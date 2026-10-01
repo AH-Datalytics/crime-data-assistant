@@ -90,8 +90,11 @@ console.log("outcome catalog, gate, carrier, migration and coverage");
 
 // ── T1 ────────────────────────────────────────────────────────────────────────────────────────
 check("T1 the catalog is exhaustive over the producible actions", () => {
-  assert.strictEqual(OUTCOME_CATALOG.length, 24, "24 accepted rows");
-  assert.strictEqual(new Set(REASON_CODES).size, 24, "every reason appears exactly once");
+  // 24 P2.1 rows plus the four named at existing accepted Phase 3 branches on integration (Codex Gate A
+  // vocabulary ruling, 2026-09-30): clarify measure_ambiguous and followup_ambiguous; decline_data
+  // reporting_coverage_insufficient and annual_result_not_supported. Each is query_log only.
+  assert.strictEqual(OUTCOME_CATALOG.length, 28, "24 P2.1 rows plus the 4 integration rows");
+  assert.strictEqual(new Set(REASON_CODES).size, 28, "every reason appears exactly once");
   for (const action of PRODUCIBLE_DELIVERY_ACTIONS) {
     const n = OUTCOME_CATALOG.filter((e) => e.action === action).length;
     assert.ok(n >= 1, `${action} must have at least one reason`);
@@ -99,7 +102,7 @@ check("T1 the catalog is exhaustive over the producible actions", () => {
   assert.deepStrictEqual(
     Object.fromEntries(PRODUCIBLE_DELIVERY_ACTIONS.map((a) =>
       [a, OUTCOME_CATALOG.filter((e) => e.action === a).length])),
-    { answer: 3, clarify: 4, decline_data: 5, decline_capability: 11, decline_source_health: 1 });
+    { answer: 3, clarify: 6, decline_data: 7, decline_capability: 11, decline_source_health: 1 });
 });
 
 check("T1 answer_limited_scope stays a DeliveryAction with no catalog row", () => {
@@ -148,8 +151,12 @@ check("T1b the two reclassified sites map to decline_source_health", () => {
 
 // ── T1c ───────────────────────────────────────────────────────────────────────────────────────
 check("T1c the catalog is the sole authority for the store partition", () => {
-  assert.strictEqual(admissiblePairs("query_log").length, 23);
+  // 23 P2.1 query_log pairs plus the four query_log-only integration rows; shared_charts is unchanged.
+  assert.strictEqual(admissiblePairs("query_log").length, 27);
   assert.strictEqual(admissiblePairs("shared_charts").length, 2);
+  for (const reason of ["measure_ambiguous", "followup_ambiguous", "reporting_coverage_insufficient", "annual_result_not_supported"]) {
+    assert.ok(!admissiblePairs("shared_charts").some((p) => p.reason === reason), `${reason} is query_log only`);
+  }
   assert.ok(isAdmissiblePair("shared_charts", "answer", "stored_artifact_replay"));
   assert.ok(!isAdmissiblePair("query_log", "answer", "stored_artifact_replay"),
     "a shared_charts-only reason must fail the query_log pair set");
@@ -169,11 +176,11 @@ check("T1c there is no second store-membership list", () => {
   const src = fs.readFileSync(path.join(ROOT, "lib/proof-contract.ts"), "utf8");
   const storeLiterals = src.match(/"(query_log|shared_charts)"/g) || [];
   // Occurrences live in: the OutcomeStore union (2), the OUTCOME_STORES constant (2), the
-  // catalog's own `stores` tuples (25 across 24 rows, one row naming both), and the two
+  // catalog's own `stores` tuples (29 across 28 rows, one row naming both), and the two
   // per-store type aliases (2). Anything beyond that is a second authority.
   const inCatalog = (src.match(/stores: \[[^\]]*\]/g) || [])
     .reduce((n, s) => n + (s.match(/"(query_log|shared_charts)"/g) || []).length, 0);
-  assert.strictEqual(inCatalog, 25, "24 rows, one of which names both stores");
+  assert.strictEqual(inCatalog, 29, "28 rows, one of which names both stores");
   assert.ok(storeLiterals.length - inCatalog <= 6,
     `store names appear ${storeLiterals.length - inCatalog} times outside the catalog; a second ` +
     `membership table, switch or array re-creates the two-carriers defect`);

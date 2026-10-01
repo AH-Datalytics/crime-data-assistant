@@ -249,6 +249,9 @@ const cases: CorpusCase[] = [
   {
     id: "L3-GEO-COUNTY-05",
     family: "countywide crosswalk",
+    // GC-080 (owner ruling, 2026-09-26): on SHR a named county means the sheriff agency; the route
+    // binds that scope as ORIs and enforces it on the executed statement (lib/shr-county-scope.ts),
+    // so this contract rule no longer demands the crosswalk for a named county.
     question: "fatal shootings in Cook County Illinois by year",
     source: "shr",
     sql: `
@@ -257,8 +260,7 @@ const cases: CorpusCase[] = [
       WHERE i.agency = 'Cook County'
       GROUP BY i.year
     `,
-    expectFindings: ["shr-countywide-crosswalk"],
-    expectRetry: ["shr-countywide-crosswalk"],
+    expectNoFindings: ["shr-countywide-crosswalk"],
   },
   {
     id: "L3-GEO-COUNTY-06",
@@ -1149,6 +1151,8 @@ const cases: CorpusCase[] = [
   {
     id: "L3-GEO-COUNTY-07",
     family: "countywide crosswalk",
+    // GC-080: as L3-GEO-COUNTY-05 -- a named SHR county is bound to its sheriff by the route and the
+    // ORI scope is enforced on the executed statement, so the crosswalk is no longer demanded here.
     question: "fatal shootings in Baltimore County since 2020",
     source: "shr",
     sql: `
@@ -1157,8 +1161,7 @@ const cases: CorpusCase[] = [
       WHERE i.agency = 'Baltimore County' AND i.state = 'MD'
       GROUP BY i.year
     `,
-    expectFindings: ["shr-countywide-crosswalk"],
-    expectRetry: ["shr-countywide-crosswalk"],
+    expectNoFindings: ["shr-countywide-crosswalk"],
   },
   {
     id: "L3-NIBRS-CAMPUS-03",

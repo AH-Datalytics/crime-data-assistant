@@ -1,0 +1,228 @@
+/**
+ * Decision 1 Group A: ISOLATED TERMINAL-CODE PROOF for both routes.
+ *
+ * WHAT THIS IS, precisely. The real `if (!claude.sql) { … }` terminal exit is lifted out of each
+ * route with the TypeScript parser and executed with controlled surrounding state and stubbed I/O.
+ * It is the route's own source text; `assertTargetIntact` fails if the statement moves or stops
+ * consulting the selector. It is NOT a full HTTP run and is not described as one — everything before
+ * the branch (routing, contract, capability, the model call) is out of frame.
+ *
+ * WHY IT REPLACED THE PREVIOUS VERSION. That one invoked the real `POST` but sent `tab`, where the
+ * route reads `body?.mode` (route.ts:567) — so every request it called "Historical" actually
+ * selected Current Trends, and my "environment difference" explanation for GC-006 was wrong. It also
+ * opened the working `crime_data.db` and took its fixture schema from the developer's `query_log.db`,
+ * outside the stated boundary (review 2026-09-09, R1 and R2).
+ *
+ * BOUNDARY. No working database is opened, no schema is read from developer data, no network, no
+ * model, no server, no shared source written.
+ */
+import { INTERNAL_LEAK_SAFE_MESSAGE, containsInternalLeak } from "../lib/scaffold-helpers";
+import {
+  assertTargetIntact,
+  extractNoSqlBranch,
+  runBranch,
+  COURT_EXPLANATION,
+  REPHRASE_INVITATION,
+  type ExtractedBranch,
+  type RouteKey,
+} from "./decision1-terminal-harness";
+
+let checks = 0;
+let failures = 0;
+function check(cond: boolean, message: string) {
+  checks++;
+  if (!cond) { failures++; console.log(`  FAIL  ${message}`); }
+}
+
+/** The two routes that carry a Decision 1 no-SQL terminal exit. `RouteKey` also covers SHR,
+ *  which has no such exit, so these maps are keyed on the pair rather than on every route. */
+type TerminalRoute = Extract<RouteKey, "query" | "nibrs">;
+const ROUTES: TerminalRoute[] = ["query", "nibrs"];
+const branches: Record<TerminalRoute, ExtractedBranch> = {
+  query: extractNoSqlBranch("query"),
+  nibrs: extractNoSqlBranch("nibrs"),
+};
+/** Each route's own tab. The NIBRS branch hardcodes "nibrs"; the other reads `tab`. */
+const MODE: Record<TerminalRoute, "historical" | "current"> = { query: "historical", nibrs: "current" };
+
+console.log("0 - the extraction target is the real terminal statement");
+for (const route of ROUTES) {
+  const b = branches[route];
+  console.log(`  ${route}: ${b.file}:${b.line}, ${b.text.length} chars`);
+  const problems = assertTargetIntact(b);
+  for (const problem of problems) check(false, problem);
+  check(problems.length === 0, `${route}: extraction target intact`);
+}
+
+/* ------------------------------------------------------------------ */
+console.log("");
+console.log("A - court-process questions, each through its recorded source");
+
+const GROUP_A: Array<[string, TerminalRoute, string]> = [
+  ["GC-006", "query", "conviction rates for murders in Houston"],
+  ["GC-007", "query", "how many offenders were sentenced to prison"],
+  ["GC-008", "query", "savannah police officers convicted of corruption related crimes from 1990 - 2024"],
+  ["GC-009", "nibrs", "Can you provide one bar per city with the race of defendants reflected in each bar?"],
+];
+
+for (const [id, route, question] of GROUP_A) {
+  const out = runBranch(branches[route], {
+    sql: "", question, mode: MODE[route], modelExplanation: "model prose",
+  });
+  console.log(`  ${id} [${route}]: ${JSON.stringify((out.explanation || "").slice(0, 70))}`);
+
+  // Non-vacuous: the branch must be entered AND produce output before any wording is judged.
+  check(out.entered, `${id}: the terminal branch must be entered when there is no SQL`);
+  check((out.explanation || "").length > 0, `${id}: an explanation must actually be produced`);
+  check(COURT_EXPLANATION.test(out.explanation || ""),
+    `${id}: the branch must emit the court-data explanation`);
+  check(!REPHRASE_INVITATION.test(out.explanation || ""),
+    `${id}: the branch must not emit the rephrase invitation`);
+
+  // The recorded reason. The query route pushes into the shared `firedGuardrails`; the NIBRS branch
+  // builds its own single-reason list. Both hand that list to the logger and to the proof.
+  check((out.loggedGuardrails || []).includes("court-data-out-of-scope"),
+    `${id}: the logged reason must be court-data-out-of-scope (got ${JSON.stringify(out.loggedGuardrails)})`);
+  check((out.proofGuardrails || []).includes("court-data-out-of-scope"),
+    `${id}: the proof must record court-data-out-of-scope (got ${JSON.stringify(out.proofGuardrails)})`);
+  if (route === "query") {
+    check(out.firedGuardrails.includes("court-data-out-of-scope"),
+      `${id}: the route guardrail list must carry the reason (got ${JSON.stringify(out.firedGuardrails)})`);
+  }
+
+  // The narrative that was logged must be the narrative that was delivered, not an earlier draft.
+  check(out.loggedStrings.includes(out.explanation || "\u0000"),
+    `${id}: the delivered explanation must appear among the logged arguments`);
+  check(!out.loggedStrings.some((s) => REPHRASE_INVITATION.test(s)),
+    `${id}: no logged argument may carry the rephrase invitation`);
+
+  // And the reader must actually receive it.
+  check(out.emitted !== null, `${id}: a terminal payload must be emitted`);
+  check(COURT_EXPLANATION.test(String(out.emitted?.explanation ?? "")),
+    `${id}: the emitted payload must carry the court explanation`);
+  check(out.emitted?.sql === "", `${id}: the emitted payload must report no SQL`);
+}
+
+/* ------------------------------------------------------------------ */
+console.log("");
+console.log("B - controls, each requiring a real output");
+
+for (const route of ROUTES) {
+  const mode = MODE[route];
+
+  const unrelated = runBranch(branches[route], {
+    sql: "", question: "show me burglaries in Toledo for 2023", mode, modelExplanation: "model prose",
+  });
+  check(unrelated.entered, `${route}: unrelated request must enter the branch`);
+  check(REPHRASE_INVITATION.test(unrelated.explanation || ""),
+    `${route}: unrelated request must receive the generic template`);
+  check(!COURT_EXPLANATION.test(unrelated.explanation || ""),
+    `${route}: unrelated request must not acquire the court explanation`);
+  check((unrelated.loggedGuardrails || []).includes("no-sql-server-template"),
+    `${route}: unrelated request must record the generic reason (got ${JSON.stringify(unrelated.loggedGuardrails)})`);
+
+  const clearance = runBranch(branches[route], {
+    sql: "", mode, modelExplanation: "model prose",
+    question: "give me the share of all rape clearances that were prosecution declined in 2025",
+  });
+  check(clearance.entered, `${route}: clearance control must enter the branch`);
+  check((clearance.explanation || "").length > 0, `${route}: clearance control must produce output`);
+  check(!COURT_EXPLANATION.test(clearance.explanation || ""),
+    `${route}: a police-clearance question must not become a court refusal`);
+  check((clearance.loggedGuardrails || []).includes("no-sql-server-template"),
+    `${route}: clearance control must record the generic reason`);
+
+  const compound = runBranch(branches[route], {
+    sql: "", mode, modelExplanation: "model prose",
+    question: "Please show me a graph of the violent crime rate back to 1930 and also the U.S. prison population going back that far (or as far as possible)",
+  });
+  check(compound.entered, `${route}: compound control must enter the branch`);
+  check((compound.explanation || "").length > 0, `${route}: compound control must produce output`);
+  check(!/entire request|whole request|none of (?:this|that)/i.test(compound.explanation || ""),
+    `${route}: compound request must not be declared wholly unsupported`);
+  if (COURT_EXPLANATION.test(compound.explanation || "")) {
+    check(/reported crime/i.test(compound.explanation || ""),
+      `${route}: a court explanation must still affirm reported crime is tracked`);
+  }
+
+  /*
+   * The pre-existing internal-leak firewall must survive the repair. The safety property asserted
+   * for BOTH routes is the one that matters: nothing internal reaches the reader, and the firewall's
+   * own reason is still recorded.
+   *
+   * AN ASYMMETRY THIS MEASURED, characterised and NOT endorsed. The two routes then diverge. NIBRS
+   * computes `internalLeak` once and suppresses the substitution, so it delivers the safe message.
+   * The Current/Historical route re-tests the text it just replaced — and `INTERNAL_LEAK_SAFE_MESSAGE`
+   * is itself clean — so the court explanation overwrites it, with both reasons recorded. Neither
+   * leaks. Which one is right is a product question outside this repair's scope, so each route's
+   * actual value is pinned here so a change becomes visible rather than silent.
+   */
+  const leak = runBranch(branches[route], {
+    sql: "", mode, question: "how many offenders were sentenced to prison",
+    modelExplanation: "internal note: SELECT * FROM summary_clearance_detail",
+  });
+  console.log(`  ${route} leak control: ${JSON.stringify((leak.explanation || "").slice(0, 60))}`);
+  check(leak.entered, `${route}: leak control must enter the branch`);
+  check((leak.explanation || "").length > 0, `${route}: leak control must produce output`);
+  check(!containsInternalLeak(leak.explanation),
+    `${route}: the delivered text must not carry internal content`);
+  check(!(leak.explanation || "").includes("summary_clearance_detail"),
+    `${route}: the leaking model text must not be delivered`);
+  check((leak.loggedGuardrails || []).includes("internal-leak-firewall"),
+    `${route}: the firewall reason must be recorded (got ${JSON.stringify(leak.loggedGuardrails)})`);
+  if (route === "nibrs") {
+    check(leak.explanation === INTERNAL_LEAK_SAFE_MESSAGE,
+      "nibrs: leak control currently delivers the safe message");
+  } else {
+    /*
+     * A server-authored no-SQL message must survive. This is the condition behind the GC-006 claim I
+     * withdrew: `serverAuthoredNoSql` is set only under `tab === "current"` (route.ts:1601), so a
+     * Historical turn cannot reach it — my previous harness sent `tab` where the route reads
+     * `body?.mode`, so what it called Historical was Current. The NIBRS branch declares its own
+     * `const serverAuthoredNoSql = false`, so this control exists for the query route only.
+     */
+    const serverAuthored = runBranch(branches[route], {
+      sql: "", mode: "current", question: "conviction rates for murders in Houston",
+      modelExplanation: "I couldn't generate the requested query, but Houston Police Department, TX is in Current Trends. Please try the same question again or specify the offense and date range.",
+      serverAuthoredNoSql: true,
+    });
+    check(serverAuthored.entered, "query: server-authored control must enter the branch");
+    check(/Houston Police Department/.test(serverAuthored.explanation || ""),
+      "query: a server-authored no-SQL message must not be replaced by the court explanation");
+    check(!COURT_EXPLANATION.test(serverAuthored.explanation || ""),
+      "query: the court explanation must not overwrite a verified-availability message");
+    check(!(serverAuthored.loggedGuardrails || []).includes("court-data-out-of-scope"),
+      "query: no court reason may be recorded for a server-authored message");
+
+    check(COURT_EXPLANATION.test(leak.explanation || ""),
+      "query: leak control currently delivers the court explanation (asymmetry, characterised)");
+    check((leak.loggedGuardrails || []).includes("court-data-out-of-scope"),
+      "query: both the firewall and the court reason must be recorded");
+  }
+}
+
+/* ------------------------------------------------------------------ */
+console.log("");
+console.log("C - a SQL-present reply bypasses the branch entirely");
+
+for (const route of ROUTES) {
+  const withSql = runBranch(branches[route], {
+    sql: "SELECT 1 AS n", mode: MODE[route], modelExplanation: "Counts by year.",
+    question: "how many offenders were sentenced to prison",
+  });
+  // A sentinel placed after the statement: the branch returns, so reaching it proves a bypass.
+  check(withSql.sentinelReached, `${route}: a SQL-present reply must fall through the branch`);
+  check(!withSql.entered, `${route}: the no-SQL branch must not be entered`);
+  check(withSql.loggedGuardrails === null, `${route}: no refusal may be logged`);
+  check(withSql.proofGuardrails === null, `${route}: no decline proof may be built`);
+  check(withSql.emitted === null, `${route}: no terminal payload may be emitted`);
+  check(withSql.firedGuardrails.length === 0,
+    `${route}: no no-SQL reason may be recorded (got ${JSON.stringify(withSql.firedGuardrails)})`);
+  check(withSql.explanation === "Counts by year.",
+    `${route}: the model explanation must be left untouched`);
+}
+
+console.log("");
+console.log(`checks: ${checks}   failures: ${failures}`);
+if (failures > 0) { console.log("RESULT: FAIL"); process.exit(1); }
+console.log("RESULT: PASS");

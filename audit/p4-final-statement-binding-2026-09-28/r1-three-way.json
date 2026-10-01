@@ -1,0 +1,83 @@
+{
+ "kind": "p4-r1-three-way",
+ "at": "2026-09-28T02:46:41.732Z",
+ "versions": {
+  "prechange": "backup-before route+db (in memory)",
+  "submitted": "reviewed candidate (pre-mutation.sha256)",
+  "corrected": "R1 correction"
+ },
+ "rows": [
+  {
+   "id": "initial-plain",
+   "prechange": "600 [unbound]",
+   "submitted": "600 [bound]",
+   "corrected": "600 [bound]"
+  },
+  {
+   "id": "initial-robbery",
+   "prechange": "null [unbound]",
+   "submitted": "null [bound]",
+   "corrected": "null [bound]"
+  },
+  {
+   "id": "initial-schema-corrected",
+   "prechange": "null [unbound]",
+   "submitted": "null [bound]",
+   "corrected": "null [bound]"
+  },
+  {
+   "id": "retry-after-schema-failure",
+   "prechange": "600 [unbound]",
+   "submitted": "600 [bound]",
+   "corrected": "600 [bound]"
+  },
+  {
+   "id": "initial-altered-in-transit",
+   "prechange": "7800 [unbound+altered]",
+   "submitted": "no rows [bound+altered/bound+altered]",
+   "corrected": "no rows [bound+altered/bound+altered]"
+  },
+  {
+   "id": "retry-altered-in-transit",
+   "prechange": "7800 [unbound+altered]",
+   "submitted": "no rows [bound+altered]",
+   "corrected": "no rows [bound+altered]"
+  },
+  {
+   "id": "final-check-refusal",
+   "prechange": "600 [unbound]",
+   "submitted": "no rows [no launch]",
+   "corrected": "no rows [no launch]"
+  },
+  {
+   "id": "rollup-state-clearance",
+   "prechange": "300 [unbound]",
+   "submitted": "no rows [no launch]",
+   "corrected": "300 [bound]"
+  },
+  {
+   "id": "rollup-national-clearance",
+   "prechange": "500 [unbound/unbound]",
+   "submitted": "no rows [unbound]",
+   "corrected": "500 [unbound/bound]"
+  },
+  {
+   "id": "rollup-state-clearance-retry",
+   "prechange": "300 [unbound]",
+   "submitted": "no rows [no launch]",
+   "corrected": "300 [bound]"
+  },
+  {
+   "id": "rollup-clearance-altered-in-transit",
+   "prechange": "200 [unbound+altered]",
+   "submitted": "no rows [no launch]",
+   "corrected": "no rows [bound+altered/bound+altered]"
+  },
+  {
+   "id": "wrong-table-clearance",
+   "prechange": "no rows [no launch]",
+   "submitted": "no rows [no launch]",
+   "corrected": "no rows [no launch]"
+  }
+ ]
+}

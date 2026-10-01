@@ -1,0 +1,10 @@
+The original mutations.json (submitted 2026-09-28, reported in the handoff as 5/5 caught with 9, 4, 2, 1, 2
+failing checks) was overwritten during the CMA1 correction when Claude reran mutations.cjs, which writes
+beside itself. Its original bytes are not recoverable (it was never committed or hashed).
+
+- cma1/mutations-submitted-rerun.json: the overwriting rerun, against the CMA1-corrected lib and the
+  54-check test (10, 5, 2, 1, 2 failing; all killed).
+- cma1/mutations-submission-state.json: a reproduction of the submitted state (lib = cma1/before-cma1-tree,
+  test = cma1/backup-before/test-comma-from-items.ts, the 38-check version) via cma1/mutations-submission-state.cjs:
+  9, 4, 2, 1, 2 failing, all killed -- the same result the handoff reported. It is a reproduction, not the
+  original file.

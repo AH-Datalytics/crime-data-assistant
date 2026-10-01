@@ -550,17 +550,18 @@ export const CAPABILITY_INVENTORY: readonly CapabilitySpec[] = [
     authorizationEligible: false,
   },
   {
-    capabilityId: "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)",
+    capabilityId: "nibrs::agencies+summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)",
     artifact: "nibrs",
     database: PROVIDERS["nibrs"],
-    preparationTables: [],
+    preparationTables: [
+      { name: "agencies", requiredColumns: [], minRows: 0 },
+    ],
     tables: [
-      { name: "agencies", requiredColumns: ["agency_type","city","ori","population","state","year"], minRows: 1 },
       { name: "summary_clearance_type", requiredColumns: ["cleared_by_arrest","cleared_exceptional","ori","total_offenses","ucr_offense_code","year"], minRows: 1 },
     ],
     dependencies: [],
     semanticDependencies: [],
-    flagKey: "PROOF_CAPABILITY_NIBRS_88FD3545",
+    flagKey: "PROOF_CAPABILITY_NIBRS_1E28753D",
     policy: null,
     authorizationEligible: false,
   },

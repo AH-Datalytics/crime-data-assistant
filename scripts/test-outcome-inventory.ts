@@ -46,18 +46,38 @@ interface OperationalRow {
 const ROOT = path.resolve(__dirname, "..");
 const inv = buildInventory(ROOT);
 
-/** The accepted P2.1 semantic sets. These are the numbers the owner approved, not observations. */
+/**
+ * The accepted P2.1 semantic sets, plus the accepted Phase 3 exits added when that candidate was integrated
+ * (2026-09-30, Codex Gate A vocabulary ruling). These are the numbers the owner approved, not observations.
+ *
+ * P2.1: 96 decision sites (query 29, nibrs-query 24, shr-query 28, hc-query 15) and 19 operational rows.
+ * Integration adds 22 decision sites and 2 operational rows, enumerated site by site against a clean dev
+ * checkout (audit/phase3-integration-2026-09-30/prep/exit-enumeration.json); none of dev's sites was removed:
+ *   query (+6):       crime-type clarify (measure_ambiguous); current-amendment clarify (followup_ambiguous);
+ *                     city-ranking unavailable + owned failure (capability_path_unavailable x2); city ranking and
+ *                     current year-over-year (deterministic_plan | no_rows_in_source x2).
+ *   nibrs-query (+11): crime-type clarify (measure_ambiguous); where-level clarify (geography_scope_ambiguous);
+ *                     category change (reporting_coverage_insufficient | capability_path_unavailable) and its answer
+ *                     (deterministic_plan); ranking structural refusal (sql_shape_rejected); annual family
+ *                     (annual_result_not_supported | capability_path_unavailable) and its answer (deterministic_plan);
+ *                     member coverage refusals (geography_contract_violation x3); owned multi-agency
+ *                     (capability_path_unavailable).
+ *   shr-query (+5):   county scope (geography_scope_ambiguous | capability_path_unavailable); crime-type and
+ *                     shooting-scope clarify (measure_ambiguous x2); city ranking (deterministic_plan |
+ *                     no_rows_in_source); owned count (deterministic_plan | all_values_null).
+ *   operational (+2): the SHR city-ranking and owned-count database-error catches (OPERATIONAL_RECORD).
+ */
 const EXPECTED = {
-  decisionSites: 96,
-  sealSites: 96,
-  operationalRows: 19,
-  perRouteSealSites: { query: 29, "nibrs-query": 24, "shr-query": 28, "hc-query": 15 },
+  decisionSites: 118,
+  sealSites: 118,
+  operationalRows: 21,
+  perRouteSealSites: { query: 35, "nibrs-query": 35, "shr-query": 33, "hc-query": 15 },
   /** §2.4(ii): exactly one operational row is not an unconditionally terminal path. */
   nonTerminalOperationalRows: 1,
   /** §2.4(ii): exactly one terminates by closing the SSE stream rather than by returning. */
   streamClosureTerminations: 1,
-  /** 94 exits log through their route-local closure; the two source-switch exits call directly. */
-  closurePairedSites: 94,
+  /** 116 exits log through their route-local closure; the two source-switch exits call directly. */
+  closurePairedSites: 116,
   directPairedSites: 2,
 };
 
@@ -159,7 +179,9 @@ check("T7b computed sites select between whole Outcome constants, never parallel
     "from reason, which is the defect the discriminated union exists to prevent");
   const computed = inv.decisionSites.filter(
     (s) => s.outcome.form === "computed" || s.outcome.form === "hoisted");
-  assert.strictEqual(computed.length, 11, "P2.1 measured 11 computed sites in three forms");
+  // P2.1 measured 11; the integration adds the 7 computed candidate sites enumerated at EXPECTED (query 2,
+  // nibrs-query 2, shr-query 3), each a choice between two whole OUTCOMES constants with its own predicate.
+  assert.strictEqual(computed.length, 18, "P2.1's 11 computed sites plus the 7 integrated candidate sites");
   for (const s of computed) {
     assert.ok(s.outcome.whenTrue && s.outcome.whenFalse, `${s.fingerprint} needs two arms`);
     assert.ok(s.outcome.predicate, `${s.fingerprint} must carry its own predicate`);

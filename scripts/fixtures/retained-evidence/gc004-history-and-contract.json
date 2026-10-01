@@ -1,0 +1,563 @@
+{
+  "boundary": "Real retained answers and frozen questions assembled by the captured runner buildHistory function; offline product helpers only, all file-backed DB opens and network blocked.",
+  "results": [
+    {
+      "id": "GC-004",
+      "question": "Now what about just the share that's prosecution declined",
+      "source": "nibrs",
+      "setupCount": 1,
+      "history": {
+        "sent": [
+          {
+            "role": "user",
+            "content": "Which states have the highest share of rapes cleared by exception in 2025?",
+            "source": "nibrs"
+          },
+          {
+            "role": "assistant",
+            "content": "States ranked by the percentage of reported rapes cleared by exceptional means in 2025, restricted to states with at least 100 reported offenses. Under FBI definitions, an exceptional clearance occurs when law enforcement identifies the offender and establishes probable cause, but cannot make an arrest due to circumstances beyond their control (such as victim cooperation declining or the death of the offender). Note that 2025 data may be preliminary, and NIBRS reporting completeness varies across states.\n\nClearance note: FBI clearance means cleared by arrest or exceptional means; it is not the same as conviction or prosecution.\n\nRanking result limit: 20 rows.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+            "source": "nibrs"
+          }
+        ],
+        "applicationWillKeep": [
+          {
+            "role": "user",
+            "content": "Which states have the highest share of rapes cleared by exception in 2025?",
+            "source": "nibrs"
+          },
+          {
+            "role": "assistant",
+            "content": "States ranked by the percentage of reported rapes cleared by exceptional means in 2025, restricted to states with at least 100 reported offenses. Under FBI definitions, an exceptional clearance occurs when law enforcement identifies the offender and establishes probable cause, but cannot make an arrest due to circumstances beyond their control (such as victim cooperation declining or the death of the offender). Note that 2025 data may be preliminary, and NIBRS reporting completeness varies across states.\n\nClearance note: FBI clearance means cleared by arrest or exceptional means; it is not the same as conviction or prosecution.\n\nRanking result limit: 20 rows.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+            "source": "nibrs"
+          }
+        ],
+        "trimming": {
+          "messagesBuilt": 2,
+          "messagesEligible": 2,
+          "messagesKept": 2,
+          "messagesDroppedByLimit": 0,
+          "contentTruncated": 0
+        }
+      },
+      "plan": {
+        "kind": "not_followup",
+        "reconstructedQuestion": "Now what about just the share that's prosecution declined"
+      },
+      "transform": null,
+      "native": [
+        {
+          "sql": "SELECT scd.state,\n  SUM(scd.total_offenses) AS total_rapes,\n  SUM(scd.cleared_B) AS cleared_prosecution_declined,\n  ROUND(100.0 * SUM(scd.cleared_B) / NULLIF(SUM(scd.total_offenses), 0), 1) AS prosecution_declined_rate\nFROM summary_clearance_detail scd\nWHERE scd.ucr_offense_code IN ('11A', '11B', '11C')\n  AND scd.year = 2025\nGROUP BY scd.state\nHAVING SUM(scd.total_offenses) >= 100\nORDER BY prosecution_declined_rate DESC\nLIMIT 20",
+          "validation": {
+            "enforced": [
+              "structural-measure-unit-unmodeled"
+            ],
+            "fired": [],
+            "retryIssues": [
+              "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_clearance_detail` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are unknown-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+            ],
+            "message": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+          },
+          "guardrails": {
+            "fired": [],
+            "issues": [],
+            "sql": "SELECT scd.state,\n  SUM(scd.total_offenses) AS total_rapes,\n  SUM(scd.cleared_B) AS cleared_prosecution_declined,\n  ROUND(100.0 * SUM(scd.cleared_B) / NULLIF(SUM(scd.total_offenses), 0), 1) AS prosecution_declined_rate\nFROM summary_clearance_detail scd\nWHERE scd.ucr_offense_code IN ('11A', '11B', '11C')\n  AND scd.year = 2025\nGROUP BY scd.state\nHAVING SUM(scd.total_offenses) >= 100\nORDER BY prosecution_declined_rate DESC\nLIMIT 20",
+            "needsFix": false,
+            "overrideResponse": null,
+            "overrideGuardrail": null
+          }
+        },
+        {
+          "sql": "SELECT state,\n  SUM(total_offenses) AS rape_offenses,\n  SUM(cleared_B) AS prosecution_declined_count,\n  ROUND(100.0 * SUM(cleared_B) / NULLIF(SUM(total_offenses), 0), 2) AS prosecution_declined_share_pct\nFROM summary_clearance_detail\nWHERE ucr_offense_code IN ('11A', '11B', '11C')\n  AND year = 2025\nGROUP BY state\nHAVING SUM(total_offenses) >= 100\nORDER BY prosecution_declined_share_pct DESC\nLIMIT 20",
+          "validation": {
+            "enforced": [
+              "structural-measure-unit-unmodeled"
+            ],
+            "fired": [],
+            "retryIssues": [
+              "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_clearance_detail` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are unknown-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+            ],
+            "message": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+          },
+          "guardrails": {
+            "fired": [],
+            "issues": [],
+            "sql": "SELECT state,\n  SUM(total_offenses) AS rape_offenses,\n  SUM(cleared_B) AS prosecution_declined_count,\n  ROUND(100.0 * SUM(cleared_B) / NULLIF(SUM(total_offenses), 0), 2) AS prosecution_declined_share_pct\nFROM summary_clearance_detail\nWHERE ucr_offense_code IN ('11A', '11B', '11C')\n  AND year = 2025\nGROUP BY state\nHAVING SUM(total_offenses) >= 100\nORDER BY prosecution_declined_share_pct DESC\nLIMIT 20",
+            "needsFix": false,
+            "overrideResponse": null,
+            "overrideGuardrail": null
+          }
+        }
+      ],
+      "prefixed": {
+        "question": "Which states have the highest share of rapes cleared by exception in 2025? Now what about just the share that's prosecution declined",
+        "contract": {
+          "source": "nibrs",
+          "geography": {
+            "kind": "unknown",
+            "name": null,
+            "state": null,
+            "canonicalName": null,
+            "confidence": "low",
+            "needsClarification": []
+          },
+          "geographies": [
+            {
+              "kind": "unknown",
+              "name": null,
+              "state": null,
+              "canonicalName": null,
+              "confidence": "low",
+              "needsClarification": []
+            }
+          ],
+          "metric": {
+            "topic": "rape",
+            "offenseCodes": [
+              "11A",
+              "11B",
+              "11C"
+            ],
+            "offenses": [
+              {
+                "topic": "rape",
+                "codes": [
+                  "11A",
+                  "11B",
+                  "11C"
+                ],
+                "label": "Rapes"
+              }
+            ],
+            "unit": "clearance_rate",
+            "numerator": null,
+            "denominator": null,
+            "unsupportedReason": null
+          },
+          "time": {
+            "startYear": 2025,
+            "endYear": 2025,
+            "partialYear": false,
+            "returnedPeriodRequired": false
+          },
+          "breakdowns": [],
+          "comparability": {
+            "continuousReporters": false,
+            "partialYearDisclosure": false,
+            "comparison": {
+              "requested": true,
+              "years": null
+            }
+          },
+          "followup": {
+            "isFollowup": false,
+            "operation": null
+          },
+          "warnings": []
+        },
+        "validation": {
+          "enforced": [],
+          "fired": [],
+          "retryIssues": [],
+          "message": null
+        }
+      }
+    },
+    {
+      "id": "GC-070",
+      "question": "now detroit",
+      "source": "current",
+      "setupCount": 5,
+      "history": {
+        "sent": [
+          {
+            "role": "user",
+            "content": "Can I see murders rolling over 12 months nationally, 2018 to present?",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "Rolling 12-month murder totals nationally from 2018 to present. Note: National figures are based on a consistent sample of 558 agencies that have reported every month since January 2017 — not every agency in the country. Trends are reliable but absolute numbers reflect only this sample. Recent data is preliminary and subject to change.\n\nReturned period: January 2018-June 2026.\n\nThe 2026 figures cover January-June 2026.",
+            "source": "current"
+          },
+          {
+            "role": "user",
+            "content": "show me by per capita",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "Rolling 12-month national murder rate per 100,000 population from 2018 to present, calculated using agencies in the national sample. Note: National figures are based on a consistent sample of 558 agencies that have reported every month since January 2017 — not every agency in the country. Trends are reliable but absolute numbers reflect only this sample. Data for 2026 is partial and preliminary.\n\nReturned period: January 2018-June 2026.\n\nThe 2026 figures cover January-June 2026.",
+            "source": "current"
+          },
+          {
+            "role": "user",
+            "content": "show seattle for 20206",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "Monthly murder counts and rates per 100,000 for Seattle in 2026. Note: 2026 data is partial and preliminary — not all months or agencies have reported yet.\n\nReturned period: January-June 2026.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.",
+            "source": "current"
+          },
+          {
+            "role": "user",
+            "content": "range",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "This data contains the minimum and maximum years on record for murder in the city of Seattle.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.\n\nComparison includes: Min Year, Max Year.",
+            "source": "current"
+          },
+          {
+            "role": "user",
+            "content": "do for nyc",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "This data contains the available year range for murder data in New York City.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.\n\nComparison includes: Min Year, Max Year.",
+            "source": "current"
+          }
+        ],
+        "applicationWillKeep": [
+          {
+            "role": "user",
+            "content": "show seattle for 20206",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "Monthly murder counts and rates per 100,000 for Seattle in 2026. Note: 2026 data is partial and preliminary — not all months or agencies have reported yet.\n\nReturned period: January-June 2026.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.",
+            "source": "current"
+          },
+          {
+            "role": "user",
+            "content": "range",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "This data contains the minimum and maximum years on record for murder in the city of Seattle.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.\n\nComparison includes: Min Year, Max Year.",
+            "source": "current"
+          },
+          {
+            "role": "user",
+            "content": "do for nyc",
+            "source": "current"
+          },
+          {
+            "role": "assistant",
+            "content": "This data contains the available year range for murder data in New York City.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.\n\nComparison includes: Min Year, Max Year.",
+            "source": "current"
+          }
+        ],
+        "trimming": {
+          "messagesBuilt": 10,
+          "messagesEligible": 10,
+          "messagesKept": 6,
+          "messagesDroppedByLimit": 4,
+          "contentTruncated": 0
+        }
+      },
+      "plan": {
+        "kind": "not_followup",
+        "reconstructedQuestion": "now detroit"
+      },
+      "transform": null,
+      "native": [
+        {
+          "sql": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Detroit' AND state = 'MI' AND type = 'City' AND offense = 'Murder'",
+          "validation": {
+            "enforced": [],
+            "fired": [],
+            "retryIssues": [],
+            "message": null
+          },
+          "guardrails": {
+            "fired": [],
+            "issues": [],
+            "sql": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Detroit' AND state = 'MI' AND type = 'City' AND offense = 'Murder'",
+            "needsFix": false,
+            "overrideResponse": null,
+            "overrideGuardrail": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "GC-048",
+      "question": "show murders per capita for the city of St. Louis city and the City of Chicago since 1950",
+      "source": "historical",
+      "setupCount": 0,
+      "history": {
+        "sent": [],
+        "applicationWillKeep": [],
+        "trimming": {
+          "messagesBuilt": 0,
+          "messagesEligible": 0,
+          "messagesKept": 0,
+          "messagesDroppedByLimit": 0,
+          "contentTruncated": 0
+        }
+      },
+      "plan": {
+        "kind": "not_followup",
+        "reconstructedQuestion": "show murders per capita for the city of St. Louis city and the City of Chicago since 1950"
+      },
+      "transform": null,
+      "native": [
+        {
+          "sql": "SELECT hac.year,\n  ROUND(SUM(CASE WHEN ha.agency = 'St. Louis' AND ha.state = 'mo' AND hac.ori = 'MOSPD0000' THEN hac.murder END) * 100000.0 / MAX(CASE WHEN ha.agency = 'St. Louis' AND ha.state = 'mo' AND hac.ori = 'MOSPD0000' THEN hap.population END), 1) AS st_louis,\n  ROUND(SUM(CASE WHEN ha.agency = 'Chicago' AND ha.state = 'il' THEN hac.murder END) * 100000.0 / MAX(CASE WHEN ha.agency = 'Chicago' AND ha.state = 'il' THEN hap.population END), 1) AS chicago\nFROM historical_agency_crime hac\nJOIN historical_agency ha ON ha.ori = hac.ori\nJOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\nWHERE ((ha.agency = 'St. Louis' AND ha.state = 'mo' AND ha.type = 'city' AND hac.ori = 'MOSPD0000')\n    OR (ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city'))\n  AND hac.year >= 1950\nGROUP BY hac.year\nORDER BY hac.year\nLIMIT 1000",
+          "validation": {
+            "enforced": [],
+            "fired": [],
+            "retryIssues": [],
+            "message": null
+          },
+          "guardrails": {
+            "fired": [
+              "historical-missing-gap-fill"
+            ],
+            "issues": [
+              "Your query retrieves historical data for a single agency over a year range but does not use a recursive CTE to fill missing years. Many agencies have gaps in reporting — without gap-fill, the chart will misleadingly connect data across missing years. Use: WITH years AS (SELECT <start> AS year UNION ALL SELECT year + 1 FROM years WHERE year < <end>) SELECT y.year, ... FROM years y LEFT JOIN ... This ensures missing years appear as NULL/gaps in the chart."
+            ],
+            "sql": "SELECT hac.year,\n  ROUND(SUM(CASE WHEN ha.agency = 'St. Louis' AND ha.state = 'mo' AND hac.ori = 'MOSPD0000' THEN hac.murder END) * 100000.0 / MAX(CASE WHEN ha.agency = 'St. Louis' AND ha.state = 'mo' AND hac.ori = 'MOSPD0000' THEN hap.population END), 1) AS st_louis,\n  ROUND(SUM(CASE WHEN ha.agency = 'Chicago' AND ha.state = 'il' THEN hac.murder END) * 100000.0 / MAX(CASE WHEN ha.agency = 'Chicago' AND ha.state = 'il' THEN hap.population END), 1) AS chicago\nFROM historical_agency_crime hac\nJOIN historical_agency ha ON ha.ori = hac.ori\nJOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\nWHERE ((ha.agency = 'St. Louis' AND ha.state = 'mo' AND ha.type = 'city' AND hac.ori = 'MOSPD0000')\n    OR (ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city'))\n  AND hac.year >= 1950\nGROUP BY hac.year\nORDER BY hac.year\nLIMIT 1000",
+            "needsFix": true,
+            "overrideResponse": null,
+            "overrideGuardrail": null
+          }
+        },
+        {
+          "sql": "WITH years AS (\n  SELECT 1950 AS year\n  UNION ALL\n  SELECT year + 1 FROM years WHERE year < 2025\n)\nSELECT\n  y.year,\n  ROUND(\n    (SELECT hac.murder * 100000.0 / hap.population\n     FROM historical_agency_crime hac\n     JOIN historical_agency ha ON ha.ori = hac.ori\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\n     WHERE ha.agency = 'St. Louis' AND ha.state = 'mo' AND ha.type = 'city' AND hac.ori = 'MOSPD0000' AND hac.year = y.year\n     LIMIT 1),\n    1\n  ) AS st_louis,\n  ROUND(\n    (SELECT hac.murder * 100000.0 / hap.population\n     FROM historical_agency_crime hac\n     JOIN historical_agency ha ON ha.ori = hac.ori\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\n     WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city' AND hac.year = y.year\n     LIMIT 1),\n    1\n  ) AS chicago\nFROM years y\nORDER BY y.year\nLIMIT 1000",
+          "validation": {
+            "enforced": [
+              "structural-returned-series-unresolved"
+            ],
+            "fired": [],
+            "retryIssues": [
+              "[SYSTEM: Query contract violation (structural-returned-series-unresolved). The returned columns could not be traced to their source tables, so nothing proves this query answers the question asked. Rewrite it as a plain SELECT over the supported tables. Rewrite the SQL against a table whose rows are city-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+            ],
+            "message": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+          },
+          "guardrails": {
+            "fired": [],
+            "issues": [],
+            "sql": "WITH years AS (\n  SELECT 1950 AS year\n  UNION ALL\n  SELECT year + 1 FROM years WHERE year < 2025\n)\nSELECT\n  y.year,\n  ROUND(\n    (SELECT hac.murder * 100000.0 / hap.population\n     FROM historical_agency_crime hac\n     JOIN historical_agency ha ON ha.ori = hac.ori\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\n     WHERE ha.agency = 'St. Louis' AND ha.state = 'mo' AND ha.type = 'city' AND hac.ori = 'MOSPD0000' AND hac.year = y.year\n     LIMIT 1),\n    1\n  ) AS st_louis,\n  ROUND(\n    (SELECT hac.murder * 100000.0 / hap.population\n     FROM historical_agency_crime hac\n     JOIN historical_agency ha ON ha.ori = hac.ori\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\n     WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city' AND hac.year = y.year\n     LIMIT 1),\n    1\n  ) AS chicago\nFROM years y\nORDER BY y.year\nLIMIT 1000",
+            "needsFix": false,
+            "overrideResponse": null,
+            "overrideGuardrail": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "GC-058",
+      "question": "Using 2023 data, which cities in Louisiana had the highest violent crime rate",
+      "source": "historical",
+      "setupCount": 0,
+      "history": {
+        "sent": [],
+        "applicationWillKeep": [],
+        "trimming": {
+          "messagesBuilt": 0,
+          "messagesEligible": 0,
+          "messagesKept": 0,
+          "messagesDroppedByLimit": 0,
+          "contentTruncated": 0
+        }
+      },
+      "plan": {
+        "kind": "not_followup",
+        "reconstructedQuestion": "Using 2023 data, which cities in Louisiana had the highest violent crime rate"
+      },
+      "transform": null,
+      "native": [
+        {
+          "sql": "SELECT ha.agency || ', ' || UPPER(ha.state) AS city, ROUND(hac.violent * 100000.0 / hap.population, 1) AS violent_crime_rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year WHERE ha.state = 'la' AND ha.type = 'city' AND hac.year = 2023 AND hap.population > 25000 AND hac.violent IS NOT NULL ORDER BY violent_crime_rate DESC LIMIT 20",
+          "validation": {
+            "enforced": [
+              "historical-ranking-unrequested-population-floor"
+            ],
+            "fired": [],
+            "retryIssues": [
+              "[SYSTEM: Query contract violation (historical-ranking-unrequested-population-floor). The SQL restricts population to 25,000, which the request never asked for. A population cutoff decides which places can appear in a rate ranking, so it cannot be added silently. Remove it, keeping only `population > 0` where a rate needs a non-zero denominator.]"
+            ],
+            "message": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+          },
+          "guardrails": {
+            "fired": [],
+            "issues": [],
+            "sql": "SELECT ha.agency || ', ' || UPPER(ha.state) AS city, ROUND(hac.violent * 100000.0 / hap.population, 1) AS violent_crime_rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year WHERE ha.state = 'la' AND ha.type = 'city' AND hac.year = 2023 AND hap.population > 25000 AND hac.violent IS NOT NULL ORDER BY violent_crime_rate DESC LIMIT 20",
+            "needsFix": false,
+            "overrideResponse": null,
+            "overrideGuardrail": null
+          }
+        },
+        {
+          "sql": null,
+          "validation": null,
+          "guardrails": null
+        }
+      ]
+    }
+  ],
+  "counterexamples": [
+    {
+      "question": "now for 2024",
+      "bare": {
+        "metric": {
+          "topic": "unknown",
+          "offenseCodes": [],
+          "offenses": [],
+          "unit": "unknown",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2024,
+          "endYear": 2024,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        }
+      },
+      "combined": {
+        "metric": {
+          "topic": "rape",
+          "offenseCodes": [
+            "11A",
+            "11B",
+            "11C"
+          ],
+          "offenses": [
+            {
+              "topic": "rape",
+              "codes": [
+                "11A",
+                "11B",
+                "11C"
+              ],
+              "label": "Rapes"
+            }
+          ],
+          "unit": "clearance_rate",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2024,
+          "endYear": 2025,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        }
+      },
+      "proposedFallbackApplies": true
+    },
+    {
+      "question": "How many agencies reported in 2024?",
+      "bare": {
+        "metric": {
+          "topic": "unknown",
+          "offenseCodes": [],
+          "offenses": [],
+          "unit": "unknown",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2024,
+          "endYear": 2024,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        }
+      },
+      "combined": {
+        "metric": {
+          "topic": "rape",
+          "offenseCodes": [
+            "11A",
+            "11B",
+            "11C"
+          ],
+          "offenses": [
+            {
+              "topic": "rape",
+              "codes": [
+                "11A",
+                "11B",
+                "11C"
+              ],
+              "label": "Rapes"
+            }
+          ],
+          "unit": "clearance_rate",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2024,
+          "endYear": 2025,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        }
+      },
+      "proposedFallbackApplies": true
+    },
+    {
+      "question": "What is the population of Chicago?",
+      "bare": {
+        "metric": {
+          "topic": "unknown",
+          "offenseCodes": [],
+          "offenses": [],
+          "unit": "unknown",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        }
+      },
+      "combined": {
+        "metric": {
+          "topic": "rape",
+          "offenseCodes": [
+            "11A",
+            "11B",
+            "11C"
+          ],
+          "offenses": [
+            {
+              "topic": "rape",
+              "codes": [
+                "11A",
+                "11B",
+                "11C"
+              ],
+              "label": "Rapes"
+            }
+          ],
+          "unit": "clearance_rate",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2025,
+          "endYear": 2025,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        }
+      },
+      "proposedFallbackApplies": true
+    }
+  ]
+}

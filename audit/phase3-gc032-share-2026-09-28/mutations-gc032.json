@@ -1,0 +1,159 @@
+{
+ "at": "2026-09-28T18:01:19.423Z",
+ "results": [
+  {
+   "id": "G0-pre-change",
+   "file": "backup-before",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  the retained GC-032 statement, as written",
+    "FAIL  with the LIMIT the route appends",
+    "FAIL  after the planner routes both CTEs to the state rollup",
+    "FAIL  CROSS JOIN form",
+    "FAIL  JOIN ON 1 = 1 form",
+    "FAIL  unrounded percentage",
+    "FAIL  after routing to rollup.state_summary_offender_demographics",
+    "FAIL  the planner's rollups carry the source's evidenced recorded measure",
+    "FAIL  a \"% of crimes\" unit is re-labelled: Youth under 18 accounted for 8.0% of serious violent crimes in California from 2021 to 2025.",
+    "FAIL  the unit is stated, with unknown ages named as part of the total",
+    "FAIL  stated once, not repeated"
+   ],
+   "tail": "29/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G1-rollup-measure",
+   "file": "lib/table-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  after the planner routes both CTEs to the state rollup",
+    "FAIL  after routing to rollup.state_summary_offender_demographics",
+    "FAIL  the planner's rollups carry the source's evidenced recorded measure"
+   ],
+   "tail": "37/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G2-schema-alias",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  after the planner routes both CTEs to the state rollup",
+    "FAIL  after routing to rollup.state_summary_offender_demographics"
+   ],
+   "tail": "38/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G3-cte-equivalence",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  the retained GC-032 statement, as written",
+    "FAIL  with the LIMIT the route appends",
+    "FAIL  after the planner routes both CTEs to the state rollup",
+    "FAIL  CROSS JOIN form",
+    "FAIL  JOIN ON 1 = 1 form",
+    "FAIL  unrounded percentage"
+   ],
+   "tail": "34/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G4-route-limit",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  with the LIMIT the route appends",
+    "FAIL  after the planner routes both CTEs to the state rollup"
+   ],
+   "tail": "38/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G5-unit-disclosure",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  a \"% of crimes\" unit is re-labelled: Youth under 18 accounted for 8.0% of serious violent crimes in California from 2021 to 2025.",
+    "FAIL  the unit is stated, with unknown ages named as part of the total",
+    "FAIL  stated once, not repeated"
+   ],
+   "tail": "37/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G6-relabel",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  a \"% of crimes\" unit is re-labelled: Youth under 18 accounted for 8.0% of serious violent crimes in California from 2021 to 2025."
+   ],
+   "tail": "39/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G7-unknown-always",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  unknown ages are not claimed when the statement filters them"
+   ],
+   "tail": "39/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G8-one-extra-conjunct",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: two extra conjuncts on the numerator"
+   ],
+   "tail": "39/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G9-single-row-keywords",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: both CTEs grouped by year (many rows each, cross-joined)",
+    "FAIL  refused by the share rule: both CTEs with the same HAVING"
+   ],
+   "tail": "38/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G10-outer-only-outputs",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: outer reads a column the CTE does not return"
+   ],
+   "tail": "39/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G11-same-measure",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: numerator from the state rollup, denominator from the base table"
+   ],
+   "tail": "39/40 passed; offline guard: 0 denied database opens, 0 network calls"
+  }
+ ]
+}

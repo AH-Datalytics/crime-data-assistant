@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 
 import { detectNibrsCapabilityOverride } from "../lib/nibrs-capability-overrides.js";
-import { detectCurrentYearClearanceOverride, detectDemographicRateDenominatorFollowup, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
+import { detectCurrentYearClearanceOverride, detectDemographicRateDenominatorFollowup, detectNibrsCountywideDemographicsOverride, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "../lib/capability-overrides.js";
 import { removedDemographicPlaceToken } from "../lib/demographic-rate-intent.js";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "../lib/chat-history.js";
 
@@ -264,6 +264,75 @@ assert("unresolved women's language is not mistaken for a place",
   assert("another population denominator follow-up fires", Boolean(detectDemographicRateDenominatorFollowup("try another population denominator", priorDemo)));
   assert("different denominator remains gated on prior context", detectDemographicRateDenominatorFollowup("Use a different denominator", []) === null);
   assert("unrelated question does not fire", detectDemographicRateDenominatorFollowup("show robberies in Boston 2020", priorDemo) === null);
+}
+
+/*
+ * A NAMED AGENCY IS NOT A COUNTY, however its own name is spelled.
+ *
+ * "Worcester County Sheriff's Office" is one agency with one ORI, and the contract already resolves
+ * it as such — but two decisions tested only for the word `county` and refused it as a countywide
+ * request. The saved GC-084 response was refused in 2 ms, before a contract was even built. The
+ * same question asked of a city police department was answered, because its name happens not to
+ * contain that word.
+ *
+ * The countywide refusal itself is correct and must survive: a genuine countywide demographic
+ * breakdown combines agencies with different participation, and a bare county name is Decision 10's
+ * settled default. These separate the three.
+ */
+{
+  const demo = (place: string) => `show me murders by offender age for ${place}`;
+
+  // NAMED AGENCIES — must no longer be refused as counties.
+  for (const place of [
+    "worcester county, md sheriff's office",
+    "Worcester County Sheriff's Office",
+    "bernalillo county sheriff",
+    "dona ana county sheriff's office, nm",
+    "nassau county police department",
+    "suffolk county police",
+  ]) {
+    assert(`named agency is not a countywide request: ${place}`,
+      detectNibrsCountywideDemographicsOverride(demo(place)) === null);
+  }
+
+  // A city agency is the control: it was always answered, and must stay that way.
+  assert("a city police department is unaffected",
+    detectNibrsCountywideDemographicsOverride(demo("pocomoke city, md police department")) === null);
+
+  // A BARE COUNTY NAME — Decision 10's settled default — must still be refused.
+  for (const place of ["worcester county, md", "cook county", "jefferson parish"]) {
+    const fired = detectNibrsCountywideDemographicsOverride(demo(place));
+    assert(`a bare county request is still refused: ${place}`,
+      fired !== null && fired.guardrail === "nibrs-countywide-demographics-unsupported");
+  }
+
+  /*
+   * A MENTION IS NOT A SCOPE, at the override too.
+   *
+   * This stage has no contract, so wording is all it has. A whole-county request that names a
+   * sheriff as an inclusion must keep its refusal; an earlier form of the exclusion removed it.
+   * Under-matching here is the residual — the downstream capability rule, which does have the
+   * contract, is what catches phrasings this wording test misses.
+   */
+  for (const q of [
+    "murder offenders by age for Worcester County, MD including the sheriff's office",
+    "offender age breakdown for all agencies in Cook County, not just the sheriff",
+  ]) {
+    const fired = detectNibrsCountywideDemographicsOverride(q);
+    assert(`a whole-county request keeps its refusal despite naming an agency: ${q}`,
+      fired !== null && fired.guardrail === "nibrs-countywide-demographics-unsupported");
+  }
+
+  // An EXPLICIT countywide request is not refused here — it has a deterministic crosswalk route
+  // with a participation disclosure, which the existing suite already pins. Asserted so this
+  // change is not mistaken for having altered it.
+  assert("an explicit countywide request still reaches its crosswalk route",
+    detectNibrsCountywideDemographicsOverride("show countywide murder offenders by age for worcester county md") === null);
+
+  // The refusal is about demographics, not about the word: a countywide COUNT is not this override's
+  // business and must stay untouched.
+  assert("a countywide count is not a demographics refusal",
+    detectNibrsCountywideDemographicsOverride("how many murders in worcester county, md in 2023") === null);
 }
 
 console.log(`nibrs capability override tests: ${pass} passed, ${fail} failed`);

@@ -1,0 +1,274 @@
+{
+ "at": "2026-09-28T20:31:14.611Z",
+ "results": [
+  {
+   "id": "H0-submitted-lib",
+   "file": "backup-before-g32",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  the conflicting crime-share sentence is replaced by the owned statement: In California from 2021 to 2025, 8.4% of all reported serious violent crimes were committed by youth under 18.",
+    "FAIL  the three-word variant too",
+    "FAIL  a correct model sentence is replaced by the same owned statement",
+    "FAIL  stated once, not repeated",
+    "FAIL  a fraction is stated as the same percentage",
+    "FAIL  counts that do not reproduce the share are not quoted",
+    "FAIL  two different states: the place is left out, not guessed",
+    "FAIL  two group filters: the group is not named",
+    "FAIL  not one row: no figure is stated",
+    "FAIL  refused: CTE share with an integer 100 (1260/15060 would give 8)",
+    "FAIL  refused: CTE fraction with no real factor (would give 0)",
+    "FAIL  refused: single-SELECT share with an integer 100",
+    "FAIL  refused: the routed single-SELECT sibling with an integer 100",
+    "FAIL  refused: the routed CTE form with an integer 100"
+   ],
+   "tail": "42/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H1-real-division-skipped",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused: CTE share with an integer 100 (1260/15060 would give 8)",
+    "FAIL  refused: CTE fraction with no real factor (would give 0)",
+    "FAIL  refused: single-SELECT share with an integer 100",
+    "FAIL  refused: the routed single-SELECT sibling with an integer 100",
+    "FAIL  refused: the routed CTE form with an integer 100"
+   ],
+   "tail": "51/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H2-integer-literal-counts-as-real",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused: CTE share with an integer 100 (1260/15060 would give 8)",
+    "FAIL  refused: single-SELECT share with an integer 100",
+    "FAIL  refused: the routed single-SELECT sibling with an integer 100",
+    "FAIL  refused: the routed CTE form with an integer 100"
+   ],
+   "tail": "52/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H3-total-not-real",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  accepted: TOTAL() operands, which are always real"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H4-model-sentence-kept",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  the conflicting crime-share sentence is replaced by the owned statement: In California from 2021 to 2025, 8.4% of all reported serious violent crimes were committed by youth under 18.",
+    "FAIL  the three-word variant too",
+    "FAIL  a correct model sentence is replaced by the same owned statement",
+    "FAIL  stated once, not repeated",
+    "FAIL  a fraction is stated as the same percentage",
+    "FAIL  counts that do not reproduce the share are not quoted",
+    "FAIL  two different states: the place is left out, not guessed",
+    "FAIL  two group filters: the group is not named",
+    "FAIL  not one row: no figure is stated"
+   ],
+   "tail": "47/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H5-any-count-pair-quoted",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  counts that do not reproduce the share are not quoted"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H6-first-state-guessed",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  two different states: the place is left out, not guessed"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H7-first-group-guessed",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  two group filters: the group is not named"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H8-fraction-not-scaled",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  a fraction is stated as the same percentage"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "H9-first-of-many-rows",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  not one row: no figure is stated"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G1-rollup-measure",
+   "file": "lib/table-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  after the planner routes both CTEs to the state rollup",
+    "FAIL  after routing to rollup.state_summary_offender_demographics",
+    "FAIL  the planner's rollups carry the source's evidenced recorded measure"
+   ],
+   "tail": "53/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G2-schema-alias",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  after the planner routes both CTEs to the state rollup",
+    "FAIL  after routing to rollup.state_summary_offender_demographics"
+   ],
+   "tail": "54/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G3-cte-equivalence",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  the retained GC-032 statement, as written",
+    "FAIL  with the LIMIT the route appends",
+    "FAIL  after the planner routes both CTEs to the state rollup",
+    "FAIL  CROSS JOIN form",
+    "FAIL  JOIN ON 1 = 1 form",
+    "FAIL  unrounded percentage",
+    "FAIL  accepted: a fraction with 1.0 * before the division",
+    "FAIL  accepted: TOTAL() operands, which are always real"
+   ],
+   "tail": "48/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G4-route-limit",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  with the LIMIT the route appends",
+    "FAIL  after the planner routes both CTEs to the state rollup"
+   ],
+   "tail": "54/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G5-unit-disclosure",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  the conflicting crime-share sentence is replaced by the owned statement: In California from 2021 to 2025, 8.4% of all reported serious violent crimes were committed by youth under 18.",
+    "FAIL  the three-word variant too",
+    "FAIL  a correct model sentence is replaced by the same owned statement",
+    "FAIL  the unit note follows, with unknown ages named as part of the total",
+    "FAIL  stated once, not repeated",
+    "FAIL  a fraction is stated as the same percentage",
+    "FAIL  counts that do not reproduce the share are not quoted",
+    "FAIL  two different states: the place is left out, not guessed",
+    "FAIL  two group filters: the group is not named",
+    "FAIL  not one row: no figure is stated"
+   ],
+   "tail": "46/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G7-unknown-always",
+   "file": "lib/result-disclosure.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  unknown ages are not claimed when the statement filters them"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G8-one-extra-conjunct",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: two extra conjuncts on the numerator"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G9-single-row-keywords",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: both CTEs grouped by year (many rows each, cross-joined)",
+    "FAIL  refused by the share rule: both CTEs with the same HAVING"
+   ],
+   "tail": "54/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G10-outer-only-outputs",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: outer reads a column the CTE does not return"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "G11-same-measure",
+   "file": "lib/structural-semantics.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  refused by the share rule: numerator from the state rollup, denominator from the base table"
+   ],
+   "tail": "55/56 passed; offline guard: 0 denied database opens, 0 network calls"
+  }
+ ]
+}

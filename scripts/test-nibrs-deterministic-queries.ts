@@ -11,6 +11,12 @@ import {
   buildNibrsLocalDemographicQuery,
   buildNibrsStructuredLocalTrendQuery,
 } from "../lib/nibrs-deterministic-queries.js";
+import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard.js";
+import { buildQueryContract } from "../lib/query-contract.js";
+import { alignTitleYearRange, applyResultDisclosures } from "../lib/result-disclosure.js";
+import { genericResultState } from "../lib/result-state-adapters.js";
+import { validateGrain } from "../lib/requested-grain.js";
+import { normalizeConsolidatedDisplayRows } from "../lib/agency-consolidations.js";
 
 {
   const query = buildNibrsComparableAgencyClearanceQuery(
@@ -36,12 +42,32 @@ import {
           { year: 2024, ori: "CA0380100", population: 827526 },
         ],
         oriRanges: [{ ori: "CA0380100", startYear: 2021, endYear: 2024 }],
-        reason: "test",
+          reason: "test",
       }],
-    }
+    },
+    // Increment 5: peers are now selected by the shared population core, not by a SQL
+    // LIMIT over an ordered pool, so the builder takes an injectable candidate source.
+    // Decision 16 requires every peer named and the real band stated, which is only
+    // possible when the chosen set is a value the code holds.
+    () => [
+      { ori: "WA0170100", agency: "Seattle", state: "WA", population: 750000 },
+      { ori: "CO0160100", agency: "Denver", state: "CO", population: 715000 },
+      { ori: "TN0190100", agency: "Nashville", state: "TN", population: 690000 },
+      { ori: "MD0300100", agency: "Baltimore", state: "MD", population: 585000 },
+    ]
   );
   assert.ok(query, "similar-size agency clearance comparison should be deterministic");
-  assert.match(query.sql, /LIMIT 3/);
+  // The three nearest by population are selected in code and read by the query.
+  assert.match(query.sql, /'WA0170100'/);
+  assert.match(query.sql, /'CO0160100'/);
+  assert.match(query.sql, /'TN0190100'/);
+  assert.doesNotMatch(query.sql, /'MD0300100'/, "the fourth-nearest agency must not be selected");
+  assert.doesNotMatch(query.sql, /candidate_pool/, "peer selection must no longer happen in SQL");
+  // Decision 16: the rule, the band and every peer are named in the explanation.
+  assert.match(query.explanation, /population alone/i);
+  assert.match(query.explanation, /Seattle/);
+  assert.match(query.explanation, /Denver/);
+  assert.match(query.explanation, /Nashville/);
   assert.match(query.sql, /summary_clearance_type sct INDEXED BY idx_sct_ori_year/);
   assert.match(query.sql, /ucr_offense_code IN \('11A', '11B', '11C'\)/);
   assert.match(query.sql, /sct\.year BETWEEN 2021 AND 2024/);
@@ -249,6 +275,24 @@ import {
   assert.match(query.sql, /city = 'DALLAS'/i);
   assert.equal(query.sql.match(/ORDER BY primary_agency\.pop_group/gi)?.length, 2);
   assert.equal(query.yAxis, "houston_tx_murders,dallas_tx_murders");
+  /*
+   * THE CITY PATH THROUGH THE PRE-EXECUTION GUARD.
+   *
+   * The guarded assertions further down build from a resolution plan, whose target list is literal
+   * and reads no table. This path is the other one: `target_places` selects its supplied place key
+   * and label FROM `agencies`. A checker change that refuses any supplied value beside a real table
+   * breaks exactly this query and nothing the plan-based tests cover, so it is asserted here
+   * against the builder's own output.
+   */
+  assert.equal(
+    deterministicPlanRefusal({
+      question: "compare murders in Houston and Dallas by year since 2020",
+      source: "nibrs",
+      sql: query.sql,
+    }),
+    null,
+    "the pre-execution guard must accept the city-resolved comparison the product delivers"
+  );
 }
 
 {
@@ -504,6 +548,553 @@ for (const question of [
   );
   assert.equal(buildNibrsClearanceTypeBreakdownQuery(q, null), null, "no resolved agency means no deterministic query");
   db.close();
+}
+
+/*
+ * THE BUILDER AND THE SAFETY CHECKER MUST AGREE ON A SUPPORTED ANSWER.
+ *
+ * A multi-agency, multi-offence annual comparison was built correctly and then refused before
+ * execution: each per-offence branch carries a constant label beside its measure, and a constant
+ * had no traceable origin, so every returned series was reported unresolved. The plan was thrown
+ * away and the question fell to the model.
+ *
+ * These do not check the label. They check that a built plan survives the guard that actually runs
+ * in the route, that the figures it returns are the figures the fixture holds, and that the checks
+ * which should still refuse a query still do. The names are varied deliberately: a proof that
+ * passes by recognising GC-083 proves nothing.
+ */
+{
+  const witness = "show me murders, robberies, and aggravated assaults for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025";
+  const planFor = (oris: [string, string], labels: [string, string], years: number[]) => ({
+    elapsedMs: 0,
+    hasStateComparison: false,
+    places: [0, 1].map((i) => ({
+      contractIndex: i,
+      kind: i === 0 ? "city_police" : "sheriff",
+      status: "resolved",
+      label: labels[i],
+      oriYears: years.map((year) => ({ ori: oris[i], year })),
+      population: null,
+    })),
+  }) as never;
+
+  const built = buildNibrsStructuredLocalTrendQuery(
+    witness, planFor(["NM0010100", "NM0010000"], ["Albuquerque Police Department", "Bernalillo County Sheriff"], [2020, 2021, 2022, 2023, 2024, 2025])
+  );
+  assert.ok(built, "the supported multi-agency annual comparison must still build");
+  assert.equal(
+    deterministicPlanRefusal({ question: witness, source: "nibrs", sql: built!.sql }),
+    null,
+    "and the structural guard that runs before execution must accept it"
+  );
+
+  // Different agencies, different offence order, different years: the agreement is about the
+  // shape, not about these names.
+  const other = "compare aggravated assaults, murders and robberies for dallas police department and harris county sheriff by year for 2021 to 2023";
+  const otherBuilt = buildNibrsStructuredLocalTrendQuery(
+    other, planFor(["TX0570000", "TX1010000"], ["Dallas Police Department", "Harris County Sheriff"], [2021, 2022, 2023])
+  );
+  assert.ok(otherBuilt, "the same shape must build for other agencies and offence orderings");
+  assert.equal(
+    deterministicPlanRefusal({ question: other, source: "nibrs", sql: otherBuilt!.sql }),
+    null,
+    "and must be accepted on its own terms, not by matching the witness"
+  );
+
+  /*
+   * EXECUTION AND DELIVERY, THROUGH THE FUNCTIONS THE ROUTE ACTUALLY USES.
+   *
+   * Building a query and asserting rows proves the SQL. It does not prove the answer: the route
+   * runs the pre-execution guard, executes, then passes the result through disclosure, grain and
+   * title alignment before anything reaches a reader. This drives that same chain in-process —
+   * `deterministicPlanRefusal` -> execute -> `applyResultDisclosures` -> `validateGrain` ->
+   * `alignTitleYearRange` — and asserts the delivered figures, both agency identities, the offence
+   * labels, the period, the explanation and the title.
+   *
+   * Every figure is distinct, so a swapped agency, offence or year cannot pass unnoticed. The
+   * decoys are the mistakes this shape invites: a third agency in the same state, a neighbouring
+   * year, an offence code nobody asked for, and — the one the split-table design risks —
+   * duplicate completeness rows that would multiply a measure through its join.
+   */
+  const db = new Database(":memory:");
+  db.exec([
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
+    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+    "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
+    "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+    // Murders (victim table) — distinct per agency and year.
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100',2020,1,'09A',11),('NM0010100',2021,1,'09A',12),('NM0010000',2020,1,'09A',21),('NM0010000',2021,1,'09A',22);",
+    // Aggravated assaults (victim table) — deliberately far from the murder values.
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100',2020,1,'13A',311),('NM0010100',2021,1,'13A',312),('NM0010000',2020,1,'13A',321),('NM0010000',2021,1,'13A',322);",
+    // Robberies (offence table) — a different table and column entirely.
+    "INSERT INTO summary_city_monthly VALUES ('NM0010100',2020,1,'120',411),('NM0010100',2021,1,'120',412),('NM0010000',2020,1,'120',421),('NM0010000',2021,1,'120',422);",
+    // DECOYS. A third agency, an unrequested offence, and a year outside the range.
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM9999999',2020,1,'09A',9999),('NM0010100',2020,1,'11A',8888),('NM0010100',2019,1,'09A',7777);",
+    "INSERT INTO summary_city_monthly VALUES ('NM9999999',2020,1,'120',6666);",
+    // Completeness for both years, both agencies. The duplicate row is the multiplication trap:
+    // a join that fans out would double every measure for that agency-year.
+    "INSERT INTO nibrs_agency_completeness VALUES ('NM0010100',2020,12),('NM0010100',2021,12),('NM0010000',2020,12),('NM0010000',2021,12),('NM0010100',2020,12);",
+  ].join("\n"));
+
+  const twoYearQuestion = "show me murders, robberies, and aggravated assaults for albuquerque police department and bernalillo county sheriff by year for 2020 to 2021";
+  const twoYear = buildNibrsStructuredLocalTrendQuery(
+    twoYearQuestion,
+    planFor(["NM0010100", "NM0010000"], ["Albuquerque Police Department", "Bernalillo County Sheriff"], [2020, 2021])
+  );
+  assert.ok(twoYear, "the two-year witness must build");
+
+  // THE SAME query that is executed must be the one the guard passed.
+  assert.equal(
+    deterministicPlanRefusal({ question: twoYearQuestion, source: "nibrs", sql: twoYear!.sql }),
+    null,
+    "the executed query must be the one the pre-execution guard accepted"
+  );
+
+  const rawRows = db.prepare(twoYear!.sql).all() as Record<string, unknown>[];
+  const rows = normalizeConsolidatedDisplayRows(rawRows) as Record<string, number | null>[];
+  // The route additionally normalises city-like columns; this shape returns none, asserted rather
+  // than assumed, so that step is a no-op here.
+  const columns = Object.keys(rows[0] ?? {});
+  for (const cityLike of ["city", "agency", "agency_name", "jurisdiction"]) {
+    assert.ok(!columns.includes(cityLike), `this shape returns no ${cityLike} column`);
+  }
+
+  const byYear = new Map(rows.map((row) => [row.year, row]));
+  assert.deepEqual([...byYear.keys()].sort(), [2020, 2021], "exactly the requested years are returned");
+
+  const y2020 = byYear.get(2020)!;
+  const y2021 = byYear.get(2021)!;
+  const col = (label: string, offense: string) => `${label}_${offense}`;
+  const abq = "albuquerque_police_department";
+  const bcs = "bernalillo_county_sheriff";
+
+  // ALL TWELVE seeded cells, each asserted explicitly: two agencies x three offences x two years.
+  const expected: Array<[string, string, number, number]> = [
+    [abq, "murders", 11, 12], [bcs, "murders", 21, 22],
+    [abq, "aggravated_assaults", 311, 312], [bcs, "aggravated_assaults", 321, 322],
+    [abq, "robberies", 411, 412], [bcs, "robberies", 421, 422],
+  ];
+  for (const [agency, offense, v2020, v2021] of expected) {
+    assert.equal(y2020[col(agency, offense)], v2020, `${agency} ${offense} 2020`);
+    assert.equal(y2021[col(agency, offense)], v2021, `${agency} ${offense} 2021`);
+  }
+
+  // The decoys must not appear anywhere in the result.
+  const everyValue = rows.flatMap((row) => Object.values(row));
+  for (const decoy of [9999, 8888, 7777, 6666]) {
+    assert.ok(!everyValue.includes(decoy),
+      `a decoy figure (${decoy}) reached the answer: wrong agency, offence or year`);
+  }
+  // The duplicate completeness row must not have doubled anything.
+  assert.equal(y2020[col(abq, "murders")], 11, "a duplicate completeness row must not multiply a measure");
+  assert.equal(y2020[col(abq, "robberies")], 411, "including across the offence table");
+
+  /*
+   * DELIVERY. What a reader is actually handed, through the route's own functions.
+   */
+  const delivered = applyResultDisclosures({
+    explanation: twoYear!.explanation,
+    question: twoYearQuestion,
+    sql: twoYear!.sql,
+    rows,
+    tab: "nibrs",
+    resultState: genericResultState({ sql: twoYear!.sql, rows }),
+  });
+  const grain = validateGrain(twoYearQuestion, rows, twoYear!.sql);
+  assert.ok(grain.ok, `the delivered grain must match the request: ${grain.message ?? ""}`);
+  const title = alignTitleYearRange(twoYear!.title, rows);
+
+  // Both agency identities survive to the reader, separately.
+  for (const name of ["Albuquerque Police Department", "Bernalillo County Sheriff"]) {
+    assert.ok(delivered.includes(name), `the delivered explanation must name ${name}`);
+    assert.ok(title.includes(name), `the delivered title must name ${name}`);
+  }
+  // The offences are named, and the source split is disclosed rather than implied.
+  for (const offense of ["murders", "robberies", "aggravated assaults"]) {
+    assert.ok(delivered.toLowerCase().includes(offense), `the explanation must name ${offense}`);
+  }
+  assert.match(delivered, /victim summaries/i, "the victim/offence table split must be disclosed");
+  // The completeness rule that can withhold a year must be stated, not silent.
+  assert.match(delivered, /all 12 months/i, "the 12-month completeness rule must be disclosed");
+
+  /*
+   * WITHHELD YEAR. An agency reporting 11 of 12 months must have that year left blank and
+   * explained — never converted to a zero, and never counted as a complete comparison.
+   */
+  const partialDb = new Database(":memory:");
+  partialDb.exec([
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
+    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+    "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
+    "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100',2020,1,'09A',11),('NM0010100',2021,1,'09A',12),('NM0010000',2020,1,'09A',21),('NM0010000',2021,1,'09A',22);",
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100',2020,1,'13A',311),('NM0010100',2021,1,'13A',312),('NM0010000',2020,1,'13A',321),('NM0010000',2021,1,'13A',322);",
+    "INSERT INTO summary_city_monthly VALUES ('NM0010100',2020,1,'120',411),('NM0010100',2021,1,'120',412),('NM0010000',2020,1,'120',421),('NM0010000',2021,1,'120',422);",
+    // 2021 is one month short for BOTH agencies: the data exists and must still be withheld.
+    "INSERT INTO nibrs_agency_completeness VALUES ('NM0010100',2020,12),('NM0010100',2021,11),('NM0010000',2020,12),('NM0010000',2021,11);",
+  ].join("\n"));
+  const partialRows = partialDb.prepare(twoYear!.sql).all() as Record<string, number | null>[];
+  partialDb.close();
+  const p2021 = new Map(partialRows.map((row) => [row.year, row])).get(2021)!;
+  for (const [agency, offense] of [[abq, "murders"], [bcs, "murders"], [abq, "robberies"], [bcs, "aggravated_assaults"]] as const) {
+    assert.equal(p2021[col(agency, offense)], null,
+      `an incomplete year must be withheld, not published: ${agency} ${offense}`);
+    assert.notEqual(p2021[col(agency, offense)], 0,
+      `and must never be converted to a zero: ${agency} ${offense}`);
+  }
+  const p2020 = new Map(partialRows.map((row) => [row.year, row])).get(2020)!;
+  assert.equal(p2020[col(abq, "murders")], 11, "the complete year beside it is unaffected");
+
+  /*
+   * MISSING MEMBER. An agency with no rows at all must not silently vanish from a comparison the
+   * explanation still describes as covering both.
+   */
+  const missingDb = new Database(":memory:");
+  missingDb.exec([
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
+    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+    "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
+    "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+    // Only the first agency reports anything.
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100',2020,1,'09A',11);",
+    "INSERT INTO nibrs_agency_completeness VALUES ('NM0010100',2020,12),('NM0010000',2020,12);",
+  ].join("\n"));
+  const missingRows = missingDb.prepare(twoYear!.sql).all() as Record<string, number | null>[];
+  missingDb.close();
+  const m2020 = new Map(missingRows.map((row) => [row.year, row])).get(2020)!;
+  assert.equal(m2020[col(abq, "murders")], 11, "the reporting agency still delivers its figure");
+  assert.equal(m2020[col(bcs, "murders")], 0,
+    "an agency that reported a complete year with no matching offence is a real zero");
+  // The absent member must still be a named column rather than disappearing from the shape.
+  assert.ok(Object.keys(m2020).includes(col(bcs, "murders")),
+    "a member with no data must remain a named column, not vanish from the comparison");
+}
+
+/*
+ * THE BUILDER'S OWN BOUNDARIES, THROUGH THE GUARD AND THROUGH DELIVERY.
+ *
+ * The offence identity now lives in a relation's name rather than in a projected label, so the
+ * pre-execution guard accepts what the builder produces without the checker being widened. These
+ * exercise ACTUAL builder output at the edges of the supported family, not a hand-written shape.
+ */
+{
+  const planFor = (oris: string[], labels: string[], years: number[], kinds: string[]) => ({
+    elapsedMs: 0,
+    hasStateComparison: false,
+    places: oris.map((ori, i) => ({
+      contractIndex: i, kind: kinds[i], status: "resolved", label: labels[i],
+      oriYears: years.map((year) => ({ ori, year, population: 500000 })), population: 500000,
+    })),
+  }) as never;
+
+  const guarded = (question: string, plan: unknown) => {
+    const built = buildNibrsStructuredLocalTrendQuery(question, plan as never);
+    if (!built) return null;
+    assert.equal(
+      deterministicPlanRefusal({ question, source: "nibrs", sql: built.sql }),
+      null,
+      `the pre-execution guard must accept the builder's own output: ${question}`
+    );
+    return built;
+  };
+
+  // One agency, several offences.
+  const oneAgency = guarded(
+    "show me murders, robberies and aggravated assaults for albuquerque police department by year for 2020 to 2021",
+    planFor(["NM0010100"], ["Albuquerque Police Department"], [2020, 2021], ["city_police"])
+  );
+  assert.ok(oneAgency, "one agency with several offences is a supported comparison");
+
+  // Several agencies, one offence.
+  const oneOffense = guarded(
+    "compare murders for albuquerque police department and bernalillo county sheriff by year for 2020 to 2021",
+    planFor(["NM0010100", "NM0010000"], ["Albuquerque Police Department", "Bernalillo County Sheriff"], [2020, 2021], ["city_police", "sheriff"])
+  );
+  assert.ok(oneOffense, "several agencies with one offence is a supported comparison");
+
+  // A rate, with its own denominator and completeness rule.
+  const rate = guarded(
+    "compare murder rates per 100k for albuquerque police department and bernalillo county sheriff by year for 2020 to 2021",
+    planFor(["NM0010100", "NM0010000"], ["Albuquerque Police Department", "Bernalillo County Sheriff"], [2020, 2021], ["city_police", "sheriff"])
+  );
+  assert.ok(rate, "the supported rate output must still build");
+  assert.match(rate!.sql, /100000\.0 \*/, "a rate divides by a population denominator");
+  assert.match(rate!.sql, /NULLIF\(MAX\(CASE WHEN pr\.place_key/, "and yields null rather than dividing by zero");
+  assert.match(rate!.sql, /pr\.population/, "using the year-specific population the reporting CTE carries");
+
+  // Boundaries the builder refuses, unchanged by this work.
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery(
+      "murders by month for albuquerque police department and bernalillo county sheriff in 2020",
+      planFor(["NM0010100", "NM0010000"], ["A", "B"], [2020], ["city_police", "sheriff"])
+    ),
+    null,
+    "month breakdowns stay on the validated model path"
+  );
+  assert.equal(
+    buildNibrsStructuredLocalTrendQuery(
+      "how many murders in albuquerque police department in 2020",
+      planFor(["NM0010100"], ["Albuquerque Police Department"], [2020], ["city_police"])
+    ),
+    null,
+    "a single agency with a single offence count is not this family"
+  );
+
+  /*
+   * UNAVAILABLE REPORTING IS NULL AND EXPLAINED — and is NOT the covered zero above.
+   * The earlier fixture gave the silent agency a complete-year completeness row, which makes its
+   * zero real. Here the agency has no completeness record at all: nothing establishes that it
+   * reported, so the answer must withhold rather than publish a zero.
+   */
+  const q = "compare murders for albuquerque police department and bernalillo county sheriff by year for 2020 to 2021";
+  const built = oneOffense!;
+  const db = new Database(":memory:");
+  db.exec([
+    "CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT);",
+    "CREATE TABLE summary_victim_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, victim_count INTEGER);",
+    "CREATE TABLE summary_city_monthly (ori TEXT, year INTEGER, month INTEGER, ucr_offense_code TEXT, offense_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+    "CREATE INDEX idx_svcm_ori ON summary_victim_city_monthly(ori);",
+    "CREATE INDEX idx_scm_ori_year ON summary_city_monthly(ori, year);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+    "INSERT INTO summary_victim_city_monthly VALUES ('NM0010100',2020,1,'09A',11),('NM0010100',2021,1,'09A',12);",
+    // Only the first agency has any completeness record. The second is unestablished, not empty.
+    "INSERT INTO nibrs_agency_completeness VALUES ('NM0010100',2020,12),('NM0010100',2021,12);",
+  ].join("\n"));
+  const rows = normalizeConsolidatedDisplayRows(db.prepare(built.sql).all() as Record<string, unknown>[]) as Record<string, number | null>[];
+  db.close();
+
+  const y2020 = new Map(rows.map((r) => [r.year, r])).get(2020)!;
+  assert.equal(y2020.albuquerque_police_department_murders, 11, "the reporting agency delivers its figure");
+  assert.equal(y2020.bernalillo_county_sheriff_murders, null,
+    "an agency with NO reporting record must be withheld, not published as zero");
+  assert.notEqual(y2020.bernalillo_county_sheriff_murders, 0,
+    "and must never be converted to a zero");
+
+  // The incomplete counterpart goes through delivery too, not just raw rows.
+  const delivered = applyResultDisclosures({
+    explanation: built.explanation, question: q, sql: built.sql, rows, tab: "nibrs",
+    resultState: genericResultState({ sql: built.sql, rows }),
+  });
+  const title = alignTitleYearRange(built.title, rows);
+  for (const name of ["Albuquerque Police Department", "Bernalillo County Sheriff"]) {
+    assert.ok(delivered.includes(name), `the withheld agency must still be named: ${name}`);
+    assert.ok(title.includes(name), `and named in the title: ${name}`);
+  }
+  assert.match(delivered, /all 12 months/i,
+    "and the rule that withheld it must be stated in the delivered explanation");
+  assert.ok(validateGrain(q, rows, built.sql).ok, "the incomplete counterpart still matches the requested grain");
+}
+
+/*
+ * A NAMED AGENCY'S DEMOGRAPHIC ANSWER, END TO END.
+ *
+ * The saved GC-084 response was refused in 2 ms because the request contained the word `county` —
+ * inside the agency's own name. The whole downstream path already worked: the contract resolved it
+ * as an agency, and this builder produces a complete answer. Only the misclassification stood in
+ * the way, which a city agency proved by being answered all along.
+ *
+ * These drive actual builder output through the pre-execution guard, a schema-faithful fixture and
+ * the production delivery functions, and assert the figures, the agency identity, the period, the
+ * explanation and the title. The decoys are the substitutions this shape invites.
+ */
+{
+  const question = "show me murders by offender age for worcester county, md sheriff's office from 2022 to 2025";
+  const years = [2022, 2023, 2024, 2025];
+  const sheriffPlan = {
+    elapsedMs: 0, hasStateComparison: false,
+    places: [{
+      contractIndex: 0, kind: "sheriff", status: "resolved", label: "Worcester County Sheriff's Office",
+      oriYears: years.map((year) => ({ ori: "MD0240000", year, population: 52000 })), population: 52000,
+    }],
+  } as never;
+
+  const built = buildNibrsLocalDemographicQuery(question, sheriffPlan);
+  assert.ok(built, "a named sheriff agency's demographic request must build");
+  assert.equal(
+    deterministicPlanRefusal({ question, source: "nibrs", sql: built!.sql }),
+    null,
+    "and the pre-execution guard must accept the builder's own output"
+  );
+
+  const db = new Database(":memory:");
+  db.exec([
+    "CREATE TABLE summary_offender_demographics (ori TEXT, year INTEGER, ucr_offense_code TEXT, age_group TEXT, offender_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+    "CREATE INDEX idx_sod_new_ori_year ON summary_offender_demographics(ori, year);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+    // The requested agency: a distinct figure per age band.
+    "INSERT INTO summary_offender_demographics VALUES ('MD0240000',2022,'09A','25-34',31),('MD0240000',2023,'09A','25-34',32),('MD0240000',2022,'09A','18-24',21),('MD0240000',2023,'09A','35-44',43);",
+    // DECOYS: a different agency, a different offence, a year outside the request, and a year the
+    // agency did not report completely.
+    "INSERT INTO summary_offender_demographics VALUES ('MD0240300',2022,'09A','25-34',9999);",
+    "INSERT INTO summary_offender_demographics VALUES ('MD0240000',2022,'120','25-34',8888);",
+    "INSERT INTO summary_offender_demographics VALUES ('MD0240000',2019,'09A','25-34',7777);",
+    "INSERT INTO summary_offender_demographics VALUES ('MD0240000',2024,'09A','25-34',6666);",
+    // 2024 is deliberately incomplete, so its rows must be excluded rather than counted.
+    "INSERT INTO nibrs_agency_completeness VALUES ('MD0240000',2022,12),('MD0240000',2023,12),('MD0240000',2024,11),('MD0240300',2022,12);",
+  ].join("\n"));
+  const rows = normalizeConsolidatedDisplayRows(db.prepare(built!.sql).all() as Record<string, unknown>[]) as Record<string, unknown>[];
+  db.close();
+
+  const byBand = new Map(rows.map((r) => [String(r.age_group), Number(r.offenders)]));
+  assert.equal(byBand.get("25-34"), 63, "the requested agency's complete years are summed (31 + 32)");
+  assert.equal(byBand.get("18-24"), 21, "each age band keeps its own figure");
+  assert.equal(byBand.get("35-44"), 43);
+  for (const decoy of [9999, 8888, 7777, 6666]) {
+    assert.ok(![...byBand.values()].includes(decoy),
+      `a decoy reached the answer (${decoy}): wrong agency, offence, year or an incomplete year`);
+  }
+
+  const delivered = applyResultDisclosures({
+    explanation: built!.explanation, question, sql: built!.sql, rows, tab: "nibrs",
+    resultState: genericResultState({ sql: built!.sql, rows }),
+  });
+  const title = alignTitleYearRange(built!.title, rows);
+  assert.ok(delivered.includes("Worcester County Sheriff's Office"),
+    "the delivered explanation must name the agency actually queried");
+  assert.ok(title.includes("Worcester County Sheriff's Office"),
+    "and so must the title");
+  assert.ok(!/countywide|all agencies/i.test(delivered),
+    "and must never describe one agency's figures as a countywide total");
+  /*
+   * PERIOD AND REPORTING QUALIFICATION, as they actually are.
+   *
+   * The answer states the requested period and the completeness rule that governs which years can
+   * contribute. It does NOT enumerate the contributing years, nor name 2024 as omitted — asserting
+   * that would claim a disclosure the product does not make. Pinned as the existing qualified-period
+   * behaviour so a future change to it is deliberate.
+   */
+  assert.match(delivered, /for the requested years/i,
+    "the delivered explanation states the requested period");
+  assert.match(delivered, /complete 12-month reporting years/i,
+    "and the reporting qualification that decides which years contribute");
+  assert.ok(!/2024/.test(delivered),
+    "existing behaviour does not identify the omitted year; this pins that, it does not endorse it");
+  assert.match(built!.guardrail, /deterministic-nibrs-local-demographic/,
+    "the answer is delivered by the deterministic demographic path");
+
+  // Varied names, so nothing passes by recognising this one. The second is EXECUTED and DELIVERED
+  // as well as built, so the varied-name claim is not merely a construction check.
+  for (const [place, ori, kind, execute] of [
+    ["bernalillo county sheriff", "NM0010000", "sheriff", true],
+    ["nassau county police department", "NY0300000", "sheriff", false],
+    ["pocomoke city, md police department", "MD0240300", "city_police", false],
+  ] as const) {
+    const q2 = `show me robberies by offender age for ${place} from 2022 to 2023`;
+    const b2 = buildNibrsLocalDemographicQuery(q2, {
+      elapsedMs: 0, hasStateComparison: false,
+      places: [{
+        contractIndex: 0, kind, status: "resolved", label: place,
+        oriYears: [2022, 2023].map((year) => ({ ori, year, population: 40000 })), population: 40000,
+      }],
+    } as never);
+    assert.ok(b2, `a named agency must build regardless of its name: ${place}`);
+    assert.equal(
+      deterministicPlanRefusal({ question: q2, source: "nibrs", sql: b2!.sql }),
+      null,
+      `and be accepted by the guard: ${place}`
+    );
+    if (!execute) continue;
+
+    const vdb = new Database(":memory:");
+    vdb.exec([
+      "CREATE TABLE summary_offender_demographics (ori TEXT, year INTEGER, ucr_offense_code TEXT, age_group TEXT, offender_count INTEGER);",
+      "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+      "CREATE INDEX idx_sod_new_ori_year ON summary_offender_demographics(ori, year);",
+      "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+      `INSERT INTO summary_offender_demographics VALUES ('${ori}',2022,'120','18-24',17),('${ori}',2023,'120','18-24',18),('${ori}',2022,'120','45-54',55);`,
+      `INSERT INTO summary_offender_demographics VALUES ('ZZ9999999',2022,'120','18-24',4242);`,
+      `INSERT INTO nibrs_agency_completeness VALUES ('${ori}',2022,12),('${ori}',2023,12),('ZZ9999999',2022,12);`,
+    ].join("\n"));
+    const vrows = normalizeConsolidatedDisplayRows(vdb.prepare(b2!.sql).all() as Record<string, unknown>[]) as Record<string, unknown>[];
+    vdb.close();
+    const vBands = new Map(vrows.map((r) => [String(r.age_group), Number(r.offenders)]));
+    assert.equal(vBands.get("18-24"), 35, `a second named agency delivers its own figures: ${place}`);
+    assert.equal(vBands.get("45-54"), 55);
+    assert.ok(![...vBands.values()].includes(4242), "another agency's rows must not reach it");
+    const vDelivered = applyResultDisclosures({
+      explanation: b2!.explanation, question: q2, sql: b2!.sql, rows: vrows, tab: "nibrs",
+      resultState: genericResultState({ sql: b2!.sql, rows: vrows }),
+    });
+    assert.ok(vDelivered.toLowerCase().includes(place.split(",")[0].toLowerCase()),
+      `and is named in its delivered explanation: ${place}`);
+  }
+
+  /*
+   * UNAVAILABLE REPORTING IS NOT A ZERO.
+   *
+   * An agency with no completeness record contributes no rows at all, because the builder's
+   * completeness predicate requires a complete 12-month year. The answer must therefore be EMPTY —
+   * never a zero, and never a band showing 0 as if it had been measured.
+   */
+  const unavailableDb = new Database(":memory:");
+  unavailableDb.exec([
+    "CREATE TABLE summary_offender_demographics (ori TEXT, year INTEGER, ucr_offense_code TEXT, age_group TEXT, offender_count INTEGER);",
+    "CREATE TABLE nibrs_agency_completeness (ori TEXT, year INTEGER, months_reported INTEGER);",
+    "CREATE INDEX idx_sod_new_ori_year ON summary_offender_demographics(ori, year);",
+    "CREATE INDEX idx_nac_ori_year ON nibrs_agency_completeness(ori, year);",
+    // The agency has demographic rows but NO completeness record: reporting is unestablished.
+    "INSERT INTO summary_offender_demographics VALUES ('MD0240000',2022,'09A','25-34',31);",
+  ].join("\n"));
+  const unavailableRows = unavailableDb.prepare(built!.sql).all() as Record<string, unknown>[];
+  unavailableDb.close();
+  assert.equal(unavailableRows.length, 0,
+    "unestablished reporting yields no rows; it must never be presented as a measured zero");
+  assert.ok(!unavailableRows.some((r) => Number(r.offenders) === 0),
+    "and no band may appear with a zero it did not earn");
+
+  // The shapes that must NOT be answered here, so a removed refusal is not mistaken for delivery.
+  assert.equal(
+    buildNibrsLocalDemographicQuery(
+      "show me murders by offender age for worcester county, md from 2022 to 2023",
+      sheriffPlan
+    ),
+    null,
+    "a bare county name is not an agency request and must not be answered by this builder"
+  );
+  /*
+   * TWO NAMED AGENCIES, with ONE RECOGNISED OFFENCE so the boundary is isolated. The earlier form
+   * used "violent crimes", which then mapped to no offence codes (the plural is recognised since the
+   * GC-084 batch) and would have declined on its own — proving nothing about the two-agency limit.
+   *
+   * The boundary itself changed on 2026-09-26 (Codex GC-084/GC-098 design ruling): this used to
+   * assert a two-agency request is declined, so one agency's figures could never answer for both.
+   * Offender age-group counts for 2-5 resolver-bound agencies are now built with one declared
+   * column per agency, so the guarantee is asserted directly: both agencies, each its own column,
+   * never one agency answering for both. Everything outside that bound is still declined
+   * (scripts/test-owned-demographic-comparison.ts).
+   */
+  const twoAgencyQ = "show me murders by offender age for worcester county, md sheriff's office and pocomoke city, md police department";
+  const twoAgencyContract = buildQueryContract(twoAgencyQ, "nibrs");
+  assert.ok(twoAgencyContract, "the two-agency contract must build");
+  assert.equal(twoAgencyContract!.metric.offenses.length, 1,
+    "the offence is recognised, so only the agency count can be what declines this");
+  assert.equal(twoAgencyContract!.geographies.length, 2, "and two agencies are resolved");
+  const twoAgency = buildNibrsLocalDemographicQuery(twoAgencyQ, {
+    elapsedMs: 0, hasStateComparison: false,
+    places: [
+      { contractIndex: 0, kind: "sheriff", status: "resolved", label: "Worcester County Sheriff's Office",
+        oriYears: years.map((year) => ({ ori: "MD0240000", year, population: 52000 })), population: 52000 },
+      { contractIndex: 1, kind: "city_police", status: "resolved", label: "Pocomoke City Police Department",
+        oriYears: years.map((year) => ({ ori: "MD0240300", year, population: 4000 })), population: 4000 },
+    ],
+  } as never);
+  assert.ok(twoAgency, "two resolver-bound agencies get the application-built answer");
+  assert.deepEqual(twoAgency!.memberColumns?.map((member) => [member.contractIndex, member.placeLabel]),
+    [[0, "Worcester County Sheriff's Office"], [1, "Pocomoke City Police Department"]],
+    "one declared column per agency, never one agency answering for both");
+  assert.ok(twoAgency!.sql.includes("'MD0240000'") && twoAgency!.sql.includes("'MD0240300'"),
+    "both agencies' own ORIs are in the statement");
 }
 
 console.log("nibrs deterministic query tests passed");

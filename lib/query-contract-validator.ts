@@ -1,7 +1,16 @@
 import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
+import {
+  cteReferences, escapeRegExp, flattenParens, splitCtes, stripSqlComments,
+  tablesWithUnrestrictedYear, topLevelFilterRegions,
+} from "./sql-restriction";
+import { analyzeSql } from "./sql-lineage";
+import { tableSemantics } from "./table-semantics";
 import { currentCalendarYear } from "./time-conventions";
 import type { RoutingLogMeta } from "./routing-log-meta";
 import { validateSourceCapabilities, type SourceCapabilityFinding } from "./source-capabilities";
+import { findHistoricalRankingIssues } from "./historical-ranking-request";
+import { findNibrsClearanceRankingIssues } from "./nibrs-clearance-ranking-request";
+import { DIMENSION_COLUMNS, evaluateStructuralSemantics } from "./structural-semantics";
 import { observeHistoricalClearanceGrain, type ClearanceGrainObservation } from "./historical-clearance-grain";
 import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
 import { classifyCapabilityRule } from "./capability-decision";
@@ -54,6 +63,8 @@ const CONTRACT_SECOND_FAILURE_MESSAGE =
 const BLOCK_MESSAGES: Record<string, string> = {
   "unsupported-sub-city-geography":
     SUB_CITY_GEOGRAPHY_MESSAGE,
+  "vehicle-burglary-unsupported":
+    "Thefts from vehicles are tracked separately in NIBRS as theft from a motor vehicle. This source only carries the broader burglary category, so it cannot answer that question. The NIBRS tab can.",
   "unsupported-court-policy-topic":
     "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
   "demographic-rate-unsupported":
@@ -139,7 +150,12 @@ function isSingleYearPointContract(question: string, contract: QueryContract): b
   const { startYear, endYear } = contract.time;
   if (startYear === null || endYear === null || startYear !== endYear) return false;
   if (contract.followup.operation === "chart_only" || contract.followup.operation === "metadata") return false;
-  if (hasOpenEndedOrRangeTimeIntent(question)) return false;
+  // An amended request carries its own series form. Its question text is the reader's fragment, so
+  // reading "rolling" from it would find nothing and demand a single-year filter that a rolling
+  // 12-month series -- which needs the preceding year's months -- cannot satisfy.
+  if (contract.request) {
+    if (contract.request.window === "rolling_12") return false;
+  } else if (hasOpenEndedOrRangeTimeIntent(question)) return false;
   return contract.metric.unit !== "unknown" || contract.metric.topic !== "unknown";
 }
 
@@ -188,16 +204,64 @@ function hasBroadYearPredicateForSingleYear(sql: string, year: number): boolean 
   return false;
 }
 
-function singleYearTemporalScopeIssue(question: string, contract: QueryContract, sql: string): string | null {
+/**
+ * The metric tables this statement reads, named by the catalog rather than by column guesswork.
+ *
+ * These are the relations whose rows become the number. A population, identity or crosswalk table
+ * may legitimately be pinned to a different period -- or to none -- without saying anything about
+ * the measure, which is exactly how GC-054's `agency_population WHERE year = 2026` came to stand in
+ * for a numerator that had no year predicate at all.
+ */
+function metricTablesOf(sql: string, source: QueryContractSource) {
+  return analyzeSql(sql).baseTables
+    .map((table) => ({ table, entry: tableSemantics(source, table) }))
+    .filter(({ entry }) => entry?.role === "metric")
+    .map(({ table, entry }) => ({ table, periodFrom: entry!.periodFrom }));
+}
+
+function singleYearTemporalScopeIssue(
+  question: string, contract: QueryContract, sql: string, source: QueryContractSource
+): string | null {
   if (!isSingleYearPointContract(question, contract)) return null;
   const year = contract.time.startYear;
   if (year === null) return null;
 
-  if (hasBroadYearPredicateForSingleYear(sql, year) || !hasRequestedSingleYearPredicate(sql, year)) {
+  /*
+   * THE YEAR HAS TO REACH THE ROWS THAT BECOME THE NUMBER.
+   *
+   * Both original tests searched the WHOLE statement, and both were wrong in the same direction and
+   * for the same reason. `hasRequestedSingleYearPredicate` accepted GC-054 because a population CTE
+   * said `year = 2026` while the metric table had no year predicate at all. Its twin,
+   * `hasBroadYearPredicateForSingleYear`, would refuse a correctly pinned numerator because some
+   * unrelated support table spanned a range -- a support table's period overriding a proved metric
+   * period, which the acceptance criteria forbid.
+   *
+   * So when the catalog knows which tables carry the measure, BOTH are replaced by one question
+   * asked per alias, in each scope that reads that alias into a number: is this alias's own year
+   * pinned to the requested year? A range, a broader `IN`, or nothing at all all fail it, so the
+   * broad case needs no separate veto.
+   *
+   * When the catalog knows no metric table, the original whole-statement pair still decides, which
+   * is the behaviour every non-catalogued source had before.
+   */
+  const metricTables = metricTablesOf(sql, source);
+  const unrestrictedMetric = metricTables.length > 0
+    ? tablesWithUnrestrictedYear(sql, year, metricTables, DIMENSION_COLUMNS)
+    : [];
+  const unprovenYear = metricTables.length > 0
+    ? unrestrictedMetric.length > 0
+    : hasBroadYearPredicateForSingleYear(sql, year) || !hasRequestedSingleYearPredicate(sql, year);
+
+  if (unprovenYear) {
     const partial = contract.time.partialYear
       ? ` For Current Trends partial-year ${year} queries, use year = ${year} plus the latest available month cutoff; do not include prior years in the numerator.`
       : "";
-    return `[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for ${year} only, but the SQL does not keep the metric/count numerator limited to that single year. Rewrite the SQL so fact-table year/data_year predicates use = ${year} or BETWEEN ${year} AND ${year}. Do not use year < ${year}, year <= ${year}, year >= an older year, or BETWEEN an older year AND ${year} unless the user explicitly asks for a trend, rolling window, or multi-year comparison.${partial}]`;
+    // Naming the open table is what makes the retry actionable: without it the instruction reads as
+    // "add a year predicate" to a statement that visibly already has one, somewhere else.
+    const named = unrestrictedMetric.length > 0
+      ? ` No year predicate restricts ${unrestrictedMetric.join(", ")}; a year filter on a population or support table does not limit the measure.`
+      : "";
+    return `[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for ${year} only, but the SQL does not keep the metric/count numerator limited to that single year.${named} Rewrite the SQL so fact-table year/data_year predicates use = ${year} or BETWEEN ${year} AND ${year}. Do not use year < ${year}, year <= ${year}, year >= an older year, or BETWEEN an older year AND ${year} unless the user explicitly asks for a trend, rolling window, or multi-year comparison.${partial}]`;
   }
 
   return null;
@@ -337,65 +401,7 @@ export function hasLiteralOriTargetJoin(sql: string): boolean {
  */
 const ORI_COLUMN = "(?:[A-Za-z_]\\w*\\.)?ori";
 
-/** Comments cannot restrict anything, so they are not evidence of anything either. */
-function stripSqlComments(sql: string): string {
-  return sql.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
-}
 
-/**
- * The stretches of a statement that actually filter rows: each `WHERE` and each join `ON`,
- * taken at the top level only.
- *
- * Top level matters. A `WHERE` inside a subquery restricts that subquery, not the rows the
- * statement returns, and a comparison in `SELECT`, `CASE`, `GROUP BY` or `ORDER BY` restricts
- * nothing at all -- `SELECT ha.ori = 'MD0030100' AS is_selected` is a boolean column, and it
- * was passing as though it were a filter.
- */
-function topLevelFilterRegions(sql: string): string[] {
-  const terminator = /^(?:group\s+by|order\s+by|having|limit|window|union|intersect|except|join|inner|left|right|full|cross|on|where)\b/i;
-  const regions: string[] = [];
-  let depth = 0;
-  let i = 0;
-  while (i < sql.length) {
-    const char = sql[i];
-    if (char === "'") {
-      const end = sql.indexOf("'", i + 1);
-      i = end === -1 ? sql.length : end + 1;
-      continue;
-    }
-    if (char === "(") { depth += 1; i += 1; continue; }
-    if (char === ")") { depth = Math.max(0, depth - 1); i += 1; continue; }
-    if (depth === 0) {
-      const rest = sql.slice(i);
-      const opener = /^(where|on)\b/i.exec(rest);
-      if (opener) {
-        let j = i + opener[0].length;
-        let innerDepth = 0;
-        const start = j;
-        while (j < sql.length) {
-          const c = sql[j];
-          if (c === "'") {
-            const end = sql.indexOf("'", j + 1);
-            j = end === -1 ? sql.length : end + 1;
-            continue;
-          }
-          if (c === "(") { innerDepth += 1; j += 1; continue; }
-          if (c === ")") {
-            if (innerDepth === 0) break;
-            innerDepth -= 1; j += 1; continue;
-          }
-          if (innerDepth === 0 && terminator.test(sql.slice(j))) break;
-          j += 1;
-        }
-        regions.push(sql.slice(start, j));
-        i = j;
-        continue;
-      }
-    }
-    i += 1;
-  }
-  return regions;
-}
 
 /**
  * Does this SQL actually restrict returned rows to one agency's ORI?
@@ -463,44 +469,7 @@ function statementPinsOri(
 }
 
 /** One `name AS ( body )` entry from a leading `WITH` clause. */
-type CommonTableExpression = { name: string; body: string };
 
-/**
- * The CTEs a statement defines, and the query that follows them.
- *
- * Returns nothing when the statement does not open with `WITH`, so ordinary queries take the
- * direct path and pay nothing for this.
- */
-function splitCtes(sql: string): { ctes: CommonTableExpression[]; outer: string } | null {
-  const head = /^\s*WITH\s+(RECURSIVE\s+)?/i.exec(sql);
-  if (!head) return null;
-  const ctes: CommonTableExpression[] = [];
-  let i = head[0].length;
-  while (i < sql.length) {
-    const entry = /^\s*("?)([A-Za-z_]\w*)\1\s+AS\s*(?:MATERIALIZED\s+|NOT\s+MATERIALIZED\s+)?\(/i.exec(sql.slice(i));
-    if (!entry) break;
-    let depth = 1;
-    let j = i + entry[0].length;
-    const bodyStart = j;
-    while (j < sql.length && depth > 0) {
-      const char = sql[j];
-      if (char === "'") {
-        const end = sql.indexOf("'", j + 1);
-        j = end === -1 ? sql.length : end + 1;
-        continue;
-      }
-      if (char === "(") depth += 1;
-      if (char === ")") depth -= 1;
-      j += 1;
-    }
-    ctes.push({ name: entry[2], body: sql.slice(bodyStart, j - 1) });
-    i = j;
-    const comma = /^\s*,/.exec(sql.slice(i));
-    if (!comma) break;
-    i += comma[0].length;
-  }
-  return ctes.length > 0 ? { ctes, outer: sql.slice(i) } : null;
-}
 
 /**
  * Is the required ORI pinned inside a CTE that the outer query actually joins on?
@@ -533,37 +502,7 @@ function cteTargetsOri(
   return false;
 }
 
-/** Every name the outer query refers to this CTE by -- its own name, and any alias. */
-function cteReferences(outer: string, name: string): string[] {
-  const found = new Set<string>();
-  const pattern = new RegExp(`\\b(?:FROM|JOIN)\\s+${escapeRegExp(name)}\\b(?:\\s+AS)?(?:\\s+([A-Za-z_]\\w*))?`, "gi");
-  const RESERVED = /^(on|where|group|order|limit|left|right|inner|full|cross|join|union|having|window|using)$/i;
-  for (const match of outer.matchAll(pattern)) {
-    found.add(name);
-    if (match[1] && !RESERVED.test(match[1])) found.add(match[1]);
-  }
-  return [...found];
-}
 
-/** The text outside every parenthesised group, which is where a top-level filter lives. */
-function flattenParens(text: string): string {
-  let depth = 0;
-  let out = "";
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-    if (char === "'") {
-      const end = text.indexOf("'", i + 1);
-      const literal = text.slice(i, end === -1 ? text.length : end + 1);
-      if (depth === 0) out += literal;
-      i = (end === -1 ? text.length : end);
-      continue;
-    }
-    if (char === "(") { depth += 1; out += " "; continue; }
-    if (char === ")") { depth = Math.max(0, depth - 1); out += " "; continue; }
-    if (depth === 0) out += char;
-  }
-  return out;
-}
 
 function requiredOriBlockMessage(ori: string): string {
   return `This question was resolved to one specific county law enforcement agency (ORI ${ori}), `
@@ -571,9 +510,6 @@ function requiredOriBlockMessage(ori: string): string {
     + `agency would report the wrong department's figures.`;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function normalizeSqlLiteral(value: string, template: string): string {
   const compact = value.replace(/\s+/g, " ").trim();
@@ -637,10 +573,20 @@ export function validateQueryContractSql(opts: {
    * attributed to whichever one the database happened to return.
    */
   requiredOri?: string | null;
+  /**
+   * The effective request, when the route has already built it by amendment
+   * (lib/current-followup-amendment.ts). Every check below still runs, against this contract
+   * instead of one rebuilt from `question` -- which, for an amendment, is the reader's fragment
+   * ("now detroit") and says nothing about the measure they established earlier. A contract for a
+   * different source is ignored rather than trusted.
+   */
+  contract?: QueryContract | null;
 }): QueryContractSqlValidation {
   const requiredOri = (opts.requiredOri || "").trim();
   const missingRequiredOri = Boolean(requiredOri) && !sqlTargetsOri(opts.sql, requiredOri);
-  const contract = buildQueryContract(opts.question, opts.source, opts.routingMeta);
+  const contract = opts.contract && opts.contract.source === opts.source
+    ? opts.contract
+    : buildQueryContract(opts.question, opts.source, opts.routingMeta);
   if (!contract) {
     return {
       sql: opts.sql,
@@ -713,7 +659,7 @@ export function validateQueryContractSql(opts: {
     enforced.push("contract-state-scope-local-filter");
   }
 
-  const temporalIssue = singleYearTemporalScopeIssue(opts.question, contract, sql);
+  const temporalIssue = singleYearTemporalScopeIssue(opts.question, contract, sql, opts.source);
   if (temporalIssue) {
     warnings.push("contract-single-year-temporal-scope");
     retryIssues.push(temporalIssue);
@@ -745,6 +691,40 @@ export function validateQueryContractSql(opts: {
     retryIssues.push(trendFollowupIssue);
     enforced.push("contract-trend-followup-complete-years");
   }
+  // Structural semantics: does the chosen table's row level, measure and time grain actually match
+  // what was requested? This runs alongside the capability rules rather than replacing them --
+  // several of those rules already catch cases this would, and they carry source-specific wording
+  // worth keeping. What this adds is the property none of them model: the entity a returned ROW
+  // represents. Its severity is decided by the rule itself, not by a name in a set, so a new table
+  // in the catalog is enforced the day it is added.
+  // Integration 2026-09-30: a structural block's message is generic ("... comes from `table`, which
+  // produces national-level rows"), so it is delivered only when no source-specific block fired. It is
+  // collected here and appended after every other block reason below -- the capability messages, the
+  // required-ORI message and the authored clearance-grain decline keep the order they have on dev, and
+  // the structural finding is still recorded in `enforced` either way.
+  const structuralBlockReasons: string[] = [];
+  for (const finding of evaluateStructuralSemantics({
+    question: opts.question,
+    source: opts.source,
+    contract,
+    sql,
+  })) {
+    warnings.push(finding.ruleId);   // ruleIds already begin with `structural-`
+    if (finding.severity === "block") {
+      structuralBlockReasons.push(finding.message);
+    } else {
+      // A finding may carry its whole instruction. The row-level advice below is right for a
+      // wrong-table finding and wrong for one about a single added filter on the correct table --
+      // there it would ask the model for an unrelated source change.
+      retryIssues.push(finding.selfContainedInstruction
+        ? `[SYSTEM: Query contract violation (${finding.ruleId}). ${finding.message}]`
+        : `[SYSTEM: Query contract violation (${finding.ruleId}). ${finding.message} ` +
+          `Rewrite the SQL against a table whose rows are ${finding.requestedLevel}-level, or say plainly ` +
+          "that this source cannot answer the question. Do not substitute a different geography or measure.]");
+    }
+    enforced.push(finding.ruleId);
+  }
+
   const capabilityFindings = validateSourceCapabilities({
     question: opts.question,
     source: opts.source,
@@ -783,6 +763,36 @@ export function validateQueryContractSql(opts: {
     }
   }
 
+  /*
+   * A Historical ranking must answer the request it was given.
+   *
+   * These run here rather than as capability rules because they compare the REQUEST with the SQL
+   * rather than checking which tables it reads, which is what a capability rule is for. They are
+   * retry issues, not blocks: the list size and the population filter are both things the model
+   * can correct in a rewrite. See lib/historical-ranking-request.ts for why only these two.
+   */
+  if (opts.source === "historical") {
+    for (const issue of findHistoricalRankingIssues({ question: opts.question, contract, sql })) {
+      warnings.push(`capability-${issue.ruleId}`);
+      retryIssues.push(issue.message);
+      enforced.push(issue.ruleId);
+    }
+  }
+  /*
+   * The same question, asked of a NIBRS clearance ranking: did the request state a minimum count?
+   * It ships with the clearance-refinement context repair because that repair is what lets
+   * GC-004's saved statement reach this point at all, and that statement invents a cutoff of 100
+   * offenses. See lib/nibrs-clearance-ranking-request.ts for why it is one question and not a
+   * revived eligibility checker.
+   */
+  if (opts.source === "nibrs") {
+    for (const issue of findNibrsClearanceRankingIssues({ question: opts.question, contract, sql })) {
+      warnings.push(`capability-${issue.ruleId}`);
+      retryIssues.push(issue.message);
+      enforced.push(issue.ruleId);
+    }
+  }
+
   if (missingRequiredOri) {
     blockReasons.push(requiredOriBlockMessage(requiredOri));
     enforced.push("contract-required-county-ori");
@@ -802,6 +812,7 @@ export function validateQueryContractSql(opts: {
     blockReasons.push(clearanceGrainObservation.message);
     enforced.push(clearanceGrainObservation.reason);
   }
+  blockReasons.push(...structuralBlockReasons);
 
   const uniqueBlockReasons = [...new Set(blockReasons)];
   return {

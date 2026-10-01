@@ -85,8 +85,8 @@ Use these tables to resolve agency names to ORIs before filtering incidents. The
 - Without deterministic guidance, alias_key is uppercase, punctuation-stripped text. Use an exact state-qualified key (for example, state = 'CA' AND alias_key = 'OAKLAND'), never a broad LIKE search. If the exact identity is uncertain, return sql as null instead of guessing or silently omitting a requested place.
 - agency_type in these lookup tables is normalized from ORI/state history. Use it to distinguish City vs County agencies, but remember County means a county law-enforcement agency, not countywide geography.
 
-### agency_county_crosswalk (countywide geography)
-Use this table when the user asks about a geographic county/parish/borough rather than one county sheriff or police agency.
+### agency_county_crosswalk (county breakdowns and rankings)
+A question about one named county is answered by the application itself (the county sheriff's agency by default, or the countywide total when asked for), so you will not be asked for it. Use this table for county-level breakdowns and rankings ("by county", "which counties").
 - agency_county_crosswalk: ori (7-char legacy ORI), ori9 (9-char ORI when available), agency_name, state, county_fips, county_name, county_key
 - county_key is uppercase bare county/parish name without suffix: "Cook County" -> 'COOK', "Jefferson Parish" -> 'JEFFERSON', "Santa Clara County" -> 'SANTA CLARA'.
 - Join SHR incidents with \`i.ori = ac.ori OR substr(i.ori, 1, 7) = ac.ori\`. Do not derive ori9 yourself; rows such as Indianapolis have non-obvious mappings.
@@ -121,6 +121,7 @@ One row per victim. JOINs to incidents on incident_id.
 4. **Year filtering** — Data spans 1976–${maxYear}. If the user asks for a trend "per year" or "by year" without specifying a range, include ALL available years (1976–${maxYear}) to show the full historical picture. Only default to recent years if the user asks about "recent" or "current" data.
 4b. **Data recency cutoff** — For MONTHLY queries, include data through ${DATA_CUTOFF.label}: (i.year < ${DATA_CUTOFF.year} OR (i.year = ${DATA_CUTOFF.year} AND i.month <= ${DATA_CUTOFF.month})). This ALWAYS includes partial current-year data — do NOT stop at December of the previous year. When the user says "since [year]", "to present", "to date", or specifies no end date, include data through ${DATA_CUTOFF.label}. For ANNUAL queries, cap at year <= ${DATA_CUTOFF.year - 1} unless the user explicitly asks for ${DATA_CUTOFF.year}. Recent months are often incomplete — note this in your explanation.
 5. **DEFAULT TO VICTIM COUNTS.** Always JOIN to the victims table and count victims unless the user specifically asks for incidents. One incident can have multiple victims — victim counts are the standard measure for homicide data. Use COUNT(*) on the joined result, not COUNT(*) on incidents alone.
+   - **Homicides vs murders.** "Homicide(s)" means ALL homicide victims, including negligent manslaughter; the application answers those requests itself, so you will not be asked for them. "Murder(s)" means homicide_type = 'Murder'. A request that names neither keeps the murder default.
 6. **Offender demographics** — off_race, off_sex, off_age_num are on the incidents table (not victims). NULL means unknown offender.
 7. **Victim demographics** — race, sex, age_num are on the victims table.
 8. **State queries** — Use state (2-letter code) or state_name (full name). The user may use either.
@@ -142,7 +143,7 @@ One row per victim. JOINs to incidents on incident_id.
    - **University / college / campus agencies** are specific agency queries, not surrounding-city queries. Resolve them through \`shr_agency_alias\` by searching alias/canonical agency names for campus terms plus the place, then filter incidents by ORI. Do NOT substitute the city police department and do NOT require agency_type = 'City'; campus agency_type may be Other/blank or inconsistent. If the resolved campus ORI has no rows, say the campus agency has no SHR homicide records in this database rather than returning citywide data.
    - **Multi-city comparisons**: See ENTITY SELECTION RULE above. When the user names specific cities, use CASE WHEN to pivot each into its own column (e.g., SUM(CASE WHEN i.agency = 'Nashville' AND i.state = 'TN' THEN 1 END) as nashville). Do NOT use i.agency as a GROUP BY column in the output — raw agency names can be inconsistent.
    - **City vs County disambiguation** — Many cities share agency names with county agencies (e.g., Los Angeles has both City and County). When the user asks about a city, restrict the alias subquery to agency_type = 'City' or filter incidents with (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = ''). Only use agency_type = 'County' when the user specifically asks about a county agency/sheriff. For county-named police departments such as St. Louis County Police Department, use alias lookup by ORI; do not assume every "County" request is a countywide geographic total.
-10. **Agency vs countywide geography** — The agency_type column indicates whether the reporting agency is a city police department ('City') or county sheriff's office ('County'). A "County" agency is one sheriff/county law-enforcement agency; it is NOT automatically the countywide total. For a specific named county sheriff's office (e.g., "Harris County Sheriff"), use shr_agency_alias / agency_type = 'County' as a single-agency query. For countywide geography (e.g., "gun violence in Cook County" or "by county"), use agency_county_crosswalk to include all mapped city, county, university, transit, state, and other agencies located in the county, and disclose that totals depend on agency participation. When the user asks about "cities" in rankings, filter with WHERE agency_type = 'City'.
+10. **Agency vs countywide geography** — The agency_type column indicates whether the reporting agency is a city police department ('City') or county sheriff's office ('County'). A "County" agency is one sheriff/county law-enforcement agency; it is NOT automatically the countywide total. For a specific named county sheriff's office (e.g., "Harris County Sheriff"), use shr_agency_alias / agency_type = 'County' as a single-agency query. A question about one named county is answered by the application, not by generated SQL. For county breakdowns or rankings (e.g., "by county"), use agency_county_crosswalk to include all mapped city, county, university, transit, state, and other agencies located in the county, and disclose that totals depend on agency participation. When the user asks about "cities" in rankings, filter with WHERE agency_type = 'City'.
 11. **Big cities** — When the user says "big cities" or "large cities", filter to agencies with population >= 250000 AND (agency_type = 'City' OR agency_type IS NULL OR agency_type = '').
 11b. **Murder rates (per capita)** — The incidents table has a population column. Do NOT refuse rate queries — the data supports them.
     - **Single agency by year** (e.g., "DC murder rate"): \`ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) as rate_per_100k\`. AVG(population) works here because population is the same across all incidents for one agency/year.
@@ -217,13 +218,13 @@ When the user asks about "shootings", "gun violence", "fatal shootings", or "sho
 
 ## EXAMPLE QUERIES
 
-Homicide victims by weapon type nationally:
+Murder victims by weapon type nationally:
   SELECT i.weapon_group, COUNT(*) as victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.year = ${maxYear - 1} AND i.homicide_type = 'Murder' GROUP BY i.weapon_group ORDER BY victims DESC LIMIT 20
 
 Victim race breakdown over time:
   SELECT i.year, v.race, COUNT(*) as victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.year BETWEEN 2015 AND ${maxYear - 1} AND i.homicide_type = 'Murder' GROUP BY i.year, v.race ORDER BY i.year, victims DESC LIMIT 5000
 
-Intimate partner homicide victims trend:
+Intimate partner murder victims trend:
   SELECT i.year, COUNT(*) as victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.relationship IN ('Wife', 'Husband', 'Common-Law Wife', 'Common-Law Husband', 'Girlfriend', 'Boyfriend', 'Ex-Wife', 'Ex-Husband', 'Homosexual Relationship') AND i.homicide_type = 'Murder' AND i.year >= 1976 GROUP BY i.year ORDER BY i.year LIMIT 100
 
 Female intimate partner murder victims by weapon type:

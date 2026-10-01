@@ -514,6 +514,22 @@ if ! node "$RELEASE_DIR/scripts/verify-deployed-artifact.js" \
   die "Pre-switch verification failed; refusing to publish."
 fi
 
+# ── Step 4e: Switch admission deadline (optional) ──────────────────────
+#
+# A window that must keep time for a rollback cannot let a slow build consume it: past this epoch
+# second the switch is refused and the new release is discarded exactly as a pre-switch failure is.
+# Unset (the default) changes nothing. Added for the Phase 3 activation window, 2026-09-30.
+if [[ -n "${SWITCH_NOT_AFTER_EPOCH:-}" ]]; then
+  [[ "$SWITCH_NOT_AFTER_EPOCH" =~ ^[0-9]+$ ]] || die "SWITCH_NOT_AFTER_EPOCH must be an integer epoch second."
+  if (( $(date +%s) > SWITCH_NOT_AFTER_EPOCH )); then
+    cd "$BASE_DIR"
+    rm -rf "$RELEASE_DIR"
+    log "Live app at $CURRENT_LINK is unchanged."
+    die "Switch admission deadline passed; refusing to publish."
+  fi
+  log "  Switch admitted: $(( SWITCH_NOT_AFTER_EPOCH - $(date +%s) ))s before the admission deadline."
+fi
+
 # ── Step 5: Atomic symlink switch ──────────────────────────────────────
 log "Switching symlink: $CURRENT_LINK -> $RELEASE_DIR"
 

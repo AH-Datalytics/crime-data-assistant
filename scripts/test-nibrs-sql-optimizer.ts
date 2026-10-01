@@ -95,15 +95,31 @@ bothWays(citySql, (optimized, rollupAvailable) => {
     `optimization is not idempotent with rollupAvailable=${rollupAvailable}`);
 });
 
+// The reporting-table substitution is REMOVED, so these two assertions are inverted from what they
+// asserted before: the requested monthly count must survive, and the completeness table must not be
+// introduced by the planner. See the docblock in lib/nibrs-sql-optimizer.ts — the swap changed a
+// figure on a fixture where the two sources disagree, and it passed validation both ways.
+// scripts/test-optimizer-calculation-preservation.ts holds the changed-figure witnesses.
 const stateRateSql = "SELECT a.state, SUM(a.population * rpt.months_reported / 12.0) " +
   "FROM agencies a JOIN (SELECT ori, COUNT(DISTINCT month) AS months_reported " +
   "FROM summary_city_monthly WHERE year = 2024 GROUP BY ori) rpt ON rpt.ori = a.ori " +
   "WHERE a.year = 2024 GROUP BY a.state";
+// Integration (2026-09-30): the accepted Phase 3 candidate REMOVED the completeness-table rewrite from
+// lib/nibrs-sql-optimizer.ts (it swapped the calculation after validation; see the comment there), and the merged
+// optimizer is that version. So the candidate's expectations hold, asserted here in dev's both-ways form.
 bothWays(stateRateSql, (optimized, rollupAvailable) => {
+  assert.match(optimized, /COUNT\s*\(\s*DISTINCT\s+month\s*\)\s+AS\s+months_reported/i,
+    `the requested monthly count must run as written with rollupAvailable=${rollupAvailable}`);
+  assert.doesNotMatch(optimized, /nibrs_agency_completeness/i,
+    `no completeness-table substitution with rollupAvailable=${rollupAvailable}`);
+});
+// A producer that asks for the completeness table still gets it, untouched.
+const completenessSql = "SELECT a.state, SUM(a.population * rpt.months_reported / 12.0) " +
+  "FROM agencies a JOIN (SELECT ori, months_reported FROM nibrs_agency_completeness WHERE year = 2024) rpt " +
+  "ON rpt.ori = a.ori WHERE a.year = 2024 GROUP BY a.state";
+bothWays(completenessSql, (optimized, rollupAvailable) => {
   assert.match(optimized, /FROM nibrs_agency_completeness WHERE year = 2024/i,
-    `completeness rewrite missing with rollupAvailable=${rollupAvailable}`);
-  assert.doesNotMatch(optimized, /COUNT\s*\(\s*DISTINCT\s+month\s*\)/i,
-    `monthly rescan survived with rollupAvailable=${rollupAvailable}`);
+    `an explicitly requested completeness table is kept with rollupAvailable=${rollupAvailable}`);
 });
 
 // Production 7618: an offense-filtered state-ranking scan of summary_city_monthly

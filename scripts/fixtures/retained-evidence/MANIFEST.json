@@ -1,0 +1,79 @@
+{
+  "_about": "Retained inputs of six accepted regression suites, packaged 2026-09-30 (Phase 3 integration, Codex I2). Each fixture is the source's own records for the cases the consumers read; `extraction` says exactly which. The full captures stay untouched in the main checkout's audit/ tree; re-check with audit/phase3-integration-2026-09-30/correction/extract-retained-fixtures.cjs --verify.",
+  "fixtures": [
+    {
+      "fixture": "gc057-completed-case.json",
+      "source": "audit/combined-checkpoint-2026-09-25/run-evidence/gemini-qualification-2026-09-26T00-41-20-270Z-b1482fb67b/completed-cases.json",
+      "sourceSha256": "96936290af75c8db12ece9e6aa2c3105f47f51fae20d4c5d3ed520792660196c",
+      "sourceBytes": 274789,
+      "fixtureSha256": "3902aa6d4798e71be5bd93f61d29f5f0525bb8b39facea6a78822ffbac856f42",
+      "fixtureBytes": 11464,
+      "extraction": "array records with case in [GC-057], all of them, in source order (1 of 31)",
+      "consumers": [
+        "scripts/test-jurisdiction-ranking.ts"
+      ]
+    },
+    {
+      "fixture": "codex-validator-review.json",
+      "source": "audit/correctness-candidate-2026-09-08/codex-validator-review.json",
+      "sourceSha256": "f3005d3f1fb7a0fdced6f7942cadd7a6ce32845d6b618ebc72b017fbe4b5e9d4",
+      "sourceBytes": 36368,
+      "fixtureSha256": "f3005d3f1fb7a0fdced6f7942cadd7a6ce32845d6b618ebc72b017fbe4b5e9d4",
+      "fixtureBytes": 36368,
+      "extraction": "byte copy of the whole file",
+      "consumers": [
+        "scripts/test-ratio-support.ts"
+      ]
+    },
+    {
+      "fixture": "codex-ratio-batch-review.json",
+      "source": "audit/correctness-candidate-2026-09-08/codex-ratio-batch-review.json",
+      "sourceSha256": "ec85aa0940edd2b600e9428d032844149340c5bb6e30f9590a0241ccedfd0c89",
+      "sourceBytes": 4827,
+      "fixtureSha256": "ec85aa0940edd2b600e9428d032844149340c5bb6e30f9590a0241ccedfd0c89",
+      "fixtureBytes": 4827,
+      "extraction": "byte copy of the whole file",
+      "consumers": [
+        "scripts/test-ratio-support.ts"
+      ]
+    },
+    {
+      "fixture": "correctness-repeat-turns.jsonl",
+      "source": "audit/correctness-repeat-2026-09-09/run/turns.jsonl",
+      "sourceSha256": "b80198c1428d3edfaaf07b1c4998b7011ba037a53517e200f99d455d063a7773",
+      "sourceBytes": 3660160,
+      "fixtureSha256": "80f5dd87d0b2b689f22fed3a93564f19b9449a69cb052e583cf2a7dffd3b2acc",
+      "fixtureBytes": 331496,
+      "extraction": "original line bytes of every line whose turn.caseId is in [GC-041, GC-042, GC-049, GC-050, GC-053, GC-055, GC-068, GC-073], in source order (11 of 142 lines)",
+      "consumers": [
+        "scripts/test-period-correctness.ts",
+        "scripts/test-evidence-boundary-guard.ts"
+      ]
+    },
+    {
+      "fixture": "gc004-history-and-contract.json",
+      "source": "audit/phase3-cause-cd-2026-09-25/codex-review/history-and-contract.json",
+      "sourceSha256": "5f08efde350f1a74f1f42d67150ad433e1a83677103a63f54ed45627823bdce0",
+      "sourceBytes": 28755,
+      "fixtureSha256": "5f08efde350f1a74f1f42d67150ad433e1a83677103a63f54ed45627823bdce0",
+      "fixtureBytes": 28755,
+      "extraction": "byte copy of the whole file",
+      "consumers": [
+        "scripts/test-clearance-refinement.ts"
+      ]
+    },
+    {
+      "fixture": "qualification-retained-cases.json",
+      "source": "audit/model-qualification-run-2026-09-24/evidence/retained-evidence.json",
+      "sourceSha256": "15860a4efcfc9fe23e98d9fa7c136e5e38a4fe1b87a117b3521086d14e3552a8",
+      "sourceBytes": 268617,
+      "fixtureSha256": "c8be2dfe327eb3c340617fb0787e869c788a53d9c474e64d5977a41f4036c428",
+      "fixtureBytes": 94520,
+      "extraction": "top-level \"cases\" records with case in [GC-003, GC-004, GC-048, GC-058, GC-070], all of them, in source order (5 of 30); other top-level keys (armed, sourceMode, arm, trace, phases, stopReason, stopDetail, pacing, accounting, costLanguage, usesAcceptedDispatchComponents, evaluationMode, transportBinding, runRoot, stagedRoot, declaredUnits, declaredUnitIds, turnsUsed, workerPrograms, groupTotals, sourceStableAtClose) are not read by the consumers and are omitted",
+      "consumers": [
+        "scripts/test-clearance-refinement.ts",
+        "scripts/test-historical-series-gapfill.ts"
+      ]
+    }
+  ]
+}

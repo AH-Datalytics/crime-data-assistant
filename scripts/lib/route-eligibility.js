@@ -868,6 +868,17 @@ const OPERATIONAL_STREAM_EVENTS = [
     count: 1,
     reason: "Error notice with literal text. Reports a failure, not an answer.",
   },
+  {
+    // Integration 2026-09-30: the accepted Phase 3 candidate's current-YoY internal-failure exit.
+    // `message` is a const string literal declared two lines above the enqueue ("I could not read the
+    // reporting coverage needed to compare those years ..."); it carries no figure, and the turn is
+    // logged as an error with a null proof.
+    fp: "app/api/query/route.ts::012cf17c019d7d876650b2bda907c478e66c4c0446bb0d332af18cd3b31f6d57",
+    sha256: "012cf17c019d7d876650b2bda907c478e66c4c0446bb0d332af18cd3b31f6d57",
+    bytes: 58,
+    count: 1,
+    reason: "Error notice with literal text. Reports a failure, not an answer.",
+  },
 ];
 
 const EXCLUSIONS = [

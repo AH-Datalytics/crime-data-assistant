@@ -7,16 +7,23 @@
 import { getDb } from "./rtci-db";
 import { getNibrsDb } from "./nibrs-db";
 
-export type DataCutoff = { year: number; month: number; label: string };
+/**
+ * A source's latest data point.
+ *
+ * `observed` records whether this came from reading the database or from the clock-based fallback
+ * below. Without it a guessed date is indistinguishable from a fact, and the city-ranking builder
+ * was able to present one as "the latest year with data".
+ */
+export type DataCutoff = { year: number; month: number; label: string; observed: boolean };
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
 
-function monthLabel(year: number, month: number): DataCutoff {
+function monthLabel(year: number, month: number, observed = true): DataCutoff {
   const safeMonth = Math.min(12, Math.max(1, month || 1));
-  return { year, month: safeMonth, label: `${MONTH_NAMES[safeMonth - 1]} ${year}` };
+  return { year, month: safeMonth, label: `${MONTH_NAMES[safeMonth - 1]} ${year}`, observed };
 }
 
 /** Fallback data cutoff: 2 months before current date. Used only if DB probing fails. */
@@ -25,7 +32,8 @@ function heuristicDataCutoff(): DataCutoff {
   let y = now.getFullYear();
   let m = now.getMonth() + 1 - 2;
   if (m <= 0) { m += 12; y -= 1; }
-  return monthLabel(y, m);
+  // NOT observed: this is the calendar, not the data.
+  return monthLabel(y, m, false);
 }
 
 function queryLatestMonth(
@@ -143,12 +151,27 @@ function loadRtciFacts() {
     `).get(latestMonthly.year, latestMonthly.year, latestMonthly.month) as { pop: number | null }).pop;
     const popYears = popRange.max_year - popRange.min_year + 1;
 
+    // The national sample, read from the source of truth rather than described from
+    // memory. scripts/update-rtci-db.py builds sample_agencies as exactly those agencies
+    // present in EVERY distinct month of agency_monthly, so the sample's start is the
+    // first month of agency_monthly — it is not a constant and must never be hardcoded.
+    // The prompt previously carried two different, both-stale claims: a table description
+    // saying "445 agencies ... from January 2018" and a user-facing disclaimer saying
+    // "since January 2017". Measured here: 558 agencies, first month January 2017.
+    const sampleAgencyCount = (db.prepare("SELECT COUNT(*) AS n FROM sample_agencies").get() as { n: number }).n;
+    const sampleStart = db.prepare(
+      "SELECT year, month FROM agency_monthly ORDER BY year ASC, month ASC LIMIT 1"
+    ).get() as { year: number; month: number };
+    const sampleStartLabel = `${MONTH_NAMES[sampleStart.month - 1]} ${sampleStart.year}`;
+
     return {
       agencyCount,
       stateCount,
       minYear: dateRange.min_year,
       maxYear: dateRange.max_year,
       totalMonths,
+      sampleAgencyCount,
+      sampleStartLabel,
       popMinYear: popRange.min_year,
       popMaxYear: popRange.max_year,
       popRows,
@@ -160,7 +183,7 @@ function loadRtciFacts() {
     console.warn("[dynamic-facts] Failed to load RTCI facts:", e);
     return {
       agencyCount: 669, stateCount: 48, minYear: 2017, maxYear: 2025,
-      totalMonths: 108, popMinYear: 1991, popMaxYear: 2026,
+      totalMonths: 108, sampleAgencyCount: 558, sampleStartLabel: "January 2017", popMinYear: 1991, popMaxYear: 2026,
       popRows: 7150, popAgencies: 717, latestSamplePopulation: 115499393, popYears: 10,
     };
   }

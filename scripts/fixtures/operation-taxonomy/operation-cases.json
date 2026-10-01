@@ -62,7 +62,7 @@
   "comparable_agency_clearance": {
     "family": "deterministic-nibrs-comparable-agency-clearance",
     "terminalKind": "factual",
-    "capability": "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)"
+    "capability": "nibrs::agencies+summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)"
   },
   "clearance_method": {
     "family": "deterministic-nibrs-clearance-method",

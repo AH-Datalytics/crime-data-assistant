@@ -176,13 +176,15 @@ gap("cross-state RANKING is not observed: no single state is resolved", () => {
     "cross-state ranking is now observed -- the gap is closed, update the contract deliberately");
 });
 
-gap("cross-state COMPARISON mis-resolves to a city: \"across all states\" -> city Ball, LA", () => {
-  // A spurious fuzzy match in the existing place resolver. It makes a cross-state comparison look
-  // like an agency question, so this rule allows it. Reported as a resolver defect, not patched here.
+check("cross-state COMPARISON no longer mis-resolves to a city: \"across all states\" (gap closed on integration)", () => {
+  // Was a recorded gap: a spurious fuzzy match made this resolve to city Ball, LA. The accepted Phase 3
+  // candidate's place-resolution changes, merged 2026-09-30, no longer produce that match, so the gap
+  // assertion failed as designed and is re-decided here: no city is resolved, and -- because no single
+  // state is resolved either -- the rule still does not observe it, the same as the cross-state ranking gap.
   const c = buildQueryContract("Compare murder clearance rates across all states", "historical", null)!;
   const geos = c.geographies?.length ? c.geographies : [c.geography];
-  assert(geos.some((g) => g.kind === "city"), `expected the spurious city match, got ${geos.map((g) => g.kind).join(",")}`);
-  assert(observeHistoricalClearanceGrain(c) === null, "now observed -- re-decide this gap");
+  assert(!geos.some((g) => g.kind === "city"), `the spurious city match is back: ${geos.map((g) => g.kind).join(",")}`);
+  assert(observeHistoricalClearanceGrain(c) === null, "now observed -- re-decide this case");
 });
 
 gap("a bare postal code is not resolved as a state: \"FL\" -> unknown", () => {
@@ -268,11 +270,22 @@ const UNRESOLVED_OFFENSE_BUT_LEGITIMATE: Array<[number, string]> = [
   [7888, "how do clearance rates in berkeley compare regionally, statewide, and nationally?"],
 ];
 
+// Integration 2026-09-30: the accepted Phase 3 candidate resolves "violent crime(s)" to the
+// `violent_crime` group, so these two questions now carry a resolved offense. What this list protects
+// -- they are never observed, so never declined -- is asserted for them unchanged below.
+const NOW_RESOLVE_VIOLENT_CRIME = new Set([2833, 3139]);
+
 for (const [id, question] of UNRESOLVED_OFFENSE_BUT_LEGITIMATE) {
-  check(`#${id} is not observed: no offense resolved, and its grain is allowed`, () => {
+  check(`#${id} is not observed: ${NOW_RESOLVE_VIOLENT_CRIME.has(id) ? "violent_crime resolved (declared)" : "no offense resolved"}, and its grain is allowed`, () => {
     const contract = buildQueryContract(question, "historical", null)!;
-    assert(contract.metric.offenses.length === 0,
-      `this case is meant to have NO resolved offense; it now resolves ${contract.metric.offenses.map((o) => o.topic).join(",")}`);
+    const topics = contract.metric.offenses.map((o) => o.topic);
+    if (NOW_RESOLVE_VIOLENT_CRIME.has(id)) {
+      assert(JSON.stringify(topics) === JSON.stringify(["violent_crime"]),
+        `declared to resolve violent_crime only; it resolves ${topics.join(",") || "nothing"}`);
+    } else {
+      assert(topics.length === 0,
+        `this case is meant to have NO resolved offense; it now resolves ${topics.join(",")}`);
+    }
     const o = observeHistoricalClearanceGrain(contract);
     assert(o === null, `observed as ${o?.reason}: ${question.slice(0, 70)}`);
   });

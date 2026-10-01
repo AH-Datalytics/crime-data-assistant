@@ -743,20 +743,26 @@ export async function POST(req) {
     for (const x of m.terminalExits) ek[x.kind] = (ek[x.kind] || 0) + 1;
     for (const e of m.streamEvents) sk[e.kind] = (sk[e.kind] || 0) + 1;
   }
-  check("H7  real terminal exits: 4 chokepoint, 15 envelope, 0 detached, 0 sealed-by-fallback",
-    [ek.chokepoint, ek["sse-envelope"], ek["detached-carrier"] || 0, ek.sealed || 0], [4, 15, 0, 0]);
-  check("H7b real stream events: 29 sealed", sk.sealed, 29);
+  // Integration 2026-09-30 (enumerated against dev b285be3 with this analyzer, not read off the scan:
+  // audit/phase3-integration-2026-09-30/prep/egress-*-enumeration.json). The accepted Phase 3
+  // candidate adds SEVEN streaming exits to app/api/query/route.ts, each one envelope with one event:
+  // six sealed answers (owned limitations x2, city ranking, YoY comparison, crime-type and amendment
+  // clarifications) and the current-YoY internal-failure notice, registered below. dev's 15/29/12
+  // become 22/35/13; no dev exit or event was removed (three sealed payloads changed shape only).
+  check("H7  real terminal exits: 4 chokepoint, 22 envelope, 0 detached, 0 sealed-by-fallback",
+    [ek.chokepoint, ek["sse-envelope"], ek["detached-carrier"] || 0, ek.sealed || 0], [4, 22, 0, 0]);
+  check("H7b real stream events: 35 sealed", sk.sealed, 35);
   check("H7c and every unclassified one is registered, so the tree is green",
-    [ek.unclassified, sk.unclassified, res.failures.length], [12, 12, 0]);
+    [ek.unclassified, sk.unclassified, res.failures.length], [12, 13, 0]);
   // The registries are load-bearing: emptying them must fail loudly.
   // One failure per distinct FINGERPRINT: 12 exit + 10 stream. Those 10 stream entries cover 12
   // occurrences, because one progress message is enqueued three times.
   const empty = checkEligibility(ROOT, { operationalExits: [], operationalStreamEvents: [] });
   check("H7d emptying the registries fails on every registered identity",
     [empty.ok, empty.failures.length > 0], [false, true]);
-  check("H7e the registries cover 12 exits and 12 stream events by exact identity",
+  check("H7e the registries cover 12 exits and 13 stream events by exact identity",
     [OPERATIONAL_EXITS.reduce((n, e) => n + e.count, 0),
-     OPERATIONAL_STREAM_EVENTS.reduce((n, e) => n + e.count, 0)], [12, 12]);
+     OPERATIONAL_STREAM_EVENTS.reduce((n, e) => n + e.count, 0)], [12, 13]);
   check("H7f and five delivery declarations",
     (opts0 => opts0.length)(require("./lib/route-eligibility.js").REVIEWED_DELIVERY_BODIES), 5);
 }
@@ -799,9 +805,9 @@ export async function POST() {
   check("I2  the seal as the direct event payload IS a sealed delivery",
     m.streamEvents.map((e) => e.kind), ["sealed"]);
   checkTrue("I2b so the tree passes", elig(root).ok, JSON.stringify(elig(root).failures));
-  check("I2c and all 29 real sealed enqueues have this exact shape",
+  check("I2c and all 35 real sealed enqueues have this exact shape",
     res.routes.filter((x) => x.sealed)
-      .reduce((n, x) => n + x.streamEvents.filter((e) => e.kind === "sealed").length, 0), 29);
+      .reduce((n, x) => n + x.streamEvents.filter((e) => e.kind === "sealed").length, 0), 35);
   check("I2d with zero decorative seals in the real tree",
     res.failures.filter((f) => f.kind === "decorative-seal").length, 0);
 }

@@ -45,13 +45,79 @@ export type QueryContract = {
   comparability: {
     continuousReporters: boolean;
     partialYearDisclosure: boolean;
+    /**
+     * Does the REQUEST ask whether one period differs from another?
+     *
+     * The comparison operation, owned by the request rather than rediscovered from a returned
+     * column name. GC-055 delivered `pct_change: -61.9` in one run and `decreased: "Yes"` in the
+     * next; both are the same operation, and no property of the answer distinguishes them
+     * reliably. So the operation is declared here, before any model call.
+     *
+     * `requested` is recorded INDEPENDENTLY of whether `years` resolves. An unresolved comparison
+     * request ("how has murder changed since last year?") is still a comparison request, and
+     * collapsing the two would let an unresolved one be treated as an ordinary count.
+     *
+     * Deliberately NOT derived from `time.partialYear`: that flag is a disclosure signal and is
+     * true for "what is the population estimate for 2026?", which asks for no comparison at all.
+     */
+    comparison: {
+      requested: boolean;
+      /** The compared endpoints, when the question resolves them. Null when it does not. */
+      years: { startYear: number; endYear: number } | null;
+    };
   };
   followup: {
     isFollowup: boolean;
     operation: "replace" | "refine" | "metadata" | "chart_only" | null;
   };
   warnings: string[];
+  /**
+   * Present ONLY on a contract built by amending an earlier request (lib/current-followup-amendment.ts).
+   * `buildQueryContract` never sets it, so every existing caller is unaffected.
+   *
+   * When it is present, the fields above were not parsed from the current turn's text: they were
+   * carried from the reader's own earlier turns, one field at a time. A consumer that would
+   * otherwise re-read an owned meaning from the question text — "is this a rolling request?",
+   * "which grain was asked for?" — reads it from here instead, because the current turn is often a
+   * fragment ("now detroit") that says nothing about either.
+   */
+  request?: AmendedRequestState;
 };
+
+/** The series form a Current request states. Display grain is not a separate field in this slice. */
+export type RequestWindow = "rolling_12" | "monthly" | "annual";
+export type RequestField = "offense" | "unit" | "window" | "geography" | "period";
+
+export type RequestFieldOrigin = {
+  /**
+   * stated: the reader's own words established it. defaulted: the parser supplied it (the unit is
+   * `count` whenever an offense is named). absent: nothing established it.
+   */
+  origin: "stated" | "defaulted" | "absent";
+  /** The user turn that established it, verbatim. Null when absent. */
+  turn: string | null;
+  /** True when that turn is an earlier one, carried forward rather than stated in this turn. */
+  inherited: boolean;
+};
+
+export type AmendedRequestState = {
+  kind: "current_amendment";
+  window: RequestWindow | null;
+  provenance: Record<RequestField, RequestFieldOrigin>;
+  /** The full user request the amendments were applied to, verbatim. */
+  anchor: string;
+};
+
+/**
+ * The grain a series form implies, in the vocabulary `lib/requested-grain.ts` uses. A rolling
+ * 12-month series is reported month by month, which is also what that module's own detector reads
+ * from the words "rolling over 12 months".
+ */
+export function requestWindowGrain(window: RequestWindow | null): "monthly" | "annual" | null {
+  if (window === "rolling_12" || window === "monthly") return "monthly";
+  if (window === "annual") return "annual";
+  return null;
+}
 const STATE_CODE_ALIASES: Record<string, Record<QueryContractSource, string | string[]>> = {
   NE: { current: "NE", historical: "nb", nibrs: ["NE", "NB"], shr: "NE", hate_crime: "NE" },
   GU: { current: "GU", historical: "gm", nibrs: ["GU", "GM"], shr: "GU", hate_crime: "GU" },
@@ -64,12 +130,34 @@ const OFFENSE_PATTERNS: { topic: string; codes: string[]; label: string; pattern
   { topic: "rape", codes: ["11A", "11B", "11C"], label: "Rapes", pattern: /\brapes?\b/i },
   { topic: "robbery", codes: ["120"], label: "Robberies", pattern: /\brobber(?:y|ies)\b/i },
   { topic: "aggravated_assault", codes: ["13A"], label: "Aggravated assaults", pattern: /\baggravated\s+assaults?\b/i },
+  /*
+   * A THEFT FROM A VEHICLE IS NOT A BURGLARY OF A BUILDING.
+   *
+   * "Houston vehicle burglaries" produced a contract for `220`, breaking and entering, because
+   * `/\bburglar(y|ies)\b/` is the only thing that matched. The answer that shipped counted `23F`,
+   * Theft From Motor Vehicle -- so the contract and the delivered figure were about different
+   * crimes, and a controlled path driven by the contract would have answered the wrong one
+   * correctly. NIBRS separates theft of articles from a vehicle (`23F`) from theft of the vehicle
+   * itself (`240`) and from its parts and accessories (`23G`); several police departments, Houston
+   * among them, call the first "burglary of a motor vehicle", which is where the wording comes from.
+   *
+   * DELIBERATELY NARROW. The vehicle word must be ADJACENT to the burglary word, either side. A
+   * question that merely contains both somewhere -- "were burglaries higher in neighbourhoods with
+   * more vehicle traffic" -- keeps ordinary burglary, and genuinely ambiguous wording is left to
+   * clarification rather than silently reassigned. `detectOffenses` rejects overlapping matches and
+   * takes the earlier one, so this entry supersedes the plain burglary match on the same phrase
+   * without needing to be ordered ahead of it.
+   */
+  {
+    topic: "vehicle_burglary", codes: ["23F"], label: "Thefts from vehicles",
+    pattern: /\b(?:(?:motor\s+)?vehicles?|cars?|autos?|automobiles?|trucks?)\s+burglar(?:y|ies)\b|\bburglar(?:y|ies)\s+(?:of|from|to)\s+(?:a\s+|an\s+|the\s+)?(?:motor\s+)?(?:vehicles?|cars?|autos?|automobiles?|trucks?)\b/i,
+  },
   { topic: "burglary", codes: ["220"], label: "Burglaries", pattern: /\bburglar(?:y|ies)\b/i },
   { topic: "theft", codes: ["23A-23H"], label: "Thefts", pattern: /\b(?:theft|larceny|larcenies)\b/i },
   { topic: "motor_vehicle_theft", codes: ["240"], label: "Motor vehicle thefts", pattern: /\b(?:motor\s+vehicle|auto)\s+thefts?\b/i },
   { topic: "carjacking", codes: ["64A", "64B"], label: "Carjackings", pattern: /\bcarjack(?:ing|ings)?\b/i },
   { topic: "domestic_violence", codes: [], label: "Domestic violence", pattern: /\bdomestic\s+violence\b|\bintimate\s+partner\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i },
-  { topic: "violent_crime", codes: ["09A", "11A", "11B", "11C", "120", "13A"], label: "Violent crime", pattern: /\bviolent\s+crime\b/i },
+  { topic: "violent_crime", codes: ["09A", "11A", "11B", "11C", "120", "13A"], label: "Violent crime", pattern: /\bviolent\s+crimes?\b/i },
   { topic: "property_crime", codes: ["200", "220", "23A-23H", "240"], label: "Property crime", pattern: /\bproperty\s+crime\b/i },
 ];
 
@@ -89,6 +177,29 @@ function yearsFromQuestion(question: string): { startYear: number | null; endYea
   const years = (question.match(/\b(?:19|20)\d{2}\b/g) || []).map(Number);
   if (years.length === 0) return { startYear: null, endYear: null };
   return { startYear: Math.min(...years), endYear: Math.max(...years) };
+}
+
+/**
+ * Does the question ask whether one period differs from another?
+ *
+ * A fixed phrase list, not a classifier, and it never reads the answer. "Compare"/"versus" alone is
+ * not enough: GC-055 asks "did violent crime decrease every year", which names no comparison word
+ * at all in the tab-suggest sense, and GC-068 asks "how much did murders increase". Both are
+ * comparisons and both must be recognised here.
+ *
+ * A bare year mention is deliberately excluded, so "what is the population estimate for 2026?" and
+ * "how complete is 2026 data?" are not comparisons.
+ */
+const COMPARISON_REQUEST =
+  /\b(?:compare[ds]?|comparison|versus|vs\.?|year[-\s]?over[-\s]?year|yoy|change[sd]?|changing|increase[sd]?|increasing|decrease[sd]?|decreasing|rise[ns]?|rising|rose|fall(?:s|en|ing)?|fell|drop(?:s|ped|ping)?|declin(?:e|ed|ing|es)|grew|grow(?:s|ing|th)|higher|lower|more\s+than|less\s+than|fewer\s+than)\b/i;
+
+function detectComparison(question: string, time: { startYear: number | null; endYear: number | null }): QueryContract["comparability"]["comparison"] {
+  const requested = COMPARISON_REQUEST.test(question);
+  if (!requested) return { requested: false, years: null };
+  const resolved = time.startYear !== null && time.endYear !== null && time.startYear !== time.endYear
+    ? { startYear: time.startYear, endYear: time.endYear }
+    : null;
+  return { requested: true, years: resolved };
 }
 
 function isPartialYearQuestion(question: string): boolean {
@@ -311,6 +422,7 @@ export function buildQueryContract(
     comparability: {
       continuousReporters,
       partialYearDisclosure: partialYear,
+      comparison: detectComparison(text, time),
     },
     followup: detectFollowup(text, routingMeta),
     warnings,

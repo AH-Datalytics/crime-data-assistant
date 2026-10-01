@@ -1,0 +1,75 @@
+{
+ "at": "2026-09-28T16:14:06.906Z",
+ "results": [
+  {
+   "id": "M1-alias-rule",
+   "file": "lib/sql-guardrails.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  accepted: WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender",
+    "FAIL  accepted: SELECT a.x, b.y FROM t1 a, t2 b",
+    "FAIL  accepted: SELECT a.x, b.y FROM t1 AS a, t2 AS b",
+    "FAIL  accepted: SELECT a.x, b.y, c.z FROM t1 a, t2 b, t3 c",
+    "FAIL  accepted: SELECT a.x, s.n FROM t1 a, (SELECT COUNT(*) AS n FROM t2) s",
+    "FAIL  accepted: SELECT a.x, b.y, c.z FROM t1 a, t2 b JOIN t3 c ON b.id = c.id",
+    "FAIL  accepted: SELECT t1.x, t2.y FROM t1, t2",
+    "FAIL  accepted: SELECT a.x, b.y FROM t1 a, t2 b WHERE a.id = b.id",
+    "FAIL  accepted: SELECT a.x FROM t1 a WHERE a.id IN (SELECT b.id FROM t2 b, t3 c WHERE b.k = c.k AND c.z =",
+    "FAIL  a comma subquery's alias is read from its own closing paren, not a later JOIN's ON"
+   ],
+   "tail": "44/54 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "M2-table-list",
+   "file": "lib/table-allowlist.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  both tables reported (summary_state_monthly)",
+    "FAIL  schema prefixes follow the FROM/JOIN pattern: main dropped, rollup reported by schema",
+    "FAIL  comma-joined forbidden family fires",
+    "FAIL  unqualified comma-joined forbidden family fires",
+    "FAIL  the table list sees a comma item after a JOIN"
+   ],
+   "tail": "49/54 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "M3-rollup-family",
+   "file": "lib/nibrs-rollup-router.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  comma-joined forbidden family fires in its rollup form",
+    "FAIL  a comma-joined planner rollup is recognized with its family"
+   ],
+   "tail": "52/54 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "M4-router-guard",
+   "file": "lib/nibrs-rollup-router.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  two comma-joined sources stay on base tables (state-rollup)"
+   ],
+   "tail": "53/54 passed; offline guard: 0 denied database opens, 0 network calls"
+  },
+  {
+   "id": "M5-lineage",
+   "file": "lib/sql-lineage.ts",
+   "applied": true,
+   "exit": 1,
+   "killed": true,
+   "failing": [
+    "FAIL  GC-032's returned values resolve to the same source columns in comma and JOIN form",
+    "FAIL  a comma-joined table is the traced source of its columns, so table-meaning checks judge it"
+   ],
+   "tail": "52/54 passed; offline guard: 0 denied database opens, 0 network calls"
+  }
+ ]
+}

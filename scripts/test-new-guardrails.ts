@@ -1961,12 +1961,20 @@ console.log("\n=== wave-1 query-contract guardrails ===\n");
 }
 
 {
+  // GC-080 (owner ruling, 2026-09-26): "homicides" means ALL homicide victims, so the Murder-filter
+  // retry now fires for MURDER wording only; the request-selected licence enforces both measures.
   const sql = `SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'PA' AND i.year = 2023 GROUP BY i.year`;
-  const ctx = extractQueryContext(sql, "How many homicides in Pennsylvania in 2023?", "shr");
+  // Singular "murder": this rule has never matched the plural "murders" (a gap that predates GC-080;
+  // the fact-proved murder licence blocks an unrestricted count either way).
+  const ctx = extractQueryContext(sql, "How many murder victims in Pennsylvania in 2023?", "shr");
   const r = runGuardrails(ctx);
-  assert("TP: SHR homicide question without homicide_type fires",
+  assert("TP: SHR murder question without homicide_type fires",
     r.fired.includes("shr-homicide-type-missing"),
     `fired: ${JSON.stringify(r.fired)}`);
+  const homicideCtx = extractQueryContext(sql, "How many homicides in Pennsylvania in 2023?", "shr");
+  assert("GC-080: SHR homicide question without homicide_type does NOT fire (all homicide victims)",
+    !runGuardrails(homicideCtx).fired.includes("shr-homicide-type-missing"),
+    `fired: ${JSON.stringify(runGuardrails(homicideCtx).fired)}`);
 }
 
 {
@@ -2147,10 +2155,13 @@ GROUP BY am.year`;
 
 {
   const sql = `SELECT i.year, COUNT(*) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.agency = 'Cook County' AND i.state = 'IL' GROUP BY i.year`;
+  // GC-080 (owner ruling): on SHR a named county means the sheriff agency, bound by the route and
+  // enforced on the executed statement (lib/shr-county-scope.ts). A crosswalk retry here would steer
+  // the model into the countywide answer the scope check refuses, so it no longer fires on SHR.
   const ctx = extractQueryContext(sql, "murders in Cook County Illinois since 2020", "shr");
   const r = runGuardrails(ctx);
-  assert("TP: SHR countywide query using agency name fires",
-    r.fired.includes("countywide-crosswalk-required"),
+  assert("GC-080: SHR named-county query no longer gets the countywide crosswalk retry",
+    !r.fired.includes("countywide-crosswalk-required"),
     `fired: ${JSON.stringify(r.fired)}`);
 }
 console.log("\n=== nibrs-continuous-reporting-required ===\n");

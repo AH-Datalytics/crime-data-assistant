@@ -296,12 +296,55 @@ export function detectDemographicRateDenominatorFollowup(
   return null;
 }
 
+/**
+ * Does the text MENTION a law-enforcement agency? A phrase test, and nothing more.
+ *
+ * "Worcester County Sheriff's Office" contains the word `county` and is not a county: it is one
+ * agency with one ORI, which the contract resolves as `kind: "agency"`. Two decisions used to test
+ * only for the county token and refuse it as countywide, so the same question was answered for a
+ * city police department and refused for a sheriff's office.
+ *
+ * **This says an agency is mentioned. It does NOT say the request is SCOPED to that agency** — a
+ * whole-county question can mention a sheriff as an inclusion or a contrast ("countywide …
+ * including the sheriff's office", "all agencies, not just the sheriff's office"). Treating a
+ * mention as a scope removed a necessary refusal from those requests. Callers must establish scope
+ * themselves: from the contract where they have one, and from `asksWholeCountyScope` where they
+ * do not.
+ */
+export function mentionsLawEnforcementAgency(question: string): boolean {
+  return /\b(?:sheriff'?s?\s+office|sheriff|county\s+police|county\s+agency|police\s+department)\b/i.test(question);
+}
+
+/**
+ * Does the request ask for the WHOLE county, whatever else it happens to mention?
+ *
+ * Two shapes: explicit countywide/all-agency wording, and an inclusion or contrast marker, which is
+ * how a county request names an agency without being about it.
+ *
+ * **The asymmetry is deliberate.** This only ever withdraws the agency exclusion, so over-matching
+ * returns a request to the established countywide refusal — the behaviour that shipped for months.
+ * Under-matching is the residual risk, and it is the direction that fails closed.
+ */
+export function asksWholeCountyScope(question: string): boolean {
+  return /\b(?:county-?wide|all\s+(?:law\s+enforcement\s+|reporting\s+|mapped\s+)?agencies|every\s+agency|combined\s+agencies|rest\s+of\s+the\s+county)\b/i.test(question) ||
+    /\b(?:including|not\s+just|besides|as\s+well\s+as|in\s+addition\s+to|apart\s+from|other\s+than|along\s+with|together\s+with)\b/i.test(question);
+}
+
+/** A request scoped to a named agency: one is mentioned, and the whole county is not being asked for. */
+export function scopedToNamedAgency(question: string): boolean {
+  return mentionsLawEnforcementAgency(question) && !asksWholeCountyScope(question);
+}
+
 const COUNTY_SCOPE_RE = /\b[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,4}\s+(?:county|parish|borough)\b/i;
 const COUNTY_METADATA_RE = /\b(?:which|what|list|show)\b[\s\S]{0,40}\b(?:agencies|agency|cities|city|jurisdictions|departments)\b/i;
 const NIBRS_DEMOGRAPHIC_BREAKDOWN_RE = /\b(?:offenders?|victims?|arrestees?|suspects?|demographics?|demographic|age|ages|age\s+group|race|racial|ethnicity|ethnic|sex|gender|male|female|men|women|juvenile|juveniles?|adult|adults?)\b/i;
 
 export function detectNibrsCountywideDemographicsOverride(question: string): CapabilityOverride | null {
   if (!COUNTY_SCOPE_RE.test(question)) return null;
+  // A named agency is not a countywide request, however its own name is spelled. Without this the
+  // refusal fired before the contract was even built, so nothing downstream ever saw that the
+  // request had resolved to a single ORI.
+  if (scopedToNamedAgency(question)) return null;
   // Explicit countywide requests have a deterministic agency-crosswalk route
   // with a participation disclosure. Keep refusing ambiguous county wording.
   if (/\bcountywide\b/i.test(question)) return null;

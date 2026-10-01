@@ -1,0 +1,234 @@
+{
+  "at": "2026-09-28T02:19:57.922Z",
+  "candidate": [
+    {
+      "path": "app/api/nibrs-query/route.ts",
+      "expected": "8bc5a32f3eb11c09751814dfdd3a07e274b5c82cf1a38301355df5f241f4d80a",
+      "actual": "8bc5a32f3eb11c09751814dfdd3a07e274b5c82cf1a38301355df5f241f4d80a",
+      "match": true
+    },
+    {
+      "path": "lib/nibrs-db.ts",
+      "expected": "0793478ceed08719ecb062cc75eff92f0ce012ffceaba495243661797fe58e5f",
+      "actual": "0793478ceed08719ecb062cc75eff92f0ce012ffceaba495243661797fe58e5f",
+      "match": true
+    },
+    {
+      "path": "lib/nibrs-query-worker.js",
+      "expected": "0c42346f88100a52d6102e4e625b3bb9c76e10f73bbca079e5d639547f6a9aea",
+      "actual": "0c42346f88100a52d6102e4e625b3bb9c76e10f73bbca079e5d639547f6a9aea",
+      "match": true
+    },
+    {
+      "path": "lib/nibrs-execution-binding.ts",
+      "expected": "33ac3e0a52d492cd59e0e60fe072e6590a4898617add58c0a92897a7a8f81fa5",
+      "actual": "33ac3e0a52d492cd59e0e60fe072e6590a4898617add58c0a92897a7a8f81fa5",
+      "match": true
+    },
+    {
+      "path": "scripts/test-nibrs-execution-binding.ts",
+      "expected": "27ffb4a022ce5b8661b0adf6615c29cea4a2efdbd0874c3b5a9a10014450ee29",
+      "actual": "27ffb4a022ce5b8661b0adf6615c29cea4a2efdbd0874c3b5a9a10014450ee29",
+      "match": true
+    },
+    {
+      "path": "package.json",
+      "expected": "7fee4bca0871c840453dc7fc5f11c7ecb649b9f0168559dfd0e6bf9390dcc78c",
+      "actual": "7fee4bca0871c840453dc7fc5f11c7ecb649b9f0168559dfd0e6bf9390dcc78c",
+      "match": true
+    }
+  ],
+  "backups": [
+    {
+      "path": "app/api/nibrs-query/route.ts",
+      "expected": "5c3acca508f95cb6bc8647b98a4451e1ea549aeb8abc25bcb4021f7a9d9d29eb",
+      "actual": "5c3acca508f95cb6bc8647b98a4451e1ea549aeb8abc25bcb4021f7a9d9d29eb",
+      "match": true
+    },
+    {
+      "path": "lib/nibrs-db.ts",
+      "expected": "5498f2d6906667406dffa00da68bfdaec206196a1906290e13c4a85cf7ceae12",
+      "actual": "5498f2d6906667406dffa00da68bfdaec206196a1906290e13c4a85cf7ceae12",
+      "match": true
+    },
+    {
+      "path": "lib/nibrs-query-worker.js",
+      "expected": "ec0f73a7c86c2e729cde82865d69d130d8e1d2be4390e4fd27f1aca48f5104b7",
+      "actual": "ec0f73a7c86c2e729cde82865d69d130d8e1d2be4390e4fd27f1aca48f5104b7",
+      "match": true
+    },
+    {
+      "path": "package.json",
+      "expected": "825763814eca8320cf583635028dd48010d92a0568739f289c99de0860b3bb7a",
+      "actual": "825763814eca8320cf583635028dd48010d92a0568739f289c99de0860b3bb7a",
+      "match": true
+    }
+  ],
+  "cases": [
+    {
+      "id": "state-clearance",
+      "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+      "independentFixtureExpected": 300,
+      "beforeRows": [
+        {
+          "rapes_cleared_by_arrest": 300
+        }
+      ],
+      "afterRows": [],
+      "beforeSql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+      "afterExplanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "beforeLaunches": [
+        {
+          "received": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+          "sha": null,
+          "shaOfReceived": "0751cae95af8b91a11a40996acbbc24b25c0df7e507d34a608eca9bf6d14c8a4",
+          "altered": false
+        }
+      ],
+      "afterLaunches": [],
+      "originalCheck": {
+        "sql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+        "enforced": [],
+        "warnings": [],
+        "failure": null
+      },
+      "plannedCheck": {
+        "sql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+        "enforced": [
+          "nibrs-clearance-type-table"
+        ],
+        "warnings": [
+          "capability-nibrs-clearance-type-table"
+        ],
+        "failure": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+      }
+    },
+    {
+      "id": "national-clearance",
+      "question": "How many rapes were cleared by arrest nationwide in 2025?",
+      "independentFixtureExpected": 500,
+      "beforeRows": [
+        {
+          "rapes_cleared_by_arrest": 500
+        }
+      ],
+      "afterRows": [],
+      "beforeSql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.national_summary_clearance_detail WHERE year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+      "afterExplanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "beforeLaunches": [
+        {
+          "received": "SELECT\n  d.year,\n  SUM(d.arrestee_count) AS arrests\nFROM rollup.national_summary_arrestee_demographics d\nWHERE d.year BETWEEN 2025 AND 2025\n  AND d.ucr_arrest_offense IN ('11A', '11B', '11C')\nGROUP BY d.year\nORDER BY d.year\nLIMIT 1000",
+          "sha": null,
+          "shaOfReceived": "26881ed4e63e0bb05b75544d16c2f1ec603850852e676064a897533e894d2105",
+          "altered": false
+        },
+        {
+          "received": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.national_summary_clearance_detail WHERE year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+          "sha": null,
+          "shaOfReceived": "e60e80e9cd359c2977d42c532f3760903e71e669a447ee25a0f56b91fccef649",
+          "altered": false
+        }
+      ],
+      "afterLaunches": [
+        {
+          "received": "SELECT\n  d.year,\n  SUM(d.arrestee_count) AS arrests\nFROM rollup.national_summary_arrestee_demographics d\nWHERE d.year BETWEEN 2025 AND 2025\n  AND d.ucr_arrest_offense IN ('11A', '11B', '11C')\nGROUP BY d.year\nORDER BY d.year\nLIMIT 1000",
+          "sha": null,
+          "shaOfReceived": "26881ed4e63e0bb05b75544d16c2f1ec603850852e676064a897533e894d2105",
+          "altered": false
+        }
+      ],
+      "originalCheck": {
+        "sql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+        "enforced": [],
+        "warnings": [],
+        "failure": null
+      },
+      "plannedCheck": {
+        "sql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.national_summary_clearance_detail WHERE year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+        "enforced": [
+          "nibrs-clearance-type-table"
+        ],
+        "warnings": [
+          "capability-nibrs-clearance-type-table"
+        ],
+        "failure": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+      }
+    },
+    {
+      "id": "state-clearance-retry",
+      "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+      "independentFixtureExpected": 300,
+      "beforeRows": [
+        {
+          "rapes_cleared_by_arrest": 300
+        }
+      ],
+      "afterRows": [],
+      "beforeSql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+      "afterExplanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "beforeLaunches": [
+        {
+          "received": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+          "sha": null,
+          "shaOfReceived": "0751cae95af8b91a11a40996acbbc24b25c0df7e507d34a608eca9bf6d14c8a4",
+          "altered": false
+        }
+      ],
+      "afterLaunches": [],
+      "originalCheck": {
+        "sql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+        "enforced": [],
+        "warnings": [],
+        "failure": null
+      },
+      "plannedCheck": {
+        "sql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+        "enforced": [
+          "nibrs-clearance-type-table"
+        ],
+        "warnings": [
+          "capability-nibrs-clearance-type-table"
+        ],
+        "failure": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+      }
+    }
+  ],
+  "unsafeTableControl": {
+    "sql": "SELECT SUM(offense_count) AS rapes_cleared_by_arrest FROM summary_state_monthly WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+    "enforced": [
+      "nibrs-clearance-type-table"
+    ],
+    "failure": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+  },
+  "comparisons": [
+    {
+      "id": "GC-084/098",
+      "old": 20,
+      "now": 20,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-057",
+      "old": 8,
+      "now": 8,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 owned count",
+      "old": 48,
+      "now": 48,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 periods",
+      "old": 17,
+      "now": 17,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "baselineLimit": "Pre-change route/db module bytes loaded in memory at their original identities; current worker executes legacy no-hash calls, whose prior behavior is preserved. Synthetic rows; not production qualification."
+}

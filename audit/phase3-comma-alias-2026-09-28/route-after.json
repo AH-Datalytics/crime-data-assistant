@@ -1,0 +1,205 @@
+{
+ "kind": "phase3-comma-alias-route-witness",
+ "at": "2026-09-28T13:35:08.114Z",
+ "root": ".",
+ "expected": {
+  "youth_count": 1200,
+  "total_count": 14000,
+  "youth_share_pct": 8.6,
+  "rapes_cleared_by_arrest": 300
+ },
+ "boundaries": {
+  "networkProbe": [
+   {
+    "api": "https.request",
+    "blocked": true
+   },
+   {
+    "api": "http.get",
+    "blocked": true
+   },
+   {
+    "api": "net.connect",
+    "blocked": true
+   },
+   {
+    "api": "fetch",
+    "blocked": true
+   }
+  ],
+  "databaseProbe": [
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\crime_data.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\nibrs.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\shr.db",
+    "blocked": true
+   },
+   {
+    "path": "/opt/nibrs/nibrs.db",
+    "blocked": true
+   }
+  ],
+  "outboundNetworkAttempts": 4,
+  "refusedDatabaseOpens": 4,
+  "substitutedModules": [
+   "better-sqlite3",
+   "@anthropic-ai/sdk"
+  ]
+ },
+ "gc032Delivery": {
+  "delivered": false,
+  "rows": [],
+  "retryRules": [
+   "structural-measure-unit-unmodeled"
+  ],
+  "reply": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+ },
+ "checks": {
+  "passed": 5,
+  "failed": 0,
+  "list": [
+   {
+    "name": "GC-032 comma form: neither comma-sensitive rule (undeclared alias, untraceable returned value) fires",
+    "ok": true,
+    "detail": "structural-measure-unit-unmodeled"
+   },
+   {
+    "name": "GC-032 comma form and explicit JOIN form get the identical outcome (rows, reply, retry rules, execution)",
+    "ok": true,
+    "detail": "{\"comma\":[\"structural-measure-unit-unmodeled\"],\"join\":[\"structural-measure-unit-unmodeled\"]}"
+   },
+   {
+    "name": "a genuinely undeclared alias in the same statement is refused as a structure failure and never executed",
+    "ok": true,
+    "detail": "{\"rules\":[\"structural-returned-series-unresolved\"],\"reply\":\"I couldn't build a valid query after correcting the SQL structure. Try rephrasin\",\"worker\":0}"
+   },
+   {
+    "name": "a comma-joined wrong-table clearance statement delivers no figure and is never executed",
+    "ok": true,
+    "detail": "{\"rules\":[],\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "control: the single-table clearance answer still delivers the fixture figure",
+    "ok": true,
+    "detail": "{\"rapes_cleared_by_arrest\":300}"
+   }
+  ]
+ },
+ "results": [
+  {
+   "id": "gc032-comma-join",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "gc032-join-form",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "same-as-comma",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y JOIN total_offenders t ON 1 = 1",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "gc032-undeclared-alias",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "refused",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-returned-series-unresolved). The returned value \"zz.youth_count\" could not be traced to a source table, so nothing proves it measures what was asked for. Qualify each column with its table. Rewrite the SQL against a table whose rows are state-level, or say plainly that"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, zz.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a valid query after correcting the SQL structure. Try rephrasing your question or asking for a simpler breakdown.",
+   "errors": [],
+   "retryRules": [
+    "structural-returned-series-unresolved"
+   ]
+  },
+  {
+   "id": "clearance-wrong-table-comma",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "refused",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "How many rapes were cleared by arrest in Illinois in 2025?\n\n[SYSTEM: Person crimes (murder, rape, assault, kidnapping, sex offenses, carjacking) must be counted from VICTIM summary tables, not offense summary tables. Use summary_victim_state_monthly or summary_victim_city_monthly instead of summary_state_monthly or summary_city_monthly. Offense tables undercount person crimes by ~20%.]\n\n[SYSTEM: Q"
+   ],
+   "modelSql": "SELECT SUM(s.offense_count) AS rapes_cleared_by_arrest FROM agencies a, summary_state_monthly s WHERE a.state = s.state AND s.state = 'IL' AND s.year = 2025 AND s.ucr_offense_code = '11A'",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "clearance-control",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"How many rapes were cleared by arrest in Illinois in 2025?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: rapes_cleared_by_arrest\n- Offense/topic: rape\n- Year range: unknown\n- Geographies: Illinois\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY mention cities/agencies/entities that appear in the \"Entities in results\" list above. "
+   ],
+   "modelSql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A'",
+   "responseSql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+   "workerReceived": [
+    "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "rapes_cleared_by_arrest": 300
+    }
+   ],
+   "columns": [
+    "rapes_cleared_by_arrest"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": [],
+   "retryRules": []
+  }
+ ]
+}

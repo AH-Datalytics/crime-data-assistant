@@ -59,10 +59,10 @@ jobs:
     # instant as the step, and a hung harness would produce no evidence of having hung, which is the
     # failure mode that cost a whole run to diagnose on 2026-08-26.
     #
-    # 60 = 45 for the harness + ~15 for setup (checkout, Node/Python pinning, venv, npm ci) and the
-    # post-harness safety steps. Green runs are unaffected: billing stops when the work finishes, so
-    # headroom is free unless it is used.
-    timeout-minutes: 60
+    # 135 = 120 for the harness + 15 for setup (checkout, Node/Python pinning, venv, npm ci, the
+    # sqlite3 provisioning) and the post-harness safety steps. Green runs are unaffected: billing stops
+    # when the work finishes, so headroom is free unless it is used.
+    timeout-minutes: 135
     permissions:
       # GITHUB_TOKEN is used by actions/checkout to read the repository, and for nothing else. The job
       # has no write permission of any kind, and `persist-credentials: false` removes the token from the
@@ -315,6 +315,52 @@ jobs:
           fi
           echo "tracked tree and index both unchanged by npm ci (untracked output ignored)"
 
+      # ---------------------------------------------------------------- the sqlite3 command-line program
+      # scripts/test-shr-post-import-runtime.ts runs the REAL `sqlite3` CLI: the SHR post-import runtime
+      # preflights it and runs ANALYZE through it, and neither better-sqlite3 nor Python's sqlite3 module
+      # provides that executable. The runner image does not supply it, and PR #18's required run failed
+      # there (2026-10-01). It is provisioned here from sqlite.org at one pinned release, verified
+      # against the SHA3-256 sqlite.org publishes for that file AND a pinned SHA-256, extracted with
+      # Python's standard library into RUNNER_TEMP, and put first on PATH for later steps. The test
+      # resolves it by name, so nothing else changes. Bumping the release means updating all four pins.
+      - name: Provision the pinned sqlite3 CLI
+        env:
+          SQLITE_URL: https://www.sqlite.org/2026/sqlite-tools-win-x64-3530400.zip
+          SQLITE_BYTES: "6557792"
+          SQLITE_SHA3_256: 88b4659fe747896b853af10157316b4ade143553efb89c1c8ca7423a278dcc8b
+          SQLITE_SHA256: f46ee2475de4cbe287e6e5f7d43c838796b14e7379cd216bdbb28d391429f9fc
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/sqlite-cli"
+          zip="$RUNNER_TEMP/sqlite-tools.zip"
+          mkdir -p "$dir"
+          curl --fail --silent --show-error --location --max-time 120 --retry 2 -o "$zip" "$SQLITE_URL"
+          bytes="$(stat -c %s "$zip")"
+          [ "$bytes" = "$SQLITE_BYTES" ] || { echo "::error::sqlite download is $bytes bytes, expected $SQLITE_BYTES"; exit 1; }
+          # Both digests read the file from stdin: with a Windows path (RUNNER_TEMP has backslashes)
+          # sha256sum escapes its output line and prefixes the hash with "\".
+          sha3="$(openssl dgst -sha3-256 < "$zip" | awk '{print $NF}')"
+          [ "$sha3" = "$SQLITE_SHA3_256" ] || { echo "::error::sqlite SHA3-256 mismatch: $sha3"; exit 1; }
+          sha2="$(sha256sum < "$zip" | cut -d' ' -f1)"
+          [ "$sha2" = "$SQLITE_SHA256" ] || { echo "::error::sqlite SHA-256 mismatch: $sha2"; exit 1; }
+          python -c "import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extract('sqlite3.exe', sys.argv[2])" "$zip" "$dir"
+          cygpath -w "$dir" >> "$GITHUB_PATH"
+          echo "provisioned sqlite3 3.53.4 into $dir (verified size, SHA3-256, SHA-256)"
+
+      - name: Assert sqlite3 resolves to the provisioned binary and works
+        run: |
+          set -euo pipefail
+          expected="$(cygpath -u "$RUNNER_TEMP/sqlite-cli/sqlite3.exe")"
+          resolved="$(command -v sqlite3)"
+          # Git Bash reports the resolved command without its .exe suffix; compare without it.
+          actual="$(cygpath -u "$resolved")"
+          [ "${actual%.exe}" = "${expected%.exe}" ] || { echo "::error::sqlite3 resolves to $resolved, not $expected"; exit 1; }
+          version="$(sqlite3 --version | cut -d' ' -f1)"
+          [ "$version" = "3.53.4" ] || { echo "::error::sqlite3 reports version $version, expected 3.53.4"; exit 1; }
+          answer="$(sqlite3 :memory: 'SELECT 6 * 7;')"
+          [ "$answer" = "42" ] || { echo "::error::sqlite3 cannot run an in-memory query (got '$answer')"; exit 1; }
+          echo "sqlite3 $version at $resolved runs an in-memory query"
+
       # ---------------------------------------------------------------- the one canonical invocation
       - name: Run the canonical harness
         id: harness
@@ -327,9 +373,14 @@ jobs:
         # "has timed out after 30 minutes" having logged 169 of 175 commands `ok`, with no tally and
         # no verdict. Nothing was wrong with the code; the cap was.
         #
-        # 45 gives 50% headroom over the observed boundary. It does NOT slow a green run, and it does
-        # not weaken anything: the suite is unchanged, and a harness that truly hangs is still killed.
-        timeout-minutes: 45
+        # 45 was 50% headroom over that boundary while the suite had ~175 commands. The Phase 3
+        # integration took it to 235: on 2026-10-01 run 36803093295 finished the whole harness in
+        # 35.2 minutes, and run 36860570626 (same suite) was killed at 45 minutes after 120 `ok`
+        # commands, having run that identical prefix 2.7 times slower. Scaling the full 35.2 minutes by
+        # that factor gives ~95 minutes (an estimate, not an observed run), so the cap is 120: ~25
+        # minutes above it. It does NOT slow a green run, and it does not weaken anything: the suite
+        # is unchanged, per-command limits are unchanged, and a harness that truly hangs is still killed.
+        timeout-minutes: 120
         run: |
           set -euo pipefail
           # The single canonical entry point. No --only (it disables whole-run coverage checks, so a

@@ -1,0 +1,158 @@
+{
+  "at": "2026-09-28T15:00:03.812Z",
+  "candidate": [
+    {
+      "file": "lib/sql-guardrails.ts",
+      "match": true
+    },
+    {
+      "file": "lib/table-allowlist.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-rollup-router.ts",
+      "match": true
+    },
+    {
+      "file": "lib/sql-lineage.ts",
+      "match": true
+    },
+    {
+      "file": "scripts/test-comma-from-items.ts",
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "match": true
+    }
+  ],
+  "backups": [
+    {
+      "file": "lib/sql-guardrails.ts",
+      "match": true
+    },
+    {
+      "file": "scripts/test-sql-guardrails.ts",
+      "match": true
+    },
+    {
+      "file": "lib/table-allowlist.ts",
+      "match": true
+    },
+    {
+      "file": "lib/nibrs-rollup-router.ts",
+      "match": true
+    },
+    {
+      "file": "scripts/test-table-allowlist.ts",
+      "match": true
+    },
+    {
+      "file": "scripts/test-nibrs-rollup-router.ts",
+      "match": true
+    },
+    {
+      "file": "lib/sql-lineage.ts",
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "match": true
+    }
+  ],
+  "results": [
+    {
+      "id": "comma-unpinned",
+      "beforeRows": [],
+      "afterRows": [
+        {
+          "rapes_cleared_by_arrest": 400
+        }
+      ],
+      "beforeWorkers": 0,
+      "afterWorkers": 1,
+      "beforeRules": [
+        "structural-returned-series-unresolved"
+      ],
+      "afterRules": []
+    },
+    {
+      "id": "join-unpinned",
+      "beforeRows": [],
+      "afterRows": [],
+      "beforeWorkers": 0,
+      "afterWorkers": 0,
+      "beforeRules": [
+        "contract-single-year-temporal-scope"
+      ],
+      "afterRules": [
+        "contract-single-year-temporal-scope"
+      ]
+    },
+    {
+      "id": "comma-pinned",
+      "beforeRows": [],
+      "afterRows": [
+        {
+          "rapes_cleared_by_arrest": 300
+        }
+      ],
+      "beforeWorkers": 0,
+      "afterWorkers": 1,
+      "beforeRules": [
+        "structural-returned-series-unresolved"
+      ],
+      "afterRules": []
+    },
+    {
+      "id": "simple-control",
+      "beforeRows": [
+        {
+          "rapes_cleared_by_arrest": 300
+        }
+      ],
+      "afterRows": [
+        {
+          "rapes_cleared_by_arrest": 300
+        }
+      ],
+      "beforeWorkers": 1,
+      "afterWorkers": 1,
+      "beforeRules": [],
+      "afterRules": []
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "GC-084/098",
+      "old": 20,
+      "now": 20,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-057",
+      "old": 8,
+      "now": 8,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 owned count",
+      "old": 48,
+      "now": 48,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 periods",
+      "old": 17,
+      "now": 17,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "finding": "CMA1: newly admitted comma query ignores the counted second instance in the single-year check; actual route delivers synthetic 400 instead of 300.",
+  "reviewerCorrection": "First route probe used nonexistent month on annual clearance table; its receipts are preserved, not used as evidence of delivery. V2 removes that invalid predicate.",
+  "limit": "Comparison is fixture-only; saved broad regression runs reused, not independently rerun."
+}

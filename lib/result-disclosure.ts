@@ -2,9 +2,16 @@ import {
   NIBRS_UCR_PROPERTY_LABEL,
   NIBRS_UCR_VIOLENT_LABEL,
 } from "./nibrs-codes";
+import { rankingLimitSentence } from "./level-ranking-eligibility";
+import { guardEmptyStateWording, type ResultStateDecision } from "./result-state";
+import { applyAgencyDisclosure, describeMultiAgency, countyRequestFromQuestion, multiAgencyRequestFromQuestion, agencyLabelsInRows, agencyRepresented, sqlEstablishesCountyScope, asksMultipleNamedAgencies, distinctAgencyIdentities, type ResolvedAgency } from "./agency-disclosure";
+import { classifyClearanceReferent, MIXED_REFERENT_NOTE } from "./clearance-referent";
+import { establishIdentities, checkRequestedMembers, mayAssertAgencyFacts, type AnswerEvidence } from "./answer-evidence";
+import { monthCoverageFromRows, describeMonths, monthPointsFromRows, returnedMonthRange, applyPeriodDisclosure, partialPeriodIsRelevant } from "./period-comparison";
 import {
   explicitStateSubstateMismatch,
   filteredEntityLabel,
+  stateNameForAbbr,
 } from "./explicit-state-intent";
 
 const MONTH_NAMES = [
@@ -31,6 +38,7 @@ function hasYearMention(text: string): boolean {
   return /\b(?:19|20)\d{2}\b/.test(text);
 }
 
+
 function appendSentence(text: string, sentence: string): string {
   const trimmed = (text || "").trim();
   if (!trimmed) return sentence;
@@ -45,13 +53,46 @@ function usesContinuousReportingFilter(sql: string): boolean {
     /\bJOIN\s+nibrs_consistent_reporters\b[\s\S]{0,200}\bON\b[\s\S]{0,160}\bori\s*=/i.test(compact);
 }
 
+/**
+ * The one denominator shape recognised as actually months-adjusted.
+ *
+ * This is the recognised form, not a general reading of SQL arithmetic. A denominator written any
+ * other way is simply not claimed to be adjusted.
+ */
+const MONTHS_ADJUSTED_DENOMINATOR =
+  /\bSUM\s*\(\s*\w+\.population\s*\*\s*\w+\.months_reported\s*\/\s*12\.0\s*\)/i;
+
+/*
+ * Why there are two branches here.
+ *
+ * The caveat used to require the literal table `nibrs_agency_completeness`, and a rate written with
+ * an inline monthly count only satisfied that because the NIBRS planner rewrote it into the table
+ * before disclosures were computed. That rewrite is gone -- it could change a figure; see
+ * lib/nibrs-sql-optimizer.ts -- so the inline form needs recognising directly or it would keep an
+ * adjusted denominator while losing the sentence that admits it.
+ *
+ * The inline branch demands the ADJUSTMENT, not evidence that months were counted somewhere. A
+ * first version accepted a month count plus a `rate_per_100k` alias, which let an UNADJUSTED rate --
+ * `SUM(a.population)`, with the month count merely reported alongside -- be described as "adjusted
+ * for months reported". On a one-agency fixture with six reporting months that rate is 100 while the
+ * genuinely adjusted counterpart is 200, and both were being given the same sentence. A matching
+ * count somewhere in the statement says nothing about the denominator.
+ *
+ * The completeness-table branch keeps its original, looser markers: it predates this and its
+ * behaviour is accepted.
+ */
 function usesNibrsDvReportingPopulationRate(sql: string): boolean {
-  return /\bsummary_domestic_violence\b/i.test(sql) &&
-    /\bnibrs_agency_completeness\b/i.test(sql) &&
-    /\bagencies\b/i.test(sql) &&
-    (/\breporting_population\b/i.test(sql) ||
+  if (!/\bsummary_domestic_violence\b/i.test(sql)) return false;
+  if (!/\bagencies\b/i.test(sql)) return false;
+  if (/\bnibrs_agency_completeness\b/i.test(sql)) {
+    return /\breporting_population\b/i.test(sql) ||
       /\brate_per_100k\b/i.test(sql) ||
-      /\bSUM\s*\(\s*\w+\.population\s*\*\s*\w+\.months_reported\s*\/\s*12\.0\s*\)/i.test(sql));
+      MONTHS_ADJUSTED_DENOMINATOR.test(sql);
+  }
+  if (/\bCOUNT\s*\(\s*DISTINCT\s+month\s*\)\s+AS\s+months_reported\b/i.test(sql)) {
+    return MONTHS_ADJUSTED_DENOMINATOR.test(sql);
+  }
+  return false;
 }
 
 function normalizeContinuousReportingExplanation(explanation: string): string {
@@ -96,7 +137,8 @@ function usesParentTheftSql(sql: string): boolean {
 }
 
 function asksBareViolentCrime(question: string): boolean {
-  return /\bviolent crime\b/i.test(question) &&
+  // Plural too (GC-084 correction C2): "violent crimes" is the same request and gets the same definition.
+  return /\bviolent crimes?\b/i.test(question) &&
     !/\b(crimes against persons|nibrs definition|nibrs taxonomy|simple assault|intimidation|kidnapping|human trafficking|all person crimes|persons crimes)\b/i.test(question);
 }
 
@@ -542,25 +584,6 @@ function yearRangeFromSql(sql: string): string | null {
   return null;
 }
 
-function monthPointsFromRows(rows: Record<string, unknown>[]): { year: number; month: number }[] {
-  const yearCol = ["year", "data_year", "Year"].find((c) => rows[0]?.[c] !== undefined);
-  const monthCol = ["month", "Month"].find((c) => rows[0]?.[c] !== undefined);
-  if (!yearCol || !monthCol) return [];
-  return rows
-    .map((r) => ({ year: Number(r[yearCol]), month: Number(r[monthCol]) }))
-    .filter((p) => Number.isFinite(p.year) && Number.isFinite(p.month) && p.month >= 1 && p.month <= 12)
-    .sort((a, b) => a.year - b.year || a.month - b.month);
-}
-
-function returnedMonthRange(rows: Record<string, unknown>[]): string | null {
-  const points = monthPointsFromRows(rows);
-  if (points.length === 0) return null;
-  const lo = points[0];
-  const hi = points[points.length - 1];
-  if (lo.year === hi.year && lo.month === hi.month) return MONTH_NAMES[lo.month - 1] + " " + hi.year;
-  if (lo.year === hi.year) return `${MONTH_NAMES[lo.month - 1]}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
-  return `${MONTH_NAMES[lo.month - 1]} ${lo.year}-${MONTH_NAMES[hi.month - 1]} ${hi.year}`;
-}
 
 function rowsIncludeYear(rows: Record<string, unknown>[], year: number): boolean {
   const yearCols = ["year", "data_year", "Year"];
@@ -699,6 +722,115 @@ export function laggedAnnualRecentYearNote(
   return "Recent year" + (flaggedYears.length === 1 ? "" : "s") + " (" + label + ") may be incomplete or preliminary \u2014 " + source + " are published on a lag, so counts can rise as more agencies report and the recent drop should not be read as a true decline.";
 }
 
+
+/**
+ * A share computed from `summary_offender_demographics.offender_count` (or its planner rollup) is a
+ * share of RECORDED OFFENDERS, not of crimes: GC-032 asks "what share of serious violent crimes ...
+ * are committed by youth", and the only answer the data supports counts offender records. A model
+ * writing "8.0% of serious violent crimes" silently changes the unit, so that phrase is re-labelled
+ * and the unit is stated once. "Share of crimes" is deliberately not used in the sentence: the
+ * route's later offender-wording step rewrites that phrase. Offenders of unknown age are named as
+ * part of the total only when the statement does not filter them.
+ */
+function offenderShareUnit(explanation: string, question: string, sql: string, rows: Record<string, unknown>[]): string {
+  const delivery = offenderShareDelivery(question, sql, rows);
+  if (!delivery) return explanation;
+  // The model's sentence is NOT kept (Codex G32-2): "8.4% of all reported serious violent crimes were
+  // committed by youth" asserts a share the database did not measure, and no rewrite of its wording
+  // can be shown complete. The product states what the verified row and the SQL's scope establish.
+  return delivery.join("\n\n");
+}
+
+/**
+ * The owned answer for a proved offender share: [statement, unit note], or null when the statement is
+ * not one. Every part is read from the returned row or the statement's own filters, and a part that
+ * cannot be read unambiguously is left out rather than guessed:
+ *   - the share is the ONE returned column computed by a division, scaled as the SQL scales it;
+ *   - a count pair is quoted only when it reproduces that share to the SQL's rounding;
+ *   - the group, place and period come from single, unambiguous equality/BETWEEN filters.
+ * Exported so the route can re-apply it after the internal-leak firewall.
+ */
+export function offenderShareDelivery(question: string, sql: string, rows: Record<string, unknown>[]): [string, string] | null {
+  const note = offenderShareUnitNote(question, sql);
+  if (!note) return null;
+  const text = sql.replace(/\s+LIMIT\s+\d+\s*;?\s*$/i, "");
+  const plain = text.replace(/'(?:''|[^'])*'/g, "''");
+
+  // The share column: the outer select item holding a top-level division, with an alias.
+  const outer = plain.slice(plain.search(/\bSELECT\b(?![\s\S]*\bSELECT\b[\s\S]*\bFROM\b[\s\S]*$)/i));
+  const selectList = outer.replace(/^\s*SELECT\s+/i, "").replace(/\s+FROM\s[\s\S]*$/i, "");
+  const items: string[] = [];
+  let depth = 0; let start = 0;
+  for (let i = 0; i < selectList.length; i++) {
+    const c = selectList[i];
+    if (c === "(") depth++;
+    else if (c === ")") depth--;
+    else if (c === "," && depth === 0) { items.push(selectList.slice(start, i)); start = i + 1; }
+  }
+  items.push(selectList.slice(start));
+  const shares = items.map((item) => item.trim()).map((item) => ({ item, alias: item.match(/\s+AS\s+([A-Za-z_]\w*)\s*$/i)?.[1] ?? null }))
+    .filter(({ item, alias }) => alias && /\//.test(item));
+  const row = rows.length === 1 ? rows[0] : null;
+  // Only an actual finite number is a share. SQL NULL (a zero denominator, or no rows summed) is an
+  // UNAVAILABLE share, and `Number(null)` is 0 -- coercing it stated 0.0% (Codex, G32 review). A real
+  // numeric 0 stays 0%.
+  const raw = shares.length === 1 && row ? row[shares[0].alias!] : undefined;
+  const value = typeof raw === "number" && Number.isFinite(raw) ? raw : NaN;
+  const unavailable = shares.length === 1 && row !== null && !Number.isFinite(value);
+
+  let figure: string | null = null;
+  let counts = "";
+  if (Number.isFinite(value)) {
+    const item = shares[0].item;
+    const percentScaled = /(?:^|[^\w.])100(?:\.0*)?\s*\*|\*\s*100(?:\.0*)?(?![\w.])/.test(item);
+    const round = item.match(/ROUND\s*\([\s\S]*,\s*(\d+)\s*\)\s+AS\s/i);
+    const digits = round ? Math.max(0, Number(round[1]) - (percentScaled ? 0 : 2)) : 1;
+    const percent = percentScaled ? value : value * 100;
+    figure = `${percent.toFixed(digits)}%`;
+    const numbers = Object.entries(row!).filter(([key, v]) => key !== shares[0].alias && typeof v === "number" && Number.isInteger(v)) as [string, number][];
+    const tolerance = 0.5 * 10 ** -digits + 1e-9;
+    const pairs = numbers.flatMap(([, a]) => numbers.map(([, b]) => [a, b] as const))
+      .filter(([a, b]) => b > 0 && a >= 0 && a <= b && Math.abs((100 * a) / b - percent) <= tolerance);
+    if (pairs.length === 1) counts = ` (${pairs[0][0].toLocaleString("en-US")} of ${pairs[0][1].toLocaleString("en-US")})`;
+  }
+
+  const distinct = <T,>(values: T[]) => [...new Set(values.map((v) => JSON.stringify(v)))].map((v) => JSON.parse(v) as T);
+  const LABELS: Record<string, string> = { age_group: "age group", sex: "sex", race: "race", ethnicity: "ethnicity" };
+  const groups = distinct([...text.matchAll(/\b(?:\w+\.)?(age_group|sex|race|ethnicity)\s*=\s*'([^']+)'/gi)].map((m) => [m[1].toLowerCase(), m[2]]));
+  const states = distinct([...text.matchAll(/\b(?:\w+\.)?state\s*=\s*'([A-Za-z]{2})'/gi)].map((m) => m[1].toUpperCase()));
+  const ranges = distinct([...text.matchAll(/\b(?:\w+\.)?(?:data_)?year\s+BETWEEN\s+(\d{4})\s+AND\s+(\d{4})/gi)].map((m) => `${m[1]}–${m[2]}`));
+  const singles = distinct([...text.matchAll(/\b(?:\w+\.)?(?:data_)?year\s*=\s*(\d{4})\b/gi)].map((m) => m[1]));
+  const place = states.length === 1 ? stateNameForAbbr(states[0]) : null;
+  const period = ranges.length + singles.length === 1 ? (ranges[0] ?? singles[0]) : null;
+  const scope = `Of the offenders recorded in NIBRS reports for the requested offenses${place ? ` in ${place}` : ""}${period ? `, ${period}` : ""}`;
+  const group = groups.length === 1 ? `had a recorded ${LABELS[groups[0][0]]} of ${groups[0][1]}` : "were in the requested group";
+  // The cause is named only when the returned row establishes it: every returned count is zero.
+  const otherValues = row && shares.length === 1 ? Object.entries(row).filter(([key]) => key !== shares[0].alias).map(([, v]) => v) : [];
+  const noOffenders = otherValues.length > 0 && otherValues.every((v) => v === 0);
+  const statement = figure
+    ? `${scope}, ${figure}${counts} ${group}.`
+    : unavailable
+      ? `${scope}, the share that ${group} is unavailable: ${noOffenders
+        ? "the result contains no recorded offenders in this scope, so no percentage can be computed."
+        : "the query returned no value for it, so no percentage is stated."}`
+      : `${scope}, the share that ${group} is shown in the results above.`;
+  return [statement, note];
+}
+
+/**
+ * The unit sentence for an offender share, or null when the statement is not one. Exported so the
+ * route can re-apply it after the internal-leak firewall, which replaces a leaking narrative whole
+ * (the same reason the missing-member note is composed after it).
+ */
+export function offenderShareUnitNote(question: string, sql: string): string | null {
+  if (!/\bsummary_offender_demographics\b|\b(?:state|national)_summary_offender_demographics\b/i.test(sql)) return null;
+  if (!/\boffender_count\b/i.test(sql) || !/\//.test(sql)) return null;
+  if (!/\b(?:share|percent(?:age)?|proportion|fraction|what\s+part)\b|%/i.test(question)) return null;
+  const unknown = /'unknown'/i.test(sql) ? "" : " (including offenders recorded with an unknown age)";
+  return `Unit: this percentage is of offenders recorded in NIBRS reports${unknown}, not of crimes or incidents; ` +
+    "one incident can list several offenders, and not every offender is identified or recorded.";
+}
+
 export function applyResultDisclosures(opts: {
   explanation: string;
   question: string;
@@ -706,6 +838,17 @@ export function applyResultDisclosures(opts: {
   rows: Record<string, unknown>[];
   tab?: string;
   comparisonLabels?: Record<string, string>;
+  /**
+   * Increment 1 (Decision 13). The result-state decision the route's source adapter
+   * reached. When present, an empty-state claim in the wording is checked against it and
+   * replaced if it is not supported. The adapters classify; this chokepoint enforces.
+   */
+  resultState?: ResultStateDecision;
+  /**
+   * Increment 4 (Decision 10). The agency actually used for the place the user named.
+   * A county answered by a sheriff's agency must say so.
+   */
+  resolvedAgency?: ResolvedAgency;
 }): string {
   let explanation = normalizeDcExplanation(normalizeClearanceRateExplanation(opts.explanation, opts.sql), opts.sql);
   explanation = normalizeStateRankingScope(explanation, opts.rows);
@@ -748,6 +891,7 @@ export function applyResultDisclosures(opts: {
 
   if (opts.tab === "nibrs") {
     explanation = normalizeUngroundedNibrsStatewideExplanation(explanation, opts.sql, opts.rows);
+    explanation = offenderShareUnit(explanation, opts.question, opts.sql, opts.rows);
 
     if (asksBareViolentCrime(opts.question)) {
       explanation = appendSentence(
@@ -829,8 +973,12 @@ export function applyResultDisclosures(opts: {
   }
 
   const ytd = ytdRange(opts.question, opts.sql, opts.rows);
-  const currentReturnedPeriod = opts.tab === "current" ? returnedMonthRange(opts.rows) : null;
-  const returnedPeriod = ytd || currentReturnedPeriod;
+  /*
+   * Row-derived month identities are not Current-specific: `returnedMonthRange` reads columns, not a
+   * tab. The old `tab === "current"` restriction is why GC-049's NIBRS monthly rows described no
+   * period at all while GC-041's identical shape did.
+   */
+  const returnedPeriod = ytd || returnedMonthRange(opts.rows);
 
   if (opts.tab === "hate_crime") {
     const note = laggedAnnualRecentYearNote(opts.rows, explanation, new Date().getFullYear(), { sourceLabel: "Hate crime" });
@@ -843,6 +991,24 @@ export function applyResultDisclosures(opts: {
   if (returnedPeriod && !new RegExp(returnedPeriod.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(explanation)) {
     explanation = appendSentence(explanation, `Returned period: ${returnedPeriod}.`);
   }
+  // The partial year's own basis, or the honest limitation. Shared with the first-delivery callers
+  // so the two can never disagree; idempotent, so applying it twice adds nothing.
+  // Relevance from the caller's own context: a partial-period or year-to-date request, or a range
+  // reaching the current year. Not merely "a row carries this year".
+  // The same bounded rule the first-answer caller uses. A bare year mention is not enough.
+  const partialPeriodRelevant = partialPeriodIsRelevant(opts.question, opts.rows);
+  explanation = applyPeriodDisclosure(explanation, opts.rows, { partialPeriodRelevant });
+
+  /*
+   * Decision 6, the partial year's own basis.
+   *
+   * The overall envelope ("January 2020-May 2026") is not the basis for the partial year, so when
+   * the results carry the current year its own months are named exactly. Where the rows carry no
+   * month identities at all, the limitation is stated rather than a range guessed — and only where a
+   * partial period is actually in play, never on an ordinary complete-year answer, a refusal or a
+   * failure.
+   */
+
 
   if (opts.tab === "current") {
     const currentYear = new Date().getFullYear();
@@ -875,6 +1041,89 @@ export function applyResultDisclosures(opts: {
 
   if (!hasYearMention(explanation)) {
     if (period) explanation = appendSentence(explanation, `Period: ${period}.`);
+  }
+
+  // ── Increment 2 (Decision 10 sibling): a mixed police/court request ──
+  // The referent core lets a mixed request through so the police half is answered. The
+  // reader still needs to be told the court half was left out rather than overlooked.
+  if (classifyClearanceReferent(opts.question).referent === "mixed"
+      && !/court and corrections part/i.test(explanation)) {
+    explanation = appendSentence(explanation, MIXED_REFERENT_NOTE);
+  }
+
+  // ── Increment 4 (Decision 10): say which agency the figures came from ──
+  // Placed before the empty-state guard so that a replaced empty-state message still
+  // carries the resolution note — the reader needs it either way.
+  // ── The evidence-to-answer boundary (closure review §4) ──────────────────────
+  //
+  // Everything below reads the CARRIED RECORD only. It never re-parses the question for
+  // identity, and it makes no factual agency claim once the state is a failure or unknown.
+  // That ordering is the point: the previous version governed the failure wording and then
+  // appended a sheriff claim underneath it.
+  const evidence: AnswerEvidence = {
+    resultState: opts.resultState ?? null,
+    resolvedAgencies: opts.resolvedAgency ? [opts.resolvedAgency] : [],
+    returnedIdentities: establishIdentities(opts.rows),
+    requestedAgencies: multiAgencyRequestFromQuestion(opts.question),
+    hasFigures: Array.isArray(opts.rows) && opts.rows.length > 0,
+  };
+
+  // 1. Govern the state first. A failure replaces the narrative outright; for a populated
+  // result an unsupported unit is removed and the rest of the answer survives.
+  //
+  // `hasFigures` is the row-presence fact this function already computes two lines above for
+  // `mayAssertAgencyFacts`. Not passing it was the GC-073 defect: a 35-row answer was
+  // discarded because `genericResultState` reports `unknown` for every successful result.
+  if (opts.resultState) {
+    const guarded = guardEmptyStateWording(explanation, opts.resultState, { hasFigures: evidence.hasFigures });
+    if (guarded.blocked) explanation = guarded.safeText;
+  }
+
+  // 2. Factual agency claims, only when the state permits one.
+  if (mayAssertAgencyFacts(evidence)) {
+    const requested = evidence.requestedAgencies ?? [];
+    const returned = evidence.returnedIdentities ?? [];
+
+    if (requested.length >= 2) {
+      // Check EACH requested member individually against established identities.
+      const check = checkRequestedMembers(requested, returned);
+      if (check.allPresent && returned.length >= 2) {
+        const d = describeMultiAgency(check.present);
+        if (d.required && !/reported separately/i.test(explanation)) {
+          explanation = appendSentence(explanation, d.sentence);
+        }
+      } else if (check.absent.length > 0) {
+        const names = check.absent.map(a => a.agencyName);
+        explanation = appendSentence(explanation,
+          `${names.join(" and ")} ${names.length === 1 ? "is" : "are"} not represented separately in these results, ` +
+          `so this is not a side-by-side comparison of every agency you named.`);
+      }
+    } else if (evidence.resolvedAgencies && evidence.resolvedAgencies.length > 0) {
+      // A resolver established this. Question text never substitutes for it.
+      explanation = applyAgencyDisclosure(explanation, evidence.resolvedAgencies[0]);
+    } else if (countyRequestFromQuestion(opts.question)) {
+      // A county was asked for and nothing resolved it: state the limitation, claim nothing.
+      const county = countyRequestFromQuestion(opts.question)!;
+      explanation = appendSentence(explanation,
+        `I can't confirm from these results which agency was used for ${county.requested}, so I'm not going to ` +
+        `state the scope. Name the agency you want and I'll use it.`);
+    }
+  }
+
+  /*
+   * A ranking should say how many results it was limited to, so the reader knows the list is a top
+   * slice rather than everything. The limit comes from the EXECUTED statement's single outer LIMIT
+   * -- never a CTE's own limit, never a default inferred from the question, and never the number of
+   * rows that came back. When there is no single outer limit to report, nothing is claimed.
+   *
+   * Placed after the empty-state guard on purpose: a refusal or blocked answer has no ranking to
+   * describe, and `hasFigures` being false means there is no top slice to announce.
+   */
+  if (evidence.hasFigures) {
+    // The question is passed so the same level-ranking family boundary applies here: a chronological
+    // or per-period result is ordered and limited too, and must not be described as a ranking.
+    const limitSentence = rankingLimitSentence(opts.sql, opts.question);
+    if (limitSentence) explanation = appendSentence(explanation, limitSentence);
   }
 
   return explanation;

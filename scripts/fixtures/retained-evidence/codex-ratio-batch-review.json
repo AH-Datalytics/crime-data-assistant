@@ -1,0 +1,102 @@
+{
+  "kind": "Codex bounded ratio repair counterexamples",
+  "sourceSha256": "372fbdd352709a1784c73414fe2af87147e397e408e6e3be081b1ae6673d3999",
+  "question": "What percentage of murder victims in Texas were male in 2023?",
+  "scope": "Pure static validation, no SQL execution or inferred model behavior.",
+  "results": [
+    {
+      "name": "valid constructed male percentage",
+      "expected": "accept",
+      "sql": "SELECT ROUND(100.0 * SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_male FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'TX' AND i.year = 2023 AND i.homicide_type = 'Murder'",
+      "before": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        }
+      ],
+      "after": [],
+      "currentValidator": {
+        "enforced": [],
+        "retryIssues": [],
+        "blockReasons": []
+      }
+    },
+    {
+      "name": "literal denominator 2 is not total victims",
+      "expected": "reject",
+      "sql": "SELECT ROUND(100.0 * SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END) / 2.0, 1) AS pct_male FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'TX' AND i.year = 2023 AND i.homicide_type = 'Murder'",
+      "before": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        }
+      ],
+      "after": [],
+      "currentValidator": {
+        "enforced": [],
+        "retryIssues": [],
+        "blockReasons": []
+      }
+    },
+    {
+      "name": "population on a metric table is not total victims",
+      "expected": "reject",
+      "sql": "SELECT ROUND(100.0 * SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END) / AVG(i.population), 1) AS pct_male FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'TX' AND i.year = 2023 AND i.homicide_type = 'Murder'",
+      "before": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        },
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `incidents` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        }
+      ],
+      "after": [],
+      "currentValidator": {
+        "enforced": [],
+        "retryIssues": [],
+        "blockReasons": []
+      }
+    },
+    {
+      "name": "decorative division alongside counts-only requested series",
+      "expected": "reject",
+      "sql": "SELECT SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END) AS pct_male, COUNT(*) / 1.0 AS helper FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'TX' AND i.year = 2023 AND i.homicide_type = 'Murder'",
+      "before": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        },
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `incidents` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        }
+      ],
+      "after": [],
+      "currentValidator": {
+        "enforced": [],
+        "retryIssues": [],
+        "blockReasons": []
+      }
+    }
+  ]
+}

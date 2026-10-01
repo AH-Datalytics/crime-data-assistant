@@ -1,0 +1,40 @@
+{
+  "SINGLE": {
+    "asWritten": {
+      "enforced": [],
+      "warnings": []
+    },
+    "routed": {
+      "reason": "state-rollup",
+      "sql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025",
+      "verdict": {
+        "enforced": [],
+        "warnings": []
+      }
+    },
+    "optimized": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025"
+  },
+  "RETAINED": {
+    "asWritten": {
+      "enforced": [
+        "structural-measure-unit-unmodeled"
+      ],
+      "warnings": [
+        "structural-measure-unit-unmodeled"
+      ]
+    },
+    "routed": {
+      "reason": "state-rollup",
+      "sql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+      "verdict": {
+        "enforced": [
+          "structural-measure-unit-unmodeled"
+        ],
+        "warnings": [
+          "structural-measure-unit-unmodeled"
+        ]
+      }
+    },
+    "optimized": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t"
+  }
+}

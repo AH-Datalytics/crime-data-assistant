@@ -1,0 +1,839 @@
+/**
+ * Proving that a condition RESTRICTS the rows a statement returns -- not merely that its text
+ * appears somewhere in the SQL.
+ *
+ * This distinction has now been got wrong twice in this repository, in two different places, in
+ * the same way: a regular expression searched the whole statement for `column = 'value'` and
+ * treated a hit as proof. It is not proof. The text can sit in a comment, in an unused CTE, in an
+ * unrelated subquery, or next to an `OR` that gives back everything the equality took away. So
+ * the check lives here once, and both callers use it.
+ *
+ * What counts as a restriction:
+ *   - it survives comment stripping;
+ *   - it sits in a top-level `WHERE` or join `ON` of a scope the statement actually uses;
+ *   - that scope is either the outer query or a CTE the outer query really references
+ *     (transitively) -- a condition parked in an unused CTE restricts nothing;
+ *   - no `OR` shares the region, because a disjunction can widen what the equality narrowed;
+ *   - no comparison anywhere in that scope admits a different literal, so a multi-value
+ *     `IN ('Murder', 'Manslaughter')` is broader than the licence rather than equal to it;
+ *   - every table the caller says must be in scope really is, so the condition and the rows it
+ *     is supposed to filter are in the same place.
+ */
+
+import { analyzeSql, compoundArms } from "./sql-lineage";
+import { commaFromItems } from "./table-allowlist";
+
+export type CommonTableExpression = { name: string; body: string };
+
+export type RestrictionOptions = {
+  /** The table whose rows are being counted -- the rows the restriction has to reach. */
+  countedTable: string;
+  /** The table the filter column lives on. */
+  filterTable: string;
+  /**
+   * The relationship that carries the restriction from the filter table to the counted rows.
+   *
+   * Without this the check proved only that both tables appeared in the statement, which
+   * `CROSS JOIN incidents` and `JOIN incidents ON 1=1` both satisfy while counting every victim,
+   * multiplied by the incident rows.
+   */
+  join: { countedColumn: string; filterColumn: string };
+};
+
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function stripSqlComments(sql: string): string {
+  return sql.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
+}
+
+/** The text outside every parenthesised group, which is where a top-level filter lives. */
+export function flattenParens(text: string): string {
+  let depth = 0;
+  let out = "";
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === "'") {
+      const end = text.indexOf("'", i + 1);
+      const literal = text.slice(i, end === -1 ? text.length : end + 1);
+      if (depth === 0) out += literal;
+      i = (end === -1 ? text.length : end);
+      continue;
+    }
+    if (char === "(") { depth += 1; out += " "; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); out += " "; continue; }
+    if (depth === 0) out += char;
+  }
+  return out;
+}
+
+/**
+ * The stretches of a statement that actually filter rows: each `WHERE` and each join `ON`,
+ * taken at the top level only.
+ *
+ * Top level matters. A `WHERE` inside a subquery restricts that subquery, not the rows the
+ * statement returns, and a comparison in `SELECT`, `CASE`, `GROUP BY` or `ORDER BY` restricts
+ * nothing at all -- `SELECT ha.ori = 'MD0030100' AS is_selected` is a boolean column, and it
+ * was passing as though it were a filter.
+ */
+export function topLevelFilterRegions(sql: string): string[] {
+  return topLevelFilterRegionsDetailed(sql).map((region) => region.text);
+}
+
+/**
+ * The same regions, each tagged with whether it is the `ON` of an OUTER join.
+ *
+ * An outer join's `ON` does not restrict the preserved side. `FROM victims v LEFT JOIN incidents i
+ * ON v.incident_id = i.id AND i.homicide_type = 'Murder'` keeps every victim row and merely blanks
+ * the incident columns for the rest, so reading that `ON` as a filter over-counts by exactly the
+ * rows it was supposed to exclude.
+ */
+export function topLevelFilterRegionsDetailed(sql: string): { text: string; outerJoinOn: boolean }[] {
+  const terminator = /^(?:group\s+by|order\s+by|having|limit|window|union|intersect|except|join|inner|left|right|full|cross|on|where)\b/i;
+  const regions: { text: string; outerJoinOn: boolean }[] = [];
+  let depth = 0;
+  let i = 0;
+  let outerPending = false;
+  let currentJoinOuter = false;
+  while (i < sql.length) {
+    const char = sql[i];
+    if (char === "'") {
+      const end = sql.indexOf("'", i + 1);
+      i = end === -1 ? sql.length : end + 1;
+      continue;
+    }
+    if (char === "(") { depth += 1; i += 1; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); i += 1; continue; }
+    if (depth === 0) {
+      const rest = sql.slice(i);
+      const outerWord = /^(left|right|full)\b/i.exec(rest);
+      if (outerWord) { outerPending = true; i += outerWord[0].length; continue; }
+      const joinWord = /^join\b/i.exec(rest);
+      if (joinWord) {
+        currentJoinOuter = outerPending;
+        outerPending = false;
+        i += joinWord[0].length;
+        continue;
+      }
+      const opener = /^(where|on)\b/i.exec(rest);
+      if (opener) {
+        const outerJoinOn = opener[1].toLowerCase() === "on" && currentJoinOuter;
+        let j = i + opener[0].length;
+        let innerDepth = 0;
+        const start = j;
+        while (j < sql.length) {
+          const c = sql[j];
+          if (c === "'") {
+            const end = sql.indexOf("'", j + 1);
+            j = end === -1 ? sql.length : end + 1;
+            continue;
+          }
+          if (c === "(") { innerDepth += 1; j += 1; continue; }
+          if (c === ")") {
+            if (innerDepth === 0) break;
+            innerDepth -= 1; j += 1; continue;
+          }
+          if (innerDepth === 0 && terminator.test(sql.slice(j))) break;
+          j += 1;
+        }
+        regions.push({ text: sql.slice(start, j), outerJoinOn });
+        i = j;
+        continue;
+      }
+    }
+    i += 1;
+  }
+  return regions;
+}
+
+/**
+ * The CTEs a statement defines, and the query that follows them.
+ *
+ * Returns nothing when the statement does not open with `WITH`, so ordinary queries take the
+ * direct path and pay nothing for this.
+ */
+export function splitCtes(sql: string): { ctes: CommonTableExpression[]; outer: string } | null {
+  const head = /^\s*WITH\s+(RECURSIVE\s+)?/i.exec(sql);
+  if (!head) return null;
+  const ctes: CommonTableExpression[] = [];
+  let i = head[0].length;
+  while (i < sql.length) {
+    const entry = /^\s*("?)([A-Za-z_]\w*)\1\s*(?:\([^)]*\))?\s*AS\s*(?:MATERIALIZED\s+|NOT\s+MATERIALIZED\s+)?\(/i
+      .exec(sql.slice(i));
+    if (!entry) break;
+    let depth = 1;
+    let j = i + entry[0].length;
+    const bodyStart = j;
+    while (j < sql.length && depth > 0) {
+      const char = sql[j];
+      if (char === "'") {
+        const end = sql.indexOf("'", j + 1);
+        j = end === -1 ? sql.length : end + 1;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      if (char === ")") depth -= 1;
+      j += 1;
+    }
+    ctes.push({ name: entry[2], body: sql.slice(bodyStart, j - 1) });
+    i = j;
+    const comma = /^\s*,/.exec(sql.slice(i));
+    if (!comma) break;
+    i += comma[0].length;
+  }
+  return ctes.length > 0 ? { ctes, outer: sql.slice(i) } : null;
+}
+
+/** Every name a query refers to this CTE by -- its own name, and any alias. */
+export function cteReferences(outer: string, name: string): string[] {
+  const found = new Set<string>();
+  const pattern = new RegExp(`\\b(?:FROM|JOIN)\\s+${escapeRegExp(name)}\\b(?:\\s+AS)?(?:\\s+([A-Za-z_]\\w*))?`, "gi");
+  const RESERVED = /^(on|where|group|order|limit|left|right|inner|full|cross|join|union|having|window|using)$/i;
+  for (const match of outer.matchAll(pattern)) {
+    found.add(name);
+    if (match[1] && !RESERVED.test(match[1])) found.add(match[1]);
+  }
+  // A CTE read only through a comma (`FROM y, t`) is used too; missing it left its filters unchecked.
+  for (const source of commaSources(outer)) {
+    if (source.table !== name.toLowerCase()) continue;
+    found.add(name);
+    if (source.name !== source.table) found.add(source.name);
+  }
+  return [...found];
+}
+
+/**
+ * The comma-joined row sources of this text -- `FROM a x, b y` yields b as y -- which the
+ * FROM/JOIN patterns in this file cannot see. Without them a second, comma-joined instance of a
+ * counted table was never asked for ITS OWN year: `FROM t a, t b WHERE a.year = 2025` summed every
+ * year of `b` (Codex CMA1). Quoted identifiers are unquoted first so `"t" b` is still `t`; string
+ * literals are blanked so a quoted `'FROM x, y'` lists nothing.
+ */
+function commaSources(text: string): { table: string; name: string }[] {
+  const plain = text
+    .replace(/'(?:''|[^'])*'/g, "''")
+    .replace(/"([A-Za-z_]\w*)"|\[([A-Za-z_]\w*)\]|`([A-Za-z_]\w*)`/g, (_m, a, b, c) => a ?? b ?? c);
+  const sources: { table: string; name: string }[] = [];
+  for (const item of commaFromItems(plain)) {
+    if (!item.table || ALIAS_RESERVED.test(item.table)) continue;
+    const table = item.table.toLowerCase();
+    const alias = item.alias && !ALIAS_RESERVED.test(item.alias) ? item.alias.toLowerCase() : null;
+    sources.push({ table, name: alias ?? table });
+  }
+  return sources;
+}
+
+/**
+ * The scopes whose filters can restrict what a statement returns: the outer query, plus every
+ * CTE the outer query actually uses, followed transitively.
+ *
+ * The transitive step matters as much as the first one. The SHR deterministic plan pins its
+ * predicate two levels down, and a check that only looked at the outer query would refuse the
+ * product's own query; a check that looked at every CTE regardless of use would accept a
+ * condition parked in dead code.
+ */
+export function restrictingScopes(sql: string): string[] {
+  const split = splitCtes(sql);
+  if (!split) return [sql];
+  const scopes = [split.outer];
+  const used = new Set<string>();
+  const queue = [split.outer];
+  while (queue.length > 0) {
+    const text = queue.pop() as string;
+    for (const cte of split.ctes) {
+      if (used.has(cte.name)) continue;
+      if (cteReferences(text, cte.name).length === 0) continue;
+      used.add(cte.name);
+      scopes.push(cte.body);
+      queue.push(cte.body);
+    }
+  }
+  return scopes;
+}
+
+/** Is this table named in a top-level FROM or JOIN of this scope? */
+function tableInScope(scope: string, table: string): boolean {
+  const name = escapeRegExp(table);
+  // Any of SQLite's identifier quotings, optionally schema-qualified.
+  const pattern = new RegExp(
+    `\\b(?:FROM|JOIN)\\s+(?:[A-Za-z_]\\w*\\s*\\.\\s*)?(?:"${name}"|\\[${name}\\]|\`${name}\`|${name})\\b`, "i");
+  const flat = flattenParens(scope);
+  return pattern.test(flat) || commaSources(flat).some((source) => source.table === table.toLowerCase());
+}
+
+const ALIAS_RESERVED = /^(on|where|group|order|limit|left|right|inner|full|cross|join|union|having|window|using|as|natural|intersect|except)$/i;
+
+/**
+ * Every name this scope's rows can be referred to by, mapped to the table it stands for.
+ *
+ * `FROM incidents i JOIN victims v` yields i->incidents, v->victims, incidents->incidents,
+ * victims->victims. Without this, `v.homicide_type = 'Murder'` was read as a restriction on
+ * `incidents` purely because `incidents` appeared elsewhere in the statement.
+ */
+function aliasMap(scope: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const pattern = /\b(?:FROM|JOIN)\s+(?:[A-Za-z_]\w*\s*\.\s*)?(?:"([^"]+)"|\[([^\]]+)\]|`([^`]+)`|([A-Za-z_]\w*))\s*(?:\bAS\b\s*)?([A-Za-z_]\w*)?/gi;
+  const flat = flattenParens(scope);
+  for (const match of flat.matchAll(pattern)) {
+    const table = match[1] ?? match[2] ?? match[3] ?? match[4];
+    if (!table || ALIAS_RESERVED.test(table)) continue;
+    map.set(table.toLowerCase(), table.toLowerCase());
+    const alias = match[5];
+    if (alias && !ALIAS_RESERVED.test(alias)) map.set(alias.toLowerCase(), table.toLowerCase());
+  }
+  for (const source of commaSources(flat)) {
+    map.set(source.table, source.table);
+    map.set(source.name, source.table);
+  }
+  return map;
+}
+
+/** Strip redundant wrapping parentheses: `((x))` -> `x`, but never `(a) AND (b)`. */
+function unwrapParens(text: string): string {
+  let out = text.trim();
+  while (out.startsWith("(") && out.endsWith(")")) {
+    let depth = 0;
+    let wraps = true;
+    for (let i = 0; i < out.length; i += 1) {
+      const char = out[i];
+      if (char === "'") {
+        const end = out.indexOf("'", i + 1);
+        i = end === -1 ? out.length : end;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      else if (char === ")") {
+        depth -= 1;
+        if (depth === 0 && i < out.length - 1) { wraps = false; break; }
+      }
+    }
+    if (!wraps) break;
+    out = out.slice(1, -1).trim();
+  }
+  return out;
+}
+
+/** The top-level `AND` conjuncts of a filter region, in source order. */
+function splitConjuncts(region: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  let i = 0;
+  while (i < region.length) {
+    const char = region[i];
+    if (char === "'") {
+      const end = region.indexOf("'", i + 1);
+      i = end === -1 ? region.length : end + 1;
+      continue;
+    }
+    if (char === "(") { depth += 1; i += 1; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); i += 1; continue; }
+    if (depth === 0 && /^and\b/i.test(region.slice(i)) && (i === 0 || /\W/.test(region[i - 1]))) {
+      parts.push(region.slice(start, i));
+      i += 3;
+      start = i;
+      continue;
+    }
+    i += 1;
+  }
+  parts.push(region.slice(start));
+
+  const out: string[] = [];
+  for (const part of parts) {
+    const bare = unwrapParens(part);
+    if (bare.length === 0) continue;
+    // Unwrapping can expose a further AND chain: `(a AND b) AND c` has to yield a, b and c, or a
+    // correct query whose predicate sits inside a bracketed group -- `WHERE (i.homicide_type =
+    // 'Murder' AND v.state = 'CA')` -- would be refused for the shape of its brackets.
+    if (bare !== part.trim() && bare.length < part.trim().length) out.push(...splitConjuncts(bare));
+    else out.push(bare);
+  }
+  return out;
+}
+
+/**
+ * Every conjunct that genuinely restricts this scope: the top-level `AND` terms of each `WHERE`
+ * and inner-join `ON`.
+ *
+ * Conjuncts, not regions. A required equality counts only when it IS one of these terms -- text
+ * matching inside a region accepted `CASE WHEN v.incident_id = i.id THEN 1 ELSE 1 END = 1`, which
+ * is always true and relates nothing. Matching whole conjuncts also removes the need for a growing
+ * list of exclusions for `CASE`, string contexts and the like, and it subsumes two earlier rules:
+ *   - a disjunction cannot slip through, because `a OR b` is a single conjunct that no exact
+ *     pattern matches -- while logged #157/#159 still pass, their murder predicate being its own
+ *     conjunct and the place aliases a separate parenthesised one;
+ *   - a filter inside a subquery cannot either, since `year IN (SELECT ...)` is one conjunct.
+ *
+ * An OUTER join's `ON` is excluded outright: it keeps the preserved side, so it restricts nothing.
+ */
+function restrictingConjuncts(scope: string): string[] {
+  const kept: string[] = [];
+  for (const region of topLevelFilterRegionsDetailed(scope)) {
+    if (region.outerJoinOn) continue;
+    kept.push(...splitConjuncts(region.text));
+  }
+  return kept;
+}
+
+/**
+ * Is `left.leftColumn = right.rightColumn` established in this scope, with aliases resolved?
+ *
+ * `left` and `right` are table names; either side of the written equality may be either one.
+ */
+function equalityProved(
+  scope: string, aliases: Map<string, string>,
+  left: string, leftColumn: string, right: string, rightColumn: string,
+): boolean {
+  const ref = "([A-Za-z_]\\w*)\\s*\\.\\s*([A-Za-z_]\\w*)";
+  // Anchored, for the same reason as the restriction: the conjunct must BE the equality. An
+  // equality buried in `CASE WHEN v.incident_id = i.id THEN 1 ELSE 1 END = 1` is always true and
+  // relates nothing, so every victim row survives, multiplied by the incidents.
+  const exact = new RegExp(`^${ref}\\s*=\\s*${ref}$`, "i");
+  for (const conjunct of restrictingConjuncts(scope)) {
+    const m = exact.exec(conjunct);
+    if (!m) continue;
+    const a = { table: aliases.get(m[1].toLowerCase()), column: m[2].toLowerCase() };
+    const b = { table: aliases.get(m[3].toLowerCase()), column: m[4].toLowerCase() };
+    const matches = (x: typeof a, table: string, column: string) =>
+      x.table === table.toLowerCase() && x.column === column.toLowerCase();
+    if (matches(a, left, leftColumn) && matches(b, right, rightColumn)) return true;
+    if (matches(b, left, leftColumn) && matches(a, right, rightColumn)) return true;
+  }
+  return false;
+}
+
+/**
+ * Does this scope restrict `filterTable.column` to exactly this value?
+ *
+ * The qualifier has to resolve to the filter table. `v.homicide_type = 'Murder'` restricts the
+ * victims table -- a column that does not exist there -- and reading it as a restriction on
+ * `incidents` merely because `incidents` was in the statement let the join be skipped entirely.
+ */
+function scopeRestrictsOn(
+  scope: string, aliases: Map<string, string>, filterTable: string, column: string, value: string,
+): boolean {
+  const owners = [...aliases.entries()]
+    .filter(([, table]) => table === filterTable.toLowerCase())
+    .map(([name]) => name);
+  // A precondition, not a guarantee: with no owner the qualifier below would be a degenerate empty
+  // alternation. Removing it changes no outcome -- `projectionsOf` and the shape-1 table check
+  // already refuse a scope without the filter table -- so it is documented as what it is.
+  if (owners.length === 0) return false;
+  const qualified = `(?:${owners.map(escapeRegExp).join("|")})\\s*\\.\\s*`;
+  // An unqualified column is only unambiguous when the filter table is the sole table in scope.
+  const soleTable = new Set([...aliases.values()]).size === 1;
+  const prefix = soleTable ? `(?:${qualified})?` : qualified;
+  return scopeRestricts(scope, column, value, prefix);
+}
+
+/** Does this one scope restrict the column to exactly this value? */
+function scopeRestricts(scope: string, column: string, value: string, qualifier?: string): boolean {
+  // The column may carry a table alias -- `i.homicide_type` -- on either side of the comparison.
+  // Callers that know which table must own it pass a qualifier restricting which aliases count.
+  const col = `${qualifier ?? "(?:[A-Za-z_]\\w*\\s*\\.\\s*)?"}${escapeRegExp(column)}`;
+
+  // NOTE on multi-value `IN`: there is deliberately no "defeating literal" scan here, unlike
+  // `sqlTargetsOri`. It is refused by construction -- `IN ('Murder', 'Manslaughter')` is a
+  // conjunct that no pattern below matches -- while such a scan COULD cause false refusals by
+  // reading `CASE WHEN homicide_type = 'Manslaughter'` in a SELECT list as a widened filter.
+  const literal = escapeRegExp(value);
+  // Anchored: the conjunct must BE the comparison, not contain it. A single-value `IN` is an
+  // equality written differently, so it is spelled out here rather than rewritten in the text.
+  const exact = new RegExp(
+    `^(?:${col}\\s*=\\s*'${literal}'`
+    + `|'${literal}'\\s*=\\s*${col}`
+    + `|${col}\\s+IN\\s*\\(\\s*'${literal}'\\s*\\))$`, "i");
+  return restrictingConjuncts(scope).some((conjunct) => exact.test(conjunct));
+}
+
+
+/**
+ * WHICH OF THESE TABLES CONTRIBUTE ROWS FROM OUTSIDE THE REQUESTED YEAR.
+ *
+ * The defect: a request for one year was proved satisfied by searching the WHOLE statement for a
+ * year predicate. GC-054 asked for the 2026 homicide rate; its SQL restricts `agency_population` to
+ * 2026 inside a CTE and puts NO year predicate on `agency_monthly` at all, so every murder the
+ * source holds was summed and divided by the 2026 population. A predicate on the population table
+ * is not a predicate on the numerator, and this file already exists because that same mistake --
+ * text anywhere in the statement read as proof -- had been made twice before.
+ *
+ * So the question asked here is per table and per scope: wherever this table contributes rows, is
+ * ITS year column restricted to the requested year? A table is reported when any scope that uses it
+ * leaves it open, because unrestricted rows entering anywhere reach the total.
+ *
+ * Deliberately NOT `sqlRestrictsColumnToValue`. That proves a quoted literal reaches a COUNTED table
+ * through a declared relationship, which is a different obligation with different inputs; a year is
+ * written bare (`year = 2026`), and the caller here knows its metric tables from the catalog rather
+ * than declaring a join. The scope safeguards are what is shared, and they are shared by calling the
+ * same helpers -- restricting scopes, alias resolution, whole-conjunct matching, outer-join `ON`
+ * exclusion -- not by re-implementing them.
+ *
+ * Fails closed: what cannot be proved restricted is reported as unrestricted.
+ */
+export function tablesWithUnrestrictedYear(
+  sql: string, year: number, tables: MetricTableYear[], identityColumns: Set<string>,
+): string[] {
+  const stripped = stripSqlComments(sql || "");
+  const open: string[] = [];
+
+  for (const spec of tables) {
+    for (const scope of restrictingScopes(stripped)) {
+      const aliases = aliasMap(scope);
+      const sole = new Set([...aliases.values()]).size === 1;
+      // PER ROW SOURCE, not per table. `FROM agency_monthly am JOIN agency_monthly pin ON ...
+      // pin.year = 2026` pins one and leaves the other reading every year; collapsing them into one
+      // alternation let the pinned one vouch for the unfiltered one. Occurrences rather than
+      // `aliasMap` entries, because that map also records the table's own name as a key, and
+      // testing `incidents.year` where the query only ever writes `i.year` reports every aliased
+      // table as unrestricted.
+      const openHere = tableOccurrences(scope, spec.table).filter((owner) =>
+        scopeTakesMeasureFrom(scope, owner, sole, identityColumns)
+        && !aliasPinnedToYear(scope, owner, sole, year)
+        && !periodProvedThroughRelation(scope, aliases, spec, year));
+      if (openHere.length > 0) { open.push(spec.table); break; }
+    }
+  }
+  return [...new Set(open)];
+}
+
+export type MetricTableYear = {
+  table: string;
+  /**
+   * The table whose row carries this one's period, and the relationship that carries it.
+   *
+   * Co-presence is not that relationship: `victims v CROSS JOIN incidents i WHERE i.year = 2026`
+   * puts a dated table in scope while counting every victim ever recorded. The join is what makes
+   * an incident's year a property of the victim row being counted, so the join is what is proved.
+   */
+  periodFrom?: { table: string; column: string; foreignColumn: string };
+};
+
+/**
+ * The name each occurrence of this table is referred to by in this scope: its alias where it has
+ * one, its own name where it does not. One entry per `FROM`/`JOIN` occurrence.
+ */
+function tableOccurrences(scope: string, table: string): string[] {
+  const names: string[] = [];
+  const pattern = /\b(?:FROM|JOIN)\s+(?:[A-Za-z_]\w*\s*\.\s*)?(?:"([^"]+)"|\[([^\]]+)\]|`([^`]+)`|([A-Za-z_]\w*))\s*(?:\bAS\b\s*)?([A-Za-z_]\w*)?/gi;
+  const flat = flattenParens(scope);
+  for (const match of flat.matchAll(pattern)) {
+    const found = match[1] ?? match[2] ?? match[3] ?? match[4];
+    if (!found || found.toLowerCase() !== table.toLowerCase()) continue;
+    const alias = match[5];
+    names.push(alias && !ALIAS_RESERVED.test(alias) ? alias.toLowerCase() : found.toLowerCase());
+  }
+  // Each comma-joined instance is its own row source and must prove its own period.
+  for (const source of commaSources(flat)) {
+    if (source.table === table.toLowerCase()) names.push(source.name);
+  }
+  return [...new Set(names)];
+}
+
+/**
+ * Does this scope read this alias's rows INTO A NUMBER?
+ *
+ * Two forms, because a measure reaches the answer two ways and an earlier version saw only one:
+ *
+ *  - a non-identity column of the alias appears in the select list. This covers `SUM(COALESCE(
+ *    am.count, 0))`, whose nesting defeated an aggregate-argument scan, and it covers a CTE that
+ *    merely PROJECTS `count` for an outer query to sum -- a scope with no aggregate in it at all.
+ *  - an aggregate call references the alias, or counts rows where the alias is the sole source.
+ *    `COUNT(v.id)` is a measure of victims even though `id` identifies rather than measures.
+ *
+ * Identity columns alone are not a measure. A selection CTE that reads `agency_monthly` for
+ * `ori, agency, state` to rank cities by population contributes no figure, and requiring a year on
+ * it refuses a shipped plan.
+ */
+function scopeTakesMeasureFrom(
+  scope: string, owner: string, sole: boolean, identityColumns: Set<string>,
+): boolean {
+  const list = selectListOf(scope);
+  if (list === null) return false;
+
+  const qualified = new RegExp(`\\b${escapeRegExp(owner)}\\s*\\.\\s*([A-Za-z_]\\w*)`, "gi");
+  for (const match of list.matchAll(qualified)) {
+    if (!identityColumns.has(match[1].toLowerCase())) return true;
+  }
+  if (sole) {
+    // With one source in scope an unqualified column can only be its own. `name(` is a call, not a
+    // column, which matters here because `count` is both a real column and a function name.
+    const bare = /\b([A-Za-z_]\w*)\b(\s*\()?/g;
+    for (const match of list.matchAll(bare)) {
+      if (match[2]) continue;
+      const word = match[1].toLowerCase();
+      if (SQL_WORDS.has(word) || identityColumns.has(word)) continue;
+      if (aliasMap(scope).has(word)) continue;
+      return true;
+    }
+  }
+
+  for (const call of aggregateCalls(list)) {
+    if (new RegExp(`\\b${escapeRegExp(owner)}\\s*\\.`, "i").test(call)) return true;
+    // `COUNT(*)` counts the JOINED rows, so it takes its measure from every relation in the scope,
+    // not only from a sole one. `COUNT(*) FROM incidents i JOIN victims v WHERE i.year >= 1990` is
+    // a figure built from both, and neither is pinned to the requested year.
+    if (/\(\s*(?:DISTINCT\s+)?\*\s*\)/i.test(call)) return true;
+    if (sole && /\(/.test(call)) return true;
+  }
+  return false;
+}
+
+/** The select list of this scope: everything between its own SELECT and its own FROM. */
+function selectListOf(scope: string): string | null {
+  const select = findTopLevelWord(scope, /^select\b/i);
+  if (select === -1) return null;
+  const after = scope.slice(select + "select".length);
+  const from = findTopLevelWord(after, /^from\b/i);
+  return from === -1 ? after : after.slice(0, from);
+}
+
+/** The index of the first depth-zero occurrence of a word, or -1. */
+function findTopLevelWord(text: string, word: RegExp): number {
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === "'") {
+      const end = text.indexOf("'", i + 1);
+      i = end === -1 ? text.length : end;
+      continue;
+    }
+    if (char === "(") { depth += 1; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && word.test(text.slice(i)) && (i === 0 || /\W/.test(text[i - 1]))) return i;
+  }
+  return -1;
+}
+
+/** Each aggregate call in this text, arguments included, however deeply they nest. */
+function aggregateCalls(text: string): string[] {
+  const calls: string[] = [];
+  const opener = /\b(?:SUM|TOTAL|AVG|COUNT|MIN|MAX|GROUP_CONCAT)\s*\(/gi;
+  let match: RegExpExecArray | null;
+  while ((match = opener.exec(text)) !== null) {
+    let depth = 0;
+    for (let i = match.index + match[0].length - 1; i < text.length; i += 1) {
+      const char = text[i];
+      if (char === "'") {
+        const end = text.indexOf("'", i + 1);
+        i = end === -1 ? text.length : end;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      else if (char === ")") {
+        depth -= 1;
+        if (depth === 0) { calls.push(text.slice(match.index, i + 1)); break; }
+      }
+    }
+  }
+  return calls;
+}
+
+const SQL_WORDS = new Set([
+  "select", "distinct", "all", "as", "case", "when", "then", "else", "end", "cast", "round",
+  "coalesce", "nullif", "ifnull", "sum", "count", "avg", "min", "max", "total", "group_concat",
+  "and", "or", "not", "null", "is", "in", "like", "between", "over", "partition", "by", "asc",
+  "desc", "from", "where", "on", "join", "left", "right", "inner", "outer", "cross", "using",
+]);
+
+/** Is THIS alias's year column pinned to exactly this year, in this scope? */
+function aliasPinnedToYear(scope: string, owner: string, sole: boolean, year: number): boolean {
+  const qualified = `${escapeRegExp(owner)}\\s*\\.\\s*`;
+  const prefix = sole ? `(?:${qualified})?` : qualified;
+  const col = `${prefix}(?:year|data_year)`;
+  const y = `'?${year}'?`;
+  // Anchored on the whole conjunct: the conjunct must BE the restriction, so `year IN (2025, 2026)`
+  // fails, a year comparison inside a CASE matches nothing, and a broader predicate
+  // (`BETWEEN 2019 AND 2024` for a 2024 request) is simply not a pin.
+  const exact = new RegExp(
+    `^(?:${col}\\s*=\\s*${y}`
+    + `|${y}\\s*=\\s*${col}`
+    + `|${col}\\s+BETWEEN\\s+${y}\\s+AND\\s+${y}`
+    + `|${col}\\s+IN\\s*\\(\\s*${y}\\s*\\))$`, "i");
+  return restrictingConjuncts(scope).some((conjunct) => exact.test(conjunct.trim()));
+}
+
+/** Is the period carried in through the declared relationship, and pinned on the table that has it? */
+function periodProvedThroughRelation(
+  scope: string, aliases: Map<string, string>, spec: MetricTableYear, year: number,
+): boolean {
+  const edge = spec.periodFrom;
+  if (!edge) return false;
+  if (!tableInScope(scope, edge.table)) return false;
+  if (!equalityProved(scope, aliases, spec.table, edge.column, edge.table, edge.foreignColumn)) {
+    return false;
+  }
+  const sole = new Set([...aliases.values()]).size === 1;
+  return tableOccurrences(scope, edge.table)
+    .some((owner) => aliasPinnedToYear(scope, owner, sole, year));
+}
+
+/**
+ * Does this statement restrict `column` to exactly `value`, for the rows it returns?
+ *
+ * Fails closed: anything this cannot prove structurally is reported as unproved.
+ */
+export function sqlRestrictsColumnToValue(
+  sql: string, column: string, value: string, opts: RestrictionOptions,
+): boolean {
+  const stripped = stripSqlComments(sql || "");
+  const split = splitCtes(stripped);
+  const ctes = split ? split.ctes : [];
+
+  // The proof has to happen where the rows being counted are, and that is the OUTERMOST scope
+  // holding the counted table -- the outer query when it selects from `victims` itself, otherwise
+  // the CTE that does. An inner CTE may also mention `victims` incidentally, and its filters
+  // restrict its own rows, not the ones the answer counts:
+  //   WITH m AS (SELECT i.id FROM incidents i JOIN victims x ON x.incident_id = i.id WHERE <murder>)
+  //   SELECT COUNT(v.id) FROM victims v JOIN m ON m.id = v.incident_id
+  // Proving inside `m` there would authorise a count of the outer `v`, which nothing restricted.
+  const scopes = restrictingScopes(stripped).filter((scope) => tableInScope(scope, opts.countedTable));
+  for (const scope of scopes.slice(0, 1)) {
+    const aliases = aliasMap(scope);
+
+    // Shape 1: the predicate is applied where the rows are counted, AND the two tables are
+    // actually related. Co-presence is not a relationship: `CROSS JOIN incidents` and
+    // `JOIN incidents ON 1=1` put the filter table in scope while counting every victim.
+    if (tableInScope(scope, opts.filterTable)
+      && equalityProved(scope, aliases,
+        opts.countedTable, opts.join.countedColumn, opts.filterTable, opts.join.filterColumn)
+      && scopeRestrictsOn(scope, aliases, opts.filterTable, column, value)) {
+      return true;
+    }
+
+    // Shape 2: the house idiom -- a CTE restricts the filter table and PROJECTS ITS KEY, and the
+    // counting scope joins that projected key to the counted rows. `cteTargetsOri` accepts the
+    // same shape for the agency pin, and refusing it here would refuse the shipped query. The key
+    // equality is what makes this a restriction rather than a multiplication.
+    for (const cte of ctes) {
+      const refs = cteReferences(scope, cte.name);
+      if (refs.length === 0) continue;
+      // No explicit outer-join check on the CTE reference: `restrictingRegions` already refuses an
+      // outer join's ON, so the key equality below cannot be proved through one. Mutation testing
+      // showed a separate guard here changed no outcome, and a guard that cannot fail is worse
+      // than none -- it invites belief in a protection that is not doing the work.
+      const cteAliases = aliasMap(cte.body);
+      // `scopeRestrictsOn` needs an alias resolving to the filter table, so a CTE that never
+      // touches it cannot get past this line.
+      if (!scopeRestrictsOn(cte.body, cteAliases, opts.filterTable, column, value)) continue;
+      // Restricting and projecting the key is not enough: the CTE must emit that key at most once,
+      // or the join multiplies the counted rows instead of filtering them.
+      if (!cteEmitsKeyAtMostOnce(cte.body, opts.filterTable)) continue;
+      const withCte = new Map(aliases);
+      for (const name of refs) withCte.set(name.toLowerCase(), cte.name.toLowerCase());
+      for (const projected of projectionsOf(cte.body, opts.filterTable, opts.join.filterColumn)) {
+        if (equalityProved(scope, withCte,
+          opts.countedTable, opts.join.countedColumn, cte.name, projected)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * The output columns of a CTE that carry `table.column` -- the names the outer query can join on.
+ *
+ * Resolved through the lineage analyzer rather than by matching names, so `SELECT id AS k` is
+ * found and a same-named column belonging to some other table is not. Fails closed: an
+ * unparseable body projects nothing, so nothing can be proved through it.
+ */
+/** Is this keyword present at the top level of a statement -- outside parentheses and strings? */
+function hasTopLevelKeyword(sql: string, keyword: RegExp): boolean {
+  let depth = 0;
+  for (let i = 0; i < sql.length; i += 1) {
+    const char = sql[i];
+    if (char === "'") {
+      const end = sql.indexOf("'", i + 1);
+      i = end === -1 ? sql.length : end;
+      continue;
+    }
+    if (char === "(") { depth += 1; continue; }
+    if (char === ")") { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && keyword.test(sql.slice(i)) && (i === 0 || /\W/.test(sql[i - 1]))) return true;
+  }
+  return false;
+}
+
+/**
+ * Does this CTE emit each value of the filter table's key AT MOST ONCE?
+ *
+ * Projecting the right key is not the same as emitting it once, and the difference multiplies the
+ * answer rather than filtering it. Both of these project `incidents.id` and join it correctly, and
+ * both count every victim two or more times:
+ *
+ *   WITH m AS (SELECT id FROM incidents WHERE homicide_type = 'Murder'
+ *              UNION ALL SELECT id FROM incidents WHERE homicide_type = 'Murder')
+ *   WITH m AS (SELECT i.id FROM incidents i JOIN victims x ON x.incident_id = i.id WHERE ...)
+ *
+ * Only the plain single-table projection is proved here: one row of `incidents` in, at most one row
+ * out, so the key is as unique as it is on the table. Every compound, joined, grouped or derived
+ * form fails closed -- uniqueness is NOT inferred from selecting the right column.
+ */
+function cteEmitsKeyAtMostOnce(cteBody: string, filterTable: string): boolean {
+  // A compound arm can repeat a key the other arm already emitted. `UNION ALL` plainly does; even
+  // `UNION` would need the whole projection compared, which is not proved here.
+  if (compoundArms(cteBody).length > 1) return false;
+  // Exactly one table, and it must be the filter table. Any join can repeat the left side's key --
+  // joining back to `victims` emits one row per victim, not one per incident.
+  const tables = new Set([...aliasMap(cteBody).values()]);
+  if (tables.size !== 1 || !tables.has(filterTable.toLowerCase())) return false;
+  // Grouping and windowing can synthesise rows whose key multiplicity this does not track.
+  if (hasTopLevelKeyword(cteBody, /^group\s+by\b/i)) return false;
+  if (hasTopLevelKeyword(cteBody, /^window\b/i)) return false;
+  return true;
+}
+
+/**
+ * Are two RELATION INSTANCES joined on a column, in a scope that actually restricts?
+ *
+ * `equalityProved` answers the same question about two TABLES, which is enough while the tables
+ * differ. It cannot separate `FROM x d1 JOIN x d2 ON d2.year = d1.year` from the same statement
+ * joined on `ori` as well: both resolve to one table on both sides. This compares the aliases as
+ * written, so a measure read from `d2` is only attributed to an identifier read from `d1` when the
+ * statement really ties those two instances together on that column.
+ *
+ * Everything else is the existing discipline, reused rather than restated: comment stripping, top
+ * level `WHERE`/`ON` regions of scopes the statement uses, no `OR` sharing the region, and the
+ * anchored conjunct so an equality buried inside a `CASE` cannot pass for a join.
+ */
+export function aliasesJoinedOnColumn(
+  sql: string, leftAlias: string, rightAlias: string, column: string,
+): boolean {
+  const left = leftAlias.toLowerCase();
+  const right = rightAlias.toLowerCase();
+  const wanted = column.toLowerCase();
+  if (left === right) return true;   // one instance is trivially tied to itself
+  const ref = "([A-Za-z_]\\w*)\\s*\\.\\s*([A-Za-z_]\\w*)";
+  const exact = new RegExp(`^${ref}\\s*=\\s*${ref}$`, "i");
+  for (const scope of restrictingScopes(stripSqlComments(sql || ""))) {
+    for (const conjunct of restrictingConjuncts(scope)) {
+      const m = exact.exec(conjunct);
+      if (!m) continue;
+      const a = { alias: m[1].toLowerCase(), column: m[2].toLowerCase() };
+      const b = { alias: m[3].toLowerCase(), column: m[4].toLowerCase() };
+      if (a.column !== wanted || b.column !== wanted) continue;
+      if ((a.alias === left && b.alias === right) || (a.alias === right && b.alias === left)) return true;
+    }
+  }
+  return false;
+}
+
+export function projectionsOf(cteBody: string, table: string, column: string): string[] {
+  const lineage = analyzeSql(cteBody);
+  // Fail closed. Today this cannot change an outcome -- `analyzeSql` returns zero items whenever
+  // `parsed` is false, which was measured, not assumed -- so it is defence against a future
+  // analyzer that reports partial items alongside a failed parse, not a guarantee under test.
+  if (!lineage.parsed) return [];
+  const names: string[] = [];
+  for (const item of lineage.items) {
+    const carries = item.refs.some((ref) =>
+      ref.column.toLowerCase() === column.toLowerCase()
+      && (ref.table ?? "").toLowerCase() === table.toLowerCase());
+    if (!carries) continue;
+    const name = item.alias ?? item.refs[0]?.column;
+    if (name) names.push(name);
+  }
+  return names;
+}

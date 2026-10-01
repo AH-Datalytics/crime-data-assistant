@@ -27,6 +27,9 @@ import { OUTCOMES } from "./proof-contract";
  */
 export const BLOCK_CAPABILITY_RULES = new Set([
   "unsupported-sub-city-geography",
+  // Integration (2026-09-30): the accepted Phase 3 candidate added this refusal to the block set that
+  // lived in query-contract-validator.ts; dev moved the set here, so it is carried here.
+  "vehicle-burglary-unsupported",
   "unsupported-court-policy-topic",
   "demographic-rate-unsupported",
   "nibrs-clearance-weapon-unsupported",

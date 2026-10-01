@@ -141,7 +141,8 @@ interface CatalogEntry {
 /**
  * THE authority for action, reason and store. Every reason appears exactly once.
  *
- * 24 rows. `answer_limited_scope` deliberately has none: it stays a full member of
+ * 28 rows (24 from P2.1, plus four named at existing accepted Phase 3 branches when the candidate was
+ * integrated: see the clarify and decline_data groups). `answer_limited_scope` deliberately has none: it stays a full member of
  * `DeliveryAction` — the persisted action vocabulary is six — and is simply not producible. Giving
  * it a speculative reason so an exhaustiveness assertion could pass would be inventing a product
  * path, so the assertion is stated over *producible* actions instead (T1).
@@ -157,18 +158,31 @@ export const OUTCOME_CATALOG = [
   { action: "answer", reason: "model_sql_validated", stores: ["query_log"] },
   { action: "answer", reason: "stored_artifact_replay", stores: ["shared_charts"] },
 
-  // ── clarify (4) ───────────────────────────────────────────────────────────────────────────
+  // ── clarify (6) ───────────────────────────────────────────────────────────────────────────
   { action: "clarify", reason: "geography_ambiguous", stores: ["query_log"] },
   { action: "clarify", reason: "geography_scope_ambiguous", stores: ["query_log"] },
   { action: "clarify", reason: "place_unresolved", stores: ["query_log"] },
   { action: "clarify", reason: "source_switch", stores: ["query_log"] },
+  // Integration of the accepted Phase 3 candidate (Codex Gate A vocabulary ruling, 2026-09-30): named
+  // decisions at existing branches, not new behavior. `measure_ambiguous`: the violent/property/both and
+  // fatal/nonfatal shooting questions. `followup_ambiguous`: the Current/Historical amendment whose request
+  // is unresolved.
+  { action: "clarify", reason: "measure_ambiguous", stores: ["query_log"] },
+  { action: "clarify", reason: "followup_ambiguous", stores: ["query_log"] },
 
-  // ── decline_data (5) ──────────────────────────────────────────────────────────────────────
+  // ── decline_data (7) ──────────────────────────────────────────────────────────────────────
   { action: "decline_data", reason: "no_rows_in_source", stores: ["query_log", "shared_charts"] },
   { action: "decline_data", reason: "all_values_null", stores: ["query_log"] },
   { action: "decline_data", reason: "outside_source_years", stores: ["query_log"] },       // ∗
   { action: "decline_data", reason: "not_in_source", stores: ["query_log"] },              // ∗
   { action: "decline_data", reason: "agency_identity_unavailable", stores: ["query_log"] },
+  // Integration (Codex Gate A vocabulary ruling): `reporting_coverage_insufficient` is the NIBRS
+  // category-change path's `no-complete-reporter` result (a data decline, not `continuous_reporting_required`,
+  // which is a capability decline). `annual_result_not_supported` is the annual family's `no-supportable-year`
+  // decline: its years are withheld for disagreement, unestablished or partial reporting, so it must NOT be
+  // recorded as `outside_source_years`; the delivered explanation keeps the specific reasons.
+  { action: "decline_data", reason: "reporting_coverage_insufficient", stores: ["query_log"] },
+  { action: "decline_data", reason: "annual_result_not_supported", stores: ["query_log"] },
 
   // ── decline_capability (11) ───────────────────────────────────────────────────────────────
   { action: "decline_capability", reason: "capability_path_unavailable", stores: ["query_log"] }, // ∗

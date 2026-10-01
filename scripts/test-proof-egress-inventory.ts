@@ -282,7 +282,11 @@ console.log("\nmodel_response is captured outside NIBRS");
   check("capture happens BEFORE the server template overwrites it", () => {
     const source = read("app/api/query/route.ts");
     const capture = source.indexOf("if (!claude.sql) rawFirstNoSql = claude.explanation");
-    const overwrite = source.indexOf("buildNoSqlFallbackMessage(tab ===");
+    // The substitution site is now the shared referent-aware selector: a court-process request gets
+    // the honest explanation instead of the generic template, because this branch returns before
+    // `runGuardrails` (Decision 1, 2026-09-09). The ORDERING requirement is unchanged and is what
+    // this check exists for -- only the name of the call doing the replacing moved.
+    const overwrite = source.indexOf("selectNoSqlRefusal(guardrailQuestion");
     assert.ok(capture > 0 && overwrite > 0, "both sites must exist");
     assert.ok(capture < overwrite, "the raw text must be captured before it is replaced");
   });
@@ -422,9 +426,15 @@ console.log("\nall four sources are integrated");
   });
 
   check("SHR captures raw no-SQL model text before the server template", () => {
+    // The property is the ORDER: the model's own words are captured before the server replaces
+    // them. Which server-authored text replaces them is a separate decision -- SHR now picks it
+    // through the shared no-SQL selector instead of naming one template inline -- so match the
+    // assignment, not one particular right-hand side.
     const source = read("app/api/shr-query/route.ts");
     const capture = source.indexOf("const rawNoSqlText = claude.explanation || null;");
-    const template = source.indexOf('buildNoSqlFallbackMessage("shr")');
+    const template = source.search(
+      /claude\.explanation = (?:buildNoSqlFallbackMessage\("shr"\)|noSqlRefusal\.explanation)/,
+    );
     assert.ok(capture > 0 && template > 0, "both sites must exist");
     assert.ok(capture < template, "the raw text must be captured before it is replaced");
     assert.match(source, /boundedModelResponseJson\(rawNoSqlText, null\)/);

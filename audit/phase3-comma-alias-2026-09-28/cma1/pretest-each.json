@@ -1,0 +1,313 @@
+{
+ "at": "2026-09-28T16:30:34.722Z",
+ "results": [
+  {
+   "step": "python scripts/audit-test-exit-codes.py",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "  CAN REPORT A FAILURE AND EXIT 0   : 0"
+   },
+   "before": {
+    "skipped": "python runs once"
+   }
+  },
+  {
+   "step": "python scripts/diagnose-answer-log.py --self-test",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "diagnose-answer-log self-test: 27 passed, 0 failed"
+   },
+   "before": {
+    "skipped": "python runs once"
+   }
+  },
+  {
+   "step": "tsx scripts/test-structural-semantics.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "structural semantics: 90 passed, 0 failed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "structural semantics: 90 passed, 0 failed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-structural-enforcement.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "structural enforcement: 15 passed, 0 failed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "structural enforcement: 15 passed, 0 failed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-structural-route-placement.ts",
+   "after": {
+    "exit": 1,
+    "failLines": [
+     "FAIL  nibrs-query: every assignment to the executed SQL has a recognised source"
+    ],
+    "tail": "structural route placement: 24 passed, 1 failed"
+   },
+   "before": {
+    "exit": 1,
+    "failLines": [
+     "FAIL  nibrs-query: every assignment to the executed SQL has a recognised source"
+    ],
+    "tail": "structural route placement: 24 passed, 1 failed"
+   }
+  },
+  {
+   "step": "npm run test:current-trends-readiness",
+   "after": {
+    "skipped": "npm script (runs its own chain)"
+   },
+   "before": {
+    "skipped": "npm script (runs its own chain)"
+   }
+  },
+  {
+   "step": "tsx scripts/test-historical-county-identity.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "historical county identity tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "historical county identity tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-historical-county-live-paths.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "historical county live path tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "historical county live path tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-authoritative-agency-label.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "authoritative agency label tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "authoritative agency label tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-authoritative-label-route-placement.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "authoritative label route placement tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "authoritative label route placement tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-nibrs-place-resolver.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs place resolver tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs place resolver tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-nibrs-query-planner.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs query planner tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs query planner tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-nibrs-rollup-router.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup router tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup router tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-nibrs-rollup-freshness.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup freshness tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup freshness tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-nibrs-rollup-deterministic.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup deterministic tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup deterministic tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-nibrs-scope-deterministic.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs scoped deterministic tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs scoped deterministic tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-multi-city-deterministic.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "multi-city deterministic tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "multi-city deterministic tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-current-indexed-state-deterministic.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "current indexed-state deterministic tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "current indexed-state deterministic tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-latency-scoreboard.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "latency scoreboard tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "latency scoreboard tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-shr-deterministic-murder.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "SHR deterministic murder tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "SHR deterministic murder tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-shr-annual-coverage.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "SHR annual coverage tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "SHR annual coverage tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-resolver-warning-classification.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "resolver warning classification tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "resolver warning classification tests passed"
+   }
+  },
+  {
+   "step": "tsx scripts/test-build-shr-return-a-comparison.ts",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "SHR comparison artifact builder tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "SHR comparison artifact builder tests passed"
+   }
+  },
+  {
+   "step": "node scripts/test-nibrs-rollup-worker.js",
+   "after": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup worker tests passed"
+   },
+   "before": {
+    "exit": 0,
+    "failLines": [],
+    "tail": "nibrs rollup worker tests passed"
+   }
+  }
+ ]
+}

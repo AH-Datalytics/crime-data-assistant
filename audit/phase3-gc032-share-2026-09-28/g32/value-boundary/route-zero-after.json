@@ -1,0 +1,342 @@
+{
+ "kind": "phase3-comma-alias-route-witness",
+ "at": "2026-09-28T22:09:07.808Z",
+ "root": ".",
+ "expected": {
+  "youth_count": 0,
+  "total_count": 13800,
+  "youth_share_pct": 0,
+  "rapes_cleared_by_arrest": 300
+ },
+ "boundaries": {
+  "networkProbe": [
+   {
+    "api": "https.request",
+    "blocked": true
+   },
+   {
+    "api": "http.get",
+    "blocked": true
+   },
+   {
+    "api": "net.connect",
+    "blocked": true
+   },
+   {
+    "api": "fetch",
+    "blocked": true
+   }
+  ],
+  "databaseProbe": [
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\crime_data.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\nibrs.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\shr.db",
+    "blocked": true
+   },
+   {
+    "path": "/opt/nibrs/nibrs.db",
+    "blocked": true
+   }
+  ],
+  "outboundNetworkAttempts": 4,
+  "refusedDatabaseOpens": 4,
+  "substitutedModules": [
+   "better-sqlite3",
+   "@anthropic-ai/sdk"
+  ]
+ },
+ "gc032Delivery": {
+  "delivered": true,
+  "retryRules": [],
+  "expected": {
+   "youthN": 0,
+   "totalN": 13800,
+   "pct": 0
+  }
+ },
+ "checks": {
+  "passed": 18,
+  "failed": 0,
+  "list": [
+   {
+    "name": "retained-gc032: executed once by the bound worker",
+    "ok": true,
+    "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+   },
+   {
+    "name": "retained-gc032: the row holds a real 0 share over 13800 recorded offenders",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+   },
+   {
+    "name": "retained-gc032: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+    "ok": true,
+    "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+   },
+   {
+    "name": "retained-cte-false-wording: executed once by the bound worker",
+    "ok": true,
+    "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+   },
+   {
+    "name": "retained-cte-false-wording: the row holds a real 0 share over 13800 recorded offenders",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+   },
+   {
+    "name": "retained-cte-false-wording: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+    "ok": true,
+    "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+   },
+   {
+    "name": "single-select: executed once by the bound worker",
+    "ok": true,
+    "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+   },
+   {
+    "name": "single-select: the row holds a real 0 share over 13800 recorded offenders",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+   },
+   {
+    "name": "single-select: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+    "ok": true,
+    "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+   },
+   {
+    "name": "single-select-false-wording: executed once by the bound worker",
+    "ok": true,
+    "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+   },
+   {
+    "name": "single-select-false-wording: the row holds a real 0 share over 13800 recorded offenders",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+   },
+   {
+    "name": "single-select-false-wording: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+    "ok": true,
+    "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+   },
+   {
+    "name": "total-cte: executed once by the bound worker",
+    "ok": true,
+    "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+   },
+   {
+    "name": "total-cte: the row holds a real 0 share over 13800 recorded offenders",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+   },
+   {
+    "name": "total-cte: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+    "ok": true,
+    "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+   },
+   {
+    "name": "total-cte-false-wording: executed once by the bound worker",
+    "ok": true,
+    "detail": "{\"rows\":[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}],\"worker\":1}"
+   },
+   {
+    "name": "total-cte-false-wording: the row holds a real 0 share over 13800 recorded offenders",
+    "ok": true,
+    "detail": "[{\"youth_share_pct\":0,\"youth_count\":0,\"total_count\":13800}]"
+   },
+   {
+    "name": "total-cte-false-wording: delivered as 0.0% with its counts, not as unavailable, no crime claim",
+    "ok": true,
+    "detail": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition"
+   }
+  ]
+ },
+ "results": [
+  {
+   "id": "retained-gc032",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 0,
+     "youth_count": 0,
+     "total_count": 13800
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "retained-cte-false-wording",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 0,
+     "youth_count": 0,
+     "total_count": 13800
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "single-select",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025",
+   "responseSql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 LIMIT 1000",
+   "workerReceived": [
+    "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 0,
+     "youth_count": 0,
+     "total_count": 13800
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "single-select-false-wording",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025",
+   "responseSql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 LIMIT 1000",
+   "workerReceived": [
+    "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS youth_share_pct, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS youth_count, SUM(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025 LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 0,
+     "youth_count": 0,
+     "total_count": 13800
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "total-cte",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT TOTAL(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT TOTAL(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": "WITH youth_offenders AS (SELECT TOTAL(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT TOTAL(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT TOTAL(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT TOTAL(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 0,
+     "youth_count": 0,
+     "total_count": 13800
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "total-cte-false-wording",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"what share of serious violent crimes in California are committed by youth under 18?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: youth_share_pct, youth_count, total_count\n- Offense/topic: murder, rape, robbery, aggravated assault\n- Year range: unknown\n- Geographies: California\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY ment"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT TOTAL(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT TOTAL(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": "WITH youth_offenders AS (SELECT TOTAL(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT TOTAL(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000",
+   "workerReceived": [
+    "WITH youth_offenders AS (SELECT TOTAL(d.offender_count) AS youth_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT TOTAL(d.offender_count) AS total_count FROM rollup.state_summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "youth_share_pct": 0,
+     "youth_count": 0,
+     "total_count": 13800
+    }
+   ],
+   "columns": [
+    "youth_share_pct",
+    "youth_count",
+    "total_count"
+   ],
+   "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% (0 of 13,800) had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+   "errors": [],
+   "retryRules": []
+  }
+ ]
+}

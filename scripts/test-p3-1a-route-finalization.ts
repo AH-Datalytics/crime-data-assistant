@@ -87,6 +87,9 @@ const TRIGGERS: { ruleId: string; source: QueryContractSource; question: string 
     question: "What share of homicides in Denver, CO were solved in 2019?" },
   { ruleId: "shr-demographic-rate-unsupported", source: "shr",
     question: "Show the homicide rate per capita for Hispanic residents of Denver, CO in 2019." },
+  // Integration 2026-09-30: the accepted Phase 3 candidate's added block rule (lib/source-capabilities.ts).
+  { ruleId: "vehicle-burglary-unsupported", source: "current",
+    question: "How many vehicle burglaries were reported in Denver, CO in 2019?" },
 ];
 
 console.log("R1 — the runtime chain from a fired rule to a finalizable failure");

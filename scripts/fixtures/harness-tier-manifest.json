@@ -1821,6 +1821,420 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "P1.2b dependency closure. Proves the harness Python environment is declared in the repository and cannot drift. Measures the third-party closure from source -- following local-module imports TRANSITIVELY, reading FUNCTION-LEVEL imports through a full AST walk, and including scripts that plan commands SPAWN, discovered dynamically from command source rather than from any hard-coded list, because the four tools carrying `import requests` are network-optional exclusions that nothing reasoning about the plan can see. Requires FORWARD containment (everything imported is declared or reasonably excluded) and REVERSE containment (every locked distribution is reachable from the declaration through the lock's own `# via` provenance, so an extra pinned-and-hashed package fails). The anthropic exclusion is CALL-PATH specific and re-checked every run: it holds only while every harness-reachable invocation of the two tools importing it passes --print-target. Also asserts the lock is fully pinned and hashed and records its generating interpreter and pip-tools version, and that the workflow builds an isolated venv, proves the direct packages absent before installing, installs exclusively from the lock with --require-hashes, runs pip check, compares the installed set to the lock, and names no package or version itself. Tier F: reads source, the declaration, the lock and the workflow; installs nothing, contacts no index, and imports no third-party package."
+    },
+    {
+      "id": "test-structural-semantics",
+      "tier": "F",
+      "script": "scripts/test-structural-semantics.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1599 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-structural-enforcement",
+      "tier": "F",
+      "script": "scripts/test-structural-enforcement.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1288 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-structural-route-placement",
+      "tier": "F",
+      "script": "scripts/test-structural-route-placement.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (573 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-comma-from-items",
+      "tier": "F",
+      "script": "scripts/test-comma-from-items.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (964 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-phantom-place-guard",
+      "tier": "F",
+      "script": "scripts/test-phantom-place-guard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (3345 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-nibrs-annual-clearance",
+      "tier": "F",
+      "script": "scripts/test-nibrs-annual-clearance.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2922 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-agency-member-completeness",
+      "tier": "F",
+      "script": "scripts/test-agency-member-completeness.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1155 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-agency-figure-mapping",
+      "tier": "F",
+      "script": "scripts/test-agency-figure-mapping.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1238 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-agency-answer-ownership",
+      "tier": "F",
+      "script": "scripts/test-agency-answer-ownership.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (397 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-nibrs-execution-binding",
+      "tier": "F",
+      "script": "scripts/test-nibrs-execution-binding.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1280 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-nibrs-rollup-capability-family",
+      "tier": "F",
+      "script": "scripts/test-nibrs-rollup-capability-family.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (15552 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-optimizer-calculation-preservation",
+      "tier": "F",
+      "script": "scripts/test-optimizer-calculation-preservation.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2195 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-level-ranking-eligibility",
+      "tier": "F",
+      "script": "scripts/test-level-ranking-eligibility.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2763 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-city-ranking",
+      "tier": "F",
+      "script": "scripts/test-city-ranking.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (26232 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-city-ranking-shr",
+      "tier": "F",
+      "script": "scripts/test-city-ranking-shr.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (12924 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-agency-classification",
+      "tier": "F",
+      "script": "scripts/test-shr-agency-classification.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (438 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-agency-type-evidence",
+      "tier": "F",
+      "script": "scripts/test-shr-agency-type-evidence.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (12692 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-city-ranking-completeness",
+      "tier": "F",
+      "script": "scripts/test-city-ranking-completeness.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2732 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-nibrs-category-change",
+      "tier": "F",
+      "script": "scripts/test-nibrs-category-change.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1101 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-where-level-clarification",
+      "tier": "F",
+      "script": "scripts/test-where-level-clarification.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (11861 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-county-scope",
+      "tier": "F",
+      "script": "scripts/test-shr-county-scope.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1179 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-count-plan",
+      "tier": "F",
+      "script": "scripts/test-shr-count-plan.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (6373 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-subcity-ward-behavior",
+      "tier": "F",
+      "script": "scripts/test-subcity-ward-behavior.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1117 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-gc032-share",
+      "tier": "F",
+      "script": "scripts/test-gc032-share.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1022 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-delivered-answer",
+      "tier": "F",
+      "script": "scripts/test-delivered-answer.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (9698 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-followup-agency-continuation",
+      "tier": "F",
+      "script": "scripts/test-followup-agency-continuation.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1155 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-limitation-replies",
+      "tier": "F",
+      "script": "scripts/test-limitation-replies.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2452 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-decision1-no-sql-explanation",
+      "tier": "F",
+      "script": "scripts/test-decision1-no-sql-explanation.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2519 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-decision1-route-terminal",
+      "tier": "F",
+      "script": "scripts/test-decision1-route-terminal.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2014 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-decision1-mutation-check",
+      "tier": "F",
+      "script": "scripts/test-decision1-mutation-check.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1452 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-court-refusal-regression",
+      "tier": "F",
+      "script": "scripts/test-court-refusal-regression.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (2094 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-clarification-repairs",
+      "tier": "F",
+      "script": "scripts/test-clarification-repairs.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (3849 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-owned-demographic-comparison",
+      "tier": "F",
+      "script": "scripts/test-owned-demographic-comparison.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1713 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-historical-baltimore-default",
+      "tier": "F",
+      "script": "scripts/test-historical-baltimore-default.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1293 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-current-followup-amendment",
+      "tier": "F",
+      "script": "scripts/test-current-followup-amendment.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (30780 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-murder-licence",
+      "tier": "F",
+      "script": "scripts/test-shr-murder-licence.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (509 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-authority-placement",
+      "tier": "F",
+      "script": "scripts/test-shr-authority-placement.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (400 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-legacy-licence-removal",
+      "tier": "F",
+      "script": "scripts/test-shr-legacy-licence-removal.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (980 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-shr-post-import-runtime",
+      "tier": "F",
+      "script": "scripts/test-shr-post-import-runtime.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (30988 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-schema-catalog-agreement",
+      "tier": "F",
+      "script": "scripts/test-schema-catalog-agreement.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (498 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-jurisdiction-ranking",
+      "tier": "F",
+      "script": "scripts/test-jurisdiction-ranking.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (34665 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-ratio-support",
+      "tier": "F",
+      "script": "scripts/test-ratio-support.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (28428 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-period-correctness",
+      "tier": "F",
+      "script": "scripts/test-period-correctness.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (45971 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-evidence-boundary-guard",
+      "tier": "F",
+      "script": "scripts/test-evidence-boundary-guard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (18051 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-clearance-refinement",
+      "tier": "F",
+      "script": "scripts/test-clearance-refinement.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (94950 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-historical-series-gapfill",
+      "tier": "F",
+      "script": "scripts/test-historical-series-gapfill.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1693 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
     }
   ]
 }

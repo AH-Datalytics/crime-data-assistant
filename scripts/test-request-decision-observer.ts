@@ -62,6 +62,19 @@ function contractOf(over: Record<string, unknown> = {}): QueryContract {
 
 const SOURCES: QueryContractSource[] = ["current", "historical", "nibrs", "shr", "hate_crime"];
 
+/**
+ * Block rules added AFTER the BASE snapshot by accepted work, declared here rather than by editing the
+ * frozen `base-capability-sets.json` (which would destroy the evidence of BASE membership). Each entry
+ * names its applicability pairs, so the pinned counts below stay BASE-plus-declared, never "whatever
+ * the tree has". Integration 2026-09-30: the accepted Phase 3 candidate's vehicle-burglary rule
+ * (lib/source-capabilities.ts), one definition applying to Current and Historical.
+ */
+const ADDED_BLOCK_RULES: { id: string; sources: QueryContractSource[] }[] = [
+  { id: "vehicle-burglary-unsupported", sources: ["current", "historical"] },
+];
+const ADDED_IDS = ADDED_BLOCK_RULES.map((r) => r.id);
+const ADDED_PAIRS = ADDED_BLOCK_RULES.reduce((n, r) => n + r.sources.length, 0);
+
 // ── the frozen oracle, read only ────────────────────────────────────────────────────────────
 const P31A = path.join(__dirname, "..", "docs", "superpowers", "p3-1a");
 const V3_PATH = path.join(P31A, "frozen-cases-v3.json");
@@ -93,7 +106,8 @@ console.log("C1 — production reuse");
   }
   check("C1  the denominator is exactly the SQL-independent production rule set",
     [...ids].sort(), sqlIndependentIds);
-  check("C1b nine definitions across twenty-one applicability pairs", [ids.size, pairs], [9, 21]);
+  check("C1b BASE's nine definitions across twenty-one applicability pairs, plus the declared additions",
+    [ids.size, pairs], [9 + ADDED_IDS.length, 21 + ADDED_PAIRS]);
 }
 
 // ── C2 — ONE shared typed decision authority ────────────────────────────────────────────────
@@ -130,13 +144,16 @@ console.log("\nC3 — BASE parity of the extracted authority");
   const basePath = path.join(__dirname, "..", "docs", "superpowers", "p3-1a", "base-capability-sets.json");
   if (fs.existsSync(basePath)) {
     const base = JSON.parse(fs.readFileSync(basePath, "utf8"));
-    check("C3  block membership identical to BASE", [...BLOCK_CAPABILITY_RULES], base.block);
+    check("C3  block membership identical to BASE, apart from the declared additions",
+      [...BLOCK_CAPABILITY_RULES].filter((id) => !ADDED_IDS.includes(id)), base.block);
+    checkTrue("C3a every declared addition is in the block set and was NOT in BASE",
+      ADDED_IDS.every((id) => BLOCK_CAPABILITY_RULES.has(id) && !base.block.includes(id) && !base.retry.includes(id)));
     check("C3b retry membership identical to BASE", [...RETRY_CAPABILITY_RULES], base.retry);
   } else {
     fail++; console.log("  FAIL  C3  BASE membership snapshot missing; parity cannot be asserted");
   }
-  check("C3c sizes unchanged from BASE",
-    [BLOCK_CAPABILITY_RULES.size, RETRY_CAPABILITY_RULES.size], [9, 28]);
+  check("C3c sizes are BASE's plus the declared additions",
+    [BLOCK_CAPABILITY_RULES.size, RETRY_CAPABILITY_RULES.size], [9 + ADDED_IDS.length, 28]);
   check("C3d branch order: block wins",
     classifyCapabilityRule("shr-non-homicide-unsupported").kind, "block");
   check("C3e a retry rule classifies as retry",

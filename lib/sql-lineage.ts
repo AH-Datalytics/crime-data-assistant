@@ -1,0 +1,837 @@
+/**
+ * Where does each returned value actually come from?
+ *
+ * The first version of increment C asked "is a compatible table mentioned anywhere in this SQL?".
+ * That is the same defect the county-ORI validator had to fix twice: a literal appearing somewhere
+ * is not proof that the returned rows are restricted by it. Reproduced against `89c331b`:
+ *
+ *     SELECT i.year, COUNT(*) * 100000.0 / i.population AS rate
+ *     FROM incidents i
+ *     JOIN state_population sp ON sp.state = i.state AND sp.year = i.year
+ *     WHERE i.state = 'CA'
+ *
+ * `state_population` is joined and entirely decorative. The rate still divides by the per-agency
+ * `incidents.population`. The old check saw an approved denominator table and passed it.
+ *
+ * So this resolves each returned expression to the base tables its columns actually come from, and
+ * for a division it does the same for the denominator side specifically.
+ *
+ * It is deliberately conservative. This is not a SQL parser and does not try to be: anything it
+ * cannot resolve is reported as unresolved, and the caller must fail closed rather than assume the
+ * query is safe. A shape we cannot prove is not a shape we may execute.
+ */
+
+import { commaFromItems } from "./table-allowlist";
+
+/**
+ * A CTE built from `VALUES (...)` or a `SELECT` with no `FROM` reads no table at all. The SHR
+ * deterministic murder plan uses several -- `targets(city, ori, ...) AS (VALUES ('Oakland, CA', ...))`.
+ * Columns drawn from one are literals the query supplied itself, so they are neither a factual
+ * source nor an unresolved reference. Treating them as unresolved failed four real plans closed.
+ */
+export const LITERAL_SOURCE = "(values)";
+
+export type ColumnRef = {
+  /** The base table this column resolves to, or null when it could not be resolved. */
+  table: string | null;
+  column: string;
+  /**
+   * When a column comes through a CTE that reads several base tables, we know the shortlist even
+   * though we cannot pick one. The caller narrows it by role -- a CTE joining a metric table to a
+   * directory has exactly one table the measure can have come from. Without this, every real
+   * multi-table CTE was reported unresolved and would have failed closed.
+   */
+  candidates?: string[];
+  /**
+   * This column was already combined by an aggregate where it was produced.
+   *
+   * A CTE that writes `SUM(s.offense_count) AS total` hands its consumer an ANNUAL figure, even
+   * though the lineage still points at a monthly table. Without this mark a consumer reading
+   * `c.total` looks identical to one reading a bare monthly column, and the annual check refused a
+   * correct answer for aggregating in the wrong place rather than not at all.
+   */
+  aggregated?: true;
+  /**
+   * The RELATION INSTANCE this column was read from -- the alias as written, or the table name when
+   * the source carried no alias.
+   *
+   * `table` alone cannot answer "did this number come from the same records as that identifier",
+   * because one table can appear twice. `FROM x d1 JOIN x d2 ON d2.year = d1.year` gives `d1.ori` and
+   * `d2.offender_count` identical `table` values while the count belongs to a different set of rows
+   * than the identifier. The alias is what separates them, and it was already known here -- it was
+   * simply being discarded at resolution.
+   */
+  sourceAlias?: string;
+};
+
+export type SelectItem = {
+  alias: string | null;
+  raw: string;
+  /** Every column reference in the expression, resolved to base tables where possible. */
+  refs: ColumnRef[];
+  /** Refs on the right-hand side of a top-level division, or null when there is no division. */
+  denominatorRefs: ColumnRef[] | null;
+  /**
+   * The denominator's own expression TEXT, or null when there is no division.
+   *
+   * WHY THE TEXT AND NOT ONLY THE REFS. `COUNT(*)` and a bare constant both reference no columns, so
+   * `denominatorRefs` is an empty array for both and cannot tell them apart. A share divided by a
+   * real row count is a share; the same numerator divided by `2.0` is not. That distinction is
+   * invisible to the refs alone, and reading it from the refs is what let a literal denominator pass
+   * as a computed share (review 2026-09-08, R1).
+   */
+  denominatorRaw: string | null;
+  /** COUNT(*) and friends contribute a row count rather than a named column. */
+  countsRows: boolean;
+  /**
+   * An answer-bearing number with no column lineage at all: `COUNT(*)`, `SUM(1)`, a bare constant.
+   * It claims to be a measure while referencing nothing, so it can only be checked against what the
+   * catalog says one ROW of the table means. Previously a non-COUNT case here was classified as
+   * carrying no measurement and skipped entirely.
+   */
+  numericWithoutColumns: boolean;
+  /**
+   * `SELECT *` or `SELECT alias.*`. The columns are whatever the table happens to hold, so nothing
+   * here can be checked against the request -- and an unchecked projection previously produced no
+   * column references at all, was classified as carrying no measurement, and passed.
+   */
+  hasWildcard: boolean;
+  /**
+   * The references this expression reads WITHOUT an aggregate around them.
+   *
+   * `SUM(s.offense_count)` combines the rows a group holds; a bare `s.offense_count` beside
+   * `GROUP BY s.year` reports one arbitrary row of that group and SQLite says nothing about it.
+   * When the rows are months and the answer is titled "by year", that difference is the whole
+   * defect, and `refs` alone cannot see it -- both forms reference the same column.
+   *
+   * A reference is counted here when it appears outside every aggregate call in the expression, so
+   * `SUM(a) - b` reports `b` and `SUM(a) - SUM(b)` reports nothing. That is deliberate: an
+   * aggregate over one operand proves nothing about the others.
+   */
+  unaggregatedRefs: ColumnRef[];
+  /** False when any part of the expression could not be traced. */
+  resolved: boolean;
+};
+
+export type SqlLineage = {
+  /** False when the statement shape defeated the analyzer. Callers must fail closed. */
+  parsed: boolean;
+  /**
+   * A shape this analyzer does not support well enough to authorise an answer. Naming it lets the
+   * caller say which shape rather than emitting a generic refusal -- and makes the limitation
+   * visible instead of silently permissive.
+   */
+  unsupportedShape: string | null;
+  items: SelectItem[];
+  /** Every base table reachable from the outer query, including through CTEs. */
+  baseTables: string[];
+};
+
+const SQL_KEYWORDS = new Set([
+  "select", "from", "where", "group", "by", "order", "having", "limit", "offset", "as", "on",
+  "join", "left", "right", "inner", "outer", "full", "cross", "union", "all", "distinct", "and",
+  "or", "not", "in", "is", "null", "case", "when", "then", "else", "end", "asc", "desc", "with",
+  "recursive", "between", "like", "exists", "cast", "over", "partition", "using", "nulls", "first",
+  "last", "filter", "within", "collate", "escape", "glob", "regexp", "match",
+]);
+
+/** Replace comments and string literals with blanks so they cannot be mistaken for identifiers. */
+function scrub(sql: string): string {
+  let out = "";
+  let i = 0;
+  while (i < sql.length) {
+    const two = sql.slice(i, i + 2);
+    if (two === "--") {
+      const end = sql.indexOf("\n", i);
+      const stop = end === -1 ? sql.length : end;
+      out += " ".repeat(stop - i);
+      i = stop;
+      continue;
+    }
+    if (two === "/*") {
+      const end = sql.indexOf("*/", i + 2);
+      const stop = end === -1 ? sql.length : end + 2;
+      out += " ".repeat(stop - i);
+      i = stop;
+      continue;
+    }
+    const ch = sql[i];
+    if (ch === "'" || ch === '"') {
+      let j = i + 1;
+      while (j < sql.length) {
+        if (sql[j] === ch && sql[j + 1] === ch) { j += 2; continue; }
+        if (sql[j] === ch) { j += 1; break; }
+        j += 1;
+      }
+      // Keep double-quoted identifiers readable; blank out string literals.
+      out += ch === '"' ? sql.slice(i, j) : " ".repeat(j - i);
+      i = j;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+/** Index of the first match of `re` at paren depth 0, or -1. */
+function findTopLevel(text: string, re: RegExp): number {
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0) {
+      re.lastIndex = i;
+      const m = re.exec(text);
+      if (m && m.index === i) return i;
+    }
+  }
+  return -1;
+}
+
+function splitTopLevel(text: string, separator: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (ch === separator && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts.map((part) => part.trim()).filter((part) => part.length > 0);
+}
+
+/**
+ * `name AS ( ... )` pairs, with their bodies and any declared column list.
+ *
+ * The declared list is load-bearing and was previously discarded:
+ *
+ *     WITH x(murders) AS (SELECT robbery FROM historical_agency_crime) SELECT x.murders FROM x
+ *
+ * Looking up `murders` in the body finds nothing, so the old code fell back to the CTE's single
+ * base table and invented `historical_agency_crime.murders` -- a column that does not exist, and
+ * one that no offense check could match. Mapping the declared names positionally onto the body's
+ * select list resolves it to `robbery`, which is the truth.
+ */
+/**
+ * Split a query at its top-level compound operators.
+ *
+ * Refusing every compound was correct for safety and wrong in practice: it flagged 150 of 1,605
+ * sampled production queries, 140 of them legitimate -- mostly the documented NIBRS pattern of
+ * combining victim summaries (person crimes) with offense summaries (everything else). Each arm
+ * returns its own series, so the honest fix is to READ every arm rather than refuse the shape.
+ * That is what closes the original hole too: a first arm returning murder cannot authorise a
+ * second arm returning robbery, because the second arm is now checked.
+ */
+export function compoundArms(query: string): string[] {
+  const arms: string[] = [];
+  let depth = 0;
+  let start = 0;
+  const re = /\b(?:UNION\s+ALL|UNION|INTERSECT|EXCEPT)\b/gi;
+  for (let i = 0; i < query.length; i += 1) {
+    const ch = query[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0) {
+      re.lastIndex = i;
+      const m = re.exec(query);
+      if (m && m.index === i) {
+        arms.push(query.slice(start, i));
+        start = i + m[0].length;
+        i = start - 1;
+      }
+    }
+  }
+  arms.push(query.slice(start));
+  return arms.map((arm) => arm.trim()).filter((arm) => arm.length > 0);
+}
+
+function extractCtes(sql: string): {
+  names: Map<string, string>;
+  columnLists: Map<string, string[]>;
+  rest: string;
+} {
+  const names = new Map<string, string>();
+  const columnLists = new Map<string, string[]>();
+  if (!/^\s*WITH\b/i.test(sql)) return { names, columnLists, rest: sql };
+  let i = sql.search(/\bWITH\b/i);
+  i += sql.slice(i).match(/\bWITH\s+(?:RECURSIVE\s+)?/i)?.[0].length ?? 4;
+
+  while (i < sql.length) {
+    const header = sql.slice(i).match(/^\s*([A-Za-z_][\w]*)\s*(?:\(([^)]*)\)\s*)?AS\s*\(/i);
+    if (!header) break;
+    if (header[2]) {
+      columnLists.set(
+        header[1].toLowerCase(),
+        header[2].split(",").map((part) => part.trim().toLowerCase()).filter(Boolean)
+      );
+    }
+    const bodyStart = i + header[0].length;
+    let depth = 1;
+    let j = bodyStart;
+    while (j < sql.length && depth > 0) {
+      if (sql[j] === "(") depth += 1;
+      else if (sql[j] === ")") depth -= 1;
+      j += 1;
+    }
+    names.set(header[1].toLowerCase(), sql.slice(bodyStart, j - 1));
+    i = j;
+    const comma = sql.slice(i).match(/^\s*,\s*/);
+    if (comma) { i += comma[0].length; continue; }
+    break;
+  }
+  return { names, columnLists, rest: sql.slice(i) };
+}
+
+/** All `FROM`/`JOIN` sources in one query level: alias (or name) -> table name. */
+function sourceAliases(query: string): Map<string, string> {
+  const aliases = new Map<string, string>();
+  // `rollup.national_summary_...` is one table in an ATTACHed database. Reading only the part
+  // before the dot made the schema name look like the table, so a real deterministic NIBRS plan
+  // resolved to nothing and would have been refused.
+  const re = /\b(?:FROM|JOIN)\s+(?:([A-Za-z_][\w]*)\s*\.\s*)?([A-Za-z_][\w]*)\s*(?:(?:AS\s+)?([A-Za-z_][\w]*))?/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(query)) !== null) {
+    const table = m[2].toLowerCase();
+    const maybeAlias = (m[3] ?? "").toLowerCase();
+    const alias = maybeAlias && !SQL_KEYWORDS.has(maybeAlias) ? maybeAlias : table;
+    aliases.set(alias, table);
+    if (!aliases.has(table)) aliases.set(table, table);
+  }
+  // Comma-separated FROM items (`FROM youth y, totals t`) are sources too; a parenthesised item is
+  // left out, exactly as a parenthesised FROM/JOIN source is above.
+  for (const item of commaFromItems(query)) {
+    if (!item.table) continue;
+    const table = item.table.toLowerCase();
+    const maybeAlias = (item.alias ?? "").toLowerCase();
+    const alias = maybeAlias && !SQL_KEYWORDS.has(maybeAlias) ? maybeAlias : table;
+    aliases.set(alias, table);
+    if (!aliases.has(table)) aliases.set(table, table);
+  }
+  return aliases;
+}
+
+function baseTablesOf(query: string, ctes: Map<string, string>, seen = new Set<string>()): string[] {
+  const found = new Set<string>();
+  for (const table of sourceAliases(query).values()) {
+    if (ctes.has(table)) {
+      if (seen.has(table)) continue;
+      seen.add(table);
+      for (const inner of baseTablesOf(ctes.get(table)!, ctes, seen)) found.add(inner);
+    } else {
+      found.add(table);
+    }
+  }
+  return [...found];
+}
+
+/**
+ * What each output column of a CTE is actually made of.
+ *
+ * Role-narrowing is not enough when a CTE reads two metric tables. The SHR deterministic murder
+ * plan has `counts AS (SELECT t.city, i.month, COUNT(v.id) AS murder_victims FROM targets t JOIN
+ * incidents i ... JOIN victims v ...)`, so `c.murder_victims` could come from `incidents` or
+ * `victims` by table alone. Reading the CTE's own select list resolves it to `victims`, which is
+ * the truth and is what "lineage" has to mean.
+ */
+function cteOutputs(
+  name: string,
+  ctes: Map<string, string>,
+  memo: Map<string, Map<string, ColumnRef[]>>,
+  seen: Set<string>,
+  columnLists: Map<string, string[]> = new Map()
+): Map<string, ColumnRef[]> {
+  const cached = memo.get(name);
+  if (cached) return cached;
+  const outputs = new Map<string, ColumnRef[]>();
+  memo.set(name, outputs);              // set first: a recursive CTE must not loop
+  if (seen.has(name)) return outputs;
+  seen.add(name);
+
+  const body = ctes.get(name);
+  if (!body) return outputs;
+
+  const declared = columnLists.get(name) ?? null;
+
+  // A CTE can itself be compound. Every arm contributes to the same output columns, so each arm's
+  // refs are merged into the entry for that position -- which is how a second arm returning a
+  // different offense becomes visible to the measure check.
+  // SQL aligns compound arms by POSITION, not by name. An earlier version merged each arm under its
+  // own alias, so `SELECT murder AS murders ... UNION ALL SELECT robbery AS anything ...` filed the
+  // second arm under `anything` and `x.murders` never saw the robbery at position 2.
+  const refsByIndex: ColumnRef[][] = [];
+  const nameByIndex: (string | null)[] = [];
+
+  for (const arm of compoundArms(body)) {
+  const selectAt = findTopLevel(arm, /\bSELECT\b/gi);
+  if (selectAt === -1) continue;
+  const afterSelect = arm.slice(selectAt + "SELECT".length);
+  const fromAt = findTopLevel(afterSelect, /\bFROM\b/gi);
+  const selectList = fromAt === -1 ? afterSelect : afterSelect.slice(0, fromAt);
+  const fromClause = fromAt === -1 ? "" : afterSelect.slice(fromAt);
+  const innerAliases = sourceAliases(fromClause);
+
+  const items = splitTopLevel(selectList, ",");
+  items.forEach((raw, index) => {
+    const aliasMatch = raw.match(/\s+(?:AS\s+)?([A-Za-z_][\w]*)\s*$/i);
+    const alias = aliasMatch && !SQL_KEYWORDS.has(aliasMatch[1].toLowerCase()) ? aliasMatch[1] : null;
+    const bodyExpr = alias ? raw.slice(0, raw.length - aliasMatch![0].length) : raw;
+    // `columnLists` must be forwarded here. Without it a nested CTE lost its positional mapping,
+    // so `WITH x(m) AS (SELECT robbery ...), y(murders) AS (SELECT x.m FROM x)` laundered robbery
+    // into `y.murders` with nothing to object to.
+    const { refs } = refsIn(bodyExpr, innerAliases, ctes, memo, seen, columnLists);
+    // What this arm hands on: a reference it only ever reads inside an aggregate arrives at the
+    // consumer already combined, and must not be mistaken there for a raw row value.
+    const stillBare = new Set(
+      refsIn(withoutAggregateCalls(bodyExpr), innerAliases, ctes, memo, new Set(seen), columnLists)
+        .refs.map((ref) => `${ref.table ?? "?"}.${ref.column}`));
+    for (const ref of refs) {
+      if (!stillBare.has(`${ref.table ?? "?"}.${ref.column}`)) ref.aggregated = true;
+    }
+    const bare = bodyExpr.trim().match(/^(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)$/);
+    const key = (alias ?? bare?.[1] ?? "").toLowerCase();
+    /*
+     * A SUPPLIED NUMBER BESIDE A REAL TABLE IS NOT THAT TABLE'S MEASUREMENT.
+     *
+     * `SELECT v.year, 7 AS murders FROM summary_victim_city_monthly AS v` used to be accepted. The
+     * constant contributes no refs, so the caller's origin lookup came back empty, fell through to
+     * the single-base-table fallback, and `murders` was attributed to whichever table the CTE
+     * happened to read. Nothing downstream could then tell the invented number from a measurement.
+     * (The two-table form was refused only incidentally: two metric candidates cannot be narrowed.)
+     *
+     * Recording the constant as an UNRESOLVED reference is what the arm actually knows -- the value
+     * came from no column -- and the established `structural-returned-series-unresolved` rule
+     * refuses any returned series carrying it. This removes an inference rather than adding a rule,
+     * and it trusts nothing the query supplies.
+     *
+     * Two limits are deliberate, because both are what keep real plans working:
+     *  - NUMERIC only. `scrub` blanks string literals, so a supplied LABEL (`'place_1' AS
+     *    place_key`) is indistinguishable here from any other quoted text, and the deterministic
+     *    comparison builder's `target_places` legitimately supplies one beside `agencies`. A label
+     *    is not the answer-bearing value; a number is.
+     *  - The arm must READ a table. `requested_years(year) AS (SELECT 2020 ...)` supplies a
+     *    dimension from nothing at all, and that stays `LITERAL_SOURCE` through the caller.
+     */
+    const suppliedNumber =
+      refs.length === 0 && /[0-9]/.test(bodyExpr) && !bodyExpr.includes("'")
+      && [...new Set(innerAliases.values())].some(
+        (source) => (ctes.has(source) ? baseTablesOf(ctes.get(source)!, ctes).length > 0 : true)
+      );
+    if (key && suppliedNumber) refs.push({ table: null, column: key });
+    refsByIndex[index] = [...(refsByIndex[index] ?? []), ...refs];
+    if (key && !nameByIndex[index]) nameByIndex[index] = key;   // the first arm names the column
+  });
+  }
+
+  refsByIndex.forEach((refs, index) => {
+    const name = nameByIndex[index];
+    if (name) outputs.set(name, refs);
+    // A declared column list renames by POSITION, so `x(murders)` over `SELECT robbery` means
+    // `x.murders` IS `robbery`. Without this the declared name resolves to nothing real.
+    if (declared && index < declared.length) outputs.set(declared[index], refs);
+  });
+  return outputs;
+}
+
+function refsIn(
+  expression: string,
+  aliases: Map<string, string>,
+  ctes: Map<string, string>,
+  memo: Map<string, Map<string, ColumnRef[]>> = new Map(),
+  seen: Set<string> = new Set(),
+  columnLists: Map<string, string[]> = new Map()
+): {
+  refs: ColumnRef[];
+  countsRows: boolean;
+  resolved: boolean;
+} {
+  const refs: ColumnRef[] = [];
+  let resolved = true;
+  const countsRows = /\bCOUNT\s*\(\s*(?:\*|DISTINCT\s+[\w.]+|[\w.]+)\s*\)/i.test(expression);
+
+  const singleBase = (() => {
+    const tables = [...new Set(aliases.values())].filter((t) => !ctes.has(t));
+    return tables.length === 1 ? tables[0] : null;
+  })();
+
+  /**
+   * The ONE relation instance an unqualified column can only have come from, or null.
+   *
+   * `singleBase` answers a weaker question -- "is one table read here" -- and two aliases of that one
+   * table satisfy it while leaving a bare column genuinely ambiguous. `sourceAliases` also records
+   * each table under its own name beside its alias, so the map's size cannot be counted directly;
+   * an entry whose key differs from its value is an explicitly aliased instance, and more than one of
+   * those means the bare column is not uniquely attributable. Nothing is guessed: the ambiguous case
+   * falls through to the unattributed push below and stays unproved.
+   */
+  const soleInstance = (() => {
+    if (!singleBase) return null;
+    const explicit = [...aliases.entries()].filter(([alias, table]) => alias !== table);
+    if (explicit.length > 1) return null;
+    return { alias: explicit[0]?.[0] ?? singleBase, table: singleBase };
+  })();
+
+  /**
+   * Carry a ref out of the CTE that produced it WITHOUT carrying the CTE's private alias as if it
+   * were the outer statement's.
+   *
+   * Two CTEs may each read the fact table as `d`. Those are different relation instances, and a
+   * consumer comparing the propagated alias strings saw one instance and treated a figure computed
+   * over every agency as tied to an identifier selected for one -- the scoped_alias_collision
+   * witness. Qualifying the alias by the CTE it came from keeps `ids>d` and `totals>d` distinct, so
+   * an equality proved inside one scope can no longer be borrowed by another.
+   */
+  const throughCte = (cte: string, ref: ColumnRef): ColumnRef =>
+    ref.sourceAlias ? { ...ref, sourceAlias: `${cte}>${ref.sourceAlias}` } : { ...ref };
+
+  const qualified = /\b([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)\b/g;
+  const consumed: [number, number][] = [];
+  let m: RegExpExecArray | null;
+  while ((m = qualified.exec(expression)) !== null) {
+    consumed.push([m.index, m.index + m[0].length]);
+    const aliasKey = m[1].toLowerCase();
+    const table = aliases.get(aliasKey) ?? null;
+    if (table && ctes.has(table)) {
+      // Resolve through the CTE to the column's own origin before falling back to table-level guesses.
+      const column = m[2].toLowerCase();
+      const origin = cteOutputs(table, ctes, memo, new Set(seen), columnLists).get(column);
+      if (origin && origin.length > 0) {
+        for (const ref of origin) refs.push(throughCte(table, ref));
+        continue;
+      }
+      const inner = baseTablesOf(ctes.get(table)!, ctes);
+      if (inner.length === 1) refs.push({ table: inner[0], column });
+      else if (inner.length > 1) refs.push({ table: null, column, candidates: inner });
+      else refs.push({ table: LITERAL_SOURCE, column });
+    } else if (table) {
+      refs.push({ table, column: m[2].toLowerCase(), sourceAlias: aliasKey });
+    } else {
+      refs.push({ table: null, column: m[2].toLowerCase() });
+      resolved = false;
+    }
+  }
+
+  const bare = /\b([A-Za-z_][\w]*)\b(\s*\()?/g;
+  while ((m = bare.exec(expression)) !== null) {
+    if (consumed.some(([s, e]) => m!.index >= s && m!.index < e)) continue;
+    const word = m[1].toLowerCase();
+    if (m[2]) continue;                        // a function call, not a column
+    // Only skip a function NAME when a paren follows it. `count` is a real column in
+    // agency_monthly, state_monthly and national_monthly, and skipping it by name meant
+    // `SUM(count)` resolved to nothing and the series escaped evaluation entirely.
+    if (SQL_KEYWORDS.has(word)) continue;
+    if (/^\d/.test(word)) continue;
+    if (aliases.has(word)) continue;           // a table/alias name used bare
+
+    // An UNQUALIFIED column drawn from a CTE must still resolve through that CTE. Falling straight
+    // through to the single base table invented `historical_agency_crime.murders` for
+    // `SELECT year, murders FROM x`, which no offense check could match -- so a compound arm hidden
+    // in `x` stayed invisible even once the arms were being read.
+    const cteSources = [...new Set([...aliases.values()])].filter((table) => ctes.has(table));
+    if (cteSources.length === 1) {
+      const origin = cteOutputs(cteSources[0], ctes, memo, new Set(seen), columnLists).get(word);
+      if (origin && origin.length > 0) {
+        for (const ref of origin) refs.push(throughCte(cteSources[0], ref));
+        continue;
+      }
+    }
+
+    // A bare column in a single-instance statement HAS a relation instance -- the only one there is.
+    // Attaching it here is what keeps the ordinary unqualified spelling answerable; withholding it
+    // made qualification syntax a new requirement for a query that was already readable and correct.
+    if (soleInstance) refs.push({ table: soleInstance.table, column: word, sourceAlias: soleInstance.alias });
+    else if (singleBase) refs.push({ table: singleBase, column: word });
+    else {
+      const candidates = [...new Set([...aliases.values()].flatMap(
+        (table) => (ctes.has(table) ? baseTablesOf(ctes.get(table)!, ctes) : [table])
+      ))];
+      if (candidates.length > 1) refs.push({ table: null, column: word, candidates });
+      else if (candidates.length === 1) refs.push({ table: candidates[0], column: word });
+      else refs.push({ table: LITERAL_SOURCE, column: word });
+    }
+  }
+
+  return { refs, countsRows, resolved };
+}
+
+/** Right-hand side of the last top-level `/`, or null when the expression has no division. */
+function denominatorExpression(expression: string): string | null {
+  let depth = 0;
+  let cut = -1;
+  for (let i = 0; i < expression.length; i += 1) {
+    const ch = expression[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (ch === "/" && depth === 0) cut = i;
+  }
+  if (cut === -1) {
+    // A rate is often written as ROUND(x / y, 1); look one level in when the whole item is a call.
+    const call = expression.match(/^\s*[A-Za-z_]\w*\s*\(([\s\S]*)\)\s*$/);
+    if (call) {
+      const inner = splitTopLevel(call[1], ",")[0];
+      if (inner && inner !== expression) return denominatorExpression(inner);
+    }
+    return null;
+  }
+  return expression.slice(cut + 1);
+}
+
+const AGGREGATE_CALL = /\b(?:SUM|TOTAL|AVG|COUNT|MIN|MAX|GROUP_CONCAT)\s*\(/gi;
+
+/**
+ * The same expression with every aggregate CALL blanked out, arguments included.
+ *
+ * Blanked rather than removed so the remaining text keeps its offsets and stays parseable by the
+ * same reader. `SUM(a) - b` becomes `        - b`, which reports `b` and nothing else.
+ */
+function withoutAggregateCalls(expression: string): string {
+  let out = expression;
+  for (;;) {
+    AGGREGATE_CALL.lastIndex = 0;
+    const match = AGGREGATE_CALL.exec(out);
+    if (!match) return out;
+    let depth = 0;
+    let end = match.index + match[0].length - 1;   // sits on the opening paren
+    for (let i = end; i < out.length; i += 1) {
+      const char = out[i];
+      if (char === "'") {
+        const close = out.indexOf("'", i + 1);
+        i = close === -1 ? out.length : close;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      else if (char === ")") {
+        depth -= 1;
+        if (depth === 0) { end = i; break; }
+      }
+      if (i === out.length - 1) end = i;           // unbalanced: blank to the end
+    }
+    out = out.slice(0, match.index) + " ".repeat(end - match.index + 1) + out.slice(end + 1);
+  }
+}
+
+/**
+ * The columns this statement groups by, at the top level of its outer query.
+ *
+ * A grouped column is the one thing a bare reference beside an aggregate is safe to be: it holds
+ * the same value for every row of the group by construction.
+ */
+/*
+ * Depth-aware scanning, exported for callers that need to read one clause of one query level.
+ *
+ * These wrap the private helpers above rather than re-implementing them. The level-ranking
+ * eligibility rule needs exactly this and nothing more: a query's own clause text, and the bodies of
+ * its CTEs, with parenthesised subqueries skipped. A second copy of a paren scanner is how two
+ * callers end up disagreeing about what "top level" means, so there is one.
+ */
+
+/** Comments and quoted text blanked, so keyword scanning cannot be fooled by a string literal. */
+export function scrubSql(sql: string): string {
+  return scrub(sql);
+}
+
+/** CTE name -> body, plus the trailing query, for one `WITH` prefix. */
+export function cteBodies(sql: string): { bodies: Map<string, string>; rest: string } {
+  const { names, rest } = extractCtes(sql);
+  return { bodies: names, rest };
+}
+
+/**
+ * The text of `keyword`'s clause at this query level, up to the next clause keyword, or null.
+ *
+ * The terminator list includes WHERE deliberately: without it a wrapping form's FROM clause
+ * swallows its own WHERE (`FROM ( ... ) t WHERE offenses > 0`) and the query reads as having no
+ * filter at all.
+ */
+export function topLevelClause(query: string, keyword: RegExp): string | null {
+  const at = findTopLevel(query, keyword);
+  if (at === -1) return null;
+  const after = query.slice(at).replace(new RegExp(`^${keyword.source}`, "i"), "");
+  let end = after.length;
+  for (const next of [
+    /\bWHERE\b/gi, /\bGROUP\s+BY\b/gi, /\bHAVING\b/gi,
+    /\bORDER\s+BY\b/gi, /\bLIMIT\b/gi, /\bWINDOW\b/gi, /\bUNION\b/gi,
+  ]) {
+    const found = findTopLevel(after, next);
+    if (found !== -1 && found < end) end = found;
+  }
+  return after.slice(0, end).trim() || null;
+}
+
+/** True when `keyword` appears at this query level. */
+export function hasTopLevelKeyword(query: string, keyword: RegExp): boolean {
+  return findTopLevel(query, keyword) !== -1;
+}
+
+/** Split a boolean clause on top-level `AND`. */
+export function splitTopLevelAnd(clause: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  const scan = /\bAND\b|[()]/gi;
+  let m: RegExpExecArray | null;
+  while ((m = scan.exec(clause)) !== null) {
+    if (m[0] === "(") depth += 1;
+    else if (m[0] === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0) {
+      parts.push(clause.slice(start, m.index));
+      start = m.index + m[0].length;
+    }
+  }
+  parts.push(clause.slice(start));
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+/** Returned by `governingRowLimit` when the outer limit cannot be established safely. */
+export const LIMIT_INCONCLUSIVE = Symbol("limit-inconclusive");
+
+/**
+ * The single limit governing rows returned to the reader: the one `LIMIT` at paren depth 0.
+ *
+ * A CTE's own limit is not it, no limit is `null`, and two top-level limits are inconclusive rather
+ * than a guess. `LIMIT offset, count` yields the count. This is the same contract the frozen
+ * correctness evaluator applies when it reads a capture, deliberately so -- but it is implemented
+ * here rather than imported, because the evaluator carries a test transport that has no business in
+ * product code.
+ */
+export function governingRowLimit(sql: string): number | null | typeof LIMIT_INCONCLUSIVE {
+  const text = scrub(sql);
+  let depth = 0;
+  const hits: number[] = [];
+  const re = /[()]|\bLIMIT\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m[0] === "(") depth += 1;
+    else if (m[0] === ")") { depth -= 1; if (depth < 0) return LIMIT_INCONCLUSIVE; }
+    else if (depth === 0) hits.push(m.index + m[0].length);
+  }
+  if (depth !== 0) return LIMIT_INCONCLUSIVE;
+  if (hits.length === 0) return null;
+  if (hits.length > 1) return LIMIT_INCONCLUSIVE;
+  const tail = text.slice(hits[0]);
+  const offsetForm = /^\s*(\d+)\s*,\s*(\d+)/.exec(tail);
+  if (offsetForm) return parseInt(offsetForm[2], 10);
+  const plain = /^\s*(\d+)/.exec(tail);
+  return plain ? parseInt(plain[1], 10) : LIMIT_INCONCLUSIVE;
+}
+
+export function groupByColumns(sql: string): string[] {
+  const { rest } = extractCtes(scrub(sql));
+  const at = findTopLevel(rest, /\bGROUP\s+BY\b/gi);
+  if (at === -1) return [];
+  const after = rest.slice(at + "GROUP BY".length);
+  let end = after.length;
+  for (const keyword of [/\bHAVING\b/gi, /\bORDER\s+BY\b/gi, /\bLIMIT\b/gi, /\bWINDOW\b/gi]) {
+    const found = findTopLevel(after, keyword);
+    if (found !== -1 && found < end) end = found;
+  }
+  return splitTopLevel(after.slice(0, end), ",")
+    .map((part) => part.trim().replace(/^.*\./, "").toLowerCase())
+    .filter((part) => /^[a-z_]\w*$/.test(part));
+}
+
+export function analyzeSql(sql: string): SqlLineage {
+  const scrubbed = scrub(sql);
+  const { names: ctes, columnLists, rest } = extractCtes(scrubbed);
+
+  const selectAt = findTopLevel(rest, /\bSELECT\b/gi);
+  if (selectAt === -1) return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+
+  const memo = new Map<string, Map<string, ColumnRef[]>>();
+  const items: SelectItem[] = [];
+  const baseTables: string[] = [];
+
+  // EVERY arm of a compound is read, not just the first.
+  const arms = compoundArms(rest.slice(selectAt));
+  for (const arm of arms) {
+  const armSelectAt = findTopLevel(arm, /\bSELECT\b/gi);
+  if (armSelectAt === -1) continue;
+  const afterSelect = arm.slice(armSelectAt + "SELECT".length);
+  const fromAt = findTopLevel(afterSelect, /\bFROM\b/gi);
+  const selectList = fromAt === -1 ? afterSelect : afterSelect.slice(0, fromAt);
+  const fromClause = fromAt === -1 ? "" : afterSelect.slice(fromAt);
+
+  const aliases = sourceAliases(fromClause);
+  for (const table of baseTablesOf(fromClause, ctes)) {
+    if (!baseTables.includes(table)) baseTables.push(table);
+  }
+
+  for (const raw of splitTopLevel(selectList, ",")) {
+    const aliasMatch = raw.match(/\s+(?:AS\s+)?([A-Za-z_][\w]*)\s*$/i);
+    const alias = aliasMatch && !SQL_KEYWORDS.has(aliasMatch[1].toLowerCase()) ? aliasMatch[1] : null;
+    const body = alias ? raw.slice(0, raw.length - aliasMatch![0].length) : raw;
+
+    // A scalar subquery carries its own FROM; merge those aliases so the expression can resolve.
+    const itemAliases = new Map(aliases);
+    if (/\bSELECT\b[\s\S]*\bFROM\b/i.test(body)) {
+      for (const [alias, table] of sourceAliases(body)) itemAliases.set(alias, table);
+    }
+
+    const { refs, countsRows, resolved } = refsIn(body, itemAliases, ctes, memo, new Set(), columnLists);
+    const denomExpr = denominatorExpression(body);
+    const denominatorRefs = denomExpr === null
+      ? null
+      : refsIn(denomExpr, itemAliases, ctes, memo, new Set(), columnLists).refs;
+
+    // A projection wildcard is the WHOLE item (`*`) or a qualified one (`alias.*`). Anything else
+    // is the multiplication operator: `COUNT(*) * 100000.0 / population` is a rate, and an earlier
+    // draft read that second `*` as a projection and flagged every rate.
+    //
+    // `SELECT DISTINCT *` puts a keyword in front of the item, and `"hac".*` quotes the alias.
+    // Both are ordinary SQL and both previously escaped this check entirely.
+    // SQLite accepts four identifier quotings: bare, "double", [bracket] and `backtick`. Recognising
+    // only bare and double-quoted let `[hac].*` and \`hac\`.* through untouched.
+    const withoutLeadingQuantifier = body.trim().replace(/^(?:DISTINCT|ALL)\s+/i, "").trim();
+    const hasWildcard = withoutLeadingQuantifier === "*" ||
+      /(?:"[^"]+"|\[[^\]]+\]|`[^`]+`|\b[A-Za-z_]\w*)\s*\.\s*\*/.test(body);
+
+    const aggregateOrConstant = countsRows
+      || /\b(?:SUM|AVG|MIN|MAX|TOTAL|COUNT)\s*\(/i.test(body)
+      || /^\s*[-+]?[0-9][0-9_.]*\s*$/.test(body);
+    const numericWithoutColumns = refs.length === 0 && aggregateOrConstant;
+
+    const bare = withoutAggregateCalls(body);
+    const unaggregatedRefs = (bare.trim() === body.trim()
+      ? refs                                        // no aggregate here: every ref is bare HERE
+      : refsIn(bare, itemAliases, ctes, memo, new Set(), columnLists).refs)
+      // ...but a reference combined further down the lineage is not bare anywhere.
+      .filter((ref) => ref.aggregated !== true);
+
+    items.push({
+      alias, raw: raw.trim(), refs, denominatorRefs, denominatorRaw: denomExpr, countsRows,
+      hasWildcard, numericWithoutColumns, unaggregatedRefs, resolved,
+    });
+  }
+  }
+
+  if (items.length === 0) return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+  /*
+   * A STATEMENT THAT REACHES NO TABLE CANNOT BE TRACED, AND A CTE DOES NOT CHANGE THAT.
+   *
+   * This used to read `baseTables.length === 0 && ctes.size === 0`, which refused
+   * `SELECT 2020 AS year, 500 AS murders` and accepted the identical literals the moment they were
+   * wrapped: `WITH t AS (SELECT 2020 AS year, 500 AS murders) SELECT t.year, t.murders FROM t`.
+   * Every outer column then resolved to `LITERAL_SOURCE`, `isFactualSeries` was left with nothing
+   * real, and a made-up total was delivered as an answer with no finding against it.
+   *
+   * `baseTables` is already collected THROUGH the CTEs -- `baseTablesOf(fromClause, ctes)` above
+   * follows a CTE source to the tables it reads -- so an empty list means this statement's own FROM
+   * reaches no table anywhere. Dropping the second condition removes the exemption rather than
+   * adding a rule, and the boundary now applies wherever it already applied.
+   *
+   * It is a conservative treatment, not a proof of every source the engine could reach. A statement
+   * whose outer query has no FROM and touches its table only inside a scalar subquery is refused
+   * here too; that shape is already refused today when it carries no CTE, and it is asserted
+   * deliberately in `scripts/test-structural-semantics.ts` rather than left to be discovered.
+   */
+  if (baseTables.length === 0) {
+    return { parsed: false, unsupportedShape: null, items: [], baseTables: [] };
+  }
+  return { parsed: true, unsupportedShape: null, items, baseTables };
+}

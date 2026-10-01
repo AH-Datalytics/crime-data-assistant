@@ -1,0 +1,14 @@
+{
+ "kind": "shr-post-import-manifest",
+ "reviewedAt": "HEAD ca783be547ce580e46dd11df90369e882fe47c0c, plus the uncommitted classification-policy files (2026-09-30)",
+ "note": "SHA-256 of each file as git stores it (LF line endings: the bytes a git-archive release contains). The first five are the committed blobs at that HEAD; the last two are the policy-enforcing evidence builder and its library, not yet committed, pinned as their LF-normalized working bytes. A release whose copy differs is refused.",
+ "files": {
+  "scripts/normalize-shr-agencies.ts": "dc979eca401bfb9bd3049526cfe559ee551eb671f3fc85e4d2b70143c34acf8a",
+  "scripts/build-shr-state-population.ts": "2bf9b57478d7ca25c24a3791291bbc7690d147ddd11c1818331b8b79411dd5f7",
+  "scripts/extend-state-population-cde.ts": "5c08749af54503bc72a33c8cf767014cca86ae651f48f8ed29608d41fe4bc624",
+  "lib/shr-agency-normalization.ts": "774ac4b37e7e453c9c61ba6f6f85f1fbaf4eae3fda7738827af2bf27f6fd08e0",
+  "lib/state-population.ts": "dbf3d7ef9f3c85d8d4bf1cb8468297f1ca6e757b0496596bc34d901ac23f3d36",
+  "scripts/build-shr-agency-type-evidence.ts": "e77682a6bf464c9de871fb169e06831b2f3e9738d41cd90a11911a088715e49f",
+  "lib/shr-agency-classification.ts": "0558d7ff7e2407444f5967c01a6066c9e8c53def42fb3e0f1b3ee45962bc5302"
+ }
+}

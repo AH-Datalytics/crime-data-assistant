@@ -1,0 +1,240 @@
+{
+  "at": "2026-09-28T21:40:53.644Z",
+  "manifests": [
+    {
+      "file": "C:\\Users\\jeffm\\crime-data-assistant\\audit\\phase3-gc032-share-2026-09-28\\g32\\candidate-g32.sha256",
+      "entries": [
+        {
+          "file": "lib/structural-semantics.ts",
+          "match": true
+        },
+        {
+          "file": "lib/table-semantics.ts",
+          "match": true
+        },
+        {
+          "file": "lib/result-disclosure.ts",
+          "match": true
+        },
+        {
+          "file": "app/api/nibrs-query/route.ts",
+          "match": true
+        },
+        {
+          "file": "scripts/test-gc032-share.ts",
+          "match": true
+        },
+        {
+          "file": "package.json",
+          "match": true
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\jeffm\\crime-data-assistant\\audit\\phase3-gc032-share-2026-09-28\\backup-before-g32.sha256",
+      "entries": [
+        {
+          "file": "package.json",
+          "match": true
+        },
+        {
+          "file": "result-disclosure.ts",
+          "match": true
+        },
+        {
+          "file": "route.ts",
+          "match": true
+        },
+        {
+          "file": "structural-semantics.ts",
+          "match": true
+        },
+        {
+          "file": "table-semantics.ts",
+          "match": true
+        },
+        {
+          "file": "test-gc032-share.ts",
+          "match": true
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\jeffm\\crime-data-assistant\\audit\\phase3-gc032-share-2026-09-28\\receipts-before-g32.sha256",
+      "entries": [
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/codex-adversarial-after.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/codex-adversarial-before.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/codex-adversarial.cjs",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/codex-integrity.cjs",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/codex-integrity.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/codex-route.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/route-after.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/route-before.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/mutations-gc032.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/comma-route.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/cma1-route.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/p41-binding-witness.json",
+          "match": true
+        },
+        {
+          "file": "audit/phase3-gc032-share-2026-09-28/r1/combined-offline.json",
+          "match": true
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "GC-084/098",
+      "old": 20,
+      "now": 20,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-057",
+      "old": 8,
+      "now": 8,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 owned count",
+      "old": 48,
+      "now": 48,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "id": "GC-080 periods",
+      "old": 17,
+      "now": 17,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "p4": {
+    "before": 12,
+    "after": 12,
+    "changed": []
+  },
+  "probes": [
+    {
+      "stage": "before",
+      "results": [
+        {
+          "id": "retained-gc032",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "explanation": "The percentage cannot be calculated because there are no recorded offenders in the requested scope.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nPeriod: 2021-2025.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage."
+        },
+        {
+          "id": "single-select-zero-denominator",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "explanation": "The percentage cannot be calculated because there are no recorded offenders in the requested scope.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nPeriod: 2021-2025.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage."
+        },
+        {
+          "id": "total-zero-denominator",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "explanation": "The percentage cannot be calculated because there are no recorded offenders in the requested scope.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nPeriod: 2021-2025.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage."
+        }
+      ]
+    },
+    {
+      "stage": "after",
+      "results": [
+        {
+          "id": "retained-gc032",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage."
+        },
+        {
+          "id": "single-select-zero-denominator",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage."
+        },
+        {
+          "id": "total-zero-denominator",
+          "rows": [
+            {
+              "youth_share_pct": null,
+              "youth_count": 0,
+              "total_count": 0
+            }
+          ],
+          "workerExecutions": 1,
+          "explanation": "Of the offenders recorded in NIBRS reports for the requested offenses in California, 2021–2025, 0.0% had a recorded age group of Under 18.\n\nUnit: this percentage is of offenders recorded in NIBRS reports (including offenders recorded with an unknown age), not of crimes or incidents; one incident can list several offenders, and not every offender is identified or recorded.\n\nDefinition: NIBRS violent crime is reported here using the UCR-aligned set: murder/nonnegligent manslaughter, rape, robbery, and aggravated assault.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage."
+        }
+      ]
+    }
+  ],
+  "limits": "File comparisons only for broad regressions. Independently replayed 56/56 unit and 41/41 route checks plus three undefined-share probes on each tree. No mutation or full-chain rerun. No source database, provider call or product edits."
+}

@@ -1,0 +1,326 @@
+{
+ "kind": "phase3-comma-alias-route-witness",
+ "at": "2026-09-28T16:42:50.778Z",
+ "root": ".",
+ "expected": {
+  "youth_count": 1200,
+  "total_count": 14000,
+  "youth_share_pct": 8.6,
+  "rapes_cleared_by_arrest": 300
+ },
+ "boundaries": {
+  "networkProbe": [
+   {
+    "api": "https.request",
+    "blocked": true
+   },
+   {
+    "api": "http.get",
+    "blocked": true
+   },
+   {
+    "api": "net.connect",
+    "blocked": true
+   },
+   {
+    "api": "fetch",
+    "blocked": true
+   }
+  ],
+  "databaseProbe": [
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\crime_data.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\nibrs.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\shr.db",
+    "blocked": true
+   },
+   {
+    "path": "/opt/nibrs/nibrs.db",
+    "blocked": true
+   }
+  ],
+  "outboundNetworkAttempts": 4,
+  "refusedDatabaseOpens": 4,
+  "substitutedModules": [
+   "better-sqlite3",
+   "@anthropic-ai/sdk"
+  ]
+ },
+ "gc032Delivery": {
+  "delivered": false,
+  "retryRules": [],
+  "note": "not exercised by this witness"
+ },
+ "checks": {
+  "passed": 9,
+  "failed": 0,
+  "list": [
+   {
+    "name": "comma-unpinned: refused, no figure, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "comma-pinned: delivers 300",
+    "ok": true,
+    "detail": "[{\"rapes_cleared_by_arrest\":300}]"
+   },
+   {
+    "name": "join-unpinned: refused, no figure, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "join-pinned: delivers 300",
+    "ok": true,
+    "detail": "[{\"rapes_cleared_by_arrest\":300}]"
+   },
+   {
+    "name": "quoted-comma-unpinned: refused, no figure, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "join-then-comma-unpinned: refused, no figure, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "cte-comma-unpinned: refused, no figure, never executed",
+    "ok": true,
+    "detail": "{\"rows\":[],\"worker\":0}"
+   },
+   {
+    "name": "cte-comma-pinned: delivers 300",
+    "ok": true,
+    "detail": "[{\"rapes_cleared_by_arrest\":300}]"
+   },
+   {
+    "name": "simple-control: delivers 300",
+    "ok": true,
+    "detail": "[{\"rapes_cleared_by_arrest\":300}]"
+   }
+  ]
+ },
+ "results": [
+  {
+   "id": "comma-unpinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "How many rapes were cleared by arrest in Illinois in 2025?\n\n[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for 2025 only, but the SQL does not keep the metric/count numerator limited to that single year. No year predicate restricts summary_clearance_detail; a year filter on a population or support table does not limit the measure. Rewrite the SQL so fact-ta"
+   ],
+   "modelSql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A'",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "contract-single-year-temporal-scope"
+   ]
+  },
+  {
+   "id": "comma-pinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": 300,
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"How many rapes were cleared by arrest in Illinois in 2025?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: rapes_cleared_by_arrest\n- Offense/topic: rape\n- Year range: unknown\n- Geographies: Illinois\n- Scope: city\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY mention cities/agencies/entities that appear in the \"Entities in results\" list above. D"
+   ],
+   "modelSql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2025",
+   "responseSql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a INDEXED BY idx_scd_ori_year, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2025 LIMIT 1000",
+   "workerReceived": [
+    "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a INDEXED BY idx_scd_ori_year, summary_clearance_detail b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2025 LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "rapes_cleared_by_arrest": 300
+    }
+   ],
+   "columns": [
+    "rapes_cleared_by_arrest"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "join-unpinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "How many rapes were cleared by arrest in Illinois in 2025?\n\n[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for 2025 only, but the SQL does not keep the metric/count numerator limited to that single year. No year predicate restricts summary_clearance_detail; a year filter on a population or support table does not limit the measure. Rewrite the SQL so fact-ta"
+   ],
+   "modelSql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a JOIN summary_clearance_detail b ON a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code WHERE a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A'",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "contract-single-year-temporal-scope"
+   ]
+  },
+  {
+   "id": "join-pinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": 300,
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"How many rapes were cleared by arrest in Illinois in 2025?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: rapes_cleared_by_arrest\n- Offense/topic: rape\n- Year range: unknown\n- Geographies: Illinois\n- Scope: city\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY mention cities/agencies/entities that appear in the \"Entities in results\" list above. D"
+   ],
+   "modelSql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a JOIN summary_clearance_detail b ON a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code WHERE a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2025",
+   "responseSql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a INDEXED BY idx_scd_ori_year JOIN summary_clearance_detail b ON a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code WHERE a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2025 LIMIT 1000",
+   "workerReceived": [
+    "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a INDEXED BY idx_scd_ori_year JOIN summary_clearance_detail b ON a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code WHERE a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A' AND b.year = 2025 LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "rapes_cleared_by_arrest": 300
+    }
+   ],
+   "columns": [
+    "rapes_cleared_by_arrest"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "quoted-comma-unpinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "How many rapes were cleared by arrest in Illinois in 2025?\n\n[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for 2025 only, but the SQL does not keep the metric/count numerator limited to that single year. No year predicate restricts summary_clearance_detail; a year filter on a population or support table does not limit the measure. Rewrite the SQL so fact-ta"
+   ],
+   "modelSql": "SELECT SUM(b.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a, \"summary_clearance_detail\" b WHERE a.ori = b.ori AND a.ucr_offense_code = b.ucr_offense_code AND a.year = 2025 AND b.state = 'IL' AND b.ucr_offense_code = '11A'",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a valid query after correcting the SQL structure. Try rephrasing your question or asking for a simpler breakdown.",
+   "errors": [],
+   "retryRules": [
+    "contract-single-year-temporal-scope"
+   ]
+  },
+  {
+   "id": "join-then-comma-unpinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "How many rapes were cleared by arrest in Illinois in 2025?\n\n[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for 2025 only, but the SQL does not keep the metric/count numerator limited to that single year. No year predicate restricts summary_clearance_detail; a year filter on a population or support table does not limit the measure. Rewrite the SQL so fact-ta"
+   ],
+   "modelSql": "SELECT SUM(summary_clearance_detail.cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail a JOIN agencies g ON g.ori = a.ori AND g.year = 2025, summary_clearance_detail WHERE a.ori = summary_clearance_detail.ori AND a.ucr_offense_code = summary_clearance_detail.ucr_offense_code AND a.year = 2025 AND summary_clearance_detail.state = 'IL' AND summary_clearance_detail.ucr_offense_code = '11A'",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "contract-single-year-temporal-scope"
+   ]
+  },
+  {
+   "id": "cte-comma-unpinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": "refuse",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "How many rapes were cleared by arrest in Illinois in 2025?\n\n[SYSTEM: Query contract violation (contract-single-year-temporal-scope). The user asked for 2025 only, but the SQL does not keep the metric/count numerator limited to that single year. No year predicate restricts summary_clearance_detail; a year filter on a population or support table does not limit the measure. Rewrite the SQL so fact-ta"
+   ],
+   "modelSql": "WITH y AS (SELECT SUM(cleared_by_arrest) AS c FROM summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A' AND year = 2025), t AS (SELECT SUM(cleared_by_arrest) AS c FROM summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A') SELECT t.c AS rapes_cleared_by_arrest FROM y, t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "contract-single-year-temporal-scope"
+   ]
+  },
+  {
+   "id": "cte-comma-pinned",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": 300,
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"How many rapes were cleared by arrest in Illinois in 2025?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: rapes_cleared_by_arrest\n- Offense/topic: rape\n- Year range: unknown\n- Geographies: Illinois\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY mention cities/agencies/entities that appear in the \"Entities in results\" list above. "
+   ],
+   "modelSql": "WITH y AS (SELECT SUM(cleared_by_arrest) AS c FROM summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A' AND year = 2025), t AS (SELECT SUM(cleared_by_arrest) AS c FROM summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A' AND year = 2025) SELECT t.c AS rapes_cleared_by_arrest FROM y, t",
+   "responseSql": "WITH y AS (SELECT SUM(cleared_by_arrest) AS c FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A' AND year = 2025), t AS (SELECT SUM(cleared_by_arrest) AS c FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A' AND year = 2025) SELECT t.c AS rapes_cleared_by_arrest FROM y, t LIMIT 1000",
+   "workerReceived": [
+    "WITH y AS (SELECT SUM(cleared_by_arrest) AS c FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A' AND year = 2025), t AS (SELECT SUM(cleared_by_arrest) AS c FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND ucr_offense_code = '11A' AND year = 2025) SELECT t.c AS rapes_cleared_by_arrest FROM y, t LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "rapes_cleared_by_arrest": 300
+    }
+   ],
+   "columns": [
+    "rapes_cleared_by_arrest"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": [],
+   "retryRules": []
+  },
+  {
+   "id": "simple-control",
+   "question": "How many rapes were cleared by arrest in Illinois in 2025?",
+   "expect": 300,
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "User question: \"How many rapes were cleared by arrest in Illinois in 2025?\"\n\nResults metadata:\n- Rows: 1\n- Metrics: rapes_cleared_by_arrest\n- Offense/topic: rape\n- Year range: unknown\n- Geographies: Illinois\n- Scope: state\n\nDescribe what these results contain in one sentence (metric, geography, time range). ONLY mention cities/agencies/entities that appear in the \"Entities in results\" list above. "
+   ],
+   "modelSql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A'",
+   "responseSql": "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000",
+   "workerReceived": [
+    "SELECT SUM(cleared_by_arrest) AS rapes_cleared_by_arrest FROM rollup.state_summary_clearance_detail WHERE state = 'IL' AND year = 2025 AND ucr_offense_code = '11A' LIMIT 1000"
+   ],
+   "rows": [
+    {
+     "rapes_cleared_by_arrest": 300
+    }
+   ],
+   "columns": [
+    "rapes_cleared_by_arrest"
+   ],
+   "explanation": "The requested results are shown above.",
+   "errors": [],
+   "retryRules": []
+  }
+ ]
+}

@@ -1,0 +1,143 @@
+{
+  "comma": {
+    "parsed": true,
+    "items": [
+      {
+        "alias": "youth_share_pct",
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "youth_offenders>d",
+            "aggregated": true
+          },
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "total_offenders>d",
+            "aggregated": true
+          }
+        ]
+      },
+      {
+        "alias": null,
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "youth_offenders>d",
+            "aggregated": true
+          }
+        ]
+      },
+      {
+        "alias": null,
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "total_offenders>d",
+            "aggregated": true
+          }
+        ]
+      }
+    ]
+  },
+  "crossJoin": {
+    "parsed": true,
+    "items": [
+      {
+        "alias": "youth_share_pct",
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "youth_offenders>d",
+            "aggregated": true
+          },
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "total_offenders>d",
+            "aggregated": true
+          }
+        ]
+      },
+      {
+        "alias": null,
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "youth_offenders>d",
+            "aggregated": true
+          }
+        ]
+      },
+      {
+        "alias": null,
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "total_offenders>d",
+            "aggregated": true
+          }
+        ]
+      }
+    ]
+  },
+  "joinOn": {
+    "parsed": true,
+    "items": [
+      {
+        "alias": "youth_share_pct",
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "youth_offenders>d",
+            "aggregated": true
+          },
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "total_offenders>d",
+            "aggregated": true
+          }
+        ]
+      },
+      {
+        "alias": null,
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "youth_offenders>d",
+            "aggregated": true
+          }
+        ]
+      },
+      {
+        "alias": null,
+        "resolved": true,
+        "refs": [
+          {
+            "table": "summary_offender_demographics",
+            "column": "offender_count",
+            "sourceAlias": "total_offenders>d",
+            "aggregated": true
+          }
+        ]
+      }
+    ]
+  }
+}

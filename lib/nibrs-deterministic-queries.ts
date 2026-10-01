@@ -14,9 +14,34 @@ import {
   nibrsDemographicCompletenessPredicate,
 } from "./nibrs-completeness";
 import incidentOffenseScopes from "./nibrs-incident-offense-scopes.json";
+import { selectPopulationPeers, type PeerCandidate } from "./peer-comparison";
+import { fetchNibrsPeerCandidates, type PeerCandidateSource } from "./peer-adapters";
+import { getNibrsDb } from "./nibrs-db";
+import type { EstablishedIdentity } from "./answer-evidence";
+import type { CompletenessPlan } from "./city-ranking-completeness";
 
 export interface DeterministicNibrsQuery {
   sql: string;
+  /**
+   * Increment 5: the selected peers as IDENTITIES (ORI + display label), for comparing
+   * selection with the evidence that actually came back. Review §2B: the id is what
+   * membership is decided on, because the executed result labels agencies with a state
+   * suffix the pre-execution selection does not carry.
+   */
+  selectedPeers?: EstablishedIdentity[];
+  /**
+   * Which member each pivoted measure column belongs to, recorded by the producer.
+   *
+   * The column name is composed with `seriesKey`, which maps every run of non-alphanumerics to "_",
+   * so the separator is indistinguishable from the content: `union_city_murders` could be
+   * ("Union City", "murders") or ("Union", "city murders"). The composition is LOSSY, and no shared
+   * copy of a lossy function makes it invertible -- exporting `seriesKey` fixes drift between reader
+   * and producer, not ambiguity. When two members slug identically the builder also appends "_2" to
+   * keep the SQL valid, and that suffix carries no identity at all.
+   *
+   * So the binding is carried rather than recovered. A reader with this list never parses a slug.
+   */
+  memberColumns?: { column: string; placeKey: string; contractIndex: number; placeLabel: string }[];
   title: string;
   explanation: string;
   chartHint: "line" | "bar" | "pie" | "stacked_bar" | "scatter" | "none";
@@ -25,6 +50,8 @@ export interface DeterministicNibrsQuery {
   xAxisLabel?: string;
   yAxisLabel?: string;
   guardrail: string;
+  /** City rankings only: the shared S1 completeness plan (lib/city-ranking-completeness.ts). */
+  completeness?: CompletenessPlan;
 }
 
 function sqlString(value: string): string {
@@ -450,7 +477,12 @@ function requestedPeerCount(question: string): number {
 
 export function buildNibrsComparableAgencyClearanceQuery(
   question: string,
-  resolutionPlan?: NibrsPlaceResolutionPlan | null
+  resolutionPlan?: NibrsPlaceResolutionPlan | null,
+  /**
+   * Increment 5: the candidate source. Defaults to the NIBRS agencies table; injected in
+   * tests so the selected set, the band and the named peers can be pinned without a DB.
+   */
+  candidateSource?: PeerCandidateSource
 ): DeterministicNibrsQuery | null {
   if (!/\b(?:clearance|clearances|cleared|solve[ds]?)\b/i.test(question) ||
       !/\b(?:similar(?:[-\s]+siz(?:e|ed)|ly[-\s]+sized)?|comparable|peer)\s+(?:agencies|departments)|\bagencies\s+(?:of\s+)?(?:similar|comparable)\s+size\b/i.test(question)) return null;
@@ -464,6 +496,31 @@ export function buildNibrsComparableAgencyClearanceQuery(
   if (targetYears.length === 0) return null;
   const reference = [...targetYears].sort((a, b) => b.year - a.year)[0];
   const peerCount = requestedPeerCount(question);
+  // Increment 5 (Decision 16): SELECT THE PEERS HERE, not in SQL. A LIMIT over an
+  // ordered pool picks agencies the answer cannot then name; Decision 16 requires every
+  // peer named and the real population band stated, so the chosen set must be a value we
+  // hold. The deterministic query below reads these identities.
+  const subject: PeerCandidate = {
+    ori: reference.ori,
+    agency: target.label.replace(/,\s*[A-Z]{2}$/, ""),
+    state: /,\s*([A-Z]{2})$/.exec(target.label)?.[1] ?? "",
+    population: Number(reference.population),
+  };
+  const source: PeerCandidateSource = candidateSource
+    ?? ((q) => fetchNibrsPeerCandidates(getNibrsDb() as unknown as Parameters<typeof fetchNibrsPeerCandidates>[0], q));
+  let candidates: PeerCandidate[];
+  try {
+    candidates = source({ year: reference.year, excludeOri: reference.ori, population: Number(reference.population) });
+  } catch {
+    return null;   // no candidate evidence -> fall through to the model rather than guess
+  }
+  if (candidates.length === 0) return null;
+  const selection = selectPopulationPeers(subject, candidates, peerCount);
+  if (selection.peers.length === 0) return null;
+  const peerRows = selection.peers
+    .map((p) => `(${sqlString(p.ori ?? "")}, ${sqlString(`${p.agency}, ${p.state}`)})`)
+    .join(", ");
+
   const codes = contract.metric.offenseCodes.map(sqlString).join(", ");
   const targetRows = targetYears.map((item) =>
     `(${item.year}, ${sqlString(item.ori)}, ${Number(item.population)})`
@@ -473,17 +530,8 @@ export function buildNibrsComparableAgencyClearanceQuery(
 target_years(year, ori, population) AS (
   VALUES ${targetRows}
 ),
-candidate_pool AS MATERIALIZED (
-  SELECT a.ori,
-    COALESCE(NULLIF(a.city, ''), a.ori) || ', ' || a.state AS agency_label,
-    a.population
-  FROM agencies a INDEXED BY idx_agencies_year_state_population
-  WHERE a.year = ${reference.year}
-    AND a.agency_type = 'City'
-    AND a.population > 0
-    AND a.ori <> ${sqlString(reference.ori)}
-  ORDER BY ABS(a.population - ${Number(reference.population)}), a.ori
-  LIMIT 100
+peer_selected(ori, agency_label) AS (
+  VALUES ${peerRows}
 ),
 target_data AS MATERIALIZED (
   SELECT 1 AS available
@@ -495,17 +543,9 @@ target_data AS MATERIALIZED (
   LIMIT 1
 ),
 peer_candidates AS MATERIALIZED (
-  SELECT cp.ori, cp.agency_label, cp.population
-  FROM candidate_pool cp
+  SELECT ps.ori, ps.agency_label
+  FROM peer_selected ps
   WHERE EXISTS (SELECT 1 FROM target_data)
-    AND EXISTS (
-      SELECT 1
-      FROM summary_clearance_type probe INDEXED BY idx_sct_ori_year
-      WHERE probe.ori = cp.ori
-        AND probe.year BETWEEN ${resolutionPlan.startYear} AND ${resolutionPlan.endYear}
-        AND probe.ucr_offense_code IN (${codes})
-    )
-  LIMIT ${peerCount}
 ),
 selected_agencies(place_label, ori, effective_year) AS (
   SELECT ${sqlString(target.label)}, ty.ori, ty.year FROM target_years ty
@@ -514,7 +554,7 @@ selected_agencies(place_label, ori, effective_year) AS (
   SELECT pc.agency_label, pc.ori, NULL FROM peer_candidates pc
 ),
 clearances AS (
-  SELECT sct.year, sa.place_label,
+  SELECT sct.year, sa.place_label, sa.ori,
     SUM(sct.total_offenses) AS total_offenses,
     SUM(sct.cleared_by_arrest) AS cleared_by_arrest,
     SUM(sct.cleared_exceptional) AS cleared_exceptional
@@ -524,9 +564,9 @@ clearances AS (
     AND (sa.effective_year IS NULL OR sa.effective_year = sct.year)
     AND sct.year BETWEEN ${resolutionPlan.startYear} AND ${resolutionPlan.endYear}
     AND sct.ucr_offense_code IN (${codes})
-  GROUP BY sct.year, sa.place_label
+  GROUP BY sct.year, sa.place_label, sa.ori
 )
-SELECT year, place_label,
+SELECT year, place_label, ori,
   total_offenses,
   cleared_by_arrest,
   cleared_exceptional,
@@ -541,7 +581,8 @@ LIMIT 1000`;
   return {
     sql,
     title: `${target.label} clearance rates and similar-size agencies`,
-    explanation: `This compares ${offenseLabel} clearance rates for ${target.label} with the ${peerCount} city police agencies whose ${reference.year} service populations are closest to ${Number(reference.population).toLocaleString("en-US")}. ` +
+    selectedPeers: selection.peers.map((p) => ({ id: p.ori ?? null, label: `${p.agency}, ${p.state}` })),
+    explanation: `This compares ${offenseLabel} clearance rates for ${target.label} with its population peers. ${selection.disclosure} ` +
       (methodBreakdown ? "Arrest and exceptional clearances are shown separately. " : "The overall rate includes arrest and exceptional clearances. ") +
       "Peer selection is based on agency service population, not broader socioeconomic similarity. Recent NIBRS data may be incomplete.",
     chartHint: "line",
@@ -668,7 +709,11 @@ LIMIT 1000`.trim()
     guardrail: "deterministic-nibrs-local-city-offense-count",
   };
 }
-function seriesKey(value: string): string {
+/**
+ * The column-name rule for pivoted comparison series. Exported so the reader that attributes a figure
+ * to an agency uses the producer's own rule instead of a copy that can drift from it.
+ */
+export function seriesKey(value: string): string {
   const key = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
@@ -691,6 +736,7 @@ function structuredTargetSelect(
 ): {
   key: string;
   label: string;
+  contractIndex: number;
   sql: string;
 } | null {
   const key = "place_" + (index + 1);
@@ -699,6 +745,7 @@ function structuredTargetSelect(
     return {
       key,
       label: resolved.label,
+      contractIndex: index,
       sql: resolved.oriYears.map((item) =>
         "SELECT " + sqlString(key) + " AS place_key, " + sqlString(resolved.label) +
         " AS place_label, " + sqlString(item.ori) + " AS ori, " + item.year + " AS effective_year"
@@ -740,6 +787,7 @@ function structuredTargetSelect(
     return {
       key,
       label,
+      contractIndex: index,
       sql: cityTargetSql(geography.name),
     };
   }
@@ -751,12 +799,23 @@ function structuredTargetSelect(
   // deterministic path until resolution is explicit.
   if (/\b(?:county\s+police|sheriff)\b/i.test(geography.name)) return null;
 
-  const cityPolice = geography.name.match(/^(.+?)\s+(?:city\s+)?police\s+(?:department|dept\.?)$/i);
+  const cityPolice = geography.name.match(/^(.+?)\s+police\s+(?:department|dept\.?)$/i);
   if (cityPolice) {
+    const asWritten = cityPolice[1];
+    const stripped = asWritten.replace(/\s+city$/i, "");
+    // Reaching here means resolution already failed, so there is no ORI to key on and only the
+    // string is left -- and the string cannot settle this. In `agencies`, 27 (state, name) pairs
+    // have both `X` and `X CITY`: some are one agency renamed across the source's 2017
+    // re-normalization, and some are genuinely different municipalities with different ORIs and
+    // wildly different populations (CA REDWOOD, 5,604, against REDWOOD CITY, 88,161). A query
+    // covering both spellings would merge two real places; a query picking one would be a guess.
+    // Decline instead, and let the model path answer under the omitted-member enforcement.
+    if (stripped !== asWritten) return null;
     return {
       key,
       label,
-      sql: cityTargetSql(cityPolice[1]),
+      contractIndex: index,
+      sql: cityTargetSql(asWritten),
     };
   }
 
@@ -807,10 +866,13 @@ export function buildNibrsLocalDemographicQuery(
   if (contract.metric.offenses.length !== 1) return null;
   const offense = contract.metric.offenses[0];
   if (offense.codes.length === 0 || offense.codes.some((code) => !/^[0-9A-Z]{3}$/.test(code))) return null;
-  if (contract.geographies.length !== 1 || !["city", "agency"].includes(contract.geographies[0].kind)) return null;
+  if (contract.geographies.length === 0 || contract.geographies.some((geography) => !["city", "agency"].includes(geography.kind))) return null;
   if (contract.geography.kind === "campus" || contract.comparability.continuousReporters) return null;
   if (contract.breakdowns.includes("month")) return null;
   if (/\b(?:weapon|firearm|gun|shooting|domestic\s+violence|intimate\s+partner|circumstance|injury|relationship|clearance|cleared)\b/i.test(question)) return null;
+  if (contract.geographies.length > 1) {
+    return buildOwnedMultiAgencyOffenderAgeQuery(question, contract, role, dimensions[0], offense, resolutionPlan);
+  }
 
   const target = structuredTargetSelect(contract.geographies[0], 0, resolutionPlan);
   if (!target) return null;
@@ -907,11 +969,150 @@ export function buildNibrsLocalDemographicQuery(
     guardrail: isShare ? "deterministic-nibrs-local-demographic-share" : "deterministic-nibrs-local-demographic-count",
   };
 }
+
+const OWNED_DEMOGRAPHIC_MAX_MEMBERS = 5;
+
+/**
+ * Offender age-group counts for 2-5 named agencies, built here so every figure is attributable
+ * (GC-084; Codex design ruling 2026-09-26).
+ *
+ * The multi-agency ownership refusal in the NIBRS route is unchanged: this makes one bounded
+ * request something the application builds, and everything outside the bound still reaches that
+ * refusal. The bound is offender role, age group, counts, one offense family, no annual breakdown.
+ *
+ * Attribution rests on three things. Every requested member must carry the resolver's own
+ * ORI/year binding -- the name-based fallback in `structuredTargetSelect` is never reached,
+ * because it guesses. No ORI may belong to two members in the same year, so nothing is pooled.
+ * And each member gets one count column, declared by contract index in `memberColumns`, which the
+ * route binds to the executed statement.
+ *
+ * The pivot has no ELSE: an age group a member has no rows for stays NULL, never a fabricated 0,
+ * while a recorded zero sums to 0. Each member keeps its own complete-reporting years; the
+ * comparison is not narrowed to a period the members share.
+ */
+function buildOwnedMultiAgencyOffenderAgeQuery(
+  question: string,
+  contract: NonNullable<ReturnType<typeof buildQueryContract>>,
+  role: NibrsDemographicRole,
+  dimension: NibrsDemographicDimension,
+  offense: QueryContractOffense,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
+): DeterministicNibrsQuery | null {
+  if (role !== "offender" || dimension !== "age_group") return null;
+  if (contract.metric.unit !== "count") return null;
+  if (contract.breakdowns.some((breakdown) => breakdown !== "age_group")) return null;
+  const memberCount = contract.geographies.length;
+  if (memberCount < 2 || memberCount > OWNED_DEMOGRAPHIC_MAX_MEMBERS) return null;
+  if (!resolutionPlan || resolutionPlan.hasStateComparison || resolutionPlan.places.length !== memberCount) return null;
+  const members = contract.geographies.map((_, index) => resolvedPlaceForContractIndex(resolutionPlan, index));
+  if (members.some((member) => !member || member.oriYears.length === 0)) return null;
+  const owners = new Map<string, number>();
+  for (const [index, member] of members.entries()) {
+    for (const item of member!.oriYears) {
+      const key = item.ori + ":" + item.year;
+      if (owners.has(key) && owners.get(key) !== index) return null;
+      owners.set(key, index);
+    }
+  }
+  // Every member is resolved, so this takes the resolver-bound branch for each.
+  const targets = contract.geographies.map((geography, index) => structuredTargetSelect(geography, index, resolutionPlan));
+  if (targets.some((target) => target === null)) return null;
+  const resolvedTargets = targets.filter((target): target is NonNullable<typeof target> => target !== null);
+
+  const years = yearScope("d.year", question);
+  const ageSql = demographicLabelSql("d.age_group", "age_group");
+  const offensePredicate = offense.codes.length === 1
+    ? "d.ucr_offense_code = " + sqlString(offense.codes[0])
+    : "d.ucr_offense_code IN (" + offense.codes.map(sqlString).join(",") + ")";
+
+  const aliases = new Set<string>();
+  const series = resolvedTargets.map((target) => {
+    // Apostrophes dropped first, so "sheriff's" reads back as "Sheriffs", not "Sheriff S".
+    const baseAlias = seriesKey(target.label.replace(/['’]/g, "") + "_offenders");
+    let alias = baseAlias;
+    let suffix = 2;
+    while (aliases.has(alias)) alias = baseAlias + "_" + suffix++;
+    aliases.add(alias);
+    return { alias, placeKey: target.key, contractIndex: target.contractIndex, placeLabel: target.label };
+  });
+
+  const sql = [
+    "WITH target_places AS (",
+    "  " + resolvedTargets.map((target) => target.sql).join("\n  UNION\n  "),
+    "),",
+    "grouped AS (",
+    "  SELECT tp.place_key, " + ageSql + " AS age_group, SUM(d.offender_count) AS offenders",
+    "  FROM target_places AS tp",
+    "  CROSS JOIN summary_offender_demographics AS d INDEXED BY idx_sod_new_ori_year",
+    "  WHERE d.ori = tp.ori",
+    "    AND (tp.effective_year IS NULL OR tp.effective_year = d.year)",
+    "    AND " + offensePredicate,
+    "    AND " + years.predicate,
+    "    AND " + nibrsDemographicCompletenessPredicate("d.ori", "d.year"),
+    "  GROUP BY tp.place_key, " + ageSql,
+    ")",
+    "SELECT age_group,",
+    "  " + series.map((item) =>
+      "SUM(CASE WHEN place_key = " + sqlString(item.placeKey) + " THEN offenders END) AS " + item.alias
+    ).join(",\n  "),
+    "FROM grouped",
+    "GROUP BY age_group",
+    "ORDER BY CASE WHEN age_group = 'Unknown' THEN 1 ELSE 0 END, age_group",
+    "LIMIT 1000",
+  ].join("\n");
+
+  const places = resolvedTargets.map((target) => target.label).join(" and ");
+  return {
+    sql,
+    title: "NIBRS " + offense.label.toLowerCase() + " offenders by age group for " + places,
+    explanation:
+      "This returns " + offense.label.toLowerCase() + " offenders by age group for " + places +
+      ", one column per agency" + years.periodText + ". " +
+      "These are recorded offender counts, not incidents and not unique people; one incident can involve several offenders. " +
+      "Unknown or unreported ages remain visible as Unknown. " +
+      "A blank cell is a missing contribution for that agency and age group, not a count. " +
+      // GC-084 correction C3: the completeness predicate admits current-year rows without the 12-month
+      // test, so the prose must not claim every counted year is complete.
+      "Past years are counted only when the agency reported all 12 months; if the period includes " + new Date().getFullYear() +
+      ", its counts are partial-year counts that can cover only some months. " +
+      NIBRS_COMPLETENESS_PROXY_DISCLOSURE + " " +
+      "The agencies can cover different years; the comparison is not narrowed to a shared period. " +
+      NIBRS_RECENT_MATURATION_DISCLOSURE,
+    chartHint: "bar",
+    xAxis: "age_group",
+    yAxis: series.map((item) => item.alias).join(","),
+    xAxisLabel: "Age group",
+    yAxisLabel: "Offenders",
+    guardrail: "deterministic-nibrs-local-demographic-count",
+    // Carried, not recoverable from the column names: see `memberColumns` on the type.
+    memberColumns: series.map((item) => ({
+      column: item.alias, placeKey: item.placeKey, contractIndex: item.contractIndex, placeLabel: item.placeLabel,
+    })),
+  };
+}
+/*
+ * ONE RELATION PER OFFENCE, AND THE OFFENCE IDENTITY LIVES IN ITS NAME.
+ *
+ * These branches used to be UNIONed into a single `series_counts` CTE, each tagging its rows with
+ * `'murder' AS offense_key` so the outer pivot could select them. That label is a constant with no
+ * source table, and the pre-execution structural check — correctly — could not trace a returned
+ * series that inherited it, so a correctly built plan was refused before it ever ran.
+ *
+ * The fix is not to teach the checker about constants. It is to stop projecting one: each offence
+ * gets its own relation, and which offence a column holds is carried by the CTE's name and the
+ * output column's name rather than by a value in the data. Nothing downstream has to trust a
+ * string to know what it is looking at.
+ *
+ * Each relation groups by `(year, place_key)`, so it contributes at most one row per join key and
+ * cannot multiply the others when they are joined side by side. That is a property of the shape,
+ * not of any particular request.
+ */
 function structuredOffenseSelect(
   offense: QueryContractOffense,
   targetCte: string,
-  years: YearScope
-): { key: string; label: string; sql: string } | null {
+  years: YearScope,
+  index: number
+): { key: string; label: string; sql: string; cte: string; alias: string } | null {
   if (offense.codes.length === 0 || offense.codes.some((code) => !/^[0-9A-Z]{3}$/.test(code))) return null;
   const usesPersonTable = offense.codes.every((code) => PERSON_COUNT_CODES.has(code));
   const usesOffenseTable = offense.codes.every((code) => !PERSON_COUNT_CODES.has(code));
@@ -928,8 +1129,10 @@ function structuredOffenseSelect(
   return {
     key,
     label: offense.label,
+    cte: "offense_counts_" + (index + 1),
+    alias: "oc" + (index + 1),
     sql: [
-      "SELECT s.year, tp.place_key, " + sqlString(key) + " AS offense_key, SUM(s." + valueColumn + ") AS reported_count",
+      "SELECT s.year, tp.place_key, SUM(s." + valueColumn + ") AS reported_count",
       "  FROM " + targetCte + " AS tp",
       "  CROSS JOIN " + table + " AS s INDEXED BY " + tableIndex,
       "  WHERE s.ori = tp.ori",
@@ -978,12 +1181,12 @@ export function buildNibrsStructuredLocalTrendQuery(
   const resolvedTargets = targets.filter((target): target is NonNullable<typeof target> => target !== null);
   const targetCte = "target_places";
   const years = yearScope("year", question);
-  const offenses = contract.metric.offenses.map((offense) => structuredOffenseSelect(offense, targetCte, years));
+  const offenses = contract.metric.offenses.map((offense, index) => structuredOffenseSelect(offense, targetCte, years, index));
   if (offenses.some((offense) => offense === null)) return null;
   const resolvedOffenses = offenses.filter((offense): offense is NonNullable<typeof offense> => offense !== null);
 
   const aliases = new Set<string>();
-  const series: { alias: string; placeKey: string; offenseKey: string }[] = [];
+  const series: { alias: string; placeKey: string; contractIndex: number; placeLabel: string; offenseAlias: string }[] = [];
   for (const target of resolvedTargets) {
     for (const offense of resolvedOffenses) {
       const baseAlias = seriesKey(target.label + "_" + offense.label + (isRate ? "_rate_per_100k" : ""));
@@ -994,7 +1197,13 @@ export function buildNibrsStructuredLocalTrendQuery(
       series.push({
         alias,
         placeKey: target.key,
-        offenseKey: offense.key,
+        // The contract index the key was derived from: `place_N` is assigned from it, and it is the
+        // only part of this binding a label collision cannot reach. Two members labelled "Mobile"
+        // have one label and two contract indices.
+        contractIndex: target.contractIndex,
+        placeLabel: target.label,
+        // Which RELATION holds this offence, rather than which label value to match on.
+        offenseAlias: offense.alias,
       });
     }
   }
@@ -1003,9 +1212,8 @@ export function buildNibrsStructuredLocalTrendQuery(
   const pivotColumns = series.map((item) => {
     const reportingMonths = "MAX(CASE WHEN pr.place_key = " + sqlString(item.placeKey) +
       " THEN pr.months_reported END)";
-    const countValue = "COALESCE(SUM(CASE WHEN sc.place_key = " + sqlString(item.placeKey) +
-      " AND sc.offense_key = " + sqlString(item.offenseKey) +
-      " THEN sc.reported_count END), 0)";
+    const countValue = "COALESCE(SUM(CASE WHEN " + item.offenseAlias + ".place_key = " +
+      sqlString(item.placeKey) + " THEN " + item.offenseAlias + ".reported_count END), 0)";
     const valueExpression = isRate
       ? "ROUND(100000.0 * " + countValue + " / NULLIF(MAX(CASE WHEN pr.place_key = " +
         sqlString(item.placeKey) + " THEN pr.population END), 0), 1)"
@@ -1046,13 +1254,20 @@ export function buildNibrsStructuredLocalTrendQuery(
     "WITH " + targetCte + " AS (",
     "  " + resolvedTargets.map((target) => target.sql).join("\n  UNION\n  "),
     "),",
-    "series_counts AS (",
-    "  " + resolvedOffenses.map((offense) => offense.sql).join("\n  UNION ALL\n  "),
-    "),",
+    ...resolvedOffenses.flatMap((offense) => [
+      offense.cte + " AS (",
+      "  " + offense.sql,
+      "),",
+    ]),
     ...reportingCte,
     "SELECT pr.year,",
     "  " + pivotColumns.join(",\n  "),
-    "FROM place_reporting AS pr LEFT JOIN series_counts AS sc ON sc.year = pr.year AND sc.place_key = pr.place_key",
+    "FROM place_reporting AS pr",
+    // One join per offence relation, each keyed on (year, place_key) and therefore one-to-one with
+    // the reporting row. Side by side they cannot fan out, so no measure is counted twice.
+    ...resolvedOffenses.map((offense) =>
+      "LEFT JOIN " + offense.cte + " AS " + offense.alias +
+      " ON " + offense.alias + ".year = pr.year AND " + offense.alias + ".place_key = pr.place_key"),
     "GROUP BY pr.year",
     "ORDER BY pr.year",
     "LIMIT 1000",
@@ -1079,6 +1294,10 @@ export function buildNibrsStructuredLocalTrendQuery(
     xAxisLabel: "Year",
     yAxisLabel: isRate ? "Rate per 100,000" : "Reported count",
     guardrail: isRate ? "deterministic-nibrs-structured-local-rate" : "deterministic-nibrs-structured-local-trend",
+    // Carried, not recoverable from the column names: see `memberColumns` on the type.
+    memberColumns: series.map((item) => ({
+      column: item.alias, placeKey: item.placeKey, contractIndex: item.contractIndex, placeLabel: item.placeLabel,
+    })),
   };
 }
 export function buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
@@ -1144,4 +1363,391 @@ LIMIT 1000`.trim();
     yAxisLabel: "Domestic violence share (%)",
     guardrail: "deterministic-nibrs-dv-assault-share",
   };
+}
+
+/**
+ * Does abandoning this deterministic query lose a peer selection contract?
+ *
+ * A peer comparison selected its members on population alone. If its execution fails and
+ * the route continues into the model path, those members are gone and the model may
+ * invent a different set — exactly the Decision 16 failure this batch exists to fix. The
+ * route uses this to stop honestly instead.
+ */
+export function deterministicPeerSelectionLost(query: Pick<DeterministicNibrsQuery, "selectedPeers">): boolean {
+  return Boolean(query.selectedPeers && query.selectedPeers.length > 0);
+}
+
+/*
+ * ============================================================================================
+ * A CHECKED CALCULATION PATH: yearly offence and clearance figures for one agency.
+ *
+ * Everything else in this file builds SQL and lets a general checker decide afterwards whether the
+ * number means what the answer says. That approach failed the same bounded milestone twice: a
+ * statement can sum months into a month, or aggregate in one scope and claim a period in another,
+ * and no amount of static reading of unrestricted SQL settled it. This path inverts that. It owns
+ * the offence, the contributing rows, the period and the arithmetic together, so the figure is
+ * correct by construction rather than inspected for correctness later.
+ *
+ * WHAT THE SOURCE ACTUALLY SAYS, measured on the restored backup on 2026-09-12 for Houston and
+ * `23F` across 2018-2026 (source gate recorded in the 2026-09-11 handoff):
+ *
+ *   - `summary_clearance_detail` is keyed `(year, state, ori, ucr_offense_code)`. It is ALREADY
+ *     ANNUAL, so this path performs no month-to-year aggregation at all -- the defect class that
+ *     failed twice cannot arise here.
+ *   - For 2018-2025 its `total_offenses` equals the monthly table's `SUM(offense_count)` EXACTLY,
+ *     every year, and the monthly `cleared_count` equals `cleared_by_arrest + cleared_A..E`
+ *     exactly. So the monthly `cleared_count` is TOTAL clearances including exceptional means.
+ *   - For 2026 the three tables DISAGREE: 8,967 offences over six months, 2,478 in the annual
+ *     table, and a completeness row saying one month.
+ *
+ * SO NOTHING IS ASSUMED TO AGREE. The query returns the evidence for each requested year -- the
+ * other table's offence AND clearance totals, the month counts, and the smallest clearance
+ * component -- and `partitionAnnualClearanceRows` decides per year whether a figure is supportable.
+ * Every test it applies is a reason to WITHHOLD, and a withheld year keeps its own reason all the
+ * way to the reader.
+ *
+ * WHAT THIS PATH DOES NOT DO: a month-constrained figure. A request naming specific months is
+ * declined rather than answered as a whole year, because answering a narrower question with a wider
+ * one is the same class of error this path exists to end.
+ * ============================================================================================
+ */
+
+/** One requested year as the query returns it, before any disposition is decided. */
+export type AnnualClearanceRow = {
+  year: number;
+  total_offenses: number | null;
+  cleared: number | null;
+  not_cleared: number | null;
+  clearance_rate: number | null;
+  /**
+   * The smallest clearance component on the row.
+   *
+   * SQLite's scalar `MIN` returns NULL when any argument is NULL, so this one column answers both
+   * questions the sum cannot: is any component missing, and is any component negative. Checking the
+   * sum alone let `20 + (-10)` deliver as a clean 10, with the invalid input cancelled out of sight.
+   */
+  min_component: number | null;
+  months_reported: number | null;
+  months_with_data: number | null;
+  monthly_offenses: number | null;
+  monthly_cleared: number | null;
+};
+
+export type WithheldYear = { year: number; reason: string };
+
+export type AnnualClearancePartition = {
+  delivered: AnnualClearanceRow[];
+  withheld: WithheldYear[];
+};
+
+/** Does this request name particular months rather than whole years? */
+function asksSpecificMonths(question: string): boolean {
+  const q = question ?? "";
+  const month = "(?:january|february|march|april|may|june|july|august|september|october|november|december)";
+  return new RegExp("\\b" + month + "\\b", "i").test(q)
+    || /\b(?:first|last)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven)\s+months\b/i.test(q)
+    || /\byear[-\s]to[-\s]date\b|\bytd\b/i.test(q)
+    || /\bthrough\s+\w+\s+only\b/i.test(q);
+}
+
+/**
+ * Is this the family this path owns?
+ *
+ * Asked of the CONTRACT, not of the saved question, so any agency, offence and span that fit are
+ * owned and none is recognised by matching a remembered sentence. Recognition happens before plan
+ * construction AND before the follow-up switch: once a request is owned, a missing plan is an
+ * honest decline, never a handover to model-generated SQL for the same question.
+ *
+ * A month-restricted request IS owned -- deliberately. It belongs to this family and this family
+ * cannot calculate it, so it must be declined here; leaving it unowned would hand it back to the
+ * generated calculation and it would come back as an unrestricted year.
+ */
+export function asksAnnualClearanceFamily(question: string): boolean {
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract) return false;
+  if (contract.metric.unit !== "clearance_rate") return false;
+  if (!contract.breakdowns.includes("year")) return false;
+  if (contract.breakdowns.some((breakdown) => breakdown !== "year")) return false;
+  if (contract.time.startYear === null || contract.time.endYear === null) return false;
+  if (contract.metric.offenses.length !== 1) return false;
+  if (contract.metric.offenseCodes.length !== 1) return false;
+  if ((contract.geographies?.length ?? 0) > 1) return false;
+  if (contract.geography.kind !== "city" && contract.geography.kind !== "agency") return false;
+  // The clearance tables count OFFENCES. Person crimes are counted per victim in this product, and
+  // borrowing an offence-row source for them would answer a different measure under the same name.
+  if (PERSON_COUNT_CODES.has(contract.metric.offenseCodes[0])) return false;
+  // A clearance-TYPE breakdown is a different answer with its own builder.
+  if (asksClearanceTypeBreakdown(question)) return false;
+  return true;
+}
+
+/** Why an owned request cannot be served here, in the reader's terms. */
+export function annualClearanceDeclineReason(
+  question: string, resolutionPlan?: NibrsPlaceResolutionPlan | null
+): string {
+  if (asksSpecificMonths(question)) {
+    return "I can give you whole reporting years for one agency, but not a figure limited to " +
+      "particular months -- and I'm not going to answer a narrower question with a wider one. Ask " +
+      "for the years and I'll tell you what each one covers.";
+  }
+  const resolved = resolvedPlaceForContractIndex(resolutionPlan, 0);
+  if ((resolved?.oriYears.length ?? 0) === 0) {
+    return "I couldn't resolve that place to a single reporting agency in this source, and a " +
+      "clearance figure attributed to the wrong agency is worse than none. Naming the police " +
+      "department directly, with a year range, usually works.";
+  }
+  return "I couldn't build a yearly clearance answer for that request from this source, and I'd " +
+    "rather say so than hand you a figure I can't account for.";
+}
+
+/**
+ * The controlled plan. Returns null only when the request cannot be served; the caller owns the
+ * honest decline, and must not fall through to a generated query for an owned request.
+ */
+export function buildNibrsAnnualClearanceQuery(
+  question: string,
+  resolutionPlan?: NibrsPlaceResolutionPlan | null
+): DeterministicNibrsQuery | null {
+  if (!asksAnnualClearanceFamily(question)) return null;
+  // Owned, but out of this family's reach: the caller declines with the reason above.
+  if (asksSpecificMonths(question)) return null;
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract) return null;
+
+  const startYear = contract.time.startYear!;
+  const endYear = contract.time.endYear!;
+  if (endYear < startYear || endYear - startYear > 30) return null;
+
+  const code = contract.metric.offenseCodes[0];
+  if (!/^[0-9A-Z]{3}$/.test(code)) return null;
+
+  const resolved = resolvedPlaceForContractIndex(resolutionPlan, 0);
+  const oris = [...new Set(resolved?.oriYears.map((item) => item.ori) ?? [])];
+  if (oris.length !== 1) return null;          // one agency, established, or nothing
+  const ori = oris[0];
+  const place = resolved?.label ?? contract.geography.canonicalName ?? contract.geography.name ?? "the requested agency";
+
+  const offense = contract.metric.offenses[0];
+  const yearValues: string[] = [];
+  for (let year = startYear; year <= endYear; year += 1) yearValues.push("(" + year + ")");
+
+  const componentColumns = ["cleared_by_arrest", "cleared_A", "cleared_B", "cleared_C", "cleared_D", "cleared_E"];
+  const componentSum = componentColumns.map((column) => "scd." + column).join(" + ");
+  const componentMin = "MIN(" + componentColumns.map((column) => "scd." + column).join(", ") + ")";
+
+  const sql = [
+    "WITH requested_years(year) AS (VALUES " + yearValues.join(", ") + "),",
+    "annual AS (",
+    "  SELECT scd.year, scd.total_offenses, " + componentSum + " AS cleared,",
+    "    " + componentMin + " AS min_component",
+    "  FROM summary_clearance_detail scd INDEXED BY idx_scd_ori_year",
+    "  WHERE scd.ori = " + sqlString(ori) + " AND scd.ucr_offense_code = " + sqlString(code),
+    "    AND scd.year BETWEEN " + startYear + " AND " + endYear,
+    "),",
+    "monthly AS (",
+    "  SELECT s.year, COUNT(DISTINCT s.month) AS months_with_data,",
+    "    SUM(s.offense_count) AS monthly_offenses, SUM(s.cleared_count) AS monthly_cleared",
+    "  FROM summary_city_monthly s INDEXED BY idx_scm_ori_year",
+    "  WHERE s.ori = " + sqlString(ori) + " AND s.ucr_offense_code = " + sqlString(code),
+    "    AND s.year BETWEEN " + startYear + " AND " + endYear,
+    "  GROUP BY s.year",
+    "),",
+    "reporting AS (",
+    "  SELECT nac.year, nac.months_reported",
+    "  FROM nibrs_agency_completeness nac INDEXED BY idx_nac_ori_year",
+    "  WHERE nac.ori = " + sqlString(ori),
+    "    AND nac.year BETWEEN " + startYear + " AND " + endYear,
+    ")",
+    "SELECT y.year AS year,",
+    "  a.total_offenses AS total_offenses,",
+    "  a.cleared AS cleared,",
+    "  a.total_offenses - a.cleared AS not_cleared,",
+    "  ROUND(100.0 * a.cleared / NULLIF(a.total_offenses, 0), 1) AS clearance_rate,",
+    "  a.min_component AS min_component,",
+    "  r.months_reported AS months_reported,",
+    "  m.months_with_data AS months_with_data,",
+    "  m.monthly_offenses AS monthly_offenses,",
+    "  m.monthly_cleared AS monthly_cleared",
+    "FROM requested_years y",
+    "LEFT JOIN annual a ON a.year = y.year",
+    "LEFT JOIN monthly m ON m.year = y.year",
+    "LEFT JOIN reporting r ON r.year = y.year",
+    "ORDER BY y.year",
+  ].join("\n");
+
+  return {
+    sql,
+    title: offense.label + " and clearances, " + place + ", " + startYear + "-" + endYear,
+    explanation: annualClearanceMeaning(offense),
+    chartHint: "line",
+    xAxis: "year",
+    yAxis: "total_offenses,cleared",
+    xAxisLabel: "Year",
+    yAxisLabel: offense.label,
+    guardrail: "nibrs-annual-clearance",
+  };
+}
+
+/** What the offence actually is, said plainly, because the wording invites the wrong reading. */
+function annualClearanceMeaning(offense: QueryContractOffense): string {
+  if (offense.topic === "vehicle_burglary") {
+    return "Theft from a motor vehicle (NIBRS offense 23F) -- articles taken from a vehicle, which " +
+      "many departments call burglary of a motor vehicle. It is not burglary of a building (220), " +
+      "theft of the vehicle itself (240), or theft of its parts and accessories (23G).";
+  }
+  return offense.label + " (NIBRS offense " + offense.codes.join(", ") + ").";
+}
+
+/**
+ * Which years can be answered, and why the rest cannot.
+ *
+ * EVERY TEST HERE IS A REASON TO WITHHOLD, and every delivered figure has passed all of them --
+ * including a zero, which is a figure like any other and gets no shortcut past the evidence. Nothing
+ * is repaired, clamped or coerced: a contradiction between two sources is reported as one, because
+ * the alternative is publishing whichever number the query happened to reach first.
+ */
+export function partitionAnnualClearanceRows(rows: AnnualClearanceRow[]): AnnualClearancePartition {
+  const delivered: AnnualClearanceRow[] = [];
+  const withheld: WithheldYear[] = [];
+
+  for (const row of rows) {
+    if (row.total_offenses === null) {
+      withheld.push({ year: row.year, reason: "this source has no record for that year" });
+      continue;
+    }
+    // An annual row that exists but cannot be added up is a different problem from an absent one,
+    // and saying "no record" about it would be false.
+    if (row.cleared === null || row.min_component === null) {
+      withheld.push({ year: row.year, reason: "the clearance figures for that year are incomplete" });
+      continue;
+    }
+    if (row.total_offenses < 0 || row.min_component < 0) {
+      withheld.push({ year: row.year, reason: "the recorded figures include a negative value" });
+      continue;
+    }
+    if (row.cleared > row.total_offenses) {
+      withheld.push({ year: row.year, reason: "more clearances are recorded than offenses" });
+      continue;
+    }
+    if (row.monthly_offenses === null || row.monthly_offenses !== row.total_offenses) {
+      withheld.push({
+        year: row.year,
+        reason: "the yearly and monthly records disagree about how many offenses there were",
+      });
+      continue;
+    }
+    // The clearances need the same agreement the offences do. Checking only the offence total let
+    // two sources differ by an order of magnitude on clearances and still publish one of them.
+    if (row.monthly_cleared === null || row.monthly_cleared !== row.cleared) {
+      withheld.push({
+        year: row.year,
+        reason: "the yearly and monthly records disagree about how many offenses were cleared",
+      });
+      continue;
+    }
+    if (row.months_reported === null || row.months_with_data === null
+      || row.months_reported !== row.months_with_data) {
+      withheld.push({
+        year: row.year,
+        reason: "how much of the year was reported could not be established",
+      });
+      continue;
+    }
+    /*
+     * A PARTIAL YEAR IS WITHHELD, NOT LABELLED.
+     *
+     * This source records how MANY months an agency reported, never WHICH. Equal counts do not
+     * establish that the reported months are the months carrying this offence, so a partial figure
+     * cannot be given a basis the reader could check -- and the approved boundary is to withhold a
+     * partial figure whose basis is unestablished rather than to publish it with a caveat.
+     */
+    if (row.months_reported !== 12) {
+      withheld.push({
+        year: row.year,
+        reason: "only part of that year was reported, and this source does not record which months",
+      });
+      continue;
+    }
+    // A real zero is an answer. It has passed every check above; it simply has no rate.
+    if (row.total_offenses === 0) {
+      delivered.push({ ...row, clearance_rate: null });
+      continue;
+    }
+    delivered.push(row);
+  }
+  return { delivered, withheld };
+}
+
+/** What the reader is shown: the reconciliation evidence stays behind, its conclusion does not. */
+const ANNUAL_CLEARANCE_COLUMNS = [
+  "year", "total_offenses", "cleared", "not_cleared", "clearance_rate", "months_reported",
+];
+
+export type AnnualClearanceDelivery = {
+  rows: Record<string, unknown>[];
+  columns: string[];
+  /** The answer's own wording, which the route puts through its ordinary disclosure chokepoint. */
+  explanation: string;
+  /**
+   * The withholding reasons, kept SEPARATE and appended after disclosures.
+   *
+   * They are established by this query's own evidence -- rows it fetched and checked -- not by the
+   * rows being returned, so the ordinary chokepoint cannot see what supports them and replaced them
+   * with a generic omission notice. Carrying them alongside keeps the specific reason in front of
+   * the reader without exempting arbitrary narrative or weakening any empty-result protection.
+   */
+  withheldNote: string;
+  title: string;
+};
+
+/**
+ * Turn executed rows into what the route delivers, or into an honest decline.
+ *
+ * Lives here rather than in the route so the whole decision -- which years are supportable, what
+ * the reader is told, and when there is nothing to tell -- is one function the tests drive directly
+ * and the handler merely calls.
+ */
+export function annualClearanceDelivery(
+  question: string, place: string, rows: AnnualClearanceRow[]
+): AnnualClearanceDelivery | { decline: string } {
+  const contract = buildQueryContract(question, "nibrs");
+  const offense = contract?.metric.offenses[0];
+  if (!offense) return { decline: "I couldn't establish which offense that question is about." };
+
+  const partition = partitionAnnualClearanceRows(rows);
+  const withheldNote = annualClearanceWithheldNote(partition);
+  if (partition.delivered.length === 0) {
+    // Nothing supportable. The reasons are still the answer, and they are what the reader gets --
+    // never an empty table under a confident title.
+    return {
+      decline: [
+        annualClearanceMeaning(offense),
+        "No year in the requested range can be reported for " + place + " from this source.",
+        withheldNote,
+      ].filter(Boolean).join("\n\n"),
+    };
+  }
+  const years = partition.delivered.map((row) => row.year);
+  return {
+    rows: partition.delivered.map((row) => Object.fromEntries(
+      ANNUAL_CLEARANCE_COLUMNS.map((column) => [column, (row as unknown as Record<string, unknown>)[column]]))),
+    columns: ANNUAL_CLEARANCE_COLUMNS,
+    explanation: [
+      annualClearanceMeaning(offense),
+      "Clearance here means cleared by arrest or by exceptional means, as recorded by the FBI; it " +
+      "is not the same as a conviction.",
+      "Complete 12-month reporting years: " + years.join(", ") + ".",
+    ].join("\n\n"),
+    withheldNote,
+    // The title states the years actually delivered, not the years requested.
+    title: offense.label + " and clearances, " + place + ", " +
+      (years.length === 1 ? String(years[0]) : years[0] + "-" + years[years.length - 1]),
+  };
+}
+
+/** One sentence per withheld year, naming the year and the reason it is not reported. */
+export function annualClearanceWithheldNote(partition: AnnualClearancePartition): string {
+  return partition.withheld
+    .map((year) => "No figure is given for " + year.year + ": " + year.reason + ".")
+    .join("\n\n");
 }

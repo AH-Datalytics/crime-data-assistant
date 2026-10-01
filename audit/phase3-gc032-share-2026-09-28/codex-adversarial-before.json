@@ -1,0 +1,172 @@
+{
+ "kind": "phase3-comma-alias-route-witness",
+ "at": "2026-09-28T20:06:33.034Z",
+ "root": "audit\\phase3-gc032-share-2026-09-28\\before-tree",
+ "expected": {
+  "youth_count": 1260,
+  "total_count": 15060,
+  "youth_share_pct": 8.4,
+  "rapes_cleared_by_arrest": 300
+ },
+ "boundaries": {
+  "networkProbe": [
+   {
+    "api": "https.request",
+    "blocked": true
+   },
+   {
+    "api": "http.get",
+    "blocked": true
+   },
+   {
+    "api": "net.connect",
+    "blocked": true
+   },
+   {
+    "api": "fetch",
+    "blocked": true
+   }
+  ],
+  "databaseProbe": [
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\crime_data.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\nibrs.db",
+    "blocked": true
+   },
+   {
+    "path": "C:\\Users\\jeffm\\crime-data-assistant\\shr.db",
+    "blocked": true
+   },
+   {
+    "path": "/opt/nibrs/nibrs.db",
+    "blocked": true
+   }
+  ],
+  "outboundNetworkAttempts": 4,
+  "refusedDatabaseOpens": 4,
+  "substitutedModules": [
+   "better-sqlite3",
+   "@anthropic-ai/sdk"
+  ]
+ },
+ "gc032Delivery": {
+  "delivered": false,
+  "retryRules": [
+   "structural-measure-unit-unmodeled"
+  ],
+  "expected": {
+   "youthN": 1260,
+   "totalN": 15060,
+   "pct": 8.4
+  }
+ },
+ "checks": {
+  "passed": 1,
+  "failed": 6,
+  "list": [
+   {
+    "name": "retained-gc032: delivers 8.4% = 1260 / 15060",
+    "ok": false,
+    "detail": "[]"
+   },
+   {
+    "name": "retained-gc032: delivered text names the unit as recorded offenders, not crimes, and keeps the figure, place and period",
+    "ok": false,
+    "detail": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+   },
+   {
+    "name": "integer-percentage: delivers 8.4% = 1260 / 15060",
+    "ok": false,
+    "detail": "[]"
+   },
+   {
+    "name": "integer-percentage: delivered text names the unit as recorded offenders, not crimes, and keeps the figure, place and period",
+    "ok": false,
+    "detail": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+   },
+   {
+    "name": "fraction-no-coercion: delivers 8.4% = 1260 / 15060",
+    "ok": false,
+    "detail": "[]"
+   },
+   {
+    "name": "fraction-no-coercion: delivered text names the unit as recorded offenders, not crimes, and keeps the figure, place and period",
+    "ok": false,
+    "detail": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives."
+   },
+   {
+    "name": "reviewer fixture: 1260 / 15060 rounds to 8.4%",
+    "ok": true,
+    "detail": "{\"youthN\":1260,\"totalN\":15060,\"pct\":8.4}"
+   }
+  ]
+ },
+ "results": [
+  {
+   "id": "retained-gc032",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100.0 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "integer-percentage",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(100 * y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  },
+  {
+   "id": "fraction-no-coercion",
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "expect": "answer",
+   "status": 200,
+   "threw": null,
+   "modelCalls": 2,
+   "retryPrompts": [
+    "what share of serious violent crimes in California are committed by youth under 18?\n\n[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Re"
+   ],
+   "modelSql": "WITH youth_offenders AS (SELECT SUM(d.offender_count) AS youth_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.age_group = 'Under 18' AND d.year BETWEEN 2021 AND 2025), total_offenders AS (SELECT SUM(d.offender_count) AS total_count FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') AND d.year BETWEEN 2021 AND 2025) SELECT ROUND(y.youth_count / t.total_count, 1) AS youth_share_pct, y.youth_count, t.total_count FROM youth_offenders y, total_offenders t",
+   "responseSql": null,
+   "workerReceived": [],
+   "rows": [],
+   "columns": [],
+   "explanation": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+   "errors": [],
+   "retryRules": [
+    "structural-measure-unit-unmodeled"
+   ]
+  }
+ ]
+}
