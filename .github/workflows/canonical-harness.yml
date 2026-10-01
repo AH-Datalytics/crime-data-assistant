@@ -59,10 +59,10 @@ jobs:
     # instant as the step, and a hung harness would produce no evidence of having hung, which is the
     # failure mode that cost a whole run to diagnose on 2026-08-26.
     #
-    # 60 = 45 for the harness + ~15 for setup (checkout, Node/Python pinning, venv, npm ci) and the
-    # post-harness safety steps. Green runs are unaffected: billing stops when the work finishes, so
-    # headroom is free unless it is used.
-    timeout-minutes: 60
+    # 135 = 120 for the harness + 15 for setup (checkout, Node/Python pinning, venv, npm ci, the
+    # sqlite3 provisioning) and the post-harness safety steps. Green runs are unaffected: billing stops
+    # when the work finishes, so headroom is free unless it is used.
+    timeout-minutes: 135
     permissions:
       # GITHUB_TOKEN is used by actions/checkout to read the repository, and for nothing else. The job
       # has no write permission of any kind, and `persist-credentials: false` removes the token from the
@@ -373,9 +373,14 @@ jobs:
         # "has timed out after 30 minutes" having logged 169 of 175 commands `ok`, with no tally and
         # no verdict. Nothing was wrong with the code; the cap was.
         #
-        # 45 gives 50% headroom over the observed boundary. It does NOT slow a green run, and it does
-        # not weaken anything: the suite is unchanged, and a harness that truly hangs is still killed.
-        timeout-minutes: 45
+        # 45 was 50% headroom over that boundary while the suite had ~175 commands. The Phase 3
+        # integration took it to 235: on 2026-10-01 run 36803093295 finished the whole harness in
+        # 35.2 minutes, and run 36860570626 (same suite) was killed at 45 minutes after 120 `ok`
+        # commands, having run that identical prefix 2.7 times slower. Scaling the full 35.2 minutes by
+        # that factor gives ~95 minutes (an estimate, not an observed run), so the cap is 120: ~25
+        # minutes above it. It does NOT slow a green run, and it does not weaken anything: the suite
+        # is unchanged, per-command limits are unchanged, and a harness that truly hangs is still killed.
+        timeout-minutes: 120
         run: |
           set -euo pipefail
           # The single canonical entry point. No --only (it disables whole-run coverage checks, so a
