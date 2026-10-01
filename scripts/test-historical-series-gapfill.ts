@@ -55,7 +55,7 @@ const QUESTION = "show murders per capita for the city of St. Louis city and the
 
 /* ── the two retained statements ─────────────────────────────────────────────────────── */
 const CAPTURE = JSON.parse(readFileSync(
-  "audit/model-qualification-run-2026-09-24/evidence/retained-evidence.json", "utf8")) as {
+  "scripts/fixtures/retained-evidence/qualification-retained-cases.json", "utf8" /* retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json */)) as {
     cases: Array<{ case: string; scored: { observed: { modelOutputs?: Array<{ text: string }> } } }>;
   };
 function savedSql(index: number): string {

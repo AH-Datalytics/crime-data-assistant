@@ -2181,6 +2181,60 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (498 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files."
+    },
+    {
+      "id": "test-jurisdiction-ranking",
+      "tier": "F",
+      "script": "scripts/test-jurisdiction-ranking.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (34665 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-ratio-support",
+      "tier": "F",
+      "script": "scripts/test-ratio-support.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (28428 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-period-correctness",
+      "tier": "F",
+      "script": "scripts/test-period-correctness.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (45971 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-evidence-boundary-guard",
+      "tier": "F",
+      "script": "scripts/test-evidence-boundary-guard.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (18051 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-clearance-refinement",
+      "tier": "F",
+      "script": "scripts/test-clearance-refinement.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (94950 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-historical-series-gapfill",
+      "tier": "F",
+      "script": "scripts/test-historical-series-gapfill.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1693 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
     }
   ]
 }

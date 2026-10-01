@@ -30,7 +30,7 @@ import type { QueryContract, QueryContractSource } from "../lib/query-contract";
 
 const REVIEW = path.resolve(
   __dirname,
-  "../audit/correctness-candidate-2026-09-08/codex-validator-review.json"
+  "fixtures/retained-evidence/codex-validator-review.json" // retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json
 );
 
 type ReviewRow = {
@@ -122,7 +122,7 @@ for (const [id, sql] of Object.entries(CONSTRUCTED)) {
  */
 const DIAG = path.resolve(
   __dirname,
-  "../audit/correctness-candidate-2026-09-08/codex-ratio-batch-review.json"
+  "fixtures/retained-evidence/codex-ratio-batch-review.json" // retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json
 );
 const diag = JSON.parse(fs.readFileSync(DIAG, "utf8"));
 /*

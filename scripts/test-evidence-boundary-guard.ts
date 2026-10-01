@@ -44,7 +44,7 @@ const EMPTY_STATE_MESSAGE_FRAGMENT = /genuine zero, an unreported period, or a g
 const CAVEAT = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data.";
 
 /* ── the capture's own rows ─────────────────────────────────────────── */
-const turns = fs.readFileSync("audit/correctness-repeat-2026-09-09/run/turns.jsonl", "utf8").trim().split(/\r?\n/);
+const turns = fs.readFileSync("scripts/fixtures/retained-evidence/correctness-repeat-turns.jsonl", "utf8") /* retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json */.trim().split(/\r?\n/);
 const gc073 = turns.map((l) => JSON.parse(l)).find((t) => t.turn.caseId === "GC-073" && t.turn.turnIndex === 1);
 const GC073_ROWS = gc073.attempts[gc073.attempts.length - 1].parsed.rows as Record<string, unknown>[];
 const GC073_SQL = gc073.attempts[gc073.attempts.length - 1].parsed.sql as string;

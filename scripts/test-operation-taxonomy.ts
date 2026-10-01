@@ -756,7 +756,11 @@ async function main() {
   check("sealed families enumerated from source match the pinned set", () => {
     const ROUTES = ["app/api/query/route.ts", "app/api/nibrs-query/route.ts", "app/api/shr-query/route.ts", "app/api/hc-query/route.ts"];
     const sites = ROUTES.reduce((n, f) => n + [...fs.readFileSync(f, "utf8").matchAll(/sealPlanDerivation\(/g)].length, 0);
-    assert.strictEqual(sites, 12, "seal-site count moved; re-run the two-pass enumeration");
+    // 12 -> 18 on the Phase 3 integration (2026-09-30), enumerated against dev b285be3 before this
+    // moved: query +2 (cityRankingPlan.guardrail, yoyComparisonPlan.guardrail), nibrs-query +2
+    // (NIBRS_CATEGORY_CHANGE_GUARDRAIL, ownedQuery.guardrail), shr-query +2 ("owned-shr-count",
+    // SHR_CITY_RANKING_GUARDRAIL). Only the string-literal one is visible to the family regex below.
+    assert.strictEqual(sites, 18, "seal-site count moved; re-run the two-pass enumeration");
     const families = new Set<string>();
     for (const f of ROUTES) for (const m of fs.readFileSync(f, "utf8").matchAll(/sealPlanDerivation\(\s*"([a-z0-9-]+)"/g)) families.add(m[1]);
     for (const f of ["lib/nibrs-deterministic-queries.ts", "lib/nibrs-rollup-deterministic.ts", "lib/nibrs-scope-deterministic.ts", "lib/current-indexed-state-deterministic.ts", "lib/multi-city-deterministic.ts", "lib/historical-deterministic-queries.ts"]) {
@@ -780,6 +784,8 @@ async function main() {
       "deterministic-nibrs-continuous-reporters", "deterministic-nibrs-countywide-demographic",
       "deterministic-nibrs-rollup-juvenile-arrests-race", "deterministic-nibrs-rollup-national-arrests",
       "deterministic-murder", "deterministic-shooting",
+      // Phase 3 integration: the owned SHR count seal, and the NIBRS annual-clearance builder.
+      "owned-shr-count", "nibrs-annual-clearance",
     ].sort();
     assert.deepStrictEqual([...families].sort(), PINNED, "family set drifted: a builder was added, renamed, or removed");
   });

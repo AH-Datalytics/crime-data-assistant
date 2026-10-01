@@ -119,7 +119,7 @@ const built = buildCityRanking(j, CUTOFF)!;
 
 console.log("\n3 - city rankings are unchanged");
 {
-  const saved = JSON.parse(readFileSync("audit/combined-checkpoint-2026-09-25/run-evidence/gemini-qualification-2026-09-26T00-41-20-270Z-b1482fb67b/completed-cases.json", "utf8"))
+  const saved = JSON.parse(readFileSync("scripts/fixtures/retained-evidence/gc057-completed-case.json", "utf8") /* retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json */)
     .find((r: { case: string }) => r.case === "GC-057").scored.observed.sql;
   const city = buildCityRanking(ranking("What cities had the highest murder rates in 2024?", "current")!, CUTOFF)!;
   check(city.sql === saved, "the city SQL is byte-identical to the SQL the approved run delivered for GC-057 (then routed as city)");

@@ -293,22 +293,15 @@
     "policy": null,
     "authorizationEligible": false
   },
-  "nibrs::agencies+summary_clearance_type::agencies(agency_type,city,ori,population,state,year)|summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": {
+  "nibrs::agencies+summary_clearance_type::summary_clearance_type(cleared_by_arrest,cleared_exceptional,ori,total_offenses,ucr_offense_code,year)": {
     "artifact": "nibrs",
-    "prepDependencies": [],
+    "prepDependencies": [
+      "agencies"
+    ],
     "emittedDependencies": [
-      "agencies",
       "summary_clearance_type"
     ],
     "requiredColumns": {
-      "agencies": [
-        "agency_type",
-        "city",
-        "ori",
-        "population",
-        "state",
-        "year"
-      ],
       "summary_clearance_type": [
         "cleared_by_arrest",
         "cleared_exceptional",
@@ -318,7 +311,7 @@
         "year"
       ]
     },
-    "flagKey": "PROOF_CAPABILITY_NIBRS_88FD3545",
+    "flagKey": "PROOF_CAPABILITY_NIBRS_1E28753D",
     "policy": null,
     "authorizationEligible": false
   },

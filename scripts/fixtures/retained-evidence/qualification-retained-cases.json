@@ -1,0 +1,2275 @@
+{
+  "cases": [
+    {
+      "case": "GC-048",
+      "setupTurns": [],
+      "scored": {
+        "case": "GC-048",
+        "tab": "historical",
+        "route": "app/api/query/route.ts",
+        "sourceMode": "declared-source",
+        "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+        "sourceStableBefore": true,
+        "sourceStableAfter": true,
+        "sourceMoved": [],
+        "ms": 4075,
+        "calls": 2,
+        "counts": [
+          {
+            "purpose": "generation",
+            "category": "hosted-count",
+            "tokens": 14533,
+            "ok": true
+          },
+          {
+            "purpose": "retry",
+            "category": "hosted-count",
+            "tokens": 15227,
+            "ok": true
+          }
+        ],
+        "transportErrors": [],
+        "refusedDispatches": [],
+        "historyTrimming": null,
+        "observed": {
+          "status": 200,
+          "stage": "post-model-validation",
+          "sql": null,
+          "sqlGenerated": "WITH years AS (\n  SELECT 1950 AS year\n  UNION ALL\n  SELECT year + 1 FROM years WHERE year < 2025\n)\nSELECT\n  y.year,\n  ROUND(\n    (SELECT hac.murder * 100000.0 / hap.population\n     FROM historical_agency_crime hac\n     JOIN historical_agency ha ON ha.ori = hac.ori\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\n     WHERE ha.agency = 'St. Louis' AND ha.state = 'mo' AND ha.type = 'city' AND hac.ori = 'MOSPD0000' AND hac.year = y.year\n     LIMIT 1),\n    1\n  ) AS st_louis,\n  ROUND(\n    (SELECT hac.murder * 100000.0 / hap.population\n     FROM historical_agency_crime hac\n     JOIN historical_agency ha ON ha.ori = hac.ori\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\n     WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city' AND hac.year = y.year\n     LIMIT 1),\n    1\n  ) AS chicago\nFROM years y\nORDER BY y.year\nLIMIT 1000",
+          "sqlRejectedByApplication": true,
+          "rows": [],
+          "answer": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "modelOutputs": [
+            {
+              "ok": true,
+              "text": "{\n  \"sql\": \"SELECT hac.year,\\n  ROUND(SUM(CASE WHEN ha.agency = 'St. Louis' AND ha.state = 'mo' AND hac.ori = 'MOSPD0000' THEN hac.murder END) * 100000.0 / MAX(CASE WHEN ha.agency = 'St. Louis' AND ha.state = 'mo' AND hac.ori = 'MOSPD0000' THEN hap.population END), 1) AS st_louis,\\n  ROUND(SUM(CASE WHEN ha.agency = 'Chicago' AND ha.state = 'il' THEN hac.murder END) * 100000.0 / MAX(CASE WHEN ha.agency = 'Chicago' AND ha.state = 'il' THEN hap.population END), 1) AS chicago\\nFROM historical_agency_crime hac\\nJOIN historical_agency ha ON ha.ori = hac.ori\\nJOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\\nWHERE ((ha.agency = 'St. Louis' AND ha.state = 'mo' AND ha.type = 'city' AND hac.ori = 'MOSPD0000')\\n    OR (ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city'))\\n  AND hac.year >= 1950\\nGROUP BY hac.year\\nORDER BY hac.year\\nLIMIT 1000\",\n  \"explanation\": \"Annual murder rates per 100,000 residents for St. Louis, MO and Chicago, IL since 1950. Data before 1960 may reflect incomplete or limited reporting. Note: Direct comparisons between agencies should be interpreted with caution. Agencies differ in reporting practices, jurisdictional boundaries, and population coverage.\",\n  \"chartHint\": \"line\",\n  \"xAxis\": \"year\",\n  \"yAxis\": \"st_louis,chicago\",\n  \"yAxisLabel\": \"Rate per 100K\",\n  \"title\": \"St. Louis vs Chicago Murders Per Capita\"\n}"
+            },
+            {
+              "ok": true,
+              "text": "{\"sql\":\"WITH years AS (\\n  SELECT 1950 AS year\\n  UNION ALL\\n  SELECT year + 1 FROM years WHERE year < 2025\\n)\\nSELECT\\n  y.year,\\n  ROUND(\\n    (SELECT hac.murder * 100000.0 / hap.population\\n     FROM historical_agency_crime hac\\n     JOIN historical_agency ha ON ha.ori = hac.ori\\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\\n     WHERE ha.agency = 'St. Louis' AND ha.state = 'mo' AND ha.type = 'city' AND hac.ori = 'MOSPD0000' AND hac.year = y.year\\n     LIMIT 1),\\n    1\\n  ) AS st_louis,\\n  ROUND(\\n    (SELECT hac.murder * 100000.0 / hap.population\\n     FROM historical_agency_crime hac\\n     JOIN historical_agency ha ON ha.ori = hac.ori\\n     JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year\\n     WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city' AND hac.year = y.year\\n     LIMIT 1),\\n    1\\n  ) AS chicago\\nFROM years y\\nORDER BY y.year\\nLIMIT 1000\",\"explanation\":\"Annual murder rates per 100,000 residents for St. Louis, MO and Chicago, IL since 1950. Data before 1960 may reflect incomplete or limited reporting. Note: Direct comparisons between agencies should be interpreted with caution. Agencies differ in reporting practices, jurisdictional boundaries, and population coverage. Some agencies have years where they did not fully report to the FBI — a sharp drop in one year followed by a rebound may indicate a reporting gap rather than a real change in crime.\",\"chartHint\":\"line\",\"xAxis\":\"year\",\"yAxis\":\"st_louis,chicago\",\"title\":\"St. Louis vs Chicago Murders Per Capita\",\"yAxisLabel\":\"Rate per 100K\"}"
+            }
+          ],
+          "dispatchErrors": [],
+          "routeGuardRetries": 1,
+          "purposes": [
+            "generation",
+            "retry"
+          ],
+          "error": null,
+          "rateLimited": false,
+          "failure": null,
+          "answered": true
+        },
+        "judged": {
+          "case": "GC-048",
+          "caseVerdictRule": "Fail if any applicable expectation fails. Pass only if every applicable expectation passes. Inconclusive if none fails and at least one is inconclusive. Not-applicable expectations are excluded from the case verdict but recorded. Expectation verdicts are retained so per-decision totals are counted, not inferred.",
+          "expectations": [
+            {
+              "index": 0,
+              "decision": 4,
+              "id": null,
+              "stance": "boundary",
+              "rule": "Name interior gaps as gaps, and state out-of-coverage start/end dates",
+              "expected": "States explicitly that the requested start or end date falls outside coverage.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "The coverage statement, scored against the actual coverage boundary for the resolved entity.",
+              "condition": "Applies only if the requested start or end falls outside the resolved coverage boundary. Otherwise record not applicable.",
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            },
+            {
+              "index": 1,
+              "decision": 4,
+              "id": null,
+              "stance": "interior",
+              "rule": "Name interior gaps as gaps, and state out-of-coverage start/end dates",
+              "expected": "Names interior missing years as missing rather than presenting them as zero.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "How missing years are presented.",
+              "condition": "Applies only if the resolved entity has an interior gap inside the requested span. Otherwise record not applicable.",
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            }
+          ],
+          "caseVerdict": "unsettled",
+          "caseVerdictWhy": "an applicable expectation awaits adjudication against the retained evidence",
+          "adjudicationRequired": 2
+        },
+        "threw": null
+      },
+      "inconclusive": false,
+      "rateLimited": false
+    },
+    {
+      "case": "GC-058",
+      "setupTurns": [],
+      "scored": {
+        "case": "GC-058",
+        "tab": "historical",
+        "route": "app/api/query/route.ts",
+        "sourceMode": "declared-source",
+        "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+        "sourceStableBefore": true,
+        "sourceStableAfter": true,
+        "sourceMoved": [],
+        "ms": 2877,
+        "calls": 2,
+        "counts": [
+          {
+            "purpose": "generation",
+            "category": "hosted-count",
+            "tokens": 14528,
+            "ok": true
+          },
+          {
+            "purpose": "retry",
+            "category": "hosted-count",
+            "tokens": 15022,
+            "ok": true
+          }
+        ],
+        "transportErrors": [],
+        "refusedDispatches": [],
+        "historyTrimming": null,
+        "observed": {
+          "status": 200,
+          "stage": "post-model-validation",
+          "sql": null,
+          "sqlGenerated": "SELECT ha.agency || ', ' || UPPER(ha.state) AS city, ROUND(hac.violent * 100000.0 / hap.population, 1) AS violent_crime_rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year WHERE ha.state = 'la' AND ha.type = 'city' AND hac.year = 2023 AND hap.population > 25000 AND hac.violent IS NOT NULL ORDER BY violent_crime_rate DESC LIMIT 20",
+          "sqlRejectedByApplication": true,
+          "rows": [],
+          "answer": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "modelOutputs": [
+            {
+              "ok": true,
+              "text": "{\n  \"sql\": \"SELECT ha.agency || ', ' || UPPER(ha.state) AS city, ROUND(hac.violent * 100000.0 / hap.population, 1) AS violent_crime_rate FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori JOIN historical_agency_population hap ON hap.ori = hac.ori AND hap.year = hac.year WHERE ha.state = 'la' AND ha.type = 'city' AND hac.year = 2023 AND hap.population > 25000 AND hac.violent IS NOT NULL ORDER BY violent_crime_rate DESC LIMIT 20\",\n  \"explanation\": \"Violent crime rates per 100,000 residents for Louisiana cities with populations over 25,000 in 2023. Note: Direct comparisons between agencies should be interpreted with caution. Agencies differ in reporting practices, jurisdictional boundaries, and population coverage.\",\n  \"chartHint\": \"bar\",\n  \"xAxis\": \"city\",\n  \"yAxis\": \"violent_crime_rate\",\n  \"yAxisLabel\": \"Rate per 100K\",\n  \"title\": \"Louisiana Cities Violent Crime Rate 2023\"\n}"
+            },
+            {
+              "ok": true,
+              "text": "{\"sql\":null,\"explanation\":\"The historical state-level table tracks statewide and national totals rather than individual city breakdowns. Agency-level rankings across cities in a state cannot be calculated from that table.\",\"chartHint\":\"none\"}"
+            }
+          ],
+          "dispatchErrors": [],
+          "routeGuardRetries": 1,
+          "purposes": [
+            "generation",
+            "retry"
+          ],
+          "error": null,
+          "rateLimited": false,
+          "failure": null,
+          "answered": true
+        },
+        "judged": {
+          "case": "GC-058",
+          "caseVerdictRule": "Fail if any applicable expectation fails. Pass only if every applicable expectation passes. Inconclusive if none fails and at least one is inconclusive. Not-applicable expectations are excluded from the case verdict but recorded. Expectation verdicts are retained so per-decision totals are counted, not inferred.",
+          "expectations": [
+            {
+              "index": 0,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "The generated query carries an explicit limit of 20.",
+              "check": "mechanical",
+              "check_op": "sql_limit_eq",
+              "operands": {
+                "value": 20
+              },
+              "evidenceRequired": "The generated SQL carries an explicit row limit equal to the operand. Operands: value (integer).",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The evidence the operation needs is absent from the capture.",
+              "verdict": "pass",
+              "why": "explicit LIMIT 20, operand 20",
+              "observedValue": 20,
+              "computed": true
+            },
+            {
+              "index": 1,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "Returns no more than 20 rows.",
+              "check": "mechanical",
+              "check_op": "rows_count",
+              "operands": {
+                "op": "lte",
+                "value": 20
+              },
+              "evidenceRequired": "Compare the number of data rows returned. Operands: op (eq|gte|lte), value (integer).",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The evidence the operation needs is absent from the capture.",
+              "verdict": "pass",
+              "why": "rows_count 0 lte 20",
+              "observedValue": 0,
+              "computed": true
+            },
+            {
+              "index": 2,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "Applies no eligibility filter the user did not request. A mathematically necessary population > 0 denominator guard is not an eligibility floor and does not fail this.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "The saved SQL, read for an unsolicited population or volume threshold on the ranked set.",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            },
+            {
+              "index": 3,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "States the limit it used.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "The stated limit.",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            }
+          ],
+          "caseVerdict": "unsettled",
+          "caseVerdictWhy": "an applicable expectation awaits adjudication against the retained evidence",
+          "adjudicationRequired": 2
+        },
+        "threw": null
+      },
+      "inconclusive": false,
+      "rateLimited": false
+    },
+    {
+      "case": "GC-003",
+      "setupTurns": [],
+      "scored": {
+        "case": "GC-003",
+        "tab": "nibrs",
+        "route": "app/api/nibrs-query/route.ts",
+        "sourceMode": "declared-source",
+        "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+        "sourceStableBefore": true,
+        "sourceStableAfter": true,
+        "sourceMoved": [],
+        "ms": 2267,
+        "calls": 0,
+        "counts": [],
+        "transportErrors": [],
+        "refusedDispatches": [],
+        "historyTrimming": null,
+        "observed": {
+          "status": 200,
+          "stage": "pre-model",
+          "sql": null,
+          "sqlGenerated": null,
+          "sqlRejectedByApplication": false,
+          "rows": [],
+          "answer": "Did you mean violent crime, property crime, or both?",
+          "modelOutputs": [],
+          "dispatchErrors": [],
+          "routeGuardRetries": 0,
+          "purposes": [],
+          "error": null,
+          "rateLimited": false,
+          "failure": "stage pre-model",
+          "answered": false
+        },
+        "judged": {
+          "case": "GC-003",
+          "caseVerdictRule": "Fail if any applicable expectation fails. Pass only if every applicable expectation passes. Inconclusive if none fails and at least one is inconclusive. Not-applicable expectations are excluded from the case verdict but recorded. Expectation verdicts are retained so per-decision totals are counted, not inferred.",
+          "expectations": [
+            {
+              "index": 0,
+              "decision": 1,
+              "id": null,
+              "stance": "answer",
+              "rule": "Police clearance records answerable; court proceedings not",
+              "expected": "Answers using police clearance data rather than refusing it as a court-outcome topic.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "Whether the response substantively answers, and the stated reason for any refusal.",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            },
+            {
+              "index": 1,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "The generated query carries an explicit limit of 20.",
+              "check": "mechanical",
+              "check_op": "sql_limit_eq",
+              "operands": {
+                "value": 20
+              },
+              "evidenceRequired": "The generated SQL carries an explicit row limit equal to the operand. Operands: value (integer).",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The evidence the operation needs is absent from the capture.",
+              "verdict": "inconclusive",
+              "why": "no SQL was retained",
+              "observedValue": null,
+              "computed": true
+            },
+            {
+              "index": 2,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "Returns no more than 20 rows.",
+              "check": "mechanical",
+              "check_op": "rows_count",
+              "operands": {
+                "op": "lte",
+                "value": 20
+              },
+              "evidenceRequired": "Compare the number of data rows returned. Operands: op (eq|gte|lte), value (integer).",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The evidence the operation needs is absent from the capture.",
+              "verdict": "pass",
+              "why": "rows_count 0 lte 20",
+              "observedValue": 0,
+              "computed": true
+            },
+            {
+              "index": 3,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "Applies no eligibility filter the user did not request. A mathematically necessary population > 0 denominator guard is not an eligibility floor and does not fail this.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "The saved SQL, read for an unsolicited population or volume threshold on the ranked set.",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            },
+            {
+              "index": 4,
+              "decision": 5,
+              "id": null,
+              "stance": "default",
+              "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+              "expected": "States the limit it used.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "The stated limit.",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            }
+          ],
+          "caseVerdict": "unsettled",
+          "caseVerdictWhy": "an applicable expectation awaits adjudication against the retained evidence",
+          "adjudicationRequired": 3
+        },
+        "threw": null
+      },
+      "inconclusive": false,
+      "rateLimited": false
+    },
+    {
+      "case": "GC-004",
+      "setupTurns": [
+        {
+          "case": "GC-004/setup-1",
+          "tab": "nibrs",
+          "route": "app/api/nibrs-query/route.ts",
+          "sourceMode": "declared-source",
+          "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+          "sourceStableBefore": true,
+          "sourceStableAfter": true,
+          "sourceMoved": [],
+          "ms": 11685,
+          "calls": 2,
+          "counts": [
+            {
+              "purpose": "generation",
+              "category": "hosted-count",
+              "tokens": 50085,
+              "ok": true
+            },
+            {
+              "purpose": "explanation",
+              "category": "hosted-count",
+              "tokens": 507,
+              "ok": true
+            }
+          ],
+          "transportErrors": [],
+          "refusedDispatches": [],
+          "historyTrimming": {
+            "messagesBuilt": 0,
+            "messagesEligible": 0,
+            "messagesKept": 0,
+            "messagesDroppedByLimit": 0,
+            "contentTruncated": 0
+          },
+          "observed": {
+            "status": 200,
+            "stage": "delivered",
+            "sql": "SELECT state,\n       SUM(total_offenses) AS total_rapes,\n       SUM(cleared_A + cleared_B + cleared_C + cleared_D + cleared_E) AS cleared_exceptional,\n       ROUND(100.0 * SUM(cleared_A + cleared_B + cleared_C + cleared_D + cleared_E) / NULLIF(SUM(total_offenses), 0), 1) AS exceptional_clearance_rate\nFROM rollup.state_summary_clearance_detail\nWHERE ucr_offense_code IN ('11A', '11B', '11C')\n  AND year = 2025\nGROUP BY state\nHAVING SUM(total_offenses) >= 100\nORDER BY exceptional_clearance_rate DESC\nLIMIT 20",
+            "sqlGenerated": "SELECT state,\n       SUM(total_offenses) AS total_rapes,\n       SUM(cleared_A + cleared_B + cleared_C + cleared_D + cleared_E) AS cleared_exceptional,\n       ROUND(100.0 * SUM(cleared_A + cleared_B + cleared_C + cleared_D + cleared_E) / NULLIF(SUM(total_offenses), 0), 1) AS exceptional_clearance_rate\nFROM summary_clearance_detail\nWHERE ucr_offense_code IN ('11A', '11B', '11C')\n  AND year = 2025\nGROUP BY state\nHAVING SUM(total_offenses) >= 100\nORDER BY exceptional_clearance_rate DESC\nLIMIT 20;",
+            "sqlRejectedByApplication": false,
+            "rows": [
+              {
+                "state": "DE",
+                "total_rapes": 175,
+                "cleared_exceptional": 38,
+                "exceptional_clearance_rate": 21.7
+              },
+              {
+                "state": "PA",
+                "total_rapes": 2476,
+                "cleared_exceptional": 435,
+                "exceptional_clearance_rate": 17.6
+              },
+              {
+                "state": "NC",
+                "total_rapes": 2678,
+                "cleared_exceptional": 436,
+                "exceptional_clearance_rate": 16.3
+              },
+              {
+                "state": "ID",
+                "total_rapes": 858,
+                "cleared_exceptional": 133,
+                "exceptional_clearance_rate": 15.5
+              },
+              {
+                "state": "VA",
+                "total_rapes": 2086,
+                "cleared_exceptional": 308,
+                "exceptional_clearance_rate": 14.8
+              },
+              {
+                "state": "AL",
+                "total_rapes": 1536,
+                "cleared_exceptional": 223,
+                "exceptional_clearance_rate": 14.5
+              },
+              {
+                "state": "SC",
+                "total_rapes": 1742,
+                "cleared_exceptional": 244,
+                "exceptional_clearance_rate": 14
+              },
+              {
+                "state": "IN",
+                "total_rapes": 1733,
+                "cleared_exceptional": 210,
+                "exceptional_clearance_rate": 12.1
+              },
+              {
+                "state": "MI",
+                "total_rapes": 5034,
+                "cleared_exceptional": 585,
+                "exceptional_clearance_rate": 11.6
+              },
+              {
+                "state": "ND",
+                "total_rapes": 329,
+                "cleared_exceptional": 35,
+                "exceptional_clearance_rate": 10.6
+              },
+              {
+                "state": "FL",
+                "total_rapes": 3984,
+                "cleared_exceptional": 409,
+                "exceptional_clearance_rate": 10.3
+              },
+              {
+                "state": "KY",
+                "total_rapes": 1568,
+                "cleared_exceptional": 157,
+                "exceptional_clearance_rate": 10
+              },
+              {
+                "state": "TN",
+                "total_rapes": 2546,
+                "cleared_exceptional": 250,
+                "exceptional_clearance_rate": 9.8
+              },
+              {
+                "state": "MD",
+                "total_rapes": 1790,
+                "cleared_exceptional": 171,
+                "exceptional_clearance_rate": 9.6
+              },
+              {
+                "state": "IA",
+                "total_rapes": 1080,
+                "cleared_exceptional": 100,
+                "exceptional_clearance_rate": 9.3
+              },
+              {
+                "state": "DC",
+                "total_rapes": 158,
+                "cleared_exceptional": 14,
+                "exceptional_clearance_rate": 8.9
+              },
+              {
+                "state": "HI",
+                "total_rapes": 458,
+                "cleared_exceptional": 40,
+                "exceptional_clearance_rate": 8.7
+              },
+              {
+                "state": "UT",
+                "total_rapes": 2134,
+                "cleared_exceptional": 184,
+                "exceptional_clearance_rate": 8.6
+              },
+              {
+                "state": "CO",
+                "total_rapes": 3132,
+                "cleared_exceptional": 239,
+                "exceptional_clearance_rate": 7.6
+              },
+              {
+                "state": "SD",
+                "total_rapes": 405,
+                "cleared_exceptional": 26,
+                "exceptional_clearance_rate": 6.4
+              }
+            ],
+            "answer": "States ranked by the percentage of reported rapes cleared by exceptional means in 2025, restricted to states with at least 100 reported offenses. Under FBI definitions, an exceptional clearance occurs when law enforcement identifies the offender and establishes probable cause, but cannot make an arrest due to circumstances beyond their control (such as victim cooperation declining or the death of the offender). Note that 2025 data may be preliminary, and NIBRS reporting completeness varies across states.\n\nClearance note: FBI clearance means cleared by arrest or exceptional means; it is not the same as conviction or prosecution.\n\nRanking result limit: 20 rows.\n\nNote: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.",
+            "modelOutputs": [
+              {
+                "ok": true,
+                "text": "{\n  \"sql\": \"SELECT state,\\n       SUM(total_offenses) AS total_rapes,\\n       SUM(cleared_A + cleared_B + cleared_C + cleared_D + cleared_E) AS cleared_exceptional,\\n       ROUND(100.0 * SUM(cleared_A + cleared_B + cleared_C + cleared_D + cleared_E) / NULLIF(SUM(total_offenses), 0), 1) AS exceptional_clearance_rate\\nFROM summary_clearance_detail\\nWHERE ucr_offense_code IN ('11A', '11B', '11C')\\n  AND year = 2025\\nGROUP BY state\\nHAVING SUM(total_offenses) >= 100\\nORDER BY exceptional_clearance_rate DESC\\nLIMIT 20;\",\n  \"explanation\": \"States ranked by the percentage of reported rapes cleared by exceptional means in 2025, restricted to states with at least 100 reported offenses. Under FBI definitions, an exceptional clearance occurs when law enforcement identifies the offender and establishes probable cause, but cannot make an arrest due to circumstances beyond their control (such as victim cooperation declining or the death of the offender). Note that 2025 data may be preliminary, and NIBRS reporting completeness varies across states.\",\n  \"chartHint\": \"bar\",\n  \"xAxis\": \"state\",\n  \"yAxis\": \"exceptional_clearance_rate\",\n  \"title\": \"Highest Exceptional Clearance Share for Rape by State (2025)\",\n  \"yAxisLabel\": \"Exceptional Clearance Rate (%)\"\n}"
+              },
+              {
+                "ok": true,
+                "text": ""
+              }
+            ],
+            "dispatchErrors": [],
+            "routeGuardRetries": 0,
+            "purposes": [
+              "generation",
+              "explanation"
+            ],
+            "error": null,
+            "rateLimited": false,
+            "failure": null,
+            "answered": true
+          },
+          "judged": {
+            "case": "GC-004/setup-1",
+            "caseVerdict": "not-scored",
+            "caseVerdictWhy": "setup turn",
+            "expectations": []
+          },
+          "threw": null,
+          "setupLogId": 187
+        }
+      ],
+      "scored": {
+        "case": "GC-004",
+        "tab": "nibrs",
+        "route": "app/api/nibrs-query/route.ts",
+        "sourceMode": "declared-source",
+        "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+        "sourceStableBefore": true,
+        "sourceStableAfter": true,
+        "sourceMoved": [],
+        "ms": 4808,
+        "calls": 2,
+        "counts": [
+          {
+            "purpose": "generation",
+            "category": "hosted-count",
+            "tokens": 50291,
+            "ok": true
+          },
+          {
+            "purpose": "retry",
+            "category": "hosted-count",
+            "tokens": 50392,
+            "ok": true
+          }
+        ],
+        "transportErrors": [],
+        "refusedDispatches": [],
+        "historyTrimming": {
+          "messagesBuilt": 2,
+          "messagesEligible": 2,
+          "messagesKept": 2,
+          "messagesDroppedByLimit": 0,
+          "contentTruncated": 0
+        },
+        "observed": {
+          "status": 200,
+          "stage": "post-model-validation",
+          "sql": null,
+          "sqlGenerated": null,
+          "sqlRejectedByApplication": false,
+          "rows": [],
+          "answer": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+          "modelOutputs": [
+            {
+              "ok": true,
+              "text": "```json\n{\n  \"sql\": \"SELECT scd.state,\\n  SUM(scd.total_offenses) AS total_rapes,\\n  SUM(scd.cleared_B) AS cleared_prosecution_declined,\\n  ROUND(100.0 * SUM(scd.cleared_B) / NULLIF(SUM(scd.total_offenses), 0), 1) AS prosecution_declined_rate\\nFROM summary_clearance_detail scd\\nWHERE scd.ucr_offense_code IN ('11A', '11B', '11C')\\n  AND scd.year = 2025\\nGROUP BY scd.state\\nHAVING SUM(scd.total_offenses) >= 100\\nORDER BY prosecution_declined_rate DESC\\nLIMIT 20\",\n  \"explanation\": \"States ranked by the percentage of reported rapes cleared specifically due to prosecution being declined in 2025, restricted to states with at least 100 reported offenses. Under FBI reporting standards, this exceptional clearance subtype applies when an offender has been identified and enough evidence exists to support an arrest and charge, but the prosecutor declines to prosecute. Note that 2025 data may be preliminary, and NIBRS reporting coverage varies across states.\",\n  \"chartHint\": \"bar\",\n  \"xAxis\": \"state\",\n  \"yAxis\": \"prosecution_declined_rate\",\n  \"title\": \"Share of Rapes Cleared Due to Declined Prosecution by State (2025)\",\n  \"yAxisLabel\": \"Clearance Rate (%)\"\n}\n```"
+            },
+            {
+              "ok": true,
+              "text": "```json\n{\n  \"sql\": \"SELECT state,\\n  SUM(total_offenses) AS rape_offenses,\\n  SUM(cleared_B) AS prosecution_declined_count,\\n  ROUND(100.0 * SUM(cleared_B) / NULLIF(SUM(total_offenses), 0), 2) AS prosecution_declined_share_pct\\nFROM summary_clearance_detail\\nWHERE ucr_offense_code IN ('11A', '11B', '11C')\\n  AND year = 2025\\nGROUP BY state\\nHAVING SUM(total_offenses) >= 100\\nORDER BY prosecution_declined_share_pct DESC\\nLIMIT 20\",\n  \"explanation\": \"States ranked by the count and share of reported rapes cleared due to prosecution being declined in 2025, restricted to states with at least 100 reported offenses. Under FBI reporting guidelines, prosecution declined is an exceptional clearance category where law enforcement identified the offender and established probable cause, but prosecutors declined to file charges. Note that 2025 data may be preliminary, and coverage completeness varies significantly by state.\",\n  \"chartHint\": \"bar\",\n  \"xAxis\": \"state\",\n  \"yAxis\": \"prosecution_declined_share_pct\",\n  \"title\": \"Share of Rapes Cleared Due to Prosecution Declined by State (2025)\",\n  \"yAxisLabel\": \"Share of Offenses (%)\"\n}\n```"
+            }
+          ],
+          "dispatchErrors": [],
+          "routeGuardRetries": 1,
+          "purposes": [
+            "generation",
+            "retry"
+          ],
+          "error": null,
+          "rateLimited": false,
+          "failure": null,
+          "answered": true
+        },
+        "judged": {
+          "case": "GC-004",
+          "caseVerdictRule": "Fail if any applicable expectation fails. Pass only if every applicable expectation passes. Inconclusive if none fails and at least one is inconclusive. Not-applicable expectations are excluded from the case verdict but recorded. Expectation verdicts are retained so per-decision totals are counted, not inferred.",
+          "expectations": [
+            {
+              "index": 0,
+              "decision": 1,
+              "id": null,
+              "stance": "answer",
+              "rule": "Police clearance records answerable; court proceedings not",
+              "expected": "Answers using police clearance data rather than refusing it as a court-outcome topic.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "Whether the response substantively answers, and the stated reason for any refusal.",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            }
+          ],
+          "caseVerdict": "unsettled",
+          "caseVerdictWhy": "an applicable expectation awaits adjudication against the retained evidence",
+          "adjudicationRequired": 1
+        },
+        "threw": null,
+        "followsSetupTurns": 1,
+        "sourceLogId": 188
+      },
+      "inconclusive": false,
+      "scoredJudgedOnItsOwnEvidence": true,
+      "rateLimited": false
+    },
+    {
+      "case": "GC-070",
+      "setupTurns": [
+        {
+          "case": "GC-070/setup-1",
+          "tab": "current",
+          "route": "app/api/query/route.ts",
+          "sourceMode": "declared-source",
+          "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+          "sourceStableBefore": true,
+          "sourceStableAfter": true,
+          "sourceMoved": [],
+          "ms": 6121,
+          "calls": 2,
+          "counts": [
+            {
+              "purpose": "generation",
+              "category": "hosted-count",
+              "tokens": 15176,
+              "ok": true
+            },
+            {
+              "purpose": "explanation",
+              "category": "hosted-count",
+              "tokens": 506,
+              "ok": true
+            }
+          ],
+          "transportErrors": [],
+          "refusedDispatches": [],
+          "historyTrimming": {
+            "messagesBuilt": 0,
+            "messagesEligible": 0,
+            "messagesKept": 0,
+            "messagesDroppedByLimit": 0,
+            "contentTruncated": 0
+          },
+          "observed": {
+            "status": 200,
+            "stage": "delivered",
+            "sql": "WITH all_months AS (\n  SELECT year, month, count,\n    SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12\n  FROM national_monthly\n  WHERE offense = 'Murder'\n)\nSELECT year, month, rolling_12\nFROM all_months\nWHERE (year > 2018 OR (year = 2018 AND month >= 1))\n  AND (year < 2026 OR (year = 2026 AND month <= 6))\nORDER BY year, month LIMIT 5000",
+            "sqlGenerated": "WITH all_months AS (\n  SELECT year, month, count,\n    SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12\n  FROM national_monthly\n  WHERE offense = 'Murder'\n)\nSELECT year, month, rolling_12\nFROM all_months\nWHERE (year > 2018 OR (year = 2018 AND month >= 1))\n  AND (year < 2026 OR (year = 2026 AND month <= 6))\nORDER BY year, month",
+            "sqlRejectedByApplication": false,
+            "rows": [
+              {
+                "year": 2018,
+                "month": 1,
+                "rolling_12": 9130
+              },
+              {
+                "year": 2018,
+                "month": 2,
+                "rolling_12": 9047
+              },
+              {
+                "year": 2018,
+                "month": 3,
+                "rolling_12": 9001
+              },
+              {
+                "year": 2018,
+                "month": 4,
+                "rolling_12": 8915
+              },
+              {
+                "year": 2018,
+                "month": 5,
+                "rolling_12": 8860
+              },
+              {
+                "year": 2018,
+                "month": 6,
+                "rolling_12": 8792
+              },
+              {
+                "year": 2018,
+                "month": 7,
+                "rolling_12": 8689
+              },
+              {
+                "year": 2018,
+                "month": 8,
+                "rolling_12": 8732
+              },
+              {
+                "year": 2018,
+                "month": 9,
+                "rolling_12": 8731
+              },
+              {
+                "year": 2018,
+                "month": 10,
+                "rolling_12": 8578
+              },
+              {
+                "year": 2018,
+                "month": 11,
+                "rolling_12": 8512
+              },
+              {
+                "year": 2018,
+                "month": 12,
+                "rolling_12": 8475
+              },
+              {
+                "year": 2019,
+                "month": 1,
+                "rolling_12": 8426
+              },
+              {
+                "year": 2019,
+                "month": 2,
+                "rolling_12": 8436
+              },
+              {
+                "year": 2019,
+                "month": 3,
+                "rolling_12": 8430
+              },
+              {
+                "year": 2019,
+                "month": 4,
+                "rolling_12": 8456
+              },
+              {
+                "year": 2019,
+                "month": 5,
+                "rolling_12": 8464
+              },
+              {
+                "year": 2019,
+                "month": 6,
+                "rolling_12": 8489
+              },
+              {
+                "year": 2019,
+                "month": 7,
+                "rolling_12": 8532
+              },
+              {
+                "year": 2019,
+                "month": 8,
+                "rolling_12": 8565
+              },
+              {
+                "year": 2019,
+                "month": 9,
+                "rolling_12": 8570
+              },
+              {
+                "year": 2019,
+                "month": 10,
+                "rolling_12": 8568
+              },
+              {
+                "year": 2019,
+                "month": 11,
+                "rolling_12": 8623
+              },
+              {
+                "year": 2019,
+                "month": 12,
+                "rolling_12": 8644
+              },
+              {
+                "year": 2020,
+                "month": 1,
+                "rolling_12": 8759
+              },
+              {
+                "year": 2020,
+                "month": 2,
+                "rolling_12": 8824
+              },
+              {
+                "year": 2020,
+                "month": 3,
+                "rolling_12": 8918
+              },
+              {
+                "year": 2020,
+                "month": 4,
+                "rolling_12": 9050
+              },
+              {
+                "year": 2020,
+                "month": 5,
+                "rolling_12": 9219
+              },
+              {
+                "year": 2020,
+                "month": 6,
+                "rolling_12": 9531
+              },
+              {
+                "year": 2020,
+                "month": 7,
+                "rolling_12": 9930
+              },
+              {
+                "year": 2020,
+                "month": 8,
+                "rolling_12": 10188
+              },
+              {
+                "year": 2020,
+                "month": 9,
+                "rolling_12": 10508
+              },
+              {
+                "year": 2020,
+                "month": 10,
+                "rolling_12": 10948
+              },
+              {
+                "year": 2020,
+                "month": 11,
+                "rolling_12": 11249
+              },
+              {
+                "year": 2020,
+                "month": 12,
+                "rolling_12": 11571
+              },
+              {
+                "year": 2021,
+                "month": 1,
+                "rolling_12": 11761
+              },
+              {
+                "year": 2021,
+                "month": 2,
+                "rolling_12": 11931
+              },
+              {
+                "year": 2021,
+                "month": 3,
+                "rolling_12": 12072
+              },
+              {
+                "year": 2021,
+                "month": 4,
+                "rolling_12": 12275
+              },
+              {
+                "year": 2021,
+                "month": 5,
+                "rolling_12": 12418
+              },
+              {
+                "year": 2021,
+                "month": 6,
+                "rolling_12": 12467
+              },
+              {
+                "year": 2021,
+                "month": 7,
+                "rolling_12": 12406
+              },
+              {
+                "year": 2021,
+                "month": 8,
+                "rolling_12": 12424
+              },
+              {
+                "year": 2021,
+                "month": 9,
+                "rolling_12": 12466
+              },
+              {
+                "year": 2021,
+                "month": 10,
+                "rolling_12": 12390
+              },
+              {
+                "year": 2021,
+                "month": 11,
+                "rolling_12": 12332
+              },
+              {
+                "year": 2021,
+                "month": 12,
+                "rolling_12": 12255
+              },
+              {
+                "year": 2022,
+                "month": 1,
+                "rolling_12": 12232
+              },
+              {
+                "year": 2022,
+                "month": 2,
+                "rolling_12": 12272
+              },
+              {
+                "year": 2022,
+                "month": 3,
+                "rolling_12": 12313
+              },
+              {
+                "year": 2022,
+                "month": 4,
+                "rolling_12": 12297
+              },
+              {
+                "year": 2022,
+                "month": 5,
+                "rolling_12": 12275
+              },
+              {
+                "year": 2022,
+                "month": 6,
+                "rolling_12": 12266
+              },
+              {
+                "year": 2022,
+                "month": 7,
+                "rolling_12": 12210
+              },
+              {
+                "year": 2022,
+                "month": 8,
+                "rolling_12": 12188
+              },
+              {
+                "year": 2022,
+                "month": 9,
+                "rolling_12": 12038
+              },
+              {
+                "year": 2022,
+                "month": 10,
+                "rolling_12": 11966
+              },
+              {
+                "year": 2022,
+                "month": 11,
+                "rolling_12": 11818
+              },
+              {
+                "year": 2022,
+                "month": 12,
+                "rolling_12": 11763
+              },
+              {
+                "year": 2023,
+                "month": 1,
+                "rolling_12": 11708
+              },
+              {
+                "year": 2023,
+                "month": 2,
+                "rolling_12": 11605
+              },
+              {
+                "year": 2023,
+                "month": 3,
+                "rolling_12": 11550
+              },
+              {
+                "year": 2023,
+                "month": 4,
+                "rolling_12": 11402
+              },
+              {
+                "year": 2023,
+                "month": 5,
+                "rolling_12": 11286
+              },
+              {
+                "year": 2023,
+                "month": 6,
+                "rolling_12": 11127
+              },
+              {
+                "year": 2023,
+                "month": 7,
+                "rolling_12": 11030
+              },
+              {
+                "year": 2023,
+                "month": 8,
+                "rolling_12": 10852
+              },
+              {
+                "year": 2023,
+                "month": 9,
+                "rolling_12": 10766
+              },
+              {
+                "year": 2023,
+                "month": 10,
+                "rolling_12": 10627
+              },
+              {
+                "year": 2023,
+                "month": 11,
+                "rolling_12": 10607
+              },
+              {
+                "year": 2023,
+                "month": 12,
+                "rolling_12": 10483
+              },
+              {
+                "year": 2024,
+                "month": 1,
+                "rolling_12": 10302
+              },
+              {
+                "year": 2024,
+                "month": 2,
+                "rolling_12": 10246
+              },
+              {
+                "year": 2024,
+                "month": 3,
+                "rolling_12": 10111
+              },
+              {
+                "year": 2024,
+                "month": 4,
+                "rolling_12": 10032
+              },
+              {
+                "year": 2024,
+                "month": 5,
+                "rolling_12": 9917
+              },
+              {
+                "year": 2024,
+                "month": 6,
+                "rolling_12": 9755
+              },
+              {
+                "year": 2024,
+                "month": 7,
+                "rolling_12": 9624
+              },
+              {
+                "year": 2024,
+                "month": 8,
+                "rolling_12": 9505
+              },
+              {
+                "year": 2024,
+                "month": 9,
+                "rolling_12": 9327
+              },
+              {
+                "year": 2024,
+                "month": 10,
+                "rolling_12": 9239
+              },
+              {
+                "year": 2024,
+                "month": 11,
+                "rolling_12": 9114
+              },
+              {
+                "year": 2024,
+                "month": 12,
+                "rolling_12": 8957
+              },
+              {
+                "year": 2025,
+                "month": 1,
+                "rolling_12": 8911
+              },
+              {
+                "year": 2025,
+                "month": 2,
+                "rolling_12": 8767
+              },
+              {
+                "year": 2025,
+                "month": 3,
+                "rolling_12": 8621
+              },
+              {
+                "year": 2025,
+                "month": 4,
+                "rolling_12": 8481
+              },
+              {
+                "year": 2025,
+                "month": 5,
+                "rolling_12": 8309
+              },
+              {
+                "year": 2025,
+                "month": 6,
+                "rolling_12": 8189
+              },
+              {
+                "year": 2025,
+                "month": 7,
+                "rolling_12": 7990
+              },
+              {
+                "year": 2025,
+                "month": 8,
+                "rolling_12": 7835
+              },
+              {
+                "year": 2025,
+                "month": 9,
+                "rolling_12": 7773
+              },
+              {
+                "year": 2025,
+                "month": 10,
+                "rolling_12": 7593
+              },
+              {
+                "year": 2025,
+                "month": 11,
+                "rolling_12": 7506
+              },
+              {
+                "year": 2025,
+                "month": 12,
+                "rolling_12": 7421
+              },
+              {
+                "year": 2026,
+                "month": 1,
+                "rolling_12": 7251
+              },
+              {
+                "year": 2026,
+                "month": 2,
+                "rolling_12": 7164
+              },
+              {
+                "year": 2026,
+                "month": 3,
+                "rolling_12": 7111
+              },
+              {
+                "year": 2026,
+                "month": 4,
+                "rolling_12": 6980
+              },
+              {
+                "year": 2026,
+                "month": 5,
+                "rolling_12": 6835
+              },
+              {
+                "year": 2026,
+                "month": 6,
+                "rolling_12": 6663
+              }
+            ],
+            "answer": "Rolling 12-month murder totals nationally from 2018 to present. Note: National figures are based on a consistent sample of 558 agencies that have reported every month since January 2017 — not every agency in the country. Trends are reliable but absolute numbers reflect only this sample. Recent data is preliminary and subject to change.\n\nReturned period: January 2018-June 2026.\n\nThe 2026 figures cover January-June 2026.",
+            "modelOutputs": [
+              {
+                "ok": true,
+                "text": "{\n  \"sql\": \"WITH all_months AS (\\n  SELECT year, month, count,\\n    SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12\\n  FROM national_monthly\\n  WHERE offense = 'Murder'\\n)\\nSELECT year, month, rolling_12\\nFROM all_months\\nWHERE (year > 2018 OR (year = 2018 AND month >= 1))\\n  AND (year < 2026 OR (year = 2026 AND month <= 6))\\nORDER BY year, month\",\n  \"explanation\": \"Rolling 12-month murder totals nationally from 2018 to present. Note: National figures are based on a consistent sample of 558 agencies that have reported every month since January 2017 — not every agency in the country. Trends are reliable but absolute numbers reflect only this sample. Recent data is preliminary and subject to change.\",\n  \"chartHint\": \"line\",\n  \"xAxis\": \"year\",\n  \"yAxis\": \"rolling_12\",\n  \"title\": \"National Murders Rolling 12-Month Total\"\n}"
+              },
+              {
+                "ok": true,
+                "text": "These results contain 12-month rolling murder totals at the national level from 2018 to 2026. This data comes from a sample of agencies reporting to The Crime Index and does not represent a national total."
+              }
+            ],
+            "dispatchErrors": [],
+            "routeGuardRetries": 0,
+            "purposes": [
+              "generation",
+              "explanation"
+            ],
+            "error": null,
+            "rateLimited": false,
+            "failure": null,
+            "answered": true
+          },
+          "judged": {
+            "case": "GC-070/setup-1",
+            "caseVerdict": "not-scored",
+            "caseVerdictWhy": "setup turn",
+            "expectations": []
+          },
+          "threw": null,
+          "setupLogId": 4456
+        },
+        {
+          "case": "GC-070/setup-2",
+          "tab": "current",
+          "route": "app/api/query/route.ts",
+          "sourceMode": "declared-source",
+          "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+          "sourceStableBefore": true,
+          "sourceStableAfter": true,
+          "sourceMoved": [],
+          "ms": 7357,
+          "calls": 3,
+          "counts": [
+            {
+              "purpose": "generation",
+              "category": "hosted-count",
+              "tokens": 15293,
+              "ok": true
+            },
+            {
+              "purpose": "retry",
+              "category": "hosted-count",
+              "tokens": 15885,
+              "ok": true
+            },
+            {
+              "purpose": "explanation",
+              "category": "hosted-count",
+              "tokens": 491,
+              "ok": true
+            }
+          ],
+          "transportErrors": [],
+          "refusedDispatches": [],
+          "historyTrimming": {
+            "messagesBuilt": 2,
+            "messagesEligible": 2,
+            "messagesKept": 2,
+            "messagesDroppedByLimit": 0,
+            "contentTruncated": 0
+          },
+          "observed": {
+            "status": 200,
+            "stage": "delivered",
+            "sql": "WITH annual_pop AS (\n  SELECT ap.year, SUM(ap.population) AS sample_population\n  FROM agency_population ap\n  JOIN agencies a ON a.ori = ap.ori\n  WHERE a.national_sample = 1\n  GROUP BY ap.year\n),\nmonthly AS (\n  SELECT nm.year, nm.month, nm.count, pop.sample_population\n  FROM national_monthly nm\n  JOIN annual_pop pop ON pop.year = nm.year\n  WHERE nm.offense = 'Murder'\n),\nrolling AS (\n  SELECT m.year, m.month,\n    SUM(m.count) OVER (ORDER BY m.year, m.month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_count,\n    m.sample_population\n  FROM monthly m\n)\nSELECT r.year, r.month,\n  ROUND(r.rolling_count * 100000.0 / r.sample_population, 1) AS murder_rate\nFROM rolling r\nWHERE r.year >= 2018 AND (r.year < 2026 OR (r.year = 2026 AND r.month <= 6))\nORDER BY r.year, r.month\nLIMIT 1000",
+            "sqlGenerated": "WITH annual_pop AS (\n  SELECT ap.year, SUM(ap.population) AS sample_population\n  FROM agency_population ap\n  JOIN agencies a ON a.ori = ap.ori\n  WHERE a.national_sample = 1\n  GROUP BY ap.year\n),\nmonthly AS (\n  SELECT nm.year, nm.month, nm.count, pop.sample_population\n  FROM national_monthly nm\n  JOIN annual_pop pop ON pop.year = nm.year\n  WHERE nm.offense = 'Murder'\n),\nrolling AS (\n  SELECT m.year, m.month,\n    SUM(m.count) OVER (ORDER BY m.year, m.month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_count,\n    m.sample_population\n  FROM monthly m\n)\nSELECT r.year, r.month,\n  ROUND(r.rolling_count * 100000.0 / r.sample_population, 1) AS murder_rate\nFROM rolling r\nWHERE r.year >= 2018 AND (r.year < 2026 OR (r.year = 2026 AND r.month <= 6))\nORDER BY r.year, r.month\nLIMIT 1000",
+            "sqlRejectedByApplication": false,
+            "rows": [
+              {
+                "year": 2018,
+                "month": 1,
+                "murder_rate": 7.7
+              },
+              {
+                "year": 2018,
+                "month": 2,
+                "murder_rate": 7.7
+              },
+              {
+                "year": 2018,
+                "month": 3,
+                "murder_rate": 7.6
+              },
+              {
+                "year": 2018,
+                "month": 4,
+                "murder_rate": 7.6
+              },
+              {
+                "year": 2018,
+                "month": 5,
+                "murder_rate": 7.5
+              },
+              {
+                "year": 2018,
+                "month": 6,
+                "murder_rate": 7.5
+              },
+              {
+                "year": 2018,
+                "month": 7,
+                "murder_rate": 7.4
+              },
+              {
+                "year": 2018,
+                "month": 8,
+                "murder_rate": 7.4
+              },
+              {
+                "year": 2018,
+                "month": 9,
+                "murder_rate": 7.4
+              },
+              {
+                "year": 2018,
+                "month": 10,
+                "murder_rate": 7.3
+              },
+              {
+                "year": 2018,
+                "month": 11,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2018,
+                "month": 12,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2019,
+                "month": 1,
+                "murder_rate": 7.1
+              },
+              {
+                "year": 2019,
+                "month": 2,
+                "murder_rate": 7.1
+              },
+              {
+                "year": 2019,
+                "month": 3,
+                "murder_rate": 7.1
+              },
+              {
+                "year": 2019,
+                "month": 4,
+                "murder_rate": 7.1
+              },
+              {
+                "year": 2019,
+                "month": 5,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2019,
+                "month": 6,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2019,
+                "month": 7,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2019,
+                "month": 8,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2019,
+                "month": 9,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2019,
+                "month": 10,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2019,
+                "month": 11,
+                "murder_rate": 7.3
+              },
+              {
+                "year": 2019,
+                "month": 12,
+                "murder_rate": 7.3
+              },
+              {
+                "year": 2020,
+                "month": 1,
+                "murder_rate": 7.4
+              },
+              {
+                "year": 2020,
+                "month": 2,
+                "murder_rate": 7.4
+              },
+              {
+                "year": 2020,
+                "month": 3,
+                "murder_rate": 7.5
+              },
+              {
+                "year": 2020,
+                "month": 4,
+                "murder_rate": 7.6
+              },
+              {
+                "year": 2020,
+                "month": 5,
+                "murder_rate": 7.8
+              },
+              {
+                "year": 2020,
+                "month": 6,
+                "murder_rate": 8
+              },
+              {
+                "year": 2020,
+                "month": 7,
+                "murder_rate": 8.4
+              },
+              {
+                "year": 2020,
+                "month": 8,
+                "murder_rate": 8.6
+              },
+              {
+                "year": 2020,
+                "month": 9,
+                "murder_rate": 8.8
+              },
+              {
+                "year": 2020,
+                "month": 10,
+                "murder_rate": 9.2
+              },
+              {
+                "year": 2020,
+                "month": 11,
+                "murder_rate": 9.5
+              },
+              {
+                "year": 2020,
+                "month": 12,
+                "murder_rate": 9.7
+              },
+              {
+                "year": 2021,
+                "month": 1,
+                "murder_rate": 9.9
+              },
+              {
+                "year": 2021,
+                "month": 2,
+                "murder_rate": 10
+              },
+              {
+                "year": 2021,
+                "month": 3,
+                "murder_rate": 10.1
+              },
+              {
+                "year": 2021,
+                "month": 4,
+                "murder_rate": 10.3
+              },
+              {
+                "year": 2021,
+                "month": 5,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2021,
+                "month": 6,
+                "murder_rate": 10.5
+              },
+              {
+                "year": 2021,
+                "month": 7,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2021,
+                "month": 8,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2021,
+                "month": 9,
+                "murder_rate": 10.5
+              },
+              {
+                "year": 2021,
+                "month": 10,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2021,
+                "month": 11,
+                "murder_rate": 10.3
+              },
+              {
+                "year": 2021,
+                "month": 12,
+                "murder_rate": 10.3
+              },
+              {
+                "year": 2022,
+                "month": 1,
+                "murder_rate": 10.3
+              },
+              {
+                "year": 2022,
+                "month": 2,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2022,
+                "month": 3,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2022,
+                "month": 4,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2022,
+                "month": 5,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2022,
+                "month": 6,
+                "murder_rate": 10.4
+              },
+              {
+                "year": 2022,
+                "month": 7,
+                "murder_rate": 10.3
+              },
+              {
+                "year": 2022,
+                "month": 8,
+                "murder_rate": 10.3
+              },
+              {
+                "year": 2022,
+                "month": 9,
+                "murder_rate": 10.2
+              },
+              {
+                "year": 2022,
+                "month": 10,
+                "murder_rate": 10.1
+              },
+              {
+                "year": 2022,
+                "month": 11,
+                "murder_rate": 10
+              },
+              {
+                "year": 2022,
+                "month": 12,
+                "murder_rate": 9.9
+              },
+              {
+                "year": 2023,
+                "month": 1,
+                "murder_rate": 9.8
+              },
+              {
+                "year": 2023,
+                "month": 2,
+                "murder_rate": 9.7
+              },
+              {
+                "year": 2023,
+                "month": 3,
+                "murder_rate": 9.7
+              },
+              {
+                "year": 2023,
+                "month": 4,
+                "murder_rate": 9.6
+              },
+              {
+                "year": 2023,
+                "month": 5,
+                "murder_rate": 9.5
+              },
+              {
+                "year": 2023,
+                "month": 6,
+                "murder_rate": 9.3
+              },
+              {
+                "year": 2023,
+                "month": 7,
+                "murder_rate": 9.3
+              },
+              {
+                "year": 2023,
+                "month": 8,
+                "murder_rate": 9.1
+              },
+              {
+                "year": 2023,
+                "month": 9,
+                "murder_rate": 9
+              },
+              {
+                "year": 2023,
+                "month": 10,
+                "murder_rate": 8.9
+              },
+              {
+                "year": 2023,
+                "month": 11,
+                "murder_rate": 8.9
+              },
+              {
+                "year": 2023,
+                "month": 12,
+                "murder_rate": 8.8
+              },
+              {
+                "year": 2024,
+                "month": 1,
+                "murder_rate": 8.5
+              },
+              {
+                "year": 2024,
+                "month": 2,
+                "murder_rate": 8.5
+              },
+              {
+                "year": 2024,
+                "month": 3,
+                "murder_rate": 8.4
+              },
+              {
+                "year": 2024,
+                "month": 4,
+                "murder_rate": 8.3
+              },
+              {
+                "year": 2024,
+                "month": 5,
+                "murder_rate": 8.2
+              },
+              {
+                "year": 2024,
+                "month": 6,
+                "murder_rate": 8.1
+              },
+              {
+                "year": 2024,
+                "month": 7,
+                "murder_rate": 8
+              },
+              {
+                "year": 2024,
+                "month": 8,
+                "murder_rate": 7.9
+              },
+              {
+                "year": 2024,
+                "month": 9,
+                "murder_rate": 7.7
+              },
+              {
+                "year": 2024,
+                "month": 10,
+                "murder_rate": 7.7
+              },
+              {
+                "year": 2024,
+                "month": 11,
+                "murder_rate": 7.5
+              },
+              {
+                "year": 2024,
+                "month": 12,
+                "murder_rate": 7.4
+              },
+              {
+                "year": 2025,
+                "month": 1,
+                "murder_rate": 7.3
+              },
+              {
+                "year": 2025,
+                "month": 2,
+                "murder_rate": 7.2
+              },
+              {
+                "year": 2025,
+                "month": 3,
+                "murder_rate": 7.1
+              },
+              {
+                "year": 2025,
+                "month": 4,
+                "murder_rate": 6.9
+              },
+              {
+                "year": 2025,
+                "month": 5,
+                "murder_rate": 6.8
+              },
+              {
+                "year": 2025,
+                "month": 6,
+                "murder_rate": 6.7
+              },
+              {
+                "year": 2025,
+                "month": 7,
+                "murder_rate": 6.5
+              },
+              {
+                "year": 2025,
+                "month": 8,
+                "murder_rate": 6.4
+              },
+              {
+                "year": 2025,
+                "month": 9,
+                "murder_rate": 6.4
+              },
+              {
+                "year": 2025,
+                "month": 10,
+                "murder_rate": 6.2
+              },
+              {
+                "year": 2025,
+                "month": 11,
+                "murder_rate": 6.1
+              },
+              {
+                "year": 2025,
+                "month": 12,
+                "murder_rate": 6.1
+              },
+              {
+                "year": 2026,
+                "month": 1,
+                "murder_rate": 5.9
+              },
+              {
+                "year": 2026,
+                "month": 2,
+                "murder_rate": 5.9
+              },
+              {
+                "year": 2026,
+                "month": 3,
+                "murder_rate": 5.8
+              },
+              {
+                "year": 2026,
+                "month": 4,
+                "murder_rate": 5.7
+              },
+              {
+                "year": 2026,
+                "month": 5,
+                "murder_rate": 5.6
+              },
+              {
+                "year": 2026,
+                "month": 6,
+                "murder_rate": 5.5
+              }
+            ],
+            "answer": "Rolling 12-month national murder rate per 100,000 population from 2018 to present, calculated using agencies in the national sample. Note: National figures are based on a consistent sample of 558 agencies that have reported every month since January 2017 — not every agency in the country. Trends are reliable but absolute numbers reflect only this sample. Data for 2026 is partial and preliminary.\n\nReturned period: January 2018-June 2026.\n\nThe 2026 figures cover January-June 2026.",
+            "modelOutputs": [
+              {
+                "ok": true,
+                "text": "{\n  \"sql\": \"WITH monthly AS (\\n  SELECT nm.year, nm.month, nm.count,\\n    (SELECT SUM(ap.population) FROM agency_population ap\\n     JOIN agencies a ON a.ori = ap.ori AND a.national_sample = 1\\n     WHERE ap.year = nm.year) as sample_pop\\n  FROM national_monthly nm\\n  WHERE nm.offense = 'Murder'\\n),\\nrolling AS (\\n  SELECT year, month,\\n    SUM(count) OVER (ORDER BY year, month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) as rolling_12,\\n    sample_pop\\n  FROM monthly\\n)\\nSELECT year, month,\\n  ROUND(rolling_12 * 100000.0 / sample_pop, 1) as rate_per_100k\\nFROM rolling\\nWHERE year >= 2018 AND (year < 2026 OR (year = 2026 AND month <= 6))\\nORDER BY year, month\\nLIMIT 1000\",\n  \"explanation\": \"Rolling 12-month murder rate per 100,000 population nationally from 2018 to present. Note: National figures are based on a consistent sample of 558 agencies that have reported every month since January 2017 — not every agency in the country. Trends are reliable but absolute numbers reflect only this sample. Recent data is preliminary and subject to change.\",\n  \"chartHint\": \"line\",\n  \"xAxis\": \"year\",\n  \"yAxis\": \"rate_per_100k\",\n  \"title\": \"US Murder Rate Per Month\",\n  \"yAxisLabel\": \"Rate per 100K\"\n}"
+              },
+              {
+                "ok": true,
+                "text": "{\"sql\":\"WITH annual_pop AS (\\n  SELECT ap.year, SUM(ap.population) AS sample_population\\n  FROM agency_population ap\\n  JOIN agencies a ON a.ori = ap.ori\\n  WHERE a.national_sample = 1\\n  GROUP BY ap.year\\n),\\nmonthly AS (\\n  SELECT nm.year, nm.month, nm.count, pop.sample_population\\n  FROM national_monthly nm\\n  JOIN annual_pop pop ON pop.year = nm.year\\n  WHERE nm.offense = 'Murder'\\n),\\nrolling AS (\\n  SELECT m.year, m.month,\\n    SUM(m.count) OVER (ORDER BY m.year, m.month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW) AS rolling_count,\\n    m.sample_population\\n  FROM monthly m\\n)\\nSELECT r.year, r.month,\\n  ROUND(r.rolling_count * 100000.0 / r.sample_population, 1) AS murder_rate\\nFROM rolling r\\nWHERE r.year >= 2018 AND (r.year < 2026 OR (r.year = 2026 AND r.month <= 6))\\nORDER BY r.year, r.month\\nLIMIT 1000\",\"explanation\":\"Rolling 12-month national murder rate per 100,000 population from 2018 to present, calculated using agencies in the national sample. Note: National figures are based on a consistent sample of 558 agencies that have reported every month since January 2017 — not every agency in the country. Trends are reliable but absolute numbers reflect only this sample. Data for 2026 is partial and preliminary.\",\"chartHint\":\"line\",\"xAxis\":\"year\",\"yAxis\":\"murder_rate\",\"title\":\"US Murder Rate Per Month\",\"yAxisLabel\":\"Rate per 100K\"}"
+              },
+              {
+                "ok": true,
+                "text": "These results contain the national murder rate per capita from 2018 to 2026. This data comes from a sample of agencies reporting to The Crime Index and does not represent a national total."
+              }
+            ],
+            "dispatchErrors": [],
+            "routeGuardRetries": 1,
+            "purposes": [
+              "generation",
+              "retry",
+              "explanation"
+            ],
+            "error": null,
+            "rateLimited": false,
+            "failure": null,
+            "answered": true
+          },
+          "judged": {
+            "case": "GC-070/setup-2",
+            "caseVerdict": "not-scored",
+            "caseVerdictWhy": "setup turn",
+            "expectations": []
+          },
+          "threw": null,
+          "setupLogId": 4457
+        },
+        {
+          "case": "GC-070/setup-3",
+          "tab": "current",
+          "route": "app/api/query/route.ts",
+          "sourceMode": "declared-source",
+          "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+          "sourceStableBefore": true,
+          "sourceStableAfter": true,
+          "sourceMoved": [],
+          "ms": 5269,
+          "calls": 2,
+          "counts": [
+            {
+              "purpose": "generation",
+              "category": "hosted-count",
+              "tokens": 15436,
+              "ok": true
+            },
+            {
+              "purpose": "explanation",
+              "category": "hosted-count",
+              "tokens": 462,
+              "ok": true
+            }
+          ],
+          "transportErrors": [],
+          "refusedDispatches": [],
+          "historyTrimming": {
+            "messagesBuilt": 4,
+            "messagesEligible": 4,
+            "messagesKept": 4,
+            "messagesDroppedByLimit": 0,
+            "contentTruncated": 0
+          },
+          "observed": {
+            "status": 200,
+            "stage": "delivered",
+            "sql": "SELECT am.year, am.month, am.count as murders, ap.population, ROUND(am.count * 100000.0 / ap.population, 2) as rate_per_100k\nFROM agency_monthly am\nJOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year\nWHERE am.agency = 'Seattle' AND am.state = 'WA' AND am.type = 'City'\n  AND am.offense = 'Murder'\n  AND am.year = 2026\n  AND am.month <= 6\nORDER BY am.year, am.month\nLIMIT 1000",
+            "sqlGenerated": "SELECT am.year, am.month, am.count as murders, ap.population, ROUND(am.count * 100000.0 / ap.population, 2) as rate_per_100k\nFROM agency_monthly am\nJOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year\nWHERE am.agency = 'Seattle' AND am.state = 'WA' AND am.type = 'City'\n  AND am.offense = 'Murder'\n  AND am.year = 2026\n  AND am.month <= 6\nORDER BY am.year, am.month\nLIMIT 1000",
+            "sqlRejectedByApplication": false,
+            "rows": [
+              {
+                "year": 2026,
+                "month": 1,
+                "murders": 2,
+                "population": 791503,
+                "rate_per_100k": 0.25
+              },
+              {
+                "year": 2026,
+                "month": 2,
+                "murders": 2,
+                "population": 791503,
+                "rate_per_100k": 0.25
+              },
+              {
+                "year": 2026,
+                "month": 3,
+                "murders": 1,
+                "population": 791503,
+                "rate_per_100k": 0.13
+              },
+              {
+                "year": 2026,
+                "month": 4,
+                "murders": 1,
+                "population": 791503,
+                "rate_per_100k": 0.13
+              },
+              {
+                "year": 2026,
+                "month": 5,
+                "murders": 5,
+                "population": 791503,
+                "rate_per_100k": 0.63
+              },
+              {
+                "year": 2026,
+                "month": 6,
+                "murders": 0,
+                "population": 791503,
+                "rate_per_100k": 0
+              }
+            ],
+            "answer": "Monthly murder counts and rates per 100,000 for Seattle in 2026. Note: 2026 data is partial and preliminary — not all months or agencies have reported yet.\n\nReturned period: January-June 2026.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.",
+            "modelOutputs": [
+              {
+                "ok": true,
+                "text": "{\n  \"sql\": \"SELECT am.year, am.month, am.count as murders, ap.population, ROUND(am.count * 100000.0 / ap.population, 2) as rate_per_100k\\nFROM agency_monthly am\\nJOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year\\nWHERE am.agency = 'Seattle' AND am.state = 'WA' AND am.type = 'City'\\n  AND am.offense = 'Murder'\\n  AND am.year = 2026\\n  AND am.month <= 6\\nORDER BY am.year, am.month\\nLIMIT 1000\",\n  \"explanation\": \"Monthly murder counts and rates per 100,000 for Seattle in 2026. Note: 2026 data is partial and preliminary — not all months or agencies have reported yet.\",\n  \"chartHint\": \"line\",\n  \"xAxis\": \"year\",\n  \"yAxis\": \"rate_per_100k\",\n  \"title\": \"Seattle Murder Rate Per Month\",\n  \"yAxisLabel\": \"Rate per 100K\"\n}"
+              },
+              {
+                "ok": true,
+                "text": ""
+              }
+            ],
+            "dispatchErrors": [],
+            "routeGuardRetries": 0,
+            "purposes": [
+              "generation",
+              "explanation"
+            ],
+            "error": null,
+            "rateLimited": false,
+            "failure": null,
+            "answered": true
+          },
+          "judged": {
+            "case": "GC-070/setup-3",
+            "caseVerdict": "not-scored",
+            "caseVerdictWhy": "setup turn",
+            "expectations": []
+          },
+          "threw": null,
+          "setupLogId": 4458,
+          "note": "the logged typo is retained verbatim"
+        },
+        {
+          "case": "GC-070/setup-4",
+          "tab": "current",
+          "route": "app/api/query/route.ts",
+          "sourceMode": "declared-source",
+          "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+          "sourceStableBefore": true,
+          "sourceStableAfter": true,
+          "sourceMoved": [],
+          "ms": 2993,
+          "calls": 2,
+          "counts": [
+            {
+              "purpose": "generation",
+              "category": "hosted-count",
+              "tokens": 15536,
+              "ok": true
+            },
+            {
+              "purpose": "explanation",
+              "category": "hosted-count",
+              "tokens": 446,
+              "ok": true
+            }
+          ],
+          "transportErrors": [],
+          "refusedDispatches": [],
+          "historyTrimming": {
+            "messagesBuilt": 6,
+            "messagesEligible": 6,
+            "messagesKept": 6,
+            "messagesDroppedByLimit": 0,
+            "contentTruncated": 0
+          },
+          "observed": {
+            "status": 200,
+            "stage": "delivered",
+            "sql": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Seattle' AND state = 'WA' AND type = 'City' AND offense = 'Murder' LIMIT 5000",
+            "sqlGenerated": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Seattle' AND state = 'WA' AND type = 'City' AND offense = 'Murder'",
+            "sqlRejectedByApplication": false,
+            "rows": [
+              {
+                "min_year": 2017,
+                "max_year": 2026
+              }
+            ],
+            "answer": "This data contains the minimum and maximum years on record for murder in the city of Seattle.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.\n\nComparison includes: Min Year, Max Year.",
+            "modelOutputs": [
+              {
+                "ok": true,
+                "text": "{\n  \"sql\": \"SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Seattle' AND state = 'WA' AND type = 'City' AND offense = 'Murder'\",\n  \"explanation\": \"Date range of available murder data for Seattle.\",\n  \"chartHint\": \"none\",\n  \"xAxis\": \"min_year\",\n  \"yAxis\": \"max_year\",\n  \"title\": \"Seattle Murder Data Range\"\n}"
+              },
+              {
+                "ok": true,
+                "text": "This data contains the minimum and maximum years on record for murder in the city of Seattle."
+              }
+            ],
+            "dispatchErrors": [],
+            "routeGuardRetries": 0,
+            "purposes": [
+              "generation",
+              "explanation"
+            ],
+            "error": null,
+            "rateLimited": false,
+            "failure": null,
+            "answered": true
+          },
+          "judged": {
+            "case": "GC-070/setup-4",
+            "caseVerdict": "not-scored",
+            "caseVerdictWhy": "setup turn",
+            "expectations": []
+          },
+          "threw": null,
+          "setupLogId": 4459
+        },
+        {
+          "case": "GC-070/setup-5",
+          "tab": "current",
+          "route": "app/api/query/route.ts",
+          "sourceMode": "declared-source",
+          "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+          "sourceStableBefore": true,
+          "sourceStableAfter": true,
+          "sourceMoved": [],
+          "ms": 2686,
+          "calls": 2,
+          "counts": [
+            {
+              "purpose": "generation",
+              "category": "hosted-count",
+              "tokens": 15502,
+              "ok": true
+            },
+            {
+              "purpose": "explanation",
+              "category": "hosted-count",
+              "tokens": 450,
+              "ok": true
+            }
+          ],
+          "transportErrors": [],
+          "refusedDispatches": [],
+          "historyTrimming": {
+            "messagesBuilt": 8,
+            "messagesEligible": 8,
+            "messagesKept": 6,
+            "messagesDroppedByLimit": 2,
+            "contentTruncated": 0
+          },
+          "observed": {
+            "status": 200,
+            "stage": "delivered",
+            "sql": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'New York City' AND state = 'NY' AND type = 'City' AND offense = 'Murder' LIMIT 5000",
+            "sqlGenerated": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'New York City' AND state = 'NY' AND type = 'City' AND offense = 'Murder'",
+            "sqlRejectedByApplication": false,
+            "rows": [
+              {
+                "min_year": 2017,
+                "max_year": 2026
+              }
+            ],
+            "answer": "This data contains the available year range for murder data in New York City.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.\n\nComparison includes: Min Year, Max Year.",
+            "modelOutputs": [
+              {
+                "ok": true,
+                "text": "{\n  \"sql\": \"SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'New York City' AND state = 'NY' AND type = 'City' AND offense = 'Murder'\",\n  \"explanation\": \"This query returns the minimum and maximum reporting years available for murder in New York City.\",\n  \"chartHint\": \"none\",\n  \"xAxis\": \"min_year\",\n  \"yAxis\": \"max_year\",\n  \"title\": \"New York City Murder Year Range\"\n}"
+              },
+              {
+                "ok": true,
+                "text": "This data contains the available year range for murder data in New York City."
+              }
+            ],
+            "dispatchErrors": [],
+            "routeGuardRetries": 0,
+            "purposes": [
+              "generation",
+              "explanation"
+            ],
+            "error": null,
+            "rateLimited": false,
+            "failure": null,
+            "answered": true
+          },
+          "judged": {
+            "case": "GC-070/setup-5",
+            "caseVerdict": "not-scored",
+            "caseVerdictWhy": "setup turn",
+            "expectations": []
+          },
+          "threw": null,
+          "setupLogId": 4460
+        }
+      ],
+      "scored": {
+        "case": "GC-070",
+        "tab": "current",
+        "route": "app/api/query/route.ts",
+        "sourceMode": "declared-source",
+        "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+        "sourceStableBefore": true,
+        "sourceStableAfter": true,
+        "sourceMoved": [],
+        "ms": 2919,
+        "calls": 2,
+        "counts": [
+          {
+            "purpose": "generation",
+            "category": "hosted-count",
+            "tokens": 15407,
+            "ok": true
+          },
+          {
+            "purpose": "explanation",
+            "category": "hosted-count",
+            "tokens": 448,
+            "ok": true
+          }
+        ],
+        "transportErrors": [],
+        "refusedDispatches": [],
+        "historyTrimming": {
+          "messagesBuilt": 10,
+          "messagesEligible": 10,
+          "messagesKept": 6,
+          "messagesDroppedByLimit": 4,
+          "contentTruncated": 0
+        },
+        "observed": {
+          "status": 200,
+          "stage": "delivered",
+          "sql": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Detroit' AND state = 'MI' AND type = 'City' AND offense = 'Murder' LIMIT 5000",
+          "sqlGenerated": "SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Detroit' AND state = 'MI' AND type = 'City' AND offense = 'Murder'",
+          "sqlRejectedByApplication": false,
+          "rows": [
+            {
+              "min_year": 2017,
+              "max_year": 2026
+            }
+          ],
+          "answer": "This data contains the available year range for murder data in Detroit.\n\nNote: Current Trends data comes from a sample of agencies with consistent reporting — it does not represent complete state or national totals. For comprehensive state-level estimates, try the Historical Library tab.\n\nComparison includes: Min Year, Max Year.",
+          "modelOutputs": [
+            {
+              "ok": true,
+              "text": "{\n  \"sql\": \"SELECT MIN(year) as min_year, MAX(year) as max_year FROM agency_monthly WHERE agency = 'Detroit' AND state = 'MI' AND type = 'City' AND offense = 'Murder'\",\n  \"explanation\": \"Available year range for murder data in Detroit.\",\n  \"chartHint\": \"none\",\n  \"xAxis\": \"min_year\",\n  \"yAxis\": \"max_year\",\n  \"title\": \"Detroit Murder Year Range\"\n}"
+            },
+            {
+              "ok": true,
+              "text": "This data contains the available year range for murder data in Detroit."
+            }
+          ],
+          "dispatchErrors": [],
+          "routeGuardRetries": 0,
+          "purposes": [
+            "generation",
+            "explanation"
+          ],
+          "error": null,
+          "rateLimited": false,
+          "failure": null,
+          "answered": true
+        },
+        "judged": {
+          "case": "GC-070",
+          "caseVerdictRule": "Fail if any applicable expectation fails. Pass only if every applicable expectation passes. Inconclusive if none fails and at least one is inconclusive. Not-applicable expectations are excluded from the case verdict but recorded. Expectation verdicts are retained so per-decision totals are counted, not inferred.",
+          "expectations": [
+            {
+              "index": 0,
+              "decision": 8,
+              "id": null,
+              "stance": "repeat",
+              "rule": "Caveats are per-answer, not per-session",
+              "expected": "The caveat that applies to this answer appears in this answer, in full, not shortened to a reference to an earlier turn.",
+              "check": "semantic",
+              "check_op": null,
+              "operands": null,
+              "evidenceRequired": "Presence and completeness of the applicable caveat in the follow-up response.",
+              "condition": null,
+              "pass": "The expected behaviour is present.",
+              "fail": "The response contradicts the expected behaviour.",
+              "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+              "verdict": "unsettled",
+              "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+              "computed": false
+            }
+          ],
+          "caseVerdict": "unsettled",
+          "caseVerdictWhy": "an applicable expectation awaits adjudication against the retained evidence",
+          "adjudicationRequired": 1
+        },
+        "threw": null,
+        "followsSetupTurns": 5,
+        "sourceLogId": 4461
+      },
+      "inconclusive": false,
+      "scoredJudgedOnItsOwnEvidence": true,
+      "rateLimited": false
+    }
+  ]
+}

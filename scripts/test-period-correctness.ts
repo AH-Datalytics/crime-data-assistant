@@ -63,7 +63,7 @@ function check(cond: boolean, message: string) {
   if (!cond) { failures++; console.log(`  FAIL  ${message}`); }
 }
 
-const CAP = "audit/correctness-repeat-2026-09-09/run/turns.jsonl";
+const CAP = "scripts/fixtures/retained-evidence/correctness-repeat-turns.jsonl"; // retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json
 const turns = fs.readFileSync(CAP, "utf8").trim().split(/\r?\n/).map((l) => JSON.parse(l));
 const parsed = (id: string, idx: number) => {
   const t = turns.find((x) => x.turn.caseId === id && x.turn.turnIndex === idx);

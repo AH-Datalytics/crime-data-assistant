@@ -60,7 +60,7 @@ function check(name: string, ok: boolean, detail = "") {
 
 /* ── the retained conversation, not a reconstruction of one ──────────────────────────── */
 const REVIEW = JSON.parse(readFileSync(
-  "audit/phase3-cause-cd-2026-09-25/codex-review/history-and-contract.json", "utf8")) as {
+  "scripts/fixtures/retained-evidence/gc004-history-and-contract.json", "utf8" /* retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json */)) as {
     results: Array<{ id: string; question: string; history: { sent: Array<{ role: string; content: string; source?: string }> } }>;
   };
 const GC004 = REVIEW.results.find((r) => r.id === "GC-004")!;
@@ -70,7 +70,7 @@ const FOLLOW_UP = GC004.question;
 
 /* ── the saved statement, read from the capture ──────────────────────────────────────── */
 const CAPTURE = JSON.parse(readFileSync(
-  "audit/model-qualification-run-2026-09-24/evidence/retained-evidence.json", "utf8")) as {
+  "scripts/fixtures/retained-evidence/qualification-retained-cases.json", "utf8" /* retained input packaged 2026-09-30; source digest and extraction rule in scripts/fixtures/retained-evidence/MANIFEST.json */)) as {
     cases: Array<{ case: string; scored: { observed: { modelOutputs?: Array<{ text: string }> } } }>;
   };
 function savedSql(id: string, index: number): string {

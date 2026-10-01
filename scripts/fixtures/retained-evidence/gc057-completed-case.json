@@ -1,0 +1,315 @@
+[
+  {
+    "case": "GC-057",
+    "setupTurns": [],
+    "scored": {
+      "case": "GC-057",
+      "tab": "current",
+      "route": "app/api/query/route.ts",
+      "sourceMode": "declared-source",
+      "sourceMarker": "03bde6a9243c94ec98df97e8c2edc9597389ca73f93a8142b6d3b6080ae43bf8",
+      "sourceStableBefore": true,
+      "sourceStableAfter": true,
+      "sourceMoved": [],
+      "ms": 2061,
+      "calls": 0,
+      "counts": [],
+      "transportErrors": [],
+      "refusedDispatches": [],
+      "historyTrimming": null,
+      "observed": {
+        "status": 200,
+        "stage": "pre-model",
+        "sql": "SELECT am.agency AS city, am.state AS state, SUM(am.count) AS offenses, ap.population AS population, ROUND(SUM(am.count) * 100000.0 / ap.population, 2) AS rate_per_100k, MIN(am.month) AS first_month, MAX(am.month) AS last_month FROM agency_monthly am JOIN agency_population ap ON ap.ori = am.ori AND ap.year = am.year WHERE am.offense = 'Murder' AND am.year = 2024 AND am.type = 'City' AND ap.population > 0 GROUP BY am.ori, am.agency, am.state, ap.population ORDER BY rate_per_100k DESC LIMIT 20",
+        "sqlGenerated": null,
+        "sqlRejectedByApplication": false,
+        "rows": [
+          {
+            "city": "Birmingham",
+            "state": "AL",
+            "offenses": 139,
+            "population": 195418,
+            "rate_per_100k": 71.13,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "St Louis",
+            "state": "MO",
+            "offenses": 150,
+            "population": 277294,
+            "rate_per_100k": 54.09,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Memphis",
+            "state": "TN",
+            "offenses": 250,
+            "population": 613207,
+            "rate_per_100k": 40.77,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Baton Rouge",
+            "state": "LA",
+            "offenses": 83,
+            "population": 217387,
+            "rate_per_100k": 38.18,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Portsmouth",
+            "state": "VA",
+            "offenses": 36,
+            "population": 97156,
+            "rate_per_100k": 37.05,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Baltimore",
+            "state": "MD",
+            "offenses": 197,
+            "population": 566632,
+            "rate_per_100k": 34.77,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "New Orleans",
+            "state": "LA",
+            "offenses": 124,
+            "population": 361802,
+            "rate_per_100k": 34.27,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Detroit",
+            "state": "MI",
+            "offenses": 203,
+            "population": 651171,
+            "rate_per_100k": 31.17,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Cleveland",
+            "state": "OH",
+            "offenses": 111,
+            "population": 362762,
+            "rate_per_100k": 30.6,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Harrisburg",
+            "state": "PA",
+            "offenses": 15,
+            "population": 49985,
+            "rate_per_100k": 30.01,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "North Little Rock",
+            "state": "AR",
+            "offenses": 19,
+            "population": 64487,
+            "rate_per_100k": 29.46,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Dayton",
+            "state": "OH",
+            "offenses": 39,
+            "population": 134857,
+            "rate_per_100k": 28.92,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Kansas City",
+            "state": "MO",
+            "offenses": 141,
+            "population": 511437,
+            "rate_per_100k": 27.57,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Shreveport",
+            "state": "LA",
+            "offenses": 47,
+            "population": 175092,
+            "rate_per_100k": 26.84,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Washington",
+            "state": "DC",
+            "offenses": 187,
+            "population": 702250,
+            "rate_per_100k": 26.63,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Albany",
+            "state": "GA",
+            "offenses": 17,
+            "population": 66169,
+            "rate_per_100k": 25.69,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Jackson",
+            "state": "TN",
+            "offenses": 17,
+            "population": 68286,
+            "rate_per_100k": 24.9,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Atlanta",
+            "state": "GA",
+            "offenses": 122,
+            "population": 517123,
+            "rate_per_100k": 23.59,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Pueblo",
+            "state": "CO",
+            "offenses": 26,
+            "population": 110805,
+            "rate_per_100k": 23.46,
+            "first_month": 1,
+            "last_month": 12
+          },
+          {
+            "city": "Milwaukee",
+            "state": "WI",
+            "offenses": 131,
+            "population": 560416,
+            "rate_per_100k": 23.38,
+            "first_month": 1,
+            "last_month": 12
+          }
+        ],
+        "answer": "Cities by Murder Rate per 100,000, 2024. `first_month` and `last_month` are the earliest and latest month each city has records for here. Cities with different spans are not comparable on a count, and these two numbers do not rule out missing months in between. Ranking result limit: 20 rows.\n\nComparison includes: First Month, Last Month.",
+        "modelOutputs": [],
+        "dispatchErrors": [],
+        "routeGuardRetries": 0,
+        "purposes": [],
+        "error": null,
+        "rateLimited": false,
+        "failure": "stage pre-model",
+        "answered": false
+      },
+      "judged": {
+        "case": "GC-057",
+        "caseVerdictRule": "Fail if any applicable expectation fails. Pass only if every applicable expectation passes. Inconclusive if none fails and at least one is inconclusive. Not-applicable expectations are excluded from the case verdict but recorded. Expectation verdicts are retained so per-decision totals are counted, not inferred.",
+        "expectations": [
+          {
+            "index": 0,
+            "decision": 5,
+            "id": null,
+            "stance": "default",
+            "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+            "expected": "The generated query carries an explicit limit of 20.",
+            "check": "mechanical",
+            "check_op": "sql_limit_eq",
+            "operands": {
+              "value": 20
+            },
+            "evidenceRequired": "The generated SQL carries an explicit row limit equal to the operand. Operands: value (integer).",
+            "condition": null,
+            "pass": "The expected behaviour is present.",
+            "fail": "The response contradicts the expected behaviour.",
+            "inconclusive": "The evidence the operation needs is absent from the capture.",
+            "verdict": "pass",
+            "why": "explicit LIMIT 20, operand 20",
+            "observedValue": 20,
+            "computed": true
+          },
+          {
+            "index": 1,
+            "decision": 5,
+            "id": null,
+            "stance": "default",
+            "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+            "expected": "Returns no more than 20 rows.",
+            "check": "mechanical",
+            "check_op": "rows_count",
+            "operands": {
+              "op": "lte",
+              "value": 20
+            },
+            "evidenceRequired": "Compare the number of data rows returned. Operands: op (eq|gte|lte), value (integer).",
+            "condition": null,
+            "pass": "The expected behaviour is present.",
+            "fail": "The response contradicts the expected behaviour.",
+            "inconclusive": "The evidence the operation needs is absent from the capture.",
+            "verdict": "pass",
+            "why": "rows_count 20 lte 20",
+            "observedValue": 20,
+            "computed": true
+          },
+          {
+            "index": 2,
+            "decision": 5,
+            "id": null,
+            "stance": "default",
+            "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+            "expected": "Applies no eligibility filter the user did not request. A mathematically necessary population > 0 denominator guard is not an eligibility floor and does not fail this.",
+            "check": "semantic",
+            "check_op": null,
+            "operands": null,
+            "evidenceRequired": "The saved SQL, read for an unsolicited population or volume threshold on the ranked set.",
+            "condition": null,
+            "pass": "The expected behaviour is present.",
+            "fail": "The response contradicts the expected behaviour.",
+            "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+            "verdict": "unsettled",
+            "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+            "computed": false
+          },
+          {
+            "index": 3,
+            "decision": 5,
+            "id": null,
+            "stance": "default",
+            "rule": "Rankings apply no eligibility filter; default limit is a result count and is stated",
+            "expected": "States the limit it used.",
+            "check": "semantic",
+            "check_op": null,
+            "operands": null,
+            "evidenceRequired": "The stated limit.",
+            "condition": null,
+            "pass": "The expected behaviour is present.",
+            "fail": "The response contradicts the expected behaviour.",
+            "inconclusive": "The frozen rule does not permit a confident judgement from the saved response.",
+            "verdict": "unsettled",
+            "why": "a semantic check is judged against the complete retained evidence, not by string match. It is emitted for adjudication; this is capture-time unsettled, not unscorable.",
+            "computed": false
+          }
+        ],
+        "caseVerdict": "unsettled",
+        "caseVerdictWhy": "an applicable expectation awaits adjudication against the retained evidence",
+        "adjudicationRequired": 2
+      },
+      "threw": null
+    },
+    "inconclusive": false,
+    "rateLimited": false
+  }
+]

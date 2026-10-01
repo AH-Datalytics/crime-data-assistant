@@ -1,0 +1,961 @@
+{
+  "kind": "Codex pure saved-SQL review",
+  "sourceHash": "14f500f403b14b0fbf5c26208f8a5a394b8ed3a8d0595e325e74f5383a5124f8",
+  "databaseQueries": 0,
+  "modelCalls": 0,
+  "rows": [
+    {
+      "caseId": "GC-032",
+      "question": "what share of serious violent crimes in California are committed by youth under 18?",
+      "source": "nibrs",
+      "sql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS pct_under_18, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS under_18_offenders, SUM(d.offender_count) AS total_offenders FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.year BETWEEN 2021 AND 2025 AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') LIMIT 1000",
+      "loggedError": "contract_second_failure:structural-measure-unit-unmodeled",
+      "boundedModelResponse": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "capturedContract": {
+        "source": "nibrs",
+        "geography": {
+          "kind": "state",
+          "name": "California",
+          "state": "CA",
+          "canonicalName": "California",
+          "confidence": "high",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "state",
+            "name": "California",
+            "state": "CA",
+            "canonicalName": "California",
+            "confidence": "high",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "crime",
+          "offenseCodes": [],
+          "offenses": [],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "reconstructedContract": {
+        "source": "nibrs",
+        "geography": {
+          "kind": "state",
+          "name": "California",
+          "state": "CA",
+          "canonicalName": "California",
+          "confidence": "high",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "state",
+            "name": "California",
+            "state": "CA",
+            "canonicalName": "California",
+            "confidence": "high",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "crime",
+          "offenseCodes": [],
+          "offenses": [],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "diagnosticContext": "Saved single logged SQL; original/retry distinction unavailable. Default validator routing context reconstructed, not a route replay.",
+      "validation": {
+        "sql": "SELECT ROUND(100.0 * SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) / SUM(d.offender_count), 1) AS pct_under_18, SUM(CASE WHEN d.age_group = 'Under 18' THEN d.offender_count ELSE 0 END) AS under_18_offenders, SUM(d.offender_count) AS total_offenders FROM summary_offender_demographics d WHERE d.state = 'CA' AND d.year BETWEEN 2021 AND 2025 AND d.ucr_offense_code IN ('09A','11A','11B','11C','120','13A') LIMIT 1000",
+        "fired": [],
+        "warnings": [
+          "structural-measure-unit-unmodeled"
+        ],
+        "capabilityFindings": [],
+        "retryIssues": [
+          "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are state-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+        ],
+        "blockReasons": [],
+        "enforced": [
+          "structural-measure-unit-unmodeled"
+        ]
+      },
+      "structuralWithCapturedContract": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `summary_offender_demographics` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        }
+      ]
+    },
+    {
+      "caseId": "GC-033",
+      "question": "What percentage of murder victims in Texas were male in 2023?",
+      "source": "shr",
+      "sql": "SELECT v.sex, COUNT(*) as victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'TX' AND i.year = 2023 AND i.homicide_type = 'Murder' GROUP BY v.sex ORDER BY victims DESC LIMIT 1000",
+      "loggedError": "contract_second_failure:structural-measure-unit-unmodeled",
+      "boundedModelResponse": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "capturedContract": {
+        "source": "shr",
+        "geography": {
+          "kind": "state",
+          "name": "Texas",
+          "state": "TX",
+          "canonicalName": "Texas",
+          "confidence": "high",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "state",
+            "name": "Texas",
+            "state": "TX",
+            "canonicalName": "Texas",
+            "confidence": "high",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2023,
+          "endYear": 2023,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [
+          "sex"
+        ],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "reconstructedContract": {
+        "source": "shr",
+        "geography": {
+          "kind": "state",
+          "name": "Texas",
+          "state": "TX",
+          "canonicalName": "Texas",
+          "confidence": "high",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "state",
+            "name": "Texas",
+            "state": "TX",
+            "canonicalName": "Texas",
+            "confidence": "high",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2023,
+          "endYear": 2023,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [
+          "sex"
+        ],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "diagnosticContext": "Saved single logged SQL; original/retry distinction unavailable. Default validator routing context reconstructed, not a route replay.",
+      "validation": {
+        "sql": "SELECT v.sex, COUNT(*) as victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'TX' AND i.year = 2023 AND i.homicide_type = 'Murder' GROUP BY v.sex ORDER BY victims DESC LIMIT 1000",
+        "fired": [],
+        "warnings": [
+          "structural-measure-unit-unmodeled"
+        ],
+        "capabilityFindings": [],
+        "retryIssues": [
+          "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are state-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]",
+          "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `incidents` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are state-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+        ],
+        "blockReasons": [],
+        "enforced": [
+          "structural-measure-unit-unmodeled"
+        ]
+      },
+      "structuralWithCapturedContract": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        },
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `incidents` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "state",
+          "series": null
+        }
+      ]
+    },
+    {
+      "caseId": "GC-034",
+      "question": "Share of murder victims with an unknown relationship by sex and year",
+      "source": "shr",
+      "sql": "SELECT i.year, v.sex, SUM(CASE WHEN i.relationship = 'Unknown' OR i.relationship IS NULL THEN 1 ELSE 0 END) as unknown_relationship_victims, SUM(CASE WHEN i.relationship != 'Unknown' AND i.relationship IS NOT NULL THEN 1 ELSE 0 END) as known_relationship_victims, COUNT(*) as total_victims, ROUND(100.0 * SUM(CASE WHEN i.relationship = 'Unknown' OR i.relationship IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) as pct_unknown FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND v.sex IN ('Male', 'Female') GROUP BY i.year, v.sex ORDER BY i.year, v.sex LIMIT 1000",
+      "loggedError": "contract_second_failure:structural-measure-unit-unmodeled",
+      "boundedModelResponse": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "capturedContract": {
+        "source": "shr",
+        "geography": {
+          "kind": "unknown",
+          "name": null,
+          "state": null,
+          "canonicalName": null,
+          "confidence": "low",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "unknown",
+            "name": null,
+            "state": null,
+            "canonicalName": null,
+            "confidence": "low",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [
+          "sex"
+        ],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "reconstructedContract": {
+        "source": "shr",
+        "geography": {
+          "kind": "unknown",
+          "name": null,
+          "state": null,
+          "canonicalName": null,
+          "confidence": "low",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "unknown",
+            "name": null,
+            "state": null,
+            "canonicalName": null,
+            "confidence": "low",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [
+          "sex"
+        ],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "diagnosticContext": "Saved single logged SQL; original/retry distinction unavailable. Default validator routing context reconstructed, not a route replay.",
+      "validation": {
+        "sql": "SELECT i.year, v.sex, SUM(CASE WHEN i.relationship = 'Unknown' OR i.relationship IS NULL THEN 1 ELSE 0 END) as unknown_relationship_victims, SUM(CASE WHEN i.relationship != 'Unknown' AND i.relationship IS NOT NULL THEN 1 ELSE 0 END) as known_relationship_victims, COUNT(*) as total_victims, ROUND(100.0 * SUM(CASE WHEN i.relationship = 'Unknown' OR i.relationship IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) as pct_unknown FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.homicide_type = 'Murder' AND v.sex IN ('Male', 'Female') GROUP BY i.year, v.sex ORDER BY i.year, v.sex LIMIT 1000",
+        "fired": [],
+        "warnings": [
+          "structural-measure-unit-unmodeled"
+        ],
+        "capabilityFindings": [],
+        "retryIssues": [
+          "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are unknown-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]",
+          "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `incidents` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are unknown-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+        ],
+        "blockReasons": [],
+        "enforced": [
+          "structural-measure-unit-unmodeled"
+        ]
+      },
+      "structuralWithCapturedContract": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "unknown",
+          "series": null
+        },
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `incidents` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "unknown",
+          "series": null
+        }
+      ]
+    },
+    {
+      "caseId": "GC-035",
+      "question": "ratio of male to female homicide victims in philadelphia by year since 2010",
+      "source": "shr",
+      "sql": "SELECT i.year, SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END) as male_victims, SUM(CASE WHEN v.sex = 'Female' THEN 1 ELSE 0 END) as female_victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.ori = 'PAPEP00' AND i.year >= 2010 AND i.homicide_type = 'Murder' GROUP BY i.year ORDER BY i.year LIMIT 100",
+      "loggedError": "contract_second_failure:structural-measure-unit-unmodeled",
+      "boundedModelResponse": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "capturedContract": {
+        "source": "shr",
+        "geography": {
+          "kind": "city",
+          "name": "Philadelphia",
+          "state": "PA",
+          "canonicalName": "Philadelphia, PA",
+          "confidence": "high",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "city",
+            "name": "Philadelphia",
+            "state": "PA",
+            "canonicalName": "Philadelphia, PA",
+            "confidence": "high",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2010,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [
+          "year",
+          "sex"
+        ],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "reconstructedContract": {
+        "source": "shr",
+        "geography": {
+          "kind": "city",
+          "name": "Philadelphia",
+          "state": "PA",
+          "canonicalName": "Philadelphia, PA",
+          "confidence": "high",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "city",
+            "name": "Philadelphia",
+            "state": "PA",
+            "canonicalName": "Philadelphia, PA",
+            "confidence": "high",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "ratio",
+          "numerator": null,
+          "denominator": null,
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": 2010,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [
+          "year",
+          "sex"
+        ],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "diagnosticContext": "Saved single logged SQL; original/retry distinction unavailable. Default validator routing context reconstructed, not a route replay.",
+      "validation": {
+        "sql": "SELECT i.year, SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END) as male_victims, SUM(CASE WHEN v.sex = 'Female' THEN 1 ELSE 0 END) as female_victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.ori = 'PAPEP00' AND i.year >= 2010 AND i.homicide_type = 'Murder' GROUP BY i.year ORDER BY i.year LIMIT 100",
+        "fired": [],
+        "warnings": [
+          "structural-measure-unit-unmodeled"
+        ],
+        "capabilityFindings": [],
+        "retryIssues": [
+          "[SYSTEM: Query contract violation (structural-measure-unit-unmodeled). The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed. Rewrite the SQL against a table whose rows are city-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+        ],
+        "blockReasons": [],
+        "enforced": [
+          "structural-measure-unit-unmodeled"
+        ]
+      },
+      "structuralWithCapturedContract": [
+        {
+          "ruleId": "structural-measure-unit-unmodeled",
+          "severity": "retry",
+          "message": "The question asks for a ratio, and `victims` does not model one -- a share needs a numerator and a denominator, and neither is established here. Return the underlying counts, or say plainly that this cannot be computed.",
+          "requestedLevel": "city",
+          "series": null
+        }
+      ]
+    },
+    {
+      "caseId": "GC-039",
+      "question": "Show me the cities with the highest sexual assault rate per 100,000",
+      "source": "current",
+      "sql": "",
+      "loggedError": null,
+      "boundedModelResponse": "I could not generate a database query for that request in the Current Trends source. Please restate it with the place, offense, and date range you want.",
+      "capturedContract": {
+        "source": "current",
+        "geography": {
+          "kind": "unknown",
+          "name": null,
+          "state": null,
+          "canonicalName": null,
+          "confidence": "low",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "unknown",
+            "name": null,
+            "state": null,
+            "canonicalName": null,
+            "confidence": "low",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "unknown",
+          "offenseCodes": [],
+          "offenses": [],
+          "unit": "rate_per_100k",
+          "numerator": null,
+          "denominator": "population",
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "reconstructedContract": {
+        "source": "current",
+        "geography": {
+          "kind": "unknown",
+          "name": null,
+          "state": null,
+          "canonicalName": null,
+          "confidence": "low",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "unknown",
+            "name": null,
+            "state": null,
+            "canonicalName": null,
+            "confidence": "low",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "unknown",
+          "offenseCodes": [],
+          "offenses": [],
+          "unit": "rate_per_100k",
+          "numerator": null,
+          "denominator": "population",
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "diagnosticContext": "Saved single logged SQL; original/retry distinction unavailable. Default validator routing context reconstructed, not a route replay.",
+      "validation": null,
+      "structuralWithCapturedContract": null
+    },
+    {
+      "caseId": "GC-097",
+      "question": "Which state has the highest murder rate?",
+      "source": "nibrs",
+      "sql": "SELECT state, SUM(victim_count) AS murders, SUM(a.population * rpt.months_reported / 12.0) AS adj_population, ROUND(SUM(victim_count) * 100000.0 / SUM(a.population * rpt.months_reported / 12.0), 1) AS rate_per_100k FROM summary_victim_city_monthly s JOIN agencies a ON a.state = s.state AND a.year = s.year JOIN (SELECT ori, year, months_reported FROM nibrs_agency_completeness) rpt ON rpt.ori = a.ori AND rpt.year = a.year WHERE s.ucr_offense_code = '09A' AND s.year BETWEEN 2021 AND 2025 GROUP BY s.state ORDER BY rate_per_100k DESC LIMIT 1",
+      "loggedError": "contract_second_failure:structural-returned-series-unresolved",
+      "boundedModelResponse": "I couldn't build a reliable query that matched the requested source, geography, metric, and time period. Try narrowing the question or choosing one of the suggested alternatives.",
+      "capturedContract": {
+        "source": "nibrs",
+        "geography": {
+          "kind": "unknown",
+          "name": null,
+          "state": null,
+          "canonicalName": null,
+          "confidence": "low",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "unknown",
+            "name": null,
+            "state": null,
+            "canonicalName": null,
+            "confidence": "low",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "rate_per_100k",
+          "numerator": null,
+          "denominator": "population",
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "reconstructedContract": {
+        "source": "nibrs",
+        "geography": {
+          "kind": "unknown",
+          "name": null,
+          "state": null,
+          "canonicalName": null,
+          "confidence": "low",
+          "needsClarification": []
+        },
+        "geographies": [
+          {
+            "kind": "unknown",
+            "name": null,
+            "state": null,
+            "canonicalName": null,
+            "confidence": "low",
+            "needsClarification": []
+          }
+        ],
+        "metric": {
+          "topic": "murder",
+          "offenseCodes": [
+            "09A"
+          ],
+          "offenses": [
+            {
+              "topic": "murder",
+              "codes": [
+                "09A"
+              ],
+              "label": "Murders"
+            }
+          ],
+          "unit": "rate_per_100k",
+          "numerator": null,
+          "denominator": "population",
+          "unsupportedReason": null
+        },
+        "time": {
+          "startYear": null,
+          "endYear": null,
+          "partialYear": false,
+          "returnedPeriodRequired": false
+        },
+        "breakdowns": [],
+        "comparability": {
+          "continuousReporters": false,
+          "partialYearDisclosure": false
+        },
+        "followup": {
+          "isFollowup": false,
+          "operation": null
+        },
+        "warnings": []
+      },
+      "diagnosticContext": "Saved single logged SQL; original/retry distinction unavailable. Default validator routing context reconstructed, not a route replay.",
+      "validation": {
+        "sql": "SELECT state, SUM(victim_count) AS murders, SUM(a.population * rpt.months_reported / 12.0) AS adj_population, ROUND(SUM(victim_count) * 100000.0 / SUM(a.population * rpt.months_reported / 12.0), 1) AS rate_per_100k FROM summary_victim_city_monthly s JOIN agencies a ON a.state = s.state AND a.year = s.year JOIN (SELECT ori, year, months_reported FROM nibrs_agency_completeness) rpt ON rpt.ori = a.ori AND rpt.year = a.year WHERE s.ucr_offense_code = '09A' AND s.year BETWEEN 2021 AND 2025 GROUP BY s.state ORDER BY rate_per_100k DESC LIMIT 1",
+        "fired": [],
+        "warnings": [
+          "structural-returned-series-unresolved"
+        ],
+        "capabilityFindings": [],
+        "retryIssues": [
+          "[SYSTEM: Query contract violation (structural-returned-series-unresolved). The returned value \"adj_population\" could not be traced to a source table, so nothing proves it measures what was asked for. Qualify each column with its table. Rewrite the SQL against a table whose rows are state-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]",
+          "[SYSTEM: Query contract violation (structural-returned-series-unresolved). The returned value \"rate_per_100k\" could not be traced to a source table, so nothing proves it measures what was asked for. Qualify each column with its table. Rewrite the SQL against a table whose rows are state-level, or say plainly that this source cannot answer the question. Do not substitute a different geography or measure.]"
+        ],
+        "blockReasons": [],
+        "enforced": [
+          "structural-returned-series-unresolved"
+        ]
+      },
+      "structuralWithCapturedContract": [
+        {
+          "ruleId": "structural-returned-series-unresolved",
+          "severity": "retry",
+          "message": "The returned value \"adj_population\" could not be traced to a source table, so nothing proves it measures what was asked for. Qualify each column with its table.",
+          "requestedLevel": "state",
+          "series": "adj_population"
+        },
+        {
+          "ruleId": "structural-returned-series-unresolved",
+          "severity": "retry",
+          "message": "The returned value \"rate_per_100k\" could not be traced to a source table, so nothing proves it measures what was asked for. Qualify each column with its table.",
+          "requestedLevel": "state",
+          "series": "rate_per_100k"
+        }
+      ],
+      "lineage": {
+        "parsed": true,
+        "unsupportedShape": null,
+        "items": [
+          {
+            "alias": null,
+            "raw": "state",
+            "refs": [
+              {
+                "table": null,
+                "column": "state",
+                "candidates": [
+                  "summary_victim_city_monthly",
+                  "agencies",
+                  "nibrs_agency_completeness"
+                ]
+              }
+            ],
+            "denominatorRefs": null,
+            "countsRows": false,
+            "hasWildcard": false,
+            "numericWithoutColumns": false,
+            "resolved": true
+          },
+          {
+            "alias": "murders",
+            "raw": "SUM(victim_count) AS murders",
+            "refs": [
+              {
+                "table": null,
+                "column": "victim_count",
+                "candidates": [
+                  "summary_victim_city_monthly",
+                  "agencies",
+                  "nibrs_agency_completeness"
+                ]
+              }
+            ],
+            "denominatorRefs": null,
+            "countsRows": false,
+            "hasWildcard": false,
+            "numericWithoutColumns": false,
+            "resolved": true
+          },
+          {
+            "alias": "adj_population",
+            "raw": "SUM(a.population * rpt.months_reported / 12.0) AS adj_population",
+            "refs": [
+              {
+                "table": "agencies",
+                "column": "population"
+              },
+              {
+                "table": null,
+                "column": "months_reported"
+              }
+            ],
+            "denominatorRefs": [],
+            "countsRows": false,
+            "hasWildcard": false,
+            "numericWithoutColumns": false,
+            "resolved": false
+          },
+          {
+            "alias": "rate_per_100k",
+            "raw": "ROUND(SUM(victim_count) * 100000.0 / SUM(a.population * rpt.months_reported / 12.0), 1) AS rate_per_100k",
+            "refs": [
+              {
+                "table": "agencies",
+                "column": "population"
+              },
+              {
+                "table": null,
+                "column": "months_reported"
+              },
+              {
+                "table": null,
+                "column": "victim_count",
+                "candidates": [
+                  "summary_victim_city_monthly",
+                  "agencies",
+                  "nibrs_agency_completeness"
+                ]
+              }
+            ],
+            "denominatorRefs": [
+              {
+                "table": "agencies",
+                "column": "population"
+              },
+              {
+                "table": null,
+                "column": "months_reported"
+              }
+            ],
+            "countsRows": false,
+            "hasWildcard": false,
+            "numericWithoutColumns": false,
+            "resolved": false
+          }
+        ],
+        "baseTables": [
+          "summary_victim_city_monthly",
+          "agencies",
+          "nibrs_agency_completeness"
+        ]
+      }
+    }
+  ]
+}
