@@ -131,6 +131,8 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [activeExchangeIdx, setActiveExchangeIdx] = useState(-1);
   const [expandedRailIdx, setExpandedRailIdx] = useState(-1);
+  // Narrow screens hide the rail, so a chart/table answer's explanation is shown in the stage instead.
+  const [expandedStageIdx, setExpandedStageIdx] = useState(-1);
   const [animateIdx, setAnimateIdx] = useState(-1);
   const [showTutorial, setShowTutorial] = useState(false);
 
@@ -391,6 +393,29 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
       </button>
     </div>
   ) : null;
+  // One source selector, rendered in the header once a conversation has started AND in the landing
+  // input bar, so the choice can be made before the first question and stays visible after it. It
+  // only sets `source`; nothing is dispatched until Ask.
+  const renderSourceSelect = (variant: "header" | "landing") => (
+    <div className={`shrink-0 relative ${variant === "landing" ? "self-start" : ""}`}>
+      <label htmlFor={`source-select-${variant}`} className="sr-only">Data source</label>
+      <select
+        id={`source-select-${variant}`}
+        aria-label="Data source"
+        value={source}
+        onChange={(e) => { setSource(e.target.value as SourceId); setShowDisambiguation(false); }}
+        className={variant === "landing"
+          ? "appearance-none pl-3 pr-8 py-2.5 text-[13px] font-medium rounded-xl border border-[var(--border)] bg-white shadow-sm cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-2 focus:ring-[#475EC7]/20"
+          : "appearance-none pl-2.5 pr-7 py-1.5 text-[11px] font-medium rounded-md border border-[var(--border)] bg-[var(--surface)] cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20"}
+        style={{ color: SOURCE_OPTIONS.find(o => o.id === source)?.color || "var(--foreground)" }}
+      >
+        {SOURCE_OPTIONS.map(opt => (
+          <option key={opt.id} value={opt.id}>{opt.label}</option>
+        ))}
+      </select>
+      <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round"><path d="M2 3.5l3 3 3-3"/></svg>
+    </div>
+  );
   const rerunControl = canCrossSourceRerun && !loading && rerunSourceOptions.length > 0 ? (
     <div className="relative shrink-0">
       <select
@@ -468,19 +493,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
               </svg>
               <span className="hidden sm:inline">Tutorial</span>
             </button>
-            <div className="shrink-0 relative">
-              <select
-                value={source}
-                onChange={(e) => { setSource(e.target.value as SourceId); setShowDisambiguation(false); }}
-                className="appearance-none pl-2.5 pr-7 py-1.5 text-[11px] font-medium rounded-md border border-[var(--border)] bg-[var(--surface)] cursor-pointer focus:outline-none focus:border-[#475EC7] focus:ring-1 focus:ring-[#475EC7]/20"
-                style={{ color: SOURCE_OPTIONS.find(o => o.id === source)?.color || "var(--foreground)" }}
-              >
-                {SOURCE_OPTIONS.map(opt => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </select>
-              <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round"><path d="M2 3.5l3 3 3-3"/></svg>
-            </div>
+            {renderSourceSelect("header")}
           </>)}
         </div>
       </header>
@@ -536,6 +549,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                     <QueryGuidance input={input} onChangeInput={setGuidedInput} showExamples={false} floating onFloatingOpenChange={setLandingGuidanceOpen} onApplyAction={handleAsk} attentionSignal={guidanceAttention} />
                     <QueryPlanChips input={input} selectedSource={source} activeSource={activeSource} />
                   </div>
+                {renderSourceSelect("landing")}
                 <button
                   type="submit"
                   disabled={inputSubmitDisabled}
@@ -702,6 +716,31 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                   </div>
                 )}
                 {sourceNudgeBanner}
+
+                {/* Explanation on narrow screens. At 700px and wider it is in the left rail; below that the
+                    rail is hidden, and a chart/table answer would otherwise reach the user without its
+                    period, coverage and method disclosures. Same text and the same clamp as the rail. */}
+                {explanation && (() => {
+                  const stageExpanded = expandedStageIdx === activeExchangeIdx;
+                  return (
+                    <div className="min-[700px]:hidden mb-2 shrink-0 bg-white border border-[var(--border)] rounded-md px-3 py-2" data-testid="stage-explanation">
+                      <div className={`text-[12px] text-[var(--foreground)] leading-relaxed ${stageExpanded ? "max-h-[45vh] overflow-y-auto" : "line-clamp-6"}`}>
+                        {renderInlineMarkdown(explanation)}
+                      </div>
+                      {explanation.length > 80 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedStageIdx(stageExpanded ? -1 : activeExchangeIdx)}
+                          aria-expanded={stageExpanded}
+                          className="text-[11px] mt-1 cursor-pointer"
+                          style={{ color: accentColor }}
+                        >
+                          {stageExpanded ? "Show less" : "Show more"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Toolbar */}
                 <div className="flex items-center justify-between mb-2 sm:mb-3 shrink-0 flex-wrap gap-1">
