@@ -33,6 +33,7 @@ import {
 import { buildCityRanking, resolvePeriod, IDENTITY_UNIQUENESS } from "../lib/city-ranking-builder";
 import { validateQueryContractSql, queryContractFailureMessage } from "../lib/query-contract-validator";
 import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard";
+import { buildQueryContract } from "../lib/query-contract";
 
 let passed = 0;
 let failed = 0;
@@ -1175,6 +1176,23 @@ check("NATIONAL (NR-1) — a state stated by postal code is never swallowed into
   }
 });
 
+check("WHAT/WHICH — a state city ranking worded 'What cities in <state>' passes the route's structural proof, as 'Which' does", () => {
+  // The defect (2026-10-01 witness, nibrs-what-state): on NIBRS "What cities in Illinois had the highest murder
+  // rates" built the state ranking but the route refused it, structural-rate-denominator-unbound.
+  for (const [source, db] of [["nibrs", nibrs], ["current", current]] as const) {
+    for (const state of ["Illinois", "Texas", "Michigan", "Louisiana"]) {
+      for (const lead of ["What", "Which"]) {
+        const question = `${lead} cities in ${state} had the highest murder rates in 2025?`;
+        const { plan, built } = run(db, question, source);
+        assert.equal(plan.scope.kind, "state", question);
+        for (const sql of [built.sql, ...(built.completeness ? [built.completeness.candidatesSql] : [])]) {
+          assert.equal(deterministicPlanRefusal({ question, source, sql }), null, `${source}: ${question}`);
+        }
+      }
+    }
+  }
+});
+
 check("NATIONAL — accepted ranking constraints still apply to a national request", () => {
   // NIBRS reporting-jurisdiction limitation (GC-057) is unchanged by a national qualifier.
   declined("Which US jurisdictions had the highest murder rates in 2025?", "nibrs", "jurisdiction-unavailable-nibrs");
@@ -1188,8 +1206,14 @@ check("NATIONAL — accepted ranking constraints still apply to a national reque
 check("NATIONAL — the route's structural proof accepts a stated national scope through its assembled scope", () => {
   // The routes validate an owned ranking against rankingValidationContract (the question less its
   // claimed national words), not the raw question, whose "U.S." reads as national row level.
-  let rawRefusals = 0;
+  let contractHonored = 0;
   for (const [source, db, measure] of [["current", current, "rape"], ["nibrs", nibrs, "murder"]] as const) {
+    // A deliberately STATE-level contract for the same statements. If the guard ignored the contract it is
+    // handed (validating the raw question instead), these would be accepted -- so a refusal here proves
+    // the plumbing honors the contract. (The raw national question can no longer serve as this witness:
+    // since the "what cities" row-level cue, 2026-10-02, "What cities in the United States ..." reads as
+    // city rows without the adapter too.)
+    const stateLevel = buildQueryContract(`What is the ${measure} rate in Illinois in 2025?`, source);
     assert.equal(rankingValidationContract(`What cities had the highest ${measure} rates in 2025?`, source), null,
       "an unqualified request keeps the question's own contract");
     assert.equal(rankingValidationContract("Which cities in Texas have the highest murder rates in 2025?", source), null,
@@ -1205,11 +1229,15 @@ check("NATIONAL — the route's structural proof accepts a stated national scope
       for (const sql of statements) {
         assert.equal(deterministicPlanRefusal({ question, source, sql, contract }), null,
           `${form} (${source}): accepted with the assembled scope`);
-        if (deterministicPlanRefusal({ question, source, sql })) rawRefusals++;
+        // A question with NO row-level cue, so the level comes from the contract: accepted on its own contract
+        // (unknown level), refused when the state-level contract is handed in.
+        const neutral = `${measure} rates in 2025`;
+        if (built.sql === sql && deterministicPlanRefusal({ question: neutral, source, sql }) === null
+          && deterministicPlanRefusal({ question: neutral, source, sql, contract: stateLevel })) contractHonored++;
       }
     }
   }
-  assert.ok(rawRefusals > 0, "the raw-question contract refuses at least one national form, so this check discriminates the plumbing");
+  assert.ok(contractHonored > 0, "a state-level contract handed to the guard refuses the city rows, so the guard uses the contract it is given");
 });
 
 nibrs.close();
