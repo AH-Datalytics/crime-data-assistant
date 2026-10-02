@@ -1149,6 +1149,14 @@ check("NATIONAL (NR-1) — a state stated by postal code is never swallowed into
     declined("Which US cities in IN had the highest murder rates in 2025?", source, "national-and-state");
     declined("Which US cities in IN had the most murders in 2025?", source, "national-and-state");
     declined("Which U.S. cities in TX had the most murders in 2025?", source, "national-and-state");
+    // Codex NR-1 casing ruling: the preposition's casing must not decide whether the state survives.
+    for (const prep of ["IN", "In", "iN"]) {
+      declined(`Which US cities ${prep} IN had the highest murder rates in 2025?`, source, "national-and-state");
+      declined(`Which US cities ${prep} IN had the most murders in 2025?`, source, "national-and-state");
+      declined(`Which cities ${prep} IN had the highest murder rates in 2025?`, source, "state-unresolved");
+    }
+    declined("Which US cities ACROSS TX had the most murders in 2025?", source);
+    declined("Which US cities IN Indiana had the highest murder rates in 2025?", source);
     // The same swallowing without a national word gave a nationwide answer on released 9bc214c too.
     declined("Which cities in IN had the highest murder rates in 2025?", source, "state-unresolved");
     declined("Which cities in TX have the highest murder rates in 2025?", source, "state-unresolved");
@@ -1157,6 +1165,9 @@ check("NATIONAL (NR-1) — a state stated by postal code is never swallowed into
     assert.ok(indiana?.kind === "ranking" && indiana.scope.kind === "state" && indiana.scope.code === "IN", "Indiana spelled out is a state ranking");
     declined("Which US cities in Indiana had the highest murder rates in 2025?", source);
     // The lower-case preposition is never a state, and the national forms still reach the ranking.
+    // The code itself stays case-sensitive: "in in"-style lower case is never Indiana, and the pronoun
+    // "us" is still not the country.
+    declined("Show us the cities with the highest murder rates in 2025", source, "unaccounted-request");
     for (const q of ["Which cities in the US had the highest murder rates in 2025?", "Which US cities have the highest murder rates in 2025?"]) {
       const r = recognizeCityRanking(q, source);
       assert.ok(r?.kind === "ranking" && r.scope.kind === "nationwide", `${q} stays a nationwide ranking`);

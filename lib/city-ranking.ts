@@ -532,10 +532,13 @@ const NATIONAL_MODIFIER_WORDS = new RegExp(String.raw`\b(?:United\s+States|Ameri
 // Case-sensitive on purpose: the "no capitalised word follows" guard must not be case-folded.
 const NATIONAL_PLACE_CASED = /\b(?:[Ii]n|[Aa]cross|[Tt]hroughout)\s+the\s+(?:U\.S\.|US|United\s+States|united\s+states)(?![A-Za-z.])(?!\s+[A-Z])/g;
 const NATIONAL_ADVERB = /\bnationwide\b/gi;
-// An upper-case postal code after a place preposition ("in IN", "across TX"). Case-sensitive on purpose:
-// the lower-case preposition itself ("in") must never read as Indiana.
+// An upper-case postal code after a place preposition ("in IN", "IN IN", "across TX"). The preposition
+// matches in any casing (Codex NR-1 casing ruling: the filler consumes every casing of "in"); the code
+// stays case-sensitive on purpose, so a lower-case preposition itself ("in") never reads as Indiana.
+const anyCase = (word: string) => word.replace(/[a-z]/g, (c) => `[${c}${c.toUpperCase()}]`);
 const STATED_STATE_CODE = new RegExp(
-  String.raw`(?<=\b(?:[Ii]n|[Aa]cross|[Tt]hroughout|[Ww]ithin)\s+)(?:${Object.values(STATE_NAME_TO_ABBR).join("|")})(?![A-Za-z])`, "g");
+  String.raw`(?<=\b(?:${["in", "across", "throughout", "within"].map(anyCase).join("|")})\s+)` +
+  String.raw`(?:${Object.values(STATE_NAME_TO_ABBR).join("|")})(?![A-Za-z])`, "g");
 /*
  * `largest` and `smallest` are deliberately NOT direction words. They describe the cities, not the
  * measure: in "top 10 largest cities by murder rate" the superlative orders population and the
