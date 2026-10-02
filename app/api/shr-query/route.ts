@@ -40,6 +40,8 @@ import { planShrCityRanking, runShrCityRanking, SHR_CITY_RANKING_GUARDRAIL, type
 import { rankingValidationContract } from "@/lib/city-ranking";
 import type { QueryContract } from "@/lib/query-contract";
 import { loadShrTypeEvidence } from "@/lib/shr-agency-classification";
+import { cachedYearClassAvailability, unresolvedInScopes, unresolvedDisclosure, unresolvedLimitation, SHR_YEAR_CLASS_TABLE, type ClassScope } from "@/lib/shr-agency-year-class";
+import { SHR_AGENCY_TYPE_GUARDRAIL, requestedAgencyCategories } from "@/lib/shr-agency-type-authority";
 import { CITY_RANKING_FAILURE_TEXT } from "@/lib/city-ranking-nibrs";
 import { SHR_DATA_CUTOFF } from "@/lib/dynamic-facts";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -351,12 +353,20 @@ export async function POST(req: NextRequest) {
      * fallback: if it cannot prove the licence the query is refused, because falling back to the
      * legacy text prover on failure would make the stronger authority optional.
      */
+    // City/County membership authority (lib/shr-agency-type-authority.ts): the classification's availability is
+    // read only for a statement that touches agency type; the coverage check is cached per process.
+    const yearClassFor = (inputSql: string) => {
+      if (!/\bagency_type\b|\bshr_agency_year_class\b/i.test(inputSql) && requestedAgencyCategories(guardrailQuestion).length === 0) return null;
+      const classDb = getShrDb();
+      return classDb ? cachedYearClassAvailability(classDb) : null;
+    };
     const runModelAuthoredValidation = (inputSql: string): ModelAuthoredShrValidation => {
       const contractResult = validateModelAuthoredShrSql({
         question: guardrailQuestion,
         sql: inputSql,
         routingMeta,
         scope: shrCountyScope,
+        yearClass: yearClassFor(inputSql),
       });
       recordContractValidation(contractResult);
       if (contractResult.licenceRefusal) {
@@ -375,6 +385,7 @@ export async function POST(req: NextRequest) {
         routingMeta,
         scope: shrCountyScope,
         contract,
+        yearClass: yearClassFor(inputSql),
       });
       recordContractValidation(contractResult);
       return contractResult;
@@ -715,6 +726,9 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         whereClauses.push(shootingQualifier.qualifier.clause);
       }
       let joinClauses = "JOIN victims v ON v.incident_id = i.id";
+      // The name-match fallback's City membership comes from the agency/year classification only.
+      const CITY_CLASS_FILTER = "cls.agency_type = 'City'";
+      let fallbackClassUsed = false;
       let withClause = "";
       let titlePlace = "Nationally";
       let cityCount = 0;
@@ -863,7 +877,11 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
               return `(${agency}${state})`;
             });
             whereClauses.push(`(${cityClauses.join(" OR ")})`);
-            whereClauses.push("(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
+            // Never "blank means City" (Codex combined ruling, 2026-10-02): the agency/year classification decides,
+            // keyed on all three of ori, state and year so it restricts the counted rows without multiplying them.
+            joinClauses += ` JOIN ${SHR_YEAR_CLASS_TABLE} cls ON cls.ori = i.ori AND cls.state = i.state AND cls.year = i.year`;
+            whereClauses.push(CITY_CLASS_FILTER);
+            fallbackClassUsed = true;
           }
         }
       }
@@ -911,7 +929,29 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         const columns = rows.length > 0 ? Object.keys(rows[0]) : [wantsMonthly ? "month" : "year", "fatal_shootings"];
 
         // Add caveats
+        // Named-agency rows the classification could not type, within this statement's own filters.
+        let fallbackUnresolved: { agencies: number; incidents: number } | null = null;
+        const fallbackScopes: ClassScope[] | null = shootingContract.agencyTypeScopes ?? null;
+        if (fallbackClassUsed) {
+          const baseWhere = whereClauses.filter((c) => c !== CITY_CLASS_FILTER);
+          const u = db.prepare(
+            `SELECT COUNT(DISTINCT i.ori || '|' || i.state) AS agencies, COUNT(*) AS incidents FROM incidents i JOIN victims v ON v.incident_id = i.id` +
+            ` LEFT JOIN ${SHR_YEAR_CLASS_TABLE} u ON u.ori = i.ori AND u.state = i.state AND u.year = i.year` +
+            ` WHERE ${baseWhere.join(" AND ")} AND (u.ori IS NULL OR u.membership = 'unresolved')`,
+          ).get() as { agencies: number; incidents: number };
+          fallbackUnresolved = u;
+          if (u.agencies > 0 && isZeroResult(rows, columns)) {
+            const limitation = unresolvedLimitation(u, fallbackScopes ?? []);
+            const limitationProof = finalizeExit({ outcome: OUTCOMES.reporting_coverage_insufficient, sql, guardrails: ["deterministic-shooting", SHR_AGENCY_TYPE_GUARDRAIL], narrative: limitation, db });
+            writeLog(question, sql, 0, "shr_agency_type_unresolved", Date.now() - start, limitation, "shr", ["deterministic-shooting", SHR_AGENCY_TYPE_GUARDRAIL], "deterministic", sessionId, null, limitationProof);
+            return jsonResp(emitFactualPayload(limitationProof, {
+              success: true, question, sql, explanation: limitation, title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+              chartConfig: null, chartMeta: null, executionTimeMs: Date.now() - start,
+            }));
+          }
+        }
         const caveats = [normalizeShrAgencyText(explanation)];
+        if (fallbackUnresolved && fallbackScopes && fallbackUnresolved.agencies > 0) caveats.push(unresolvedDisclosure(fallbackUnresolved, fallbackScopes));
         if (overlapDisclosure) caveats.push(overlapDisclosure);
         caveats.push("Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
         let totalExplanation = caveats.join("\n\n");
@@ -1429,9 +1469,11 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
     }
     let rows: Record<string, unknown>[];
+    let classScopes: ClassScope[] | null = null;
     try {
       const executionContract = runModelAuthoredValidation(sql);
       sql = executionContract.sql;
+      classScopes = executionContract.agencyTypeScopes ?? null;
       const executionContractFailure = contractFailureResponse(executionContract, `contract_execution_failure:${executionContract.enforced.join(",")}`);
       if (executionContractFailure) return executionContractFailure;
       const schemaCheck = validateSqlSchema(db, sql);
@@ -1452,6 +1494,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         );
         if (correctedFailure) return correctedFailure;
         sql = correctedContract.sql;
+        classScopes = correctedContract.agencyTypeScopes ?? null;
       }
       rows = db.prepare(sql).all() as Record<string, unknown>[];
       rows = normalizeShrDisplayRows(rows);
@@ -1466,6 +1509,18 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     }
 
     const executionMs = Date.now() - start;
+    // Agencies the City/County-dependent statement could not classify, within its own year/state scope.
+    const classUnresolved = classScopes ? unresolvedInScopes(db, classScopes) : null;
+    if (classScopes && classUnresolved && classUnresolved.agencies > 0 && isZeroResult(rows, rows.length > 0 ? Object.keys(rows[0]) : [])) {
+      const limitation = unresolvedLimitation(classUnresolved, classScopes);
+      const limitationGuardrails = [...new Set([...guardrailResult.fired, ...routeGuardrailsFired, SHR_AGENCY_TYPE_GUARDRAIL])];
+      const limitationProof = finalizeExit({ outcome: OUTCOMES.reporting_coverage_insufficient, sql, guardrails: limitationGuardrails, narrative: limitation, db });
+      writeLog(question, sql, 0, "shr_agency_type_unresolved", executionMs, limitation, "shr", limitationGuardrails, "haiku-4.5", sessionId, null, limitationProof);
+      return jsonResp(emitFactualPayload(limitationProof, {
+        success: true, question, sql, explanation: limitation, title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+        chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
+      }));
+    }
     claude.title = claude.title ? normalizeShrAgencyText(claude.title) : claude.title;
     claude.explanation = normalizeShrAgencyText(claude.explanation || "");
 
@@ -1708,6 +1763,10 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     // after the agency-name tidying above could shorten "Sheriff's Office" away.
     const allHomicides = shrRequestedMeasure(guardrailQuestion) === "homicide";
     explanation = withShrScopeAndMeasureDisclosures(explanation, shrCountyScope, allHomicides);
+    if (classScopes && classUnresolved && classUnresolved.agencies > 0) {
+      explanation = `${explanation}\n\n${unresolvedDisclosure(classUnresolved, classScopes)}`;
+      routeGuardrailsFired.push(SHR_AGENCY_TYPE_GUARDRAIL);
+    }
     if (allHomicides) claude.title = allHomicideTitle(claude.title);
 
     const finalNarrative = sanitizeUserFacingNarrative(explanation, claude.title);

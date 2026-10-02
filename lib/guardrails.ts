@@ -3305,6 +3305,10 @@ const GUARDRAILS: Guardrail[] = [
       return true;
     },
     rewrite: (sql) => {
+      // Group by the select list's own year column: an unqualified `year` is ambiguous when a
+      // joined table (e.g. shr_agency_year_class) also has one.
+      const qualifiedYear = (sql.match(/^\s*SELECT\b([\s\S]*?)\bFROM\b/i)?.[1] ?? "").match(/\b(\w+)\.year\b/i);
+      const year = qualifiedYear ? `${qualifiedYear[1]}.year` : "year";
       // Depth-aware: find the outermost GROUP BY
       let d = 0;
       let gbPos = -1;
@@ -3331,16 +3335,16 @@ const GUARDRAILS: Guardrail[] = [
         const terminator = afterGB.match(/\b(HAVING|ORDER\s+BY|LIMIT)\b/i);
         if (terminator && terminator.index != null) {
           const insertPos = gbPos + gbLen + terminator.index;
-          return sql.slice(0, insertPos).trimEnd() + ", year " + sql.slice(insertPos);
+          return sql.slice(0, insertPos).trimEnd() + `, ${year} ` + sql.slice(insertPos);
         }
-        return sql.trimEnd() + ", year";
+        return sql.trimEnd() + `, ${year}`;
       }
       // No GROUP BY — insert before ORDER BY/LIMIT/end
       const insertPoint = sql.match(/\b(ORDER\s+BY|LIMIT)\b/i);
       if (insertPoint && insertPoint.index) {
-        return sql.slice(0, insertPoint.index) + "GROUP BY year " + sql.slice(insertPoint.index);
+        return sql.slice(0, insertPoint.index) + `GROUP BY ${year} ` + sql.slice(insertPoint.index);
       }
-      return sql + " GROUP BY year";
+      return sql + ` GROUP BY ${year}`;
     },
   },
 

@@ -728,6 +728,13 @@ export const TABLE_SEMANTICS: TableSemantics[] = [
     rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["none"], measures: ["none"],
     measureBinding: { kind: "none" }, components: "present", aggregation: "additive",
   }),
+  // The agency/year City/County classification (lib/shr-agency-year-class.ts): one row per agency per year, the
+  // only approved type source for counted rows (lib/shr-agency-type-authority.ts enforces how it is joined).
+  T({
+    source: "shr", table: "shr_agency_year_class", role: "identity",
+    rowKey: "agency", outputLevels: ALL_LOCAL, timeGrains: ["annual"], measures: ["none"],
+    measureBinding: { kind: "none" }, components: "present", aggregation: "additive",
+  }),
   T({
     source: "shr", table: "agency_county_crosswalk", role: "crosswalk",
     rowKey: "agency", outputLevels: ["agency", "county", "state"], timeGrains: ["none"],

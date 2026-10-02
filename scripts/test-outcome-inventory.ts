@@ -66,18 +66,21 @@ const inv = buildInventory(ROOT);
  *                     shooting-scope clarify (measure_ambiguous x2); city ranking (deterministic_plan |
  *                     no_rows_in_source); owned count (deterministic_plan | all_values_null).
  *   operational (+2): the SHR city-ranking and owned-count database-error catches (OPERATIONAL_RECORD).
+ * SHR agency/year classification (Codex combined ruling, 2026-10-02), shr-query (+2): the limited answer when a
+ * City/County-dependent statement matched no classified agency while unclassified agencies are in its scope, on the
+ * model path and on the deterministic name-match fallback (reporting_coverage_insufficient x2) -- never an apparent zero.
  */
 const EXPECTED = {
-  decisionSites: 118,
-  sealSites: 118,
+  decisionSites: 120,
+  sealSites: 120,
   operationalRows: 21,
-  perRouteSealSites: { query: 35, "nibrs-query": 35, "shr-query": 33, "hc-query": 15 },
+  perRouteSealSites: { query: 35, "nibrs-query": 35, "shr-query": 35, "hc-query": 15 },
   /** §2.4(ii): exactly one operational row is not an unconditionally terminal path. */
   nonTerminalOperationalRows: 1,
   /** §2.4(ii): exactly one terminates by closing the SSE stream rather than by returning. */
   streamClosureTerminations: 1,
-  /** 116 exits log through their route-local closure; the two source-switch exits call directly. */
-  closurePairedSites: 116,
+  /** 118 exits log through their route-local closure; the two source-switch exits call directly. */
+  closurePairedSites: 118,
   directPairedSites: 2,
 };
 

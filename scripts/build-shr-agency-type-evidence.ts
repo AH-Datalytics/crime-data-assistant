@@ -1,8 +1,11 @@
 /**
  * Builds the SHR agency-type evidence the approved classification policy reads (lib/shr-agency-classification.ts).
  *
- * WRITES only `shr_agency_type_binding` and `shr_agency_type_evidence` in shr.db, dropped and rebuilt in ONE
- * transaction (a failure leaves the previous tables). It does NOT write `incidents` -- no `agency_type` fill,
+ * WRITES only `shr_agency_type_binding`, `shr_agency_type_evidence` and the agency/year classification
+ * (`shr_agency_year_class` + `shr_agency_year_class_meta`, lib/shr-agency-year-class.ts) in shr.db, dropped and
+ * rebuilt in ONE transaction (a failure leaves the previous tables). The classification is the existing
+ * period-bound classifier's decision for every (ori, state, year) in `incidents`, materialized from the evidence
+ * just written -- not a second algorithm. It does NOT write `incidents` -- no `agency_type` fill,
  * so no legacy or name-default label is copied anywhere -- and it opens nibrs.db READ-ONLY.
  *
  * For each distinct SHR (ori, state) in `incidents`, the NIBRS agencies whose 9-character ORI begins with the
@@ -18,6 +21,7 @@
 import Database from "better-sqlite3";
 import path from "node:path";
 import { SHR_TYPE_BINDING_TABLE, SHR_TYPE_EVIDENCE_DDL, SHR_TYPE_EVIDENCE_TABLE, SHR_TYPE_SOURCE } from "../lib/shr-agency-classification";
+import { computeYearClassRows, writeYearClass } from "../lib/shr-agency-year-class";
 
 const shrPath = process.env.SHR_DB_PATH || path.join(process.cwd(), "shr.db");
 const nibrsPath = process.env.NIBRS_DB_PATH || path.join(process.cwd(), "nibrs.db");
@@ -57,6 +61,7 @@ function main(): void {
       evidenceRows: evidence.length,
       otherStateRows: evidence.filter((e) => e.nibrs_state !== e.state).length,
     };
+    let classSummary: Record<string, number> | null = null;
     if (apply) {
       const builtAt = new Date().toISOString();
       shr.transaction(() => {
@@ -66,9 +71,14 @@ function main(): void {
         for (const r of bindings) b.run(r.ori, r.state, r.candidate_oris, builtAt);
         const e = shr.prepare(`INSERT INTO ${SHR_TYPE_EVIDENCE_TABLE} (ori, state, nibrs_ori, year, nibrs_state, agency_type, source) VALUES (?, ?, ?, ?, ?, ?, ?)`);
         for (const r of evidence) e.run(r.ori, r.state, r.nibrs_ori, r.year, r.nibrs_state, r.agency_type, SHR_TYPE_SOURCE);
+        // The agency/year classification, from the evidence just written, in the same transaction.
+        const classRows = computeYearClassRows(shr);
+        writeYearClass(shr, classRows, builtAt);
+        classSummary = { agencyYears: classRows.length, eligible: 0, ineligible: 0, unresolved: 0 };
+        for (const c of classRows) classSummary[c.membership] += 1;
       })();
     }
-    console.log(JSON.stringify(summary));
+    console.log(JSON.stringify(classSummary ? { ...summary, classification: classSummary } : summary));
     if (!apply) console.log("Dry run only. Re-run with --apply to write these tables.");
   } finally {
     shr.close();

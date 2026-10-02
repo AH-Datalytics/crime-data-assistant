@@ -16,7 +16,9 @@ import { spawnSync } from "node:child_process";
 import Database from "better-sqlite3";
 import { classifyShrAgency, loadShrTypeEvidence } from "../lib/shr-agency-classification";
 import { planShrCityRanking, runShrCityRanking } from "../lib/city-ranking-shr";
-import { validateDeterministicShrPlanSql } from "../lib/shr-authority";
+import { validateDeterministicShrPlanSql, validateModelAuthoredShrSql } from "../lib/shr-authority";
+import { yearClassAvailability, unresolvedInScope, unresolvedInScopes, unresolvedDisclosure, unresolvedLimitation, YEAR_CLASS_UNAVAILABLE_TEXT } from "../lib/shr-agency-year-class";
+import { requestedAgencyCategories } from "../lib/shr-agency-type-authority";
 import { queryContractFailureMessage } from "../lib/query-contract-validator";
 
 let checks = 0;
@@ -203,6 +205,186 @@ console.log("\n6 - a failure part-way through the write leaves the previous tabl
   const after = JSON.stringify(f.shr.prepare("SELECT * FROM shr_agency_type_evidence ORDER BY ori").all());
   check(failed && after === before, `the build fails mid-write and the previous evidence is intact (${failed ? "failed" : "did not fail"})`);
   f.shr.close();
+}
+
+console.log("\n7 - the agency/year classification: one authority for City/County membership (Codex combined ruling, 2026-10-02)");
+{
+  // Disposable files. Legacy incidents.agency_type values are set to MISLEAD: the county sheriff carries 'City', and
+  // every 2026 row is blank -- as production's 2026 rows are. The relation must ignore them entirely.
+  const shrPath = path.join(WORK, "class-shr.db"), nibrsPath = path.join(WORK, "class-nibrs.db");
+  const shr = new Database(shrPath), nibrs = new Database(nibrsPath);
+  shr.exec(fs.readFileSync(path.join(REPO, "scripts/fixtures/operation-taxonomy/shr.ddl.sql"), "utf8"));
+  nibrs.exec(fs.readFileSync(path.join(REPO, "scripts/fixtures/operation-taxonomy/nibrs.ddl.sql"), "utf8"));
+  const inc = shr.prepare("INSERT INTO incidents (year, month, state, ori, agency, population, homicide_type, agency_type) VALUES (?, 1, ?, ?, ?, ?, 'Murder', ?)");
+  const vic = shr.prepare("INSERT INTO victims (incident_id, victim_num) VALUES (?, ?)");
+  const add = (year: number, state: string, ori: string, agency: string, pop: number, legacy: string | null, victims: number) => {
+    const id = inc.run(year, state, ori, agency, pop, legacy).lastInsertRowid;
+    for (let k = 1; k <= victims; k++) vic.run(id, k);
+  };
+  // St. Louis city (City in NIBRS 2021-2025; 2026 carried forward) and the same-NAMED county sheriff (County).
+  for (const y of [2024, 2025]) add(y, "MO", "MOSPD00", "St. Louis", 280000, "City", 3);
+  add(2026, "MO", "MOSPD00", "St. Louis", 280000, "", 4);
+  for (const y of [2024, 2026]) add(y, "MO", "MOSLC00", "St. Louis", 990000, y === 2026 ? "" : "City", 2);
+  // Jackson: two NIBRS agencies share the 7-character identifier -> unresolved, never guessed.
+  add(2026, "MS", "MS02501", "Jackson", 150000, "", 5);
+  // Washington: no NIBRS match at all -> unresolved.
+  add(2026, "DC", "DCMPD00", "Washington", 690000, "", 6);
+  // An agency typed only from 2025: 2024 must stay unresolved (no later evidence decides an earlier year).
+  for (const y of [2024, 2025]) add(y, "TX", "TXA0100", "Alamo", 300000, "City", 1);
+  for (const y of [2021, 2022, 2023, 2024, 2025]) nibrs.prepare("INSERT INTO agencies (ori, year, state, city, agency_type) VALUES ('MOSPD0000', ?, 'MO', 'St. Louis', 'City')").run(y);
+  for (const y of [2023, 2024, 2025]) nibrs.prepare("INSERT INTO agencies (ori, year, state, city, agency_type) VALUES ('MOSLC0000', ?, 'MO', 'St. Louis County', 'County')").run(y);
+  nibrs.prepare("INSERT INTO agencies (ori, year, state, city, agency_type) VALUES ('MS0250100', 2025, 'MS', 'Jackson', 'City')").run();
+  nibrs.prepare("INSERT INTO agencies (ori, year, state, city, agency_type) VALUES ('MS0250101', 2025, 'MS', 'Jackson County SO', 'County')").run();
+  nibrs.prepare("INSERT INTO agencies (ori, year, state, city, agency_type) VALUES ('TXA010000', 2025, 'TX', 'Alamo', 'City')").run();
+  shr.close(); nibrs.close();
+  const f = { shrPath, nibrsPath, shr: new Database(shrPath), nibrs: new Database(nibrsPath) } as Fixture;
+  const legacyBefore = JSON.stringify(f.shr.prepare("SELECT id, agency_type FROM incidents ORDER BY id").all());
+  f.shr.close(); f.nibrs.close();
+  const summary = build({ ...f, shr: undefined as never, nibrs: undefined as never });
+  const db = new Database(shrPath);
+  const cls = (ori: string, state: string, year: number) => db.prepare("SELECT membership, agency_type, reason, basis FROM shr_agency_year_class WHERE ori = ? AND state = ? AND year = ?").get(ori, state, year) as
+    { membership: string; agency_type: string | null; reason: string | null; basis: string | null } | undefined;
+
+  check(summary.classification && summary.classification.agencyYears === 9 && summary.classification.eligible === 4 && summary.classification.ineligible === 2 && summary.classification.unresolved === 3,
+    `the builder materializes one row per agency-year: 9 = 4 City, 2 another type, 3 unresolved (${JSON.stringify(summary.classification)})`);
+  const all = db.prepare("SELECT ori, state, year, membership, agency_type, reason FROM shr_agency_year_class ORDER BY ori, state, year").all() as
+    { ori: string; state: string; year: number; membership: string; agency_type: string | null; reason: string | null }[];
+  check(all.every((r) => { const e = loadShrTypeEvidence(db, r.year); const c = classifyShrAgency(e.byAgency.get(`${r.ori}|${r.state}`) ?? null, e.built, r.year);
+    return c.membership === r.membership && (c.membership === "unresolved" ? c.reason === r.reason && r.agency_type === null : c.agencyType === r.agency_type); }),
+    "every materialized row equals the existing classifier's decision for that agency and year -- not a second algorithm");
+  const stl26 = cls("MOSPD00", "MO", 2026);
+  check(stl26?.membership === "eligible" && stl26.agency_type === "City" && JSON.parse(stl26.basis!).carriedForwardFrom === 2025,
+    "St. Louis city 2026: City, carried forward from 2025 with its basis recorded");
+  check(cls("MOSLC00", "MO", 2026)?.membership === "ineligible" && cls("MOSLC00", "MO", 2026)?.agency_type === "County",
+    "the same-named county sheriff: 'ineligible' with its exact type County (the legacy 'City' label is ignored)");
+  check(cls("MS02501", "MS", 2026)?.reason === "several-nibrs-matches" && cls("MS02501", "MS", 2026)?.agency_type === null,
+    "conflicting evidence (two NIBRS agencies): unresolved, with NULL type so no type filter can admit it");
+  check(cls("DCMPD00", "DC", 2026)?.reason === "no-nibrs-match", "no NIBRS match: unresolved");
+  check(cls("TXA0100", "TX", 2024)?.membership === "unresolved" && cls("TXA0100", "TX", 2025)?.membership === "eligible",
+    "an agency first typed in 2025 stays unresolved for 2024: later evidence never decides an earlier year");
+  check(JSON.stringify(db.prepare("SELECT id, agency_type FROM incidents ORDER BY id").all()) === legacyBefore,
+    "incidents.agency_type is untouched: the derived result is never written into the source column");
+  check((db.prepare("SELECT agency_years FROM shr_agency_year_class_meta").get() as { agency_years: number }).agency_years === 9, "a generation record states what was built");
+
+  const avail = yearClassAvailability(db);
+  check(avail.available, "built and current: available");
+  // Delivered answers on the fixture.
+  const J = "JOIN shr_agency_year_class c ON c.ori = i.ori AND c.state = i.state AND c.year = i.year";
+  const n = (sql: string) => (db.prepare(sql).get() as { n: number }).n;
+  const classified = n(`SELECT COUNT(v.id) AS n FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.state = 'MO' AND i.year = 2026 AND c.agency_type = 'City'`);
+  const blankAsCity = n("SELECT COUNT(v.id) AS n FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'MO' AND i.year = 2026 AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')");
+  const strictLegacy = n("SELECT COUNT(v.id) AS n FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'MO' AND i.year = 2026 AND i.agency_type = 'City'");
+  check(classified === 4 && blankAsCity === 6 && strictLegacy === 0,
+    `MO city murder victims, 2026: classified 4 (St. Louis city only); the old blank-as-City rule gave 6 (sheriff counted), the strict legacy filter 0 (${classified}/${blankAsCity}/${strictLegacy})`);
+  const multi = n(`SELECT COUNT(v.id) AS n FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.state = 'MO' AND i.year BETWEEN 2024 AND 2026 AND c.agency_type = 'City'`);
+  check(multi === 3 + 3 + 4, `a multi-year class join counts each victim once: 10 for St. Louis city 2024-2026 (${multi})`);
+
+  // The authority on statements (lib/shr-authority.ts + lib/shr-agency-type-authority.ts).
+  const model = (sql: string, a: ReturnType<typeof yearClassAvailability> | null = avail) =>
+    validateModelAuthoredShrSql({ question: "How many murders happened in cities in Missouri in 2026?", sql, yearClass: a });
+  const ok = model(`SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.state = 'MO' AND i.year = 2026 AND i.homicide_type = 'Murder' AND c.agency_type = 'City'`);
+  check(queryContractFailureMessage(ok) === null && JSON.stringify(ok.agencyTypeScopes) === JSON.stringify([{ years: [2026, 2026], states: ["MO"] }]),
+    "the approved form passes and carries its own year/state scope for the disclosure");
+  for (const [label, sql] of [
+    ["incidents.agency_type", "SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'MO' AND i.year = 2026 AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')"],
+    ["alias agency_type", "SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.ori IN (SELECT ori FROM shr_agency_alias WHERE agency_type = 'City' AND state = 'MO')"],
+    ["OR'd type test", `SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.year = 2026 AND (c.agency_type = 'City' OR c.agency_type IS NULL)`],
+    ["decorative join", `SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.year = 2026`],
+    ["ori-only join", "SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id JOIN shr_agency_year_class c ON c.ori = i.ori WHERE c.agency_type = 'City'"],
+    ["outer join", `SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id LEFT ${J} WHERE c.agency_type = 'City'`],
+    ["year-unbound subquery", "SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.ori IN (SELECT ori FROM shr_agency_year_class WHERE agency_type = 'City')"],
+  ] as const) {
+    const r = model(sql);
+    check(r.retryIssues.some((x) => x.startsWith("shr-agency-type-authority:")) && r.enforced.includes("shr-agency-type-authority") && !r.agencyTypeScopes,
+      `model SQL with ${label}: one retry with the instruction, no licensed scope`);
+  }
+  const untouched = validateModelAuthoredShrSql({ question: "How many murders happened in Missouri in 2026?", yearClass: avail,
+    sql: "SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'MO' AND i.year = 2026" });
+  check(!untouched.enforced.includes("shr-agency-type-authority") && untouched.retryIssues.length === 0, "a request that does not depend on City/County membership keeps its path untouched");
+
+  // ---- SCA-1 (Codex SHR classification ruling): the REQUEST decides, on the rows the answer counts ----
+  const CITY_Q = "How many murders happened in cities in Missouri in 2026?";
+  const asked = (question: string, sql: string) => validateModelAuthoredShrSql({ question, sql, yearClass: avail });
+  const SEND_BACK = (x: ReturnType<typeof asked>) => x.retryIssues.some((s) => s.startsWith("shr-agency-type-authority:")) && !x.agencyTypeScopes;
+  const CLASSIFIED = `SELECT i.year, COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.state = 'MO' AND i.year = 2026 AND i.homicide_type = 'Murder' AND c.agency_type = 'City' GROUP BY i.year`;
+  const PLAIN = "SELECT i.year, COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'MO' AND i.year = 2026 GROUP BY i.year";
+  check(SEND_BACK(asked(CITY_Q, PLAIN)), "a city question answered with NO classification is sent back (the SQL's wording no longer decides)");
+  check(SEND_BACK(asked(CITY_Q, `WITH classified AS (${CLASSIFIED}) ${PLAIN}`)), "a valid classification in an UNUSED CTE does not license an unclassified count");
+  check(SEND_BACK(asked(CITY_Q, CLASSIFIED.replace("c.agency_type = 'City'", "c.membership = 'ineligible'"))), "'ineligible' is not City: the wrong category is sent back");
+  check(SEND_BACK(asked(CITY_Q, CLASSIFIED.replace("'City'", "'County'"))), "County answering a city question is the wrong category");
+  check(SEND_BACK(asked(CITY_Q, `SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.year = 2026 AND i.ori IN (SELECT c.ori FROM shr_agency_year_class c WHERE c.agency_type = 'City' AND c.year = 2026)`)),
+    "a classification inside a filtering subquery does not license the counted rows");
+  // Codex SCA correction ruling: the classification restricts j while the victims are counted from i.
+  const SECOND = `SELECT i.year, COUNT(DISTINCT v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id JOIN incidents j ON j.year = i.year AND j.state = i.state JOIN shr_agency_year_class c ON c.ori = j.ori AND c.state = j.state AND c.year = j.year WHERE i.state = 'MO' AND i.year = 2026 AND i.homicide_type = 'Murder' AND c.agency_type = 'City' GROUP BY i.year`;
+  check(SEND_BACK(asked(CITY_Q, SECOND)), "a classification on a SECOND incidents instance does not license the instance whose rows are counted");
+  check(SEND_BACK(asked(CITY_Q, SECOND.replace("c.ori = j.ori AND c.state = j.state AND c.year = j.year", "c.ori = i.ori AND c.state = i.state AND c.year = i.year"))),
+    "two incidents instances are sent back even when the classification is on the counted one (one instance per counting scope)");
+  check(SEND_BACK(asked("How many murders happened in Missouri in 2026?", CLASSIFIED)), "a question that asks no city/county distinction may not be narrowed by agency type");
+  check(SEND_BACK(asked("How many murders happened in Missouri in 2026?", `SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.state = 'MO' AND i.year = 2026 AND i.ori IN (SELECT c.ori FROM shr_agency_year_class c WHERE c.agency_type = 'City')`)),
+    "nor narrowed through a year-unbound classification subquery");
+  const usedCte = asked(CITY_Q, `WITH classified AS (${CLASSIFIED}) SELECT year, victims FROM classified`);
+  check(queryContractFailureMessage(usedCte) === null && JSON.stringify(usedCte.agencyTypeScopes) === JSON.stringify([{ years: [2026, 2026], states: ["MO"] }]),
+    "a classification in a CTE the answer actually reads is followed and licensed");
+  const member = asked(CITY_Q, CLASSIFIED.replace("c.agency_type = 'City'", "c.membership = 'eligible'"));
+  check(queryContractFailureMessage(member) === null, "membership = 'eligible' is the same set as City");
+  const sheriffs = asked("How many murders were reported by sheriffs in Missouri in 2026?", CLASSIFIED.replace("'City'", "'County'"));
+  check(queryContractFailureMessage(sheriffs) === null && SEND_BACK(asked("How many murders were reported by sheriffs in Missouri in 2026?", CLASSIFIED)),
+    "a sheriff question takes County, and City answering it is sent back");
+  check(requestedAgencyCategories("How many murders in Kansas City in 2025?").length === 0 && requestedAgencyCategories("murders in New York City").length === 0
+    && JSON.stringify(requestedAgencyCategories("murders in big cities in Texas")) === '["City"]',
+    "a place NAME (Kansas City, New York City) is not a request about cities; plural cities is");
+  const detCity = validateDeterministicShrPlanSql({ question: "fatal shootings in Springfield in 2025", yearClass: avail,
+    sql: `SELECT i.year, COUNT(*) AS n FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.agency = 'St. Louis' AND i.year = 2026 AND c.agency_type = 'City' GROUP BY i.year` });
+  // The classification authority's own verdict on the fallback's shape (the other contract checks judge its place and year).
+  check(!detCity.blockReasons.includes(YEAR_CLASS_UNAVAILABLE_TEXT) && !detCity.retryIssues.some((s) => s.startsWith("shr-agency-type-authority"))
+    && JSON.stringify(detCity.agencyTypeScopes) === JSON.stringify([{ years: [2026, 2026], states: null }]),
+    "the deterministic fallback carries its own City category on its counted rows, with its own scope");
+
+  // ---- SCA-2: the disclosure covers every counting scope; unreadable scope forms are sent back ----
+  const UNION_Q = "How many murders happened in cities in Mississippi and Missouri in 2026?";
+  const union = asked(UNION_Q, `${CLASSIFIED.replace("'MO'", "'MS'")} UNION ALL ${CLASSIFIED}`);
+  check(queryContractFailureMessage(union) === null && JSON.stringify(union.agencyTypeScopes) === JSON.stringify([{ years: [2026, 2026], states: ["MS"] }, { years: [2026, 2026], states: ["MO"] }]),
+    "a UNION keeps BOTH arms' scopes (the last one no longer overwrites the first)");
+  const unionUnresolved = unresolvedInScopes(db, union.agencyTypeScopes!);
+  check(unionUnresolved.agencies === 1 && /1 agency with up to 1 incident record in MS in 2026 and MO in 2026 could not be classified/.test(unresolvedDisclosure(unionUnresolved, union.agencyTypeScopes!)),
+    "the union disclosure keeps Mississippi's unclassified agency and names both scopes");
+  check(unresolvedInScopes(db, [...union.agencyTypeScopes!].reverse()).agencies === 1,
+    "the disclosure counts every scope, not only the first (Mississippi's agency is found with Missouri listed first)");
+  check(SEND_BACK(asked(UNION_Q, CLASSIFIED.replace("i.state = 'MO'", "(i.state = 'MO' OR i.state = 'MS')"))),
+    "an OR over states is sent back (use IN) rather than disclosing a wrong all-states count");
+  const inList = asked(UNION_Q, CLASSIFIED.replace("i.state = 'MO'", "i.state IN ('MO', 'MS')"));
+  check(queryContractFailureMessage(inList) === null && JSON.stringify(inList.agencyTypeScopes) === JSON.stringify([{ years: [2026, 2026], states: ["MO", "MS"] }]),
+    "the same places as an IN list are read exactly");
+  check(/carried forward/.test(unresolvedDisclosure(unionUnresolved, union.agencyTypeScopes!)) && /several possible matches, or missing or conflicting types/.test(unresolvedDisclosure(unionUnresolved, union.agencyTypeScopes!))
+    && !/for that year\./.test(unresolvedDisclosure(unionUnresolved, union.agencyTypeScopes!)),
+    "the wording states carry-forward and what 'could not be classified' covers (not only missing types)");
+  const unavailable = model(`SELECT COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.year = 2026 AND c.agency_type = 'City'`,
+    { available: false, reason: "stale", detail: "x" });
+  check(unavailable.blockReasons.includes(YEAR_CLASS_UNAVAILABLE_TEXT), "a stale or missing classification is an owned limitation, never blank-as-City");
+  const det = validateDeterministicShrPlanSql({ question: "q", sql: "SELECT COUNT(*) AS n FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE (i.agency_type = 'City' OR i.agency_type IS NULL) AND i.year = 2026", yearClass: avail });
+  check(det.blockReasons.length > 0 && det.enforced.includes("shr-agency-type-authority"), "a deterministic plan that reads a legacy type is blocked, not retried");
+
+  // Disclosure and the no-apparent-zero rule, within the statement's own scope.
+  const msScope = { years: [2026, 2026] as [number, number], states: ["MS"] };
+  const msUnresolved = unresolvedInScope(db, msScope);
+  const msCities = n(`SELECT COUNT(v.id) AS n FROM incidents i JOIN victims v ON v.incident_id = i.id ${J} WHERE i.state = 'MS' AND i.year = 2026 AND c.agency_type = 'City'`);
+  check(msUnresolved.agencies === 1 && msUnresolved.incidents === 1 && msCities === 0,
+    "Mississippi 2026: no classified city, one unresolved agency -- the case that must not read as zero");
+  check(/^I can't give a reliable figure/.test(unresolvedLimitation(msUnresolved, msScope)) && /1 agency with up to 1 incident record in MS in 2026/.test(unresolvedLimitation(msUnresolved, msScope))
+    && !/\b0\b/.test(unresolvedLimitation(msUnresolved, msScope).replace(/2026/g, "")), "its limited answer names the unclassified agency and states no zero");
+  const moUnresolved = unresolvedInScope(db, { years: [2024, 2026], states: ["MO", "TX"] });
+  check(moUnresolved.agencies === 1 && moUnresolved.incidents === 1, "MO+TX 2024-2026: only Alamo's 2024 row is unclassified (one agency, one record)");
+  check(/1 agency with up to 1 incident record in MO, TX in 2024-2026 could not be classified/.test(unresolvedDisclosure(moUnresolved, { years: [2024, 2026], states: ["MO", "TX"] })),
+    "the disclosure states the excluded agencies within the statement's scope");
+
+  // Staleness: an agency-year added after the build makes the relation stale, hence unavailable.
+  db.prepare("INSERT INTO incidents (year, month, state, ori, agency, homicide_type) VALUES (2026, 2, 'MO', 'MONEW00', 'New', 'Murder')").run();
+  const stale = yearClassAvailability(db);
+  check(!stale.available && stale.reason === "stale", `a new agency-year without a rebuild: stale (${stale.available ? "available" : stale.detail})`);
+  db.exec("DROP TABLE shr_agency_year_class");
+  const gone = yearClassAvailability(db);
+  check(!gone.available && gone.reason === "not-built", "no relation: not built");
+  db.close();
 }
 
 try { fs.rmSync(WORK, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch { /* best effort */ }

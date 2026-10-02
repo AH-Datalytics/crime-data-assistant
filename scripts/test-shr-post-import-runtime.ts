@@ -50,7 +50,7 @@ const sha = (text: string | Buffer) => crypto.createHash("sha256").update(text).
 const COMMITTED = ["scripts/normalize-shr-agencies.ts", "scripts/build-shr-state-population.ts", "scripts/extend-state-population-cde.ts",
   "lib/shr-agency-normalization.ts", "lib/state-population.ts"];
 /** The policy-enforcing evidence builder and its library (2026-09-30), not yet committed: pinned as LF-normalized bytes. */
-const POLICY = ["scripts/build-shr-agency-type-evidence.ts", "lib/shr-agency-classification.ts"];
+const POLICY = ["scripts/build-shr-agency-type-evidence.ts", "lib/shr-agency-classification.ts", "lib/shr-agency-year-class.ts"];
 const REVIEWED = [...COMMITTED, ...POLICY];
 /** The bytes a git-built Linux release carries for a reviewed file. */
 const releaseBytes = (rel: string): Buffer => COMMITTED.includes(rel)

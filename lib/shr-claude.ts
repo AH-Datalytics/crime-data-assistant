@@ -75,7 +75,13 @@ One row per homicide incident.
 - off_race TEXT — 'White', 'Black', 'Asian/Pacific Islander', 'American Indian', 'Unknown', or NULL
 - off_ethnicity TEXT
 - incident_num TEXT
-- agency_type TEXT — 'City' or 'County' (NULL for some older records)
+- agency_type TEXT — NOT EVIDENCE. Never read it: these labels were never in the FBI file, and recent years are blank. For City/County membership use shr_agency_year_class (below).
+
+### shr_agency_year_class (City/County membership by agency and year)
+The ONLY approved source of an agency's type. One row per agency per year: ori, state, year, membership ('eligible' = City, 'ineligible' = another type, 'unresolved'), agency_type (the exact type, e.g. 'City', 'County'; NULL when unresolved), reason, basis.
+- When an answer depends on whether agencies are cities or counties, JOIN shr_agency_year_class c ON c.ori = i.ori AND c.state = i.state AND c.year = i.year (an INNER JOIN on all THREE keys) and add c.agency_type = 'City' (or 'County') as a plain AND condition. Never put it inside OR, never use a LEFT JOIN, never match on ori alone or in an IN subquery.
+- Agencies without a type for that year are excluded; the application states how many. Do not describe the result as including them, and never treat a missing type as City.
+- A request that does not depend on City/County membership (a named agency resolved to ORIs, a state total) does not need this table.
 
 ### shr_agency_identity / shr_agency_alias (agency lookup and normalization)
 Use these tables to resolve agency names to ORIs before filtering incidents. They are built from SHR ORI/state/name history plus NIBRS agency metadata where available.
@@ -83,7 +89,7 @@ Use these tables to resolve agency names to ORIs before filtering incidents. The
 - shr_agency_alias: alias, alias_key, ori, state, canonical_agency, agency_type
 - For a named agency/city/county, filter incidents by ORIs from deterministic agency-resolution guidance when it is present. Do not replace those ORIs with an agency-name or alias lookup.
 - Without deterministic guidance, alias_key is uppercase, punctuation-stripped text. Use an exact state-qualified key (for example, state = 'CA' AND alias_key = 'OAKLAND'), never a broad LIKE search. If the exact identity is uncertain, return sql as null instead of guessing or silently omitting a requested place.
-- agency_type in these lookup tables is normalized from ORI/state history. Use it to distinguish City vs County agencies, but remember County means a county law-enforcement agency, not countywide geography.
+- agency_type in these lookup tables is a legacy normalized label, not evidence: do NOT filter on it for City/County membership; use shr_agency_year_class. County means a county law-enforcement agency, not countywide geography.
 
 ### agency_county_crosswalk (county breakdowns and rankings)
 A question about one named county is answered by the application itself (the county sheriff's agency by default, or the countywide total when asked for), so you will not be asked for it. Use this table for county-level breakdowns and rankings ("by county", "which counties").
@@ -142,9 +148,9 @@ One row per victim. JOINs to incidents on incident_id.
    - If unsure about the exact name, use alias lookup: \`i.ori IN (SELECT ori FROM shr_agency_alias WHERE state = 'TX' AND alias_key LIKE '%HOUSTON%')\`.
    - **University / college / campus agencies** are specific agency queries, not surrounding-city queries. Resolve them through \`shr_agency_alias\` by searching alias/canonical agency names for campus terms plus the place, then filter incidents by ORI. Do NOT substitute the city police department and do NOT require agency_type = 'City'; campus agency_type may be Other/blank or inconsistent. If the resolved campus ORI has no rows, say the campus agency has no SHR homicide records in this database rather than returning citywide data.
    - **Multi-city comparisons**: See ENTITY SELECTION RULE above. When the user names specific cities, use CASE WHEN to pivot each into its own column (e.g., SUM(CASE WHEN i.agency = 'Nashville' AND i.state = 'TN' THEN 1 END) as nashville). Do NOT use i.agency as a GROUP BY column in the output — raw agency names can be inconsistent.
-   - **City vs County disambiguation** — Many cities share agency names with county agencies (e.g., Los Angeles has both City and County). When the user asks about a city, restrict the alias subquery to agency_type = 'City' or filter incidents with (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = ''). Only use agency_type = 'County' when the user specifically asks about a county agency/sheriff. For county-named police departments such as St. Louis County Police Department, use alias lookup by ORI; do not assume every "County" request is a countywide geographic total.
-10. **Agency vs countywide geography** — The agency_type column indicates whether the reporting agency is a city police department ('City') or county sheriff's office ('County'). A "County" agency is one sheriff/county law-enforcement agency; it is NOT automatically the countywide total. For a specific named county sheriff's office (e.g., "Harris County Sheriff"), use shr_agency_alias / agency_type = 'County' as a single-agency query. A question about one named county is answered by the application, not by generated SQL. For county breakdowns or rankings (e.g., "by county"), use agency_county_crosswalk to include all mapped city, county, university, transit, state, and other agencies located in the county, and disclose that totals depend on agency participation. When the user asks about "cities" in rankings, filter with WHERE agency_type = 'City'.
-11. **Big cities** — When the user says "big cities" or "large cities", filter to agencies with population >= 250000 AND (agency_type = 'City' OR agency_type IS NULL OR agency_type = '').
+   - **City vs County disambiguation** — Many cities share agency names with county agencies (e.g., Los Angeles has both City and County). When the user asks about a city, use the ORIs from agency resolution; if you must separate a city agency from a same-named county agency, JOIN shr_agency_year_class c ON c.ori = i.ori AND c.state = i.state AND c.year = i.year and filter c.agency_type = 'City'. Only filter c.agency_type = 'County' when the user specifically asks about a county agency/sheriff. For county-named police departments such as St. Louis County Police Department, use alias lookup by ORI; do not assume every "County" request is a countywide geographic total.
+10. **Agency vs countywide geography** — shr_agency_year_class.agency_type indicates whether the reporting agency is a city police department ('City') or county sheriff's office ('County'). A "County" agency is one sheriff/county law-enforcement agency; it is NOT automatically the countywide total. For a specific named county sheriff's office (e.g., "Harris County Sheriff"), resolve it through shr_agency_alias to its ORI as a single-agency query. A question about one named county is answered by the application, not by generated SQL. For county breakdowns or rankings (e.g., "by county"), use agency_county_crosswalk to include all mapped city, county, university, transit, state, and other agencies located in the county, and disclose that totals depend on agency participation. When the user asks about "cities" in rankings, JOIN shr_agency_year_class c ON c.ori = i.ori AND c.state = i.state AND c.year = i.year and filter c.agency_type = 'City'.
+11. **Big cities** — When the user says "big cities" or "large cities", filter to agencies with i.population >= 250000, JOIN shr_agency_year_class c ON c.ori = i.ori AND c.state = i.state AND c.year = i.year, and c.agency_type = 'City'.
 11b. **Murder rates (per capita)** — The incidents table has a population column. Do NOT refuse rate queries — the data supports them.
     - **Single agency by year** (e.g., "DC murder rate"): \`ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) as rate_per_100k\`. AVG(population) works here because population is the same across all incidents for one agency/year.
     - **Multi-agency rankings** (e.g., "cities with highest murder rate"): GROUP BY agency, then compute rate per agency: \`ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1)\` within each GROUP BY agency, state, year group.
@@ -157,7 +163,8 @@ One row per victim. JOINs to incidents on incident_id.
     WITH monthly AS (
       SELECT printf('%04d-%02d', i.year, i.month) AS ym, COUNT(*) as cnt
       FROM incidents i JOIN victims v ON v.incident_id = i.id
-      WHERE i.agency = 'Houston' AND i.state = 'TX' AND (i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '') AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.month BETWEEN 1 AND 12
+      JOIN shr_agency_year_class c ON c.ori = i.ori AND c.state = i.state AND c.year = i.year
+      WHERE i.agency = 'Houston' AND i.state = 'TX' AND c.agency_type = 'City' AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.month BETWEEN 1 AND 12
       GROUP BY ym
     ), bounds AS (SELECT MIN(ym) AS start_ym, MAX(ym) AS end_ym FROM monthly),
     spine (ym) AS (
