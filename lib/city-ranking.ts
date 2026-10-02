@@ -42,6 +42,7 @@
  */
 import { buildQueryContract } from "./query-contract";
 import { resolveGeoPlaces } from "./geo-place-resolver";
+import { STATE_NAME_TO_ABBR } from "./state-population";
 import { UCR_CODES } from "./nibrs-codes";
 import { SHR_ALL_HOMICIDE_DISCLOSURE, SHR_MEASURE_CONFLICT_MESSAGE, shrRequestedMeasure } from "./shr-murder-licence";
 
@@ -531,6 +532,10 @@ const NATIONAL_MODIFIER_WORDS = new RegExp(String.raw`\b(?:United\s+States|Ameri
 // Case-sensitive on purpose: the "no capitalised word follows" guard must not be case-folded.
 const NATIONAL_PLACE_CASED = /\b(?:[Ii]n|[Aa]cross|[Tt]hroughout)\s+the\s+(?:U\.S\.|US|United\s+States|united\s+states)(?![A-Za-z.])(?!\s+[A-Z])/g;
 const NATIONAL_ADVERB = /\bnationwide\b/gi;
+// An upper-case postal code after a place preposition ("in IN", "across TX"). Case-sensitive on purpose:
+// the lower-case preposition itself ("in") must never read as Indiana.
+const STATED_STATE_CODE = new RegExp(
+  String.raw`(?<=\b(?:[Ii]n|[Aa]cross|[Tt]hroughout|[Ww]ithin)\s+)(?:${Object.values(STATE_NAME_TO_ABBR).join("|")})(?![A-Za-z])`, "g");
 /*
  * `largest` and `smallest` are deliberately NOT direction words. They describe the cities, not the
  * measure: in "top 10 largest cities by murder rate" the superlative orders population and the
@@ -1329,6 +1334,13 @@ export function recognizeCityRanking(question: string, source: CityRankingSource
         "state-name", (text) => ({ field: "geography", name: text }), ["geography"]);
     }
   }
+
+  // A state stated by its postal code must survive to assembly even when the contract did not resolve
+  // it: with a national qualifier the contract reports only "national", and the case-insensitive
+  // preposition filler would otherwise consume "IN" in "US cities in IN" (Codex NR-1, 2026-10-01).
+  // Claimed as a geography, so assembly declines national-plus-state, or state-unresolved without a
+  // national word; a code the contract did resolve is already claimed above and is untouched.
+  claimWords(ledger, question, STATED_STATE_CODE, "stated-state-code", (text) => ({ field: "geography", name: text }), ["geography"]);
 
   applyFillerAndConnectors(ledger, question);
 

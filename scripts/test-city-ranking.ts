@@ -1143,6 +1143,27 @@ check("NATIONAL — competing or different meanings are not broadened into a nat
   }
 });
 
+check("NATIONAL (NR-1) — a state stated by postal code is never swallowed into a nationwide ranking", () => {
+  for (const source of ["current", "nibrs", "shr"] as const) {
+    // Codex NR-1: "in IN" read as preposition + preposition, so the national form delivered every city.
+    declined("Which US cities in IN had the highest murder rates in 2025?", source, "national-and-state");
+    declined("Which US cities in IN had the most murders in 2025?", source, "national-and-state");
+    declined("Which U.S. cities in TX had the most murders in 2025?", source, "national-and-state");
+    // The same swallowing without a national word gave a nationwide answer on released 9bc214c too.
+    declined("Which cities in IN had the highest murder rates in 2025?", source, "state-unresolved");
+    declined("Which cities in TX have the highest murder rates in 2025?", source, "state-unresolved");
+    // Full-name counterparts are unchanged: a state ranking, and national-plus-state still refused.
+    const indiana = recognizeCityRanking("Which cities in Indiana had the highest murder rates in 2025?", source);
+    assert.ok(indiana?.kind === "ranking" && indiana.scope.kind === "state" && indiana.scope.code === "IN", "Indiana spelled out is a state ranking");
+    declined("Which US cities in Indiana had the highest murder rates in 2025?", source);
+    // The lower-case preposition is never a state, and the national forms still reach the ranking.
+    for (const q of ["Which cities in the US had the highest murder rates in 2025?", "Which US cities have the highest murder rates in 2025?"]) {
+      const r = recognizeCityRanking(q, source);
+      assert.ok(r?.kind === "ranking" && r.scope.kind === "nationwide", `${q} stays a nationwide ranking`);
+    }
+  }
+});
+
 check("NATIONAL — accepted ranking constraints still apply to a national request", () => {
   // NIBRS reporting-jurisdiction limitation (GC-057) is unchanged by a national qualifier.
   declined("Which US jurisdictions had the highest murder rates in 2025?", "nibrs", "jurisdiction-unavailable-nibrs");
