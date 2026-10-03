@@ -81,6 +81,58 @@ export function shootingCityIntents(question: string): ShootingCityIntent[] {
   return [{ agency: raw, display: displayPlace(raw), state }];
 }
 
+export const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTH_RE = "(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
+const monthNumber = (word: string): number => MONTH_NAMES.findIndex((m) => m.toLowerCase().startsWith(word.toLowerCase().replace(/\.$/, "").slice(0, 3))) + 1;
+
+/**
+ * GC-108: a month cutoff applied within EVERY requested year ("through July of each year", "January through July").
+ * `supported`: the months [startMonth, endMonth] are kept in each year. `unsupported`: a month is tied to a specific
+ * year ("through July 2024") -- a different request (a range ending mid-year) the deterministic path does not build,
+ * so it declines rather than answer whole years. `none`: no month restriction asked.
+ */
+export type ShootingMonthWindow =
+  | { kind: "none" }
+  | { kind: "unsupported"; reason: string }
+  | { kind: "supported"; startMonth: number; endMonth: number; label: string; explanation: string };
+
+export function shootingMonthWindow(question: string): ShootingMonthWindow {
+  const yearAfter = (s: string) => /^\s*,?\s*(?:of\s+)?(?:19|20)\d{2}\b/.test(s);
+  const range = new RegExp(`\\b(?:from\\s+|between\\s+)?${MONTH_RE}\\s*(?:through|thru|to|until|till|and|-|–)\\s*(?:the\\s+end\\s+of\\s+)?${MONTH_RE}\\b`, "i").exec(question);
+  if (range) {
+    if (yearAfter(question.slice(range.index + range[0].length))) return { kind: "unsupported", reason: "a month range tied to a specific year" };
+    const start = monthNumber(range[1]); const end = monthNumber(range[2]);
+    if (start >= 1 && end >= start) {
+      return { kind: "supported", startMonth: start, endMonth: end, label: `${MONTH_NAMES[start - 1]}–${MONTH_NAMES[end - 1]}`, explanation: `${MONTH_NAMES[start - 1]} through ${MONTH_NAMES[end - 1]} of each year` };
+    }
+    return { kind: "unsupported", reason: "a month range that wraps the year end" };
+  }
+  const through = new RegExp(`\\b(?:through|thru|until|till|up\\s+to|to\\s+date\\s+through|year[-\\s]to[-\\s]date\\s+through)\\s+(?:the\\s+end\\s+of\\s+)?${MONTH_RE}\\b`, "i").exec(question);
+  if (through) {
+    if (yearAfter(question.slice(through.index + through[0].length))) return { kind: "unsupported", reason: "a month cutoff tied to a specific year" };
+    const end = monthNumber(through[1]);
+    if (end >= 1) {
+      return { kind: "supported", startMonth: 1, endMonth: end, label: `January–${MONTH_NAMES[end - 1]}`, explanation: `January through ${MONTH_NAMES[end - 1]} of each year` };
+    }
+  }
+  return { kind: "none" };
+}
+
+/**
+ * GC-109: what the deterministic shooting path measures. `count` (default): fatal-shooting victims. `median_age`:
+ * the median recorded age of fatal-shooting VICTIMS. Any other age statistic, or an offender/shooter age, is
+ * `unsupported` -- the deterministic path declines rather than return counts for an age question.
+ */
+export type ShootingMeasure = { kind: "count" } | { kind: "median_age" } | { kind: "unsupported"; reason: string };
+
+export function shootingMeasure(question: string): ShootingMeasure {
+  const ageAsked = /\bages?\b/i.test(question);
+  if (!ageAsked) return { kind: "count" };
+  if (/\b(?:offenders?|shooters?|suspects?|killers?|perpetrators?)\b/i.test(question)) return { kind: "unsupported", reason: "an offender age" };
+  if (/\bmedian\b/i.test(question)) return { kind: "median_age" };
+  return { kind: "unsupported", reason: "an age statistic other than the median" };
+}
+
 export function shootingYearIntent(question: string): { clause: string; label: string; explanation: string } {
   const between = question.match(/\b(?:between|from)\s+((?:19|20)\d{2})\s+(?:and|to|through|-)\s+((?:19|20)\d{2})\b/i) ||
     question.match(/\b((?:19|20)\d{2})\s*(?:-|to|through)\s*((?:19|20)\d{2})\b/i);
