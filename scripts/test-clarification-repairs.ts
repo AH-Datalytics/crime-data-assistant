@@ -49,7 +49,8 @@ import {
   ASKS_SHOOTING_WORDING,
   STATES_NONFATAL,
 } from "../lib/shooting-scope-clarification";
-import { displayPlace, shootingCityIntents, shootingYearIntent, stateMention } from "../lib/shr-deterministic-shooting";
+import { SHR_DATA_CUTOFF } from "../lib/dynamic-facts";
+import { MONTH_NAMES, displayPlace, shootingCityIntents, shootingMeasure, shootingMonthWindow, shootingYearIntent, stateMention } from "../lib/shr-deterministic-shooting";
 import { shrCountyRequest, resolveShrCountyScope, withShrScopeAndMeasureDisclosures } from "../lib/shr-county-scope";
 import { shrRequestedMeasure } from "../lib/shr-murder-licence";
 import { explicitStateIntent } from "../lib/explicit-state-intent";
@@ -531,6 +532,11 @@ function harness(request: string, userTurn: string) {
       asksShooting: ASKS_SHOOTING_WORDING.test(request),
       wantsNonfatal: STATES_NONFATAL.test(request),
       shootingScopeAsk: shouldAskShootingScope(request, []),
+      // GC-108/109 (2026-10-03): the requested month window and measure, decided exactly as the route does.
+      shootingMonths: shootingMonthWindow(request),
+      shootingMeasured: shootingMeasure(request),
+      shootingFormSupported: shootingMonthWindow(request).kind !== "unsupported" && shootingMeasure(request).kind !== "unsupported",
+      MONTH_NAMES, SHR_DATA_CUTOFF,
       shootingYearIntent, sourceYearOverlap, shootingCityIntents, displayPlace, stateMention,
       explicitStateIntent, resolveShrAgency, buildShrCanonicalLabelCase,
       isZeroResult, runShrAgencyProbe, appendShrAgencyProbeCaveat,

@@ -53,7 +53,7 @@ import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { detectDemographicRateDenominatorFollowup, detectShrGroupRateOverride, detectSubCityGeographyOverride } from "@/lib/capability-overrides";
 import { displayShrAgencyName, normalizeShrAgencyText } from "@/lib/shr-agency-normalization";
 import { asksSimpleFirearmHomicideTrend } from "@/lib/shr-firearm-trend-intent";
-import { displayPlace, shootingCityIntents, shootingYearIntent, stateMention } from "@/lib/shr-deterministic-shooting";
+import { MONTH_NAMES, displayPlace, shootingCityIntents, shootingMeasure, shootingMonthWindow, shootingYearIntent, stateMention } from "@/lib/shr-deterministic-shooting";
 import { classifyShootingQualifier } from "@/lib/shooting-qualifiers";
 import {
   ASKS_SHOOTING_WORDING,
@@ -689,7 +689,17 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     if (asksShooting && !wantsNonfatal && shootingQualifier.kind === "unsupported") {
       console.log(`[shr][deterministic-shooting] declining: unsupported qualifier(s) ${shootingQualifier.ids.join(",")} — routing to model`);
     }
-    if (asksShooting && !wantsNonfatal && shootingQualifier.kind !== "unsupported" && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
+    // GC-108/109: the requested month window and measure must reach the delivered answer. A form this path cannot
+    // build (a month tied to one year, an offender or non-median age statistic) declines, as an unsupported
+    // qualifier does, instead of answering whole-year victim counts.
+    const shootingMonths = shootingMonthWindow(shootingRequest);
+    const shootingMeasured = shootingMeasure(shootingRequest);
+    const shootingFormSupported = shootingMonths.kind !== "unsupported" && shootingMeasured.kind !== "unsupported";
+    if (asksShooting && !wantsNonfatal && !shootingFormSupported) {
+      const why = shootingMonths.kind === "unsupported" ? shootingMonths.reason : shootingMeasured.kind === "unsupported" ? shootingMeasured.reason : "";
+      console.log(`[shr][deterministic-shooting] declining: ${why} — routing to model`);
+    }
+    if (asksShooting && !wantsNonfatal && shootingQualifier.kind !== "unsupported" && shootingFormSupported && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
       const stateMatch = shootingRequest.match(/\b([A-Z]{2})\b/) || shootingRequest.match(/\bin\s+(\w+)\b/i);
       const yearIntent = shootingYearIntent(shootingRequest);
       const wantsMonthly = /\b(?:monthly|per\s+month|by\s+month)\b/i.test(shootingRequest);
@@ -897,13 +907,34 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       const periodSelect = wantsMonthly ? "printf('%04d-%02d', i.year, i.month) AS month" : "i.year";
       const periodGroup = wantsMonthly ? "i.year, i.month" : "i.year";
       const periodOrder = wantsMonthly ? "i.year, i.month" : "i.year";
+      // The where clauses BEFORE any month restriction, for the unknown-month disclosure below.
+      const whereWithoutMonth = [...whereClauses];
       if (wantsMonthly) whereClauses.push("i.month IS NOT NULL");
+      // GC-108: the requested months within each year. An incident without a recorded month cannot be placed in
+      // the window, so it is excluded (and disclosed below), never counted as if it fell inside it.
+      if (shootingMonths.kind === "supported") whereClauses.push(`i.month BETWEEN ${shootingMonths.startMonth} AND ${shootingMonths.endMonth}`);
+      const medianAge = shootingMeasured.kind === "median_age";
+      const measureColumn = medianAge ? "median_victim_age" : "fatal_shootings";
+      // GC-109: the median recorded victim age per period (and place), from the SAME rows the count would use.
+      // SQLite has no MEDIAN: rank known ages within each group; the median is the middle rank (odd n) or the mean
+      // of the two middle ranks (even n). Victims with no recorded age are excluded from the median and counted.
+      const medianKeys = [wantsMonthly ? "month" : "year", ...(isMultiCity ? ["agency", "state"] : [])];
+      const medianSql = () => {
+        const ctePrefix = withClause ? `${withClause.trimEnd()}, ` : "WITH ";
+        const keys = medianKeys.join(", ");
+        return `${ctePrefix}shooting_victims AS (SELECT ${periodSelect}, ${selectPlace}v.age_num AS age FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")}), `
+          + `ranked AS (SELECT ${keys}, age, ROW_NUMBER() OVER (PARTITION BY ${keys} ORDER BY age) AS rn, COUNT(*) OVER (PARTITION BY ${keys}) AS n FROM shooting_victims WHERE age IS NOT NULL), `
+          + `medians AS (SELECT ${keys}, AVG(age) AS median_victim_age, MAX(n) AS victims_with_known_age FROM ranked WHERE rn IN ((n + 1) / 2, (n + 2) / 2) GROUP BY ${keys}), `
+          + `totals AS (SELECT ${keys}, COUNT(*) AS fatal_shooting_victims, SUM(CASE WHEN age IS NULL THEN 1 ELSE 0 END) AS victims_age_unknown FROM shooting_victims GROUP BY ${keys}) `
+          + `SELECT ${medianKeys.map((k) => `t.${k}`).join(", ")}, m.median_victim_age, COALESCE(m.victims_with_known_age, 0) AS victims_with_known_age, t.victims_age_unknown FROM totals t LEFT JOIN medians m ON ${medianKeys.map((k) => `m.${k} = t.${k}`).join(" AND ")} ORDER BY ${medianKeys.map((k) => `t.${k}`).join(", ")} LIMIT 1000`;
+      };
       // Held in a variable so the derivation can be sealed from what the PLANNER
       // emitted. Sealing from shootingContract.sql -- the post-validation string --
       // would fingerprint the executed SQL against itself and prove nothing, which is
       // exactly the tautology the token exists to avoid. The contract validator can
       // rewrite this query, and that rewrite is what must remain detectable.
-      const plannedShootingSql = `${withClause}SELECT ${periodSelect}, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY ${periodGroup}${groupPlace} ORDER BY ${periodOrder}${orderPlace} LIMIT 1000`;
+      const countShootingSql = `${withClause}SELECT ${periodSelect}, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY ${periodGroup}${groupPlace} ORDER BY ${periodOrder}${orderPlace} LIMIT 1000`;
+      const plannedShootingSql = `${medianAge ? medianSql() : countShootingSql}`;
       const shootingContract = runDeterministicPlanValidation(plannedShootingSql);
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
@@ -916,8 +947,15 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       const qualifierNarrative =
         shootingQualifier.kind === "supported" ? shootingQualifier.qualifier.narrativeLabel : "fatal shootings (firearm homicides)";
       const qualifierCaveat = shootingQualifier.kind === "supported" ? shootingQualifier.qualifier.caveat : null;
-      const title = `${qualifierTitle}, ${titlePlace}, ${effectiveYearLabel}`;
-      const explanation = `${qualifierNarrative.charAt(0).toUpperCase()}${qualifierNarrative.slice(1)} by ${wantsMonthly ? "month" : "year"}${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${effectiveYearExplanation}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.${qualifierCaveat ? ` ${qualifierCaveat}` : ""}`;
+      const monthWindowLabel = shootingMonths.kind === "supported" ? ` (${shootingMonths.label})` : "";
+      const monthWindowText = shootingMonths.kind === "supported" ? `, ${shootingMonths.explanation}` : "";
+      const title = medianAge
+        ? `Median Age of Victims: ${qualifierTitle}, ${titlePlace}, ${effectiveYearLabel}${monthWindowLabel}`
+        : `${qualifierTitle}, ${titlePlace}, ${effectiveYearLabel}${monthWindowLabel}`;
+      const explanationLead = medianAge
+        ? `Median age of victims of ${qualifierNarrative} by ${wantsMonthly ? "month" : "year"}`
+        : `${qualifierNarrative.charAt(0).toUpperCase()}${qualifierNarrative.slice(1)} by ${wantsMonthly ? "month" : "year"}`;
+      const explanation = `${explanationLead}${titlePlace !== "Nationally" ? ` in ${titlePlace}` : ""} ${effectiveYearExplanation}${monthWindowText}. This shows only homicides where the weapon was a firearm - nonfatal shootings are not tracked in this database.${qualifierCaveat ? ` ${qualifierCaveat}` : ""}`;
       // Execute the deterministic SQL
       const db = getShrDb();
       if (!db) {
@@ -926,7 +964,8 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       try {
         let rows = db.prepare(sql).all() as Record<string, unknown>[];
         rows = normalizeShrDisplayRows(rows);
-        const columns = rows.length > 0 ? Object.keys(rows[0]) : [wantsMonthly ? "month" : "year", "fatal_shootings"];
+        const columns = rows.length > 0 ? Object.keys(rows[0])
+          : medianAge ? [...medianKeys, "median_victim_age", "victims_with_known_age", "victims_age_unknown"] : [wantsMonthly ? "month" : "year", "fatal_shootings"];
 
         // Add caveats
         // Named-agency rows the classification could not type, within this statement's own filters.
@@ -953,7 +992,29 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         const caveats = [normalizeShrAgencyText(explanation)];
         if (fallbackUnresolved && fallbackScopes && fallbackUnresolved.agencies > 0) caveats.push(unresolvedDisclosure(fallbackUnresolved, fallbackScopes));
         if (overlapDisclosure) caveats.push(overlapDisclosure);
-        caveats.push("Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
+        // GC-108: what the month window could not place, and a latest year the source does not yet cover to the end
+        // of the window.
+        if (shootingMonths.kind === "supported") {
+          const unknownMonth = db.prepare(
+            `${withClause}SELECT COUNT(*) AS n FROM incidents i ${joinClauses} WHERE ${whereWithoutMonth.join(" AND ")} AND i.month IS NULL`,
+          ).get() as { n: number };
+          if (unknownMonth.n > 0) {
+            caveats.push(`${unknownMonth.n.toLocaleString("en-US")} victim record${unknownMonth.n === 1 ? "" : "s"} in this scope ${unknownMonth.n === 1 ? "has" : "have"} no recorded month, so ${unknownMonth.n === 1 ? "it is" : "they are"} not included in the ${shootingMonths.label} window.`);
+          }
+          const cutoffYear = Number(SHR_DATA_CUTOFF.year), cutoffMonth = Number(SHR_DATA_CUTOFF.month);
+          const latestRowYear = rows.reduce((max, r) => Math.max(max, Number(r.year ?? String(r.month ?? "").slice(0, 4)) || 0), 0);
+          if (latestRowYear === cutoffYear && cutoffMonth >= 1 && cutoffMonth < shootingMonths.endMonth) {
+            caveats.push(`SHR data for ${cutoffYear} runs through ${MONTH_NAMES[cutoffMonth - 1]}, so ${cutoffYear} covers ${MONTH_NAMES[shootingMonths.startMonth - 1]}–${MONTH_NAMES[cutoffMonth - 1]} only, not the full ${shootingMonths.label} window.`);
+          }
+        }
+        // GC-109: the median is over victims with a recorded age; the unknown-age victims are counted, not guessed.
+        if (medianAge) {
+          const unknownAge = rows.reduce((sum, r) => sum + (Number(r.victims_age_unknown) || 0), 0);
+          caveats.push(`The median is computed from victims with a recorded age (victims_with_known_age); ${unknownAge > 0 ? `${unknownAge.toLocaleString("en-US")} victim${unknownAge === 1 ? "" : "s"} with no recorded age ${unknownAge === 1 ? "is" : "are"} excluded and shown as victims_age_unknown` : "no victim in these rows lacks a recorded age"}. A period with no recorded ages has no median.`);
+        }
+        caveats.push(medianAge
+          ? "Not all agencies and states report SHR data every year, so these figures describe the reported victims only."
+          : "Not all agencies and states report SHR data every year, so these counts underrepresent total fatal shootings.");
         let totalExplanation = caveats.join("\n\n");
 
         // Deterministic paths bypass runGuardrails, so the zero-result agency
@@ -973,7 +1034,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         // GC-080: which agency was queried, and which victims counted, stated by the application.
         totalExplanation = withShrScopeAndMeasureDisclosures(totalExplanation, shrCountyScope, shootingAllHomicides);
         const displayTitle = normalizeShrAgencyText(title);
-        const chartConfig = applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: ["fatal_shootings"], yAxisLabel: "Fatal Shootings", title: displayTitle }, question);
+        const chartConfig = applyChartCustomizations({ type: "line", xAxis: wantsMonthly ? "month" : "year", yAxis: [measureColumn], yAxisLabel: medianAge ? "Median Victim Age" : "Fatal Shootings", title: displayTitle }, question);
         const shootingProof = finalizeExit({ outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source, sql, rows, columns, derivation: sealPlanDerivation("deterministic-shooting", plannedShootingSql), planFamily: "deterministic-shooting", guardrails: detGuardrails, returnedEntities: returnedEntityKeys(rows), narrative: totalExplanation, hasChart: true, db });
         writeLog(question, sql, rows.length, null, Date.now() - start, totalExplanation, "shr", detGuardrails, "deterministic", sessionId, serializeChartConfigForLog(chartConfig, columns.slice(), { source: "FBI SHR", agencyCount: 0, population: null }), shootingProof);
         return jsonResp(emitFactualPayload(shootingProof, attachChartAuditToPayload({
