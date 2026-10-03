@@ -890,5 +890,25 @@ check("non-aggregatability is a typed property, not a sentence", () => {
     "so it must not be able to produce a statewide figure");
 });
 
+check("'what' as a determiner asks for a list exactly as 'which' does (NIBRS What/Which, 2026-10-02)", () => {
+  const level = (q: string, source: QueryContractSource = "nibrs") => requestedScope(q, buildQueryContract(q, source)!).rowLevel;
+  // The defect: a city ranking worded "What cities in <state> ..." fell back to the state geography.
+  for (const state of ["Illinois", "Texas", "Michigan", "Louisiana"]) {
+    assert.strictEqual(level(`What cities in ${state} had the highest murder rates in 2025?`), "city", state);
+    assert.strictEqual(level(`What cities in ${state} have the highest murder rates in 2025?`), "city", `${state} (have)`);
+    assert.strictEqual(level(`Which cities in ${state} had the highest murder rates in 2025?`), "city", `${state} (which, unchanged)`);
+  }
+  assert.strictEqual(level("What U.S. cities have the highest murder rates in 2025?"), "city", "a modifier word between");
+  assert.strictEqual(level("What large cities in Texas had the most murders in 2025?"), "city");
+  assert.strictEqual(level("What counties in Texas had the most murders in 2025?"), "county");
+  assert.strictEqual(level("What agencies in Ohio reported the most robberies in 2025?"), "agency");
+  assert.strictEqual(level("What police departments in Ohio reported the most robberies in 2025?"), "agency");
+  assert.strictEqual(level("What states had the highest murder rates in 2025?"), "state");
+  // Not claimed: "what" that is not the determiner of the entity noun keeps the geography's level.
+  assert.strictEqual(level("What is the murder rate for cities in Texas in 2025?"), "state", "a longer gap is a different construction");
+  assert.strictEqual(level("What was the murder rate in Illinois in 2025?"), "state");
+  assert.strictEqual(level("What is the murder rate in Chicago in 2025?"), "city", "a city geography is still a city");
+});
+
 console.log(`\nstructural semantics: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

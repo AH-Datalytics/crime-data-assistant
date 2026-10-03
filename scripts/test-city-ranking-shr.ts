@@ -19,7 +19,7 @@ import "./offline-evidence-guard";
 import { deniedDatabaseOpens, deniedNetworkCalls } from "./offline-evidence-guard";
 import { readFileSync } from "node:fs";
 import Database from "better-sqlite3";
-import { recognizeCityRanking, type CityRankingRequest } from "../lib/city-ranking";
+import { recognizeCityRanking, rankingValidationContract, type CityRankingRequest } from "../lib/city-ranking";
 import { buildCityRanking } from "../lib/city-ranking-builder";
 import { planShrCityRanking, runShrCityRanking, type ValidatedStatement } from "../lib/city-ranking-shr";
 import { proveShrVictimLicence } from "../lib/shr-murder-licence";
@@ -162,9 +162,10 @@ function shrDb() {
 }
 const deps = (db: Database.Database, question: string, seen: string[] = []) =>
   ({ validate: validator(db, question, seen), typeEvidence: (year: number) => loadShrTypeEvidence(db, year) });
+// Mirrors the route: a stated nationwide scope validates against its assembled scope (rankingValidationContract).
 const validator = (db: Database.Database, question: string, seen: string[] = []) => (statement: string): ValidatedStatement | null => {
   seen.push(statement);
-  const contract = validateDeterministicShrPlanSql({ question, sql: statement });
+  const contract = validateDeterministicShrPlanSql({ question, sql: statement, contract: rankingValidationContract(question, "shr") });
   if (queryContractFailureMessage(contract)) return null;
   return { sql: contract.sql, rows: () => db.prepare(contract.sql).all() as Record<string, unknown>[] };
 };
@@ -339,6 +340,48 @@ console.log("\n5 - disagreement and refusal are owned failures");
     const refuseAll = (statement: string) => { seen.push(statement); return null; };
     check(runShrCityRanking(plan, { validate: refuseAll, typeEvidence }).kind === "refused" && seen.length === 1, "a validation refusal runs nothing further");
   } else check(false, "GC-064 plans for the refusal checks");
+  db.close();
+}
+
+console.log("\n6 - a stated national scope delivers the same SHR ranking (Codex national-ranking ruling, 2026-10-01)");
+{
+  const { db, add, evidence, city } = shrDb();
+  add("A1", "Alpha", "", 200000, 2025, 100); evidence("A1", city);                   // 50.0 city
+  add("H1", "Eta", null, 500000, 2025, 150); evidence("H1", city);                   // 30.0 city
+  add("C1", "Gamma County", "City", 400000, 2025, 300); evidence("C1", { bound: { 2024: "County", 2025: "County" } }); // County: not ranked
+  add("G1", "Gamma", "City", 250000, 2025, 50); evidence("G1", "unbound");           // unresolved candidate
+  const forms: [string, string][] = [
+    ["U.S.", "What U.S. cities over 100k population have highest homicide rates currently"],
+    ["US", "What US cities over 100k population have highest homicide rates currently"],
+    ["United States", "What cities in the United States over 100k population have highest homicide rates currently"],
+    ["American", "What American cities over 100k population have highest homicide rates currently"],
+    ["nationwide", "What cities nationwide over 100k population have highest homicide rates currently"],
+  ];
+  const base = planShrCityRanking(GC064, CUTOFF);
+  const baseOut = base?.kind === "deterministic" ? runShrCityRanking(base, deps(db, GC064)) : null;
+  check(baseOut?.kind === "answer" && baseOut.rows.length > 0, "the unqualified GC-064 ranking delivers non-empty fixture rows");
+  for (const [form, question] of forms) {
+    const recognized = recognizeCityRanking(question, "shr");
+    check(recognized?.kind === "ranking" && recognized.scope.kind === "nationwide"
+      && recognized.origins.find((o) => o.field === "scope")?.from === "production",
+      `${form}: recognized as a STATED nationwide scope (a production, not the omission default)`);
+    const plan = planShrCityRanking(question, CUTOFF);
+    const out = plan?.kind === "deterministic" ? runShrCityRanking(plan, deps(db, question)) : null;
+    check(out?.kind === "answer" && baseOut?.kind === "answer"
+      && JSON.stringify(rowsOf(out)) === JSON.stringify(rowsOf(baseOut)) && out.rows.length > 0
+      && out.title === baseOut.title && out.explanation === baseOut.explanation && out.complete === baseOut.complete
+      && plan?.kind === "deterministic" && base?.kind === "deterministic" && plan.built.sql === base.built.sql,
+      `${form}: same statement, rows, title, completeness and disclosures as the unqualified ranking`);
+  }
+  const territory = recognizeCityRanking("Which cities in the U.S. Virgin Islands have the highest homicide rates currently", "shr");
+  check(!territory || territory.kind !== "ranking", "a territory is not broadened into a nationwide SHR ranking");
+  const pronoun = recognizeCityRanking("Show us the cities with the highest homicide rates currently", "shr");
+  check(!pronoun || pronoun.kind !== "ranking", "the pronoun is not the country");
+  const both = recognizeCityRanking("Which American cities in Texas have the highest homicide rates currently", "shr");
+  check(both?.kind === "unsupported" && both.reason === "national-and-state", "national plus a state declines rather than choosing");
+  const state = recognizeCityRanking("Which cities in Texas have the highest homicide rates currently", "shr");
+  check(state?.kind === "ranking" && state.scope.kind === "state" && /i\.state = 'TX'/.test(buildCityRanking(state, CUTOFF)!.sql),
+    "a state control stays a state, filtered in the statement");
   db.close();
 }
 

@@ -26,8 +26,11 @@
 import { proveShrVictimLicence, shrRequestedMeasure, SHR_MEASURE_CONFLICT_MESSAGE, type ShrVictimMeasure } from "./shr-murder-licence";
 import { shrScopeViolation, SHR_SCOPE_GUARDRAIL, type ShrScopeBinding } from "./shr-county-scope";
 import { validateQueryContractSql, type QueryContractSqlValidation } from "./query-contract-validator";
+import type { QueryContract } from "./query-contract";
 import { compiledShrCountIssue, type CompiledShrCount } from "./shr-count-plan";
 import type { RoutingLogMeta } from "./routing-log-meta";
+import { agencyTypeVerdict, agencyTypeRetryInstruction, requestedAgencyCategories, SHR_AGENCY_TYPE_GUARDRAIL } from "./shr-agency-type-authority";
+import { YEAR_CLASS_UNAVAILABLE_TEXT, type ClassScope, type YearClassAvailability } from "./shr-agency-year-class";
 
 const MODEL_AUTHORED = Symbol("shr.model-authored");
 const DETERMINISTIC = Symbol("shr.deterministic-plan");
@@ -37,11 +40,14 @@ export type ModelAuthoredShrValidation = QueryContractSqlValidation & {
   readonly [MODEL_AUTHORED]: true;
   /** Why the licence was refused, when it was. Null when it was proved or not engaged. */
   licenceRefusal: string | null;
+  /** Set when the statement counts only classified agencies (shr_agency_year_class): every counting scope, to disclose. */
+  agencyTypeScopes?: ClassScope[] | null;
 };
 
 /** Result of validating SQL a DETERMINISTIC compiler assembled. */
 export type DeterministicShrPlanValidation = QueryContractSqlValidation & {
   readonly [DETERMINISTIC]: true;
+  agencyTypeScopes?: ClassScope[] | null;
 };
 
 /** GC-080: why an all-homicide request was refused. */
@@ -73,6 +79,17 @@ export function validateModelAuthoredShrSql(opts: {
   sql: string;
   routingMeta?: RoutingLogMeta | null;
   /** GC-080: the county scope the route bound before the model, enforced on this statement. */
+  scope?: ShrScopeBinding | null;
+  /** Whether the SHR agency/year classification is built and current (lib/shr-agency-year-class.ts). */
+  yearClass?: YearClassAvailability | null;
+}): ModelAuthoredShrValidation {
+  return withAgencyTypeVerdict(validateModelAuthoredShrSqlInner(opts), opts.yearClass ?? null, "model", opts.question);
+}
+
+function validateModelAuthoredShrSqlInner(opts: {
+  question: string;
+  sql: string;
+  routingMeta?: RoutingLogMeta | null;
   scope?: ShrScopeBinding | null;
 }): ModelAuthoredShrValidation {
   const raw = validateQueryContractSql({
@@ -110,6 +127,39 @@ export function validateModelAuthoredShrSql(opts: {
     blockReasons: [...base.blockReasons, measure === "conflict" ? SHR_MEASURE_CONFLICT_MESSAGE : HOMICIDE_LICENCE_MESSAGE],
     enforced: [...new Set([...base.enforced, SHR_LICENCE_GUARDRAIL])],
   }, scope);
+}
+
+/**
+ * City/County membership authority (Codex combined ruling and SHR classification ruling SCA-1/SCA-2, 2026-10-02;
+ * lib/shr-agency-type-authority.ts). The REQUEST decides whether the answer depends on City/County membership and
+ * which category; when it does, the counted rows of every counting scope must carry that category from
+ * shr_agency_year_class. Model SQL that breaks the rule gets one retry with the instruction; an unavailable or stale
+ * classification is an owned limitation, never "blank means City"; a deterministic plan that breaks it is blocked.
+ * A statement that neither depends on agency type nor touches it is returned unchanged.
+ */
+function withAgencyTypeVerdict<T extends QueryContractSqlValidation>(result: T, yearClass: YearClassAvailability | null, mode: "model" | "deterministic", question: string): T & { agencyTypeScopes?: ClassScope[] | null } {
+  let requested = requestedAgencyCategories(question);
+  // A deterministic compiler that classifies on its own account (the name-match fallback restricts a named place to
+  // its City agency) carries its own category: the verdict still requires it on the counted rows, as City or County.
+  // Model SQL gets no such allowance -- the request alone decides.
+  // A deterministic plan that decides membership IN CODE (the accepted city ranking reads the evidence tables through
+  // lib/shr-agency-classification.ts) does not classify in SQL at all, so the request's category is not a SQL
+  // obligation for it: only the legacy-type ban applies. One that classifies in SQL must do it on its counted rows.
+  if (mode === "deterministic") requested = /\bshr_agency_year_class\b/i.test(result.sql) ? (requested.length > 0 ? requested : ["City", "County"]) : [];
+  const verdict = agencyTypeVerdict(result.sql, requested);
+  if (!verdict.touches) return result;
+  const enforced = [...new Set([...result.enforced, SHR_AGENCY_TYPE_GUARDRAIL])];
+  const needsClass = requested.length > 0 || /\bshr_agency_year_class\b/i.test(result.sql);
+  if (needsClass && (!yearClass || !yearClass.available)) {
+    return { ...result, enforced, blockReasons: [...result.blockReasons, YEAR_CLASS_UNAVAILABLE_TEXT], agencyTypeScopes: null };
+  }
+  if (!verdict.ok) {
+    console.log(`[shr][agency-type] ${verdict.problems.join("; ")}`);
+    return mode === "model"
+      ? { ...result, enforced, retryIssues: [...result.retryIssues, `${SHR_AGENCY_TYPE_GUARDRAIL}: ${verdict.problems.join("; ")}. ${agencyTypeRetryInstruction(requested)}`], agencyTypeScopes: null }
+      : { ...result, enforced, blockReasons: [...result.blockReasons, YEAR_CLASS_UNAVAILABLE_TEXT], agencyTypeScopes: null };
+  }
+  return { ...result, enforced, agencyTypeScopes: verdict.scopes.length > 0 ? verdict.scopes : null };
 }
 
 /** Add the county-scope refusal (GC-080) when a bound scope is violated. Unchanged without one. */
@@ -216,12 +266,17 @@ export function validateDeterministicShrPlanSql(opts: {
   routingMeta?: RoutingLogMeta | null;
   /** GC-080: the county scope bound for this plan, enforced on its statement. */
   scope?: ShrScopeBinding | null;
+  /** An owned plan's validation contract, when it differs from the question's (lib/city-ranking.ts rankingValidationContract). */
+  contract?: QueryContract | null;
+  /** Whether the SHR agency/year classification is built and current (lib/shr-agency-year-class.ts). */
+  yearClass?: YearClassAvailability | null;
 }): DeterministicShrPlanValidation {
   const raw = validateQueryContractSql({
     question: opts.question,
     source: "shr",
     sql: opts.sql,
     routingMeta: opts.routingMeta ?? null,
+    contract: opts.contract ?? null,
   });
   // Legacy validation is unchanged for murder plans. An explicit all-homicide request (GC-080)
   // cannot carry the legacy murder-only row-count rule, so for that measure only the rule is
@@ -236,5 +291,5 @@ export function validateDeterministicShrPlanSql(opts: {
       base = { ...base, blockReasons: [...base.blockReasons, measure === "conflict" ? SHR_MEASURE_CONFLICT_MESSAGE : HOMICIDE_LICENCE_MESSAGE], enforced: [...new Set([...base.enforced, SHR_LICENCE_GUARDRAIL])] };
     }
   }
-  return { ...withScopeVerdict(base, opts.scope ?? null), [DETERMINISTIC]: true };
+  return withAgencyTypeVerdict({ ...withScopeVerdict(base, opts.scope ?? null), [DETERMINISTIC]: true as const }, opts.yearClass ?? null, "deterministic", opts.question);
 }

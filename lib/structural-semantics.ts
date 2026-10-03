@@ -72,17 +72,37 @@ const ROW_LEVEL_CUES: { level: EntityLevel; pattern: RegExp; label: string }[] =
     level: "agency", label: "asks for a list of agencies or departments",
     pattern: /\b(?:top|bottom|best|worst|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all)\b[^.?!]{0,40}\b(?:agenc(?:y|ies)|police\s+departments?|sheriff'?s?\s+offices?)\b|\bby\s+agenc(?:y|ies)\b|\bagenc(?:y|ies)\s+(?:with|that|ranked)\b/i,
   },
+  // "What" as a determiner ("what agencies", "what U.S. cities", "what large counties") asks for a list exactly
+  // as "which" does. Up to two modifier words may sit between; a longer gap ("what is the murder rate for
+  // cities") is a different construction and is not claimed. Without these, "What cities in Illinois had the
+  // highest murder rates" fell back to its state geography and a city ranking was refused as state-level.
+  {
+    level: "agency", label: "asks for a list of agencies or departments (what ...)",
+    pattern: /\bwhat\s+(?:[\w.'-]+\s+){0,2}(?:agenc(?:y|ies)|police\s+departments?|sheriff'?s?\s+offices?)\b/i,
+  },
   {
     level: "city", label: "asks for a list of cities",
     pattern: /\b(?:top|bottom|best|worst|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all|safest|deadliest)\b[^.?!]{0,40}\bcit(?:y|ies)\b|\bby\s+cit(?:y|ies)\b|\bcit(?:y|ies)\s+(?:with|that|ranked|had|have)\b/i,
+  },
+  {
+    level: "city", label: "asks for a list of cities (what ...)",
+    pattern: /\bwhat\s+(?:[\w.'-]+\s+){0,2}cit(?:y|ies)\b/i,
   },
   {
     level: "county", label: "asks for a list of counties",
     pattern: /\b(?:top|bottom|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all)\b[^.?!]{0,40}\b(?:count(?:y|ies)|parish(?:es)?)\b|\bby\s+count(?:y|ies)\b|\bcount(?:y|ies)\s+(?:with|that|ranked)\b/i,
   },
   {
+    level: "county", label: "asks for a list of counties (what ...)",
+    pattern: /\bwhat\s+(?:[\w.'-]+\s+){0,2}(?:count(?:y|ies)|parish(?:es)?)\b/i,
+  },
+  {
     level: "state", label: "asks for a list of states",
     pattern: /\b(?:top|bottom|highest|lowest|most|fewest|rank(?:ed|ing)?|list|which|every|all)\b[^.?!]{0,40}\bstates?\b|\bby\s+state\b|\bstates?\s+(?:with|that|ranked)\b/i,
+  },
+  {
+    level: "state", label: "asks for a list of states (what ...)",
+    pattern: /\bwhat\s+(?:[\w.'-]+\s+){0,2}states?\b/i,
   },
 ];
 

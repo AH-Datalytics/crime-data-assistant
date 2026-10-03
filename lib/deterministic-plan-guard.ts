@@ -22,11 +22,13 @@ export function deterministicPlanRefusal(opts: {
   question: string;
   source: QueryContractSource;
   sql: string | null | undefined;
+  /** An owned plan's validation contract, when it differs from the question's (lib/city-ranking.ts rankingValidationContract). */
+  contract?: ReturnType<typeof buildQueryContract> | null;
 }): { message: string; ruleIds: string[] } | null {
   const sql = (opts.sql ?? "").trim();
   if (!sql) return null;
 
-  const contract = buildQueryContract(opts.question, opts.source);
+  const contract = opts.contract && opts.contract.source === opts.source ? opts.contract : buildQueryContract(opts.question, opts.source);
   if (!contract) return null;
 
   const findings = evaluateStructuralSemantics({

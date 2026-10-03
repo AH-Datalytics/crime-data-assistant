@@ -86,13 +86,26 @@ check("model-authored SQL reaches the fact-based authority", () => {
   assert.ok(uses >= 6, `model-authored validation is invoked only ${uses} times; the model path has more sites`);
 });
 
+check("City/County membership in the route comes only from the agency/year classification (Codex combined ruling, 2026-10-02)", () => {
+  // The name-match fallback used to add "(i.agency_type = 'City' OR i.agency_type IS NULL OR i.agency_type = '')":
+  // blank meant City. No route statement may read a legacy type; the fallback joins the classification on all
+  // three keys and filters its type, and every validator call carries the classification's availability.
+  assert.doesNotMatch(source, /agency_type\s+IS\s+NULL|i\.agency_type\s*=/, "a legacy blank-as-City or incidents.agency_type filter is back in the route");
+  assert.match(source, /JOIN \$\{SHR_YEAR_CLASS_TABLE\} cls ON cls\.ori = i\.ori AND cls\.state = i\.state AND cls\.year = i\.year/,
+    "the fallback no longer joins the classification on ori, state and year");
+  assert.match(source, /const CITY_CLASS_FILTER = "cls\.agency_type = 'City'";/, "the fallback's City filter is not the classification's type");
+  assert.strictEqual([...source.matchAll(/yearClass: yearClassFor\(inputSql\)/g)].length, 2,
+    "both the model-authored and the deterministic validation must receive the classification's availability");
+});
+
 check("the deterministic plans stay on their own bounded path", () => {
   assert.match(source, /const contract = runDeterministicPlanValidation\(murderPlan\.sql\)/,
     "the deterministic murder plan no longer uses the deterministic validator");
   // GC-064 adds the application-built city ranking: its victim join and any murder filter are literal
   // in the builder's template, which is what this path is for (lib/shr-authority.ts). Named, so an
-  // unnamed extra caller still fails the count.
-  assert.match(source, /const validateRankingStatement = \(statement: string\): ValidatedStatement \| null => \{\s*const contract = runDeterministicPlanValidation\(statement\)/,
+  // unnamed extra caller still fails the count. It passes the ranking's assembled validation contract
+  // (a stated nationwide scope; lib/city-ranking.ts rankingValidationContract), still on this validator.
+  assert.match(source, /const validateRankingStatement = \(statement: string\): ValidatedStatement \| null => \{\s*const contract = runDeterministicPlanValidation\(statement, rankingContract\)/,
     "the SHR city ranking no longer uses the deterministic validator");
   const deterministic = [...source.matchAll(/runDeterministicPlanValidation\(/g)].length;
   assert.strictEqual(deterministic, 3,

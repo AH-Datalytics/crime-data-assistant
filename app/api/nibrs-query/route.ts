@@ -99,6 +99,7 @@ import { governFactualNarrative } from "@/lib/result-state";
 import { verifyPeerMembership } from "@/lib/peer-comparison";
 import { decideDeterministicFailure, decideDatabaseFailure, buildNibrsRecoveryContext, runsAnnualClearanceFlow } from "@/lib/nibrs-recovery";
 import { NIBRS_CITY_RANKING_GUARDRAIL, CITY_RANKING_FAILURE_TEXT } from "@/lib/city-ranking-nibrs";
+import { rankingValidationContract } from "@/lib/city-ranking";
 import { runOwnedAnnualClearance } from "@/lib/nibrs-owned-family";
 import { NIBRS_CATEGORY_CHANGE_GUARDRAIL, planCategoryChange, recognizeCategoryChange, runOwnedCategoryChange } from "@/lib/nibrs-category-change";
 import { pendingWhereLevelReask, whereLevelClarification } from "@/lib/where-level-clarification";
@@ -581,9 +582,9 @@ export async function POST(req: NextRequest) {
      * is repeated at the execution itself, so nothing reaches the database on a family's word that it
      * checked: a refused statement throws here and runs nothing.
      */
-    const runOwnedStatement = async (statement: string): Promise<Record<string, unknown>[]> => {
+    const runOwnedStatement = async (statement: string, contract: ReturnType<typeof rankingValidationContract> = null): Promise<Record<string, unknown>[]> => {
       const ownedStatement = { sql: statement };
-      const ownedStatementRefusal = deterministicPlanRefusal({ question, source: "nibrs", sql: ownedStatement.sql });
+      const ownedStatementRefusal = deterministicPlanRefusal({ question, source: "nibrs", sql: ownedStatement.sql, contract });
       if (!ownedStatementRefusal) {
         return normalizeNibrsDisplayRows((await executeWithTimeout(ownedStatement.sql)).rows) as Record<string, unknown>[];
       }
@@ -696,8 +697,13 @@ export async function POST(req: NextRequest) {
     // Structural proof BEFORE execution. This branch runs and returns long before the model path's
     // contract validation, so without it the plan executed with no proof at all. A refused plan is
     // not used: the request falls through to the model path, which validates in full.
+    // The owned city ranking validates a stated nationwide scope against its assembled scope; every
+    // other deterministic plan validates against the question exactly as before.
+    const nibrsPlanContract = nibrsPlan.kind === "deterministic" && nibrsPlan.query.guardrail === NIBRS_CITY_RANKING_GUARDRAIL
+      ? rankingValidationContract(question, "nibrs")
+      : null;
     const nibrsPlanRefusal = nibrsPlan.kind === "deterministic"
-      ? deterministicPlanRefusal({ question, source: "nibrs", sql: nibrsPlan.query.sql })
+      ? deterministicPlanRefusal({ question, source: "nibrs", sql: nibrsPlan.query.sql, contract: nibrsPlanContract })
       : null;
     if (nibrsPlanRefusal) {
       console.log(`[structural] NIBRS deterministic plan refused: ${nibrsPlanRefusal.ruleIds.join(", ")}`);
@@ -837,7 +843,7 @@ export async function POST(req: NextRequest) {
         let rankingPartialLead: string | null = null;
         if (deterministicQuery.guardrail === NIBRS_CITY_RANKING_GUARDRAIL && deterministicQuery.completeness) {
           const rankingPlan = deterministicQuery.completeness;
-          const rankingDecision = decideCandidates(rankingPlan, await runOwnedStatement(rankingPlan.candidatesSql));
+          const rankingDecision = decideCandidates(rankingPlan, await runOwnedStatement(rankingPlan.candidatesSql, nibrsPlanContract));
           if (rankingDecision.kind === "inconsistent") throw new Error(`city ranking candidates inconsistent: ${rankingDecision.reason}`);
           const rankingResult = completenessOf(rankingPlan, rankingDecision, rows, deterministicQuery.title);
           if (!rankingResult.complete) {

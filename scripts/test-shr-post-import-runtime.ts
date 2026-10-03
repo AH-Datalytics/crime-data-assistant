@@ -7,10 +7,12 @@
  *   1. the runtime module: pinned release, reviewed-hash check, no npx, a native load that reaches the addon
  *      (Codex SR-1), deadline admission before every dispatch including preflight's own (SR-2), a stalled
  *      command killed at the deadline, failure stops with a status record, arguments and environment preserved;
- *   2. the reviewed importer, loaded in memory with only its paths and its curl/unzip calls redirected to the
- *      fixture: an unusable runtime refuses BEFORE any delete or download; an expiry at any point before or
- *      during the replacement leaves the year exactly as it was (SR-2); a usable runtime imports and runs the
- *      steps; a failing step fails the run; the served importer's other behavior is unchanged;
+ *   2. the SAFE REFRESH (owner-approved SHR repair, 2026-10-02), the importer loaded in memory with only its paths
+ *      and its curl calls redirected (unzip and sqlite3 are the real programs on real files): a valid file reaches
+ *      the delivered ranking through a candidate and a backup-API activation, history untouched; and every failure
+ *      that motivated the repair -- HTTP error, error page, truncated archive, wrong-year file, unreadable lines,
+ *      shrinking file, expiry after the delete began, post-step failure, too little time to activate, a
+ *      read-back mismatch and a failed restore -- leaves every table of the live database exactly as it was;
  *   3. the recovery entry: type fill-in only (SR-3), preflight-only dispatches nothing, and the REAL reviewed
  *      normalizer run on a disposable database shows exactly what the recovery writes.
  */
@@ -21,8 +23,12 @@ import path from "node:path";
 import crypto from "node:crypto";
 import Module from "node:module";
 import childProcess, { spawnSync } from "node:child_process";
+import zlib from "node:zlib";
 import Database from "better-sqlite3";
-import { classifyShrAgency, loadShrTypeEvidence } from "../lib/shr-agency-classification";
+import { classifyShrAgency, loadShrTypeEvidence, SHR_TYPE_EVIDENCE_DDL } from "../lib/shr-agency-classification";
+import { planShrCityRanking, runShrCityRanking } from "../lib/city-ranking-shr";
+import { validateDeterministicShrPlanSql } from "../lib/shr-authority";
+import { queryContractFailureMessage } from "../lib/query-contract-validator";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const runtimeModule = require("./ops/shr-post-import-runtime.js");
@@ -50,7 +56,7 @@ const sha = (text: string | Buffer) => crypto.createHash("sha256").update(text).
 const COMMITTED = ["scripts/normalize-shr-agencies.ts", "scripts/build-shr-state-population.ts", "scripts/extend-state-population-cde.ts",
   "lib/shr-agency-normalization.ts", "lib/state-population.ts"];
 /** The policy-enforcing evidence builder and its library (2026-09-30), not yet committed: pinned as LF-normalized bytes. */
-const POLICY = ["scripts/build-shr-agency-type-evidence.ts", "lib/shr-agency-classification.ts"];
+const POLICY = ["scripts/build-shr-agency-type-evidence.ts", "lib/shr-agency-classification.ts", "lib/shr-agency-year-class.ts"];
 const REVIEWED = [...COMMITTED, ...POLICY];
 /** The bytes a git-built Linux release carries for a reviewed file. */
 const releaseBytes = (rel: string): Buffer => COMMITTED.includes(rel)
@@ -142,16 +148,6 @@ function counts(file: string, year: number) {
 }
 const count = (file: string, year: number) => counts(file, year).incidents;
 const readAll = (file: string, sql: string) => { const d = new Database(file, { readonly: true }); try { return d.prepare(sql).all(); } finally { d.close(); } };
-
-/** A fixed-width SHR record the importer's parser accepts (positions as in parseRecord). */
-function record(ori: string, month: number, incident: number): string {
-  const chars = Array(100).fill(" ");
-  const put = (at: number, s: string) => { for (let i = 0; i < s.length; i++) chars[at + i] = s[i]; };
-  put(0, "6"); put(1, "24"); put(3, ori.padEnd(7)); put(10, "1A"); put(12, "4"); put(13, "26"); put(15, "000274819");
-  put(31, "ST. LOUIS".padEnd(24)); put(55, "MISSOU"); put(61, String(month).padStart(2, "0")); put(69, "0"); put(70, "A");
-  put(71, String(incident % 1000).padStart(3, "0")); put(74, "A"); put(75, "25MBN"); put(80, "30MBN"); put(85, "12"); put(87, "AQ"); put(89, "03"); put(92, "000");
-  return chars.join("");
-}
 
 /** A second, instrumented instance of the runtime module whose child-process dispatches are recorded, not run. */
 function instrumentedRuntime() {
@@ -326,184 +322,420 @@ async function main() {
     assert.ok(!fs.existsSync(path.join(rel.markers, "extend-state-population-cde.json")));
   });
 
-  console.log("\n2 - the reviewed importer, through its own code");
-  // The served bytes, read from production 2026-09-29 (git blob d41197bf, identical to the local audit
-  // copy). Committed as a fixture on integration so the comparison runs in a clean checkout.
+  console.log("\n2 - the safe refresh, through the importer's own code (owner-approved SHR repair, 2026-10-02)");
+  // The served bytes, read from production 2026-09-29 (git blob d41197bf). The parser and its code tables are
+  // the data semantics; the refresh may move WHERE rows are written, never WHAT a record becomes.
   const SERVED = path.join(REPO, "scripts", "fixtures", "shr-auto-update.served.js");
-  await check("the reviewed importer differs from the served one only in the listed runtime and deadline lines", () => {
-    const served = fs.readFileSync(SERVED, "utf8").split("\n");
-    const reviewed = fs.readFileSync(path.join(REPO, "scripts", "ops", "shr-auto-update.js"), "utf8").split("\n");
-    const removed = served.filter((l) => !reviewed.includes(l)).map((l) => l.trim()).filter((l) => l && !l.startsWith("//"));
-    // Every served (non-comment) line that no longer appears verbatim, and why.
-    assert.deepStrictEqual(removed, [
-      "const { execSync } = require('child_process');",                                      // no shell anywhere
-      "async function downloadSHR(year) {",                                                   // + deadline
-      "const jsonStr = execSync(`curl -s \"${signedUrlEndpoint}\"`, { timeout: 30000 }).toString();", // admitted, bounded, no shell
-      "execSync(`curl -sL -o \"${dest}\" \"${signedUrl}\"`, { timeout: 120000 });",           // admitted, bounded, no shell
-      "await downloadSHR(year);",
-      "const delResult = db.prepare('DELETE FROM victims WHERE incident_id IN (SELECT id FROM incidents WHERE year = ?)').run(year);", // moved into the transaction
-      "const delInc = db.prepare('DELETE FROM incidents WHERE year = ?').run(year);",
-      "console.log(`Deleted ${delInc.changes} incidents, ${delResult.changes} victims for ${year}`);",
-      "content = execSync(`unzip -p \"${zipPath}\"`, { maxBuffer: 50 * 1024 * 1024 }).toString('latin1');", // before the delete; admitted, bounded
-      "execSync('cd /opt/nibrs/repo && SHR_DB_PATH=/opt/nibrs/shr.db NIBRS_DB_PATH=/opt/nibrs/nibrs.db npx tsx scripts/normalize-shr-agencies.ts --apply', { stdio: 'inherit', timeout: 600000 });",
-      "execSync('cd /opt/nibrs/repo && SHR_DB_PATH=/opt/nibrs/shr.db RTCI_DB_PATH=/opt/nibrs/shared/crime_data.db npx tsx scripts/build-shr-state-population.ts --apply', { stdio: 'inherit', timeout: 600000 });",
-      "execSync('cd /opt/nibrs/repo && npx tsx scripts/extend-state-population-cde.ts --db=/opt/nibrs/shr.db --apply', { stdio: 'inherit', timeout: 600000 });",
-      "console.log('Refreshing query-planner statistics (ANALYZE)...');",
-      "execSync('sqlite3 /opt/nibrs/shr.db \"PRAGMA analysis_limit=1000; ANALYZE;\"', { stdio: 'inherit', timeout: 120000 });",
-    ]);
-    // The three delete lines are moved, not changed: they appear, re-indented, inside the transaction.
-    for (const l of removed.slice(5, 8)) assert.ok(reviewed.some((r) => r.trim() === l), `moved verbatim: ${l}`);
-    assert.ok(reviewed.includes("main().catch(e => { console.error(e); process.exit(1); });"), "a failure still ends the process non-zero");
+  const IMPORTER = path.join(REPO, "scripts", "ops", "shr-auto-update.js");
+  await check("the parser, its code tables and the insert column lists are byte-identical to the served importer", () => {
+    const served = fs.readFileSync(SERVED, "utf8");
+    const now = fs.readFileSync(IMPORTER, "utf8");
+    const block = (text: string, start: string, end: string) => { const i = text.indexOf(start); const j = text.indexOf(end, i); assert.ok(i >= 0 && j > i, start); return text.slice(i, j); };
+    assert.strictEqual(block(now, "const STATE_CODES", "// Download a file"), block(served, "const STATE_CODES", "// Download a file"));
+    for (const sql of ["INSERT INTO incidents (year, month, state, ori, agency, population, situation,", "INSERT INTO victims (incident_id, victim_num, age, age_num, sex, race, ethnicity)"]) {
+      assert.strictEqual(block(now, sql, "`);"), block(served, sql, "`);"), sql);
+    }
+  });
+  await check("the live database is written only by the activation and rollback restores: no delete, insert or rename touches it", () => {
+    const code = fs.readFileSync(IMPORTER, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    assert.doesNotMatch(code, /new Database\(dbPath(?![^)]*readonly)/, "the live file is never opened writable by the importer");
+    assert.doesNotMatch(code, /renameSync\([^)]*dbPath|renameSync\(candidate/, "no database is renamed into place");
+    assert.strictEqual((code.match(/\.restore /g) || []).length, 2, "exactly two writes to the live file: activation and rollback");
+    assert.match(code, /'--fail'[\s\S]*'--fail'/, "both curl calls use --fail");
+    assert.doesNotMatch(code, /\/opt\/nibrs\/repo|normalize-shr-agencies/, "no legacy repository path and no old normalizer");
   });
 
+  /** A stored (uncompressed) ZIP archive, written here so the real `unzip` tests, lists and extracts it. */
+  function zipOf(entries: { name: string; data: Buffer }[]): Buffer {
+    const locals: Buffer[] = []; const centrals: Buffer[] = []; let offset = 0;
+    for (const e of entries) {
+      const name = Buffer.from(e.name); const crc = zlib.crc32(e.data) >>> 0;
+      const local = Buffer.alloc(30); local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt32LE(crc, 14);
+      local.writeUInt32LE(e.data.length, 18); local.writeUInt32LE(e.data.length, 22); local.writeUInt16LE(name.length, 26);
+      const central = Buffer.alloc(46); central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(20, 4); central.writeUInt16LE(20, 6); central.writeUInt32LE(crc, 16);
+      central.writeUInt32LE(e.data.length, 20); central.writeUInt32LE(e.data.length, 24); central.writeUInt16LE(name.length, 28); central.writeUInt32LE(offset, 42);
+      locals.push(local, name, e.data); centrals.push(central, name); offset += 30 + name.length + e.data.length;
+    }
+    const cd = Buffer.concat(centrals);
+    const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+    end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(offset, 16);
+    return Buffer.concat([...locals, cd, end]);
+  }
+  /** A fixed-width SHR record (positions as in parseRecord); `addl` adds victims in the served additional-victim blocks. */
+  function rec(o: { ori: string; month: number; n: number; state?: string; yy?: string; agency?: string; pop?: number; addl?: number }): string {
+    const chars = Array(100 + 5 * (o.addl ?? 0)).fill(" ");
+    const put = (at: number, s: string) => { for (let i = 0; i < s.length; i++) chars[at + i] = s[i]; };
+    put(0, "6"); put(1, o.state ?? "24"); put(3, o.ori.padEnd(7)); put(10, "1A"); put(12, "4"); put(13, o.yy ?? "26"); put(15, String(o.pop ?? 274819).padStart(9, "0"));
+    put(31, (o.agency ?? "ST. LOUIS").padEnd(24)); put(55, "MISSOU"); put(61, String(o.month).padStart(2, "0")); put(69, "0"); put(70, "A");
+    put(71, String(o.n % 1000).padStart(3, "0")); put(74, o.addl ? "D" : "A"); put(75, "25MBN"); put(80, "30MBN"); put(85, "12"); put(87, "AQ"); put(89, "03");
+    put(92, String(o.addl ?? 0).padStart(3, "0"));
+    for (let a = 0; a < (o.addl ?? 0); a++) put(98 + 5 * a, "31FWN");
+    return chars.join("");
+  }
+  const archiveOf = (lines: string[]) => zipOf([{ name: "SHR2026.txt", data: Buffer.from(lines.join("\r\n") + "\r\n", "latin1") }]);
+  /** The October file: 2026 grows (St. Louis through month 9, one multi-victim incident) and a new agency appears. */
+  const OCTOBER = [
+    ...Array.from({ length: 6 }, (_, i) => rec({ ori: "MOSPD00", month: (i % 9) + 1, n: i + 1 })),
+    rec({ ori: "MOSPD00", month: 9, n: 7, addl: 2 }),
+    rec({ ori: "MOKPD00", month: 8, n: 8, agency: "KANSAS CITY", pop: 508000 }),
+    rec({ ori: "MOKPD00", month: 9, n: 9, agency: "KANSAS CITY", pop: 508000 }),
+    rec({ ori: "MONEW00", month: 9, n: 10, agency: "NEW AGENCY", pop: 120000 }),
+  ];
+
+  /** Live fixture: 2024 and 2025 history, 2026 as loaded before the refresh, and evidence for the old agencies. */
+  function liveFixture(file: string) {
+    const db = new Database(file);
+    db.exec(fs.readFileSync(path.join(REPO, "scripts", "fixtures", "operation-taxonomy", "shr.ddl.sql"), "utf8"));
+    db.pragma("journal_mode = WAL");
+    const inc = db.prepare("INSERT INTO incidents (year, month, state, ori, agency, population, homicide_type, weapon_group) VALUES (?, ?, 'MO', ?, ?, ?, 'Murder', 'Firearm')");
+    const vic = db.prepare("INSERT INTO victims (incident_id, victim_num, age, sex) VALUES (?, 1, '25', 'Male')");
+    for (const [year, month, ori, agency, pop] of [[2024, 5, "MOSPD00", "St. Louis", 280000], [2024, 6, "MOKPD00", "Kansas City", 508000], [2025, 1, "MOSPD00", "St. Louis", 280000],
+      [2025, 2, "MOSPD00", "St. Louis", 280000], [2026, 1, "MOSPD00", "St. Louis", 274819], [2026, 2, "MOSPD00", "St. Louis", 274819], [2026, 4, "MOSPD00", "St. Louis", 274819]] as const) {
+      vic.run(inc.run(year, month, ori, agency, pop).lastInsertRowid);
+    }
+    db.exec(SHR_TYPE_EVIDENCE_DDL);
+    db.prepare("INSERT INTO shr_agency_type_binding VALUES ('MOSPD00', 'MO', '[\"MOSPD0000\"]', 'fixture-september')").run();
+    db.prepare("INSERT INTO shr_agency_type_evidence VALUES ('MOSPD00', 'MO', 'MOSPD0000', 2025, 'MO', 'City', 'NIBRS agencies.agency_type')").run();
+    db.close();
+  }
+  /** NIBRS agencies for the evidence builder: both Missouri cities typed City; the new agency has no match. */
+  const refreshNibrs = path.join(WORK, "nibrs-refresh.db");
+  {
+    const db = new Database(refreshNibrs);
+    db.exec(fs.readFileSync(path.join(REPO, "scripts", "fixtures", "operation-taxonomy", "nibrs.ddl.sql"), "utf8"));
+    const a = db.prepare("INSERT INTO agencies (ori, year, state, city, population, agency_type) VALUES (?, ?, 'MO', ?, ?, 'City')");
+    for (const year of [2024, 2025]) { a.run("MOSPD0000", year, "St. Louis", 280000); a.run("MOKPD0000", year, "Kansas City", 508000); }
+    db.close();
+  }
+  /** Everything a reader could see: every row of every table, in a stable order. */
+  const digest = (file: string) => {
+    const d = new Database(file, { readonly: true });
+    try {
+      const tables = d.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[];
+      return sha(JSON.stringify(tables.map((t) => [t.name, d.prepare(`SELECT * FROM "${t.name}" ORDER BY 1, 2, 3`).all()])));
+    } finally { d.close(); }
+  };
+  const yearRows = (file: string, year: number) => readAll(file, `SELECT * FROM incidents WHERE year = ${year} ORDER BY id`);
+
   type Child = { execFileSync: (file: string, args: string[], opts: any) => Buffer };
-  /** Load the reviewed importer with only its paths, its child-process calls and (optionally) its clock redirected. */
-  async function runImporter(release: ReturnType<typeof makeRelease>, db: string, lines: string[],
-    o: { child?: (calls: string[], lines: string[]) => Child; deadline?: { remainingMs(): number }; deadlineMs?: number } = {}) {
-    const dataDir = path.join(WORK, `data-${path.basename(release.root)}`);
+  type RefreshOpts = { archive?: Buffer | null; curl?: (args: string[]) => Buffer; intercept?: (file: string, args: string[], opts: any) => Buffer | undefined;
+    deadline?: { remainingMs(): number }; env?: Record<string, string>; preArchive?: Buffer | null; nibrs?: string };
+  /**
+   * Run the importer's own main() in this process with only its paths and its child-process boundary redirected:
+   * curl is the fixture (no network); unzip and sqlite3 are the REAL programs on the real files.
+   */
+  async function runRefresh(release: ReturnType<typeof makeRelease>, live: string, o: RefreshOpts = {}) {
+    const tag = path.basename(release.root);
+    const dataDir = path.join(WORK, `data-${tag}`); const backups = path.join(WORK, `backups-${tag}`);
     fs.mkdirSync(dataDir, { recursive: true });
-    fs.writeFileSync(path.join(dataDir, "shr-2026.zip"), Buffer.alloc(2048));   // present, as the fallback requires
+    if (o.preArchive !== null) fs.writeFileSync(path.join(dataDir, "shr-2026.zip"), o.preArchive ?? archiveOf([rec({ ori: "MOSPD00", month: 4, n: 1 })]));
     const calls: string[] = [];
-    const offline: Child = {
-      execFileSync: (file: string, args: string[]) => {
-        calls.push(`${file} ${args.join(" ")}`);
-        if (file === "curl") throw new Error("offline fixture: no download");
-        if (file === "unzip" && args[0] === "-p") return Buffer.from(lines.join("\n"), "latin1");
-        throw new Error(`unexpected command in fixture: ${file}`);
-      },
-    };
-    (globalThis as any).__shrTestChildProcess = o.child ? o.child(calls, lines) : offline;
-    let text = fs.readFileSync(path.join(REPO, "scripts", "ops", "shr-auto-update.js"), "utf8");
+    let curlN = 0;
+    const child: Child = { execFileSync: (file, args, opts) => {
+      calls.push(`${path.basename(file)} ${args.join(" ")}`);
+      const hooked = o.intercept?.(file, args, opts);
+      if (hooked !== undefined) return hooked;
+      if (file === "curl") {
+        if (o.curl) return o.curl(args);
+        if (curlN++ === 0) return Buffer.from('{"url":"https://fixture.invalid/shr-2026.zip"}');
+        if (o.archive === null) throw Object.assign(new Error("curl: (22) The requested URL returned error: 403"), { status: 22 });
+        fs.writeFileSync(args[args.indexOf("-o") + 1], o.archive ?? archiveOf(OCTOBER));
+        return Buffer.from("");
+      }
+      return childProcess.execFileSync(file, args, { ...opts, windowsHide: true }) as unknown as Buffer;
+    } };
+    (globalThis as any).__shrTestChildProcess = child;
+    let text = fs.readFileSync(IMPORTER, "utf8");
     const swap = (from: string, to: string) => { assert.strictEqual(text.split(from).length, 2, `anchor: ${from}`); text = text.replace(from, to); };
     swap("const { execFileSync } = require('child_process');", "const { execFileSync } = globalThis.__shrTestChildProcess;");
     swap('const dataDir = "/opt/nibrs/data";', `const dataDir = ${JSON.stringify(dataDir)};`);
-    swap('const dbPath = "/opt/nibrs/shr.db";', `const dbPath = ${JSON.stringify(db)};`);
+    swap('const dbPath = "/opt/nibrs/shr.db";', `const dbPath = ${JSON.stringify(live)};`);
+    swap('const nibrsPath = "/opt/nibrs/nibrs.db";', `const nibrsPath = ${JSON.stringify(o.nibrs ?? refreshNibrs)};`);
+    swap('const backupDir = "/opt/nibrs/backups";', `const backupDir = ${JSON.stringify(backups)};`);
     swap("require('./shr-post-import-runtime')", `require(${JSON.stringify(RUNTIME_FILE)})`);
     swap("main().catch(e => { console.error(e); process.exit(1); });", "module.exports.run = main;");
-    const file = path.join(REPO, "scripts", "ops", "shr-auto-update.js");
-    const m = new Module(file, module);
-    m.filename = file; m.paths = (Module as any)._nodeModulePaths(path.dirname(file));
-    (m as any)._compile(text, file);
-    const env: Record<string, string> = { SHR_RELEASE_LINK: release.link, SHR_UPDATE_STATUS_PATH: path.join(WORK, `status-imp-${path.basename(release.root)}.json`),
-      SHR_UPDATE_YEARS: "2026", PROTECTED_UPDATE_YEARS: "", SHR_SQLITE3: SQLITE, SHR_TEST_MARKERS: release.markers };
-    if (o.deadlineMs) env.SHR_UPDATE_DEADLINE_MS = String(o.deadlineMs);
+    const statusPath = path.join(WORK, `refresh-status-${tag}.json`);
+    const env: Record<string, string> = { SHR_RELEASE_LINK: release.link, SHR_REFRESH_STATUS_PATH: statusPath, SHR_UPDATE_STATUS_PATH: path.join(WORK, `post-status-${tag}.json`),
+      SHR_UPDATE_YEARS: "2026", PROTECTED_UPDATE_YEARS: "", SHR_SQLITE3: SQLITE, SHR_TEST_MARKERS: release.markers, ...(o.env ?? {}) };
     const saved: Record<string, string | undefined> = {};
     for (const [k, v] of Object.entries(env)) { saved[k] = process.env[k]; process.env[k] = v; }
+    const m = new Module(IMPORTER, module);
+    m.filename = IMPORTER; m.paths = (Module as any)._nodeModulePaths(path.dirname(IMPORTER));
+    (m as any)._compile(text, IMPORTER);
     const log = console.log; const err = console.error; console.log = () => {}; console.error = () => {};
-    const origResolve = runtimeModule.resolveRuntime;
-    const origDeadline = runtimeModule.createDeadline;
+    const origResolve = runtimeModule.resolveRuntime; const origDeadline = runtimeModule.createDeadline;
     try {
-      // The manifest path defaults beside the runtime module; point it at the fixture's for this run.
       runtimeModule.resolveRuntime = (x: any = {}) => origResolve({ ...x, manifestPath: release.manifest, sqliteBin: SQLITE });
       if (o.deadline) runtimeModule.createDeadline = () => o.deadline;
-      try { await (m.exports as any).run(); return { error: null as Error | null, calls, status: env.SHR_UPDATE_STATUS_PATH }; }
-      catch (e) { return { error: e as Error, calls, status: env.SHR_UPDATE_STATUS_PATH }; }
+      let error: Error | null = null;
+      try { await (m.exports as any).run(); } catch (e) { error = e as Error; }
+      const status = fs.existsSync(statusPath) ? JSON.parse(fs.readFileSync(statusPath, "utf8")) : null;
+      return { error, calls, status, dataDir, backups, archive: path.join(dataDir, "shr-2026.zip") };
     } finally {
       runtimeModule.resolveRuntime = origResolve; runtimeModule.createDeadline = origDeadline;
       console.log = log; console.error = err;
       for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     }
   }
-
-  for (const [label, bs, reason] of [["abi", "incompatible", /NODE_MODULE_VERSION/], ["invalid-native", "invalid-native", /better-sqlite3 does not load/]] as const) {
-    await check(`an unusable runtime (${label}) refuses BEFORE any download or delete: the year's rows are untouched`, async () => {
-      const rel = makeRelease(`imp-${label}`, { betterSqlite3: bs });
-      const db = path.join(WORK, `shr-imp-${label}.db`); freshDb(db, 3);
-      const out = await runImporter(rel, db, [record("MOSPD00", 3, 1)]);
-      assert.ok(out.error instanceof PostImportRefusal && reason.test((out.error as Error).message), String(out.error));
-      assert.deepStrictEqual(out.calls, [], "no curl or unzip was even attempted");
-      assert.deepStrictEqual(counts(db, 2026), { incidents: 3, victims: 3 }, "the 2026 rows are exactly as before");
-    });
-  }
-  await check("a usable runtime imports the year and then runs every step", async () => {
-    const rel = makeRelease("imp-good");
-    const db = path.join(WORK, "shr-imp-good.db"); freshDb(db, 3);
-    const out = await runImporter(rel, db, [record("MOSPD00", 3, 1), record("MOSPD00", 4, 2)]);
-    assert.strictEqual(out.error, null, String(out.error));
-    assert.deepStrictEqual(counts(db, 2026), { incidents: 2, victims: 2 }, "2026 replaced by the fixture file's two records");
-    assert.deepStrictEqual(counts(db, 2025), { incidents: 1, victims: 1 }, "the other year untouched");
-    const status = JSON.parse(fs.readFileSync(out.status, "utf8"));
-    assert.strictEqual(status.outcome, "ok");
-    assert.strictEqual(status.steps.length, 4);
-    assert.deepStrictEqual(out.calls.map((c) => c.split(" ").slice(0, 2).join(" ")), ["curl -s", "unzip -p"],
-      "the importer's only child processes are its own download attempt and unzip, without a shell");
-  });
-  await check("SR-2 (Codex witness): the clock expiring after the first curl stops the run -- no second curl, no unzip, no delete", async () => {
-    const rel = makeRelease("imp-expire-curl");
-    const db = path.join(WORK, "shr-imp-expire-curl.db"); freshDb(db, 3);
-    let remaining = 60000;
-    const out = await runImporter(rel, db, [record("MOSPD00", 3, 1)], {
-      deadline: { remainingMs: () => remaining },
-      child: (calls) => ({ execFileSync: (file, args) => {
-        calls.push(`${file} ${args.join(" ")}`);
-        if (file === "curl" && args[0] === "-s") { remaining = 0; return Buffer.from('{"url":"https://fixture.invalid/archive.zip"}'); }
-        if (file === "curl") return Buffer.from("");
-        if (file === "unzip") return Buffer.from(record("MOSPD00", 3, 1), "latin1");
-        throw new Error(`unexpected ${file}`);
-      } }),
-    });
-    assert.ok(out.error instanceof PostImportRefusal && /download curl not dispatched: 0 ms left/.test((out.error as Error).message), String(out.error));
-    assert.deepStrictEqual(out.calls.map((c) => c.split(" ").slice(0, 2).join(" ")), ["curl -s"]);
-    assert.deepStrictEqual(counts(db, 2026), { incidents: 3, victims: 3 }, "no row deleted or inserted after expiry");
-  });
-  await check("SR-2: the clock expiring inside the replacement rolls back the delete and every insert", async () => {
-    const rel = makeRelease("imp-expire-tx");
-    const db = path.join(WORK, "shr-imp-expire-tx.db"); freshDb(db, 3);
-    const lines = Array.from({ length: 2500 }, (_, i) => record("MOSPD00", 3, i + 1));
-    let allowAfterUnzip: number | null = null;   // after unzip: admit the replacement and the line-1000 check, expire at line 2000
-    const out = await runImporter(rel, db, lines, {
-      deadline: { remainingMs: () => allowAfterUnzip === null ? 60000 : (allowAfterUnzip-- > 0 ? 60000 : 0) },
-      child: (calls, ls) => ({ execFileSync: (file, args) => {
-        calls.push(`${file} ${args.join(" ")}`);
-        if (file === "curl") throw new Error("offline");
-        allowAfterUnzip = 2;
-        return Buffer.from(ls.join("\n"), "latin1");
-      } }),
-    });
-    assert.ok(out.error instanceof PostImportRefusal && /replace 2026 \(line 2000\) not dispatched/.test((out.error as Error).message), String(out.error));
-    assert.deepStrictEqual(counts(db, 2026), { incidents: 3, victims: 3 }, "the year is exactly as before: delete and 1,999 inserts rolled back");
-  });
-  await check("SR-2 real-launch stall: an unzip that never ends is killed at the deadline, the year is untouched, and the run fails", async () => {
-    const rel = makeRelease("imp-stall");
-    const db = path.join(WORK, "shr-imp-stall.db"); freshDb(db, 3);
-    let unzipTimeout = -1;
-    const t0 = Date.now();
-    const out = await runImporter(rel, db, [record("MOSPD00", 3, 1)], {
-      deadlineMs: 9000,
-      child: (calls) => ({ execFileSync: (file, args, opts) => {
-        calls.push(`${file} ${args.join(" ")}`);
-        if (file === "curl") throw new Error("offline");
-        unzipTimeout = opts.timeout;
-        // A REAL child that never exits, launched with exactly the options the importer passed.
-        return childProcess.execFileSync(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { ...opts, windowsHide: true }) as unknown as Buffer;   // no encoding passed: a Buffer at run time
-      } }),
-    });
-    // Observation only (no wall-clock pass/fail gate). Structurally: the unzip ran under a timeout no larger than
-    // the budget (so a real never-ending child was killed there), and the next dispatch was refused for time.
-    console.log(`        (observed: the importer returned after ${Date.now() - t0} ms against a 9000 ms budget)`);
-    assert.ok(unzipTimeout > 0 && unzipTimeout <= 9000, `unzip bounded by the remaining time (${unzipTimeout})`);
-    assert.ok(out.error instanceof PostImportRefusal && /not dispatched/.test((out.error as Error).message), String(out.error));
-    assert.deepStrictEqual(counts(db, 2026), { incidents: 3, victims: 3 });
-    assert.strictEqual(JSON.parse(fs.readFileSync(out.status, "utf8")).outcome, "failed");
-  });
-  await check("disclosed behavior change: an unzip failure now skips the year WITHOUT deleting it (the served order deleted first)", async () => {
-    const rel = makeRelease("imp-unzip-fail");
-    const db = path.join(WORK, "shr-imp-unzip-fail.db"); freshDb(db, 3);
-    const out = await runImporter(rel, db, [], {
-      child: (calls) => ({ execFileSync: (file, args) => { calls.push(`${file} ${args.join(" ")}`); throw new Error(`${file} failed`); } }),
-    });
-    assert.strictEqual(out.error, null, String(out.error));
-    assert.deepStrictEqual(counts(db, 2026), { incidents: 3, victims: 3 });
-  });
-  await check("a failing step after the import fails the importer (the process would exit 1)", async () => {
-    const rel = makeRelease("imp-fails");
-    const db = path.join(WORK, "shr-imp-fails.db"); freshDb(db, 3);
-    process.env.SHR_TEST_FAIL = "normalize-shr-agencies";
+  /** The delivered SHR city ranking, through the application's own planner, validator and classification. */
+  const RANK_Q = "Which cities had the most murders in 2026?";
+  function delivered(file: string, cutoffMonth: number) {
+    const db = new Database(file, { readonly: true });
     try {
-      const out = await runImporter(rel, db, [record("MOSPD00", 3, 1)]);
-      assert.ok(out.error && /normalize-shr-agencies failed/.test(out.error.message), String(out.error));
-      assert.strictEqual(JSON.parse(fs.readFileSync(out.status, "utf8")).outcome, "failed");
-    } finally { delete process.env.SHR_TEST_FAIL; }
+      const plan = planShrCityRanking(RANK_Q, { year: 2026, month: cutoffMonth, observed: true });
+      assert.ok(plan && plan.kind === "deterministic", `the ranking is planned (${JSON.stringify(plan && (plan as any).kind)})`);
+      const out = runShrCityRanking(plan as any, {
+        validate: (sql: string) => { const v = validateDeterministicShrPlanSql({ question: RANK_Q, sql }); return queryContractFailureMessage(v) ? null : { sql: v.sql, rows: () => db.prepare(v.sql).all() as Record<string, unknown>[] }; },
+        typeEvidence: (year: number) => loadShrTypeEvidence(db, year),
+      });
+      assert.strictEqual(out.kind, "answer", JSON.stringify(out).slice(0, 200));
+      const a = out as any;
+      return { rows: a.rows.map((r: any) => [r.ori, r.victims]), title: a.title as string, explanation: a.explanation as string };
+    } finally { db.close(); }
+  }
+
+  const goodRel = makeRelease("refresh-real", { realScripts: true });
+  await check("SUCCESS: a valid October file reaches the delivered ranking; history is untouched; the candidate is gone and a snapshot kept", async () => {
+    const live = path.join(WORK, "live-success.db"); liveFixture(live);
+    const before = delivered(live, 4);
+    const history = [yearRows(live, 2024), yearRows(live, 2025)];
+    const out = await runRefresh(goodRel, live);
+    assert.strictEqual(out.error, null, String(out.error));
+    assert.strictEqual(out.status.outcome, "ok");
+    assert.deepStrictEqual(counts(live, 2026), { incidents: 10, victims: 12 }, "2026 replaced by the 10 validated records and their 12 victims");
+    assert.deepStrictEqual([yearRows(live, 2024), yearRows(live, 2025)], history, "every 2024 and 2025 row is exactly as before");
+    assert.deepStrictEqual(readAll(live, "SELECT COUNT(*) AS n FROM incidents WHERE agency_type IS NOT NULL AND agency_type <> ''"), [{ n: 0 }],
+      "no derived type was written into incidents (policy: provenance stays in the evidence tables)");
+    assert.deepStrictEqual(readAll(live, "SELECT ori, candidate_oris FROM shr_agency_type_binding ORDER BY ori"),
+      [{ ori: "MOKPD00", candidate_oris: '["MOKPD0000"]' }, { ori: "MONEW00", candidate_oris: "[]" }, { ori: "MOSPD00", candidate_oris: '["MOSPD0000"]' }],
+      "the evidence was rebuilt and covers every 2026 agency, including the new ones");
+    const after = delivered(live, 9);
+    assert.deepStrictEqual(before.rows, [["MOSPD00", 3]]);
+    assert.deepStrictEqual(after.rows, [["MOSPD00", 9], ["MOKPD00", 2]], "the delivered ranking now reads the refreshed rows");
+    assert.match(after.explanation, /New Agency/i, "the agency with no NIBRS match is disclosed as unresolved, not ranked or dropped silently");
+    assert.ok(!fs.readdirSync(out.backups).some((n) => n.startsWith("shr-candidate-")), "the candidate is removed after activation");
+    assert.strictEqual(fs.readdirSync(out.backups).filter((n) => /^shr-pre-.*\.db$/.test(n)).length, 1, "the rollback snapshot is kept");
+    assert.ok(!fs.existsSync(path.join(out.backups, "shr-refresh.lock")), "the lock is released");
+    assert.deepStrictEqual(out.status.candidateCounts, [{ year: 2026, before: { year: 2026, incidents: 3, victims: 3, maxMonth: 4 }, after: { year: 2026, incidents: 10, victims: 12, maxMonth: 9 } }]);
+    assert.deepStrictEqual(out.status.validation[0].rejected, { short: 0, "not-a-record": 0, "unknown-state": 0, "year-out-of-range": 0, "other-year": 0 });
+  });
+  await check("SUCCESS while a reader holds the live file open: the restore reaches it without a rename or a reopen", async () => {
+    const live = path.join(WORK, "live-reader.db"); liveFixture(live);
+    // A separate process with a read-only connection that stays open and re-reads, as an app worker does.
+    const reader = childProcess.spawn(process.execPath, ["-e", `const D=require(${JSON.stringify(path.join(REPO, "node_modules", "better-sqlite3"))});
+      const db=new D(${JSON.stringify(live)},{readonly:true}); const q=db.prepare("SELECT COUNT(*) AS n FROM incidents WHERE year=2026");
+      process.stdout.write("first " + q.get().n + "\\n"); process.stdin.on("data",()=>{ process.stdout.write("again " + q.get().n + "\\n"); });`], { stdio: ["pipe", "pipe", "inherit"], windowsHide: true });
+    const lines: string[] = [];
+    const next = () => new Promise<string>((resolve) => { const t = setInterval(() => { if (lines.length) { clearInterval(t); resolve(lines.shift()!); } }, 20); });
+    reader.stdout.on("data", (d) => lines.push(...String(d).split("\n").filter(Boolean)));
+    try {
+      assert.strictEqual(await next(), "first 3");
+      const out = await runRefresh(makeRelease("refresh-reader", { realScripts: true }), live);
+      assert.strictEqual(out.error, null, String(out.error));
+      reader.stdin.write("x\n");
+      assert.strictEqual(await next(), "again 10", "the open connection sees the refreshed year on its next read");
+    } finally { reader.kill(); }
+  });
+  await check("--no-activate builds and checks the candidate but changes nothing live, keeping the candidate and snapshot", async () => {
+    const live = path.join(WORK, "live-noact.db"); liveFixture(live); const d0 = digest(live);
+    const out = await runRefresh(makeRelease("refresh-noact", { realScripts: true }), live, { env: { SHR_REFRESH_NO_ACTIVATE: "1" } });
+    assert.strictEqual(out.error, null, String(out.error));
+    assert.strictEqual(out.status.outcome, "validated-not-activated");
+    assert.strictEqual(digest(live), d0, "live is byte-for-byte the same in every table");
+    const cand = fs.readdirSync(out.backups).find((n) => /^shr-candidate-.*\.db$/.test(n))!;
+    assert.deepStrictEqual(counts(path.join(out.backups, cand), 2026), { incidents: 10, victims: 12 }, "the kept candidate holds the refresh");
+  });
+
+  // ---- the failures that motivated this work: each leaves the live database exactly as it was ----
+  const failing = async (label: string, o: RefreshOpts, stage: RegExp, extra?: (out: Awaited<ReturnType<typeof runRefresh>>, live: string) => void) => {
+    const live = path.join(WORK, `live-${label}.db`); liveFixture(live); const d0 = digest(live);
+    const out = await runRefresh(makeRelease(`refresh-${label}`, { realScripts: true }), live, o);
+    assert.ok(out.error, "the run fails");
+    assert.match(String(out.error!.message), stage, `actual: ${String(out.error!.message).replace(/\s+/g, " ")}`);
+    assert.strictEqual(digest(live), d0, "every table of the live database is exactly as before");
+    assert.ok(out.status && /refused|failed|rolled-back/.test(out.status.outcome), `status ${out.status && out.status.outcome}`);
+    assert.ok(!fs.existsSync(path.join(out.backups, "shr-refresh.lock")), "the lock is released after a failure");
+    extra?.(out, live);
+    return out;
+  };
+  const previous = archiveOf([rec({ ori: "MOSPD00", month: 4, n: 1 })]);
+  const keepsPrevious = (out: Awaited<ReturnType<typeof runRefresh>>) => {
+    assert.ok(fs.readFileSync(out.archive).equals(previous), "the previous archive is preserved byte-for-byte");
+    assert.ok(!fs.readdirSync(out.dataDir).some((n) => n.includes(".download-")), "no partial download is left behind");
+    assert.ok(!out.calls.some((c) => c.startsWith("sqlite3")), "no database work was even started");
+  };
+  await check("HTTP error: curl --fail refuses; no fallback import from the old archive; the previous archive is preserved", () =>
+    failing("http", { archive: null, preArchive: previous }, /download refused: shr-2026\.zip: curl: \(22\)/, keepsPrevious).then(() => undefined));
+  await check("an error page saved as the archive is not a zip: the archive test refuses it", () =>
+    failing("html", { archive: Buffer.from("<html><body>Access Denied</body></html>".repeat(40)), preArchive: previous }, /download refused/, keepsPrevious).then(() => undefined));
+  await check("a truncated archive fails the archive test and is not accepted", () =>
+    failing("truncated", { archive: archiveOf(OCTOBER).subarray(0, archiveOf(OCTOBER).length - 40), preArchive: previous }, /download refused/, keepsPrevious).then(() => undefined));
+  await check("WRONG-YEAR input: a file of 2025 records offered as 2026 is refused, and none of them is written", () =>
+    failing("wrong-year", { archive: archiveOf(Array.from({ length: 20 }, (_, i) => rec({ ori: "MOSPD00", month: 3, n: i + 1, yy: "25" }))), preArchive: previous },
+      /validation refused: no records for 2026[\s\S]*20 of 20 records are for another year/, (out) => {
+        assert.ok(fs.readFileSync(out.archive).equals(previous), "the refused file did not replace the previous archive");
+        assert.strictEqual(out.status.validation[0].rejected["other-year"], 20);
+      }).then(() => undefined));
+  await check("unreadable lines beyond the tolerance are refused, with the reasons counted", () =>
+    failing("unreadable", { archive: archiveOf([...OCTOBER, ...Array.from({ length: 8 }, () => "X".repeat(120)), "too short"]) },
+      /validation refused: 9 of 19 lines are not readable records/, (out) => assert.deepStrictEqual(out.status.validation[0].rejected,
+        { short: 1, "not-a-record": 8, "unknown-state": 0, "year-out-of-range": 0, "other-year": 0 })).then(() => undefined));
+  await check("a file that would shrink the loaded year is refused (a larger count alone is not taken as proof of completeness)", () =>
+    // Padded with a whitespace-only entry (blank lines are not records) so the archive clears the 1,000-byte floor.
+    failing("shrink", { archive: zipOf([{ name: "SHR2026.txt", data: Buffer.from(rec({ ori: "MOSPD00", month: 4, n: 1 }) + "\r\n", "latin1") },
+      { name: "pad.txt", data: Buffer.from(" \r\n".repeat(600)) }]) }, /validation refused: the file has 1 incidents for 2026, fewer than 95% of the 3/).then(() => undefined));
+  await check("FAILURE AFTER DELETION HAS BEGUN: the deadline expiring inside the candidate's replacement rolls it back; live untouched", async () => {
+    let armed = false;
+    const big = archiveOf(Array.from({ length: 2500 }, (_, i) => rec({ ori: "MOSPD00", month: (i % 9) + 1, n: i + 1 })));
+    await failing("mid-replace", {
+      archive: big,
+      intercept: (file, args) => { if (file === SQLITE && args.some((a) => a.startsWith(".backup") && a.includes("shr-candidate-"))) armed = true; return undefined; },
+      // Ample time until the candidate copy exists; the replacement's record-1000 admission then sees an expired clock.
+      deadline: { remainingMs: () => (armed ? 0 : 3600000) },
+    }, /replace 2026 \(record 1000\) not dispatched/, (out) => {
+      const cand = fs.readdirSync(out.backups).find((x) => /^shr-candidate-.*\.db$/.test(x))!;
+      assert.deepStrictEqual(counts(path.join(out.backups, cand), 2026), { incidents: 3, victims: 3 }, "inside the candidate too, the delete was rolled back");
+    });
+  });
+  await check("POST-STEP FAILURE: a failing evidence build stops the run before activation; live untouched", () =>
+    // The evidence builder cannot open its NIBRS database: the importer's nibrs path points at a missing file.
+    failing("post-step", { nibrs: path.join(WORK, "missing-nibrs.db") }, /build-shr-agency-type-evidence failed/).then(() => undefined));
+  await check("DEADLINE: too little time left for activation (with its rollback reserve) refuses before the restore; live untouched", () =>
+    (() => {
+      // Nine minutes left once the candidate check has run: less than the 10-minute activation reserve.
+      const clock = { activating: false };
+      return failing("deadline", {
+        deadline: { remainingMs: () => (clock.activating ? 9 * 60 * 1000 : 3600000) },
+        intercept: (file, args) => { if (file === SQLITE && args.includes("PRAGMA quick_check;") && args.some((a) => a.includes("shr-candidate-"))) clock.activating = true; return undefined; },
+      }, /activation refused: not admitted/).then(() => undefined);
+    })());
+  await check("ACTIVATION READ-BACK MISMATCH: the snapshot is restored the same way and verified; live ends exactly as before", () =>
+    failing("readback", {
+      // The activation restore copies the WRONG file (the snapshot itself): the read-back disagrees with the candidate.
+      intercept: (file, args, opts) => {
+        const i = args.findIndex((a) => a.startsWith(".restore") && a.includes("shr-candidate-"));
+        if (file === SQLITE && i >= 0) { const wrong = [...args]; wrong[i] = args[i].replace(/shr-candidate-/, "shr-pre-"); return childProcess.execFileSync(file, wrong, { ...opts, windowsHide: true }) as unknown as Buffer; }
+        return undefined;
+      },
+    }, /activation refused: the live year counts or agency-type evidence count differ[\s\S]*the snapshot was restored and verified/, (out) => assert.strictEqual(out.status.outcome, "rolled-back")).then(() => undefined));
+  await check("ACTIVATION CHANGED LIVE, THEN FAILED ITS CHECK: only the rollback restore can bring it back -- and it does", () =>
+    failing("changed-then-bad", {
+      // The real activation restore runs, and then one refreshed row is lost, so the live file differs both
+      // from the candidate (the read-back fails) and from the original (only the snapshot restore repairs it).
+      intercept: (file, args, opts) => {
+        if (file === SQLITE && args.some((a) => a.startsWith(".restore") && a.includes("shr-candidate-"))) {
+          const result = childProcess.execFileSync(file, args, { ...opts, windowsHide: true }) as unknown as Buffer;
+          const d = new Database(args[1]);
+          const id = (d.prepare("SELECT MAX(id) AS id FROM incidents WHERE year = 2026").get() as { id: number }).id;
+          d.prepare("DELETE FROM victims WHERE incident_id = ?").run(id); d.prepare("DELETE FROM incidents WHERE id = ?").run(id); d.close();
+          return result;
+        }
+        return undefined;
+      },
+    }, /activation refused: the live year counts or agency-type evidence count differ[\s\S]*the snapshot was restored and verified/, (out) => assert.strictEqual(out.status.outcome, "rolled-back")).then(() => undefined));
+  // ---- Codex SRF-1: the read-back must not be able to spend the time the rollback needs ----
+  /** Real activation restore, then one refreshed row lost (so only the rollback can repair live); clock is the test's. */
+  function srf1(live: string, clock: { remaining: number }, o: { atActivation: number; checkFails?: boolean; recoveryRestoreFails?: boolean }) {
+    const seen = { liveCheckTimeouts: [] as number[], recoveryRestoreTimeout: -1, recoveryCheckTimeout: -1 };
+    let activated = false; let recovering = false;
+    const intercept = (file: string, args: string[], opts: any): Buffer | undefined => {
+      if (file !== SQLITE) return undefined;
+      if (args.some((a) => a.startsWith(".restore") && a.includes("shr-candidate-"))) {
+        const result = childProcess.execFileSync(file, args, { ...opts, windowsHide: true }) as unknown as Buffer;
+        const d = new Database(live);
+        const id = (d.prepare("SELECT MAX(id) AS id FROM incidents WHERE year = 2026").get() as { id: number }).id;
+        d.prepare("DELETE FROM victims WHERE incident_id = ?").run(id); d.prepare("DELETE FROM incidents WHERE id = ?").run(id); d.close();
+        activated = true; clock.remaining = o.atActivation;
+        return result;
+      }
+      if (args.some((a) => a.startsWith(".restore") && a.includes("shr-pre-"))) {
+        recovering = true; seen.recoveryRestoreTimeout = opts.timeout;
+        if (o.recoveryRestoreFails) throw new Error("simulated recovery restore failure");
+        const result = childProcess.execFileSync(file, args, { ...opts, windowsHide: true }) as unknown as Buffer;
+        clock.remaining -= opts.timeout;            // the restore used ALL of its admitted time
+        return result;
+      }
+      if (activated && !recovering && args.includes("PRAGMA quick_check;") && args.includes(live)) {
+        seen.liveCheckTimeouts.push(opts.timeout);
+        clock.remaining -= opts.timeout;            // the check used ALL of its admitted time ...
+        if (o.checkFails !== false) throw new Error("simulated live check consumed its allowed timeout");   // ... and then failed
+      }
+      if (recovering && args.includes("PRAGMA quick_check;") && args.includes(live)) seen.recoveryCheckTimeout = opts.timeout;
+      return undefined;
+    };
+    return { intercept, seen };
+  }
+  await check("SRF-1 (Codex witness, kept): 301 s left when the live check starts -- it cannot spend the 300 s recovery reserve; the original is restored and verified", async () => {
+    const live = path.join(WORK, "live-srf1-witness.db"); liveFixture(live); const d0 = digest(live);
+    const clock = { remaining: 3600000 };
+    const { intercept, seen } = srf1(live, clock, { atActivation: 301000 });
+    const out = await runRefresh(makeRelease("srf1-witness", { realScripts: true }), live, { deadline: { remainingMs: () => clock.remaining }, intercept });
+    // Before the correction this check was admitted for 301,000 ms and the rollback was "not dispatched: 0 ms left".
+    assert.ok(seen.liveCheckTimeouts.every((t) => t <= 1000), `the live check is bounded by the work budget (${seen.liveCheckTimeouts})`);
+    assert.strictEqual(out.status.outcome, "rolled-back", JSON.stringify(out.status.rollback));
+    assert.strictEqual(digest(live), d0, "every table of the live database is back exactly as before");
+    assert.ok(seen.recoveryCheckTimeout >= 5000, "the recovery's own check was dispatched");
+  });
+  await check("SRF-1: with a large budget, the live check AND the recovery restore each use all their admitted time -- the recovery check still runs", async () => {
+    const live = path.join(WORK, "live-srf1-large.db"); liveFixture(live); const d0 = digest(live);
+    const clock = { remaining: 3600000 };
+    const { intercept, seen } = srf1(live, clock, { atActivation: 3600000 });
+    const out = await runRefresh(makeRelease("srf1-large", { realScripts: true }), live, { deadline: { remainingMs: () => clock.remaining }, intercept });
+    assert.strictEqual(seen.liveCheckTimeouts.length, 1);
+    assert.ok(seen.liveCheckTimeouts[0] <= 600000 && seen.liveCheckTimeouts[0] <= 3600000 - 300000, `bounded check (${seen.liveCheckTimeouts[0]})`);
+    assert.ok(seen.recoveryRestoreTimeout > 0 && seen.recoveryRestoreTimeout <= (3600000 - seen.liveCheckTimeouts[0]) - 120000,
+      `the recovery restore leaves the 120 s verification reserve (${seen.recoveryRestoreTimeout})`);
+    assert.ok(seen.recoveryCheckTimeout >= 5000, `the recovery check ran after a restore that used all its time (${seen.recoveryCheckTimeout})`);
+    assert.strictEqual(out.status.outcome, "rolled-back", JSON.stringify(out.status.rollback));
+    assert.strictEqual(digest(live), d0);
+  });
+  await check("SRF-1: with 610 s left, an activation restore that uses ALL its admitted time still leaves the recovery reserve; the original is restored", async () => {
+    const live = path.join(WORK, "live-srf1-restore.db"); liveFixture(live); const d0 = digest(live);
+    const clock = { remaining: 610000 };
+    let activationTimeout = -1;
+    const { intercept: base, seen } = srf1(live, clock, { atActivation: 610000 });
+    const intercept = (file: string, args: string[], opts: any) => {
+      const isActivation = file === SQLITE && args.some((a) => a.startsWith(".restore") && a.includes("shr-candidate-"));
+      const result = base(file, args, opts);
+      if (isActivation) { activationTimeout = opts.timeout; clock.remaining -= opts.timeout; }   // the restore used ALL of its admitted time
+      return result;
+    };
+    const out = await runRefresh(makeRelease("srf1-restore", { realScripts: true }), live, { deadline: { remainingMs: () => clock.remaining }, intercept });
+    assert.ok(activationTimeout > 0 && activationTimeout <= 610000 - 300000, `the activation restore is bounded by the work budget (${activationTimeout})`);
+    assert.strictEqual(out.status.outcome, "rolled-back", JSON.stringify(out.status.rollback));
+    assert.strictEqual(digest(live), d0);
+    assert.ok(seen.recoveryCheckTimeout >= 5000, "the recovery's own check was dispatched");
+  });
+  await check("SRF-1: when recovery itself cannot finish, the run says so honestly (rollback-failed), and live is reported changed", async () => {
+    const live = path.join(WORK, "live-srf1-fails.db"); liveFixture(live); const d0 = digest(live);
+    const clock = { remaining: 3600000 };
+    const { intercept } = srf1(live, clock, { atActivation: 3600000, recoveryRestoreFails: true });
+    const out = await runRefresh(makeRelease("srf1-fails", { realScripts: true }), live, { deadline: { remainingMs: () => clock.remaining }, intercept });
+    assert.ok(out.error && /rollback failed: simulated recovery restore failure/.test(out.error.message), String(out.error));
+    assert.strictEqual(out.status.outcome, "rollback-failed");
+    assert.notStrictEqual(digest(live), d0, "the fixture really is left changed: the report is not a false success");
+  });
+  await check("ACTIVATION FAILURE: a failed restore is followed by the snapshot restore; live ends exactly as before", () =>
+    failing("restore-fails", {
+      intercept: (file, args) => { if (file === SQLITE && args.some((a) => a.startsWith(".restore") && a.includes("shr-candidate-"))) throw new Error("simulated restore failure"); return undefined; },
+    }, /activation refused: activation failed: simulated restore failure[\s\S]*the snapshot was restored and verified/).then(() => undefined));
+  await check("an unusable runtime refuses BEFORE any download (no curl, no unzip, no snapshot)", async () => {
+    const live = path.join(WORK, "live-abi.db"); liveFixture(live); const d0 = digest(live);
+    const out = await runRefresh(makeRelease("refresh-abi", { betterSqlite3: "incompatible" }), live);
+    assert.ok(out.error instanceof PostImportRefusal && /NODE_MODULE_VERSION/.test((out.error as Error).message), String(out.error));
+    assert.deepStrictEqual(out.calls, []);
+    assert.strictEqual(digest(live), d0);
+  });
+  await check("a second refresh is refused while the lock exists, and the lock is not removed by the refused run", async () => {
+    const live = path.join(WORK, "live-lock.db"); liveFixture(live); const d0 = digest(live);
+    const rel = makeRelease("refresh-lock", { realScripts: true });
+    fs.mkdirSync(path.join(WORK, `backups-${path.basename(rel.root)}`), { recursive: true });
+    fs.writeFileSync(path.join(WORK, `backups-${path.basename(rel.root)}`, "shr-refresh.lock"), "held");
+    const out = await runRefresh(rel, live);
+    assert.ok(out.error && /lock refused/.test(out.error.message), String(out.error));
+    assert.deepStrictEqual(out.calls, []);
+    assert.strictEqual(digest(live), d0);
+    assert.ok(fs.existsSync(path.join(out.backups, "shr-refresh.lock")), "someone else's lock is left in place");
   });
 
   console.log("\n3 - the recovery entry (type fill-in only)");

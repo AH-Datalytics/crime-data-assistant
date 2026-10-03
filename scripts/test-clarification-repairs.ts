@@ -27,6 +27,8 @@
  * and executed — the route's own expression, with the real modules bound.
  */
 
+import { cachedYearClassAvailability, SHR_YEAR_CLASS_TABLE, unresolvedDisclosure, unresolvedLimitation } from "../lib/shr-agency-year-class";
+import { SHR_AGENCY_TYPE_GUARDRAIL } from "../lib/shr-agency-type-authority";
 import "./offline-evidence-guard";
 import { deniedDatabaseOpens, deniedNetworkCalls } from "./offline-evidence-guard";
 
@@ -516,7 +518,10 @@ function harness(request: string, userTurn: string) {
   const runValidation = runRouteExpression<(sql: string) => unknown>(
     extractDeclaration("shr", "runDeterministicPlanValidation").text,
     // GC-080: the closure now passes the bound county scope; these fixtures name no county.
-    { validateDeterministicShrPlanSql, guardrailQuestion: request, routingMeta: null, recordContractValidation: () => {}, shrCountyScope: null });
+    { validateDeterministicShrPlanSql, guardrailQuestion: request, routingMeta: null, recordContractValidation: () => {}, shrCountyScope: null,
+      // SHR agency/year classification (2026-10-02): the route reads the classification's availability for a
+      // statement that touches agency type -- the REAL check, on this fixture database.
+      yearClassFor: (sql: string) => (/\bagency_type\b|\bshr_agency_year_class\b/i.test(sql) ? cachedYearClassAvailability(shrDb as unknown as Parameters<typeof cachedYearClassAvailability>[0]) : null) });
   return {
     dispatches, payloads, logged,
     catalog: {
@@ -532,6 +537,8 @@ function harness(request: string, userTurn: string) {
       applyChartCustomizations, sealPlanDerivation, returnedEntityKeys, normalizeShrAgencyText,
       limitationReply,
       runDeterministicPlanValidation: runValidation,
+      // SHR agency/year classification (2026-10-02): the name-match fallback's real constants and disclosures.
+      SHR_YEAR_CLASS_TABLE, SHR_AGENCY_TYPE_GUARDRAIL, unresolvedLimitation, unresolvedDisclosure,
       // GC-080: the county-to-sheriff scope and the request-selected measure the branch now reads.
       shrRequestedMeasure, shrCountyRequest, resolveShrCountyScope, withShrScopeAndMeasureDisclosures,
       guardrailQuestion: request,

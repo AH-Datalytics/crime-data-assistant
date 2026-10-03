@@ -1589,6 +1589,19 @@ console.log("\n═══ missing-group-by-year ═══\n");
 }
 
 {
+  // TP: qualified i.year with a joined table that also has `year` — group by i.year, never an ambiguous `year`
+  const sql = `SELECT i.year, COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id JOIN shr_agency_year_class c ON c.ori = i.ori AND c.state = i.state AND c.year = i.year WHERE i.state = 'AL' AND i.year = 2025 AND c.agency_type = 'City' LIMIT 1000`;
+  const ctx = extractQueryContext(sql, "How many murder victims were in cities in Alabama in 2025?", "shr");
+  const r = runGuardrails(ctx);
+  assert("TP: qualified i.year without GROUP BY fires",
+    r.fired.includes("missing-group-by-year"),
+    `fired: ${JSON.stringify(r.fired)}`);
+  assert("TP: rewrite groups by the qualified i.year (not an ambiguous year)",
+    /GROUP BY i\.year\s+LIMIT/i.test(r.sql) && !/GROUP BY year\b/i.test(r.sql),
+    `rewritten: ${r.sql}`);
+}
+
+{
   // FP: scalar subquery with year in SELECT — should NOT fire
   const sql = `SELECT (SELECT MAX(year) FROM agencies) AS max_year, SUM(victim_count) AS total FROM summary_victim_state_monthly WHERE state = 'TX' AND year = 2024`;
   const ctx = extractQueryContext(sql, "total murders in Texas with max year", "nibrs");
