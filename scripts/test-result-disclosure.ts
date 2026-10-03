@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, missingLowerBoundNote, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
+import { historicalRapeSeries, RAPE_DEFINITION_CAVEAT, returnedRapeCountColumn } from "../lib/historical-rape-series";
 
 {
   const rows = [];
@@ -611,6 +612,114 @@ import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote
   assert.match(out, /Although the query covered 2016 onward, this source returned data beginning in 2017\./);
   assert.equal(missingLowerBoundNote("violent crime from 2017 onward", "SELECT year FROM crime WHERE year >= 2017", [{ year: 2017, count: 10 }]), null);
   assert.equal(missingLowerBoundNote("show violent crime trends", "SELECT year FROM crime", [{ year: 2017, count: 10 }]), null);
+}
+
+
+// ---- GC-085: Historical annual rape-COUNT series across the 2013 definition change ----
+{
+  const NAT = "SELECT year, rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2010 AND 2024 ORDER BY year";
+  const years = (from: number, to: number, value: (y: number) => number | null = () => 100) =>
+    Array.from({ length: to - from + 1 }, (_, i) => ({ year: from + i, rape: value(from + i) }));
+  const DIRECTION_OR_CAUSE = /\b(increas\w*|decreas\w*|rose|fell|declin\w*|due to|because|substantial\w*)\b/i;
+
+  // GC-085: the national count series across 2013 gets the owned narrative.
+  {
+    const r = historicalRapeSeries("historical", NAT, years(2010, 2024));
+    assert.ok(r);
+    assert.equal(r.narrative, `FBI UCR rape offenses nationally by year, 2010–2024. These are the FBI's Uniform Crime Reporting rape category, not all sexual assaults. ${RAPE_DEFINITION_CAVEAT}`);
+    assert.equal(DIRECTION_OR_CAUSE.test(r.narrative), false);
+  }
+
+  // Decided by the resolved source/measure/period, never the question: there is no question parameter, and the
+  // same rows answer the same way whether they fall, rise or stay flat.
+  for (const shape of [(y: number) => 3000 - y, (y: number) => y, () => 7]) {
+    const r = historicalRapeSeries("historical", NAT, years(2011, 2014, shape));
+    assert.ok(r);
+    assert.ok(r.narrative.endsWith(RAPE_DEFINITION_CAVEAT));
+  }
+
+  // Period boundaries: a period wholly after (or wholly before) 2013 gets nothing; 2012-2013 crosses.
+  assert.equal(historicalRapeSeries("historical", NAT, years(2013, 2024)), null);
+  assert.equal(historicalRapeSeries("historical", NAT, years(2014, 2024)), null);
+  assert.equal(historicalRapeSeries("historical", NAT, years(2000, 2012)), null);
+  assert.ok(historicalRapeSeries("historical", NAT, years(2012, 2013)));
+
+  // Other tabs, measures and totals are untouched.
+  assert.equal(historicalRapeSeries("current", NAT, years(2010, 2024)), null);
+  assert.equal(historicalRapeSeries("historical", NAT.replace("rape", "murder"), years(2010, 2024).map((r) => ({ year: r.year, murder: r.rape }))), null);
+  assert.equal(historicalRapeSeries("historical", NAT.replace("rape", "rape_rate"), years(2010, 2024).map((r) => ({ year: r.year, rape_rate: r.rape }))), null);
+  assert.equal(historicalRapeSeries("historical", "SELECT year, COALESCE(murder,0) + COALESCE(rape,0) + COALESCE(robbery,0) + COALESCE(aggravated_assault,0) AS violent_crime FROM historical_state_national WHERE state = 'United States' ORDER BY year", years(2010, 2024).map((r) => ({ year: r.year, violent_crime: r.rape }))), null);
+  assert.equal(historicalRapeSeries("historical", "SELECT year, murder, rape FROM historical_state_national WHERE state = 'United States'", years(2010, 2024).map((r) => ({ year: r.year, murder: 1, rape: r.rape }))), null);
+  assert.equal(historicalRapeSeries("historical", "SELECT year, rape_clr FROM historical_agency_clearance WHERE ori = 'X'", years(2010, 2024).map((r) => ({ year: r.year, rape_clr: 1 }))), null);
+  assert.equal(historicalRapeSeries("historical", NAT, []), null);
+  assert.equal(historicalRapeSeries("historical", null, years(2010, 2024)), null);
+
+  // Missing values are named, never zero: a NULL cell and an absent year.
+  {
+    const rows = [{ year: 2010, agency: "Witness City", rape: 40 }, { year: 2011, agency: "Witness City", rape: null }, { year: 2013, agency: "Witness City", rape: 44 }];
+    const r = historicalRapeSeries("historical", "SELECT hac.year, ha.agency, hac.rape FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE hac.ori = 'ZZ0000001'", rows);
+    assert.ok(r);
+    assert.deepEqual(r.missingYears, [2011, 2012]);
+    assert.ok(r.narrative.startsWith("FBI UCR rape offenses for Witness City by year, 2010–2013."));
+    assert.ok(r.narrative.includes("The returned results include no value for 2011 and 2012."));
+    assert.equal(/\bzero\b|\b0\b/.test(r.narrative), false);
+  }
+
+  // A single named state.
+  {
+    const rows = years(2012, 2013).map((r) => ({ ...r, state: "Louisiana" }));
+    const r = historicalRapeSeries("historical", "SELECT year, state, rape FROM historical_state_national WHERE state = 'Louisiana'", rows);
+    assert.ok(r?.narrative.startsWith("FBI UCR rape offenses in Louisiana by year, 2012–2013."));
+  }
+
+  // Codex correction (:33700): the RETURNED measure must be established as the stored rape count. A rape mention in a
+  // CTE, subquery, expression, alias or literal never relabels another returned measure.
+  {
+    const accept: [string, string[], string][] = [
+      [NAT, ["year", "rape"], "rape"],
+      [NAT + ";", ["year", "rape"], "rape"],
+      ["SELECT n.year, n.rape FROM historical_state_national n WHERE n.state = 'United States'", ["year", "rape"], "rape"],
+      ["SELECT year, rape AS rape_count FROM historical_state_national AS h WHERE state = 'United States'", ["year", "rape_count"], "rape_count"],
+      [`SELECT "year", "rape" FROM historical_state_national WHERE state = 'Ohio'`, ["year", "rape"], "rape"],
+      ["SELECT hac.year, ha.agency, hac.rape FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE hac.ori = 'X' ORDER BY hac.year LIMIT 100", ["year", "agency", "rape"], "rape"],
+      ["SELECT year, rape FROM historical_state_national WHERE state = 'United States' -- select murder\n ORDER BY year",["year", "rape"], "rape"],
+    ];
+    for (const [sql, cols, want] of accept) assert.equal(returnedRapeCountColumn(sql, cols), want, sql);
+
+    const reject: [string, string[]][] = [
+      // The two Codex route regressions: an inner rape selection, an outer rate or murder result.
+      ["WITH series AS (SELECT year, rape FROM historical_state_national WHERE state = 'United States') SELECT s.year, n.rape_rate FROM series s JOIN historical_state_national n ON n.year = s.year AND n.state = 'United States' WHERE s.year BETWEEN 2010 AND 2024 ORDER BY s.year", ["year", "rape_rate"]],
+      ["WITH years AS (SELECT year, rape FROM historical_state_national WHERE state = 'United States') SELECT y.year, n.murder FROM years y JOIN historical_state_national n ON n.year = y.year AND n.state = 'United States' WHERE y.year BETWEEN 2010 AND 2024 ORDER BY y.year", ["year", "murder"]],
+      // Transformed or aliased non-count output that still SAYS rape.
+      ["SELECT year, rape * 100000.0 / population AS rape FROM historical_state_national WHERE state = 'United States'", ["year", "rape"]],
+      ["SELECT year, ROUND(rape * 100000.0 / population, 1) AS rape_per_100k FROM historical_state_national", ["year", "rape_per_100k"]],
+      ["SELECT year, rape_rate AS rape FROM historical_state_national WHERE state = 'United States'", ["year", "rape"]],
+      ["SELECT year, murder AS rape FROM historical_state_national WHERE state = 'United States'", ["year", "rape"]],
+      ["SELECT year, rape AS rape_rate FROM historical_state_national WHERE state = 'United States'", ["year", "rape_rate"]],
+      ["SELECT year, rape AS pct_change FROM historical_state_national", ["year", "pct_change"]],
+      ["SELECT year, SUM(rape) AS rape FROM historical_state_national WHERE state != 'United States' GROUP BY year", ["year", "rape"]],
+      ["SELECT year, rape - LAG(rape) OVER (ORDER BY year) AS rape FROM historical_state_national", ["year", "rape"]],
+      ["SELECT year, rape_clr AS rape FROM historical_agency_clearance WHERE ori = 'X'", ["year", "rape"]],
+      ["SELECT year, rape FROM rtci_annual WHERE ori = 'X'", ["year", "rape"]],
+      ["SELECT year, rape FROM historical_state_national WHERE year IN (SELECT year FROM historical_state_national WHERE murder > 0)", ["year", "rape"]],
+      ["SELECT year, rape FROM historical_state_national UNION ALL SELECT year, murder FROM historical_state_national", ["year", "rape"]],
+      ["SELECT DISTINCT year, rape FROM historical_state_national", ["year", "rape"]],
+      ["SELECT * FROM historical_state_national WHERE state = 'United States'", ["year", "rape"]],
+      ["SELECT year, 'rape' AS offense, murder FROM historical_state_national", ["year", "offense", "murder"]],
+      ["SELECT year, rape, murder FROM historical_state_national", ["year", "rape", "murder"]],
+      ["SELECT year, population, rape FROM historical_state_national", ["year", "population", "rape"]],
+      ["SELECT rape FROM historical_state_national WHERE state = 'United States'", ["rape"]],
+      ["SELECT n.year, n.rape FROM historical_state_national n JOIN historical_state_national m ON m.year = n.year", ["year", "rape"]],
+      // The returned columns must be exactly the select list's output.
+      [NAT, ["year", "rape_rate"]],
+      [NAT, ["year", "rape", "extra"]],
+    ];
+    for (const [sql, cols] of reject) assert.equal(returnedRapeCountColumn(sql, cols), null, sql);
+
+    // Through the public entry point: the two Codex shapes with rows that cross 2013 get nothing.
+    assert.equal(historicalRapeSeries("historical", reject[0][0], years(2010, 2024).map((r) => ({ year: r.year, rape_rate: 26.1 }))), null);
+    assert.equal(historicalRapeSeries("historical", reject[1][0], years(2010, 2024).map((r) => ({ year: r.year, murder: 15000 }))), null);
+  }
 }
 
 console.log("result disclosure tests passed");
