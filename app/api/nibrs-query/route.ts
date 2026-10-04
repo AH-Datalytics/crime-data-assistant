@@ -1329,6 +1329,7 @@ export async function POST(req: NextRequest) {
         source: "nibrs",
         sql: inputSql,
         routingMeta,
+        history: normalizeHistoryForTab(body?.history, "nibrs"),
       });
       recordContractValidation(contractResult, collectRetryIssues);
       return contractResult;

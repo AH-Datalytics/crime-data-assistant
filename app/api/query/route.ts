@@ -1881,6 +1881,7 @@ export async function POST(req: NextRequest) {
           routingMeta,
           requiredOri: requiredCountyOri,
           contract: contractOverride,
+          history: normalizeHistoryForTab(body?.history, tab === "historical" ? "historical" : "current"),
         });
         recordContractValidation(contractResult);
         return contractResult;

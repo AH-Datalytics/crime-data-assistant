@@ -312,6 +312,7 @@ export async function POST(req: NextRequest) {
         source: "hate_crime",
         sql: inputSql,
         routingMeta,
+        history,
       });
       recordContractValidation(contractResult);
       return contractResult;

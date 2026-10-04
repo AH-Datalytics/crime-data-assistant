@@ -494,4 +494,85 @@ for (const question of trueFollowupContracts) {
   assert(!result.warnings.includes("contract-geography-state-missing"));
 }
 
+// ---- Measure preservation (Codex :34106): a statement may not deliver a different measure than requested ----
+{
+  // GC-050 (saved October capture): a share request, then a year-only follow-up answered with a population rate.
+  const gc050History = [
+    { role: "user", content: "Show me which big cities had the highest share of firearm murders in 2024" },
+    { role: "assistant", content: "I can rank cities by a count or by a rate per 100,000, but not by that measure." },
+  ];
+  const gc050Sql = "SELECT i.state, i.agency, COUNT(*) as firearm_murders, ROUND(COUNT(*) * 100000.0 / NULLIF(AVG(i.population), 0), 1) as rate_per_100k FROM incidents i JOIN victims v ON v.incident_id = i.id WHERE i.year = 2026 AND i.month <= 9 AND i.homicide_type = 'Murder' AND i.weapon_group = 'Firearm' AND i.population >= 250000 GROUP BY i.state, i.agency ORDER BY rate_per_100k DESC LIMIT 20";
+  const drift = validateQueryContractSql({ question: "now give me 2026 so far", source: "shr", sql: gc050Sql, history: gc050History });
+  assert(drift.enforced.includes("contract-measure-drift"), "GC-050: the inherited share blocks the delivered rate");
+  assert(/You asked earlier for a share/.test(drift.blockReasons.join(" ")) && /rate per 100,000/.test(drift.blockReasons.join(" ")));
+  assert(!/population denominator/.test(drift.blockReasons.join(" ")), "the message is about the measure, not a missing population");
+  const noHistory = validateQueryContractSql({ question: "now give me 2026 so far", source: "shr", sql: gc050Sql });
+  assert(!noHistory.enforced.includes("contract-measure-drift"), "with no conversation, nothing is inherited");
+  const explicit = validateQueryContractSql({ question: "now give me the firearm murder rate per 100,000 for big cities in 2026", source: "shr", sql: gc050Sql, history: gc050History });
+  assert(!explicit.enforced.includes("contract-measure-drift"), "an explicit change to a rate is honored");
+  const standalone = validateQueryContractSql({ question: "which big cities had the highest share of firearm murders in 2024", source: "shr", sql: gc050Sql });
+  assert(standalone.enforced.includes("contract-measure-drift"), "a standalone share answered with a rate is blocked too");
+
+  // GC-001/004 (NIBRS clearance shares): the share keeps the denominator the user named.
+  const ofClearances = "SELECT CAST(scd.state AS TEXT) AS state, SUM(scd.cleared_B) AS prosecution_declined, ROUND(100.0 * SUM(scd.cleared_B) / NULLIF(SUM(scd.cleared_by_arrest + scd.cleared_A + scd.cleared_B + scd.cleared_C + scd.cleared_D + scd.cleared_E), 0), 1) AS pct FROM rollup.state_summary_clearance_detail scd WHERE scd.ucr_offense_code IN ('11A','11B','11C') AND scd.year = 2025 GROUP BY scd.state";
+  const ofOffenses = "SELECT state, SUM(cleared_B) AS prosecution_declined, SUM(total_offenses) AS total_rape_offenses, ROUND(100.0 * SUM(cleared_B) / SUM(total_offenses), 1) AS pct_prosecution_declined FROM rollup.state_summary_clearance_detail WHERE ucr_offense_code IN ('11A','11B','11C') AND year = 2025 GROUP BY state";
+  const gc001 = "give me the share of all rape clearances that were prosecution declined in 2025 by state";
+  assert(!validateQueryContractSql({ question: gc001, source: "nibrs", sql: ofClearances }).enforced.includes("contract-measure-drift"), "GC-001: a share of clearances over clearances passes");
+  assert(validateQueryContractSql({ question: gc001, source: "nibrs", sql: ofOffenses }).enforced.includes("contract-measure-drift"), "GC-001: a share of clearances divided by offenses is blocked");
+  const gc004History = [{ role: "user", content: "Which states have the highest share of rapes cleared by exception in 2025?" }, { role: "assistant", content: "I couldn't build a reliable query." }];
+  const gc004 = "Now what about just the share that's prosecution declined";
+  assert(!validateQueryContractSql({ question: gc004, source: "nibrs", sql: ofOffenses, history: gc004History }).enforced.includes("contract-measure-drift"), "GC-004: keeps the setup's share of rapes (offenses) -- the saved answer passes");
+  assert(validateQueryContractSql({ question: gc004, source: "nibrs", sql: ofClearances, history: gc004History }).enforced.includes("contract-measure-drift"), "GC-004: switching to a share of clearances is blocked");
+
+  // Historical/Current: a stored population-rate column is a rate; a share computed from counts is a share.
+  const histHistory = [{ role: "user", content: "what share of violent crime in the United States was murder in 2010" }];
+  const histRate = "SELECT year, murder_rate FROM historical_state_national WHERE state = 'United States' AND year = 2020";
+  const histShare = "SELECT year, ROUND(100.0 * murder / (murder + rape + robbery + aggravated_assault), 2) AS murder_share FROM historical_state_national WHERE state = 'United States' AND year = 2020";
+  assert(validateQueryContractSql({ question: "now 2020", source: "historical", sql: histRate, history: histHistory }).enforced.includes("contract-measure-drift"), "Historical: a share follow-up answered with a stored rate is blocked");
+  assert(!validateQueryContractSql({ question: "now 2020", source: "historical", sql: histShare, history: histHistory }).enforced.includes("contract-measure-drift"), "Historical: the share follow-up answered with the share passes");
+  assert(!validateQueryContractSql({ question: "what was the murder rate in the United States in 2020", source: "historical", sql: histRate }).enforced.includes("contract-measure-drift"), "Historical: a requested rate with a stored rate passes");
+  const clr = "SELECT year, murder_clr FROM historical_agency_clearance WHERE ori = 'X'";
+  assert(!validateQueryContractSql({ question: "what share of murders were cleared in 2020", source: "historical", sql: clr }).enforced.includes("contract-measure-drift"), "a clearance percentage column is not a population rate");
+
+  // Codex R1 (:34305): an explicit replacement overrides the older measure; naming the replaced measure is not a request
+  // for it. Year-only inheritance is unchanged.
+  const shareHistory = [{ role: "user", content: "what share of violent crime in the United States was murder in 2010" }];
+  const rateHistory = [{ role: "user", content: "what was the murder rate per 100,000 in the United States in 2010" }];
+  const drifted = (question: string, sql: string, history: { role: string; content: string }[]) =>
+    validateQueryContractSql({ question, source: "historical", sql, history }).enforced.includes("contract-measure-drift");
+  for (const q of [
+    "Instead of the share, show the murder rate per 100,000 in 2020",            // Codex's witness
+    "show the murder rate per 100,000 in 2020 instead of the share",
+    "rather than a percentage, give me the murder rate for 2020",
+    "not the share -- the murder rate per capita in 2020",
+    "now show the rate instead",
+  ]) assert(!drifted(q, histRate, shareHistory), `R1 share->rate replacement is honored: "${q}"`);
+  for (const q of [
+    "Instead of the rate, show murder's share of violent crime in 2020",
+    "give me murder's percentage of violent crime in 2020 rather than the rate",
+  ]) assert(!drifted(q, histShare, rateHistory), `R1 rate->share replacement is honored: "${q}"`);
+  assert(drifted("now 2020", histShare, rateHistory), "R1: a year-only follow-up still keeps the rate (a share is blocked)");
+  assert(drifted("now 2020", histRate, shareHistory), "R1: a year-only follow-up still keeps the share (a rate is blocked)");
+  const both = "SELECT year, ROUND(100.0 * murder / (murder + rape + robbery + aggravated_assault), 2) AS murder_share, murder_rate FROM historical_state_national WHERE state = 'United States' AND year = 2020";
+  assert(!drifted("show murder's share of violent crime and the murder rate in 2020", both, shareHistory), "R1: asking for both measures invents no contradiction");
+  assert(!drifted("show murder's share of violent crime and the murder rate in 2020", histRate, shareHistory), "R1: asking for both measures is not this module's call (no block)");
+  assert(!drifted("not the share, just the numbers for 2020", "SELECT year, murder FROM historical_state_national WHERE state = 'United States' AND year = 2020", shareHistory), "R1: rejecting the share without naming a new measure does not inherit the share");
+  assert(!drifted("not the share, just the numbers for 2020", histRate, shareHistory), "R1: ...and nothing inherited means nothing to contradict");
+  // The standalone checks still hold: an unreplaced share answered with a rate is blocked.
+  assert(validateQueryContractSql({ question: "what share of violent crime was murder in 2020, not counting manslaughter", source: "historical", sql: histRate }).enforced.includes("contract-measure-drift"), "R1: 'not counting' is not a measure replacement");
+
+  // Hate Crime: incidents, offenses and victims are different recorded units.
+  const hcIncidents = "SELECT year, COUNT(DISTINCT incident_number || '|' || ori || '|' || year) AS incident_count FROM hate_crime_incidents WHERE year = 2022 GROUP BY year";
+  const hcVictims = "SELECT year, SUM(offense_victims) AS victim_count FROM hate_crime_incidents WHERE year = 2022 GROUP BY year";
+  assert(validateQueryContractSql({ question: "how many hate crime victims were there in 2022", source: "hate_crime", sql: hcIncidents }).enforced.includes("contract-measure-drift"), "HC: victims asked, incidents counted -> blocked");
+  assert(!validateQueryContractSql({ question: "how many hate crime victims were there in 2022", source: "hate_crime", sql: hcVictims }).enforced.includes("contract-measure-drift"), "HC: victims asked, victims counted -> passes");
+  const hcHistory = [{ role: "user", content: "how many hate crime victims were there in 2021" }];
+  assert(validateQueryContractSql({ question: "and 2022?", source: "hate_crime", sql: hcIncidents, history: hcHistory }).enforced.includes("contract-measure-drift"), "HC: a follow-up keeps the victim unit");
+  assert(!validateQueryContractSql({ question: "how many hate crimes were there in 2022", source: "hate_crime", sql: hcIncidents }).enforced.includes("contract-measure-drift"), "HC: no unit named -> the source default is not second-guessed");
+  assert(!validateQueryContractSql({ question: "how many hate crime incidents were there in 2022", source: "nibrs", sql: hcVictims }).enforced.includes("contract-measure-drift"), "the unit rule is Hate Crime only");
+  // p3-1a corpus row 204: a COUNT(*) over a non-hate-crime table is not read as hate-crime offenses (other rules own it).
+  assert(!validateQueryContractSql({ question: "What were the demographics of victims in Jefferson Parish, LA in 2022?", source: "hate_crime", sql: "SELECT COUNT(*) FROM summary_state_monthly WHERE state='IL'" }).enforced.includes("contract-measure-drift"), "HC units are read only from the hate-crime tables");
+  assert(validateQueryContractSql({ question: "how many hate crime victims were there in 2022", source: "hate_crime", sql: "SELECT COUNT(*) AS offenses FROM hate_crime_incidents WHERE year = 2022" }).enforced.includes("contract-measure-drift"), "a raw COUNT(*) over hate_crime_incidents is offenses, not victims");
+}
+
 console.log("query contract tests passed");

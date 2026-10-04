@@ -15,6 +15,7 @@ import { observeHistoricalClearanceGrain, type ClearanceGrainObservation } from 
 import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from "./capability-overrides";
 import { classifyCapabilityRule } from "./capability-decision";
 import { OUTCOMES } from "./proof-contract";
+import { measureDriftIssue, MEASURE_DRIFT_GUARDRAIL } from "./measure-preservation";
 
 /** The typed pair a capability block finalizes with; null when no block rule fired. */
 export type CapabilityBlockOutcome = typeof OUTCOMES.query_contract_failed | null;
@@ -581,6 +582,12 @@ export function validateQueryContractSql(opts: {
    * different source is ignored rather than trusted.
    */
   contract?: QueryContract | null;
+  /**
+   * The conversation so far (user and assistant turns). Measure preservation reads the measure the user last
+   * stated when this question states none (lib/measure-preservation.ts). Absent = no inheritance; the
+   * question's own stated measure is still held.
+   */
+  history?: { role: string; content: string }[] | null;
 }): QueryContractSqlValidation {
   const requiredOri = (opts.requiredOri || "").trim();
   const missingRequiredOri = Boolean(requiredOri) && !sqlTargetsOri(opts.sql, requiredOri);
@@ -813,6 +820,13 @@ export function validateQueryContractSql(opts: {
     enforced.push(clearanceGrainObservation.reason);
   }
   blockReasons.push(...structuralBlockReasons);
+  // Measure preservation (Codex :34106): a statement that would deliver a different measure than the request asked
+  // for -- on the question itself or inherited by a follow-up -- is blocked with the truthful limitation.
+  const measureDrift = measureDriftIssue({ question: opts.question, history: opts.history ?? null, source: opts.source, sql });
+  if (measureDrift) {
+    blockReasons.push(measureDrift);
+    enforced.push(MEASURE_DRIFT_GUARDRAIL);
+  }
 
   const uniqueBlockReasons = [...new Set(blockReasons)];
   return {

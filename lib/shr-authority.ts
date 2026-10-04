@@ -82,6 +82,8 @@ export function validateModelAuthoredShrSql(opts: {
   scope?: ShrScopeBinding | null;
   /** Whether the SHR agency/year classification is built and current (lib/shr-agency-year-class.ts). */
   yearClass?: YearClassAvailability | null;
+  /** The conversation, for measure preservation on follow-ups (lib/measure-preservation.ts). */
+  history?: { role: string; content: string }[] | null;
 }): ModelAuthoredShrValidation {
   return withAgencyTypeVerdict(validateModelAuthoredShrSqlInner(opts), opts.yearClass ?? null, "model", opts.question);
 }
@@ -91,12 +93,14 @@ function validateModelAuthoredShrSqlInner(opts: {
   sql: string;
   routingMeta?: RoutingLogMeta | null;
   scope?: ShrScopeBinding | null;
+  history?: { role: string; content: string }[] | null;
 }): ModelAuthoredShrValidation {
   const raw = validateQueryContractSql({
     question: opts.question,
     source: "shr",
     sql: opts.sql,
     routingMeta: opts.routingMeta ?? null,
+    history: opts.history ?? null,
   });
   // ONE authority per surface. The legacy text prover still emits this licence for the
   // deterministic path, so its verdict is stripped here before the fact verdict is applied --
@@ -203,6 +207,19 @@ export function withoutLegacyLicence(result: QueryContractSqlValidation): QueryC
   };
 }
 
+const RATIO_UNMODELED_RULE = "structural-measure-unit-unmodeled";
+
+/** The result without one structural rule's tag, warning, retry issue or block (same shape as withoutLegacyLicence). */
+function withoutRule(result: QueryContractSqlValidation, rule: string): QueryContractSqlValidation {
+  return {
+    ...result,
+    warnings: result.warnings.filter((w) => w !== rule),
+    enforced: result.enforced.filter((e) => e !== rule),
+    retryIssues: result.retryIssues.filter((issue) => !issue.includes(rule)),
+    blockReasons: result.blockReasons.filter((reason) => !reason.includes(rule)),
+  };
+}
+
 const COMPILED_COUNT = Symbol("shr.owned-count");
 
 /** Result of validating an OWNED COUNT the application compiled (GC-080). Carries the compilation. */
@@ -239,7 +256,12 @@ export function validateCompiledShrCount(opts: {
     sql: opts.compiled.sql,
     routingMeta: opts.routingMeta ?? null,
   });
-  const base = !issue && opts.compiled.plan.measure === "homicide" ? withoutLegacyLicence(raw) : raw;
+  const licensed = !issue && opts.compiled.plan.measure === "homicide" ? withoutLegacyLicence(raw) : raw;
+  // Measure preservation (Codex :34106): an ISSUED, unaltered sex-ratio compilation computes its ratio from two
+  // victim counts the compiler itself selects on the same rows (v.sex = 'Male' / 'Female'). The structural share
+  // proof cannot trace a ratio projected out of the plan's CTE, so its one "unit unmodeled" retry is withdrawn here
+  // -- for this compiler output only. Every other rule, and the full check on model-written SQL, is unchanged.
+  const base = !issue && opts.compiled.plan.ratio ? withoutRule(licensed, RATIO_UNMODELED_RULE) : licensed;
   const problem = issue ?? (base.sql !== opts.compiled.sql ? "the validator rewrote the compiled statement" : null);
   if (problem) console.log(`[shr][owned-count] refused: ${problem}`);
   return {
