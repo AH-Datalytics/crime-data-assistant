@@ -160,6 +160,7 @@ import {
   sanitizeChartConfigTitle,
 } from "@/lib/scaffold-helpers";
 import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
+import { nibrsWithheldRateNote, withoutNibrsMetadata } from "@/lib/nibrs-deterministic-queries";
 
 function modelLabel(modelId: string): string {
   if (modelId.includes("sonnet")) return "sonnet-4.5";
@@ -830,8 +831,13 @@ export async function POST(req: NextRequest) {
       const deterministicStart = Date.now();
       try {
         const result = await executeWithTimeout(deterministicQuery.sql);
-        const rows = normalizeNibrsDisplayRows(result.rows);
-        const columns = result.columns;
+        const executedRows = normalizeNibrsDisplayRows(result.rows);
+        // COVER batch (Codex :34982): a blank rate's established reason and activity months come from metadata the
+        // same statement returned; the metadata is then removed, so delivered rows, columns and values are unchanged.
+        const withheldRateNote = nibrsWithheldRateNote(deterministicQuery, executedRows);
+        const delivered = withoutNibrsMetadata(deterministicQuery, result.columns, executedRows);
+        const rows = delivered.rows;
+        const columns = delivered.columns;
 
         /*
          * S1 for the NIBRS city ranking (lib/city-ranking-completeness.ts; Codex combined review): the
@@ -937,6 +943,12 @@ export async function POST(req: NextRequest) {
         }
         if (deterministicMissing && explanation.includes(deterministicMissing.note)) {
           deterministicFiredGuardrails.push("nibrs-unresolved-member-disclosed");
+        }
+        // Appended after the chokepoint and any grain replacement (as the owned clearance family does): its reasons
+        // are established by evidence this statement fetched, which the generic chokepoint cannot see.
+        if (withheldRateNote && !explanation.includes(withheldRateNote)) {
+          explanation = [explanation, withheldRateNote].filter(Boolean).join("\n\n");
+          deterministicFiredGuardrails.push("nibrs-withheld-rate-explained");
         }
         // Coverage first, then the year alignment, so the year range is applied to the title that
         // will actually ship rather than to one the coverage clause then replaces.
@@ -2089,7 +2101,8 @@ export async function POST(req: NextRequest) {
 
     // Append standard NIBRS disclaimer — skip if explanation already has a coverage/completeness note
     const nibrsDisclaimer = "Note: This data comes from the FBI's NIBRS program. Not all agencies report to this system, and some may have incomplete data — especially in their first year of NIBRS reporting or for recent months of data. Always verify that reported offenses are not impacted by incomplete coverage.";
-    const alreadyHasCoverageNote = /transitioning|underreporting|incomplete|not all agencies|coverage|did not report/i.test(explanation);
+    // COVER batch: the returned-values coverage statement is not a source completeness caveat, so it must not suppress this one.
+    const alreadyHasCoverageNote = /transitioning|underreporting|incomplete|not all agencies|coverage|did not report/i.test(explanation.replace(/Returned coverage[^\n]*/g, ""));
     if (!explanation.includes("FBI's NIBRS program") && !alreadyHasCoverageNote) {
       explanation += "\n\n" + nibrsDisclaimer;
     }

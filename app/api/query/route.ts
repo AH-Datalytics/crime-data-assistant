@@ -25,7 +25,7 @@ import { checkSingleRowTrend } from "@/lib/single-row-trend";
 import { parseRoutingLogMeta } from "@/lib/routing-log-meta";
 import { answerMetadataQuestion } from "@/lib/metadata-coverage";
 import { validateTablesForTab } from "@/lib/table-allowlist";
-import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, returnedEntityKeys, trimTrailingEmptyYearRows } from "@/lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, missingLowerBoundNote, returnedEntityKeys, trimTrailingEmptyYearRows, withReturnedCoverage } from "@/lib/result-disclosure";
 import { withholdUnverifiedChange, appendWithheldChangeNote, applyPeriodDisclosure } from "@/lib/period-comparison";
 import { validateGrain } from "@/lib/requested-grain";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
@@ -2394,6 +2394,8 @@ export async function POST(req: NextRequest) {
 
         let rows: Record<string, unknown>[];
         let columns: string[];
+        // COVER batch: an entirely null series dropped from the table below, stated as returned values in every answer version.
+        let allNullSeriesNote = "";
 
         try {
           const executionContract = runContractValidation(sql);
@@ -2802,8 +2804,11 @@ export async function POST(req: NextRequest) {
           if (dataCols.length > 0 && rows.length > 0) {
             const nullCols = dataCols.filter(col => rows.every(r => r[col] === null || r[col] === undefined));
             if (nullCols.length > 0 && nullCols.length < dataCols.length) {
-              const names = nullCols.map(c => c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ');
-              claude.explanation += `\n\nNote: ${names} returned no data for this query. This agency may not be in our dataset, may not report this offense, or may not have data for the requested time period.`;
+              // COVER batch (Codex :34982): an entirely null series is "no value returned", never a claim that the
+              // source lacks data or the agency did not report.
+              const names = nullCols.map(c => c.replace(/_/g, ' ')).join(', ');
+              allNullSeriesNote = `No value returned for any requested year: ${names} (left out of the table).`;
+              claude.explanation += `\n\n${allNullSeriesNote}`;
               rows = rows.map(r => {
                 const cleaned = { ...r };
                 for (const col of nullCols) delete cleaned[col];
@@ -2981,6 +2986,11 @@ export async function POST(req: NextRequest) {
         // Row presence is forwarded so a populated streamed answer is not discarded here —
         // this call sends before applyResultDisclosures runs, and a later correction cannot
         // un-send it. Argument plumbing only; the branch and stream protocol are unchanged.
+        // COVER batch (Codex :34982): the coverage these rows actually returned is stated in the FIRST answer too, not
+        // only in the refined explanation. The same idempotent statement is reapplied by applyResultDisclosures on the
+        // refined text and its retry, and this text is the both-failed fallback and the cache entry, so every version
+        // carries it exactly once. Disclosure only: rows, SQL and values are unchanged.
+        claude.explanation = withReturnedCoverage(claude.explanation || "", deliveryQuestion, sql, rows);
         claude.explanation = governFactualNarrative(
           claude.explanation || "", initialState, null, { hasFigures: rows.length > 0 });
 
@@ -3071,6 +3081,7 @@ export async function POST(req: NextRequest) {
               }
             : undefined;
           postExplanation = applyResultDisclosures({ explanation: postExplanation, question: deliveryQuestion, sql, rows, tab, resultState, resolvedAgency });
+          if (allNullSeriesNote && !postExplanation.includes(allNullSeriesNote)) postExplanation += `\n\n${allNullSeriesNote}`;
           // A later explanation must not quietly drop the withholding the first answer carried.
           postExplanation = appendWithheldChangeNote(presentation.strip(postExplanation), presentation.note);
           if (missingLowerBoundNote(deliveryQuestion, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
@@ -3156,6 +3167,7 @@ export async function POST(req: NextRequest) {
               ? genericResultState({ sql, rows })
               : currentTrendsResultState(db, { sql, rows });
             retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question: deliveryQuestion, sql, rows, tab, resultState: retryState });
+            if (allNullSeriesNote && !retryExplanation.includes(allNullSeriesNote)) retryExplanation += `\n\n${allNullSeriesNote}`;
             retryExplanation = appendWithheldChangeNote(presentation.strip(retryExplanation), presentation.note);
             if (missingLowerBoundNote(deliveryQuestion, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");
             const retryGrainCheck = validateGrain(deliveryQuestion, rows, sql);

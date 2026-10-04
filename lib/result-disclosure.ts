@@ -1,3 +1,4 @@
+import { returnedCoverageNote } from "./returned-coverage";
 import {
   NIBRS_UCR_PROPERTY_LABEL,
   NIBRS_UCR_VIOLENT_LABEL,
@@ -523,6 +524,25 @@ export function missingLowerBoundNote(
   return "Although the query covered " + requestedStart + " onward, this source returned data beginning in " + returnedBounds.min + ".";
 }
 
+/**
+ * COVER batch (Codex :34982): the coverage the answer actually returned -- the existing whole-result start-year
+ * sentence, or, when there is more to say (per-series spans, the end side, interior years with no value), the
+ * per-series returned-value statement (lib/returned-coverage.ts). The statement is derived from the rows first;
+ * idempotence matches only that exact owned statement (COVER-R1a), never a phrase such as "Returned coverage" in
+ * model prose, so every answer version (first, refined, retry, fallback) gets the row facts exactly once.
+ */
+export function withReturnedCoverage(explanation: string, question: string, sql: string, rows: Record<string, unknown>[]): string {
+  const lower = missingLowerBoundNote(question, sql, rows);
+  const lowerYear = lower ? yearBoundsFromRows(rows)?.min ?? null : null;
+  const coverage = returnedCoverageNote({ question, sql, rows, lowerBoundOnlyStatedFor: lowerYear });
+  if (coverage) {
+    if (explanation.includes(coverage)) return explanation;
+    return appendSentence(explanation.replace(/\s*Although the query covered (?:19|20)\d{2} onward, this source returned data beginning in (?:19|20)\d{2}\.?/, ""), coverage);
+  }
+  if (lower && !explanation.includes(lower)) return appendSentence(explanation, lower);
+  return explanation;
+}
+
 export function alignTitleYearRange<T extends string | null | undefined>(title: T, rows: Record<string, unknown>[]): T {
   if (title == null) return title;
   const bounds = yearBoundsFromRows(rows);
@@ -1029,10 +1049,7 @@ export function applyResultDisclosures(opts: {
 
   explanation = alignThroughYearWithRows(explanation, opts.question, opts.rows);
 
-  const missingLowerBound = missingLowerBoundNote(opts.question, opts.sql, opts.rows);
-  if (missingLowerBound && !explanation.includes("Although the query covered")) {
-    explanation = appendSentence(explanation, missingLowerBound);
-  }
+  explanation = withReturnedCoverage(explanation, opts.question, opts.sql, opts.rows);
 
   const period = yearRangeFromRows(opts.rows) || yearRangeFromSql(opts.sql);
   if (period) {
