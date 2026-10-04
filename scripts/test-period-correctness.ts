@@ -33,7 +33,7 @@ import {
   withholdUnverifiedChange,
   describeWindowRelations,
 } from "../lib/period-comparison";
-import { applyResultDisclosures } from "../lib/result-disclosure";
+import { applyResultDisclosures, withReturnedCoverage } from "../lib/result-disclosure";
 import { genericResultState } from "../lib/result-state-adapters";
 import { buildQueryContract } from "../lib/query-contract";
 import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard";
@@ -293,6 +293,9 @@ console.log("7 - the route emits the presentation result, not the raw one");
     question: turns.find((t) => t.turn.caseId === "GC-041" && t.turn.turnIndex === 0)!.turn.question,
     claude: { explanation: "Monthly murder counts for New York City.", title: "Results" },
     withholdUnverifiedChange,
+    // COVER batch: the first answer also states returned coverage (the real helper, not a stub).
+    withReturnedCoverage,
+    deliveryQuestion: turns.find((t) => t.turn.caseId === "GC-041" && t.turn.turnIndex === 0)!.turn.question,
     governFactualNarrative: (t: string) => t,
     initialState: genericResultState({ sql: sql41, rows: rows41 }),
     singleRowWarning: null, isHistorical: false, reliabilityNote: null,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, missingLowerBoundNote, trimTrailingEmptyYearRows } from "../lib/result-disclosure";
+import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, missingLowerBoundNote, trimTrailingEmptyYearRows, withReturnedCoverage } from "../lib/result-disclosure";
 import { historicalRapeSeries, RAPE_DEFINITION_CAVEAT, returnedRapeCountColumn } from "../lib/historical-rape-series";
+import { returnedCoverageNote } from "../lib/returned-coverage";
 
 {
   const rows = [];
@@ -609,7 +610,18 @@ import { historicalRapeSeries, RAPE_DEFINITION_CAVEAT, returnedRapeCountColumn }
     rows: [{ year: 2017, count: 10 }, { year: 2025, count: 20 }],
     tab: "historical",
   });
-  assert.match(out, /Although the query covered 2016 onward, this source returned data beginning in 2017\./);
+  // COVER batch (Codex :34982): with years 2018-2024 absent and the request running to the present, the per-series
+  // returned-value statement replaces the start-only sentence (it states the late start too, once).
+  assert.match(out, /Returned coverage \(requested 2016 to the present, (?:19|20)\d{2}\): values returned 2017–2025, with no value returned for 2018–2024\./);
+  assert.doesNotMatch(out, /Although the query covered/);
+  // A late start alone keeps the existing sentence (no duplicate statement).
+  const lateOnly = applyResultDisclosures({
+    explanation: "Violent crime trends.", question: "violent crime from 2016 to 2025",
+    sql: "SELECT year, count FROM crime WHERE year BETWEEN 2016 AND 2025",
+    rows: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025].map((year) => ({ year, count: 10 })), tab: "historical",
+  });
+  assert.match(lateOnly, /Although the query covered 2016 onward, this source returned data beginning in 2017\./);
+  assert.doesNotMatch(lateOnly, /Returned coverage/);
   assert.equal(missingLowerBoundNote("violent crime from 2017 onward", "SELECT year FROM crime WHERE year >= 2017", [{ year: 2017, count: 10 }]), null);
   assert.equal(missingLowerBoundNote("show violent crime trends", "SELECT year FROM crime", [{ year: 2017, count: 10 }]), null);
 }
@@ -720,6 +732,68 @@ import { historicalRapeSeries, RAPE_DEFINITION_CAVEAT, returnedRapeCountColumn }
     assert.equal(historicalRapeSeries("historical", reject[0][0], years(2010, 2024).map((r) => ({ year: r.year, rape_rate: 26.1 }))), null);
     assert.equal(historicalRapeSeries("historical", reject[1][0], years(2010, 2024).map((r) => ({ year: r.year, murder: 15000 }))), null);
   }
+}
+
+// ---- COVER batch (Codex :34982): per-series returned-value coverage ----
+{
+  const span = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+  // GC-046 shape (wide): a 1930 calendar spine; NYC values from 1935 with 1949-1951 empty, LA from 1932 with 1934 empty.
+  const wide = span(1930, 2025).map((year) => ({
+    year,
+    nyc_violent_rate: year < 1935 || (year >= 1949 && year <= 1951) ? null : 1000,
+    la_violent_rate: year < 1932 || year === 1934 ? null : 900,
+  }));
+  const n46 = returnedCoverageNote({ question: "violent crime rate in New York City vs. Los Angeles since 1930", sql: "SELECT ... WHERE year >= 1930", rows: wide, currentYear: 2026 });
+  assert.equal(n46, "Returned coverage by series (requested 1930 to the latest year): nyc violent rate: values returned 1935–2025, with no value returned for 1949–1951; la violent rate: values returned 1932–2025, with no value returned for 1934.");
+  // GC-047 shape: one national series 1958-2024 for "1930-present".
+  const nat = span(1958, 2024).map((year) => ({ year, violent: 100 }));
+  const n47 = returnedCoverageNote({ question: "NATIONWIDE VIOLENT CRIME FROM 1930-PRESENT", sql: "SELECT year, violent FROM t WHERE state = 'United States' AND year >= 1930", rows: nat, currentYear: 2026 });
+  assert.equal(n47, "Returned coverage (requested 1930 to the present, 2026): values returned 1958–2024.");
+  // GC-088 shape (long by state): DC from 1980; Puerto Rico 1971-1994 with 1975 and 1984 absent; 3 complete states.
+  const long: Record<string, unknown>[] = [];
+  for (const s of ["Alabama", "Alaska", "Arizona"]) for (const year of span(1960, 2024)) long.push({ year, state: s, violent_crime_rate: 300 });
+  for (const year of span(1980, 2024)) long.push({ year, state: "District of Columbia", violent_crime_rate: 900 });
+  for (const year of span(1971, 1994).filter((y) => y !== 1975 && y !== 1984)) long.push({ year, state: "Puerto Rico", violent_crime_rate: 200 });
+  const n88 = returnedCoverageNote({ question: "violent crime rate per year and state since 1960", sql: "SELECT year, state, x FROM t WHERE year >= 1960", rows: long, currentYear: 2026 });
+  assert.equal(n88, "Returned coverage by series (requested 1960 to the latest year): District of Columbia: values returned 1980–2024; Puerto Rico: values returned 1971–1994, with no value returned for 1975 and 1984. The other 3 series have a value for every year 1960–2024.");
+  // Zero is a value; null is not.
+  const zeros = span(2010, 2014).map((year) => ({ year, murders: year === 2012 ? 0 : 5 }));
+  assert.equal(returnedCoverageNote({ question: "murders 2010 to 2014", sql: "", rows: zeros }), null, "a zero year is a returned value");
+  const nulls = span(2010, 2014).map((year) => ({ year, murders: year === 2012 ? null : 5 }));
+  assert.equal(returnedCoverageNote({ question: "murders 2010 to 2014", sql: "", rows: nulls }), "Returned coverage (requested 2010 to 2014): values returned 2010–2014, with no value returned for 2012.");
+  const allNull = span(2010, 2014).flatMap((year) => [{ year, state: "Ohio", rate: 1 }, { year, state: "Guam", rate: null }]);
+  assert.match(returnedCoverageNote({ question: "rates 2010 to 2014", sql: "", rows: allNull }) ?? "", /Guam: no value returned for any year\. The other series has a value for every year 2010–2014\./);
+  // Controls: complete coverage adds nothing; monthly, single-year and selected-year results get no inference.
+  assert.equal(returnedCoverageNote({ question: "murders 2010 to 2014", sql: "", rows: span(2010, 2014).map((year) => ({ year, murders: 1 })) }), null);
+  assert.equal(returnedCoverageNote({ question: "murders by month 2023 to 2024", sql: "", rows: [{ year: 2023, month: 1, murders: 1 }, { year: 2024, month: 6, murders: 2 }] }), null, "monthly");
+  assert.equal(returnedCoverageNote({ question: "murders in 2023", sql: "", rows: [{ year: 2023, state: "Ohio", murders: 1 }, { year: 2023, state: "Iowa", murders: 2 }] }), null, "single year / ranking");
+  assert.equal(returnedCoverageNote({ question: "murders in 2015 and 2020", sql: "SELECT year, murders FROM t WHERE year IN (2015, 2020)", rows: [{ year: 2015, murders: 1 }, { year: 2020, murders: 2 }] }), null, "selected years");
+  // Metadata columns are not series.
+  const meta = span(2010, 2014).map((year) => ({ year, murders: 1, population: year === 2012 ? null : 1000, months_reported: 12 }));
+  assert.equal(returnedCoverageNote({ question: "murders 2010 to 2014", sql: "", rows: meta }), null, "a null population is not a missing value series");
+  // City places keep their state qualifier; several measures per place are distinct series.
+  const cities = span(2020, 2022).flatMap((year) => [{ year, city: "Springfield", state: "IL", murder: year === 2021 ? null : 1, robbery: 2 }, { year, city: "Springfield", state: "MO", murder: 1, robbery: 2 }]);
+  assert.match(returnedCoverageNote({ question: "murder and robbery 2020 to 2022", sql: "", rows: cities }) ?? "", /Springfield, IL \(murder\): values returned 2020–2022, with no value returned for 2021/);
+  // COVER-R1a: completeness comes from the rows alone; existing prose never removes a series or year.
+  const twoSeries = span(2000, 2010).map((year) => ({ year, wyoming_murders: year === 2007 ? null : 12, second_murders: year === 2007 || year === 2000 ? null : 12 }));
+  const r1a = "Returned coverage by series (requested 2000 to 2010): wyoming murders: values returned 2000–2010, with no value returned for 2007; second murders: values returned 2001–2010, with no value returned for 2007.";
+  assert.equal(returnedCoverageNote({ question: "murders by year from 2000 to 2010", sql: "", rows: twoSeries }), r1a, "every affected series and year, no false 'other series' claim");
+  for (const prose of ["No value returned for Wyoming in 2007.", "Returned coverage is 2000 to 2010."]) {
+    const out = withReturnedCoverage(prose, "murders by year from 2000 to 2010", "", twoSeries);
+    assert.ok(out.startsWith(prose) && out.split(r1a).length - 1 === 1, `model prose "${prose}" neither suppresses nor duplicates the row facts`);
+    assert.doesNotMatch(out, /The other series has a value/);
+  }
+  // COVER-R1b: ordinary numeric ranges are ranges, not selected years; genuine lists still are.
+  for (const q of ["murders 2010-2014", "murders 2010–2014", "murders 2010 — 2014", "murders in Ohio, 2010-2014"]) {
+    assert.equal(returnedCoverageNote({ question: q, sql: "", rows: nulls }), "Returned coverage (requested 2010 to 2014): values returned 2010–2014, with no value returned for 2012.", q);
+  }
+  assert.equal(returnedCoverageNote({ question: "murders in 2010, 2012 and 2014", sql: "", rows: [{ year: 2010, murders: 1 }, { year: 2012, murders: null }, { year: 2014, murders: 2 }] }), null, "listed years stay selected");
+  assert.equal(returnedCoverageNote({ question: "murders 2010-2014", sql: "SELECT year, murders FROM t WHERE year IN (2010, 2012, 2014)", rows: [{ year: 2010, murders: 1 }, { year: 2014, murders: 2 }] }), null, "an IN list stays selected");
+  // Through the shared chokepoint: added once, and idempotent on reapplication.
+  const once = applyResultDisclosures({ explanation: "Rates.", question: "violent crime rate per year and state since 1960", sql: "SELECT year, state, x FROM t WHERE year >= 1960", rows: long, tab: "historical" });
+  const twice = applyResultDisclosures({ explanation: once, question: "violent crime rate per year and state since 1960", sql: "SELECT year, state, x FROM t WHERE year >= 1960", rows: long, tab: "historical" });
+  assert.equal(once.split("Returned coverage").length - 1, 1);
+  assert.equal(twice.split("Returned coverage").length - 1, 1, "idempotent");
 }
 
 console.log("result disclosure tests passed");

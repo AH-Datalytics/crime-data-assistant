@@ -10,6 +10,8 @@ import {
   buildNibrsLocalCityOffenseCountQuery,
   buildNibrsLocalDemographicQuery,
   buildNibrsStructuredLocalTrendQuery,
+  nibrsWithheldRateNote,
+  withoutNibrsMetadata,
 } from "../lib/nibrs-deterministic-queries.js";
 import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard.js";
 import { buildQueryContract } from "../lib/query-contract.js";
@@ -1095,6 +1097,26 @@ for (const question of [
     "one declared column per agency, never one agency answering for both");
   assert.ok(twoAgency!.sql.includes("'MD0240000'") && twoAgency!.sql.includes("'MD0240300'"),
     "both agencies' own ORIs are in the statement");
+}
+
+// COVER batch (Codex :34982): the withheld-rate note states only established reasons, names sorted observed
+// activity months as a proxy, labels a multi-ORI union, never infers January-through-N, and metadata never ships.
+{
+  const plan = {
+    memberColumns: [{ placeKey: "place_1", column: "x_rate" }],
+    metadataColumns: [{ placeKey: "place_1", placeLabel: "Union City, NJ", monthsReported: "m_mr", population: "m_pop", activityMonths: "m_am", activityOris: "m_ao" }],
+  } as never;
+  const note = (row: Record<string, unknown>) => nibrsWithheldRateNote(plan, [{ year: 2026, x_rate: null, ...row }]);
+  assert.equal(note({ m_mr: 9, m_pop: 1000, m_am: "7,1,3,13,0,3", m_ao: 2 }),
+    "Union City, NJ, 2026: the rate is left blank because the NIBRS completeness record shows 9 of 12 months reported for 2026, and a rate is shown only for a year with all 12. Summary data show offense activity in January, March, July (across its 2 agency records combined); months with recorded offenses are a proxy, not certified reporting coverage.",
+    "sorted distinct valid months; a multi-ORI union is labelled; no January-through inference");
+  assert.match(note({ m_mr: null, m_pop: 1000, m_am: "", m_ao: 0 })!, /has no months-reported entry for 2026.*Summary data show no offense activity for 2026\.$/);
+  assert.match(note({ m_mr: 12, m_pop: null, m_am: "1,2", m_ao: 1 })!, /because no service population is recorded for 2026\. Summary data show offense activity in January, February;/);
+  assert.match(note({ m_mr: 12, m_pop: 1000, m_am: "1", m_ao: 1 })!, /because the reason is not established from the returned evidence\./, "unknown causes stay unknown");
+  assert.equal(nibrsWithheldRateNote(plan, [{ year: 2026, x_rate: 4.2, m_mr: 9, m_pop: 1000, m_am: "1", m_ao: 1 }]), null, "a shown rate gets no note");
+  assert.equal(nibrsWithheldRateNote({ memberColumns: [{ placeKey: "place_1", column: "x_rate" }] } as never, [{ year: 2026, x_rate: null }]), null, "no metadata, no note");
+  const delivered = withoutNibrsMetadata(plan, ["year", "x_rate", "m_mr", "m_pop", "m_am", "m_ao"], [{ year: 2026, x_rate: null, m_mr: 9, m_pop: 1, m_am: "1", m_ao: 1 }]);
+  assert.deepEqual(delivered, { columns: ["year", "x_rate"], rows: [{ year: 2026, x_rate: null }] }, "metadata is removed from delivered rows and columns");
 }
 
 console.log("nibrs deterministic query tests passed");

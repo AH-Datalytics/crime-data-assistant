@@ -42,6 +42,13 @@ export interface DeterministicNibrsQuery {
    * So the binding is carried rather than recovered. A reader with this list never parses a slug.
    */
   memberColumns?: { column: string; placeKey: string; contractIndex: number; placeLabel: string }[];
+  /**
+   * COVER batch (Codex :34982): disclosure-only metadata the statement projects next to a withheld-able rate, per
+   * place: the completeness record's months reported (the rate gate), the service population, and the distinct
+   * months with summary offense activity (a proxy, not certified reporting) with the number of ORIs they span.
+   * Read by `nibrsWithheldRateNote`, then REMOVED from the delivered rows and columns -- never a chart measure.
+   */
+  metadataColumns?: { placeKey: string; placeLabel: string; monthsReported: string; population: string; activityMonths: string; activityOris: string }[];
   title: string;
   explanation: string;
   chartHint: "line" | "bar" | "pie" | "stacked_bar" | "scatter" | "none";
@@ -1249,7 +1256,29 @@ export function buildNibrsStructuredLocalTrendQuery(
     "  WHERE tp.effective_year IS NULL OR tp.effective_year = y.year",
     "  GROUP BY y.year, tp.place_key",
     ")",
+    // COVER batch: the months with summary offense activity, per place and requested year (one row per pair, so the
+    // join below cannot fan out). Rate plans only; disclosure metadata, removed before delivery.
+    ...(isRate ? [
+      ",observed_months AS (",
+      "  SELECT tp.place_key, s.year, GROUP_CONCAT(DISTINCT s.month) AS activity_months, COUNT(DISTINCT s.ori) AS activity_oris",
+      "  FROM " + targetCte + " AS tp",
+      "  CROSS JOIN summary_city_monthly AS s INDEXED BY idx_scm_ori_year",
+      "  WHERE s.ori = tp.ori AND s.year IN (SELECT year FROM requested_years)",
+      "    AND (tp.effective_year IS NULL OR tp.effective_year = s.year)",
+      "  GROUP BY tp.place_key, s.year",
+      ")",
+    ] : []),
   ];
+  const metadataColumns = isRate ? resolvedTargets.map((target) => {
+    const base = "meta_" + seriesKey(target.key);
+    return { placeKey: target.key, placeLabel: target.label, monthsReported: base + "_months_reported", population: base + "_population", activityMonths: base + "_activity_months", activityOris: base + "_activity_oris" };
+  }) : [];
+  const metadataSelect = metadataColumns.flatMap((m) => [
+    "MAX(CASE WHEN pr.place_key = " + sqlString(m.placeKey) + " THEN pr.months_reported END) AS " + m.monthsReported,
+    "MAX(CASE WHEN pr.place_key = " + sqlString(m.placeKey) + " THEN pr.population END) AS " + m.population,
+    "MAX(CASE WHEN om.place_key = " + sqlString(m.placeKey) + " THEN om.activity_months END) AS " + m.activityMonths,
+    "MAX(CASE WHEN om.place_key = " + sqlString(m.placeKey) + " THEN om.activity_oris END) AS " + m.activityOris,
+  ]);
   const sql = [
     "WITH " + targetCte + " AS (",
     "  " + resolvedTargets.map((target) => target.sql).join("\n  UNION\n  "),
@@ -1261,13 +1290,14 @@ export function buildNibrsStructuredLocalTrendQuery(
     ]),
     ...reportingCte,
     "SELECT pr.year,",
-    "  " + pivotColumns.join(",\n  "),
+    "  " + [...pivotColumns, ...metadataSelect].join(",\n  "),
     "FROM place_reporting AS pr",
     // One join per offence relation, each keyed on (year, place_key) and therefore one-to-one with
     // the reporting row. Side by side they cannot fan out, so no measure is counted twice.
     ...resolvedOffenses.map((offense) =>
       "LEFT JOIN " + offense.cte + " AS " + offense.alias +
       " ON " + offense.alias + ".year = pr.year AND " + offense.alias + ".place_key = pr.place_key"),
+    ...(isRate ? ["LEFT JOIN observed_months AS om ON om.year = pr.year AND om.place_key = pr.place_key"] : []),
     "GROUP BY pr.year",
     "ORDER BY pr.year",
     "LIMIT 1000",
@@ -1298,8 +1328,57 @@ export function buildNibrsStructuredLocalTrendQuery(
     memberColumns: series.map((item) => ({
       column: item.alias, placeKey: item.placeKey, contractIndex: item.contractIndex, placeLabel: item.placeLabel,
     })),
+    ...(metadataColumns.length ? { metadataColumns } : {}),
   };
 }
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/**
+ * COVER batch (Codex :34982): for each blank rate in a structured local rate answer, say why it is blank using only
+ * the evidence the same statement returned -- the completeness record's months reported (the rate is shown only at
+ * 12), else a missing population -- and name the months with summary offense activity, labelled as a proxy, not
+ * certified reporting. A union over several ORIs is labelled as combined. Unknown causes stay unknown.
+ */
+export function nibrsWithheldRateNote(query: Pick<DeterministicNibrsQuery, "memberColumns" | "metadataColumns">, rows: Record<string, unknown>[]): string | null {
+  if (!query.metadataColumns?.length || !query.memberColumns?.length) return null;
+  const notes: string[] = [];
+  for (const row of rows) {
+    const year = Number(row.year);
+    if (!Number.isInteger(year)) continue;
+    for (const meta of query.metadataColumns) {
+      const rateCols = query.memberColumns.filter((m) => m.placeKey === meta.placeKey).map((m) => m.column);
+      if (rateCols.length === 0 || !rateCols.some((c) => row[c] == null)) continue;
+      const months = row[meta.monthsReported];
+      const population = row[meta.population];
+      const reason = months == null
+        ? `the NIBRS completeness record has no months-reported entry for ${year}, and a rate is shown only for a year with all 12 months reported`
+        : Number(months) !== 12
+          ? `the NIBRS completeness record shows ${Number(months)} of 12 months reported for ${year}, and a rate is shown only for a year with all 12`
+          : population == null || Number(population) <= 0
+            ? `no service population is recorded for ${year}`
+            : `the reason is not established from the returned evidence`;
+      const activity = String(row[meta.activityMonths] ?? "").split(",").map((m) => Number(m.trim())).filter((m) => Number.isInteger(m) && m >= 1 && m <= 12);
+      const uniq = [...new Set(activity)].sort((a, b) => a - b);
+      const oris = Number(row[meta.activityOris] ?? 0);
+      const activityText = uniq.length
+        ? `Summary data show offense activity in ${uniq.map((m) => MONTH_NAMES[m - 1]).join(", ")}${oris > 1 ? ` (across its ${oris} agency records combined)` : ""}; months with recorded offenses are a proxy, not certified reporting coverage.`
+        : `Summary data show no offense activity for ${year}.`;
+      notes.push(`${meta.placeLabel}, ${year}: the rate is left blank because ${reason}. ${activityText}`);
+    }
+  }
+  return notes.length ? notes.join(" ") : null;
+}
+
+/** The delivered rows and columns without the disclosure-only metadata columns. */
+export function withoutNibrsMetadata(query: Pick<DeterministicNibrsQuery, "metadataColumns">, columns: string[], rows: Record<string, unknown>[]): { columns: string[]; rows: Record<string, unknown>[] } {
+  const meta = new Set((query.metadataColumns ?? []).flatMap((m) => [m.monthsReported, m.population, m.activityMonths, m.activityOris]));
+  if (meta.size === 0) return { columns, rows };
+  return {
+    columns: columns.filter((c) => !meta.has(c)),
+    rows: rows.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => !meta.has(k)))),
+  };
+}
+
 export function buildNibrsDomesticViolenceAggravatedAssaultShareQuery(
   question: string
 ): DeterministicNibrsQuery | null {
