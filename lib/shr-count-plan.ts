@@ -38,7 +38,15 @@ export type ShrCountGeography =
 
 export type ShrCountPeriod =
   | { kind: "year"; year: number; throughMonth: number }
-  | { kind: "range"; startYear: number; endYear: number };
+  /** `latestThroughMonth`: set only for "since <year>", when the source's latest year has records through that month only. */
+  | { kind: "range"; startYear: number; endYear: number; latestThroughMonth?: number };
+
+/**
+ * Measure preservation (Codex Phase 3 direction, :34106): a count of victims, or a count-to-count RATIO of
+ * victims by recorded sex. A ratio divides two SHR victim counts for the same place and period; it needs
+ * no population denominator, so it is never refused or relabeled as a population rate.
+ */
+export type ShrSexRatio = "male_to_female" | "female_to_male";
 
 export type ShrCountPlan = {
   geography: ShrCountGeography;
@@ -46,6 +54,8 @@ export type ShrCountPlan = {
   series: "total" | "monthly" | "annual";
   measure: "murder" | "homicide";
   unit: "victims";
+  /** Absent for a plain count; a count plan compiles exactly as before. */
+  ratio?: ShrSexRatio;
 };
 
 export type ShrOwnedCountDecision =
@@ -78,10 +88,36 @@ const LIMITATION_SUPPORTED =
   "a county (its sheriff's agency, or the countywide total when you ask for it), or named cities, for one " +
   "calendar year (as a total or by month) or an explicit range of years (as a total or year by year).";
 
-/** Is this request in the owned family? A county name, or an all-homicide (or homicide-incident) measure. */
+const SEX_WORD = String.raw`(male|female|men|women)s?`;
+const SEX_RATIO = new RegExp(
+  String.raw`\b(?:the\s+)?ratio\s+of\s+${SEX_WORD}\s+(?:to|vs\.?|versus)\s+${SEX_WORD}(?:\s+(?:homicide|murder)s?)?(?:\s+victims?)?\b` +
+  String.raw`|\b${SEX_WORD}[-\s]+(?:to|vs\.?|versus)[-\s]+${SEX_WORD}\s+(?:(?:homicide|murder)\s+)?(?:victims?\s+)?ratios?\b`,
+  "i",
+);
+const sexOf = (word: string): "Male" | "Female" => (/^(?:male|men)/i.test(word) ? "Male" : "Female");
+
+/**
+ * A count-to-count ratio of victims by recorded sex ("ratio of male to female homicide victims", "male-to-female
+ * victim ratio"), with the matched span so the planner can read the rest of the request without it. Null when the
+ * request names no such ratio, or names the same sex twice.
+ */
+export function shrSexRatioRequest(question: string): { ratio: ShrSexRatio; start: number; end: number } | null {
+  const m = SEX_RATIO.exec(question);
+  if (!m) return null;
+  const [a, b] = m[1] ? [m[1], m[2]] : [m[3], m[4]];
+  const num = sexOf(a), den = sexOf(b);
+  if (num === den) return null;
+  return { ratio: num === "Male" ? "male_to_female" : "female_to_male", start: m.index, end: m.index + m[0].length };
+}
+
+/**
+ * Is this request in the owned family? A county name, an all-homicide (or homicide-incident) measure, or a
+ * victim sex ratio (for murders or all homicides) -- the ratio is computed only from this plan's own counts.
+ */
 export function shrOwnedCountFamily(question: string): boolean {
   const measure = shrRequestedMeasure(question);
-  return measure === "homicide" || measure === "homicide_incident" || shrCountyRequest(question) !== null;
+  return measure === "homicide" || measure === "homicide_incident" || shrCountyRequest(question) !== null ||
+    (shrSexRatioRequest(question) !== null && measure !== "conflict");
 }
 
 function limitation(reason: string, what: string, status: "clarify" | "unavailable" = "unavailable"): ShrOwnedCountDecision {
@@ -91,8 +127,17 @@ function limitation(reason: string, what: string, status: "clarify" | "unavailab
 /** Everything the request asks for beyond a plain count, which a total must not silently discard. */
 function unsupportedMeaning(question: string, cityCount: number): ShrOwnedCountDecision | null {
   const contract = buildQueryContract(question, "shr");
-  if (RATE.test(question) || (contract && contract.metric.unit !== "count" && contract.metric.unit !== "unknown")) {
+  const unit = contract?.metric.unit ?? "unknown";
+  // Measure preservation: each requested measure gets its own true limitation. Only a population rate is about a
+  // missing population denominator; a share, percentage, ratio or clearance rate is not.
+  if (RATE.test(question) && unit !== "clearance_rate" || unit === "rate_per_100k") {
     return limitation("owned-count-rate", "I can't give homicide rates from this count yet; it counts victim records, with no population denominator.");
+  }
+  if (unit === "clearance_rate") {
+    return limitation("owned-count-clearance", "I can't give clearance rates from this count yet; it counts victim records.");
+  }
+  if (unit === "ratio") {
+    return limitation("owned-count-share", "I can't give that share, percentage or ratio from this count yet. The one ratio I can give is male to female (or female to male) victims.");
   }
   if (CHANGE.test(question)) {
     return limitation("owned-count-change", "I can't calculate a change or difference between periods here yet.");
@@ -219,20 +264,46 @@ export function planShrOwnedCount(question: string, db: Database.Database): ShrO
   for (const span of [...geo.mentions.map((m) => ({ start: m.start, end: m.end })), ...(countySpan ? [countySpan] : [])]) {
     residual = `${residual.slice(0, span.start)}${" ".repeat(Math.max(0, span.end - span.start))}${residual.slice(span.end)}`;
   }
+  // A victim sex ratio is a measure of THIS plan, not a breakdown, statistic or rate: its phrase is blanked (same
+  // length) so the remaining request is held to every existing rule, and the ratio is carried on the plan.
+  const sexRatio = shrSexRatioRequest(residual);
+  if (sexRatio) {
+    residual = `${residual.slice(0, sexRatio.start)}${" ".repeat(sexRatio.end - sexRatio.start)}${residual.slice(sexRatio.end)}`;
+  }
   const unsupported = unsupportedMeaning(residual, cities.length);
   if (unsupported) return unsupported;
+  let since: { start: number; latestYear: number; latestMonth: number } | null = null;
+  if (sexRatio) {
+    // "since <year>" for a ratio: an explicit start year through the latest year the source holds (read from the
+    // database, never assumed), with that year's covered months disclosed when it is partial.
+    const s = /\bsince\s+((?:19|20)\d{2})\b/i.exec(residual);
+    if (s) {
+      const latest = db.prepare("SELECT MAX(year) AS y FROM incidents").get() as { y: number | null } | undefined;
+      const latestYear = latest?.y ?? null;
+      if (latestYear == null) return limitation("owned-count-source-empty", "The SHR source has no records to count.");
+      const latestMonth = (db.prepare("SELECT MAX(month) AS m FROM incidents WHERE year = ?").get(latestYear) as { m: number | null } | undefined)?.m ?? null;
+      if (Number(s[1]) > latestYear) return limitation("owned-count-period-after-source", `SHR records run through ${latestYear}, so there is nothing since ${s[1]} yet.`);
+      since = { start: Number(s[1]), latestYear, latestMonth: latestMonth ?? 12 };
+      residual = residual.replace(s[0], `${s[1]} to ${latestYear}`.padEnd(s[0].length, " "));
+    }
+  }
   const read = readPeriod(residual);
   if ("limit" in read) return read.limit;
-  const period = read.period;
+  const period: ShrCountPeriod = since && read.period.kind === "range" && since.latestMonth < 12
+    ? { ...read.period, latestThroughMonth: since.latestMonth }
+    : read.period;
 
   const monthly = MONTHLY.test(residual);
   const annual = ANNUAL.test(residual);
   if (monthly && period.kind === "range") {
     return limitation("owned-count-series", "I can give a range of years as a total or year by year, but not month by month yet.");
   }
+  if (monthly && sexRatio) {
+    return limitation("owned-count-ratio-series", "I can give the ratio of male to female victims for a year, a range of years or year by year, but not month by month yet.");
+  }
   const series: ShrCountPlan["series"] = monthly ? "monthly" : annual && period.kind === "range" ? "annual" : "total";
   const plan = (geography: ShrCountGeography): ShrOwnedCountDecision =>
-    ({ kind: "plan", plan: { geography, period, series, measure: measure === "murder" ? "murder" : "homicide", unit: "victims" } });
+    ({ kind: "plan", plan: { geography, period, series, measure: measure === "murder" ? "murder" : "homicide", unit: "victims", ...(sexRatio ? { ratio: sexRatio.ratio } : {}) } });
 
   if (requested) {
     const namedStates = [...new Set(firsts.filter((c) => c.kind === "state" && c.state).map((c) => c.state!.toUpperCase()))];
@@ -389,6 +460,31 @@ function compileSql(plan: ShrCountPlan): string {
   const value = plan.measure === "murder" ? "murder_victims" : "homicide_victims";
   const periodExpr = monthly ? "i.month" : "i.year";
   const places = labels.map((label, n) => `(${q(label)}, ${n + 1})`).join(", ");
+  if (plan.ratio) {
+    if (monthly) throw new Error("owned count: a sex ratio is not compiled month by month");
+    // Two victim counts by recorded sex from the same rows; victims of unknown or blank sex are counted, shown, and
+    // excluded from both sides. A zero denominator gives no ratio (undefined), a year with no records is unknown.
+    const [numSex, denSex] = plan.ratio === "male_to_female" ? ["male", "female"] : ["female", "male"];
+    const ratioCol = ratioColumn(plan.ratio);
+    const head = `WITH RECURSIVE periods(period) AS (SELECT ${first} UNION ALL SELECT period + 1 FROM periods WHERE period < ${last}), ` +
+      `places(place, ord) AS (VALUES ${places}), ` +
+      `counts AS (SELECT ${placeExpr} AS place, i.year AS period, COUNT(v.id) AS victims, ` +
+      `SUM(CASE WHEN v.sex = 'Male' THEN 1 ELSE 0 END) AS male, SUM(CASE WHEN v.sex = 'Female' THEN 1 ELSE 0 END) AS female ` +
+      `FROM incidents i JOIN victims v ON v.incident_id = i.id ` +
+      `WHERE (${geoWhere}) AND ${periodWhere}${measureWhere} GROUP BY 1, 2)`;
+    if (plan.series === "total") {
+      return `${head} SELECT p.place AS place, SUM(c.male) AS male_victims, SUM(c.female) AS female_victims, ` +
+        `SUM(c.victims) - SUM(c.male) - SUM(c.female) AS unknown_sex_victims, ` +
+        `CASE WHEN SUM(c.victims) IS NULL OR SUM(c.${denSex}) = 0 THEN NULL ELSE ROUND(1.0 * SUM(c.${numSex}) / SUM(c.${denSex}), 2) END AS ${ratioCol}, ` +
+        `GROUP_CONCAT(CASE WHEN c.victims IS NULL THEN pr.period END, ', ') AS years_without_records ` +
+        `FROM places p CROSS JOIN periods pr LEFT JOIN counts c ON c.place = p.place AND c.period = pr.period GROUP BY p.place, p.ord ORDER BY p.ord LIMIT 1000`;
+    }
+    return `${head} SELECT p.place AS place, pr.period AS year, c.male AS male_victims, c.female AS female_victims, ` +
+      `c.victims - c.male - c.female AS unknown_sex_victims, ` +
+      `CASE WHEN c.victims IS NULL OR c.${denSex} = 0 THEN NULL ELSE ROUND(1.0 * c.${numSex} / c.${denSex}, 2) END AS ${ratioCol}, ` +
+      `CASE WHEN c.victims IS NULL THEN 'no SHR records (unknown)' WHEN c.${denSex} = 0 THEN 'no ${denSex} victims recorded (ratio undefined)' ELSE 'recorded' END AS shr_records ` +
+      `FROM places p CROSS JOIN periods pr LEFT JOIN counts c ON c.place = p.place AND c.period = pr.period ORDER BY p.ord, pr.period LIMIT 1000`;
+  }
   const head = `WITH RECURSIVE periods(period) AS (SELECT ${first} UNION ALL SELECT period + 1 FROM periods WHERE period < ${last}), ` +
     `places(place, ord) AS (VALUES ${places}), ` +
     `counts AS (SELECT ${placeExpr} AS place, ${periodExpr} AS period, COUNT(v.id) AS victims FROM incidents i JOIN victims v ON v.incident_id = i.id ` +
@@ -413,10 +509,61 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
+function ratioColumn(ratio: ShrSexRatio): string {
+  return ratio === "male_to_female" ? "male_to_female_ratio" : "female_to_male_ratio";
+}
+
+/** A sex-ratio plan's columns, title and narrative. Same issuance as a count. */
+function compileRatio(plan: ShrCountPlan, sql: string): CompiledShrCount {
+  const ratio = plan.ratio!;
+  const labels = placeLabels(plan.geography);
+  const homicide = plan.measure === "homicide";
+  const annual = plan.series === "annual";
+  const value = ratioColumn(ratio);
+  const [num, den] = ratio === "male_to_female" ? ["male", "female"] : ["female", "male"];
+  const columns = annual
+    ? ["place", "year", "male_victims", "female_victims", "unknown_sex_victims", value, "shr_records"]
+    : ["place", "male_victims", "female_victims", "unknown_sex_victims", value, "years_without_records"];
+  const when = periodText(plan.period);
+  const placeList = labels.join(", ");
+  const placeProse = plan.geography.kind === "national" ? "the United States" : placeList;
+  const victims = homicide ? "homicide victims (all homicides)" : "murder victims";
+  const p = plan.period;
+  const sentences = [
+    `The ratio of ${num} to ${den} ${victims} recorded in SHR for ${placeProse}, ${when.prose}${annual ? ", year by year" : ""}: ` +
+      `the number of ${num} victims divided by the number of ${den} victims.`,
+    "It is a ratio of two victim counts, so it needs no population figure.",
+    "Victims whose sex is recorded as unknown are counted in unknown_sex_victims and left out of both sides of the ratio.",
+    `When no ${den} victims are recorded, the ratio is undefined and left blank; ` +
+      (annual ? "a year with no SHR victim records is shown blank, as unknown, not as zero." : "a year with no SHR victim records is unknown and listed in years_without_records."),
+  ];
+  if (p.kind === "range" && p.latestThroughMonth) {
+    const m = MONTHS[p.latestThroughMonth - 1];
+    sentences.push(`${p.endYear} is the latest year in SHR and its records run only through ${m[0].toUpperCase()}${m.slice(1)}, so ${p.endYear} covers January through ${m[0].toUpperCase()}${m.slice(1)}.`);
+  }
+  if (plan.geography.kind === "state" || plan.geography.kind === "national") {
+    sentences.push(`These are the victim records agencies reported to SHR. Agencies that did not report are not included.`);
+  }
+  const binding = plan.geography.kind === "county" ? plan.geography.binding : null;
+  const explanation = withShrScopeAndMeasureDisclosures(sentences.join(" "), binding, homicide);
+  const label = `${num[0].toUpperCase()}${num.slice(1)}-to-${den[0].toUpperCase()}${den.slice(1)} Ratio`;
+  const compiled: CompiledShrCount = Object.freeze({
+    plan, sql, columns: Object.freeze(columns), valueColumn: value, periodColumn: annual ? "year" : null,
+    title: `${annual ? "Annual " : ""}${label} of ${homicide ? "Homicide Victims (All Homicides)" : "Murder Victims"}, ${placeList}, ${when.title}`,
+    explanation,
+    chartType: annual ? "line" : "bar",
+    xAxis: annual ? "year" : "place",
+    yAxisLabel: `${label} (victims)`,
+  });
+  ISSUED.add(compiled);
+  return compiled;
+}
+
 /** Compile a plan into its statement, columns, title and disclosures, and register it as issued. */
 export function compileShrCountPlan(input: ShrCountPlan): CompiledShrCount {
   const plan = deepFreeze(JSON.parse(JSON.stringify(input)) as ShrCountPlan);
   const sql = compileSql(plan);
+  if (plan.ratio) return compileRatio(plan, sql);
   const labels = placeLabels(plan.geography);
   const homicide = plan.measure === "homicide";
   const value = homicide ? "homicide_victims" : "murder_victims";
@@ -471,6 +618,22 @@ export function executeCompiledShrCount(db: Database.Database, compiled: Compile
 /** The compiled narrative plus the unknown periods the executed rows show. */
 export function shrCountNarrative(compiled: CompiledShrCount, rows: Record<string, unknown>[]): string {
   const notes: string[] = [];
+  if (compiled.plan.ratio) {
+    // Unknown (no records) and undefined (no denominator victims) are different states, stated separately.
+    const den = compiled.plan.ratio === "male_to_female" ? "female" : "male";
+    const unknown = new Map<string, string[]>();
+    const undefinedRatio = new Map<string, string[]>();
+    for (const row of rows) {
+      const place = String(row.place);
+      const when = compiled.periodColumn ? String(row[compiled.periodColumn]) : "this period";
+      if (row.male_victims == null && row.female_victims == null) unknown.set(place, [...(unknown.get(place) ?? []), when]);
+      else if (row[compiled.valueColumn] == null) undefinedRatio.set(place, [...(undefinedRatio.get(place) ?? []), when]);
+      else if (!compiled.periodColumn && row.years_without_records) notes.push(`${place} has no SHR victim records in ${String(row.years_without_records)}; the ratio covers only the years with records.`);
+    }
+    for (const [place, periods] of unknown) notes.push(`No SHR victim records for ${place} in ${periods.join(", ")}; unknown, not zero, and no ratio is given.`);
+    for (const [place, periods] of undefinedRatio) notes.push(`No ${den} victims are recorded for ${place} in ${periods.join(", ")}, so the ratio is undefined there, not zero.`);
+    return notes.length ? `${compiled.explanation}\n\n${notes.join(" ")}` : compiled.explanation;
+  }
   const value = compiled.valueColumn;
   if (compiled.periodColumn) {
     const byPlace = new Map<string, string[]>();

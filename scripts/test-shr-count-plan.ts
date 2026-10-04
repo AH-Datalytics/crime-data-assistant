@@ -25,6 +25,7 @@ import {
   shrCountNarrative, type ShrCountPlan, type CompiledShrCount,
 } from "../lib/shr-count-plan";
 import { validateCompiledShrCount, SHR_OWNED_COUNT_GUARDRAIL } from "../lib/shr-authority";
+import { validateQueryContractSql } from "../lib/query-contract-validator";
 
 let checks = 0;
 let failures = 0;
@@ -266,6 +267,88 @@ console.log("\n4 - execution authority: only the compiler's own, unaltered outpu
   const murderCompiled = compileShrCountPlan({ ...sheriff.plan, measure: "murder" });
   const mv = validateCompiledShrCount({ question: "number of murders in baldwin county al in 2025", compiled: murderCompiled });
   check(!ok.enforced.includes(legacyRule) && !mv.enforced.includes(legacyRule) && mv.blockReasons.length === 0, "the legacy murder-only rule does not refuse either compiled measure");
+}
+
+// ---- Measure preservation (Codex :34106): the victim sex RATIO is a measure of this plan, not a population rate ----
+{
+  const rdb = new Database(":memory:");
+  rdb.exec(`
+    CREATE TABLE incidents (id INTEGER PRIMARY KEY, year INTEGER, month INTEGER, state TEXT, ori TEXT, agency TEXT, homicide_type TEXT, weapon_group TEXT, agency_type TEXT);
+    CREATE TABLE victims (id INTEGER PRIMARY KEY, incident_id INTEGER, sex TEXT);
+  `);
+  let rid = 0; let vid = 0;
+  // year -> [male, female, unknown, negligent-manslaughter male] for a synthetic county sheriff (AL00500)
+  const series: Record<number, [number, number, number, number]> = { 2020: [6, 2, 1, 1], 2021: [4, 0, 0, 0], 2023: [0, 3, 0, 0], 2024: [5, 5, 2, 0] }; // 2022 absent
+  for (const [y, [m, f, u, nm]] of Object.entries(series)) {
+    const addV = (sex: string | null, type: string) => { rid += 1; rdb.prepare("INSERT INTO incidents VALUES (?,?,?,?,?,?,?,?,?)").run(rid, Number(y), 6, "AL", "AL00500", "Baldwin", type, "Other", "County"); vid += 1; rdb.prepare("INSERT INTO victims VALUES (?,?,?)").run(vid, rid, sex); };
+    for (let n = 0; n < m; n++) addV("Male", "Murder");
+    for (let n = 0; n < f; n++) addV("Female", "Murder");
+    for (let n = 0; n < u; n++) addV(n % 2 ? null : "Unknown", "Murder");
+    for (let n = 0; n < nm; n++) addV("Male", "Manslaughter by Negligence");
+  }
+  const binding = sheriffBindingForRatio();
+  const ratioPlan: ShrCountPlan = { geography: { kind: "county", binding }, period: { kind: "range", startYear: 2020, endYear: 2024 }, series: "annual", measure: "homicide", unit: "victims", ratio: "male_to_female" };
+  const rc = compileShrCountPlan(ratioPlan);
+  const rows = executeCompiledShrCount(rdb, rc);
+  // Independent expectation, from the inserted rows above.
+  const expect = (y: number) => {
+    const s = series[y]; if (!s) return { male: null, female: null, unknown: null, ratio: null, state: "no SHR records (unknown)" };
+    const male = s[0] + s[3]; const female = s[1];
+    return { male, female, unknown: s[2], ratio: female === 0 ? null : Math.round((male / female) * 100) / 100, state: female === 0 ? "no female victims recorded (ratio undefined)" : "recorded" };
+  };
+  const got = (y: number) => rows.find((r) => r.year === y)!;
+  check(rows.length === 5 && [2020, 2021, 2022, 2023, 2024].every((y) => {
+    const e = expect(y); const g = got(y);
+    return g.male_victims === e.male && g.female_victims === e.female && g.unknown_sex_victims === e.unknown && g.male_to_female_ratio === e.ratio && g.shr_records === e.state;
+  }), "ratio: every year equals the independently computed male/female counts, unknown-sex count and ratio (all homicides)");
+  check(got(2023).male_to_female_ratio === 0, "ratio: a zero numerator gives a ratio of 0, not blank");
+  check(got(2021).male_to_female_ratio === null && /undefined/.test(String(got(2021).shr_records)), "ratio: a zero denominator gives no ratio, marked undefined (not zero)");
+  check(got(2022).male_victims === null && /unknown/.test(String(got(2022).shr_records)), "ratio: a year with no records is unknown, not zero");
+  const murderRows = executeCompiledShrCount(rdb, compileShrCountPlan({ ...ratioPlan, measure: "murder" }));
+  check(murderRows.find((r) => r.year === 2020)!.male_victims === 6, "ratio: the murder measure excludes negligent manslaughter");
+  const narrative = shrCountNarrative(rc, rows);
+  check(/needs no population figure/.test(narrative) && !/population denominator/.test(narrative) && /2022; unknown, not zero/.test(narrative) && /undefined there, not zero/.test(narrative), "ratio narrative: no population claim; unknown and undefined years stated separately");
+  const inverse = executeCompiledShrCount(rdb, compileShrCountPlan({ ...ratioPlan, ratio: "female_to_male" }));
+  check(inverse.find((r) => r.year === 2024)!.female_to_male_ratio === Math.round((5 / 5) * 100) / 100 && inverse.find((r) => r.year === 2023)!.female_to_male_ratio === null, "ratio: female-to-male swaps numerator and denominator");
+  const total = executeCompiledShrCount(rdb, compileShrCountPlan({ ...ratioPlan, series: "total" }));
+  check(total.length === 1 && total[0].male_to_female_ratio === Math.round(((7 + 4 + 0 + 5) / (2 + 0 + 3 + 5)) * 100) / 100 && total[0].years_without_records === "2022", "ratio total: summed counts over the period, missing year listed");
+  const v = validateCompiledShrCount({ question: "ratio of male to female homicide victims in baldwin county al from 2020 to 2024 by year", compiled: rc });
+  // The route refuses on a retry issue too (queryContractFailureMessage), so BOTH must be empty.
+  check(v.blockReasons.length === 0 && v.retryIssues.length === 0, `the compiled ratio passes the shared validator with no block or retry (${[...v.blockReasons, ...v.retryIssues].join(" | ")})`);
+  // The ratio allowance is the compiler's only: the SAME statement as loose SQL keeps the structural retry.
+  const asModel = validateQueryContractSql({ question: "ratio of male to female homicide victims in baldwin county al from 2020 to 2024 by year", source: "shr", sql: rc.sql });
+  check(asModel.retryIssues.some((i) => i.includes("structural-measure-unit-unmodeled")), "the same statement written by the model keeps the structural ratio retry (allowance is compiler-only)");
+  const tampered = Object.freeze({ ...rc, sql: rc.sql.replace("ROUND(1.0 * c.male / c.female, 2)", "ROUND(1.0 * c.male / c.victims, 2)") }) as CompiledShrCount;
+  const tv = validateCompiledShrCount({ question: "ratio of male to female homicide victims in baldwin county al from 2020 to 2024 by year", compiled: tampered });
+  check(tv.blockReasons.length > 0 && tv.enforced.includes(SHR_OWNED_COUNT_GUARDRAIL), "an altered ratio statement is refused, and gets no allowance");
+  const plain = compileShrCountPlan({ ...ratioPlan, ratio: undefined });
+  check(!/v\.sex/.test(plain.sql) && plain.columns.includes("homicide_victims"), "a plan without a ratio compiles the plain count exactly as before");
+}
+
+// The planner: recognition, period, and the truthful limitation for each non-count measure.
+{
+  check(shrOwnedCountFamily("ratio of male to female homicide victims in philadelphia by year since 2010"), "family: a homicide sex ratio is owned");
+  check(shrOwnedCountFamily("male-to-female murder victim ratio in baldwin county al in 2024"), "family: a murder sex ratio is owned too");
+  check(!shrOwnedCountFamily("how many murders in Birmingham, Alabama in 2024"), "family: a plain city murder count is unchanged (not owned)");
+  const rate = planShrOwnedCount("homicide rate per 100,000 in baldwin county al in 2024", db);
+  check(rate.kind === "limitation" && rate.reason === "owned-count-rate" && /population denominator/.test(rate.explanation), "a genuine population rate keeps its missing-denominator limitation");
+  const share = planShrOwnedCount("share of homicide victims in baldwin county al who were female in 2024", db);
+  check(share.kind === "limitation" && share.reason === "owned-count-share" && !/population/.test(share.explanation), "a share is limited truthfully, never as a missing population denominator");
+  const ratio = planShrOwnedCount("ratio of male to female homicide victims in baldwin county al from 2022 to 2025 by year", db);
+  check(ratio.kind === "plan" && ratio.plan.ratio === "male_to_female" && ratio.plan.series === "annual" && ratio.plan.period.kind === "range", "a sex ratio plans as the ratio measure, annual, for the stated range");
+  const since = planShrOwnedCount("ratio of male to female homicide victims in baldwin county al by year since 2022", db);
+  const maxYear = (db.prepare("SELECT MAX(year) AS y FROM incidents").get() as { y: number }).y;
+  check(since.kind === "plan" && since.plan.period.kind === "range" && since.plan.period.startYear === 2022 && since.plan.period.endYear === maxYear, `"since 2022" runs to the source's latest year (${maxYear}), read from the database`);
+  const monthly = planShrOwnedCount("ratio of male to female homicide victims in baldwin county al in 2024 by month", db);
+  check(monthly.kind === "limitation" && monthly.reason === "owned-count-ratio-series", "a monthly ratio is a stated limitation");
+  const sinceCount = planShrOwnedCount("homicide victims in baldwin county al since 2022", db);
+  check(sinceCount.kind === "limitation" && sinceCount.reason === "owned-count-period-relative", "a plain count keeps its accepted 'since' clarification (unchanged)");
+}
+
+function sheriffBindingForRatio() {
+  const p = planShrOwnedCount("number of homicides in baldwin county al in 2025", db);
+  if (p.kind !== "plan" || p.plan.geography.kind !== "county") throw new Error("fixture: Baldwin sheriff binding did not resolve");
+  return p.plan.geography.binding;
 }
 
 console.log(`\n${checks - failures}/${checks} passed; offline guard: ${deniedDatabaseOpens().length} denied database opens, ${deniedNetworkCalls().length} network calls`);

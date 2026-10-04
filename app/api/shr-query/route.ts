@@ -367,6 +367,7 @@ export async function POST(req: NextRequest) {
         routingMeta,
         scope: shrCountyScope,
         yearClass: yearClassFor(inputSql),
+        history,
       });
       recordContractValidation(contractResult);
       if (contractResult.licenceRefusal) {
@@ -1137,8 +1138,12 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         const rows = normalizeShrDisplayRows(executeCompiledShrCount(countDb, contract.compiled));
         const explanation = shrCountNarrative(contract.compiled, rows);
         const executionMs = Date.now() - start;
-        const recorded = rows.some((row) => row[contract.compiled.valueColumn] != null);
-        const countTags = ["owned-shr-count", ...(rows.some((row) => row[contract.compiled.valueColumn] == null) ? ["shr-owned-count-unknown-periods"] : [])];
+        // A ratio's blank can mean "undefined" (no denominator victims), not "unknown": records are judged by the counts.
+        const hasRecords = (row: Record<string, unknown>) => contract.compiled.plan.ratio
+          ? row.male_victims != null || row.female_victims != null
+          : row[contract.compiled.valueColumn] != null;
+        const recorded = rows.some(hasRecords);
+        const countTags = ["owned-shr-count", ...(contract.compiled.plan.ratio ? ["owned-shr-sex-ratio"] : []), ...(rows.some((row) => !hasRecords(row)) ? ["shr-owned-count-unknown-periods"] : [])];
         const chartConfig = applyChartCustomizations({
           type: contract.compiled.chartType, xAxis: contract.compiled.xAxis, yAxis: [contract.compiled.valueColumn],
           yAxisLabel: contract.compiled.yAxisLabel, title: contract.compiled.title,
