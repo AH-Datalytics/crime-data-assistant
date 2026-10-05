@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, missingLowerBoundNote, trimTrailingEmptyYearRows, withReturnedCoverage } from "../lib/result-disclosure";
+import { historicalViolentComposite, nationalOnlyWhere, returnedViolentComposite } from "../lib/historical-composite-measure";
 import { historicalRapeSeries, RAPE_DEFINITION_CAVEAT, returnedRapeCountColumn } from "../lib/historical-rape-series";
 import { returnedCoverageNote } from "../lib/returned-coverage";
 
@@ -794,6 +795,63 @@ import { returnedCoverageNote } from "../lib/returned-coverage";
   const twice = applyResultDisclosures({ explanation: once, question: "violent crime rate per year and state since 1960", sql: "SELECT year, state, x FROM t WHERE year >= 1960", rows: long, tab: "historical" });
   assert.equal(once.split("Returned coverage").length - 1, 1);
   assert.equal(twice.split("Returned coverage").length - 1, 1, "idempotent");
+}
+
+// Composite-measure narrative (Codex :35465): the U.S. national four-component violent-crime sum gets an owned description
+// from its SQL binding; three-component, unrelated, per-state or non-plain forms are left to the existing path.
+{
+  const cols = ["year", "violent"];
+  const D1_SAVED = "SELECT year, COALESCE(murder, 0) + COALESCE(rape, 0) + COALESCE(robbery, 0) + COALESCE(aggravated_assault, 0) AS violent FROM historical_state_national WHERE state = 'United States' AND year >= 1930 ORDER BY year LIMIT 5000";
+  assert.deepEqual(returnedViolentComposite(D1_SAVED, cols), { column: "violent", kind: "count", zeroFilled: true }, "the saved 10-05 D1 statement");
+  const rows = [{ year: 2023, violent: 1240288 }, { year: 2024, violent: 1185683 }];
+  const owned = historicalViolentComposite("historical", D1_SAVED, rows)!;
+  assert.equal(owned.narrative, "U.S. national violent crime by year: the sum of the FBI UCR murder, rape, robbery and aggravated assault counts.");
+  assert.doesNotMatch(owned.narrative, /no national aggregate|not available|did not report|before \d{4}/, "no source-availability or reporting claim");
+  // Equivalent supported forms.
+  assert.equal(returnedViolentComposite("SELECT year, murder + rape + robbery + aggravated_assault AS violent_crime FROM historical_state_national WHERE state = 'United States' ORDER BY year", ["year", "violent_crime"])?.kind, "count");
+  assert.equal(returnedViolentComposite("SELECT h.year, IFNULL(h.robbery,0) + IFNULL(h.aggravated_assault,0) + IFNULL(h.murder,0) + IFNULL(h.rape,0) AS total FROM historical_state_national h WHERE h.state = 'United States' AND h.year BETWEEN 1990 AND 2024", ["year", "total"])?.zeroFilled, true, "reordered, prefixed, IFNULL");
+  const rate = returnedViolentComposite("SELECT year, ROUND(murder_rate + rape_rate + robbery_rate + aggravated_assault_rate, 1) AS violent_rate FROM historical_state_national WHERE state = 'United States' AND year >= 1960", ["year", "violent_rate"]);
+  assert.deepEqual(rate, { column: "violent_rate", kind: "rate", zeroFilled: false });
+  assert.match(historicalViolentComposite("historical", "SELECT year, ROUND(murder_rate + rape_rate + robbery_rate + aggravated_assault_rate, 1) AS violent_rate FROM historical_state_national WHERE state = 'United States'", [{ year: 2024, violent_rate: 359.1 }])!.narrative, /rates per 100,000\.$/);
+  // Negatives: never relabel these as violent crime.
+  const none = (sql: string, c = cols) => assert.equal(returnedViolentComposite(sql, c), null, sql);
+  none("SELECT year, COALESCE(murder, 0) + COALESCE(rape, 0) + COALESCE(robbery, 0) AS violent FROM historical_state_national WHERE state = 'United States'");   // three components
+  none("SELECT year, murder + robbery + rape + burglary AS violent FROM historical_state_national WHERE state = 'United States'");                                // unrelated component
+  none("SELECT year, murder + rape + robbery + aggravated_assault + burglary AS violent FROM historical_state_national WHERE state = 'United States'");            // five terms
+  none("SELECT year, murder + rape + robbery + aggravated_assault_rate AS violent FROM historical_state_national WHERE state = 'United States'");                  // mixed count and rate
+  none("SELECT year, murder + rape + robbery + aggravated_assault AS violent FROM historical_state_national WHERE state != 'United States'");                     // per-state
+  none("SELECT year, state, murder + rape + robbery + aggravated_assault AS violent FROM historical_state_national WHERE state = 'United States'", ["year", "state", "violent"]); // extra column
+  none("SELECT year, murder + rape + robbery + aggravated_assault AS violent FROM historical_agency_crime WHERE ori = 'X'");                                       // agency table
+  none("WITH t AS (SELECT * FROM historical_state_national) SELECT year, murder + rape + robbery + aggravated_assault AS violent FROM t WHERE state = 'United States'");
+  none("SELECT year, SUM(murder + rape + robbery + aggravated_assault) AS violent FROM historical_state_national WHERE state = 'United States' GROUP BY year");
+  none(D1_SAVED, ["year", "violent", "population"]);                                                                                                               // returned columns differ
+  assert.equal(historicalViolentComposite("current", D1_SAVED, rows), null, "Historical only");
+
+  // CM-R1 (Codex :35546): national-only binding must be PROVEN, not found as a substring.
+  const yes = (w: string) => assert.equal(nationalOnlyWhere(w), true, w);
+  const no = (w: string) => assert.equal(nationalOnlyWhere(w), false, w);
+  yes("state = 'United States'");
+  yes("state = 'United States' AND year >= 1930");
+  yes("year BETWEEN 2010 AND 2024 AND state = 'United States'");
+  yes("h.state = 'United States' AND h.year BETWEEN 1990 AND 2024");
+  yes("\"state\" = 'United States' AND year < 2025 AND year > 1999");
+  no("NOT (state = 'United States') AND state = 'Alabama' AND year BETWEEN 2020 AND 2024");   // Codex counterexample 1
+  no("(state = 'United States' OR state = 'Alabama') AND year BETWEEN 2020 AND 2024");        // Codex counterexample 2
+  no("state = 'United States' OR state = 'Alabama'");                                         // disjunction without parentheses
+  no("NOT state = 'Alabama' AND state = 'United States'");                                     // any negation
+  no("state = 'Alabama' AND year > 2000 AND 'state = ''United States''' = 'state = ''United States'''"); // quoted-literal decoy
+  no("state = 'Alabama' AND note = 'state = ''United States'''");                             // decoy inside another column's literal
+  no("state = 'United States' AND state = 'Alabama'");                                         // a second state predicate
+  no("state = 'United States' AND state = 'United States'");                                   // a repeated predicate is not one binding
+  no("state = 'United States' AND population > 1000000");                                      // another column
+  no("state = 'United States' AND year IN (2020, 2021)");                                       // outside the safely understood forms
+  no("state != 'United States'");
+  no("state LIKE 'United States'");
+  no("year >= 2000");                                                                           // no geography binding at all
+  no("state = 'United States' AND year >= 2000 AND state IS NOT NULL");
+  // And through the recognizer: the counterexample SQL is not owned (the normal answer path keeps it).
+  assert.equal(returnedViolentComposite("SELECT year, murder + rape + robbery + aggravated_assault AS violent FROM historical_state_national WHERE NOT (state = 'United States') AND state = 'Alabama' AND year BETWEEN 2020 AND 2024 ORDER BY year", cols), null);
+  assert.equal(returnedViolentComposite("SELECT year, murder + rape + robbery + aggravated_assault AS violent FROM historical_state_national WHERE (state = 'United States' OR state = 'Alabama') AND year BETWEEN 2020 AND 2024 ORDER BY year", cols), null);
 }
 
 console.log("result disclosure tests passed");
