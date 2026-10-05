@@ -14,6 +14,7 @@ import { HISTORICAL, RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { historicalRapeSeries } from "@/lib/historical-rape-series";
 import { historicalViolentComposite } from "@/lib/historical-composite-measure";
+import { sexualAssaultRapeNarrative } from "@/lib/historical-offense-binding";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags, mergeGuardrailTags } from "@/lib/guardrail-tag-state";
@@ -2894,12 +2895,19 @@ export async function POST(req: NextRequest) {
         // Composite measure (Codex :35465): the U.S. national violent-crime sum of the four UCR components gets the
         // application's own description from its SQL binding, delivered the same way, so no later explanation can name
         // only some of the components.
-        const compositeSeries = rapeSeries ? null : historicalViolentComposite(tab, sql, rows);
+        // Offense binding (Codex :35871): a sexual-assault request answered with the UCR rape measure (bound by the contract
+        // validator) carries the category limitation in every version; GC-085's own description keeps precedence when it applies.
+        const sexualAssaultNarrative = rapeSeries ? null : sexualAssaultRapeNarrative(tab, deliveryQuestion, sql, rows);
+        if (sexualAssaultNarrative) {
+          claude.explanation = sexualAssaultNarrative;
+          firedGuardrails.push("sexual-assault-rape-owned");
+        }
+        const compositeSeries = rapeSeries || sexualAssaultNarrative ? null : historicalViolentComposite(tab, sql, rows);
         if (compositeSeries) {
           claude.explanation = compositeSeries.narrative;
           firedGuardrails.push("violent-composite-owned");
         }
-        const ownedNarrative = rapeSeries?.narrative ?? compositeSeries?.narrative ?? null;
+        const ownedNarrative = rapeSeries?.narrative ?? sexualAssaultNarrative ?? compositeSeries?.narrative ?? null;
 
         /*
          * Decision 17: withhold an unverified year-over-year change BEFORE anything is delivered.

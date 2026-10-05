@@ -16,6 +16,7 @@ import { DEMOGRAPHIC_RATE_UNSUPPORTED_MESSAGE, SUB_CITY_GEOGRAPHY_MESSAGE } from
 import { classifyCapabilityRule } from "./capability-decision";
 import { OUTCOMES } from "./proof-contract";
 import { measureDriftIssue, MEASURE_DRIFT_GUARDRAIL } from "./measure-preservation";
+import { bindSexualAssaultMeasure } from "./historical-offense-binding";
 
 /** The typed pair a capability block finalizes with; null when no block rule fired. */
 export type CapabilityBlockOutcome = typeof OUTCOMES.query_contract_failed | null;
@@ -591,18 +592,22 @@ export function validateQueryContractSql(opts: {
 }): QueryContractSqlValidation {
   const requiredOri = (opts.requiredOri || "").trim();
   const missingRequiredOri = Boolean(requiredOri) && !sqlTargetsOri(opts.sql, requiredOri);
+  // Historical offense binding (Codex :35871): a sexual-assault request is answered with the UCR rape measure on EVERY
+  // validation pass -- rebound in the simple supported form, otherwise retried and, if still wrong, stopped. Computed
+  // before the contract so it also holds when no contract can be built.
+  const offenseBinding = opts.source === "historical" ? bindSexualAssaultMeasure(opts.question, opts.sql) : { kind: "none" as const };
   const contract = opts.contract && opts.contract.source === opts.source
     ? opts.contract
     : buildQueryContract(opts.question, opts.source, opts.routingMeta);
   if (!contract) {
     return {
-      sql: opts.sql,
-      fired: [],
-      warnings: [],
+      sql: offenseBinding.kind === "rebound" ? offenseBinding.sql : opts.sql,
+      fired: offenseBinding.kind === "rebound" ? ["contract-sexual-assault-rape-binding"] : [],
+      warnings: offenseBinding.kind === "retry" ? ["contract-sexual-assault-rape-measure"] : [],
       capabilityFindings: [],
-      retryIssues: [],
+      retryIssues: offenseBinding.kind === "retry" ? [offenseBinding.issue] : [],
       blockReasons: missingRequiredOri ? [requiredOriBlockMessage(requiredOri)] : [],
-      enforced: missingRequiredOri ? ["contract-required-county-ori"] : [],
+      enforced: [...(missingRequiredOri ? ["contract-required-county-ori"] : []), ...(offenseBinding.kind === "retry" ? ["contract-sexual-assault-rape-measure"] : [])],
       // No contract was built, so no capability rule was classified. A missing-ORI block is a
       // different finding with its own message and is not a capability outcome.
       capabilityOutcome: null,
@@ -626,6 +631,15 @@ export function validateQueryContractSql(opts: {
    */
   let capabilityOutcome: CapabilityBlockOutcome = null;
   const enforced: string[] = [];
+
+  if (offenseBinding.kind === "rebound") {
+    sql = offenseBinding.sql;
+    fired.push("contract-sexual-assault-rape-binding");
+  } else if (offenseBinding.kind === "retry") {
+    warnings.push("contract-sexual-assault-rape-measure");
+    retryIssues.push(offenseBinding.issue);
+    enforced.push("contract-sexual-assault-rape-measure");
+  }
 
   const requestedState = contract.geography.state;
   const sourceState = requestedState ? contract.geography.sourceCodes?.[opts.source] : null;
