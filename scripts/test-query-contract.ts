@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { buildQueryContract, serializeQueryContractLogMeta } from "../lib/query-contract";
 import { validateQueryContractSql } from "../lib/query-contract-validator";
+import { returnsRapeMeasure, sexualAssaultRapeNarrative } from "../lib/historical-offense-binding";
 
 {
   const contract = buildQueryContract("Omaha NE auto theft clearance rate since 1960", "historical");
@@ -573,6 +574,57 @@ for (const question of trueFollowupContracts) {
   // p3-1a corpus row 204: a COUNT(*) over a non-hate-crime table is not read as hate-crime offenses (other rules own it).
   assert(!validateQueryContractSql({ question: "What were the demographics of victims in Jefferson Parish, LA in 2022?", source: "hate_crime", sql: "SELECT COUNT(*) FROM summary_state_monthly WHERE state='IL'" }).enforced.includes("contract-measure-drift"), "HC units are read only from the hate-crime tables");
   assert(validateQueryContractSql({ question: "how many hate crime victims were there in 2022", source: "hate_crime", sql: "SELECT COUNT(*) AS offenses FROM hate_crime_incidents WHERE year = 2022" }).enforced.includes("contract-measure-drift"), "a raw COUNT(*) over hate_crime_incidents is offenses, not victims");
+}
+
+// Historical offense binding (Codex :35871): sexual-assault intent is answered with the UCR rape measure on every pass.
+{
+  const D3_SAVED = "SELECT year, aggravated_assault FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2010 AND 2024 ORDER BY year LIMIT 5000";
+  const v = (question: string, sql: string, source: "historical" | "current" = "historical") => validateQueryContractSql({ question, source, sql });
+  // The saved 10-05 D3: rebound to rape, nothing else changed.
+  const d3 = v("national, sexual assault, 2010-2024", D3_SAVED);
+  assert.equal(d3.sql, "SELECT year, rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2010 AND 2024 ORDER BY year LIMIT 5000");
+  assert(d3.fired.includes("contract-sexual-assault-rape-binding") && d3.retryIssues.length === 0 && d3.blockReasons.length === 0);
+  // Wording, geography, period and unit variations.
+  assert.equal(v("sexual assaults in Ohio since 2000", "SELECT year, aggravated_assault FROM historical_state_national WHERE state = 'Ohio' AND year >= 2000 ORDER BY year").sql, "SELECT year, rape FROM historical_state_national WHERE state = 'Ohio' AND year >= 2000 ORDER BY year");
+  assert.equal(v("U.S. sexual assault rate per 100,000 from 2015 to 2020", "SELECT year, aggravated_assault_rate FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2015 AND 2020").sql, "SELECT year, rape_rate FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2015 AND 2020", "a rate stays a rate");
+  assert.equal(v("How many sexual assaults were reported in Chicago by year since 1990?", "SELECT hac.year, hac.aggravated_assault FROM historical_agency_crime hac JOIN historical_agency ha ON hac.ori = ha.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hac.year >= 1990 ORDER BY hac.year").sql, "SELECT hac.year, hac.rape FROM historical_agency_crime hac JOIN historical_agency ha ON hac.ori = ha.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hac.year >= 1990 ORDER BY hac.year", "agency join, table prefix kept");
+  assert.equal(v("sexual assault nationally 2010-2024", "SELECT year, aggravated_assault AS sexual_assaults FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2010 AND 2024").sql, "SELECT year, rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2010 AND 2024", "a misleading alias is not kept");
+  // Already the rape measure: untouched.
+  const ok = v("national, sexual assault, 2010-2024", "SELECT year, rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2010 AND 2024");
+  assert(!ok.fired.includes("contract-sexual-assault-rape-binding") && !ok.enforced.includes("contract-sexual-assault-rape-measure"));
+  // A shape it cannot rebind: retried with the precise instruction (and stopped by the existing second-failure rule), never relabelled.
+  const complex = v("national sexual assault 2010-2024", "SELECT year, SUM(aggravated_assault) AS n FROM historical_state_national WHERE state = 'United States' GROUP BY year");
+  assert(complex.enforced.includes("contract-sexual-assault-rape-measure") && complex.retryIssues.some((i) => /contract-sexual-assault-rape-measure/.test(i)) && /aggravated_assault/.test(complex.sql));
+  // Controls: explicit aggravated assault, mixed and negated requests, and other sources are never converted.
+  for (const q of ["aggravated assault nationally 2010-2024", "rape and aggravated assault nationally 2010 to 2024", "sexual and aggravated assaults nationally 2010-2024", "compare sexual assault and aggravated assault nationally 2010-2024", "violent crime excluding sexual assault 2010-2024", "assaults other than sexual assault nationally since 2010", "aggravated sexual assault nationally 2010-2024"]) {
+    const r = v(q, D3_SAVED);
+    assert(r.sql === D3_SAVED && !r.fired.includes("contract-sexual-assault-rape-binding") && !r.enforced.includes("contract-sexual-assault-rape-measure"), q);
+  }
+  assert.equal(v("sexual assault in Detroit 2024", "SELECT year, SUM(count) AS n FROM agency_monthly WHERE offense = 'Aggravated Assault' GROUP BY year", "current").fired.includes("contract-sexual-assault-rape-binding"), false, "Historical only");
+
+  // OB-R1a (Codex :35951): bound only when the RETURNED measure is the rape column; a token elsewhere is not proof.
+  const retried = (sql: string, q = "national sexual assault each year 2015-2020") => { const r = v(q, sql); return r.enforced.includes("contract-sexual-assault-rape-measure") && r.sql === sql; };
+  assert(retried("SELECT year, population AS rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2015 AND 2020 ORDER BY year"), "Codex alias decoy: population AS rape");
+  assert(retried("SELECT year, rape * 2 AS rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2015 AND 2020"), "an expression aliased as rape");
+  assert(retried("SELECT year, (SELECT rape FROM historical_state_national WHERE state = 'Alabama' AND year = 2020) AS x FROM historical_state_national WHERE state = 'United States'"), "an inner reference");
+  assert(retried("SELECT year, robbery AS rape, rape AS robbery FROM historical_state_national WHERE state = 'United States'"), "swapped aliases");
+  assert(retried("WITH t AS (SELECT year, rape FROM historical_state_national WHERE state = 'United States') SELECT year, rape FROM t"), "a CTE (uncertain shape) is retried, not trusted");
+  for (const good of ["SELECT year, rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2015 AND 2020", "SELECT h.year, h.rape FROM historical_state_national h WHERE h.state = 'Ohio'", "SELECT year, rape_rate FROM historical_state_national WHERE state = 'United States'", "SELECT year, rape AS rape FROM historical_state_national WHERE state = 'United States'"]) {
+    const r = v("national sexual assault each year 2015-2020", good);
+    assert(r.sql === good && !r.enforced.includes("contract-sexual-assault-rape-measure") && !r.fired.includes("contract-sexual-assault-rape-binding"), `bound as is: ${good}`);
+  }
+  assert.equal(v("sexual assault nationally 2015-2020", "SELECT year, rape AS assaults FROM historical_state_national WHERE state = 'United States'").sql, "SELECT year, rape FROM historical_state_national WHERE state = 'United States'", "a rape column under another alias is returned under its own name");
+  assert.equal(returnsRapeMeasure("SELECT year, population AS rape FROM historical_state_national WHERE state = 'United States'"), null);
+  assert.equal(returnsRapeMeasure("SELECT year, rape FROM historical_state_national WHERE state = 'United States'"), "rape");
+
+  // OB-R1b: the new narrative names a place only when proven (national-only WHERE); otherwise none.
+  const rows = [2015, 2016].map((year) => ({ year, rape: 1500 }));
+  const narr = (sql: string) => sexualAssaultRapeNarrative("historical", "sexual assault each year 2015-2016", sql, rows);
+  assert.equal(narr("SELECT year, rape FROM historical_state_national WHERE NOT (state = 'United States') AND state = 'Alabama' AND year BETWEEN 2015 AND 2016 ORDER BY year"), "FBI UCR rape offenses by year, 2015–2016, for the sexual assault request. These are the FBI's Uniform Crime Reporting rape category, not all sexual assaults.", "Codex NOT example: no national claim");
+  assert.doesNotMatch(narr("SELECT year, rape FROM historical_state_national WHERE (state = 'United States' OR state = 'Alabama') AND year BETWEEN 2015 AND 2016")!, /nationally|Alabama/, "OR/mixed: no place named");
+  assert.doesNotMatch(narr("SELECT year, rape FROM historical_state_national WHERE state = 'Alabama' AND year BETWEEN 2015 AND 2016")!, /nationally/, "a state is never called national");
+  assert.match(narr("SELECT year, rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2015 AND 2016 ORDER BY year")!, /^FBI UCR rape offenses nationally by year, 2015–2016/, "proven national keeps 'nationally'");
+  assert.equal(narr("SELECT year, population AS rape FROM historical_state_national WHERE state = 'United States'"), null, "no owned description on an unproven measure");
 }
 
 console.log("query contract tests passed");
