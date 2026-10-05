@@ -13,6 +13,7 @@ import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { HISTORICAL, RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { historicalRapeSeries } from "@/lib/historical-rape-series";
+import { historicalViolentComposite } from "@/lib/historical-composite-measure";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
 import { finalizeGuardrailTags, mergeGuardrailTags } from "@/lib/guardrail-tag-state";
@@ -2890,6 +2891,15 @@ export async function POST(req: NextRequest) {
           claude.explanation = rapeSeries.narrative;
           firedGuardrails.push("rape-definition-series-owned");
         }
+        // Composite measure (Codex :35465): the U.S. national violent-crime sum of the four UCR components gets the
+        // application's own description from its SQL binding, delivered the same way, so no later explanation can name
+        // only some of the components.
+        const compositeSeries = rapeSeries ? null : historicalViolentComposite(tab, sql, rows);
+        if (compositeSeries) {
+          claude.explanation = compositeSeries.narrative;
+          firedGuardrails.push("violent-composite-owned");
+        }
+        const ownedNarrative = rapeSeries?.narrative ?? compositeSeries?.narrative ?? null;
 
         /*
          * Decision 17: withhold an unverified year-over-year change BEFORE anything is delivered.
@@ -3044,7 +3054,7 @@ export async function POST(req: NextRequest) {
         // Re-extract context from final SQL (may have been fixed by guardrails/retry)
         const finalCtx = { ...extractQueryContext(sql, guardrailQuestion, tab as "current" | "historical"), requiredOri: requiredCountyOri };
         try {
-          let postExplanation = rapeSeries ? rapeSeries.narrative : await generateExplanation({
+          let postExplanation = ownedNarrative ? ownedNarrative : await generateExplanation({
             ctx: finalCtx,
             columns,
             rows,
@@ -3144,7 +3154,7 @@ export async function POST(req: NextRequest) {
         } catch {
           // Retry post-query explanation once before falling back
           try {
-            let retryExplanation = rapeSeries ? rapeSeries.narrative : await generateExplanation({
+            let retryExplanation = ownedNarrative ? ownedNarrative : await generateExplanation({
               ctx: finalCtx,
               columns,
               rows,
