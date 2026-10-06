@@ -763,7 +763,7 @@ async function main() {
     assert.strictEqual(sites, 18, "seal-site count moved; re-run the two-pass enumeration");
     const families = new Set<string>();
     for (const f of ROUTES) for (const m of fs.readFileSync(f, "utf8").matchAll(/sealPlanDerivation\(\s*"([a-z0-9-]+)"/g)) families.add(m[1]);
-    for (const f of ["lib/nibrs-deterministic-queries.ts", "lib/nibrs-rollup-deterministic.ts", "lib/nibrs-scope-deterministic.ts", "lib/current-indexed-state-deterministic.ts", "lib/multi-city-deterministic.ts", "lib/historical-deterministic-queries.ts"]) {
+    for (const f of ["lib/nibrs-deterministic-queries.ts", "lib/nibrs-rollup-deterministic.ts", "lib/nibrs-scope-deterministic.ts", "lib/current-indexed-state-deterministic.ts", "lib/multi-city-deterministic.ts", "lib/historical-deterministic-queries.ts", "lib/historical-national-violent.ts"]) {
       const src = fs.readFileSync(f, "utf8");
       for (const m of src.matchAll(/guardrail:\s*"([a-z0-9-]+)"/g)) families.add(m[1]);
       for (const m of src.matchAll(/guardrail:\s*[^?\n]+\?\s*"([a-z0-9-]+)"\s*:\s*"([a-z0-9-]+)"/g)) { families.add(m[1]); families.add(m[2]); }
@@ -786,6 +786,8 @@ async function main() {
       "deterministic-murder", "deterministic-shooting",
       // Phase 3 integration: the owned SHR count seal, and the NIBRS annual-clearance builder.
       "owned-shr-count", "nibrs-annual-clearance",
+      // National violent-crime batch (Codex :36558/:36622): the owned U.S. annual violent-crime count.
+      "deterministic-historical-national-violent-count",
     ].sort();
     assert.deepStrictEqual([...families].sort(), PINNED, "family set drifted: a builder was added, renamed, or removed");
   });

@@ -122,6 +122,9 @@ const GUARDED_PLANS: Record<string, string> = {
   ownedStatement: "ownedStatementRefusal",
   // The Current city ranking's S1 candidates read, refused-checked like the ranked statement it precedes.
   cityRankingEvidence: "cityRankingEvidenceRefusal",
+  // The owned U.S. annual violent-crime count (lib/historical-national-violent.ts, Codex :36558): proved and read
+  // before the Historical deterministic chain; a refused or unreadable plan becomes its no-query decline.
+  nationalPlan: "nationalRefusal",
 };
 
 /**

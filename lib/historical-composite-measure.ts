@@ -58,25 +58,33 @@ function topLevel(list: string): string[] {
  * and the answer stays on the normal path.
  */
 export function nationalOnlyWhere(where: string): boolean {
+  return singleStateWhere(where) === "United States";
+}
+
+/**
+ * AGENCY+RANK batch: the same proof, naming its one state. The WHERE is a plain AND chain of exactly one
+ * `state = '<literal>'` plus year bounds; anything else returns null. `nationalOnlyWhere` is this with the
+ * literal 'United States', so its accepted behavior is unchanged.
+ */
+export function singleStateWhere(where: string): string | null {
   const literals: string[] = [];
   const masked = where.replace(/'(?:[^']|'')*'/g, (lit) => { literals.push(lit); return ` __L${literals.length - 1}__ `; }).replace(/\s+/g, " ").trim();
-  if (/[()]/.test(masked) || /\b(or|not|exists|select|in|like|is|case|between\s+symmetric)\b/i.test(masked.replace(/\byear\s+between\s+\d{4}\s+and\s+\d{4}\b/gi, ""))) return false;
+  if (/[()]/.test(masked) || /\b(or|not|exists|select|in|like|is|case|between\s+symmetric)\b/i.test(masked.replace(/\byear\s+between\s+\d{4}\s+and\s+\d{4}\b/gi, ""))) return null;
   const conjuncts = masked
     .replace(/\b((?:[A-Za-z_][A-Za-z0-9_]*\.)?year)\s+between\s+(\d{4})\s+and\s+(\d{4})\b/gi, "$1 __BETWEEN__ $2 $3")
     .split(/\s+and\s+/i).map((c) => c.trim());
-  let nationalEqualities = 0;
+  const states: string[] = [];
   for (const c of conjuncts) {
     const st = /^(?:[A-Za-z_][A-Za-z0-9_]*\.)?"?state"?\s*=\s*__L(\d+)__$/i.exec(c);
     if (st) {
-      if (literals[Number(st[1])] !== "'United States'") return false;
-      nationalEqualities += 1;
+      states.push(literals[Number(st[1])].slice(1, -1).replace(/''/g, "'"));
       continue;
     }
     if (/^(?:[A-Za-z_][A-Za-z0-9_]*\.)?"?year"?\s*(?:=|>=|<=|>|<)\s*\d{4}$/i.test(c)) continue;
     if (/^(?:[A-Za-z_][A-Za-z0-9_]*\.)?"?year"?\s+__BETWEEN__\s+\d{4}\s+\d{4}$/i.test(c)) continue;
-    return false;
+    return null;
   }
-  return nationalEqualities === 1;
+  return states.length === 1 && states[0] !== "" ? states[0] : null;
 }
 
 const COLUMN = String.raw`(?:[A-Za-z_][A-Za-z0-9_]*\.)?"?([A-Za-z_][A-Za-z0-9_]*)"?`;

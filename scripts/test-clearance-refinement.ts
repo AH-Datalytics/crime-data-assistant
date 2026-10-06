@@ -46,6 +46,7 @@ import { validateQueryContractSql, queryContractFailureMessage } from "../lib/qu
 import { applyResultDisclosures } from "../lib/result-disclosure";
 import { mayRefuseAsCourtProcess } from "../lib/clearance-referent";
 import { extractDeclaration, runRouteExpression } from "./decision1-terminal-harness";
+import { resolvePeerCountFollowup } from "../lib/peer-count-followup";
 import { normalizeHistoryForTab } from "../lib/chat-history";
 import { detectFollowupTransform } from "../lib/followup-transform";
 import { buildCrossSourceFollowupTransform } from "../lib/cross-source-followup";
@@ -254,6 +255,7 @@ console.log("\n=== 5  the NIBRS route's own expression, lifted and run ===");
     return runRouteExpression<string>(decl.text, {
       plannerMode: "off", followupPlan: null,
       clearanceRefinement: resolveClearanceRefinement(q, history, "nibrs"),
+      peerFollowup: resolvePeerCountFollowup(q, history, "nibrs"),
       followupTransform: detectFollowupTransform(q, normalized)
         ?? buildCrossSourceFollowupTransform(q, history as never, "nibrs"),
       question: q,
@@ -371,6 +373,7 @@ for (const [q, why] of [
   const out = runRouteExpression<string>(decl.text, {
     plannerMode: "off", followupPlan: null,
     clearanceRefinement: resolveClearanceRefinement(raw, HISTORY, "nibrs"),
+    peerFollowup: resolvePeerCountFollowup(raw, HISTORY, "nibrs"),
     followupTransform: detectFollowupTransform(raw, normalizeHistoryForTab(HISTORY as never, "nibrs" as never)),
     question: raw,
   });

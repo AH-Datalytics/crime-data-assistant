@@ -14,6 +14,8 @@ import { HISTORICAL, RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
 import { historicalRapeSeries } from "@/lib/historical-rape-series";
 import { historicalViolentComposite } from "@/lib/historical-composite-measure";
+import { chicagoAssaultNarrative, withChicagoAssaultComparability } from "@/lib/chicago-assault-comparability";
+import { buildHistoricalNationalViolentCountPlan, nationalViolentDeclinePlan } from "@/lib/historical-national-violent";
 import { sexualAssaultRapeNarrative } from "@/lib/historical-offense-binding";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
@@ -1498,6 +1500,7 @@ export async function POST(req: NextRequest) {
       const periodShortfall = relativePeriodShortfallNote(multiCityTrend, rows);
       const periodExplanation = periodShortfall ? `${presentation.explanation.trimEnd()} ${periodShortfall}` : presentation.explanation;
       multiCityTrend.explanation = withBaltimoreDisclosure(periodExplanation, baltimoreDefault);
+      multiCityTrend.explanation = withChicagoAssaultComparability(multiCityTrend.explanation, multiCityTrend.sql, rows);
       const ms = Date.now() - totalStart;
       // Multi-city comparison is the family that produced the 31-of-32 failure, so
       // it supplies requested/returned entity sets to the completeness check. The
@@ -1585,8 +1588,28 @@ export async function POST(req: NextRequest) {
         resolveSubject: (name, state) => resolveHistoricalSubjectPopulation(getDb(), name, state),
       })
     : null;
+  // National violent-crime batch (Codex :36558): the U.S. annual violent-crime COUNT series is owned here, BEFORE model
+  // SQL, so the model never chooses its table (release-f D1 delivered an agency sum labelled as a U.S. count).
+  // The owned national plan is answered or declined here; it never falls through to model SQL. It is proved and read
+  // first; a refused or unreadable plan is replaced by its no-query decline, which the existing no-query branch below
+  // delivers with the owned sentence (no new exit).
+  const nationalPlan = tab === "historical" && !historicalPeer && !queryBearingFollowup
+    ? buildHistoricalNationalViolentCountPlan(question)
+    : null;
+  let nationalRows: Record<string, unknown>[] | null = null;
+  const nationalRefusal = nationalPlan ? deterministicPlanRefusal({ question, source: tab, sql: nationalPlan.sql }) : null;
+  if (nationalRefusal) console.log(`[structural] historical national violent plan refused: ${nationalRefusal.ruleIds.join(", ")}`);
+  if (nationalPlan?.sql && !nationalRefusal) {
+    try {
+      const db = getDb();
+      nationalRows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(nationalPlan.sql), 30000);
+    } catch (err) {
+      console.warn("[historical-national-violent] owned national query failed; declining", err);
+    }
+  }
+  const historicalNational = nationalPlan && nationalRows === null ? nationalViolentDeclinePlan(nationalPlan) : nationalPlan;
   const historicalCityChange = tab === "historical"
-    ? historicalPeer ?? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
+    ? historicalPeer ?? historicalNational ?? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
     : null;
   if (historicalCityChange && baltimoreDefault) historicalCityChange.explanation = withBaltimoreDisclosure(historicalCityChange.explanation, baltimoreDefault);
   const historicalCityChangeRefusal = deterministicPlanRefusal({ question, source: tab, sql: historicalCityChange?.sql });
@@ -1636,8 +1659,19 @@ export async function POST(req: NextRequest) {
 
     try {
       const db = getDb();
-      const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(historicalCityChange.sql), 30000);
+      const rows = nationalRows ?? executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(historicalCityChange.sql), 30000);
       const columns = rows.length > 0 ? Object.keys(rows[0]) : historicalCityChange.columns;
+      // The owned national series: the accepted composite description from its SQL binding, then the ordinary disclosure
+      // chokepoint for the row-derived coverage, period and lag notes. Rows and SQL are the plan's own.
+      if (historicalCityChange === historicalNational) {
+        const composite = historicalViolentComposite(tab, historicalCityChange.sql, rows);
+        historicalCityChange.explanation = applyResultDisclosures({
+          explanation: composite?.narrative ?? historicalCityChange.explanation,
+          question, sql: historicalCityChange.sql, rows, tab,
+          resultState: genericResultState({ sql: historicalCityChange.sql, rows }),
+        });
+        historicalCityChange.title = alignTitleYearRange(historicalCityChange.title, rows);
+      }
       // R1 (Decision 16): compare the SELECTED peer membership with the evidence that came
       // back. A named peer that returned no rows must be disclosed, not silently dropped —
       // and never replaced, because selection is on population alone.
@@ -1653,6 +1687,7 @@ export async function POST(req: NextRequest) {
           historicalCityChange.explanation = `${historicalCityChange.explanation} ${membership.disclosure}`;
         }
       }
+      historicalCityChange.explanation = withChicagoAssaultComparability(historicalCityChange.explanation, historicalCityChange.sql, rows);
       const proof = finalizeExit({
         outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: historicalCityChange.sql,
@@ -2907,7 +2942,14 @@ export async function POST(req: NextRequest) {
           claude.explanation = compositeSeries.narrative;
           firedGuardrails.push("violent-composite-owned");
         }
-        const ownedNarrative = rapeSeries?.narrative ?? sexualAssaultNarrative ?? compositeSeries?.narrative ?? null;
+        // AGENCY+RANK correction F2 (Codex :36392): across Chicago's 2024/2025 assault boundary the model's interpretation
+        // (e.g. an "84.4% reduction") is replaced by the application's neutral description and limitation, in every version.
+        const chicagoNarrative = rapeSeries || sexualAssaultNarrative || compositeSeries ? null : chicagoAssaultNarrative(tab, sql, rows);
+        if (chicagoNarrative) {
+          claude.explanation = chicagoNarrative;
+          firedGuardrails.push("chicago-assault-comparability-owned");
+        }
+        const ownedNarrative = rapeSeries?.narrative ?? sexualAssaultNarrative ?? compositeSeries?.narrative ?? chicagoNarrative ?? null;
 
         /*
          * Decision 17: withhold an unverified year-over-year change BEFORE anything is delivered.
@@ -3011,6 +3053,9 @@ export async function POST(req: NextRequest) {
         claude.explanation = withReturnedCoverage(claude.explanation || "", deliveryQuestion, sql, rows);
         claude.explanation = governFactualNarrative(
           claude.explanation || "", initialState, null, { hasFigures: rows.length > 0 });
+        // AGENCY+RANK batch: the scoped Chicago assault comparability limitation (lib/chicago-assault-comparability.ts),
+        // in this first text (also the fallback and cache entry) and again, idempotently, in applyResultDisclosures.
+        claude.explanation = withChicagoAssaultComparability(claude.explanation || "", sql, rows);
 
         const finalization = finalizeExit({
           outcome: OUTCOMES.model_sql_validated,

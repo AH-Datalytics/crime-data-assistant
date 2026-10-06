@@ -21,6 +21,8 @@
  * recognizer of the simple supported count forms, not a SQL parser.
  */
 
+import { singleStateWhere } from "./historical-composite-measure";
+
 const KEY_COLUMNS = new Set(["year", "state", "state_name", "state_abbr", "agency", "agency_name", "ori"]);
 // The only output names the stored count may carry. A positive list, so a rate- or change-like alias is never a count.
 const COUNT_ALIASES = new Set(["rape", "rapes", "rape_count", "rape_counts", "rape_offenses", "rape_total", "total_rapes", "count", "offenses"]);
@@ -97,14 +99,17 @@ export function historicalRapeSeries(tab: string, sql: string | null | undefined
   const distinct = (col: string) => [...new Set(rows.map((r) => r[col]).filter((v) => v !== null && v !== undefined && v !== ""))];
   const stateCol = columns.find((c) => /^state(_name)?$/i.test(c));
   const agencyCol = columns.find((c) => /^(agency|agency_name)$/i.test(c));
+  // AGENCY+RANK batch (the deferred GC-085 residual, :36036): a place is named from the SQL only when it is PROVEN by the
+  // accepted national-only binding (CM-R1 nationalOnlyWhere, generalized as singleStateWhere); a `state = '...'` substring inside NOT(...)
+  // or an OR used to be read as the geography. Otherwise the place comes from the returned rows, or stays neutral.
+  const where = /\bwhere\s+(.+?)(?:\s+order\s+by\s|\s+limit\s|;|$)/i.exec(sql.replace(/\s+/g, " "));
+  const provenState = where && /\bfrom\s+historical_state_national\b/i.test(sql) ? singleStateWhere(where[1].trim()) : null;
+  const onlyState = stateCol && distinct(stateCol).length === 1 ? String(distinct(stateCol)[0]) : null;
+  const named = (state: string) => (state === "United States" ? "nationally" : `in ${state}`);
   let place = "for the requested places";
-  if (/state\s*=\s*'United States'/i.test(sql) && !(stateCol && distinct(stateCol).length > 1)) place = "nationally";
+  if (provenState && !(stateCol && distinct(stateCol).length > 1)) place = named(provenState);
   else if (agencyCol && distinct(agencyCol).length === 1) place = `for ${String(distinct(agencyCol)[0])}`;
-  else if (stateCol && distinct(stateCol).length === 1) place = `in ${String(distinct(stateCol)[0])}`;
-  else if (!stateCol && !agencyCol) {
-    const m = /\bstate\s*=\s*'([^']+)'/i.exec(sql);
-    if (m) place = m[1] === "United States" ? "nationally" : `in ${m[1]}`;
-  }
+  else if (onlyState) place = named(onlyState);
 
   // Missing values are stated, never treated as zero. For one place, name the years. The wording describes the RETURNED
   // RESULTS only: governFactualNarrative removes a "no figures/data" claim about the place unless a missing report is

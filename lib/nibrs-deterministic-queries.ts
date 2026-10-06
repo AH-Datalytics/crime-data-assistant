@@ -475,6 +475,19 @@ LIMIT 1000`.trim();
   };
 }
 
+export const PEER_COMPARISON_GUARDRAIL = "deterministic-nibrs-comparable-agency-clearance";
+/** Decision 16: a peer plan the structural proof refuses is declined, never handed to model-written SQL. */
+export const PEER_COMPARISON_REFUSED_TEXT =
+  "I can't show this peer comparison: the comparison built from population evidence did not pass this site's " +
+  "checks, and choosing peers another way would give you a group you can't check. Ask for specific agencies by " +
+  "name and I'll compare those.";
+
+/** The request shape this builder owns: a clearance comparison against agencies of similar size. */
+export function asksComparableAgencyClearance(question: string): boolean {
+  return /\b(?:clearance|clearances|cleared|solve[ds]?)\b/i.test(question) &&
+    /\b(?:similar(?:[-\s]+siz(?:e|ed)|ly[-\s]+sized)?|comparable|peer)\s+(?:agencies|departments)|\bagencies\s+(?:of\s+)?(?:similar|comparable)\s+size\b/i.test(question);
+}
+
 function requestedPeerCount(question: string): number {
   const match = question.match(/\b(\d{1,2})\s+agencies\s+of\s+(?:similar|comparable)\s+size\b/i) ||
     question.match(/\b(\d{1,2})\s+(?:most\s+)?(?:similar(?:[-\s]+siz(?:e|ed)|ly[-\s]+sized)?|comparable|peer)\b/i) ||
@@ -491,8 +504,7 @@ export function buildNibrsComparableAgencyClearanceQuery(
    */
   candidateSource?: PeerCandidateSource
 ): DeterministicNibrsQuery | null {
-  if (!/\b(?:clearance|clearances|cleared|solve[ds]?)\b/i.test(question) ||
-      !/\b(?:similar(?:[-\s]+siz(?:e|ed)|ly[-\s]+sized)?|comparable|peer)\s+(?:agencies|departments)|\bagencies\s+(?:of\s+)?(?:similar|comparable)\s+size\b/i.test(question)) return null;
+  if (!asksComparableAgencyClearance(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
   if (!contract || contract.metric.offenseCodes.length === 0 || !resolutionPlan) return null;
   const targets = resolutionPlan.places.filter((place) => place.status === "resolved" && place.kind === "city_police");
@@ -510,7 +522,9 @@ export function buildNibrsComparableAgencyClearanceQuery(
   const subject: PeerCandidate = {
     ori: reference.ori,
     agency: target.label.replace(/,\s*[A-Z]{2}$/, ""),
-    state: /,\s*([A-Z]{2})$/.exec(target.label)?.[1] ?? "",
+    // AGENCY+RANK batch: a department label ("San Francisco Police Department") has no ", CA" suffix; the resolved
+    // place carries its state, so the disclosure never reads "Department,  (808,000)".
+    state: /,\s*([A-Z]{2})$/.exec(target.label)?.[1] ?? target.state ?? "",
     population: Number(reference.population),
   };
   const source: PeerCandidateSource = candidateSource
@@ -524,23 +538,28 @@ export function buildNibrsComparableAgencyClearanceQuery(
   if (candidates.length === 0) return null;
   const selection = selectPopulationPeers(subject, candidates, peerCount);
   if (selection.peers.length === 0) return null;
+  // AGENCY+RANK batch: literal identities are projected with `AS`, never through a CTE column list. The structural
+  // proof traces an `AS` literal as supplied by the query; the column-list form left `place_label` untraceable, so
+  // every plan from this builder was refused and the request fell through to model-written peer SQL (GC-115). For the
+  // same reason no CTE is declared `AS MATERIALIZED`: the lineage reader stops at that header and every later CTE
+  // becomes an unknown table. The uncorrelated EXISTS probe is evaluated once either way.
   const peerRows = selection.peers
-    .map((p) => `(${sqlString(p.ori ?? "")}, ${sqlString(`${p.agency}, ${p.state}`)})`)
-    .join(", ");
+    .map((p) => `SELECT ${sqlString(p.ori ?? "")} AS ori, ${sqlString(`${p.agency}, ${p.state}`)} AS place_label`)
+    .join("\n  UNION ALL\n  ");
 
   const codes = contract.metric.offenseCodes.map(sqlString).join(", ");
   const targetRows = targetYears.map((item) =>
-    `(${item.year}, ${sqlString(item.ori)}, ${Number(item.population)})`
-  ).join(",\n    ");
+    `SELECT ${item.year} AS year, ${sqlString(item.ori)} AS ori, ${Number(item.population)} AS population`
+  ).join("\n  UNION ALL\n  ");
   const methodBreakdown = asksClearanceMethodBreakdown(question);
   const sql = `WITH
-target_years(year, ori, population) AS (
-  VALUES ${targetRows}
+target_years AS (
+  ${targetRows}
 ),
-peer_selected(ori, agency_label) AS (
-  VALUES ${peerRows}
+peer_selected AS (
+  ${peerRows}
 ),
-target_data AS MATERIALIZED (
+target_data AS (
   SELECT 1 AS available
   FROM target_years ty
   CROSS JOIN summary_clearance_type target_probe INDEXED BY idx_sct_ori_year
@@ -549,16 +568,16 @@ target_data AS MATERIALIZED (
     AND target_probe.ucr_offense_code IN (${codes})
   LIMIT 1
 ),
-peer_candidates AS MATERIALIZED (
-  SELECT ps.ori, ps.agency_label
+peer_candidates AS (
+  SELECT ps.ori AS ori, ps.place_label AS place_label
   FROM peer_selected ps
   WHERE EXISTS (SELECT 1 FROM target_data)
 ),
-selected_agencies(place_label, ori, effective_year) AS (
-  SELECT ${sqlString(target.label)}, ty.ori, ty.year FROM target_years ty
+selected_agencies AS (
+  SELECT ${sqlString(target.label)} AS place_label, ty.ori AS ori, ty.year AS effective_year FROM target_years ty
   WHERE EXISTS (SELECT 1 FROM target_data)
   UNION ALL
-  SELECT pc.agency_label, pc.ori, NULL FROM peer_candidates pc
+  SELECT pc.place_label AS place_label, pc.ori AS ori, NULL AS effective_year FROM peer_candidates pc
 ),
 clearances AS (
   SELECT sct.year, sa.place_label, sa.ori,
@@ -597,7 +616,7 @@ LIMIT 1000`;
     yAxis: methodBreakdown ? "arrest_rate_pct,exceptional_rate_pct" : "clearance_rate_pct",
     xAxisLabel: "Year",
     yAxisLabel: "Clearance rate (%)",
-    guardrail: "deterministic-nibrs-comparable-agency-clearance",
+    guardrail: "deterministic-nibrs-comparable-agency-clearance",   // literal: the taxonomy enumerates families by it (= PEER_COMPARISON_GUARDRAIL)
   };
 }
 
