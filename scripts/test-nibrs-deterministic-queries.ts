@@ -15,6 +15,8 @@ import {
 } from "../lib/nibrs-deterministic-queries.js";
 import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard.js";
 import { resolvePeerCountFollowup } from "../lib/peer-count-followup.js";
+import { comparableAgencySubjectCheck, subjectRowCountFrom } from "../lib/nibrs-deterministic-queries.js";
+import { planNibrsQuery } from "../lib/nibrs-query-planner.js";
 import { buildQueryContract } from "../lib/query-contract.js";
 import { alignTitleYearRange, applyResultDisclosures } from "../lib/result-disclosure.js";
 import { genericResultState } from "../lib/result-state-adapters.js";
@@ -166,6 +168,76 @@ import { normalizeConsolidatedDisplayRows } from "../lib/agency-consolidations.j
     assert.equal(f?.peerCount, n, turn);
     assert.equal(f?.refinedQuestion, gc116Prior.replace("against 3 agencies", `against ${n} agencies`), turn);
   }
+
+  // Subject-data check before peer selection (release-g P1; Codex :37036). Same resolved subject, period and codes as the
+  // peer builder; the check reads the clearance summary (real in-memory table here) or an injected count.
+  const plan115b = resolveNibrsPlaces(peerDb, gc115);
+  const realCount = subjectRowCountFrom(peerDb);   // the production statement, on the fixture database
+  assert.deepEqual(comparableAgencySubjectCheck(gc115, plan115b, realCount), { kind: "present" }, "subject rows present -> plan proceeds");
+  peerDb.prepare("DELETE FROM summary_clearance_type WHERE ori = 'CA0380100'").run();
+  const absent = comparableAgencySubjectCheck(gc115, plan115b, realCount);
+  assert.equal(absent?.kind, "absent", "no subject rows (read succeeded) -> confirmed absence");
+  assert.equal(absent && "explanation" in absent ? absent.explanation : "",
+    "No rape clearance records were found for San Francisco Police Department in the available NIBRS source for 2021–2025; a comparison with agencies of similar size cannot be calculated. Peers are not shown because a comparison without the requested agency would be misleading.");
+  // Genuine zero: a row whose total is 0 is data, not absence.
+  peerDb.prepare("INSERT INTO summary_clearance_type VALUES ('CA0380100', 2023, '11A', 0, 0, 0)").run();
+  assert.deepEqual(comparableAgencySubjectCheck(gc115, plan115b, realCount), { kind: "present" }, "a zero-total row is a genuine zero, not absence");
+  // Unreadable: a failed read is never reported as absence or zero.
+  const unreadable = comparableAgencySubjectCheck(gc115, plan115b, () => { throw new Error("SQLITE_BUSY (test)"); });
+  assert.equal(unreadable?.kind, "unreadable");
+  assert.match(unreadable && "explanation" in unreadable ? unreadable.explanation : "", /^I couldn't check whether San Francisco Police Department has rape clearance records for 2021–2025.*not a finding that the records are missing or zero\.$/);
+  // The injected count receives exactly the subject's ORIs, period and offense codes.
+  let seen: unknown = null;
+  comparableAgencySubjectCheck(gc115, plan115b, (q) => { seen = q; return 1; });
+  assert.deepEqual(seen, { pairs: [2021, 2022, 2023, 2024, 2025].map((year) => ({ ori: "CA0380100", year })), codes: ["11A", "11B", "11C"] },
+    "the count is asked for exactly the eligible subject-year pairs");
+
+  // Correction r1 (Codex :37200, F1): availability on the comparison's EXACT eligible pairs. Codex's reproduction:
+  // period 2021-2022, the subject resolved with a positive population only in 2022, and records only in 2021.
+  const f1Db = new Database(":memory:");
+  f1Db.exec(`CREATE TABLE summary_clearance_type (ori TEXT, year INTEGER, ucr_offense_code TEXT, total_offenses INTEGER, cleared_by_arrest INTEGER, cleared_exceptional INTEGER);
+    CREATE INDEX idx_sct_ori_year ON summary_clearance_type(ori, year);
+    INSERT INTO summary_clearance_type VALUES ('CA0380100', 2021, '11A', 40, 10, 2);`);
+  const f1Count = subjectRowCountFrom(f1Db);
+  const f1Q = "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size from 2021 to 2022";
+  const f1Plan = (pop2021: number | null) => ({
+    question: "", startYear: 2021, endYear: 2022, hasStateComparison: false, elapsedMs: 0,
+    places: [{ contractIndex: 0, requestedName: "San Francisco", label: "San Francisco Police Department", state: "CA", kind: "city_police" as const,
+      status: "resolved" as const, confidence: "high" as const, reason: "test",
+      oriYears: [{ year: 2021, ori: "CA0380100", population: pop2021 as number }, { year: 2022, ori: "CA0380100", population: 808000 }],
+      oriRanges: [{ ori: "CA0380100", startYear: 2021, endYear: 2022 }] }],
+  });
+  for (const pop2021 of [0, null]) {
+    const r = comparableAgencySubjectCheck(f1Q, f1Plan(pop2021) as never, f1Count);
+    assert.equal(r?.kind, "ineligible", `records only in a year without a usable population (${pop2021}) are not 'present'`);
+    assert.equal(r && "explanation" in r ? r.explanation : "",
+      "San Francisco Police Department has rape clearance records in the available NIBRS source only for 2021, and that year has no population figure for the agency, which the comparison with agencies of similar size needs. The year that does have one (2022) has no rape clearance records, so no comparison is shown and peers are not selected.");
+    const planned = planNibrsQuery(f1Q, f1Plan(pop2021) as never, { allowDeterministic: true, subjectRowCount: f1Count });
+    assert.equal(planned.kind, "unavailable", "declined before the peer builder runs");
+  }
+  // ...the same records on an eligible year are 'present'; none anywhere is 'absent'; a failing broader read is 'unreadable'.
+  f1Db.exec("INSERT INTO summary_clearance_type VALUES ('CA0380100', 2022, '11B', 0, 0, 0)");
+  assert.deepEqual(comparableAgencySubjectCheck(f1Q, f1Plan(null) as never, f1Count), { kind: "present" }, "an eligible-year row (even a zero total) is present");
+  f1Db.exec("DELETE FROM summary_clearance_type");
+  assert.equal(comparableAgencySubjectCheck(f1Q, f1Plan(null) as never, f1Count)?.kind, "absent");
+  let calls = 0;
+  const failSecond: typeof f1Count = (q) => { calls += 1; if (calls > 1) throw new Error("timeout (test)"); return 0; };
+  assert.equal(comparableAgencySubjectCheck(f1Q, f1Plan(null) as never, failSecond)?.kind, "unreadable", "a failure on the broader read is not reported as absence");
+  // No eligible pair at all (no positive population in the period): not this check's call; the existing decline applies.
+  assert.equal(comparableAgencySubjectCheck(f1Q, { ...f1Plan(null), places: [{ ...f1Plan(null).places[0], oriYears: [{ year: 2021, ori: "CA0380100", population: null }, { year: 2022, ori: "CA0380100", population: 0 }] }] } as never, f1Count), null);
+  // Not this family / not a single resolved subject: no check (other routes unchanged).
+  assert.equal(comparableAgencySubjectCheck("Rape clearance rate for San Francisco from 2021 to 2024", plan115b, realCount), null);
+  assert.equal(comparableAgencySubjectCheck(gc115, null, realCount), null);
+  // The planner declines with the specific reason BEFORE the peer builder; present data still reaches the builder.
+  const declined = planNibrsQuery(gc115, plan115b, { allowDeterministic: true, subjectRowCount: () => 0 });
+  assert.equal(declined.kind, "unavailable");
+  assert.match(declined.kind === "unavailable" ? declined.explanation : "", /^No rape clearance records were found for San Francisco Police Department/);
+  const failed = planNibrsQuery(gc115, plan115b, { allowDeterministic: true, subjectRowCount: () => { throw new Error("timeout (test)"); } });
+  assert.match(failed.kind === "unavailable" ? failed.explanation : "", /^I couldn't check whether/);
+  // The count-only follow-up carries the same subject, so it gets the same specific decline.
+  const f116 = resolvePeerCountFollowup(gc116, [{ role: "user", content: gc116Prior }], "nibrs")!;
+  const declined116 = planNibrsQuery(f116.refinedQuestion, resolveNibrsPlaces(peerDb, f116.refinedQuestion), { allowDeterministic: true, subjectRowCount: () => 0 });
+  assert.match(declined116.kind === "unavailable" ? declined116.explanation : "", /^No rape clearance records were found for San Francisco Police Department/);
 }
 
 {

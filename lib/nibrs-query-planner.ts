@@ -5,6 +5,8 @@ import {
   buildNibrsAnnualClearanceQuery,
   buildNibrsClearanceTypeBreakdownQuery,
   buildNibrsComparableAgencyClearanceQuery,
+  comparableAgencySubjectCheck,
+  type SubjectRowCount,
   buildNibrsDomesticViolenceAggravatedAssaultShareQuery,
   buildNibrsLocalCityOffenseCountQuery,
   buildNibrsLocalDemographicQuery,
@@ -52,6 +54,8 @@ export function planNibrsQuery(
     juvenileIncidentRollupAvailable?: boolean;
     /** Injected rather than imported: the facts module probes the databases at import time. */
     dataCutoff?: SourceCutoff | null;
+    /** Injected in tests; production reads the clearance summary (comparableAgencySubjectCheck). */
+    subjectRowCount?: SubjectRowCount;
   } = { allowDeterministic: true }
 ): NibrsQueryPlan {
   const blockingPlace = resolutionPlan?.places.find((place) =>
@@ -106,6 +110,14 @@ export function planNibrsQuery(
     return cityRanking.kind === "deterministic"
       ? { kind: "deterministic", query: cityRanking.query }
       : { kind: "unavailable", title: cityRanking.title, explanation: cityRanking.explanation };
+  }
+
+  // Subject-data check BEFORE peer selection (lib/nibrs-deterministic-queries.ts comparableAgencySubjectCheck): a named
+  // agency with no clearance rows, or an unreadable check, is declined here with its own specific reason, delivered
+  // verbatim by the route's existing unavailable exit. Present data falls through to the peer builder unchanged.
+  const subjectCheck = comparableAgencySubjectCheck(question, resolutionPlan, options.subjectRowCount);
+  if (subjectCheck && subjectCheck.kind !== "present") {
+    return { kind: "unavailable", title: subjectCheck.title, explanation: subjectCheck.explanation };
   }
 
   const query =
