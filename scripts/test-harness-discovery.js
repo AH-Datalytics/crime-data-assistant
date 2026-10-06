@@ -180,6 +180,44 @@ check("no network-optional or quarantined file appears in the tier manifest", ()
   }
 });
 
+check("platform-specific/linux_required_ci is accepted, and only as that pair", () => {
+  const sample = registry.entries.find((e) => e.kind === "platform-specific");
+  assert.ok(sample, "no platform-specific entry; this control would be vacuous");
+  const opts = { repo: REPO, discovered, manifestScripts: manifest.entries.map((e) => e.script) };
+  assert.deepEqual(validateExclusions({ entries: [sample] }, opts), []);
+  const wrongCode = validateExclusions({ entries: [{ ...sample, reason_code: "not_a_test" }] }, opts);
+  assert.ok(wrongCode.some((p) => /not valid for kind platform-specific/.test(p)),
+    `platform-specific accepted a foreign reason_code; problems were: ${wrongCode.join(" | ")}`);
+  const wrongKind = validateExclusions({ entries: [{ ...sample, kind: "helper" }] }, opts);
+  assert.ok(wrongKind.some((p) => /not valid for kind helper/.test(p)),
+    `linux_required_ci was accepted under kind helper; problems were: ${wrongKind.join(" | ")}`);
+});
+
+check("every platform-specific test is run by name in the Linux release workflow, as root", () => {
+  /**
+   * A platform-specific exclusion is only honest if the other platform really runs the file. The
+   * workflow's root unittest command (the `sudo` line and its continuation lines) must name each
+   * module, and the step must not be allowed to fail quietly.
+   */
+  const fs = require("node:fs");
+  const workflow = fs.readFileSync(path.join(REPO, ".github", "workflows", "linux-release-build.yml"), "utf8")
+    .replace(/\r\n/g, "\n");
+  const lines = workflow.split("\n");
+  const start = lines.findIndex((l) => /^\s*sudo -E env "PATH=\$PATH" python -m unittest/.test(l));
+  assert.ok(start >= 0, "no root `python -m unittest` command in linux-release-build.yml");
+  let command = "";
+  for (let i = start; i < lines.length; i += 1) {
+    command += " " + lines[i].trim();
+    if (!lines[i].trimEnd().endsWith("\\")) break;
+  }
+  assert.ok(!/continue-on-error/.test(workflow), "a step in linux-release-build.yml may fail quietly");
+  for (const entry of registry.entries.filter((e) => e.kind === "platform-specific")) {
+    const moduleName = path.basename(entry.path).replace(/\.py$/, "");
+    assert.ok(new RegExp(`\\b${moduleName}\\b`).test(command),
+      `${entry.path} is excluded as linux_required_ci but the Linux root command does not run ${moduleName}`);
+  }
+});
+
 /* ------------------------------------------------------------------ the partition */
 
 check("no discovered file is UNRESOLVED -- nothing is silently invisible", () => {

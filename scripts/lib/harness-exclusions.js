@@ -33,6 +33,11 @@ const EXCLUSIONS_PATH = path.join(REPO, "scripts", "fixtures", "harness-exclusio
  * are supplied here so the set is genuinely closed rather than closed-for-three-kinds -- an
  * "e.g." list would have let any string through for the other three. Adding a code is a deliberate
  * edit to this table, which is the point.
+ *
+ * `platform-specific` is the one kind whose files ARE required tests. They are outside this chain only
+ * because the chain runs on Windows and they need Linux (flock, /proc, process groups); the required
+ * `linux release build` workflow (.github/workflows/linux-release-build.yml) runs them instead, which
+ * test-harness-discovery.js checks by name. The Windows tally never claims to have executed them.
  */
 const REASON_CODES = {
   diagnostic: ["no_success_criterion", "external_unversioned_input", "writes_report"],
@@ -41,6 +46,7 @@ const REASON_CODES = {
   helper: ["not_a_test", "shared_fixture_only"],
   obsolete: ["superseded", "dead_code"],
   quarantined: ["currently_failing", "stale_expectation", "pending_product_decision"],
+  "platform-specific": ["linux_required_ci"],
 };
 
 const KINDS = Object.keys(REASON_CODES);

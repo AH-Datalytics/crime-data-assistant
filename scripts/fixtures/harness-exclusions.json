@@ -35,6 +35,41 @@
       "detail": "A genuine offline correctness test -- 15 sessions, 71 steps of multi-turn routing over lib/tab-suggest -- that is RED today, and is quarantined rather than registered, deleted, or quietly edited. Three failures with the hate-crime flag on, two with it off. One is a demonstrably stale expectation: `hate crimes in New York City since 2019` expects nibrs, from before hate_crime was routable, and it disappears when the flag is off, which is what proves it is the flag. The other two are flag-independent -- a Baltimore/DC chart comparison and a rape-clearance share, both classified as follow-ups where the test expects a fresh route -- and deciding whether the router or the follow-up semantics is wrong is a product judgement. Registering it as-is would turn the suite red inside an accounting increment; deleting it would discard 68 passing steps; editing the expectations would answer the product question by fiat.",
       "owner": "harness/accounting increment",
       "follow_up": "Bounded decision increment: rule on the two flag-independent follow-up disagreements (Baltimore/DC chart comparison, rape-clearance share) -- router defect or stale follow-up semantics -- then correct the one stale hate_crime expectation and register this file as Tier F, removing this entry. Blocked on the product judgement, not on harness work."
+    },
+    {
+      "path": "scripts/test_build_nibrs_rollups_maintenance.py",
+      "kind": "platform-specific",
+      "reason_code": "linux_required_ci",
+      "detail": "Required offline test of the builder's --maintenance-window exception (receipt, lock owner and phase, PM2 state, settled source, fixed production paths). It needs Linux: fcntl.flock for the maintenance lock and the server's shell stubs. Run by .github/workflows/linux-release-build.yml, step \"Server-maintenance tests\", as the runner user and as root, under Python 3.12.3.",
+      "owner": "server-side rollups (IB-1)"
+    },
+    {
+      "path": "scripts/test_nibrs_auto_update_ib1.py",
+      "kind": "platform-specific",
+      "reason_code": "linux_required_ci",
+      "detail": "Required offline test of the updater's population stage, settlement and publication, server-rollup stage, attempt-process disposition and restart decision. It needs Linux: fcntl.flock, /proc process scans and process sessions. Run as root by .github/workflows/linux-release-build.yml, step \"Server-maintenance tests\", under Python 3.12.3.",
+      "owner": "server-side rollups (IB-1)"
+    },
+    {
+      "path": "scripts/test_nibrs_maintenance_lock.py",
+      "kind": "platform-specific",
+      "reason_code": "linux_required_ci",
+      "detail": "Required offline test of the maintenance lock and its descriptor inheritance. It needs Linux: fcntl.flock and inherited file descriptors. Run by .github/workflows/linux-release-build.yml, step \"Server-maintenance tests\", as the runner user and as root, under Python 3.12.3.",
+      "owner": "server-side rollups (IB-1)"
+    },
+    {
+      "path": "scripts/test_nibrs_server_rollup_refresh.py",
+      "kind": "platform-specific",
+      "reason_code": "linux_required_ci",
+      "detail": "Required offline end-to-end test of the server rollup refresh: bounded and reaped build and verification workers, /proc source-holder scans, activation, containment and retention. It needs Linux and root: process groups, nice/ionice/prlimit and other processes' /proc/<pid>/fd. Run as root by .github/workflows/linux-release-build.yml, step \"Server-maintenance tests\", under Python 3.12.3.",
+      "owner": "server-side rollups (IB-1)"
+    },
+    {
+      "path": "scripts/test_nibrs_source_state.py",
+      "kind": "platform-specific",
+      "reason_code": "linux_required_ci",
+      "detail": "Required offline test of the Python port of the source-state predicate (journals, symlinked alias, device:inode, generation marker, updater scan). It needs Linux: symlink and permission semantics and /proc. Run by .github/workflows/linux-release-build.yml, step \"Server-maintenance tests\", as the runner user (permission cases) and as root, under Python 3.12.3.",
+      "owner": "server-side rollups (IB-1)"
     }
   ]
 }
