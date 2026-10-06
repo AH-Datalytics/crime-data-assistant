@@ -107,4 +107,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Writes nibrs.db, so it takes the same maintenance lock as the monthly updater and the
+    # server-side rollup refresh instead of racing them.
+    import nibrs_maintenance_lock
+    with nibrs_maintenance_lock.held("build-nibrs-state-coverage"):
+        main()
