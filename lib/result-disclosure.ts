@@ -8,6 +8,7 @@ import { guardEmptyStateWording, type ResultStateDecision } from "./result-state
 import { applyAgencyDisclosure, describeMultiAgency, countyRequestFromQuestion, multiAgencyRequestFromQuestion, agencyLabelsInRows, agencyRepresented, sqlEstablishesCountyScope, asksMultipleNamedAgencies, distinctAgencyIdentities, type ResolvedAgency } from "./agency-disclosure";
 import { classifyClearanceReferent, MIXED_REFERENT_NOTE } from "./clearance-referent";
 import { establishIdentities, checkRequestedMembers, mayAssertAgencyFacts, type AnswerEvidence } from "./answer-evidence";
+import { withChicagoAssaultComparability } from "./chicago-assault-comparability";
 import { monthCoverageFromRows, describeMonths, monthPointsFromRows, returnedMonthRange, applyPeriodDisclosure, partialPeriodIsRelevant } from "./period-comparison";
 import {
   explicitStateSubstateMismatch,
@@ -1050,6 +1051,7 @@ export function applyResultDisclosures(opts: {
   explanation = alignThroughYearWithRows(explanation, opts.question, opts.rows);
 
   explanation = withReturnedCoverage(explanation, opts.question, opts.sql, opts.rows);
+  explanation = withChicagoAssaultComparability(explanation, opts.sql, opts.rows);
 
   const period = yearRangeFromRows(opts.rows) || yearRangeFromSql(opts.sql);
   if (period) {

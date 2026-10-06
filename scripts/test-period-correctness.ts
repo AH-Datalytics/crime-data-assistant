@@ -34,6 +34,7 @@ import {
   describeWindowRelations,
 } from "../lib/period-comparison";
 import { applyResultDisclosures, withReturnedCoverage } from "../lib/result-disclosure";
+import { withChicagoAssaultComparability } from "../lib/chicago-assault-comparability";
 import { genericResultState } from "../lib/result-state-adapters";
 import { buildQueryContract } from "../lib/query-contract";
 import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard";
@@ -295,6 +296,7 @@ console.log("7 - the route emits the presentation result, not the raw one");
     withholdUnverifiedChange,
     // COVER batch: the first answer also states returned coverage (the real helper, not a stub).
     withReturnedCoverage,
+    withChicagoAssaultComparability,
     deliveryQuestion: turns.find((t) => t.turn.caseId === "GC-041" && t.turn.turnIndex === 0)!.turn.question,
     governFactualNarrative: (t: string) => t,
     initialState: genericResultState({ sql: sql41, rows: rows41 }),

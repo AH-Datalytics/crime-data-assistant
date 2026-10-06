@@ -51,6 +51,7 @@ import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { resolveClearanceRefinement } from "@/lib/clearance-refinement-followup";
+import { resolvePeerCountFollowup } from "@/lib/peer-count-followup";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { boundedModelResponseJson, shouldRetryUnexplainedNoSql, UNEXPLAINED_NO_SQL_RETRY_PROMPT } from "@/lib/no-sql-retry";
@@ -160,7 +161,7 @@ import {
   sanitizeChartConfigTitle,
 } from "@/lib/scaffold-helpers";
 import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
-import { nibrsWithheldRateNote, withoutNibrsMetadata } from "@/lib/nibrs-deterministic-queries";
+import { nibrsWithheldRateNote, withoutNibrsMetadata, PEER_COMPARISON_GUARDRAIL, PEER_COMPARISON_REFUSED_TEXT } from "@/lib/nibrs-deterministic-queries";
 
 function modelLabel(modelId: string): string {
   if (modelId.includes("sonnet")) return "sonnet-4.5";
@@ -527,9 +528,15 @@ export async function POST(req: NextRequest) {
     // names a clearance reason and settles nothing of its own. An explicit new request is left
     // exactly as the reader wrote it.
     const clearanceRefinement = resolveClearanceRefinement(question, body?.history, "nibrs");
+    // AGENCY+RANK batch (GC-116): a turn that only changes the population-peer count carries the prior peer request
+    // forward with the new count, so the owned plan answers it. Only where the turn would otherwise reach the planner.
+    const peerFollowup = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement
+      ? null
+      : resolvePeerCountFollowup(question, body?.history, "nibrs");
+    const plannerQuestion = peerFollowup?.refinedQuestion ?? question;
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.reconstructedQuestion
-      : (clearanceRefinement?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
+      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
     // Proof reasons about the reconstructed question from here on; a bare follow-up
     // fragment names no entities and would silently lose its completeness check.
     proofQuestion = guardrailQuestion;
@@ -641,7 +648,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse));
     }
 
-    const nibrsPlan = planNibrsQuery(question, deterministicResolution, {
+    const nibrsPlan = planNibrsQuery(plannerQuestion, deterministicResolution, {
       allowDeterministic: (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? false : !followupTransform,
       juvenileIncidentRollupAvailable: juvenileIncidentRollupAvailable(),
       // Injected so the city-ranking builder can resolve "latest year with data" without the
@@ -704,7 +711,7 @@ export async function POST(req: NextRequest) {
       ? rankingValidationContract(question, "nibrs")
       : null;
     const nibrsPlanRefusal = nibrsPlan.kind === "deterministic"
-      ? deterministicPlanRefusal({ question, source: "nibrs", sql: nibrsPlan.query.sql, contract: nibrsPlanContract })
+      ? deterministicPlanRefusal({ question: plannerQuestion, source: "nibrs", sql: nibrsPlan.query.sql, contract: nibrsPlanContract })
       : null;
     if (nibrsPlanRefusal) {
       console.log(`[structural] NIBRS deterministic plan refused: ${nibrsPlanRefusal.ruleIds.join(", ")}`);
@@ -719,21 +726,29 @@ export async function POST(req: NextRequest) {
      * SQL restores exactly the eligibility-versus-measure confusion the constructed family removed.
      * The comment on that branch described the fall-through plainly, and it applied here too.
      */
-    if (nibrsPlan.kind === "deterministic"
-        && nibrsPlan.query.guardrail === NIBRS_CITY_RANKING_GUARDRAIL
-        && nibrsPlanRefusal) {
+    // AGENCY+RANK batch: the population-peer comparison follows the same rule (Decision 16). Its refused plan used to
+    // fall through to model-written SQL, which chose "peers" by clearance rate and repeated one agency per year (GC-115).
+    // One exit serves both owned families; only the family, tags and owned sentence differ.
+    const refusedOwnedFamily = nibrsPlan.kind === "deterministic" && nibrsPlanRefusal
+      ? nibrsPlan.query.guardrail === NIBRS_CITY_RANKING_GUARDRAIL
+        ? { family: NIBRS_CITY_RANKING_GUARDRAIL, tag: "city-ranking-structural-refusal", log: "city_ranking_structural_refusal", text: CITY_RANKING_FAILURE_TEXT, title: "Ranking Not Available" }
+        : nibrsPlan.query.guardrail === PEER_COMPARISON_GUARDRAIL
+          ? { family: PEER_COMPARISON_GUARDRAIL, tag: "peer-comparison-structural-refusal", log: "peer_comparison_structural_refusal", text: PEER_COMPARISON_REFUSED_TEXT, title: "Peer comparison unavailable" }
+          : null
+      : null;
+    if (nibrsPlan.kind === "deterministic" && refusedOwnedFamily) {
       const refusedMs = Date.now() - routeStart;
-      const refusedGuardrails = [NIBRS_CITY_RANKING_GUARDRAIL, "city-ranking-structural-refusal"];
+      const refusedGuardrails = [refusedOwnedFamily.family, refusedOwnedFamily.tag];
       const refusedProof = finalizeExit({
         outcome: OUTCOMES.sql_shape_rejected, sql: nibrsPlan.query.sql,
-        planFamily: NIBRS_CITY_RANKING_GUARDRAIL, guardrails: refusedGuardrails,
-        narrative: CITY_RANKING_FAILURE_TEXT,
+        planFamily: refusedOwnedFamily.family, guardrails: refusedGuardrails,
+        narrative: refusedOwnedFamily.text,
       });
-      writeNibrsLog(question, nibrsPlan.query.sql, 0, "city_ranking_structural_refusal", refusedMs,
-        CITY_RANKING_FAILURE_TEXT, refusedGuardrails, "deterministic", sessionId, null, null, refusedProof);
+      writeNibrsLog(question, nibrsPlan.query.sql, 0, refusedOwnedFamily.log, refusedMs,
+        refusedOwnedFamily.text, refusedGuardrails, "deterministic", sessionId, null, null, refusedProof);
       return jsonResp(emitFactualPayload(refusedProof, {
         success: true, question, sql: null as unknown as string,
-        explanation: CITY_RANKING_FAILURE_TEXT, title: "Ranking Not Available",
+        explanation: refusedOwnedFamily.text, title: refusedOwnedFamily.title,
         columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null,
         executionTimeMs: refusedMs,
       } as QueryResponse));
@@ -861,7 +876,7 @@ export async function POST(req: NextRequest) {
         }
 
         const executionMs = Date.now() - deterministicStart;
-        const deterministicExplanation = rows.length === 0 && deterministicQuery.guardrail === "deterministic-nibrs-comparable-agency-clearance"
+        const deterministicExplanation = rows.length === 0 && deterministicQuery.guardrail === PEER_COMPARISON_GUARDRAIL
           ? `No NIBRS clearance data was found for ${deterministicResolution?.places[0]?.label ?? "the named target agency"} in the requested period. A peer comparison was not returned because showing peer agencies without the requested target would be misleading.`
           : rankingPartialLead ?? deterministicQuery.explanation;
         // R1 (Decision 16): compare the SELECTED peer membership with the evidence that
@@ -885,15 +900,17 @@ export async function POST(req: NextRequest) {
         }
         let explanation = applyResultDisclosures({
           explanation: deterministicExplanation + membershipNote,
-          question,
+          // AGENCY+RANK batch: a carried-forward peer follow-up keeps the request's own caveats (GC-116); otherwise
+          // plannerQuestion is the question itself.
+          question: plannerQuestion,
           sql: deterministicQuery.sql,
           rows,
           tab: "nibrs",
           resultState: genericResultState({ sql: deterministicQuery.sql, rows }),
         });
         const deterministicFiredGuardrails = deterministicGuardrails(deterministicQuery.guardrail);
-        const deterministicGrainCheck = validateGrain(question, rows, deterministicQuery.sql);
-        if (missingLowerBoundNote(question, deterministicQuery.sql, rows)) deterministicFiredGuardrails.push("lower-bound-disclosed");
+        const deterministicGrainCheck = validateGrain(plannerQuestion, rows, deterministicQuery.sql);
+        if (missingLowerBoundNote(plannerQuestion, deterministicQuery.sql, rows)) deterministicFiredGuardrails.push("lower-bound-disclosed");
         if (!deterministicGrainCheck.ok && deterministicGrainCheck.message) {
           explanation = deterministicGrainCheck.message;
           deterministicFiredGuardrails.push("grain-mismatch");

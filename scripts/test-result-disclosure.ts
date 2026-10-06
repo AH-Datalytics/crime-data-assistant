@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { alignTitleYearRange, applyResultDisclosures, laggedAnnualRecentYearNote, missingLowerBoundNote, trimTrailingEmptyYearRows, withReturnedCoverage } from "../lib/result-disclosure";
 import { historicalViolentComposite, nationalOnlyWhere, returnedViolentComposite } from "../lib/historical-composite-measure";
 import { historicalRapeSeries, RAPE_DEFINITION_CAVEAT, returnedRapeCountColumn } from "../lib/historical-rape-series";
+import { CHICAGO_ASSAULT_COMPARABILITY_NOTE, chicagoAssaultComparabilityNote, chicagoAssaultNarrative, withChicagoAssaultComparability } from "../lib/chicago-assault-comparability";
 import { returnedCoverageNote } from "../lib/returned-coverage";
 
 {
@@ -852,6 +853,77 @@ import { returnedCoverageNote } from "../lib/returned-coverage";
   // And through the recognizer: the counterexample SQL is not owned (the normal answer path keeps it).
   assert.equal(returnedViolentComposite("SELECT year, murder + rape + robbery + aggravated_assault AS violent FROM historical_state_national WHERE NOT (state = 'United States') AND state = 'Alabama' AND year BETWEEN 2020 AND 2024 ORDER BY year", cols), null);
   assert.equal(returnedViolentComposite("SELECT year, murder + rape + robbery + aggravated_assault AS violent FROM historical_state_national WHERE (state = 'United States' OR state = 'Alabama') AND year BETWEEN 2020 AND 2024 ORDER BY year", cols), null);
+}
+
+// ---- AGENCY+RANK batch: the GC-085 helper names a place only when it is proven (the deferred residual, :36036) ----
+{
+  const rows = Array.from({ length: 15 }, (_, i) => ({ year: 2010 + i, rape: 100 }));
+  const placeOf = (sql: string, r: Record<string, unknown>[] = rows) => historicalRapeSeries("historical", sql, r)?.narrative.replace(/ by year[\s\S]*/, "");
+  assert.equal(placeOf("SELECT year, rape FROM historical_state_national WHERE state = 'United States' AND year BETWEEN 2010 AND 2024 ORDER BY year"), "FBI UCR rape offenses nationally");
+  assert.equal(placeOf("SELECT n.year, n.rape FROM historical_state_national n WHERE n.state = 'United States' AND n.year >= 2010"), "FBI UCR rape offenses nationally");
+  // A NOT, an OR or an inequality is never taken as the geography.
+  for (const where of ["NOT state = 'United States' AND year BETWEEN 2010 AND 2024", "state <> 'United States' AND year BETWEEN 2010 AND 2024",
+    "(state = 'United States' OR state = 'Texas') AND year BETWEEN 2010 AND 2024", "state = 'United States' OR year > 2000"]) {
+    assert.equal(placeOf(`SELECT year, rape FROM historical_state_national WHERE ${where} ORDER BY year`), "FBI UCR rape offenses for the requested places", where);
+  }
+  // One proven state equality is still named (the generalized proof), and the same NOT/OR forms are not.
+  assert.equal(placeOf("SELECT year, rape FROM historical_state_national WHERE state = 'Alabama' AND year BETWEEN 2010 AND 2024"), "FBI UCR rape offenses in Alabama");
+  assert.equal(placeOf("SELECT year, rape FROM historical_state_national WHERE NOT state = 'Alabama' AND year BETWEEN 2010 AND 2024"), "FBI UCR rape offenses for the requested places");
+  assert.equal(placeOf("SELECT year, rape FROM historical_state_national WHERE state = 'Alabama' AND state = 'Texas'"), "FBI UCR rape offenses for the requested places");
+  // An agency query never reads a 'United States' literal as national.
+  assert.equal(placeOf("SELECT hac.year, hac.rape FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.state = 'United States'"), "FBI UCR rape offenses for the requested places");
+  // A place the returned rows establish is still named.
+  assert.equal(placeOf("SELECT year, state, rape FROM historical_state_national WHERE NOT state = 'Texas'", rows.map((r) => ({ ...r, state: "Ohio" }))), "FBI UCR rape offenses in Ohio");
+  assert.equal(placeOf("SELECT year, state, rape FROM historical_state_national WHERE state IN ('United States')", rows.map((r) => ({ ...r, state: "United States" }))), "FBI UCR rape offenses nationally");
+}
+
+// ---- AGENCY+RANK batch: the Chicago aggravated-assault comparability limitation (scoped; no figure changes) ----
+{
+  const note = CHICAGO_ASSAULT_COMPARABILITY_NOTE;
+  const series = (from: number, to: number, extra: Record<string, unknown> = {}) =>
+    Array.from({ length: to - from + 1 }, (_, i) => ({ year: from + i, assault: 1000, ...extra }));
+  const CHI = "SELECT year, assault FROM historical_agency_crime WHERE ori = 'ILCPD0000' AND year BETWEEN 2020 AND 2025 ORDER BY year";
+  assert.equal(chicagoAssaultComparabilityNote(CHI, series(2020, 2025)), note, "Chicago assault across 2024/2025");
+  assert.equal(chicagoAssaultComparabilityNote(
+    "SELECT hac.year, SUM(CASE WHEN ha.agency = 'Chicago' THEN hac.violent END) AS chicago_violent, SUM(CASE WHEN ha.agency = 'Houston' THEN hac.violent END) AS houston_violent FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE hac.year >= 2020 GROUP BY hac.year",
+    series(2020, 2025).map((r) => ({ year: r.year, chicago_violent: 1, houston_violent: 2 }))), note, "a violent total that includes assault, pivoted by city");
+  assert.equal(chicagoAssaultComparabilityNote(
+    "SELECT ha.agency, ha.state, SUM(CASE WHEN hac.year = 2025 THEN hac.assault END) - SUM(CASE WHEN hac.year = 2024 THEN hac.assault END) AS change FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE hac.year IN (2024, 2025) GROUP BY ha.ori ORDER BY change LIMIT 10",
+    [{ agency: "Chicago", state: "il", change: -13581 }, { agency: "Houston", state: "tx", change: 10 }]), note, "a ranking whose rows include Chicago, years from the SQL");
+  // Not applicable: one side of the boundary, another measure, another agency, another source.
+  assert.equal(chicagoAssaultComparabilityNote(CHI.replace("2025", "2024"), series(2020, 2024)), null);
+  assert.equal(chicagoAssaultComparabilityNote(CHI, series(2025, 2025)), null);
+  assert.equal(chicagoAssaultComparabilityNote(CHI.replace("assault", "murder"), series(2020, 2025).map((r) => ({ year: r.year, murder: 1 }))), null);
+  assert.equal(chicagoAssaultComparabilityNote(CHI.replace("ILCPD0000", "NY0303000"), series(2020, 2025)), null);
+  assert.equal(chicagoAssaultComparabilityNote("SELECT year, assault FROM historical_agency_crime WHERE ori = 'IL0160300' AND year BETWEEN 2020 AND 2025", series(2020, 2025, { agency: "Chicago Heights" })), null);
+  assert.equal(chicagoAssaultComparabilityNote("SELECT year, aggravated_assault FROM historical_state_national WHERE state = 'Illinois' AND year BETWEEN 2020 AND 2025", series(2020, 2025)), null);
+  assert.equal(chicagoAssaultComparabilityNote("SELECT year, SUM(offense_count) AS assaults FROM summary_city_monthly WHERE ori = 'ILCPD0000' AND ucr_offense_code = '13A' GROUP BY year", series(2020, 2025)), null);
+  // Exactly once, and nothing else in the text or rows changes.
+  const once = withChicagoAssaultComparability("Chicago aggravated assaults by year.", CHI, series(2020, 2025));
+  assert.equal(withChicagoAssaultComparability(once, CHI, series(2020, 2025)), once);
+  assert.equal(once.split(note).length - 1, 1);
+  assert.ok(once.startsWith("Chicago aggravated assaults by year."));
+  assert.equal(/\b(?:\d{1,3},\d{3}|\d{4,})\b/.test(note.replace(/\b20\d{2}\b/g, "")), false, "the note states no replacement count");
+
+  // Correction F2 (Codex :36392): the owned narrative replaces the model's interpretation on this boundary.
+  const CHANGE = "SELECT hac.year, hac.assault FROM historical_agency_crime hac JOIN historical_agency ha ON ha.ori = hac.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hac.year IN (2024, 2025) ORDER BY hac.year";
+  const owned = chicagoAssaultNarrative("historical", CHANGE, [{ year: 2024, assault: 16084 }, { year: 2025, assault: 2503 }]);
+  assert.equal(owned, `Historical library aggravated assault figures for Chicago, 2024–2025, as stored. ${note}`);
+  assert.equal(/\b(?:reduc|decreas|declin|drop|fell|fall|increas|rose|rise|\d+(?:\.\d+)?%)/i.test(owned!.replace(note, "")), false, "no direction or percentage");
+  assert.equal(chicagoAssaultNarrative("historical", CHI.replace("assault", "violent"), series(2019, 2025).map((r) => ({ year: r.year, violent: 1 })))?.startsWith("Historical library violent crime figures for Chicago, 2019–2025, as stored."), true);
+  assert.equal(chicagoAssaultNarrative("historical",
+    "SELECT hac.year, SUM(CASE WHEN hac.ori = 'ILCPD0000' THEN hac.assault END) AS chicago_assault, SUM(CASE WHEN hac.ori = 'TXHPD0000' THEN hac.assault END) AS houston_assault FROM historical_agency_crime hac WHERE hac.ori IN ('ILCPD0000', 'TXHPD0000') AND hac.year BETWEEN 2019 AND 2025 GROUP BY hac.year",
+    series(2019, 2025).map((r) => ({ year: r.year, chicago_assault: 1, houston_assault: 2 })))?.startsWith("Historical library aggravated assault figures for the requested agencies, including Chicago, 2019–2025, as stored."), true);
+  // The refined/retry versions pass the owned narrative through applyResultDisclosures: the limitation must survive
+  // intact and once (the shared "through YEAR" alignment once rewrote "through 2024" into an altered duplicate).
+  const refined = applyResultDisclosures({ explanation: owned!, question: "How did aggravated assaults in Chicago change from 2024 to 2025?", sql: CHANGE,
+    rows: [{ year: 2024, assault: 16084 }, { year: 2025, assault: 2503 }], tab: "historical" });
+  assert.equal(refined.split(note).length - 1, 1, refined);
+  assert.equal(refined.split("come from different source files").length - 1, 1, refined);
+  // Not applicable: other tabs, measures, one side of the boundary.
+  assert.equal(chicagoAssaultNarrative("current", CHANGE, [{ year: 2024, assault: 1 }, { year: 2025, assault: 1 }]), null);
+  assert.equal(chicagoAssaultNarrative("historical", CHI.replace("assault", "murder"), series(2020, 2025).map((r) => ({ year: r.year, murder: 1 }))), null);
+  assert.equal(chicagoAssaultNarrative("historical", CHI.replace("2025", "2024"), series(2020, 2024)), null);
 }
 
 console.log("result disclosure tests passed");

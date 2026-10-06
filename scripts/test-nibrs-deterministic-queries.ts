@@ -14,6 +14,7 @@ import {
   withoutNibrsMetadata,
 } from "../lib/nibrs-deterministic-queries.js";
 import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard.js";
+import { resolvePeerCountFollowup } from "../lib/peer-count-followup.js";
 import { buildQueryContract } from "../lib/query-contract.js";
 import { alignTitleYearRange, applyResultDisclosures } from "../lib/result-disclosure.js";
 import { genericResultState } from "../lib/result-state-adapters.js";
@@ -77,6 +78,94 @@ import { normalizeConsolidatedDisplayRows } from "../lib/agency-consolidations.j
   assert.match(query.sql, /exceptional_rate_pct/);
   assert.equal(validateAndSanitize(query.sql).valid, true);
   assert.equal(query.guardrail, "deterministic-nibrs-comparable-agency-clearance");
+}
+
+{
+  // AGENCY+RANK batch (GC-115/116). The plan above was REFUSED by the structural proof in production: a CTE column
+  // list and `AS MATERIALIZED` left `place_label` untraceable, so the request fell through to model SQL that chose
+  // "peers" by clearance rate. The saved questions now resolve, pass the proof and return the subject plus exactly
+  // the requested population peers, each once per year.
+  const peerDb = new Database(":memory:");
+  peerDb.exec(`
+    CREATE TABLE agencies (ori TEXT, year INTEGER, state TEXT, city TEXT, agency_type TEXT, population INTEGER, pop_group TEXT, covered_flag TEXT, agency_indicator TEXT);
+    CREATE INDEX idx_agencies_state_city_year ON agencies(state, city, year);
+    CREATE TABLE summary_clearance_type (ori TEXT, year INTEGER, ucr_offense_code TEXT, total_offenses INTEGER, cleared_by_arrest INTEGER, cleared_exceptional INTEGER);
+    CREATE INDEX idx_sct_ori_year ON summary_clearance_type(ori, year);
+  `);
+  const peers: [string, string, string, number][] = [
+    ["CA0380100", "SAN FRANCISCO", "CA", 808000], ["WA0170100", "SEATTLE", "WA", 750000], ["CO0160100", "DENVER", "CO", 715000],
+    ["TN0190100", "NASHVILLE", "TN", 690000], ["MD0300100", "BALTIMORE", "MD", 585000], ["TX2270100", "AUSTIN", "TX", 975000],
+    ["OH0250100", "COLUMBUS", "OH", 905000], ["NC0600100", "CHARLOTTE", "NC", 880000], ["IN0490100", "INDIANAPOLIS", "IN", 885000],
+    ["TX0570100", "FORT WORTH", "TX", 950000], ["OK0550100", "OKLAHOMA CITY", "OK", 690500],
+  ];
+  const insAgency = peerDb.prepare("INSERT INTO agencies VALUES (?, ?, ?, ?, 'City', ?, '1B', 'N', 'E')");
+  const insSct = peerDb.prepare("INSERT INTO summary_clearance_type VALUES (?, ?, '11A', 100, 30, 5)");
+  for (const [ori, city, st, pop] of peers) for (let y = 2021; y <= 2025; y++) { insAgency.run(ori, y, st, city, pop); insSct.run(ori, y); }
+  const source = (q: { year: number; excludeOri: string; population: number }) =>
+    (peerDb.prepare("SELECT ori, city AS agency, state, population FROM agencies WHERE year = ? AND ori <> ? ORDER BY ABS(population - ?), ori LIMIT 100")
+      .all(q.year, q.excludeOri, q.population) as { ori: string; agency: string; state: string; population: number }[]);
+
+  const gc115 = "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.";
+  const plan115 = resolveNibrsPlaces(peerDb, gc115);
+  assert.equal(plan115?.places[0]?.kind, "city_police", "the named department resolves to its city police agency");
+  assert.equal(plan115?.places[0]?.status, "resolved");
+  const q115 = buildNibrsComparableAgencyClearanceQuery(gc115, plan115, source);
+  assert.ok(q115, "GC-115 is built by the owned plan");
+  assert.doesNotMatch(q115.sql, /MATERIALIZED/i);
+  assert.equal(deterministicPlanRefusal({ question: gc115, source: "nibrs", sql: q115.sql }), null, "GC-115's owned plan passes the structural proof");
+  const rows115 = peerDb.prepare(q115.sql).all() as Record<string, unknown>[];
+  assert.equal(new Set(rows115.map((r) => r.ori)).size, 4, "GC-115 returns the subject and exactly 3 peers");
+  assert.equal(new Set(rows115.map((r) => `${r.ori}|${r.year}`)).size, rows115.length, "one row per agency per year, never one per population value");
+  assert.match(q115.explanation, /selected on population alone/);
+  assert.match(q115.explanation, /populations from [\d,]+ to [\d,]+/, "the population band is stated");
+  assert.match(q115.explanation, /Seattle, WA/i);
+  assert.match(q115.explanation, /closest in size to San Francisco Police Department, CA \(808,000\)/, "the subject is named with its state");
+
+  const gc116Prior = gc115;
+  const gc116 = "Add San Francisco PD to the table and increase to 8 comparable agencies.";
+  const followup = resolvePeerCountFollowup(gc116, [{ role: "user", content: gc116Prior }, { role: "assistant", content: "..." }], "nibrs");
+  assert.ok(followup, "GC-116 carries the prior peer request forward");
+  assert.equal(followup.peerCount, 8);
+  assert.equal(followup.refinedQuestion, "Compare the rape clearance rate for the San Francisco Police Department against 8 agencies of similar size.");
+  const q116 = buildNibrsComparableAgencyClearanceQuery(followup.refinedQuestion, resolveNibrsPlaces(peerDb, followup.refinedQuestion), source);
+  assert.ok(q116);
+  assert.equal(deterministicPlanRefusal({ question: followup.refinedQuestion, source: "nibrs", sql: q116.sql }), null);
+  const rows116 = peerDb.prepare(q116.sql).all() as Record<string, unknown>[];
+  assert.equal(new Set(rows116.map((r) => r.ori)).size, 9, "GC-116 returns the subject and exactly 8 peers");
+
+  // Controls: the follow-up is narrow.
+  assert.equal(resolvePeerCountFollowup(gc116, [{ role: "user", content: "Rape clearance rate for San Francisco 2021 to 2024" }], "nibrs"), null,
+    "no carry-forward when the prior request was not a peer comparison");
+  assert.equal(resolvePeerCountFollowup("Increase to 8 comparable agencies and show robbery instead.", [{ role: "user", content: gc116Prior }], "nibrs"), null,
+    "a turn that changes the offense is not a count-only follow-up");
+  assert.equal(resolvePeerCountFollowup("Add Oakland PD and increase to 8 comparable agencies.", [{ role: "user", content: gc116Prior }], "nibrs"), null,
+    "a different named agency is not the prior subject");
+  assert.equal(resolvePeerCountFollowup(gc116, [{ role: "user", content: gc116Prior }], "historical"), null, "NIBRS only");
+  assert.equal(resolvePeerCountFollowup("Increase to 8 comparable agencies for 2019 to 2020.", [{ role: "user", content: gc116Prior }], "nibrs"), null,
+    "a turn naming its own period is not a count-only follow-up");
+  // Correction F1 (Codex :36392): positively count-only. Codex's counterexamples keep their added meaning (left as written).
+  const prior = [{ role: "user", content: gc116Prior }];
+  for (const turn of [
+    "Increase to 8 comparable agencies, but use only agencies that reported all 12 months.",
+    "Increase to 8 comparable agencies, but exclude the original agency from the table.",
+    "Add San Francisco, TX to the table and increase to 8 comparable agencies.",
+    "Increase to 8 comparable agencies, but show counts instead of clearance rates.",
+    "Increase to 8 comparable agencies in California.",
+    "Increase to 8 comparable agencies with more than 500,000 residents.",
+    "Add San Francisco, Texas to the table and increase to 8 comparable agencies.",
+    "Add San Francisco Sheriff to the table and increase to 8 comparable agencies.",
+  ]) assert.equal(resolvePeerCountFollowup(turn, prior, "nibrs"), null, turn);
+  // ...while the genuine count-only forms, including the same subject with its own state, are carried forward.
+  for (const [turn, n] of [
+    ["Increase to 8 comparable agencies.", 8], ["increase it to 6 comparable agencies", 6], ["Use 5 comparable agencies instead.", 5],
+    ["Add San Francisco Police Department back to the table and increase to 8 comparable agencies.", 8],
+    ["Add San Francisco, CA to the table and increase to 8 comparable agencies.", 8],
+    ["Increase to 7 comparable agencies and add San Francisco PD too.", 7],
+  ] as [string, number][]) {
+    const f = resolvePeerCountFollowup(turn, prior, "nibrs");
+    assert.equal(f?.peerCount, n, turn);
+    assert.equal(f?.refinedQuestion, gc116Prior.replace("against 3 agencies", `against ${n} agencies`), turn);
+  }
 }
 
 {
