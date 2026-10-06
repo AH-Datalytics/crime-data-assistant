@@ -12,6 +12,10 @@
 # Linux x64 with the pinned Node 24.14.0 image; that the CSS pipeline does not crash; that
 # TypeScript passes; that every route registers; and that the Tailwind source boundary holds
 # against the emitted stylesheets (scripts/test-tailwind-source-boundary.ts --emitted).
+# Separately, the offline server-maintenance suites (maintenance lock, source-state predicate,
+# builder maintenance gate, server rollup refresh, updater stages) pass on Linux under the server's
+# Python 3.12.3, both as the runner user (permission cases) and as root (/proc scans, process
+# groups); these need flock, /proc and process groups, which the Windows harness cannot exercise.
 #
 # WHAT IT DOES NOT CERTIFY. Runtime correctness against real databases (none are present here);
 # the deploy script's other guards (release-allowed-extras, blob binding, LFS pointers, the NIBRS
@@ -176,6 +180,32 @@ jobs:
           echo "DOCKER_EXIT=$?" | tee -a evidence/build.log
           set -e
           sed 's/\x1b\[[0-9;]*m//g' evidence/build.log | tail -40
+
+      # Independent of the build verdict below: a failure here fails the job on its own and is
+      # recorded in its own log, never in build.log.
+      - name: Set up the server's Python for the maintenance tests
+        if: always()
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.3"
+
+      - name: Server-maintenance tests — offline, as the runner user and as root
+        if: always()
+        working-directory: repo/scripts
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          L="$GITHUB_WORKSPACE/evidence/maintenance-tests.log"
+          v="$(python --version 2>&1)"; echo "python: $v ($(command -v python))" | tee "$L"
+          test "$v" = "Python 3.12.3" || { echo "ASSERT_FAIL=python_version" | tee -a "$L"; exit 2; }
+          echo "--- as uid $(id -u): permission cases that root bypasses ---" | tee -a "$L"
+          python -m unittest -v test_nibrs_source_state test_nibrs_maintenance_lock \
+            test_build_nibrs_rollups_maintenance 2>&1 | tee -a "$L"
+          echo "--- as root: /proc holder scans, process groups, lock and PM2 lifecycle ---" | tee -a "$L"
+          sudo -E env "PATH=$PATH" python -m unittest -v test_nibrs_source_state test_nibrs_maintenance_lock \
+            test_build_nibrs_rollups_maintenance test_nibrs_server_rollup_refresh test_nibrs_auto_update_ib1 2>&1 | tee -a "$L"
+          { echo "## server-maintenance tests"; echo; echo '```'; grep -E '^(Ran|OK|FAILED)' "$L"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Classify and summarise — exactly one verdict
         if: always()

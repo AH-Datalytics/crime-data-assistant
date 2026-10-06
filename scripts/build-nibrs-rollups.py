@@ -58,6 +58,86 @@ def refuse_production() -> None:
         raise SystemExit(f"Refusing heavy rollup build on production web host {hostname!r}")
 
 
+RECEIPT_MAX_AGE_SECONDS = 1800
+
+
+def accept_maintenance_receipt(receipt_path: Path, source: Path, output: Path, generation: str) -> dict:
+    """The narrow exception to the production refusal, used only by the server-side refresh.
+
+    The receipt is written by the refresh after it has proved its preconditions. This boundary does
+    not rely on that: it consumes the receipt (single use) and then independently re-establishes
+    the live conditions that make a production build acceptable --
+      * the fixed production source and output directory (nibrs_maintenance_policy; environment
+        overrides exist only off the production host, for fixture tests),
+      * the maintenance lock is held, its owner is the receipt's attempt and pid, and the owner is
+        at a phase where a build may run ("published" by the updater, or "operator"),
+      * PM2 reports the app stopped,
+      * the source is settled at exactly the receipt's generation and identity (same predicate as
+        the refresh: journals, marker, device:inode).
+    It prevents stale or mistaken invocation; it is not a security boundary against root.
+    """
+    import json
+
+    import nibrs_maintenance_lock as lock
+    import nibrs_maintenance_policy as policy
+    import nibrs_source_state as srcstate
+
+    used = Path(str(receipt_path) + ".used")
+    try:
+        os.rename(receipt_path, used)
+    except FileNotFoundError:
+        raise SystemExit(f"Maintenance receipt is absent or already used: {receipt_path}") from None
+    try:
+        receipt = json.loads(used.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"Maintenance receipt unreadable: {exc}") from None
+
+    def refuse(reason: str) -> None:
+        raise SystemExit(f"Maintenance receipt refused: {reason}")
+
+    paths = policy.maintenance_paths()
+    if receipt.get("mode") not in {"activate", "no-activate"}:
+        refuse(f"mode {receipt.get('mode')!r}")
+    created = receipt.get("created_epoch")
+    if not isinstance(created, (int, float)) or not (0 <= time.time() - created <= RECEIPT_MAX_AGE_SECONDS):
+        refuse("stale or undated")
+    if receipt.get("source_alias") != paths.source_alias:
+        refuse(f"source alias {receipt.get('source_alias')!r} is not the policy source {paths.source_alias!r}")
+    allowed = Path(os.path.realpath(paths.shared))
+    if output.parent != allowed or str(output) != receipt.get("output"):
+        refuse(f"output {output} is not the receipt's output inside {allowed}")
+    if not (output.name.startswith("nibrs_rollups-") and output.name.endswith(".db.building")):
+        refuse(f"output name {output.name}")
+
+    try:
+        owner = lock.read_owner()
+        held = lock.lock_is_held_elsewhere()
+    except lock.LockError as exc:
+        refuse(str(exc))
+    if not held:
+        refuse("maintenance lock is not held")
+    if owner.get("attempt_id") != receipt.get("attempt_id") or owner.get("pid") != receipt.get("owner_pid"):
+        refuse("lock owner does not match the receipt")
+    if owner.get("phase") != receipt.get("owner_phase") or owner.get("phase") not in policy.BUILD_PHASES:
+        refuse(f"lock owner phase {owner.get('phase')!r} does not allow a build")
+
+    state, detail = policy.pm2_state(paths.pm2_bin, paths.app)
+    if state != "stopped":
+        refuse(f"app state {state} ({detail})")
+
+    try:
+        live = srcstate.inspect(paths.source_alias, paths.shared, os.path.join(paths.shared, "nibrs_rollups.db"))
+    except srcstate.SourceStateError as exc:
+        refuse(f"source not settled: {exc}")
+    if str(source) != live.canonical or live.canonical != receipt.get("source_canonical"):
+        refuse(f"source {source} is not the settled canonical source {live.canonical}")
+    if live.identity != receipt.get("source_identity"):
+        refuse("source device:inode changed")
+    if not (generation == live.generation == receipt.get("generation")):
+        refuse("generation does not match the settled source or the receipt")
+    return receipt
+
+
 def table_columns(conn: sqlite3.Connection, schema: str, table: str) -> dict[str, str]:
     rows = conn.execute(f"PRAGMA {quote_ident(schema)}.table_info({quote_ident(table)})").fetchall()
     return {row[1]: (row[2] or "TEXT") for row in rows}
@@ -171,11 +251,22 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path, help="New compact SQLite database")
     parser.add_argument("--skip-verify", action="store_true", help="Skip exact total verification (not for release builds)")
     parser.add_argument("--source-generation", help="Generation token captured from the production source marker")
+    parser.add_argument("--maintenance-window", action="store_true",
+                        help="Server-side refresh only: build on the production host inside the owned, app-stopped window")
+    parser.add_argument("--receipt", type=Path, help="Precondition receipt written by nibrs_server_rollup_refresh.py")
     args = parser.parse_args()
 
-    refuse_production()
     source = args.source.resolve()
     output = args.output.resolve()
+    if args.maintenance_window:
+        if args.skip_verify:
+            raise SystemExit("--skip-verify is not allowed in a maintenance-window build")
+        if not args.receipt or not args.source_generation:
+            raise SystemExit("--maintenance-window requires --receipt and --source-generation")
+        receipt = accept_maintenance_receipt(args.receipt.resolve(), source, output, args.source_generation.strip())
+    else:
+        receipt = None
+        refuse_production()
     generation_output = Path(str(output) + ".generation")
     if not source.is_file() or source.stat().st_size == 0:
         raise SystemExit(f"Source database is missing or empty: {source}")
@@ -200,6 +291,10 @@ def main() -> int:
         conn.execute("ATTACH DATABASE ? AS source", (source_uri(source),))
         columns = validate_specs(conn)
         create_metadata(conn, source, source_generation)
+        if receipt is not None:
+            # Bind the artifact to the attempt and mode that built it; the refresh checks this.
+            conn.executemany("INSERT INTO rollup_metadata (key, value) VALUES (?, ?)",
+                             [("maintenance_attempt", receipt["attempt_id"]), ("maintenance_mode", receipt["mode"])])
         conn.commit()
         for spec in SPECS:
             for level in ("state", "national"):

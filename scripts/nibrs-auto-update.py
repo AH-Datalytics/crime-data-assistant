@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -25,6 +26,8 @@ if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 from build_nibrs_consistent_reporters import rebuild_consistent_reporters
+import nibrs_maintenance_lock
+import nibrs_maintenance_policy
 
 
 def retry(fn, *args, max_retries=3, delay=30, label="operation", **kwargs):
@@ -454,6 +457,11 @@ def parse_args():
         "--verify-raw-duplicates",
         action="store_true",
         help="Read-only maintenance mode: verify exact duplicate rows in raw NIBRS segment tables. Requires --years.",
+    )
+    parser.add_argument(
+        "--server-rollups",
+        action="store_true",
+        help="After a changed import, build and activate compact rollups on this server before restarting the app (default off; also NIBRS_SERVER_ROLLUPS=1).",
     )
     parser.add_argument(
         "--dedupe-raw-years",
@@ -1756,12 +1764,337 @@ def refresh_planner_statistics(conn):
 # Main
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Population extension (Part A), settlement, server rollups, restart
+# ---------------------------------------------------------------------------
+
+# The extension runs from the deployed release, whose node_modules were built for the Node that
+# runs the app. It used to run from /opt/nibrs/repo, whose better-sqlite3 was compiled for an older
+# Node ABI; the 2026-09-16 run failed there with NODE_MODULE_VERSION 127 vs 137, after
+# ensure_state_population had already dropped the current-year rows.
+APP_DIR = os.environ.get("APP_DIR", "/opt/nibrs/current")
+NODE_BIN = os.environ.get("NIBRS_NODE_BIN", "/usr/bin/node")
+SERVER_ROLLUP_TIMEOUT = int(os.environ.get("NIBRS_SERVER_ROLLUP_OUTER_TIMEOUT", "8100"))
+STATUS_FILE = os.environ.get("NIBRS_UPDATE_STATUS_FILE", "/opt/nibrs/update-status.json")
+
+
+def population_extension_preflight(app_dir=APP_DIR, node=NODE_BIN):
+    """Prove the extension bundle can run BEFORE the table is dropped. Returns (ok, detail)."""
+    app = os.path.realpath(app_dir)
+    script = os.path.join(app, "scripts", "extend-state-population-cde.ts")
+    tsx = os.path.join(app, "node_modules", "tsx", "dist", "cli.mjs")
+    native = os.path.join(app, "node_modules", "better-sqlite3")
+    for path in (script, tsx, native):
+        if not os.path.exists(path):
+            return False, f"missing {path}"
+    probe = ("const D=require(process.argv[1]);const d=new D(':memory:');d.close();"
+             "console.log('abi='+process.versions.modules)")
+    try:
+        done = subprocess.run([node, "-e", probe, native], cwd=app, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, f"native module probe could not run: {e}"
+    if done.returncode != 0:
+        return False, (done.stderr.strip() or done.stdout.strip())[-500:]
+    return True, f"{app} {done.stdout.strip()}"
+
+
+def run_population_extension(db_path=DB_PATH, app_dir=APP_DIR, node=NODE_BIN):
+    app = os.path.realpath(app_dir)
+    cmd = [node, os.path.join(app, "node_modules", "tsx", "dist", "cli.mjs"),
+           "scripts/extend-state-population-cde.ts", f"--db={db_path}", "--apply"]
+    try:
+        done = subprocess.run(cmd, cwd=app, capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log(f"  POPULATION EXTENSION FAILED: {e}")
+        return "failed"
+    log(done.stdout.strip() or done.stderr.strip())
+    if done.returncode != 0:
+        log(f"  POPULATION EXTENSION FAILED (exit {done.returncode}); current-year state_population rows are missing")
+        return "failed"
+    return "ok"
+
+
+# Every state, DC and the national row (US): the abbreviations of lib/state-population.ts
+# STATE_NAME_TO_ABBR, which the extension writes (asserted equal by the tests).
+POPULATION_KEYS = frozenset(
+    "AK AL AR AZ CA CO CT DC DE FL GA HI IA ID IL IN KS KY LA MA MD ME MI MN MO MS MT NC ND NE "
+    "NH NJ NM NV NY OH OK OR PA RI SC SD TN TX US UT VA VT WA WI WV WY".split())
+
+
+def verify_state_population(conn, current_year=None):
+    """The extension exits 0 even when it fetched only 90% of the rows it expected, so exit 0 is not
+    proof. The population step is ok only if every key has a positive CDE-sourced population for
+    every year the extension is meant to fill: the year after the last historical row through the
+    current year (the same range the extension computes). Returns (status, detail)."""
+    current_year = current_year or datetime.now().year
+    try:
+        last = conn.execute(
+            "SELECT MAX(year) FROM state_population WHERE source NOT LIKE 'FBI CDE API%'").fetchone()[0]
+        if last is None:
+            return "partial", "no historical state_population rows"
+        have = set(conn.execute(
+            "SELECT state, year FROM state_population "
+            "WHERE year > ? AND source LIKE 'FBI CDE API%' AND population > 0", (last,)).fetchall())
+    except sqlite3.Error as e:
+        return "unverified", f"state_population could not be read: {e}"
+    years = list(range(last + 1, current_year + 1))
+    missing = [(state, year) for year in years for state in sorted(POPULATION_KEYS) if (state, year) not in have]
+    if missing:
+        return "partial", f"{len(missing)} of {len(years) * len(POPULATION_KEYS)} state-years missing, e.g. {missing[:5]}"
+    return "ok", f"{len(years)} year(s) {years} x {len(POPULATION_KEYS)} keys"
+
+
+def population_stage(conn, ensure=None, preflight=None, extend=None, verify=None):
+    """ensure_state_population drops and rebuilds the table, so it only runs once the extension
+    that restores the current-year rows is proven runnable. A failed preflight leaves the table
+    untouched; a failed extension is reported as a failed population step, never a warning; a
+    clean exit is ok only if the expected rows are actually in the table."""
+    ensure = ensure or (lambda c: retry(ensure_state_population, c, label="state population"))
+    preflight = preflight or population_extension_preflight
+    extend = extend or run_population_extension
+    verify = verify or verify_state_population
+    ok, detail = preflight()
+    log(f"  Population extension preflight: {'OK' if ok else 'FAILED'} {detail}")
+    if not ok:
+        log("  POPULATION STEP NOT RUN: state_population left unchanged")
+        return "failed-preflight"
+    ensure(conn)
+    log("Extending state_population with FBI CDE current-year figures...")
+    status = extend()
+    if status != "ok":
+        return status
+    status, detail = verify(conn)
+    log(f"  Population result: {status} ({detail})")
+    return status
+
+
+def checkpoint_settled(row, db_path=DB_PATH):
+    """A TRUNCATE checkpoint is settled only if it was not busy, every WAL frame was
+    checkpointed, and no journal remains beside the resolved database. An inspection error is
+    not settlement."""
+    if not row or len(row) < 3 or row[0] != 0 or row[1] != row[2]:
+        return False, f"checkpoint result {row}"
+    resolved = os.path.realpath(db_path)
+    for suffix in ("-wal", "-journal"):
+        path = resolved + suffix
+        try:
+            size = os.stat(path).st_size
+        except FileNotFoundError:
+            continue
+        except OSError as e:
+            return False, f"cannot inspect {path}: {e}"
+        if size:
+            return False, f"{path} is {size} bytes"
+    return True, f"checkpoint {tuple(row)}"
+
+
+def server_rollups_enabled(args):
+    return bool(getattr(args, "server_rollups", False)) or os.environ.get("NIBRS_SERVER_ROLLUPS") == "1"
+
+
+def run_server_rollups(holding, settled, refresh_script=None, timeout=SERVER_ROLLUP_TIMEOUT,
+                       app_dir=APP_DIR, status_dir="/opt/nibrs"):
+    """Run the server-side rollup refresh under this process's maintenance lock. It never undoes
+    the import: its outcome is reported separately and the caller always restarts the app."""
+    if not settled:
+        log("  Server rollups SKIPPED: source not settled after checkpoint")
+        return "skipped-unsettled"
+    refresh_script = refresh_script or os.path.join(SCRIPT_DIR, "nibrs_server_rollup_refresh.py")
+    status_file = os.path.join(status_dir, f"server-rollup-status-{holding.attempt_id}.json")
+    try:
+        marker = Path(SOURCE_GENERATION_PATH).read_text(encoding="utf-8").strip()
+    except OSError:
+        marker = ""
+    holding.set_phase("published", generation=marker)
+    env = dict(os.environ)
+    env[nibrs_maintenance_lock.FD_ENV] = str(holding.fd)
+    env[nibrs_maintenance_lock.ATTEMPT_ENV] = holding.attempt_id
+    cmd = [sys.executable, refresh_script, "--mode", "activate", "--inherit-lock",
+           "--attempt-id", holding.attempt_id, "--status-file", status_file, "--app-dir", app_dir]
+    log("Building and activating rollups on this server (app still stopped)...")
+    proc = subprocess.Popen(cmd, env=env, pass_fds=(holding.fd,), start_new_session=True)
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        log(f"  Server rollup refresh exceeded {timeout}s; stopping its process group")
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(proc.pid, sig)
+            except ProcessLookupError:
+                break
+            try:
+                proc.wait(timeout=30)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        proc.wait()
+        # The builder and verifier run in their own sessions, so killing the refresh's group does
+        # not reach them; finish_changed_run disposes of them before deciding on a restart.
+        return "timeout"
+    try:
+        with open(status_file, encoding="utf-8") as fh:
+            status = json.load(fh).get("rollup_status", "unknown")
+    except (OSError, ValueError):
+        status = f"no-status-exit-{proc.returncode}"
+    log(f"  Server rollups: {status} (exit {proc.returncode})")
+    return status
+
+
+class _ScanFailed(Exception):
+    pass
+
+
+def kill_attempt_processes(attempt_id, proc_root="/proc", grace=30):
+    """SIGKILL every live process whose command line contains this attempt id (the builder's
+    receipt path and the verifier's --attempt both carry it). Returns the survivors, or None when
+    the process table could not be inspected: a process that exits during the scan is gone, but
+    "could not look" is never "nothing running"."""
+    needle = attempt_id.encode()
+
+    def matching():
+        found = []
+        try:
+            entries = os.listdir(proc_root)
+        except OSError as e:
+            raise _ScanFailed(f"{proc_root}: {e}") from None
+        for entry in entries:
+            if not entry.isdigit() or int(entry) == os.getpid():
+                continue
+            try:
+                with open(os.path.join(proc_root, entry, "cmdline"), "rb") as fh:
+                    cmd = fh.read()
+                with open(os.path.join(proc_root, entry, "stat")) as fh:
+                    state = fh.read().rsplit(")", 1)[1].split()[0]
+            except (FileNotFoundError, ProcessLookupError):
+                continue
+            except (OSError, IndexError) as e:
+                raise _ScanFailed(f"{proc_root}/{entry}: {e}") from None
+            if needle in cmd and state != "Z":
+                found.append(int(entry))
+        return found
+
+    try:
+        deadline = time.time() + grace
+        pids = matching()
+        while pids and time.time() < deadline:
+            for pid in pids:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            time.sleep(0.5)
+            pids = matching()
+    except _ScanFailed as e:
+        log(f"  WARNING: could not inspect processes of attempt {attempt_id}: {e}")
+        return None
+    if pids:
+        log(f"  WARNING: attempt {attempt_id} processes still running: {pids}")
+    return pids
+
+
+def restart_and_check(app="nibrs", pm2_bin="pm2", timeout=120):
+    log("Restarting nibrs app...")
+    try:
+        result = subprocess.run([pm2_bin, "restart", app], capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log(f"  pm2 restart did not complete: {e}")
+        return "restart-unknown"
+    if result.returncode != 0:
+        log(f"  pm2 restart failed: {result.stderr}")
+        return "restart-failed"
+    state, detail = nibrs_maintenance_policy.pm2_state(pm2_bin, app)
+    log(f"  App state after restart: {state} {detail}")
+    return {"running": "up", "stopped": "down"}.get(state, "health-unknown")
+
+
+def finish_changed_run(holding, settled, rollups_enabled, publish=None, run_rollups=None,
+                       killer=None, restart=None):
+    """Publication, the optional rollup stage and the restart decision after a changed import.
+
+    The generation is published only for a settled source. The rollup stage can never undo the
+    import, but the app is restarted only once every process of this attempt is proved gone: if the
+    refresh reports children it could not reap, survivors remain, or the process table cannot be
+    read, the app stays stopped and the outage is reported for an operator."""
+    publish = publish or publish_source_generation
+    run_rollups = run_rollups or run_server_rollups
+    killer = killer or kill_attempt_processes
+    restart = restart or restart_and_check
+
+    if settled:
+        try:
+            publish()
+            publication = "published"
+        except Exception as e:  # the import is complete; this must not skip the restart decision
+            publication = f"failed: {e}"
+            log(f"  Source generation publication FAILED: {e}")
+    else:
+        publication = "withheld-unsettled"
+        log("  Source generation NOT published: the source is not settled; old rollups stay fail-closed")
+
+    rollups = "disabled"
+    blocked = ""
+    if rollups_enabled:
+        try:
+            rollups = run_rollups(holding, publication == "published")
+        except Exception as e:
+            rollups = f"error: {e}"
+            log(f"  Server rollups ERROR: {e}")
+        try:
+            survivors = killer(holding.attempt_id)
+        except Exception as e:
+            log(f"  Process disposition failed: {e}")
+            survivors = None
+        if rollups == "children-remain":
+            blocked = "the refresh reported children it could not reap"
+        elif survivors is None:
+            blocked = "attempt processes could not be inspected"
+        elif survivors:
+            blocked = f"attempt processes still running: {survivors}"
+
+    if blocked:
+        log(f"OUTAGE: nibrs app NOT restarted because {blocked} (attempt {holding.attempt_id}). "
+            "Confirm by hand that no build or verification process remains, then run: pm2 restart nibrs")
+        health = "not-restarted-children-remain"
+    else:
+        health = restart()
+    return {"publication": publication, "rollups": rollups, "restart": health}
+
+
+def report_outcome(**parts):
+    """One explicit outcome line and status file. AUTO-UPDATE COMPLETE alone no longer implies
+    fresh population or fresh rollups."""
+    good = {"import": {"ok", "no-changes"}, "population": {"ok", "not-run"},
+            "publication": {"published"},
+            "rollups": {"disabled", "applied", "reconciled-active", "already-current", "not-run"},
+            "restart": {"up", "not-run"}}
+    degraded = [k for k, v in parts.items() if k in good and v not in good[k]]
+    overall = "degraded" if degraded else "ok"
+    log("OUTCOME " + " ".join(f"{k}={v}" for k, v in parts.items()) + f" overall={overall}")
+    try:
+        with open(STATUS_FILE + ".tmp", "w", encoding="utf-8") as fh:
+            json.dump({**parts, "overall": overall, "degraded": degraded,
+                       "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, fh)
+        os.replace(STATUS_FILE + ".tmp", STATUS_FILE)
+    except OSError as e:
+        log(f"  could not write {STATUS_FILE}: {e}")
+    return overall
+
+
 def main():
     log("=" * 60)
     log("NIBRS AUTO-UPDATE STARTING")
     log("=" * 60)
 
     args = parse_args()
+    attempt_id = time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + f"-{os.getpid()}"
+    try:
+        holding = nibrs_maintenance_lock.acquire(
+            "nibrs-auto-update", attempt_id,
+            wait_seconds=float(os.environ.get("NIBRS_MAINTENANCE_LOCK_WAIT", "3600")))
+    except nibrs_maintenance_lock.LockError as e:
+        log(f"ERROR: {e}")
+        sys.exit(4)
+    holding.set_phase("running")
     maintenance_modes = [
         args.rebuild_derived_years,
         args.rebuild_victim_demographics_years,
@@ -2061,6 +2394,8 @@ def main():
     if not years_to_process:
         log("No changes detected. Nothing to do.")
         publish_source_generation()
+        report_outcome(**{"import": "no-changes", "population": "not-run", "publication": "published",
+                          "rollups": "not-run", "restart": "not-run"})
         log("AUTO-UPDATE COMPLETE")
         return
 
@@ -2156,17 +2491,10 @@ def main():
     # Rebuild summary tables for affected years only
     retry(rebuild_summaries, conn, affected_years, label="rebuild summaries")
     retry(verify_summary_duplicate_keys, conn, affected_years, label="summary duplicate-key check")
-    retry(ensure_state_population, conn, label="state population")
-    # ensure_state_population drops/rebuilds from historical data (ends ~currentYear-2);
-    # extend with FBI CDE API figures so current-year rate queries keep working (F26)
-    log("Extending state_population with FBI CDE current-year figures...")
-    cde_result = subprocess.run(
-        ["npx", "tsx", "scripts/extend-state-population-cde.ts", f"--db={DB_PATH}", "--apply"],
-        cwd="/opt/nibrs/repo", capture_output=True, text=True, timeout=600,
-    )
-    log(cde_result.stdout.strip() or cde_result.stderr.strip())
-    if cde_result.returncode != 0:
-        log("  WARNING: CDE state_population extension failed; current-year rates may return empty")
+    # ensure_state_population drops/rebuilds from historical data (ends ~currentYear-2); the
+    # extension restores current-year rows from FBI CDE (F26). population_stage runs the drop only
+    # after proving the extension can run, and reports a failure as a failed step.
+    population_status = population_stage(conn)
     retry(rebuild_consistent_reporters, conn, log, label="consistent reporters")
     retry(rebuild_dv_trends, conn, label="dv trends")
     retry(ensure_performance_indexes, conn, label="performance indexes")
@@ -2183,24 +2511,21 @@ def main():
             c = conn.execute(f"SELECT COUNT(*) FROM {table} WHERE year = ?", (year,)).fetchone()[0]
             log(f"  {table} [{year}]: {c:,}")
 
-    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    checkpoint = conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
     conn.close()
-    publish_source_generation()
+    settled, settle_detail = checkpoint_settled(checkpoint)
+    log(f"  Source settled: {settled} ({settle_detail})")
 
     fsize = os.path.getsize(DB_PATH) / (1024**3)
     elapsed = time.time() - total_start
     log(f"\nDatabase: {fsize:.2f} GB")
     log(f"Total time: {elapsed:.0f}s ({elapsed/60:.1f} min)")
 
-    # Restart the app
-    log("Restarting nibrs app...")
-    result = subprocess.run(["pm2", "restart", "nibrs"], capture_output=True, text=True)
-    if result.returncode == 0:
-        log("  App restarted successfully")
-    else:
-        log(f"  pm2 restart failed: {result.stderr}")
-
+    tail = finish_changed_run(holding, settled, server_rollups_enabled(args))
+    overall = report_outcome(**{"import": "ok", "population": population_status, **tail})
     log("AUTO-UPDATE COMPLETE")
+    if overall != "ok":
+        sys.exit(3)
 
 
 if __name__ == '__main__':
