@@ -495,6 +495,122 @@ function requestedPeerCount(question: string): number {
   return Math.max(1, Math.min(20, match ? Number(match[1]) : 5));
 }
 
+/**
+ * Subject-data check (local repair after the release-g window; Codex :37036, :37148; correction r1 per Codex :37200).
+ * The release-g live P1 asked for San Francisco PD (CA0380100), which is in the agency directory with populations but
+ * has NO rows in the clearance summary for the checked years (audit/source-check-peer-clearance-2026-10-06). The plan
+ * still chose peers, returned no rows, and the final answer was the generic empty-state message. This establishes the
+ * SUBJECT's data BEFORE any peer is selected, and gives the reason in an owned, specific sentence that reaches final
+ * delivery unchanged.
+ *
+ * r1: availability is checked on EXACTLY the subject-year pairs the comparison can use -- the resolved ORI/year pairs
+ * inside the period with a positive population, the same filter the peer builder applies. Counting any row over the
+ * whole period said "present" for records the comparison cannot return (a year with no usable population), so peers
+ * were still selected and the answer came back empty.
+ *
+ * Outcomes (only for the request the peer builder would take: same gate, the single resolved city-police subject, the
+ * same period and offense codes):
+ *   - "present": at least one clearance-summary row on an eligible subject-year pair. A row whose total is 0 is data
+ *     (a genuine zero), so the plan proceeds and reports it as such.
+ *   - "ineligible": no row on an eligible pair, but records exist for the subject in other years of the period (years
+ *     without a usable population figure). Stated as that, with both year lists -- never as "no records".
+ *   - "absent": the reads succeeded and found no row for the subject in the period at all. Confirmed absence in this
+ *     source for this period, stated as such.
+ *   - "unreadable": a read threw (failure or timeout). Never presented as absence, ineligibility or zero.
+ * When the subject has no eligible pair at all (no positive population in the period), this returns null and the
+ * existing population-evidence decline applies, unchanged.
+ */
+export type SubjectRowCount = (q: { pairs: { ori: string; year: number }[]; codes: string[] }) => number;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- same minimal shape as peer-adapters MinimalDb
+type SubjectCountDb = { prepare: (sql: string) => { get: (...params: any[]) => unknown } };
+
+/**
+ * The production subject-row count over explicit ORI/year pairs: the same clearance summary and index the peer plan's
+ * own `target_data` probe reads (which also joins on exact ORI and year). Exported so tests run THIS statement against a
+ * fixture database rather than a re-written copy.
+ */
+export function subjectRowCountFrom(db: SubjectCountDb): SubjectRowCount {
+  return (q) => {
+    if (q.pairs.length === 0) return 0;
+    const row = db.prepare(
+      `SELECT COUNT(*) AS n FROM summary_clearance_type INDEXED BY idx_sct_ori_year
+       WHERE (${q.pairs.map(() => "(ori = ? AND year = ?)").join(" OR ")}) AND ucr_offense_code IN (${q.codes.map(() => "?").join(", ")})`
+    ).get(...q.pairs.flatMap((p) => [p.ori, p.year]), ...q.codes) as { n: number } | undefined;
+    return Number(row?.n ?? 0);
+  };
+}
+
+export type ComparableSubjectCheck =
+  | { kind: "present" }
+  | { kind: "absent" | "ineligible" | "unreadable"; title: string; explanation: string };
+
+const yearList = (ys: number[]) => {
+  const u = [...new Set(ys)].sort((a, b) => a - b);
+  return u.length <= 1 ? u.join("") : `${u.slice(0, -1).join(", ")} and ${u[u.length - 1]}`;
+};
+
+export function comparableAgencySubjectCheck(
+  question: string,
+  resolutionPlan: NibrsPlaceResolutionPlan | null | undefined,
+  rowCount?: SubjectRowCount
+): ComparableSubjectCheck | null {
+  if (!asksComparableAgencyClearance(question) || !resolutionPlan) return null;
+  const contract = buildQueryContract(question, "nibrs");
+  if (!contract || contract.metric.offenseCodes.length === 0) return null;
+  const targets = resolutionPlan.places.filter((place) => place.status === "resolved" && place.kind === "city_police");
+  if (targets.length !== 1 || resolutionPlan.places.length !== 1) return null;
+  const target = targets[0];
+  const { startYear, endYear } = resolutionPlan;
+  const inPeriod = target.oriYears.filter((item) => item.year >= startYear && item.year <= endYear);
+  // Exactly the builder's eligibility: resolved ORI/year pairs in the period with a positive population.
+  const eligible = inPeriod.filter((item) => item.population && item.population > 0).map((item) => ({ ori: item.ori, year: item.year }));
+  if (eligible.length === 0) return null;   // no usable subject year: the existing population-evidence decline applies
+  const count: SubjectRowCount = rowCount ?? ((q) => subjectRowCountFrom(getNibrsDb() as unknown as SubjectCountDb)(q));
+  const codes = contract.metric.offenseCodes;
+  const offense = contract.metric.topic.replace(/_/g, " ");
+  const period = startYear === endYear ? `${startYear}` : `${startYear}–${endYear}`;
+  const agency = target.label;
+  const unreadable = (): ComparableSubjectCheck => ({
+    kind: "unreadable",
+    title: "Peer comparison unavailable",
+    explanation: `I couldn't check whether ${agency} has ${offense} clearance records for ${period}, so no comparison is shown. ` +
+      "This is a failure to read the data, not a finding that the records are missing or zero.",
+  });
+  try {
+    if (count({ pairs: eligible, codes }) > 0) return { kind: "present" };
+  } catch {
+    return unreadable();
+  }
+  // No row on a usable pair: are there records in the period at all (any of the subject's ORIs, any year)?
+  const oris = [...new Set(inPeriod.map((item) => item.ori))];
+  const otherYears: number[] = [];
+  try {
+    for (let y = startYear; y <= endYear; y += 1) {
+      if (eligible.some((p) => p.year === y)) continue;
+      if (count({ pairs: oris.map((ori) => ({ ori, year: y })), codes }) > 0) otherYears.push(y);
+    }
+  } catch {
+    return unreadable();
+  }
+  if (otherYears.length > 0) {
+    const eligibleYears = [...new Set(eligible.map((p) => p.year))];
+    return {
+      kind: "ineligible",
+      title: "Peer comparison unavailable",
+      explanation: `${agency} has ${offense} clearance records in the available NIBRS source only for ${yearList(otherYears)}, ` +
+        `and ${otherYears.length === 1 ? "that year has" : "those years have"} no population figure for the agency, which the comparison with agencies of similar size needs. ` +
+        `${eligibleYears.length === 1 ? "The year that does have one" : "The years that do have one"} (${yearList(eligibleYears)}) ${eligibleYears.length === 1 ? "has" : "have"} no ${offense} clearance records, so no comparison is shown and peers are not selected.`,
+    };
+  }
+  return {
+    kind: "absent",
+    title: "No clearance records for this agency",
+    explanation: `No ${offense} clearance records were found for ${agency} in the available NIBRS source for ${period}; ` +
+      "a comparison with agencies of similar size cannot be calculated. Peers are not shown because a comparison without the requested agency would be misleading.",
+  };
+}
+
 export function buildNibrsComparableAgencyClearanceQuery(
   question: string,
   resolutionPlan?: NibrsPlaceResolutionPlan | null,

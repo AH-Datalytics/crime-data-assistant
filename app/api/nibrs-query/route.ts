@@ -899,7 +899,10 @@ export async function POST(req: NextRequest) {
           if (!membership.complete) membershipNote = ` ${membership.disclosure}`;
         }
         let explanation = applyResultDisclosures({
-          explanation: deterministicExplanation + membershipNote,
+          // Peer subject-check batch (Codex :37148, truthful exclusions): the membership note is established by THIS
+          // statement's rows, which the generic chokepoint cannot see, so it stripped the "returned no data" sentence and
+          // left a dangling fragment. It is appended after the chokepoint below, like the withheld-rate note.
+          explanation: deterministicExplanation,
           // AGENCY+RANK batch: a carried-forward peer follow-up keeps the request's own caveats (GC-116); otherwise
           // plannerQuestion is the question itself.
           question: plannerQuestion,
@@ -963,6 +966,11 @@ export async function POST(req: NextRequest) {
         }
         // Appended after the chokepoint and any grain replacement (as the owned clearance family does): its reasons
         // are established by evidence this statement fetched, which the generic chokepoint cannot see.
+        const peerMembershipNote = membershipNote.trim();
+        if (peerMembershipNote && !explanation.includes(peerMembershipNote)) {
+          explanation = [explanation, peerMembershipNote].filter(Boolean).join("\n\n");
+          deterministicFiredGuardrails.push("peer-membership-disclosed");
+        }
         if (withheldRateNote && !explanation.includes(withheldRateNote)) {
           explanation = [explanation, withheldRateNote].filter(Boolean).join("\n\n");
           deterministicFiredGuardrails.push("nibrs-withheld-rate-explained");
