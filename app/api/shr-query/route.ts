@@ -100,6 +100,10 @@ import { selectShrPivotMetric } from "@/lib/shr-category-pivot";
 import { genericResultState } from "@/lib/result-state-adapters";
 import { governFactualNarrative } from "@/lib/result-state";
 import { shouldAskCrimeType } from "@/lib/crime-type-clarification";
+import { accountShrRequest, shrRecognitionRefusal, shrKnownAgencyIndex, bindShrPath, shrPart, anyOf, shrCountPlanPlaceLabels, ledgerSatisfies, shrHasRowRestriction, shrNumericIntent } from "@/lib/shr-request-accounting";
+import { planShrQuestion, compileShrQuestion, executeCompiledShrQuestion, shrQuestionOutcome, observeShrCutoff, type ShrQuestionDecision } from "@/lib/shr-question-types";
+import type { Part } from "@/lib/request-accounting";
+import { periodsApplied } from "@/lib/shr-period-proof";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /**
@@ -169,6 +173,9 @@ function ambiguousKansasCityIntent(question: string): boolean {
   return /\bKansas City\b/i.test(question) &&
     !/\b(?:KCMO|KCK|Kansas City,\s*(?:MO|KS)|Kansas City,?\s+Missouri|Kansas City,?\s+Kansas)\b/i.test(question);
 }
+
+/** Request accounting (plan r2.1): no model-written statement is executed on SHR. A constant, not a toggle. */
+const SHR_MODEL_SQL_NEVER_RUNS: boolean = true;
 
 export async function POST(req: NextRequest) {
   // Measured before the outer try so the operational row in its catch can record an
@@ -291,6 +298,13 @@ export async function POST(req: NextRequest) {
     // the transform's reconstructed question so guardrails see the geography
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
     proofQuestion = guardrailQuestion;
+    // ── Request accounting (stage 1): ONE reconstruction boundary ──────────────────────────
+    // Every reconstruction of this turn's request is resolved here, before any answer planner, so
+    // the accounted request is the one actually answered: the follow-up planner's reconstruction
+    // (`guardrailQuestion`) and the shooting-scope answer ("fatal") rebuilt into its question.
+    const shootingScopeFollowup = resolveShootingScopeFollowup(question, normalizeHistoryAllSources(body?.history));
+    const shootingRequest = shootingScopeFollowup?.reconstructedQuestion ?? question;
+    const accountedQuestion = shootingScopeFollowup?.reconstructedQuestion ?? guardrailQuestion;
     // Resolve named cities for initial questions as well as follow-ups. Restricting
     // this to follow-ups let ordinary multi-year questions keep model-authored
     // agency-name predicates and bypass verified consolidation ORIs.
@@ -453,8 +467,38 @@ export async function POST(req: NextRequest) {
       }));
     }
 
+    // ── Request accounting gate (stage 1) ─────────────────────────────────────────────────
+    // No answer may quietly drop part of the question. A part the source does not record (immigration
+    // status) or that could not be interpreted ("via banana", "reported by ICE") stops the request
+    // here, naming it, before any planner can answer a broader question in its place.
+    const accountingDb = getShrDb();
+    // A follow-up no planner reconstructed carries the earlier turns' conditions (cross-turn accounting).
+    const earlierTurns = accountedQuestion === question
+      ? history.filter((m) => m.role === "user").map((m) => String(m.content ?? "")).filter((t) => t.trim() && t.trim() !== question.trim())
+      : [];
+    const requestLedger = accountShrRequest(accountedQuestion, { ...(accountingDb ? { knownAgency: shrKnownAgencyIndex(accountingDb) } : {}), earlierTurns });
+    // ONE sealed exit for every accounting decline: the recognition gate here, and each owning path's
+    // binding below (a part its plan cannot apply is a terminal limitation, never a fall-through).
+    const accountingExit = (refusal: { parts: Part[]; explanation: string }, owner: string) => {
+      const executionMs = Date.now() - start;
+      const tags = ["request-accounting", `request-accounting-owner:${owner}`, ...refusal.parts.map((p) => `request-accounting:${p.state}:${p.concept}`)];
+      const accountingProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: tags, narrative: refusal.explanation });
+      writeLog(question, null, 0, null, executionMs, refusal.explanation, "shr", tags, "deterministic", sessionId, null, accountingProof);
+      return jsonResp(emitFactualPayload(accountingProof, {
+        success: true, question, sql: null, explanation: refusal.explanation,
+        title: "", columns: [], rows: [], rowCount: 0, truncated: false,
+        chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
+      }));
+    };
+    const accountingRefusal = shrRecognitionRefusal(requestLedger);
+    if (accountingRefusal) return accountingExit(accountingRefusal, "recognition");
+    // Parts every owning path may carry: context is already terminal; these never restrict.
+    const carried = anyOf(shrPart.countStatistic, shrPart.victimRole, shrPart.victimUnit, shrPart.concept("presentation"));
+
     const completenessIntent = detectCompletenessQuestion(question);
     if (completenessIntent) {
+      const completenessUnbound = bindShrPath(requestLedger, "data-completeness answer", anyOf(carried, shrPart.concept("metadata", "measure", "entity"), shrPart.anyPeriod));
+      if (completenessUnbound) return accountingExit(completenessUnbound, "completeness-deterministic");
       const completenessAnswer = buildCompletenessAnswer("shr", loadCompletenessRows("shr", getShrDb()), new Date().getFullYear(), completenessIntent.year);
       const executionMs = Date.now() - start;
       const completenessProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"] });
@@ -525,6 +569,8 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
 
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("shr", question, getShrDb());
     if (metadata) {
+      const metadataUnbound = bindShrPath(requestLedger, "coverage answer", anyOf(carried, shrPart.concept("metadata", "measure", "entity", "agency-type", "national"), shrPart.resolvedPlace, shrPart.anyPeriod, shrPart.connector(/^(?:and|all|any|every)$/i)));
+      if (metadataUnbound) return accountingExit(metadataUnbound, "metadata-coverage-answer");
       const executionMs = Date.now() - start;
       const metadataProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
       writeLog(question, metadata.sql, metadata.rowCount, null, executionMs, metadata.explanation, "shr", ["deterministic-metadata", "metadata-coverage-answer"], "deterministic", sessionId, serializeChartConfigForLog(metadata.chartConfig, metadata.columns, metadata.chartMeta), metadataProof);
@@ -566,7 +612,11 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         chartConfig: null, chartMeta: null, executionTimeMs: executionMs,
       }));
     }
-    if (murderPlan?.kind === "query" && murderDb) {
+    const murderPeriodProved = murderPlan?.kind === "query" ? periodsApplied(requestLedger.parts, murderPlan.sql) : false;
+    const murderApplies = anyOf(carried, shrPart.measure(/murder/i), shrPart.resolvedPlace, (p) => p.concept === "period" && murderPeriodProved, shrPart.connector(/^and$/i));
+    if (murderPlan?.kind === "query" && murderDb && ledgerSatisfies(requestLedger, murderApplies)) {
+      const murderUnbound = bindShrPath(requestLedger, "murder count", murderApplies);
+      if (murderUnbound) return accountingExit(murderUnbound, "deterministic-murder");
       const contract = runDeterministicPlanValidation(murderPlan.sql);
       const contractFailure = contractFailureResponse(contract, `contract_deterministic_murder_failure:${contract.enforced.join(",")}`, ["deterministic-murder"]);
       if (contractFailure) return contractFailure;
@@ -608,8 +658,8 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     // one turn, and `question` is still what gets logged and echoed, because that is what the
     // user typed. Nothing is inherited from the mere existence of history: the assistant's last
     // turn has to have been the question.
-    const shootingScopeFollowup = resolveShootingScopeFollowup(question, normalizeHistoryAllSources(body?.history));
-    const shootingRequest = shootingScopeFollowup?.reconstructedQuestion ?? question;
+    // `shootingScopeFollowup` / `shootingRequest` are resolved at the reconstruction boundary above
+    // (request accounting, stage 1), unchanged.
 
     // Deterministic nonfatal shooting refusal
     const asksCityFirearmHomicideTrend =
@@ -936,6 +986,18 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       // rewrite this query, and that rewrite is what must remain detectable.
       const countShootingSql = `${withClause}SELECT ${periodSelect}, ${selectPlace}COUNT(*) AS fatal_shootings FROM incidents i ${joinClauses} WHERE ${whereClauses.join(" AND ")} GROUP BY ${periodGroup}${groupPlace} ORDER BY ${periodOrder}${orderPlace} LIMIT 1000`;
       const plannedShootingSql = `${medianAge ? medianSql() : countShootingSql}`;
+      const shootingPeriodProved = periodsApplied(requestLedger.parts, plannedShootingSql);
+      const shootingIsNational = !/\b(?:[a-z_]+\.)?(?:state|ori|county_key|county_fips)\s*(?:=|IN\b)/i.test(plannedShootingSql);
+      const shootingUnbound = bindShrPath(requestLedger, "fatal-shooting answer", anyOf(
+        carried, shrPart.measure(/./), (p) => p.concept === "period" && shootingPeriodProved, shrPart.resolvedPlace, shrPart.connector(/^and$/i),
+        (p) => p.concept === "national" && shootingIsNational,
+        (p) => p.concept === "weapon" && /shoot|shot|firearm|gun/i.test(p.text),
+        (p) => p.concept === "place" && (p.rule === "place:unresolved-county" || p.rule === "place:shr-agency"),
+        shrPart.concept("agency-type"),
+        (p) => shootingQualifier.kind === "supported" && (p.concept === "circumstance" || p.concept === "agency-type"),
+        (p) => medianAge && (p.concept === "age" || (p.concept === "statistic" && /median/i.test(p.text))),
+      ));
+      if (shootingUnbound) return accountingExit(shootingUnbound, "deterministic-shooting");
       const shootingContract = runDeterministicPlanValidation(plannedShootingSql);
       const shootingContractFailure = contractFailureResponse(shootingContract, `contract_deterministic_shooting_failure:${shootingContract.enforced.join(",")}`, ["deterministic-shooting"]);
       if (shootingContractFailure) return shootingContractFailure;
@@ -1053,6 +1115,56 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       }
     }
 
+    // ── Supported question types (request accounting stage 1, plan r3.1) ─────────────────────────
+    // Every SHR request that asks for a number and that no unchanged path answers WHOLE is answered only by
+    // one of the closed list of question types (lib/shr-question-types.ts), compiled and described by the
+    // application, or declined by name. A legacy path's refusal never ends a request a type can answer
+    // (Codex r2 #7). The decision is pure and computed once.
+    let shrTypeDecisionMemo: ShrQuestionDecision | null | undefined;
+    const shrTypeDb = getShrDb();
+    const shrTypeDecision = (): ShrQuestionDecision | null => {
+      if (shrTypeDecisionMemo !== undefined) return shrTypeDecisionMemo;
+      shrTypeDecisionMemo = shrNumericIntent(requestLedger) && shrTypeDb ? planShrQuestion(requestLedger, shrTypeDb, accountedQuestion, observeShrCutoff(shrTypeDb)) : null;
+      return shrTypeDecisionMemo;
+    };
+    const shrTypeAnswers = () => shrTypeDecision()?.kind === "spec";
+    const answerShrType = (decision: ShrQuestionDecision) => {
+      if (decision.kind === "county-exit") return countyScopeExit(decision.resolution, "owned-shr-request-plan");
+      if (decision.kind === "decline") return accountingExit({ parts: decision.parts, explanation: decision.explanation }, "question-type");
+      const planDb = shrTypeDb!;
+      const compiledType = compileShrQuestion(decision.spec);
+      try {
+        const executed = executeCompiledShrQuestion(planDb, compiledType);
+        const rows = normalizeShrDisplayRows(executed.rows);
+        const outcome = shrQuestionOutcome(planDb, compiledType, executed.rows, executed.coverage);
+        if (outcome.withhold) return accountingExit({ parts: [], explanation: outcome.withhold }, "question-type");
+        const explanation = [compiledType.explanation, ...outcome.disclosures].join("\n\n");
+        const executionMs = Date.now() - start;
+        const recorded = rows.some((row) => row[compiledType.valueColumn] != null);
+        const columns = [...compiledType.columns];
+        const chartConfig = compiledType.chartType === "none" ? null : applyChartCustomizations({
+          type: compiledType.chartType, xAxis: compiledType.xAxis ?? "place", yAxis: [compiledType.valueColumn],
+          yAxisLabel: compiledType.yAxisLabel, title: compiledType.title,
+        }, question);
+        const planTags = ["owned-shr-request-plan", `shr-question-type:${compiledType.spec.type}`, ...routeGuardrailsFired];
+        const planProof = finalizeExit({ outcome: recorded ? OUTCOMES.deterministic_plan : OUTCOMES.all_values_null, sql: compiledType.sql, rows, columns, derivation: sealPlanDerivation("owned-shr-request-plan", compiledType.sql), planFamily: "owned-shr-request-plan", guardrails: planTags, returnedEntities: returnedEntityKeys(rows), narrative: explanation, hasChart: Boolean(chartConfig), db: planDb });
+        writeLog(question, compiledType.sql, rows.length, null, executionMs, explanation, "shr", planTags, "deterministic", sessionId, chartConfig ? serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }) : null, planProof);
+        return jsonResp(emitFactualPayload(planProof, attachChartAuditToPayload({
+          success: true, question, sql: compiledType.sql, explanation,
+          title: compiledType.title, columns, rows,
+          rowCount: rows.length, truncated: false,
+          chartConfig,
+          chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },
+          executionTimeMs: executionMs,
+        }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
+      } catch (dbErr) {
+        const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+        const planDbProof = OPERATIONAL_RECORD;
+        writeLog(question, compiledType.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["owned-shr-request-plan"], "deterministic", sessionId, null, planDbProof);
+        return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
+      }
+    };
+
     // GC-064 city ranking. A recognised ranking of cities is built by the application, validated as a
     // deterministic plan and run here -- before the owned count, whose limitation would otherwise
     // refuse a rate ranking -- and a recognised ranking it cannot build is an owned limitation, never
@@ -1061,6 +1173,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       year: SHR_DATA_CUTOFF.year, month: SHR_DATA_CUTOFF.month, observed: SHR_DATA_CUTOFF.observed,
     });
     if (shrRanking?.kind === "unavailable") {
+      if (shrTypeAnswers()) return answerShrType(shrTypeDecision()!);
       return countyScopeExit({ status: "unavailable", reason: "city-ranking-unavailable", explanation: shrRanking.explanation }, SHR_CITY_RANKING_GUARDRAIL);
     }
     if (shrRanking?.kind === "deterministic") {
@@ -1114,22 +1227,47 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       }, { source: "shr", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
     }
 
+    // Rates belong to the agency-rate type (T6): one agency's rate by year, or the approved decline that points state,
+    // county and national rates to Historical and Current Trends (plan r3.1 R1). City rate RANKINGS stay above.
+    if (requestLedger.parts.some((p) => p.state !== "context" && p.concept === "statistic" && /^rates?$|per\s+capita|per\s+100|^per\s+\d/i.test(p.text.trim())) && shrTypeDecision()) {
+      return answerShrType(shrTypeDecision()!);
+    }
+
     // GC-080 owned count (Codex reassessment ruling). A county-bound or all-homicide request is
     // answered ONLY by the count the application compiles here, before the response cache and before
     // any model call. The model never authors SQL for this family, and there is no murder fallback:
     // what the plan cannot express gets an owned limitation or clarification. The conflict question
     // above and the deterministic shooting section run first, deliberately.
-    if (shrOwnedCountFamily(guardrailQuestion)) {
+    if (shrOwnedCountFamily(guardrailQuestion) && !shrHasRowRestriction(requestLedger)) {
       const countDb = getShrDb();
       if (!countDb) {
         return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
       }
       const owned = planShrOwnedCount(guardrailQuestion, countDb);
+      // A legacy refusal never ends a request a supported question type answers (Codex r2 #7).
+      if (owned.kind !== "plan" && shrTypeAnswers()) return answerShrType(shrTypeDecision()!);
+      // r5: when both refuse, the question-type decline names the PART (a second threshold, a reversed span); the owned
+      // count's generic refusal does not, so the named decline is delivered.
+      if (owned.kind === "limitation" && shrTypeDecision()?.kind === "decline") return answerShrType(shrTypeDecision()!);
       if (owned.kind === "county-exit") return countyScopeExit(owned.resolution, "owned-shr-count");
       if (owned.kind === "limitation") {
         return countyScopeExit({ status: owned.status, reason: owned.reason, explanation: owned.explanation }, "owned-shr-count");
       }
-      shrCountyScope = owned.plan.geography.kind === "county" ? owned.plan.geography.binding : null;
+      const ownedPlan = owned.plan;
+      // Its period was admitted by the accepted complete-period check (OC1, readPeriod) when the plan was made.
+      const ownedApplies = anyOf(
+        carried, shrPart.measure(/murder|homicide|killing|slaying|death|manslaughter/i), shrPart.anyPeriod,
+        shrPart.placeIn(shrCountPlanPlaceLabels(ownedPlan)), shrPart.resolvedPlace,
+        (p) => ownedPlan.geography.kind === "national" && p.concept === "national",
+        (p) => ownedPlan.geography.kind === "county" && (p.concept === "agency-type" || (p.concept === "place" && p.rule === "place:unresolved-county")),
+        (p) => Boolean(ownedPlan.ratio) && (p.concept === "sex" || (p.concept === "statistic" && /ratio/i.test(p.text))),
+        shrPart.connector(/^and$/i),
+      );
+      // The owned count owns the request only when it applies EVERY part (a pure check; binding happens only in the owner).
+      if (!ledgerSatisfies(requestLedger, ownedApplies) && shrTypeAnswers()) return answerShrType(shrTypeDecision()!);
+      shrCountyScope = ownedPlan.geography.kind === "county" ? ownedPlan.geography.binding : null;
+      const countUnbound = bindShrPath(requestLedger, "homicide count", ownedApplies);
+      if (countUnbound) return accountingExit(countUnbound, "owned-shr-count");
       const compiled = compileShrCountPlan(owned.plan);
       const contract = runCompiledCountValidation(compiled);
       const contractFailure = contractFailureResponse(contract, `contract_owned_count_failure:${contract.enforced.join(",")}`, ["owned-shr-count"]);
@@ -1165,6 +1303,14 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         writeLog(question, contract.compiled.sql, 0, `DB: ${msg}`, Date.now() - start, null, "shr", ["owned-shr-count"], "deterministic", sessionId, null, countDbProof);
         return jsonResp({ success: false, error: `Database error: ${msg}` } as QueryError, 500);
       }
+    }
+
+    // ── Supported question types: everything else that asks for a number (plan r3.1) ───────────────
+    // No model-written statement produces an SHR number; a request that fits no type is declined by name.
+    if (shrNumericIntent(requestLedger)) {
+      const decision = shrTypeDecision();
+      if (!shrTypeDb || !decision) return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
+      return answerShrType(decision);
     }
 
     // Check response cache (only for standalone questions, not follow-ups)
@@ -1562,6 +1708,12 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         sql = correctedContract.sql;
         classScopes = correctedContract.agencyTypeScopes ?? null;
       }
+      // Request accounting (stage 1, task 5): the FINAL statement -- after the cache, every retry and the
+      // schema correction have settled `sql` -- must apply each recognized part of the request, on
+      // AST evidence from the rowset it returns. Otherwise it does not run (no retry).
+      // Request accounting (plan r2.1): no model-written statement produces an SHR number. A request that reaches
+      // here asked for no number the request plan recognizes, so the model's statement is not run.
+      if (SHR_MODEL_SQL_NEVER_RUNS) return accountingExit({ parts: [], explanation: "I can answer Homicide Reports questions with counts, shares, rankings or victim ages for a place and period. I couldn't find a number like that in this question, so I haven't run one." }, "model-sql");
       rows = db.prepare(sql).all() as Record<string, unknown>[];
       rows = normalizeShrDisplayRows(rows);
     } catch (dbErr) {
@@ -1798,6 +1950,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     }
 
     let explanation = claude.explanation || "";
+    const claudeExplanationAsWritten = claude.explanation || "";
     if (disclaimers.length > 0) {
       explanation = explanation + "\n\n" + disclaimers.join(" ");
     }
@@ -1849,6 +2002,8 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     if (chartConfig && claude.title && chartConfig.title !== claude.title) {
       chartConfig = { ...chartConfig, title: claude.title };
     }
+    // Request accounting (stage 1, task 6): the model's own title and explanation must not name a year
+    // or a state the executed statement did not use -- the description has to match the number.
     // The main model path. Model-authored, so no derivation is sealed and the answer
     // cannot satisfy the contract -- recorded honestly rather than softened.
     const finalization = finalizeExit({

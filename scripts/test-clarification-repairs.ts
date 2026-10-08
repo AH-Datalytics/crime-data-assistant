@@ -71,6 +71,8 @@ import { runGuardrails } from "../lib/guardrails";
 import { validateSourceCapabilities } from "../lib/source-capabilities";
 import { buildQueryContract } from "../lib/query-contract";
 import { OUTCOMES } from "../lib/proof-contract";
+import { accountShrRequest, bindShrPath, shrPart, anyOf } from "../lib/shr-request-accounting";
+import { periodsApplied } from "../lib/shr-period-proof";
 import {
   branchCondition, extractBranch, extractDeclaration, runRouteBranch, runRouteExpression,
 } from "./decision1-terminal-harness";
@@ -550,6 +552,12 @@ function harness(request: string, userTurn: string) {
       guardrailQuestion: request,
       shrCountyScope: null,
       countyScopeExit: () => null,
+      // Request accounting (stage 1): the REAL ledger for this request, the real binding, and the route's
+      // own `carried` declaration; an accounting decline is recorded as a payload so a test can see it.
+      requestLedger: accountShrRequest(request),
+      bindShrPath, shrPart, anyOf, periodsApplied,
+      carried: runRouteExpression<unknown>(extractDeclaration("shr", "carried").text, { anyOf, shrPart }),
+      accountingExit: (refusal: { explanation: string }) => { payloads.push({ accountingDecline: refusal.explanation }); return refusal; },
       // supplied, and said so: route-local helpers and transport
       contractFailureResponse: () => null,
       countyIntent: () => null,

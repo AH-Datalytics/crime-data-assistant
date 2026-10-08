@@ -256,12 +256,17 @@ async function main() {
     // `month` is required by the SHR fact loader's data-cutoff query.
     // homicide_type matters: the SHR route requires `homicide_type = 'Murder'` on any
     // murder question, and retried with the model when the stubbed SQL omitted it.
+    // Request accounting (plan r2.1): SHR numbers are compiled by the application over incidents joined to
+    // victims, so the fixture carries both tables (one victim per incident).
     db.exec(`CREATE TABLE incidents (
-      ori TEXT, year INTEGER, month INTEGER, state TEXT, agency TEXT, homicide_type TEXT,
-      victim_count INTEGER, weapon TEXT, circumstance TEXT)`);
-    const ins = db.prepare("INSERT INTO incidents VALUES (?,?,?,?,?,?,?,?,?)");
+      id INTEGER PRIMARY KEY, ori TEXT, year INTEGER, month INTEGER, state TEXT, state_name TEXT, agency TEXT, homicide_type TEXT,
+      victim_count INTEGER, weapon TEXT, weapon_group TEXT, circumstance TEXT)`);
+    db.exec("CREATE TABLE victims (id INTEGER PRIMARY KEY, incident_id INTEGER, victim_num INTEGER, sex TEXT, race TEXT, ethnicity TEXT, age TEXT, age_num INTEGER)");
+    const ins = db.prepare("INSERT INTO incidents VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+    const vic = db.prepare("INSERT INTO victims VALUES (?,?,1,'Male','White','Unknown','30',30)");
+    let n = 0;
     for (const year of [2019, 2020, 2021, 2022]) {
-      for (let month = 1; month <= 12; month++) ins.run("TX0001", year, month, "TX", "Austin", "Murder", 1, "firearm", "argument");
+      for (let month = 1; month <= 12; month++) { n += 1; ins.run(n, "TX0001", year, month, "TX", "Texas", "Austin", "Murder", 1, "Handgun", "Firearm", "argument"); vic.run(n, n); }
     }
     db.close();
   }
@@ -329,10 +334,14 @@ async function main() {
       importPath: "../app/api/shr-query/route",
       // GC-080 (owner ruling): "homicide" now selects the all-homicide licence, and this stub is
       // murder-restricted, so the question says murder. The suite tests caching, not the measure.
+      // Request accounting (stage 1): the stub now groups by weapon as the question asks. It grouped by
+      // year only, silently dropping "by weapon", and the route now refuses exactly that.
       question: "how many murder victims in Texas each year from 2019 to 2022 by weapon",
-      coldCalls: ["translate"],
+      // Request accounting (plan r2.1): an SHR number is compiled by the application, so the cold path makes NO model
+      // call; the stub below is never asked. The suite still proves off and shadow deliver the same bytes.
+      coldCalls: [],
       reply: {
-        sql: "SELECT year, SUM(victim_count) AS victims FROM incidents WHERE state = 'TX' AND homicide_type = 'Murder' AND year BETWEEN 2019 AND 2022 GROUP BY year ORDER BY year",
+        sql: "SELECT year, weapon, SUM(victim_count) AS victims FROM incidents WHERE state = 'TX' AND homicide_type = 'Murder' AND year BETWEEN 2019 AND 2022 GROUP BY year, weapon ORDER BY year",
         explanation: "Homicide victims in Texas by year.",
         title: "Homicide victims in Texas",
         chartHint: "line",
@@ -393,7 +402,10 @@ async function main() {
       // produce different answers -- so it could only check status and call counts. Resetting
       // the module-level cache between runs lets one input be served cold twice, which is
       // what makes the cold path comparable at all.
-      const coldQuestion = `${route.question} cold-case`;
+      // The suffix only makes the cold question distinct from the warm one. It must be ordinary
+      // wording: request accounting (stage 1) refuses an SHR question containing a word it cannot
+      // interpret, and the old token "cold-case" was exactly that.
+      const coldQuestion = `${route.question} please`;
 
       __resetResponseCacheForTests();
       const off = await underMode(undefined, coldQuestion);
