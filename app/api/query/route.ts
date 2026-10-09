@@ -2077,14 +2077,17 @@ export async function POST(req: NextRequest) {
         narrative: typedExplanation,
         db: typeDb,
       });
+      // One object for the log and the response, so an exported chart's metadata binds to what was logged.
+      const typedChartMeta = { source: "FBI SRS", agencyCount: 0, population: null };
       writeLog(question, compiled.sql, compiled.rows.length, null, ms, typedExplanation, tab, ["request-accounting", typeFamily], "deterministic", sessionId,
-        serializeChartConfigForLog(compiled.chartConfig, compiled.columns, { source: "FBI SRS", agencyCount: 0, population: null }), typedProof);
+        serializeChartConfigForLog(compiled.chartConfig, compiled.columns, typedChartMeta), typedProof);
       const typedStream = new ReadableStream({
         start(controller) {
           controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(typedProof, {
             type: "result", requestId: chartAuditRequestId, chartAuditSource: tab, sql: compiled.sql, explanation: typedExplanation, title: compiled.title,
             columns: compiled.columns, rows: compiled.rows, rowCount: compiled.rows.length, truncated: false, chartConfig: compiled.chartConfig,
-            chartMeta: { source: "FBI SRS", agencyCount: 0, population: null }, executionTimeMs: ms,
+            chartMeta: typedChartMeta,
+            executionTimeMs: ms,
           }))));
           controller.close();
         },
