@@ -2311,6 +2311,42 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "carjacking hotfix: carjacking has no NIBRS code (64A/64B are human trafficking); code-only builders decline code-less families; no database, no route, no network"
+    },
+    {
+      "id": "test-request-accounting",
+      "tier": "F",
+      "script": "scripts/test-request-accounting.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting stage 1: unit checks of the ledger, question types or binding; no database, no route, no network"
+    },
+    {
+      "id": "test-shr-request-accounting",
+      "tier": "F",
+      "script": "scripts/test-shr-request-accounting.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting stage 1: unit checks of the ledger, question types or binding; no database, no route, no network"
+    },
+    {
+      "id": "test-shr-question-types",
+      "tier": "F",
+      "script": "scripts/test-shr-question-types.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting stage 1: unit checks of the ledger, question types or binding; no database, no route, no network"
+    },
+    {
+      "id": "test-shr-period-proof",
+      "tier": "F",
+      "script": "scripts/test-shr-period-proof.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting stage 1: unit checks of the ledger, question types or binding; no database, no route, no network"
     }
   ]
 }
