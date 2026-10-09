@@ -28,6 +28,11 @@ export interface MultiCityTrendPlan {
    * Absent for explicit years and for Current, whose behavior is unchanged.
    */
   relativePeriod?: { start: number; end: number };
+  /**
+   * Request accounting stage 2a: the values this plan actually built its statement from (offense column, count or
+   * rate, the resolved years), so the Historical route can check every part of the request was applied by value.
+   */
+  applied?: { offense: string; rate: boolean; startYear: number | null; endYear: number | null; relative: boolean };
 }
 
 /**
@@ -237,6 +242,7 @@ ORDER BY hac.year`;
       population: null,
     },
     guardrail: `deterministic-${source}-multi-city-trend`,
+    applied: { offense: selectedOffense.historical, rate, startYear: hasRange ? startYear : null, endYear: hasRange ? endYear : null, relative: Boolean(relative) },
     requestedCities: places.map((city) => ({ label: city.label, alias: city.alias })),
     ...(relative ? { relativePeriod: { start: relative.start, end: relative.end } } : {}),
   };

@@ -93,6 +93,11 @@ import { explainEmptyCurrentTrendsResult } from "@/lib/current-trends-empty-reas
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
 import { buildHistoricalScorecard } from "@/lib/historical-scorecard";
+import { accountHistoricalRequest, historicalRecognitionRefusal, historicalRequestKind, HISTORICAL_CACHE_TAB, HISTORICAL_MODEL_SQL_DECLINE, historicalFollowupCheck } from "@/lib/historical-request-accounting";
+import { matchHistoricalType } from "@/lib/historical-question-types";
+import { compileHistoricalSpec, historicalSourceBounds } from "@/lib/historical-question-compiler";
+import { historicalLegacyBound, measureForOffenseColumn, placeIs, rangeKeys, type LegacyApplied } from "@/lib/historical-legacy-binding";
+import type { Part as AccountingPart } from "@/lib/request-accounting";
 import {
   consolidatedDisplayText,
   consolidationTargetSatisfied,
@@ -411,6 +416,12 @@ function isSameResultFollowup(question: string, rawHistory?: unknown): boolean {
   return /\b(?:same|previous|prior|last)\b/i.test(question) &&
     /\b(?:chart|table|data|query|result|results)\b/i.test(question);
 }
+
+/**
+ * Request accounting, stage 2a (K7): no model-written statement ever runs on the Historical tab. Numbers come only from a
+ * fixed path that applies the whole request or from a supported question type (lib/historical-question-types.ts).
+ */
+const HISTORICAL_MODEL_SQL_NEVER_RUNS: boolean = true;
 
 function shouldSkipHistoricalPlaceLookup(question: string, rawHistory?: unknown): boolean {
   const hasHistory = Array.isArray(rawHistory) && rawHistory.length > 0;
@@ -750,7 +761,58 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const agencyScorecard = tab === "historical" ? buildHistoricalScorecard(getDb(), capabilityQuestion) : null;
+  // ── Request accounting, stage 2a (Historical; plan 2026-10-08-request-accounting-stage2a-historical.md r1.1) ──────
+  // ONE ledger, on the effective question, before any exit that can deliver a number (C1). Every non-context part must
+  // be applied by value by whichever path answers: a fixed path whose own plan used it, or a supported type (H1-H6).
+  // Recognition refusals (topics Historical does not record, words it could not interpret) stop a NUMERIC request here.
+  // The two U.S. violent-crime series own their whole turn by their own accepted grammar, so they keep their path.
+  const historicalLedger = tab === "historical" ? accountHistoricalRequest(capabilityQuestion) : null;
+  const historicalWholeTurn = tab === "historical" && !queryBearingFollowup
+    && Boolean(buildHistoricalNationalViolentCountPlan(question) ?? buildHistoricalNationalViolentRatePlan(question));
+  const historicalNumeric = Boolean(historicalLedger && historicalRequestKind(historicalLedger) === "numeric" && !historicalWholeTurn);
+  /** The one sealed exit for every Historical accounting decline or clarification (recognition, follow-up, types). */
+  const historicalAccountingExit = (refusal: { parts: AccountingPart[]; explanation: string }, owner: string, clarify = false) => {
+    const ms = Date.now() - totalStart;
+    const tags = ["request-accounting", `request-accounting-owner:${owner}`, ...refusal.parts.map((p) => `request-accounting:${p.state}:${p.concept}`)];
+    const accountingProof = finalizeExit({ outcome: clarify ? OUTCOMES.measure_ambiguous : OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: tags });
+    writeLog(question, null, 0, null, ms, refusal.explanation, tab, tags, "deterministic", sessionId, null, accountingProof);
+    const accountingStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(accountingProof, {
+          type: "result", sql: null as unknown as string, explanation: refusal.explanation, title: clarify ? "Clarification needed" : "Not answered",
+          columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms,
+        }))));
+        controller.close();
+      },
+    });
+    return new Response(accountingStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+  };
+  if (historicalNumeric && historicalLedger) {
+    const priorHistoricalTurns = normalizeHistoryForTab(body?.history, "historical", 50).filter((m) => m.role === "user").map((m) => m.content);
+    const isHistoricalFollowup = priorHistoricalTurns.length > 0 && (isFollowUp(question) || Boolean(queryBearingFollowup) || followupPlan?.kind === "query_bearing");
+    if (isHistoricalFollowup) {
+      const carried = historicalFollowupCheck({ question, reconstructed: followupPlan?.kind === "query_bearing" ? followupPlan.reconstructedQuestion : null, previousUserTurns: priorHistoricalTurns, isFollowUp });
+      if (carried) return historicalAccountingExit({ parts: [], explanation: carried.explanation }, "followup");
+    }
+    const recognitionRefusal = historicalRecognitionRefusal(historicalLedger);
+    if (recognitionRefusal) return historicalAccountingExit(recognitionRefusal, "recognition");
+  }
+  /**
+   * A fixed path keeps a Historical request only when its applied values account for every part (C1); else null.
+   * Plan r3 §1: for EVERY Historical request, whatever its TEXT/NUMERIC classification -- a request carrying "why" is never
+   * owned by a fixed path (no path applies an explanation request), so it reaches the types (NUMERIC) or text only (TEXT).
+   */
+  const historicalOwns = <T,>(plan: T | null, applied: (p: T) => LegacyApplied | "decline"): T | null => {
+    if (!plan || !historicalLedger) return plan;
+    const a = applied(plan);
+    return a === "decline" || historicalLegacyBound(historicalLedger, a) ? plan : null;
+  };
+
+  const agencyScorecard = historicalOwns(tab === "historical" ? buildHistoricalScorecard(getDb(), capabilityQuestion) : null, (card) => {
+    if (card.rows.length === 0) return "decline";
+    const [name, st] = card.agencyLabel.split(/,\s*/);
+    return { operations: ["scorecard"], places: card.scope === "national" ? placeIs.national : card.scope === "state" ? placeIs.state(card.agencyLabel) : placeIs.agency(name ?? "", st ?? "") };
+  });
   const agencyScorecardRefusal = deterministicPlanRefusal({
     question: capabilityQuestion, source: tab, sql: agencyScorecard?.sql,
   });
@@ -847,7 +909,10 @@ export async function POST(req: NextRequest) {
   }
 
   const completenessIntent = detectCompletenessQuestion(capabilityQuestion);
-  if (completenessIntent && (tab === "current" || tab === "historical")) {
+  // Plan r3 §1: bound for every Historical request, not only NUMERIC ones.
+  const completenessOwned = !(tab === "historical" && historicalLedger)
+    || historicalLegacyBound(historicalLedger, { operations: ["completeness"], periodKeys: completenessIntent?.year ? [`year:${completenessIntent.year}`] : [] });
+  if (completenessIntent && (tab === "current" || tab === "historical") && completenessOwned) {
     const source = tab === "historical" ? "historical" : "current";
     const completenessAnswer = buildCompletenessAnswer(source, loadCompletenessRows(source, getDb()), new Date().getFullYear(), completenessIntent.year);
     const ms = Date.now() - totalStart;
@@ -1531,9 +1596,22 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const multiCityTrend = !planSaysQueryBearing && (tab === "current" || tab === "historical")
+  const multiCityTrend = historicalOwns(!planSaysQueryBearing && (tab === "current" || tab === "historical")
     ? buildMultiCityTrendPlan(question, tab)
-    : null;
+    : null, (plan) => {
+      const a = plan.applied;
+      if (!a) return { };
+      const measure = measureForOffenseColumn(a.offense);
+      return {
+        places: placeIs.any(...plan.requestedCities.map((c) => { const [n, st] = c.label.split(/,\s*/); return placeIs.agency(n ?? "", st ?? ""); })),
+        measures: measure ? [measure] : [],
+        statistic: a.rate ? "rate" : "count",
+        periodKeys: a.startYear !== null && a.endYear !== null && !a.relative ? rangeKeys(a.startYear, a.endYear) : a.startYear === null ? ["all"] : [],
+        relativeYears: a.relative && a.startYear !== null && a.endYear !== null ? { start: a.startYear, end: a.endYear } : null,
+        grain: true,
+        versus: "places",
+      };
+    });
   const multiCityRefusal = deterministicPlanRefusal({ question, source: tab, sql: multiCityTrend?.sql });
   if (multiCityRefusal) console.log(`[structural] multi-city plan refused: ${multiCityRefusal.ruleIds.join(", ")}`);
   if (multiCityTrend && !multiCityRefusal) {
@@ -1641,12 +1719,25 @@ export async function POST(req: NextRequest) {
   // Increment 5 (Decision 16): the deterministic Historical peer path. Peers are chosen
   // by the shared population core from real candidates, and the national series stays a
   // separately labelled series rather than being folded into the peer average.
-  const historicalPeer = tab === "historical"
+  const historicalPeer = historicalOwns(tab === "historical"
     ? buildHistoricalPeerComparisonPlan(question, {
         candidateSource: (q) => fetchHistoricalPeerCandidates(getDb() as unknown as Parameters<typeof fetchHistoricalPeerCandidates>[0], q),
         resolveSubject: (name, state) => resolveHistoricalSubjectPopulation(getDb(), name, state),
       })
-    : null;
+    : null, (plan) => {
+      if (!plan.sql || !plan.applied) return "decline";
+      const a = plan.applied;
+      return {
+        operations: ["peer"],
+        places: placeIs.any(placeIs.agency(a.subject.name, a.subject.state), placeIs.national),
+        measures: a.metric === "homicide" ? ["murder"] : ["violent"],
+        clearance: a.metric === "violent_clearance",
+        statistic: a.metric === "violent_clearance" ? "rate" : null,
+        change: a.metric === "homicide" ? ["increase", "decrease", "neutral"] : undefined,
+        periodKeys: a.period ? rangeKeys(a.period.start, a.period.end) : [],
+        versus: "any",
+      };
+    });
   // National violent-crime batch (Codex :36558): the U.S. annual violent-crime COUNT series is owned here, BEFORE model
   // SQL, so the model never chooses its table (release-f D1 delivered an agency sum labelled as a U.S. count).
   // The owned national plan is answered or declined here; it never falls through to model SQL. It is proved and read
@@ -1676,7 +1767,19 @@ export async function POST(req: NextRequest) {
     ? (nationalPlan.guardrail === NATIONAL_VIOLENT_RATE_GUARDRAIL ? nationalViolentRateDeclinePlan(nationalPlan, question) : nationalViolentDeclinePlan(nationalPlan))
     : nationalPlan;
   const historicalCityChange = tab === "historical"
-    ? historicalPeer ?? historicalNational ?? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
+    ? historicalPeer ?? historicalNational
+      ?? historicalOwns(buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear), (plan) => {
+        const a = plan.applied;
+        if (!plan.sql || !a || a.kind !== "local-change") return plan.sql ? {} : "decline";
+        return { places: placeIs.agency(a.place.name, a.place.state), measures: ["violent"], change: ["increase", "decrease", "neutral"], periodKeys: ["lastyear"] };
+      })
+      ?? historicalOwns(buildHistoricalCityChangeRankingPlan(question, body?.history), (plan) => {
+        const a = plan.applied;
+        if (!plan.sql) return "decline";
+        if (!a || a.kind !== "change-ranking" || a.inherited || a.floor !== null) return {};
+        // r2 §1: bound by VALUE -- the direction the plan ranks and the 20 places it shows (its LIMIT).
+        return { places: placeIs.national, entities: ["city"], measures: ["violent"], change: [a.direction === "increase" ? "increase" : "decrease"], rank: { dir: "top", n: a.limit }, periodKeys: rangeKeys(a.startYear, a.endYear) };
+      })
     : null;
   if (historicalCityChange && baltimoreDefault) historicalCityChange.explanation = withBaltimoreDisclosure(historicalCityChange.explanation, baltimoreDefault);
   const historicalCityChangeRefusal = deterministicPlanRefusal({ question, source: tab, sql: historicalCityChange?.sql });
@@ -1820,9 +1923,12 @@ export async function POST(req: NextRequest) {
       console.warn("[historical-city-change-ranking] deterministic query failed; falling back to Claude", err);
     }
   }
-  const historicalPlace = tab === "historical" && !queryBearingFollowup && !shouldSkipHistoricalPlaceLookup(question, body?.history)
+  const historicalPlace = historicalOwns(tab === "historical" && !queryBearingFollowup && !shouldSkipHistoricalPlaceLookup(question, body?.history)
     ? answerHistoricalPlaceLookup(question, getDb())
-    : null;
+    : null, (plan) => ({
+      operations: ["coverage-lookup"],
+      places: placeIs.any(...plan.rows.map((r) => placeIs.agency(String(r.agency ?? ""), String(r.state ?? "")))),
+    }));
   const historicalPlaceRefusal = deterministicPlanRefusal({
     question, source: tab, sql: historicalPlace?.sql,
   });
@@ -1876,7 +1982,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const metadata = planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb());
+  const metadata = historicalOwns(planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb()), () => ({ operations: ["coverage-lookup", "completeness"] }));
   if (metadata) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({
@@ -1928,6 +2034,64 @@ export async function POST(req: NextRequest) {
         "X-RateLimit-Remaining": String(rateCheck.remaining),
       },
     });
+  }
+
+  // ── Request accounting, stage 2a: a NUMERIC Historical request no fixed path owned is answered by one of the supported
+  // question types (H1-H6) with application-built statements, or declined/clarified by name. It never reaches model SQL.
+  if (historicalNumeric && historicalLedger) {
+    const typeDb = getDb();
+    const decision = matchHistoricalType(historicalLedger, { bounds: (source) => historicalSourceBounds(typeDb, source) });
+    if (decision.kind === "decline") return historicalAccountingExit({ parts: decision.parts, explanation: decision.explanation }, "question-type");
+    if (decision.kind === "clarify") return historicalAccountingExit({ parts: [], explanation: decision.explanation }, "question-type", true);
+    if (decision.kind === "spec") {
+      const typeFamily = `historical-question-type:${decision.spec.type}`;
+      const compiled = compileHistoricalSpec(decision.spec, {
+        db: typeDb,
+        // A typed statement is built from the issued spec, whose every part was checked by value. The structural guard
+        // (deterministicPlanRefusal) is NOT applied to it: that guard checks a statement against a contract parsed from
+        // the question text, and that contract cannot describe a typed spec (it expects total_offenses for "total crime",
+        // which task 0 found disagrees with its components; it reads a city-vs-state comparison as one row level; it has
+        // no unit for a percent change). The fixed paths keep the guard unchanged. The table allowlist still applies.
+        execute: (typedStatement) => {
+          const tables = validateTablesForTab(typedStatement, "historical", typeDb);
+          if (!tables.ok) throw new Error(`an owned Historical statement read a table outside the Historical allowlist (${tables.unknown.join(", ")})`);
+          const db = typeDb;
+          return executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(typedStatement), 30000);
+        },
+      });
+      if (compiled.kind === "decline") return historicalAccountingExit({ parts: [], explanation: compiled.explanation }, "question-type-compile");
+      const typedExplanation = decision.explainLimitation ? `${compiled.explanation} ${decision.explainLimitation}` : compiled.explanation;
+      const ms = Date.now() - totalStart;
+      const hasValue = compiled.rows.some((row) => ["value", "change", "percent_change"].some((c) => row[c] !== null && row[c] !== undefined));
+      const typedProof = finalizeExit({
+        outcome: hasValue ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
+        sql: compiled.sql,
+        rows: compiled.rows,
+        columns: compiled.columns,
+        derivation: sealPlanDerivation(typeFamily, compiled.sql),
+        planFamily: typeFamily,
+        guardrails: ["request-accounting", typeFamily],
+        requestedEntities: compiled.requestedEntities,
+        returnedEntities: compiled.returnedEntities,
+        hasChart: Boolean(compiled.chartConfig),
+        narrative: typedExplanation,
+        db: typeDb,
+      });
+      writeLog(question, compiled.sql, compiled.rows.length, null, ms, typedExplanation, tab, ["request-accounting", typeFamily], "deterministic", sessionId,
+        serializeChartConfigForLog(compiled.chartConfig, compiled.columns, { source: "FBI SRS", agencyCount: 0, population: null }), typedProof);
+      const typedStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(typedProof, {
+            type: "result", requestId: chartAuditRequestId, chartAuditSource: tab, sql: compiled.sql, explanation: typedExplanation, title: compiled.title,
+            columns: compiled.columns, rows: compiled.rows, rowCount: compiled.rows.length, truncated: false, chartConfig: compiled.chartConfig,
+            chartMeta: { source: "FBI SRS", agencyCount: 0, population: null }, executionTimeMs: ms,
+          }))));
+          controller.close();
+        },
+      });
+      return new Response(typedStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+    }
+    // `none`: no measure to answer with; the model may reply in text below, and its SQL never runs (K7).
   }
 
   const stream = new ReadableStream({
@@ -2100,7 +2264,7 @@ export async function POST(req: NextRequest) {
 
         // Check response cache (only standalone questions)
         if (isHistorical) cacheValidity = historicalCacheValidity(baseCacheValidity, readCorrectionState(getDb()));
-        const cached = promptHistory.length === 0 ? getCached(question, tab, cacheValidity) : null;
+        const cached = promptHistory.length === 0 ? getCached(question, tab === "historical" ? HISTORICAL_CACHE_TAB : tab, cacheValidity) : null;
         let fromCache = false;
 
         let claude: Awaited<ReturnType<typeof translateToSql>>;
@@ -2263,6 +2427,22 @@ export async function POST(req: NextRequest) {
               }))
             )
           );
+          close();
+          return;
+        }
+
+        // Request accounting, stage 2a (K7): no model-written statement produces a Historical number. This is the FIRST
+        // point a statement exists (from the model or from the response cache), before any validation, schema check,
+        // prepare or retry, so neither a schema failure nor a cached entry can reach an execution.
+        if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) {
+          const gateMs = Date.now() - totalStart;
+          const gateTags = ["request-accounting", "request-accounting-owner:model-sql", ...(fromCache ? ["request-accounting:cached-statement"] : [])];
+          const gateProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: gateTags });
+          writeLog(question, null, 0, null, gateMs, HISTORICAL_MODEL_SQL_DECLINE, tab, gateTags, "haiku-4.5", sessionId, null, gateProof);
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(gateProof, {
+            type: "result", sql: null as unknown as string, explanation: HISTORICAL_MODEL_SQL_DECLINE, title: "Not answered",
+            columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: gateMs,
+          }))));
           close();
           return;
         }
@@ -2474,6 +2654,9 @@ export async function POST(req: NextRequest) {
                 { role: "assistant" as const, content: JSON.stringify({ ...claude, sql }) },
                 { role: "user" as const, content: `[SYSTEM: ${tableCheck.message}]` },
               ];
+              // Request accounting stage 2a (K7, defensive): unreachable while the gate above stands; if it were removed, a Historical
+              // model statement still fails closed here instead of being retried into an execution.
+              if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
               const retry = await translate(tableCheck.message, retryHistory, systemPrompt);
               if (retry.sql) {
                 const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
@@ -2574,6 +2757,9 @@ export async function POST(req: NextRequest) {
               content: retryInstruction,
             },
           ];
+          // Request accounting stage 2a (K7, defensive): unreachable while the gate above stands; if it were removed, a Historical
+          // model statement still fails closed here instead of being retried into an execution.
+          if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
           const retry = await translate(
             retryInstruction,
             retryHistory,
@@ -3304,7 +3490,7 @@ export async function POST(req: NextRequest) {
           writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), deliveredFinalization);
           // Cache successful responses (only standalone questions)
           if (!fromCache && promptHistory.length === 0 && sql) {
-            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
+            setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         } catch {
           // Retry post-query explanation once before falling back
@@ -3382,7 +3568,7 @@ export async function POST(req: NextRequest) {
             writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), finalization);
           }
           if (!fromCache && promptHistory.length === 0 && sql) {
-            setCache(question, tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
+            setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         }
       } catch (err) {

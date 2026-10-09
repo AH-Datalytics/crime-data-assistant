@@ -751,9 +751,11 @@ export async function POST(req) {
   // become 22/35/13; no dev exit or event was removed (three sealed payloads changed shape only).
   // GC-051 batch (2026-10-07): +2 streaming exits in app/api/query/route.ts, the owned Current month-coverage failed check and
   // its result, each one envelope with one sealed event: 22/35 become 24/37.
-  check("H7  real terminal exits: 4 chokepoint, 24 envelope, 0 detached, 0 sealed-by-fallback",
-    [ek.chokepoint, ek["sse-envelope"], ek["detached-carrier"] || 0, ek.sealed || 0], [4, 24, 0, 0]);
-  check("H7b real stream events: 37 sealed", sk.sealed, 37);
+  // Request accounting stage 2a: +2 envelope exits on the query route (the Historical accounting exit and the typed answer
+  // each return their own sealed SSE Response) and +3 sealed stream events (those two and the model-SQL gate in the stream).
+  check("H7  real terminal exits: 4 chokepoint, 26 envelope, 0 detached, 0 sealed-by-fallback",
+    [ek.chokepoint, ek["sse-envelope"], ek["detached-carrier"] || 0, ek.sealed || 0], [4, 26, 0, 0]);
+  check("H7b real stream events: 40 sealed", sk.sealed, 40);
   check("H7c and every unclassified one is registered, so the tree is green",
     [ek.unclassified, sk.unclassified, res.failures.length], [12, 13, 0]);
   // The registries are load-bearing: emptying them must fail loudly.
@@ -809,7 +811,7 @@ export async function POST() {
   checkTrue("I2b so the tree passes", elig(root).ok, JSON.stringify(elig(root).failures));
   check("I2c and all 37 real sealed enqueues have this exact shape",
     res.routes.filter((x) => x.sealed)
-      .reduce((n, x) => n + x.streamEvents.filter((e) => e.kind === "sealed").length, 0), 37);
+      .reduce((n, x) => n + x.streamEvents.filter((e) => e.kind === "sealed").length, 0), 40);
   check("I2d with zero decorative seals in the real tree",
     res.failures.filter((f) => f.kind === "decorative-seal").length, 0);
 }

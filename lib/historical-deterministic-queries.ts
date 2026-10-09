@@ -10,6 +10,13 @@ export interface HistoricalCityChangePlan {
   chartConfig: ChartConfig | null;
   chartMeta: ChartMeta | null;
   guardrail: string;
+  /**
+   * Request accounting stage 2a: what the change plans applied. local: the place and the two latest years; ranking:
+   * the years, the direction, any population floor, and whether anything was taken from earlier turns.
+   */
+  applied?:
+    | { kind: "local-change"; place: { name: string; state: string }; startYear: number; endYear: number }
+    | { kind: "change-ranking"; startYear: number; endYear: number; direction: "decline" | "increase"; floor: number | null; inherited: boolean; limit: number };
 }
 
 function sqlQuote(value: string): string {
@@ -75,6 +82,7 @@ export function buildHistoricalLocalRecentChangePlan(
     chartConfig: null,
     chartMeta: { source: "FBI SRS", agencyCount: 1, population: null },
     guardrail: "deterministic-historical-local-recent-change",
+    applied: { kind: "local-change", place: { name: candidate.name, state: candidate.state.toUpperCase() }, startYear, endYear },
   };
 }
 
@@ -170,6 +178,9 @@ function historicalPredecessorExclusionSql(): string {
   return exclusions.length > 0 ? `NOT (${exclusions.join(" OR ")})` : "1 = 1";
 }
 
+/** The number of cities the change ranking shows (its LIMIT); stated in its description and bound by value (r2 §1). */
+export const CITY_CHANGE_RANKING_LIMIT = 20;
+
 export function buildHistoricalCityChangeRankingPlan(
   question: string,
   rawHistory?: unknown
@@ -247,7 +258,7 @@ export function buildHistoricalCityChangeRankingPlan(
     FROM changes
     WHERE ${directionFilter}${floorFilter}
     ORDER BY ${order}
-    LIMIT 20
+    LIMIT ${CITY_CHANGE_RANKING_LIMIT}
   `.trim();
 
   const floorText = floor
@@ -256,7 +267,7 @@ export function buildHistoricalCityChangeRankingPlan(
   return {
     sql,
     title: `Cities With the Steepest Violent Crime ${noun[0].toUpperCase()}${noun.slice(1)}, ${range.startYear}-${range.endYear}`,
-    explanation: `Cities with the steepest percentage ${noun} in total violent crime from ${range.startYear} to ${range.endYear} among Historical city agencies. Each row compares reported violent-crime counts in the start and end years; cities missing either year are excluded.${floorText}`,
+    explanation: `Cities with the steepest percentage ${noun} in total violent crime from ${range.startYear} to ${range.endYear} among Historical city agencies, showing up to ${CITY_CHANGE_RANKING_LIMIT} cities. Each row compares reported violent-crime counts in the start and end years; cities missing either year are excluded.${floorText}`,
     columns,
     chartConfig: {
       type: "bar",
@@ -267,5 +278,6 @@ export function buildHistoricalCityChangeRankingPlan(
     },
     chartMeta: { source: "FBI SRS", agencyCount: 0, population: null },
     guardrail: "deterministic-historical-city-change-ranking",
+    applied: { kind: "change-ranking", startYear: range.startYear, endYear: range.endYear, direction: dir, floor, inherited: !currentMatches || !explicitYearRange(question), limit: CITY_CHANGE_RANKING_LIMIT },
   };
 }

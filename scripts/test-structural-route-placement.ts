@@ -167,7 +167,9 @@ const MODEL_SQL_VARIABLES = new Set(["sql", "retrySql", "rollingSql", "fallbackS
  * input. They answer metadata questions (which ORI, which offense name) rather than returning a
  * factual series. Listed individually so a NEW identifier cannot join them silently.
  */
-const APPLICATION_BUILT_LOOKUPS = new Set(["oriQuery", "cdeQuery"]);
+// typedStatement: request accounting stage 2a -- a Historical statement built by lib/historical-question-compiler.ts from an
+// issued H1-H6 spec (every request part checked by value), never from model text; table-allowlisted before it runs.
+const APPLICATION_BUILT_LOOKUPS = new Set(["oriQuery", "cdeQuery", "typedStatement"]);
 
 /**
  * Already-prepared statements passed to an execution helper by variable.
