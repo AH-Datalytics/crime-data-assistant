@@ -16,6 +16,7 @@ import { historicalRapeSeries } from "@/lib/historical-rape-series";
 import { historicalViolentComposite } from "@/lib/historical-composite-measure";
 import { chicagoAssaultNarrative, withChicagoAssaultComparability } from "@/lib/chicago-assault-comparability";
 import { buildHistoricalNationalViolentCountPlan, nationalViolentDeclinePlan } from "@/lib/historical-national-violent";
+import { buildHistoricalNationalViolentRatePlan, nationalViolentRateDeclinePlan, nationalViolentRateDisclosureQuestion, nationalViolentRateEmptyNote, nationalViolentRateLimitation, NATIONAL_VIOLENT_RATE_GUARDRAIL } from "@/lib/historical-national-violent-rate";
 import { sexualAssaultRapeNarrative } from "@/lib/historical-offense-binding";
 import { extractQueryContext } from "@/lib/query-context";
 import { runGuardrails } from "@/lib/guardrails";
@@ -38,6 +39,7 @@ import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNar
 import { buildNoSqlFallbackMessage, courtProcessNoSqlIsTerminal, selectNoSqlRefusal } from "@/lib/refusal-safety";
 import { boundedModelResponseJson } from "@/lib/no-sql-retry";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
+import { CURRENT_MONTH_COVERAGE_GUARDRAIL, MONTH_COVERAGE_FAILED, monthCoverageAnswer, monthCoverageSql, ownsMonthCoverage } from "@/lib/current-month-coverage";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { resolveCurrentFollowupAmendment } from "@/lib/current-followup-amendment";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -790,6 +792,58 @@ export async function POST(req: NextRequest) {
       controller.close();
     }});
     return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+  }
+
+  // GC-051 batch (lib/current-month-coverage.ts): a standalone Current Trends "what months does YEAR include?" is answered
+  // from the year-bound months present in national_monthly -- proved before it runs, and with "no months" and "the check
+  // failed" kept apart. Owned only with no conversation history; every other turn continues exactly as before.
+  const monthCoverage = tab === "current" ? ownsMonthCoverage(question, body?.history) : null;
+  if (monthCoverage) {
+    const monthCoveragePlan = { sql: monthCoverageSql(monthCoverage.year) };
+    const monthCoverageRefusal = deterministicPlanRefusal({ question, source: tab, sql: monthCoveragePlan.sql });
+    let coverageRows: Record<string, unknown>[] | null = null;
+    if (!monthCoverageRefusal) {
+      try {
+        const db = getDb();
+        coverageRows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(monthCoveragePlan.sql), 30000);
+      } catch (err) {
+        console.warn("[current-month-coverage] owned coverage read failed", err);
+      }
+    }
+    const ms = Date.now() - totalStart;
+    const coverageTitle = `Current Trends months, ${monthCoverage.year}`;
+    // Exit 1: a refused or failed read -- the check failed. Never "no months", never model SQL.
+    if (coverageRows === null) {
+      const failedGuardrails = [CURRENT_MONTH_COVERAGE_GUARDRAIL, monthCoverageRefusal ? "month-coverage-structural-refusal" : "month-coverage-read-failed"];
+      const failedAnswer = MONTH_COVERAGE_FAILED(monthCoverage.year);
+      const failedProof = finalizeExit({ outcome: monthCoverageRefusal ? OUTCOMES.sql_shape_rejected : OUTCOMES.capability_path_unavailable, sql: monthCoveragePlan.sql, planFamily: CURRENT_MONTH_COVERAGE_GUARDRAIL, guardrails: failedGuardrails, narrative: failedAnswer });
+      writeLog(question, null, 0, "month_coverage_unavailable", ms, failedAnswer, tab, failedGuardrails, "deterministic", sessionId, null, failedProof);
+      const failedStream = new ReadableStream({ start(controller) {
+        controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(failedProof, {
+          type: "result", sql: null as unknown as string, explanation: failedAnswer, title: coverageTitle,
+          columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms,
+        }))));
+        controller.close();
+      }});
+      return new Response(failedStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+    }
+    // Exit 2: the read's result -- the requested year's months, or none for that year.
+    const coverageAnswer = monthCoverageAnswer(monthCoverage.year, coverageRows);
+    const coverageProof = finalizeExit({
+      outcome: coverageRows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
+      sql: monthCoveragePlan.sql, rows: coverageRows, columns: ["month"], truncated: false,
+      derivation: sealPlanDerivation(CURRENT_MONTH_COVERAGE_GUARDRAIL, monthCoveragePlan.sql),
+      planFamily: CURRENT_MONTH_COVERAGE_GUARDRAIL, guardrails: [CURRENT_MONTH_COVERAGE_GUARDRAIL], narrative: coverageAnswer, hasChart: false,
+    });
+    writeLog(question, monthCoveragePlan.sql, coverageRows.length, null, ms, coverageAnswer, tab, [CURRENT_MONTH_COVERAGE_GUARDRAIL], "deterministic", sessionId, null, coverageProof);
+    const coverageStream = new ReadableStream({ start(controller) {
+      controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(coverageProof, {
+        type: "result", sql: monthCoveragePlan.sql, explanation: coverageAnswer, title: coverageTitle,
+        columns: ["month"], rows: coverageRows, rowCount: coverageRows.length, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms,
+      }))));
+      controller.close();
+    }});
+    return new Response(coverageStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
   }
 
   const completenessIntent = detectCompletenessQuestion(capabilityQuestion);
@@ -1598,8 +1652,11 @@ export async function POST(req: NextRequest) {
   // The owned national plan is answered or declined here; it never falls through to model SQL. It is proved and read
   // first; a refused or unreadable plan is replaced by its no-query decline, which the existing no-query branch below
   // delivers with the owned sentence (no new exit).
+  // GC-010 batch (lib/historical-national-violent-rate.ts): the U.S. annual violent-crime RATE series, alone or with the
+  // unavailable U.S. prison population, is owned the same way -- the rate is delivered and the prison half gets its own
+  // limitation in the same answer, instead of the whole request being refused as a court topic.
   const nationalPlan = tab === "historical" && !historicalPeer && !queryBearingFollowup
-    ? buildHistoricalNationalViolentCountPlan(question)
+    ? buildHistoricalNationalViolentCountPlan(question) ?? buildHistoricalNationalViolentRatePlan(question)
     : null;
   let nationalRows: Record<string, unknown>[] | null = null;
   let nationalCorrected: boolean | undefined;
@@ -1615,7 +1672,9 @@ export async function POST(req: NextRequest) {
       console.warn("[historical-national-violent] owned national query failed; declining", err);
     }
   }
-  const historicalNational = nationalPlan && nationalRows === null ? nationalViolentDeclinePlan(nationalPlan) : nationalPlan;
+  const historicalNational = nationalPlan && nationalRows === null
+    ? (nationalPlan.guardrail === NATIONAL_VIOLENT_RATE_GUARDRAIL ? nationalViolentRateDeclinePlan(nationalPlan, question) : nationalViolentDeclinePlan(nationalPlan))
+    : nationalPlan;
   const historicalCityChange = tab === "historical"
     ? historicalPeer ?? historicalNational ?? buildHistoricalLocalRecentChangePlan(question, HISTORICAL.crimeMaxYear) ?? buildHistoricalCityChangeRankingPlan(question, body?.history)
     : null;
@@ -1675,11 +1734,23 @@ export async function POST(req: NextRequest) {
         const composite = historicalViolentComposite(tab, historicalCityChange.sql, rows);
         historicalCityChange.explanation = applyResultDisclosures({
           explanation: composite?.narrative ?? historicalCityChange.explanation,
-          question, sql: historicalCityChange.sql, rows, tab,
+          // GC-010 r1: the rate series' disclosures read the crime clause that produced the statement, never the prison
+          // clause's period; every other national plan reads the question as before.
+          question: (historicalCityChange.guardrail === NATIONAL_VIOLENT_RATE_GUARDRAIL ? nationalViolentRateDisclosureQuestion(question) : null) ?? question,
+          sql: historicalCityChange.sql, rows, tab,
           resultState: genericResultState({ sql: historicalCityChange.sql, rows }),
           historicalNationalRapeCorrected: nationalCorrected,
         });
         historicalCityChange.title = alignTitleYearRange(historicalCityChange.title, rows);
+        // GC-010: the prison half's limitation, appended after the chokepoint (it is established by the request, which the
+        // row-based chokepoint cannot see), so the compound answer keeps it in every delivery.
+        // No rows for the requested years: say so, from the plan's own period (an absence, never a zero).
+        const emptyNote = historicalCityChange.guardrail === NATIONAL_VIOLENT_RATE_GUARDRAIL && rows.length === 0 ? nationalViolentRateEmptyNote(question) : null;
+        if (emptyNote) historicalCityChange.explanation = emptyNote;
+        const prisonLimitation = historicalCityChange.guardrail === NATIONAL_VIOLENT_RATE_GUARDRAIL ? nationalViolentRateLimitation(question) : null;
+        if (prisonLimitation && !historicalCityChange.explanation.includes(prisonLimitation)) {
+          historicalCityChange.explanation = [historicalCityChange.explanation, prisonLimitation].filter(Boolean).join("\n\n");
+        }
       }
       // R1 (Decision 16): compare the SELECTED peer membership with the evidence that came
       // back. A named peer that returned no rows must be disclosed, not silently dropped —

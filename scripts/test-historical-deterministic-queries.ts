@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { buildHistoricalCityChangeRankingPlan, buildHistoricalLocalRecentChangePlan } from "../lib/historical-deterministic-queries";
 import { buildHistoricalNationalViolentCountPlan, NATIONAL_VIOLENT_COUNT_GUARDRAIL } from "../lib/historical-national-violent";
 import { historicalViolentComposite } from "../lib/historical-composite-measure";
+import { buildHistoricalNationalViolentRatePlan, nationalViolentRateDeclinePlan, nationalViolentRateDisclosureQuestion, nationalViolentRateEmptyNote, nationalViolentRateLimitation, NATIONAL_VIOLENT_RATE_GUARDRAIL, PRISON_POPULATION_LIMITATION, recognizeNationalViolentRate } from "../lib/historical-national-violent-rate";
 
 {
   const plan = buildHistoricalLocalRecentChangePlan(
@@ -122,6 +123,61 @@ assert.equal(
     ["Show me violent crime in the United States since 1975 to the present", " AND year >= 1975"],
     ["national violent crime from 1995 through 2005", " AND year BETWEEN 1995 AND 2005"],
   ] as [string, string][]) assert.equal(buildHistoricalNationalViolentCountPlan(q)?.sql, NAT(bounds), q);
+}
+
+// GC-010 batch (lib/historical-national-violent-rate.ts): the U.S. national violent-crime RATE series, alone or with the
+// unavailable U.S. prison population (Jeff's interpretation: in that compound both clauses are U.S. national).
+{
+  const GC010 = "Please show me a graph of the violent crime rate back to 1930 and also the U.S. prison population going back that far (or as far as possible)";
+  const RATE = (bounds: string) => `SELECT year, ROUND(murder_rate + rape_rate + robbery_rate + aggravated_assault_rate, 1) AS violent_crime_rate FROM historical_state_national WHERE state = 'United States'${bounds} ORDER BY year`;
+  for (const [q, bounds, prison] of [
+    [GC010, " AND year >= 1930", true],
+    ["Show the U.S. violent crime rate since 1960", " AND year >= 1960", false],
+    ["U.S. prison population and the violent crime rate since 1960", " AND year >= 1960", true],
+    ["the national violent crime rate between 1970 and 2000", " AND year BETWEEN 1970 AND 2000", false],
+    ["the national violent crime rate from 1990 to 2020", " AND year BETWEEN 1990 AND 2020", false],
+    // Each clause keeps its own period: the crime clause's period is the statement's.
+    ["violent crime rate since 1990 and the U.S. prison population since 1980", " AND year >= 1990", true],
+    ["U.S. violent crime rate per 100,000 as far back as possible", "", false],
+  ] as [string, string, boolean][]) {
+    const plan = buildHistoricalNationalViolentRatePlan(q);
+    assert.equal(plan?.sql, RATE(bounds), q);
+    assert.equal(plan?.guardrail, NATIONAL_VIOLENT_RATE_GUARDRAIL);
+    assert.equal(recognizeNationalViolentRate(q)?.prison, prison, q);
+    assert.equal(nationalViolentRateLimitation(q), prison ? PRISON_POPULATION_LIMITATION : null, q);
+    assert.equal(buildHistoricalNationalViolentCountPlan(q), null, `${q}: never the count plan`);
+    // The owned composite description binds to exactly this SQL, as a RATE.
+    assert.equal(historicalViolentComposite("historical", plan!.sql, [{ year: 2000, violent_crime_rate: 1 }])?.narrative,
+      "U.S. national violent crime by year: the sum of the FBI UCR murder, rape, robbery and aggravated assault rates per 100,000.", q);
+  }
+  // Not this family: no national word on a standalone rate, another place (even with the U.S. prison clause), a filter,
+  // before/relative/discrete years, a count, pure prison, clearance, another offense.
+  for (const q of [
+    "violent crime rate back to 1930",
+    "Show me the violent crime rate in Alabama back to 1930 and the U.S. prison population",
+    "violent crime rate in Texas since 2000 and the U.S. prison population",
+    "U.S. violent crime rate involving guns since 1960", "U.S. violent crime rate before 2000", "U.S. violent crime rate in 2000 and 2020",
+    "U.S. violent crime rate over the past 10 years", "NATIONWIDE VIOLENT CRIME FROM 1930-PRESENT", "U.S. violent crime count since 1960",
+    "What is the U.S. prison population?", "Show clearance rates for violent crime and the prison population",
+    "U.S. murder rate since 1960 and the U.S. prison population", "U.S. violent crime rate since 1960 and the jail population",
+    "U.S. violent crime rate since 2020 to 2010",
+  ]) assert.equal(buildHistoricalNationalViolentRatePlan(q), null, q);
+  // The owned decline keeps the prison limitation; the empty note states absence for the period read.
+  const decline = nationalViolentRateDeclinePlan(buildHistoricalNationalViolentRatePlan(GC010)!, GC010);
+  assert.equal(decline.sql, null);
+  assert.ok(decline.explanation.startsWith("I can't show the U.S. national violent crime rate series right now") && decline.explanation.endsWith(PRISON_POPULATION_LIMITATION));
+  assert.equal(nationalViolentRateEmptyNote("the national violent crime rate between 1931 and 1940"),
+    "No U.S. national violent crime rate values were returned for 1931–1940: the national table holds none for those years, so no rate is shown.");
+  assert.equal(nationalViolentRateEmptyNote(GC010)!.includes("1930 onward"), true);
+  // r1 (Codex :37470, P2): the disclosures read the CRIME clause, never the prison clause's period.
+  for (const [q, clause] of [
+    [GC010, "the violent crime rate back to 1930"],
+    ["U.S. prison population since 1980 and the violent crime rate since 1990", "the violent crime rate since 1990"],
+    ["violent crime rate from 1970 to 2000 and the U.S. prison population from 1980 to present", "violent crime rate from 1970 to 2000"],
+    ["U.S. prison population from 1980 to 2000 and the violent crime rate as far back as possible", "the violent crime rate as far back as possible"],
+    ["Show the U.S. violent crime rate since 1960", "U.S. violent crime rate since 1960"],
+  ] as [string, string][]) assert.equal(nationalViolentRateDisclosureQuestion(q), clause, q);
+  assert.equal(nationalViolentRateDisclosureQuestion("What is the U.S. prison population?"), null);
 }
 
 console.log("historical deterministic query tests passed");

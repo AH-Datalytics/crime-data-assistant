@@ -761,7 +761,9 @@ async function main() {
     // (NIBRS_CATEGORY_CHANGE_GUARDRAIL, ownedQuery.guardrail), shr-query +2 ("owned-shr-count",
     // SHR_CITY_RANKING_GUARDRAIL). Only the string-literal one is visible to the family regex below.
     // 18 -> 19: request accounting stage 1 (plan r2.1) -- shr-query +1, the owned request-plan seal ("owned-shr-request-plan").
-    assert.strictEqual(sites, 19, "seal-site count moved; re-run the two-pass enumeration");
+    // 19 -> 20 (GC-051 batch, 2026-10-07): query +1 (CURRENT_MONTH_COVERAGE_GUARDRAIL, the owned Current month-coverage
+    // read, lib/current-month-coverage.ts). A constant, so the family regex below is unchanged.
+    assert.strictEqual(sites, 20, "seal-site count moved; re-run the two-pass enumeration");
     const families = new Set<string>();
     for (const f of ROUTES) for (const m of fs.readFileSync(f, "utf8").matchAll(/sealPlanDerivation\(\s*"([a-z0-9-]+)"/g)) families.add(m[1]);
     for (const f of ["lib/nibrs-deterministic-queries.ts", "lib/nibrs-rollup-deterministic.ts", "lib/nibrs-scope-deterministic.ts", "lib/current-indexed-state-deterministic.ts", "lib/multi-city-deterministic.ts", "lib/historical-deterministic-queries.ts", "lib/historical-national-violent.ts"]) {

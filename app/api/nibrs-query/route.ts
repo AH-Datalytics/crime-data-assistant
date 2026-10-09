@@ -52,6 +52,7 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { resolveClearanceRefinement } from "@/lib/clearance-refinement-followup";
 import { resolvePeerCountFollowup } from "@/lib/peer-count-followup";
+import { AGENCY_PERIOD_RANKING_GUARDRAIL, AGENCY_PERIOD_RANKING_FAILURE_TEXT, agencyPeriodRankingFacts, agencyPeriodRankingNote, asExplanationFollowup, resolveRankingExplanationFollowup } from "@/lib/nibrs-agency-period-ranking";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { boundedModelResponseJson, shouldRetryUnexplainedNoSql, UNEXPLAINED_NO_SQL_RETRY_PROMPT } from "@/lib/no-sql-retry";
@@ -533,10 +534,16 @@ export async function POST(req: NextRequest) {
     const peerFollowup = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement
       ? null
       : resolvePeerCountFollowup(question, body?.history, "nibrs");
-    const plannerQuestion = peerFollowup?.refinedQuestion ?? question;
+    // GC-091 batch: a question about the previous agency-period ranking itself ("why are murders the same for all of these
+    // cities?") carries that ranking request forward unchanged, so the owned plan runs again and the answer explains what its
+    // rows establish. Only where the turn would otherwise reach the planner, exactly like the peer-count follow-up.
+    const rankingExplanation = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement || peerFollowup
+      ? null
+      : resolveRankingExplanationFollowup(question, body?.history);
+    const plannerQuestion = peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? question;
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.reconstructedQuestion
-      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
+      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
     // Proof reasons about the reconstructed question from here on; a bare follow-up
     // fragment names no entities and would silently lose its completeness check.
     proofQuestion = guardrailQuestion;
@@ -661,6 +668,10 @@ export async function POST(req: NextRequest) {
         observed: NIBRS_DATA_CUTOFF.observed,
       },
     });
+    // GC-091 batch: the explanation follow-up runs the same owned statement with an answer addressed to the question asked.
+    if (rankingExplanation && nibrsPlan.kind === "deterministic" && nibrsPlan.query.guardrail === AGENCY_PERIOD_RANKING_GUARDRAIL) {
+      nibrsPlan.query = asExplanationFollowup(nibrsPlan.query, rankingExplanation.priorQuestion);
+    }
     if (nibrsPlan.kind === "blocked" && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
       const explanation = nibrsPlan.explanation;
@@ -734,7 +745,10 @@ export async function POST(req: NextRequest) {
         ? { family: NIBRS_CITY_RANKING_GUARDRAIL, tag: "city-ranking-structural-refusal", log: "city_ranking_structural_refusal", text: CITY_RANKING_FAILURE_TEXT, title: "Ranking Not Available" }
         : nibrsPlan.query.guardrail === PEER_COMPARISON_GUARDRAIL
           ? { family: PEER_COMPARISON_GUARDRAIL, tag: "peer-comparison-structural-refusal", log: "peer_comparison_structural_refusal", text: PEER_COMPARISON_REFUSED_TEXT, title: "Peer comparison unavailable" }
-          : null
+          // GC-091 batch: the owned agency-period ranking follows the same rule.
+          : nibrsPlan.query.guardrail === AGENCY_PERIOD_RANKING_GUARDRAIL
+            ? { family: AGENCY_PERIOD_RANKING_GUARDRAIL, tag: "agency-period-ranking-structural-refusal", log: "agency_period_ranking_structural_refusal", text: AGENCY_PERIOD_RANKING_FAILURE_TEXT, title: "Ranking Not Available" }
+            : null
       : null;
     if (nibrsPlan.kind === "deterministic" && refusedOwnedFamily) {
       const refusedMs = Date.now() - routeStart;
@@ -970,6 +984,24 @@ export async function POST(req: NextRequest) {
         if (peerMembershipNote && !explanation.includes(peerMembershipNote)) {
           explanation = [explanation, peerMembershipNote].filter(Boolean).join("\n\n");
           deterministicFiredGuardrails.push("peer-membership-disclosed");
+        }
+        // GC-091 batch: the agency-period ranking's row-derived statements (coverage; for the explanation follow-up, equal
+        // totals versus repeated rows), appended after the chokepoint for the same reason as the notes above.
+        const agencyRankingFacts = deterministicQuery.guardrail === AGENCY_PERIOD_RANKING_GUARDRAIL
+          ? agencyPeriodRankingFacts(plannerQuestion, { year: NIBRS_DATA_CUTOFF.year, month: NIBRS_DATA_CUTOFF.month, observed: NIBRS_DATA_CUTOFF.observed })
+          : null;
+        if (deterministicQuery.guardrail === AGENCY_PERIOD_RANKING_GUARDRAIL && !agencyRankingFacts) throw new Error("agency-period ranking: the resolved request could not be re-established");
+        const agencyRankingNote = agencyRankingFacts
+          ? agencyPeriodRankingNote(deterministicQuery, rows as Record<string, unknown>[], { ...agencyRankingFacts, explanation: Boolean(rankingExplanation) })
+          : null;
+        if (agencyRankingNote?.tail && !explanation.includes(agencyRankingNote.tail)) {
+          explanation = [explanation, agencyRankingNote.tail].filter(Boolean).join("\n\n");
+          deterministicFiredGuardrails.push("agency-ranking-coverage-disclosed");
+        }
+        // The explanation follow-up's direct answer LEADS, so the question asked is answered before the ranking is described.
+        if (agencyRankingNote?.lead && !explanation.includes(agencyRankingNote.lead)) {
+          explanation = [agencyRankingNote.lead, explanation].filter(Boolean).join("\n\n");
+          deterministicFiredGuardrails.push("agency-ranking-explanation-followup");
         }
         if (withheldRateNote && !explanation.includes(withheldRateNote)) {
           explanation = [explanation, withheldRateNote].filter(Boolean).join("\n\n");

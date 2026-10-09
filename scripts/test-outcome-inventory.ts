@@ -75,17 +75,19 @@ const inv = buildInventory(ROOT);
  * Request accounting plan r2.1, shr-query (+1 decision, +1 operational): the owned request-plan answer
  * (deterministic_plan | all_values_null) and its database-error catch (OPERATIONAL_RECORD).
  */
+// GC-051 batch (2026-10-07), query (+2): the owned Current month-coverage exit (lib/current-month-coverage.ts) -- a failed
+// check (sql_shape_rejected | capability_path_unavailable) and its result (deterministic_plan | no_rows_in_source).
 const EXPECTED = {
-  decisionSites: 122,
-  sealSites: 122,
+  decisionSites: 124, // 120 + request accounting stage 1 (2) + GC-051 (2)
+  sealSites: 124, // 120 + request accounting stage 1 (2) + GC-051 (2)
   operationalRows: 22,
-  perRouteSealSites: { query: 35, "nibrs-query": 35, "shr-query": 37, "hc-query": 15 },
+  perRouteSealSites: { query: 37, "nibrs-query": 35, "shr-query": 37, "hc-query": 15 },
   /** §2.4(ii): exactly one operational row is not an unconditionally terminal path. */
   nonTerminalOperationalRows: 1,
   /** §2.4(ii): exactly one terminates by closing the SSE stream rather than by returning. */
   streamClosureTerminations: 1,
-  /** 120 exits log through their route-local closure; the two source-switch exits call directly. */
-  closurePairedSites: 120,
+  /** 122 exits log through their route-local closure (118 + request accounting's two + GC-051's two month-coverage exits); the two source-switch exits call directly. */
+  closurePairedSites: 122,
   directPairedSites: 2,
 };
 
@@ -190,7 +192,8 @@ check("T7b computed sites select between whole Outcome constants, never parallel
   // P2.1 measured 11; the integration adds the 7 computed candidate sites enumerated at EXPECTED (query 2,
   // nibrs-query 2, shr-query 3), each a choice between two whole OUTCOMES constants with its own predicate.
   // Request accounting plan r2.1 adds 1: the owned request-plan answer (deterministic_plan | all_values_null).
-  assert.strictEqual(computed.length, 19, "P2.1's 11 computed sites, the 7 integrated candidate sites and the request-plan answer");
+  // GC-051 batch: +2 (query), the month-coverage failed check and its result, each a choice between two whole constants.
+  assert.strictEqual(computed.length, 21, "P2.1's 11 computed sites, the 7 integrated candidate sites, the request-plan answer and GC-051's 2");
   for (const s of computed) {
     assert.ok(s.outcome.whenTrue && s.outcome.whenFalse, `${s.fingerprint} needs two arms`);
     assert.ok(s.outcome.predicate, `${s.fingerprint} must carry its own predicate`);

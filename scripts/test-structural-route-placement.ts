@@ -132,6 +132,9 @@ const GUARDED_PLANS: Record<string, string> = {
   // The owned U.S. annual violent-crime count (lib/historical-national-violent.ts, Codex :36558): proved and read
   // before the Historical deterministic chain; a refused or unreadable plan becomes its no-query decline.
   nationalPlan: "nationalRefusal",
+  // GC-051 batch: the owned Current month-coverage read (lib/current-month-coverage.ts), proved before it runs; a refused or
+  // failed read is answered as a failed check, never as "no months" and never by model SQL.
+  monthCoveragePlan: "monthCoverageRefusal",
 };
 
 /**
