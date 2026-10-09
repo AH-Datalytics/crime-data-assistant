@@ -95,6 +95,15 @@ check("two entries claiming the same script are rejected", () => {
   expectProblem([validEntry, entryWith({ id: "other" })], "a second entry claims");
 });
 
+check("a declared platform is accepted only as win32, and only on tier F", () => {
+  assert.deepEqual(manifestModule.validateManifest({ entries: [entryWith({ platform: "win32" })] }), []);
+  expectProblem([entryWith({ platform: "linux" })], "platform must be one of");
+  expectProblem([entryWith({ platform: "" })], "platform must be one of");
+  expectProblem([entryWith({ tier: "C", platform: "win32",
+    corpus: { description: "c", corpus_ids: [loadRegistry().corpora[0].id] } })],
+  "only tier F may declare a platform");
+});
+
 check("an unknown tier is rejected", () => {
   expectProblem([entryWith({ tier: "X" })], "tier must be one of");
 });
@@ -428,6 +437,44 @@ check("Tier C skips give corpus_not_certified while Tier F can still be fixture_
   // ids and the active set, and the claim under test is that the requirement is stated, not how it is
   // padded.
   assert.match(output, /requires:\s+canonical RTCI with 2017-2024/);
+});
+
+check("a declared platform skip is platform_partial, keeps fixture_passed, and exits 0", () => {
+  const results = [
+    result(PASSED, "F"),
+    result(SKIPPED, "F", { platform_required: "win32", reason: "declared platform win32; this host is linux" }),
+  ];
+  const { value, output } = capture(() =>
+    runner.report(results, synthPlan(2, 2), { probe: false, only: null }, []));
+  assert.match(output, /verdict {2}fixture: fixture_passed/);
+  assert.match(output, /verdict {2}platform: platform_partial/);
+  assert.match(output, /This run did NOT execute every command/);
+  assert.match(output, /skipped \(declared platform/);
+  assert.doesNotMatch(output, /skipped \(Tier C/, "a platform skip must not be listed as a corpus skip");
+  assert.equal(value, 0);
+});
+
+check("a complete run says platform_complete and carries no partial warning", () => {
+  const { output } = capture(() =>
+    runner.report([result(PASSED, "F")], synthPlan(1, 1), { probe: false, only: null }, []));
+  assert.match(output, /verdict {2}platform: platform_complete/);
+  assert.doesNotMatch(output, /did NOT execute every command/);
+});
+
+check("a Tier F skip without a platform declaration is a run defect, never a pass", () => {
+  const { value, output } = capture(() =>
+    runner.report([result(PASSED, "F"), result(SKIPPED, "F", { reason: "r" })], synthPlan(2, 2),
+      { probe: false, only: null }, []));
+  assert.equal(value, 1);
+  assert.match(output, /undeclared skip: .* \(tier F\)/);
+});
+
+check("a platform skip outside Tier F is a run defect too", () => {
+  const { value, output } = capture(() =>
+    runner.report([result(SKIPPED, "C", { platform_required: "win32", reason: "r", corpus_requirement: "c" })],
+      synthPlan(1, 1), { probe: false, only: null }, []));
+  assert.equal(value, 1);
+  assert.match(output, /undeclared skip: .* \(tier C\)/);
 });
 
 check("the two verdicts never merge into one", () => {

@@ -28,6 +28,13 @@
 # to run unless the interpreter's pip is exactly the version on the next line. Moving this line is
 # how that coupling gets re-reviewed on purpose instead of discovered by a broken run.
 # harness-env: pip==25.3
+#
+# The lock is resolved for ONE platform, the one it was generated on. The canonical harness now runs on
+# Linux, where pandas's `tzdata; sys_platform == "win32"` is false: tzdata is still locked and installed,
+# but nothing requires it there. The verifier evaluates markers for this platform as well as the running
+# one, so a package reachable only on the lock's platform is accepted and reported, and a package
+# reachable on neither still fails. Regenerating the lock on another platform means moving this line.
+# harness-env: lock-platform=win32
 
 # scripts/test-analytics-credential-containment.ts SPAWNS four tools -- smoke-test.py:33,
 # canary-reliability-disclosures.py:34, eval/stress-test.py:26, eval/run-eval.py:27 -- each importing

@@ -77,6 +77,10 @@ const TARGETS = [
   },
   {
     runner: "powershell",
+    // Windows PowerShell 5.1 exists only on Windows. On any other host this target is reported as NOT
+    // EXERCISED -- never as certified -- and the canonical workflow's Windows job certifies it with
+    // `node scripts/test-harness-mutations.js --runner powershell`.
+    platform: "win32",
     bucket: "tracked",
     script: "scripts/test-nibrs-refresh-cleanup.ps1",
     command: "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-nibrs-refresh-cleanup.ps1",
@@ -145,9 +149,31 @@ function certify(target) {
   }
 }
 
+// `--runner <name>` certifies only that runner's targets. The Windows job uses it for `powershell`.
+// Selecting a runner is a demand, not a filter that may come up empty: an unknown runner, or a selected
+// target this host cannot run, is a problem rather than a quiet zero.
+const runnerArg = process.argv.indexOf("--runner");
+const onlyRunner = runnerArg >= 0 ? process.argv[runnerArg + 1] : null;
+if (runnerArg >= 0 && !TARGETS.some((t) => t.runner === onlyRunner)) {
+  failures.push(`--runner ${JSON.stringify(onlyRunner)} selects no mutation target`);
+}
+const notExercised = [];
+
 console.log("exit-code certification by mutation (each target: passes clean, fails mutated, restored)");
 for (const target of TARGETS) {
+  if (onlyRunner && target.runner !== onlyRunner) continue;
   const label = `${target.runner.padEnd(10)} ${target.bucket.padEnd(9)} ${path.basename(target.script)}`;
+  if (target.platform && target.platform !== process.platform) {
+    if (onlyRunner) {
+      failures.push(`${label}: --runner ${onlyRunner} was asked to certify a ${target.platform} target on ${process.platform}`);
+      console.log(`  FAIL  ${label}  (needs ${target.platform})`);
+    } else {
+      notExercised.push(label);
+      console.log(`  --    ${label}  NOT EXERCISED on ${process.platform}: needs ${target.platform}; ` +
+        `certified by the canonical workflow's Windows job (--runner ${target.runner})`);
+    }
+    continue;
+  }
   try {
     const { exitCode } = certify(target);
     passed++;
@@ -170,7 +196,10 @@ for (const required of ["tracked", "untracked"]) {
 }
 if (TARGETS.length < 5) failures.push(`only ${TARGETS.length} mutation target(s); at least 5 required`);
 
-console.log(`\nexit-code mutations: ${passed} of ${TARGETS.length} certified, ${failures.length} problem(s)`);
+const selected = onlyRunner ? TARGETS.filter((t) => t.runner === onlyRunner).length : TARGETS.length;
+console.log(`\nexit-code mutations: ${passed} of ${selected} certified` +
+  (notExercised.length ? `, ${notExercised.length} not exercised on ${process.platform}` : "") +
+  `, ${failures.length} problem(s)`);
 if (failures.length) {
   for (const failure of failures) console.log("  " + failure);
   process.exitCode = 1;
