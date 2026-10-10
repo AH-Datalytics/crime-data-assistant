@@ -2235,6 +2235,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "Phase 3 SHR integration 2026-09-30 (accepted candidate test). MEASURED, not assumed: passed in probe mode against empty fixtures with no manifest (1693 ms). Tier F: builds or seeds whatever it reads in memory or in its own temporary files. Its retained inputs are the checked-in fixtures under scripts/fixtures/retained-evidence/ (MANIFEST.json gives each source digest and extraction rule); restored to the canonical run by the Codex I2 correction."
+    },
+    {
+      "id": "test-carjacking-codes",
+      "tier": "F",
+      "script": "scripts/test-carjacking-codes.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "carjacking hotfix: carjacking has no NIBRS code (64A/64B are human trafficking); code-only builders decline code-less families; no database, no route, no network"
     }
   ]
 }

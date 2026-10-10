@@ -155,7 +155,9 @@ const OFFENSE_PATTERNS: { topic: string; codes: string[]; label: string; pattern
   { topic: "burglary", codes: ["220"], label: "Burglaries", pattern: /\bburglar(?:y|ies)\b/i },
   { topic: "theft", codes: ["23A-23H"], label: "Thefts", pattern: /\b(?:theft|larceny|larcenies)\b/i },
   { topic: "motor_vehicle_theft", codes: ["240"], label: "Motor vehicle thefts", pattern: /\b(?:motor\s+vehicle|auto)\s+thefts?\b/i },
-  { topic: "carjacking", codes: ["64A", "64B"], label: "Carjackings", pattern: /\bcarjack(?:ing|ings)?\b/i },
+  // Carjacking has NO offense code: it is robbery (120) with a stolen vehicle, counted in the summary_carjacking_* tables.
+  // 64A/64B are human trafficking (carjacking hotfix, 2026-10-10). Like domestic violence, it is a code-less family.
+  { topic: "carjacking", codes: [], label: "Carjackings", pattern: /\bcarjack(?:ing|ings)?\b/i },
   { topic: "domestic_violence", codes: [], label: "Domestic violence", pattern: /\bdomestic\s+violence\b|\bintimate\s+partner\s+violence\b|\b(?<![a-z])dv(?![a-z])\b/i },
   { topic: "violent_crime", codes: ["09A", "11A", "11B", "11C", "120", "13A"], label: "Violent crime", pattern: /\bviolent\s+crimes?\b/i },
   { topic: "property_crime", codes: ["200", "220", "23A-23H", "240"], label: "Property crime", pattern: /\bproperty\s+crime\b/i },
@@ -249,6 +251,15 @@ function detectOffenses(question: string): QueryContractOffense[] {
     .sort((a, b) => a.index - b.index)
     .map(({ entry }) => ({ topic: entry.topic, codes: entry.codes, label: entry.label }));
 }
+/**
+ * True when ANY requested offense is a code-less family (carjacking, domestic violence). Code-only builders must not
+ * claim such a request, even beside coded offenses: the flattened code list would silently drop the family
+ * (carjacking hotfix, 2026-10-10).
+ */
+export function hasCodelessFamily(contract: QueryContract): boolean {
+  return contract.metric.offenses.some((offense) => offense.codes.length === 0);
+}
+
 function detectMetric(question: string): QueryContract["metric"] {
   const offenses = detectOffenses(question);
   const topic = offenses[0]?.topic ?? (/\bcrimes?\b/i.test(question) ? "crime" : "unknown");
