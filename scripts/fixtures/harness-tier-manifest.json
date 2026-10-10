@@ -2365,6 +2365,33 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "request accounting stage 2a: unit checks of the ledger, question types or binding; no database, no route, no network"
+    },
+    {
+      "id": "test-nibrs-request-accounting",
+      "tier": "F",
+      "script": "scripts/test-nibrs-request-accounting.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting stage 2b: unit checks of the ledger, question types or binding; no database, no route, no network"
+    },
+    {
+      "id": "test-nibrs-question-types",
+      "tier": "F",
+      "script": "scripts/test-nibrs-question-types.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting stage 2b: unit checks of the ledger, question types or binding; no database, no route, no network"
+    },
+    {
+      "id": "test-nibrs-typed-applied-sites",
+      "tier": "F",
+      "script": "scripts/test-nibrs-typed-applied-sites.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting 2b r3: where a typed answer records what it applied (source scan of lib/nibrs-question-compiler.ts) and rate/presence operands on an in-memory database; no fixture database, no route, no network"
     }
   ]
 }

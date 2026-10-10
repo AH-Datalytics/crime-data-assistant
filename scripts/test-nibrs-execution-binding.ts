@@ -137,9 +137,10 @@ async function main() {
   const legacyCalls = [...route.matchAll(/await executeWithTimeout\(([^)]*)\)/g)].map((m) => m[1]);
   // The owned-statement executor (GC-065's comparison, the NIBRS city ranking's S1 candidates read) is
   // application-built like the owned and deterministic plans, and re-proves each statement immediately
-  // before this executor runs it.
-  check(JSON.stringify(legacyCalls) === JSON.stringify(["ownedStatement.sql", "ownedQuery.sql", "deterministicQuery.sql", "fallbackSql"]),
-    `the excluded callers keep the legacy executor: owned statements, owned, deterministic and the application fallback (${legacyCalls.join(", ")})`);
+  // before this executor runs it. Request accounting stage 2b adds `typedStatement`: a statement the application compiles
+  // from an issued N1-N7 spec (lib/nibrs-question-compiler.ts), table-allowlisted before it runs, never model text.
+  check(JSON.stringify(legacyCalls) === JSON.stringify(["ownedStatement.sql", "ownedQuery.sql", "deterministicQuery.sql", "typedStatement", "fallbackSql"]),
+    `the excluded callers keep the legacy executor: owned statements, owned, deterministic, typed and the application fallback (${legacyCalls.join(", ")})`);
   const initialFinal = route.indexOf('path: "model-initial"');
   check(initialFinal > route.indexOf("const schemaCheck = validateSqlSchema(validationDb, sql);") && initialFinal < route.indexOf("await executeBoundNibrsStatement(finalCheck.authority)"),
     "on the initial path the final check follows planning and schema correction, and precedes execution");

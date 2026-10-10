@@ -1,6 +1,10 @@
 import { buildQueryContract, hasCodelessFamily, type QueryContract } from "./query-contract";
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { DeterministicNibrsQuery } from "./nibrs-deterministic-queries";
+import { appliedFromContract, placeIs } from "./nibrs-legacy-binding";
+
+const UNIT_OF_ALIAS: Record<string, string> = { victims: "victims", offenders: "offenders", arrests: "arrests" };
+const BREAKDOWN_OF_DEMO: Record<DemoDimension, string> = { age_group: "age", race: "race", sex: "sex", ethnicity: "ethnicity" };
 
 type DemoDimension = "age_group" | "race" | "sex" | "ethnicity";
 type RoleConfig = {
@@ -136,6 +140,10 @@ export function buildNibrsContinuousReporterQuery(question: string): Determinist
     xAxisLabel: "Year",
     yAxisLabel: config.countAlias[0].toUpperCase() + config.countAlias.slice(1),
     guardrail: "deterministic-nibrs-continuous-reporters",
+    applied: appliedFromContract(contract, { startYear: range.start, endYear: range.end, defaulted: contract.time.startYear === null }, {
+      operations: ["cohort"], codeGroups: [codes], units: [UNIT_OF_ALIAS[config.countAlias]], statistic: "count", grains: ["year"],
+      breakdowns: demo ? [BREAKDOWN_OF_DEMO[demo]] : [],
+    }),
   };
 }
 
@@ -179,5 +187,10 @@ export function buildNibrsCountywideDemographicQuery(question: string): Determin
     xAxisLabel: "Year",
     yAxisLabel: config.countAlias[0].toUpperCase() + config.countAlias.slice(1),
     guardrail: "deterministic-nibrs-countywide-demographic",
+    applied: appliedFromContract(contract, { startYear: range.start, endYear: range.end, defaulted: contract.time.startYear === null }, {
+      places: placeIs.any(placeIs.agency(countyKey, state), placeIs.state(stateName)),
+      codeGroups: [codes], units: [UNIT_OF_ALIAS[config.countAlias]], statistic: "count", grains: ["year"],
+      breakdowns: demo ? [BREAKDOWN_OF_DEMO[demo]] : [],
+    }),
   };
 }

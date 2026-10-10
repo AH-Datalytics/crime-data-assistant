@@ -17,18 +17,38 @@
 import { recognizeCityRanking } from "./city-ranking";
 import { buildCityRanking, type SourceCutoff } from "./city-ranking-builder";
 import type { DeterministicNibrsQuery } from "./nibrs-deterministic-queries";
+import type { CityRankingRequest } from "./city-ranking";
+import { placeIs, type NibrsApplied } from "./nibrs-legacy-binding";
+
+/**
+ * Stage 2b (plan §5, L3): what the recognized ranking applied, by value -- its scope, offense codes, the quantity it sorts
+ * on, its direction and the number of places it shows, its year, and its population floors. A count condition or a
+ * population ceiling has no applied threshold value, so a request carrying one is never bound here.
+ */
+function cityRankingApplied(r: CityRankingRequest): NibrsApplied {
+  const floors = r.eligibility.flatMap((e) => (e.kind === "population" && (e.comparison === ">=" || e.comparison === ">") ? [{ op: e.comparison, amount: e.value }] : []));
+  return {
+    places: r.scope.kind === "nationwide" ? placeIs.national : placeIs.state(r.scope.name),
+    codeGroups: r.offense.kind === "nibrs_codes" ? [r.offense.codes] : [],
+    statistic: r.sort.quantity === "rate_per_100k" ? "rate" : r.sort.quantity === "count" ? "count" : null,
+    rank: { dir: r.sort.direction === "desc" ? "top" : "bottom", n: r.resultCount },
+    years: r.period.kind === "explicit" ? { start: r.period.year, end: r.period.year } : null,
+    thresholds: floors,
+    entities: r.entityLevel === "city" ? ["city"] : ["agency"],
+  };
+}
 
 /** The guardrail every NIBRS city ranking carries. The route's owned-failure decisions key on it. */
 export const NIBRS_CITY_RANKING_GUARDRAIL = "deterministic-city-ranking-nibrs";
 
 export type CityRankingPlan =
   | { kind: "deterministic"; query: DeterministicNibrsQuery }
-  | { kind: "unavailable"; title: string; explanation: string }
+  | { kind: "unavailable"; title: string; explanation: string; reason?: string }
   | null;
 
 /** The honest limitation for a recognised ranking this family could not deliver. */
-export function cityRankingUnavailable(explanation: string): { kind: "unavailable"; title: string; explanation: string } {
-  return { kind: "unavailable", title: "Ranking Not Available", explanation };
+export function cityRankingUnavailable(explanation: string, reason?: string): { kind: "unavailable"; title: string; explanation: string; reason?: string } {
+  return { kind: "unavailable", title: "Ranking Not Available", explanation, ...(reason ? { reason } : {}) };
 }
 
 /**
@@ -39,10 +59,10 @@ export function cityRankingUnavailable(explanation: string): { kind: "unavailabl
  * arriving as a follow-up. It is declined here instead. This resolves nothing about the follow-up
  * itself -- it does not carry prior context forward, and is not a general follow-up capability.
  */
-export function cityRankingFollowupUnavailable(question: string): { kind: "unavailable"; title: string; explanation: string } | null {
+export function cityRankingFollowupUnavailable(question: string): { kind: "unavailable"; title: string; explanation: string; reason?: string } | null {
   const recognized = recognizeCityRanking(question, "nibrs");
   if (!recognized) return null;
-  if (recognized.kind === "unsupported") return cityRankingUnavailable(recognized.explanation);
+  if (recognized.kind === "unsupported") return cityRankingUnavailable(recognized.explanation, recognized.reason);
   return cityRankingUnavailable(
     "I build city rankings myself rather than generating a query for them, and I can't do that as a " +
     "follow-up to the previous answer. Ask the ranking as a standalone question — naming the " +
@@ -59,7 +79,7 @@ export const CITY_RANKING_FAILURE_TEXT =
 export function planNibrsCityRanking(question: string, cutoff: SourceCutoff | null): CityRankingPlan {
   const recognized = recognizeCityRanking(question, "nibrs");
   if (!recognized) return null;                       // not this family: existing route, untouched
-  if (recognized.kind === "unsupported") return cityRankingUnavailable(recognized.explanation);
+  if (recognized.kind === "unsupported") return cityRankingUnavailable(recognized.explanation, recognized.reason);
 
   const built = buildCityRanking(recognized, cutoff);
   if (!built) {
@@ -89,6 +109,7 @@ export function planNibrsCityRanking(question: string, cutoff: SourceCutoff | nu
       yAxisLabel: built.sortColumn === "rate_per_100k" ? "Rate per 100,000" : "Offenses",
       guardrail: built.guardrail,
       completeness: built.completeness,
+      applied: cityRankingApplied(recognized),
     },
   };
 }

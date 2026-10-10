@@ -319,7 +319,10 @@ async function main() {
       label: "app/api/nibrs-query",
       importPath: "../app/api/nibrs-query/route",
       question: "how many murder victims in Texas each year from 2019 to 2022",
-      coldCalls: ["translate", "explain"],
+      // Request accounting stage 2b: a numeric NIBRS answer is compiled by the application from a supported question type
+      // (here N1, a state series), so the cold path makes NO model call and the stub below is never asked. The suite still
+      // proves off and shadow deliver the same bytes.
+      coldCalls: [],
       reply: {
         sql: "SELECT year, SUM(victim_count) AS victims FROM summary_victim_state_monthly WHERE state = 'TX' AND offense = 'murder' AND year BETWEEN 2019 AND 2022 GROUP BY year ORDER BY year",
         explanation: "Murder victims in Texas by year.",

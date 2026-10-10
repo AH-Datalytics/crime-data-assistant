@@ -1,6 +1,7 @@
 import { buildQueryContract, hasCodelessFamily } from "./query-contract";
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { DeterministicNibrsQuery } from "./nibrs-deterministic-queries";
+import { appliedFromContract } from "./nibrs-legacy-binding";
 
 function sqlString(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
@@ -59,6 +60,10 @@ LIMIT 1000`;
     xAxisLabel: "Race",
     yAxisLabel: "Arrests",
     guardrail: "deterministic-nibrs-rollup-juvenile-arrests-race",
+    applied: appliedFromContract(contract, { startYear: start, endYear: end, defaulted: contract.time.startYear === null }, {
+      ...(contract.metric.offenseCodes.length ? {} : { codeGroups: [], allOffenses: true }),
+      units: ["arrests"], statistic: "count", filters: ["age:Under 18"], breakdowns: ["race"],
+    }),
   };
 }
 
@@ -125,6 +130,10 @@ LIMIT 1000`;
     xAxisLabel: "Year",
     yAxisLabel: "Arrests",
     guardrail: "deterministic-nibrs-rollup-national-arrests",
+    applied: appliedFromContract({ ...contract, geographies: [], geography: { ...contract.geography, kind: "national" } }, { startYear: start, endYear: end, defaulted: contract.time.startYear === null }, {
+      ...(codes.length ? {} : { codeGroups: [], allOffenses: true }),
+      units: ["arrests"], statistic: "count", grains: ["year"],
+    }),
   };
 }
 

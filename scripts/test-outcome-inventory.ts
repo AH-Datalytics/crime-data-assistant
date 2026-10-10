@@ -80,17 +80,24 @@ const inv = buildInventory(ROOT);
 // Request accounting stage 2a (Historical), query (+3): the Historical accounting exit (recognition, follow-up and type
 // declines or clarifications: capability_path_unavailable | measure_ambiguous), the typed answer (deterministic_plan |
 // no_rows_in_source), and the model-SQL gate inside the stream (capability_path_unavailable).
+// Request accounting stage 2b (NIBRS), nibrs-query (+3): the NIBRS accounting exit (follow-up, recognition, type and
+// fixed-path declines or clarifications: capability_path_unavailable | measure_ambiguous), the typed answer
+// (deterministic_plan | no_rows_in_source), and the model-SQL gate (capability_path_unavailable).
 const EXPECTED = {
-  decisionSites: 127, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3)
-  sealSites: 127, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3)
+  decisionSites: 130, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3) + stage 2b (3)
+  sealSites: 130, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3) + stage 2b (3)
   operationalRows: 22,
-  perRouteSealSites: { query: 40, "nibrs-query": 35, "shr-query": 37, "hc-query": 15 },
-  /** §2.4(ii): exactly one operational row is not an unconditionally terminal path. */
-  nonTerminalOperationalRows: 1,
+  perRouteSealSites: { query: 40, "nibrs-query": 38, "shr-query": 37, "hc-query": 15 },
+  /**
+   * §2.4(ii): operational rows that are not an unconditionally terminal path. It was 1: the NIBRS deterministic-failure
+   * catch logged, returned only on "stop", and otherwise continued into the model path. Request accounting stage 2b (plan
+   * §3) ends that catch in a decline on every branch, so it is terminal and none is left.
+   */
+  nonTerminalOperationalRows: 0,
   /** §2.4(ii): exactly one terminates by closing the SSE stream rather than by returning. */
   streamClosureTerminations: 1,
-  /** 125 exits log through their route-local closure (118 + request accounting's two + GC-051's two month-coverage exits + stage 2a's three); the two source-switch exits call directly. */
-  closurePairedSites: 125,
+  /** 128 exits log through their route-local closure (118 + request accounting's two + GC-051's two month-coverage exits + stage 2a's three + stage 2b's three); the two source-switch exits call directly. */
+  closurePairedSites: 128,
   directPairedSites: 2,
 };
 
@@ -198,7 +205,9 @@ check("T7b computed sites select between whole Outcome constants, never parallel
   // GC-051 batch: +2 (query), the month-coverage failed check and its result, each a choice between two whole constants.
   // Request accounting stage 2a: +2 (query), the Historical accounting exit (decline | clarification) and the typed answer
   // (deterministic_plan | no_rows_in_source), each a choice between two whole OUTCOMES constants.
-  assert.strictEqual(computed.length, 23, "P2.1's 11 computed sites, the 7 integrated candidate sites, the request-plan answer, GC-051's 2 and stage 2a's 2");
+  // Request accounting stage 2b: +2 (nibrs-query), the NIBRS accounting exit (decline | clarification) and the typed answer
+  // (deterministic_plan | no_rows_in_source), each a choice between two whole OUTCOMES constants.
+  assert.strictEqual(computed.length, 25, "P2.1's 11 computed sites, the 7 integrated candidate sites, the request-plan answer, GC-051's 2, stage 2a's 2 and stage 2b's 2");
   for (const s of computed) {
     assert.ok(s.outcome.whenTrue && s.outcome.whenFalse, `${s.fingerprint} needs two arms`);
     assert.ok(s.outcome.predicate, `${s.fingerprint} must carry its own predicate`);
@@ -238,16 +247,16 @@ check("T7c-ii branch level: SSE stream closure counts as termination", () => {
     "the SSE outer catch closes the stream in the enclosing try's finally block");
 });
 
-check("T7c-ii branch level: exactly one operational site is not unconditionally terminal", () => {
+check("T7c-ii branch level: no operational site is left mid-flight", () => {
   const nonTerminal = inv.operationalRows.filter((r) => !r.termination.terminal);
   assert.strictEqual(nonTerminal.length, EXPECTED.nonTerminalOperationalRows,
-    `expected exactly ${EXPECTED.nonTerminalOperationalRows} mid-flight operational site, found ` +
+    `expected exactly ${EXPECTED.nonTerminalOperationalRows} mid-flight operational site(s), found ` +
     nonTerminal.map((r) => r.fingerprint).join(", "));
-  const midFlight = nonTerminal[0];
-  assert.ok(midFlight.termination.conditional,
-    "the mid-flight site writes its row on every pass and returns on one branch only, so one " +
-    "request can write two rows: rows are not requests");
-  assert.strictEqual(midFlight.route, "nibrs-query");
+  // The former mid-flight site (the NIBRS deterministic-failure catch) must now be terminal, not merely absent: every
+  // NIBRS operational site ends the request. (Fingerprints don't name the log reason, so the route's whole set is checked.)
+  const nibrsSites = inv.operationalRows.filter((r) => r.route === "nibrs-query");
+  assert.ok(nibrsSites.length > 0, "no NIBRS operational site was found; this check would be vacuous");
+  assert.ok(nibrsSites.every((r) => r.termination.terminal), "every NIBRS operational site, including the deterministic-failure catch, must end the request (stage 2b)");
 });
 
 // ── T7d ───────────────────────────────────────────────────────────────────────────────────────

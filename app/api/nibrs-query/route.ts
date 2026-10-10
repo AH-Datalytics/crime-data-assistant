@@ -104,6 +104,19 @@ import { NIBRS_CITY_RANKING_GUARDRAIL, CITY_RANKING_FAILURE_TEXT } from "@/lib/c
 import { rankingValidationContract } from "@/lib/city-ranking";
 import { runOwnedAnnualClearance } from "@/lib/nibrs-owned-family";
 import { NIBRS_CATEGORY_CHANGE_GUARDRAIL, planCategoryChange, recognizeCategoryChange, runOwnedCategoryChange } from "@/lib/nibrs-category-change";
+import { accountNibrsRequest, nibrsRecognitionRefusal, nibrsRequestKind, nibrsFollowupCheck, NIBRS_CACHE_TAB, NIBRS_MODEL_SQL_DECLINE } from "@/lib/nibrs-request-accounting";
+import { matchNibrsType, MEASURE_CODES } from "@/lib/nibrs-question-types";
+import { compileNibrsSpec } from "@/lib/nibrs-question-compiler";
+import { nibrsLegacyBound, nibrsUnboundParts, typedExplainLimitation, placesFromGeographies, type NibrsApplied } from "@/lib/nibrs-legacy-binding";
+import { recognizeAgencyPeriodRanking } from "@/lib/nibrs-agency-period-ranking";
+import { isFollowUp } from "@/lib/tab-suggest";
+import type { Part as AccountingPart } from "@/lib/request-accounting";
+
+/**
+ * Request accounting, stage 2b (plan §6, L11): no model-written statement ever runs on the NIBRS tab. Numbers come only
+ * from a fixed path that applies the whole request or from a supported question type (lib/nibrs-question-types.ts).
+ */
+const NIBRS_MODEL_SQL_NEVER_RUNS: boolean = true;
 import { pendingWhereLevelReask, whereLevelClarification } from "@/lib/where-level-clarification";
 import { completenessOf, decideCandidates } from "@/lib/city-ranking-completeness";
 import { shouldAskCrimeType } from "@/lib/crime-type-clarification";
@@ -162,7 +175,7 @@ import {
   sanitizeChartConfigTitle,
 } from "@/lib/scaffold-helpers";
 import { findNibrsSqlIssues } from "@/lib/sql-guardrails";
-import { nibrsWithheldRateNote, withoutNibrsMetadata, PEER_COMPARISON_GUARDRAIL, PEER_COMPARISON_REFUSED_TEXT } from "@/lib/nibrs-deterministic-queries";
+import { nibrsWithheldRateNote, demographicMissingYearsNote, withoutNibrsMetadata, PEER_COMPARISON_GUARDRAIL, PEER_COMPARISON_REFUSED_TEXT } from "@/lib/nibrs-deterministic-queries";
 
 function modelLabel(modelId: string): string {
   if (modelId.includes("sonnet")) return "sonnet-4.5";
@@ -422,8 +435,98 @@ export async function POST(req: NextRequest) {
         executionTimeMs: executionMs,
       } as QueryResponse));
     }
+    // Stage 2b: the follow-up resolvers run here, unchanged, so the one ledger boundary below sees the effective question
+    // before any exit that can deliver a number (plan §3).
+    const history = normalizeHistoryForTab(body?.history, "nibrs");
+    const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+      ? followupPlan.transform
+      : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, "nibrs"));
+    // ── Cause C/D: an explicit police-clearance refinement carries its request forward ──────
+    //
+    // "Now what about just the share that's prosecution declined" settles nothing on its own, so
+    // every consumer below — the contract, the place resolver, the query context and the proof —
+    // was reasoning about a fragment, and GC-004's statement was refused for computing a share
+    // the contract had no way to recognize. This restores the PRIOR request's offense, geography
+    // and period with the newly asked reason in place of the old one, and only when the turn
+    // names a clearance reason and settles nothing of its own. An explicit new request is left
+    // exactly as the reader wrote it.
+    const clearanceRefinement = resolveClearanceRefinement(question, body?.history, "nibrs");
+    // AGENCY+RANK batch (GC-116): a turn that only changes the population-peer count carries the prior peer request
+    // forward with the new count, so the owned plan answers it. Only where the turn would otherwise reach the planner.
+    const peerFollowup = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement
+      ? null
+      : resolvePeerCountFollowup(question, body?.history, "nibrs");
+    // GC-091 batch: a question about the previous agency-period ranking itself ("why are murders the same for all of these
+    // cities?") carries that ranking request forward unchanged, so the owned plan runs again and the answer explains what its
+    // rows establish. Only where the turn would otherwise reach the planner, exactly like the peer-count follow-up.
+    const rankingExplanation = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement || peerFollowup
+      ? null
+      : resolveRankingExplanationFollowup(question, body?.history);
+    const plannerQuestion = peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? question;
+    const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+      ? followupPlan.reconstructedQuestion
+      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
+
+    // ── Request accounting, stage 2b (NIBRS; plan docs/superpowers/plans/2026-10-09-request-accounting-stage2b-nibrs.md) ──
+    // ONE ledger, on the effective question (an authoritative reconstruction, else a resolver's refined question, else the
+    // follow-up transform's context question, else the turn as typed), before any exit that can deliver a number (§3).
+    // The request kind and every explanation request come from the turn AS TYPED (r1.1 R1). Every non-context part must be
+    // applied by value by whichever path answers: a fixed path whose own plan used it, or a supported type (N1-N7).
+    const nibrsTurnLedger = accountNibrsRequest(question);
+    const nibrsLedger = guardrailQuestion === question ? nibrsTurnLedger : accountNibrsRequest(guardrailQuestion);
+    const nibrsTurnExplains = nibrsTurnLedger.parts.some((p) => p.concept === "explain");
+    // The owned agency-period ranking matches the WHOLE turn by its own closed grammar (GC-091), and its explanation
+    // follow-up carries that request forward unchanged: as for 2a's whole-turn families, it keeps its own path.
+    const nibrsWholeTurn = recognizeAgencyPeriodRanking(plannerQuestion)?.kind === "request";
+    const nibrsNumeric = nibrsRequestKind(nibrsTurnLedger) === "numeric" && !nibrsWholeTurn;
+    /** The one sealed exit for every NIBRS accounting decline or clarification (follow-up, recognition, types, gate). */
+    const nibrsAccountingExit = (refusal: { parts: AccountingPart[]; explanation: string }, owner: string, clarify = false) => {
+      const ms = Date.now() - routeStart;
+      const tags = ["request-accounting", `request-accounting-owner:${owner}`, ...refusal.parts.map((p) => `request-accounting:${p.state}:${p.concept}`)];
+      const accountingProof = finalizeExit({ outcome: clarify ? OUTCOMES.measure_ambiguous : OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: tags, narrative: refusal.explanation });
+      writeNibrsLog(question, null, 0, null, ms, refusal.explanation, tags, "deterministic", sessionId, null, null, accountingProof);
+      return jsonResp(emitFactualPayload(accountingProof, {
+        success: true, question, sql: null as unknown as string, explanation: refusal.explanation, title: clarify ? "Clarification needed" : "Not answered",
+        columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms,
+      } as QueryResponse));
+    };
+    // K2 for every replacement (r1.1 R1): the authoritative reconstruction, the clearance refinement, the peer-count and
+    // ranking-explanation follow-ups, and the follow-up transform's context question.
+    const priorNibrsTurns = normalizeHistoryForTab(body?.history, "nibrs", 50).filter((m) => m.role === "user").map((m) => m.content);
+    const nibrsResolverQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
+      ? followupPlan.reconstructedQuestion
+      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? followupTransform?.contextQuestion ?? null);
+    // r2 (task 0): a TEXT turn that a resolver rebuilt (the ranking-explanation follow-up is always a "why" turn) is
+    // checked too; a TEXT follow-up nobody rebuilt keeps the model's text reply.
+    if (!nibrsNumeric && nibrsResolverQuestion !== null && priorNibrsTurns.length > 0) {
+      const carried = nibrsFollowupCheck({ question, effective: nibrsResolverQuestion, previousUserTurns: priorNibrsTurns, isFollowUp, earlierOnly: true });
+      if (carried) return nibrsAccountingExit({ parts: [], explanation: carried.explanation }, "followup");
+    }
+    if (nibrsNumeric) {
+      const isNibrsFollowup = priorNibrsTurns.length > 0
+        && (isFollowUp(question) || Boolean(queryBearingFollowup) || followupPlan?.kind === "query_bearing" || nibrsResolverQuestion !== null);
+      if (isNibrsFollowup) {
+        const carried = nibrsFollowupCheck({ question, effective: nibrsResolverQuestion, previousUserTurns: priorNibrsTurns, isFollowUp });
+        if (carried) return nibrsAccountingExit({ parts: [], explanation: carried.explanation }, "followup");
+      }
+      const recognitionRefusal = nibrsRecognitionRefusal(nibrsLedger);
+      if (recognitionRefusal) return nibrsAccountingExit(recognitionRefusal, "recognition");
+    }
+    /**
+     * A fixed path keeps a NIBRS request only when its applied values account for every part (plan §5, L1-L3), for EVERY
+     * request whatever its kind. "Why" in the turn as typed is applied only by the ranking-explanation path (r1.1 R1).
+     */
+    const nibrsOwns = (applied: NibrsApplied | undefined | null): boolean => {
+      if (!applied) return false;
+      if (nibrsTurnExplains && !applied.explain) return false;
+      return nibrsLegacyBound(nibrsLedger, applied);
+    };
+
     const completenessIntent = detectCompletenessQuestion(question);
-    if (completenessIntent) {
+    const completenessOwned = Boolean(completenessIntent) && nibrsOwns({
+      operations: ["completeness"], years: completenessIntent?.year ? { start: completenessIntent.year, end: completenessIntent.year } : null,
+    });
+    if (completenessIntent && completenessOwned) {
       const completenessAnswer = buildCompletenessAnswer("nibrs", loadCompletenessRows("nibrs", getNibrsDb()), new Date().getFullYear(), completenessIntent.year);
       const executionMs = Date.now() - routeStart;
       const completenessProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, planFamily: "completeness-deterministic", guardrails: ["completeness-deterministic"], narrative: completenessAnswer });
@@ -515,35 +618,6 @@ export async function POST(req: NextRequest) {
       } as QueryResponse));
     }
 
-    const history = normalizeHistoryForTab(body?.history, "nibrs");
-    const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
-      ? followupPlan.transform
-      : (detectFollowupTransform(question, history) ?? buildCrossSourceFollowupTransform(question, body?.history, "nibrs"));
-    // ── Cause C/D: an explicit police-clearance refinement carries its request forward ──────
-    //
-    // "Now what about just the share that's prosecution declined" settles nothing on its own, so
-    // every consumer below — the contract, the place resolver, the query context and the proof —
-    // was reasoning about a fragment, and GC-004's statement was refused for computing a share
-    // the contract had no way to recognize. This restores the PRIOR request's offense, geography
-    // and period with the newly asked reason in place of the old one, and only when the turn
-    // names a clearance reason and settles nothing of its own. An explicit new request is left
-    // exactly as the reader wrote it.
-    const clearanceRefinement = resolveClearanceRefinement(question, body?.history, "nibrs");
-    // AGENCY+RANK batch (GC-116): a turn that only changes the population-peer count carries the prior peer request
-    // forward with the new count, so the owned plan answers it. Only where the turn would otherwise reach the planner.
-    const peerFollowup = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement
-      ? null
-      : resolvePeerCountFollowup(question, body?.history, "nibrs");
-    // GC-091 batch: a question about the previous agency-period ranking itself ("why are murders the same for all of these
-    // cities?") carries that ranking request forward unchanged, so the owned plan runs again and the answer explains what its
-    // rows establish. Only where the turn would otherwise reach the planner, exactly like the peer-count follow-up.
-    const rankingExplanation = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement || peerFollowup
-      ? null
-      : resolveRankingExplanationFollowup(question, body?.history);
-    const plannerQuestion = peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? question;
-    const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
-      ? followupPlan.reconstructedQuestion
-      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
     // Proof reasons about the reconstructed question from here on; a bare follow-up
     // fragment names no entities and would silently lose its completeness check.
     proofQuestion = guardrailQuestion;
@@ -606,7 +680,16 @@ export async function POST(req: NextRequest) {
       throw new Error("an owned family attempted to execute a refused statement");
     };
 
-    const categoryChange = deterministicResolution ? recognizeCategoryChange(question) : null;
+    const recognizedCategoryChange = deterministicResolution ? recognizeCategoryChange(question) : null;
+    // Stage 2b (plan §5): kept only when it applies every part -- the place it resolves, the UCR violent category, the
+    // direction it ranks ("greatest increase/decrease" is its top-1), and the two years it compares. Its own decline
+    // (an unsupported form) delivers no number and is kept.
+    const categoryChange = recognizedCategoryChange?.kind === "request" && promptContract && !nibrsOwns({
+      places: placesFromGeographies(promptContract.geographies.length ? promptContract.geographies : [promptContract.geography]),
+      codeGroups: [MEASURE_CODES.violent_crime], rank: { dir: "top", n: 1 }, change: [recognizedCategoryChange.direction],
+      periodValues: [`year:${recognizedCategoryChange.year}`, `year:${recognizedCategoryChange.prior}`, `range:${recognizedCategoryChange.prior}:${recognizedCategoryChange.year}`, `between:${recognizedCategoryChange.prior}:${recognizedCategoryChange.year}`],
+      versus: "years",
+    }) ? null : recognizedCategoryChange;
     if (categoryChange && promptContract) {
       const changeStart = Date.now();
       const changeGuardrails = deterministicGuardrails(NIBRS_CATEGORY_CHANGE_GUARDRAIL);
@@ -672,6 +755,18 @@ export async function POST(req: NextRequest) {
     if (rankingExplanation && nibrsPlan.kind === "deterministic" && nibrsPlan.query.guardrail === AGENCY_PERIOD_RANKING_GUARDRAIL) {
       nibrsPlan.query = asExplanationFollowup(nibrsPlan.query, rankingExplanation.priorQuestion);
     }
+    // Stage 2b (plan §5): a deterministic plan is kept only when its applied values account for every part of the request.
+    // The owned agency-period ranking keeps its whole-turn path. An unowned plan never runs: a NUMERIC request goes to the
+    // supported types below, a TEXT request to the model's text reply, whose SQL never runs (§6).
+    const nibrsPlanOwned = nibrsPlan.kind !== "deterministic"
+      || (nibrsPlan.query.guardrail === AGENCY_PERIOD_RANKING_GUARDRAIL && nibrsWholeTurn)
+      || nibrsOwns(nibrsPlan.query.applied);
+    if (nibrsPlan.kind === "deterministic" && !nibrsPlanOwned) {
+      console.log(`[request-accounting] NIBRS fixed plan ${nibrsPlan.query.guardrail} does not apply every part; not run`);
+    }
+    // Jeff's ruling 4 (2b prereg fact 4): the city ranking's "not by that measure" decline does not own a clearance-rate
+    // ranking; the request reaches N6. Every other city-ranking decline stays owned.
+    const nibrsPlanDeclineYields = nibrsPlan.kind === "unavailable" && nibrsPlan.reason === "unit-clearance_rate" && nibrsNumeric;
     if (nibrsPlan.kind === "blocked" && deterministicResolution) {
       const executionMs = Date.now() - routeStart;
       const explanation = nibrsPlan.explanation;
@@ -693,7 +788,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse));
     }
 
-    if (nibrsPlan.kind === "unavailable") {
+    if (nibrsPlan.kind === "unavailable" && !nibrsPlanDeclineYields) {
       const executionMs = Date.now() - routeStart;
       const juvenileProof = finalizeExit({ outcome: OUTCOMES.required_component_unavailable, planFamily: "nibrs-juvenile-offender-incident-summary-unavailable", narrative: nibrsPlan.explanation });
       writeNibrsLog(question, null, 0, null, executionMs, nibrsPlan.explanation, ["nibrs-juvenile-offender-incident-summary-unavailable"], "deterministic", sessionId, null, null, juvenileProof);
@@ -721,7 +816,7 @@ export async function POST(req: NextRequest) {
     const nibrsPlanContract = nibrsPlan.kind === "deterministic" && nibrsPlan.query.guardrail === NIBRS_CITY_RANKING_GUARDRAIL
       ? rankingValidationContract(question, "nibrs")
       : null;
-    const nibrsPlanRefusal = nibrsPlan.kind === "deterministic"
+    const nibrsPlanRefusal = nibrsPlan.kind === "deterministic" && nibrsPlanOwned
       ? deterministicPlanRefusal({ question: plannerQuestion, source: "nibrs", sql: nibrsPlan.query.sql, contract: nibrsPlanContract })
       : null;
     if (nibrsPlanRefusal) {
@@ -776,7 +871,15 @@ export async function POST(req: NextRequest) {
      * is what lets a test run these exact branches with a counting executor, instead of matching
      * regexes against this file.
      */
-    if (nibrsPlan.kind === "deterministic" && runsAnnualClearanceFlow(nibrsPlan.query.guardrail)) {
+    // Stage 2b (exit audit 858): a refused plan from a non-owned family used to fall through to model SQL. There is no
+    // model fallback now, so it is declined with its reason.
+    // A NUMERIC request goes on to the supported types (the deterministic branch below skips a refused plan); anything else
+    // is declined with the reason.
+    if (nibrsPlan.kind === "deterministic" && nibrsPlanOwned && nibrsPlanRefusal && !refusedOwnedFamily && !runsAnnualClearanceFlow(nibrsPlan.query.guardrail) && !nibrsNumeric) {
+      return nibrsAccountingExit({ parts: [], explanation: "I built a fixed statement for this question, but it didn't pass this site's structural check, so I haven't answered with a number." }, "fixed-path-refused");
+    }
+
+    if (nibrsPlan.kind === "deterministic" && nibrsPlanOwned && runsAnnualClearanceFlow(nibrsPlan.query.guardrail)) {
       const ownedQuery = nibrsPlan.query;
       const ownedStart = Date.now();
       const outcome = await runOwnedAnnualClearance({
@@ -855,7 +958,7 @@ export async function POST(req: NextRequest) {
       } as QueryResponse, { source: "nibrs", requestId: chartAuditRequestId, queryLogId: chartAuditQueryLogId })));
     }
 
-    if (nibrsPlan.kind === "deterministic" && !nibrsPlanRefusal) {
+    if (nibrsPlan.kind === "deterministic" && nibrsPlanOwned && !nibrsPlanRefusal) {
       const deterministicQuery = nibrsPlan.query;
       const deterministicStart = Date.now();
       try {
@@ -985,6 +1088,12 @@ export async function POST(req: NextRequest) {
           explanation = [explanation, peerMembershipNote].filter(Boolean).join("\n\n");
           deterministicFiredGuardrails.push("peer-membership-disclosed");
         }
+        // Stage 2b r2.2: a by-year demographic answer names requested years with no rows (derived from these rows).
+        const missingYearsNote = demographicMissingYearsNote(deterministicQuery, rows as Record<string, unknown>[]);
+        if (missingYearsNote && !explanation.includes(missingYearsNote)) {
+          explanation = [explanation, missingYearsNote].join("\n\n");
+          deterministicFiredGuardrails.push("demographic-missing-years-disclosed");
+        }
         // GC-091 batch: the agency-period ranking's row-derived statements (coverage; for the explanation follow-up, equal
         // totals versus repeated rows), appended after the chokepoint for the same reason as the notes above.
         const agencyRankingFacts = deterministicQuery.guardrail === AGENCY_PERIOD_RANKING_GUARDRAIL
@@ -1099,12 +1208,17 @@ export async function POST(req: NextRequest) {
         if (recovery.outcome === "stop") {
           return jsonResp({ success: false, error: recovery.error, sql: deterministicQuery.sql } as QueryError, 500);
         }
-        console.warn("[nibrs] Deterministic query failed; continuing through guarded model path:", msg, recovery.reason);
+        // Stage 2b (plan §3): the "continue through the guarded model path" recovery is removed. With no model path, a
+        // failed fixed plan ends in a decline that names the failure.
+        console.warn("[nibrs] Deterministic query failed; declined (no model path under request accounting):", msg, recovery.reason);
+        return nibrsAccountingExit({ parts: [], explanation: `I couldn't complete "${deterministicQuery.title}" for this question, so I haven't answered with a number. That's a failure on our side, not a statement about what the data contains.` }, "fixed-path-failed");
       }
     }
 
     const metadataStart = Date.now();
-    const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
+    const metadataCandidate = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
+    // Stage 2b (plan §5): bound like 2a's metadata (the coverage or completeness operation it answers).
+    const metadata = metadataCandidate && nibrsOwns({ operations: ["coverage-lookup", "completeness"] }) ? metadataCandidate : null;
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
       const metadataProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
@@ -1149,6 +1263,62 @@ export async function POST(req: NextRequest) {
     // its own, and only while the chain back to that request is unbroken. A new scope — another
     // city, a nationwide request, a different topic — stops it, so single-agency follow-ups and
     // genuinely new questions are untouched.
+    // ── Request accounting, stage 2b: a NUMERIC NIBRS request no fixed path owned is answered by one of the supported
+    // question types (N1-N7) with application-built statements, or declined/clarified by name. It never reaches model SQL.
+    // `none` (no measure to answer with): as on Historical, the model may reply in text below, and its SQL never runs (§6).
+    const nibrsTypeDecision = nibrsNumeric ? matchNibrsType(nibrsLedger) : null;
+    if (nibrsNumeric && nibrsTypeDecision) {
+      const decision = nibrsTypeDecision;
+      if (decision.kind === "decline") return nibrsAccountingExit({ parts: decision.parts, explanation: decision.explanation }, "question-type");
+      if (decision.kind === "clarify") return nibrsAccountingExit({ parts: [], explanation: decision.explanation }, "question-type", true);
+    }
+    if (nibrsNumeric && nibrsTypeDecision?.kind === "spec") {
+      const typeDb = getNibrsDb();
+      const decision = nibrsTypeDecision;
+      const typeFamily = `nibrs-question-type:${decision.spec.type}`;
+      const typedStart = Date.now();
+      const compiled = await compileNibrsSpec(decision.spec, {
+        db: typeDb,
+        now: new Date(),
+        cutoff: { year: NIBRS_DATA_CUTOFF.year, month: NIBRS_DATA_CUTOFF.month },
+        // A typed statement is built from the issued spec, whose every part was checked by value. The structural guard
+        // (deterministicPlanRefusal) is not applied to it (2a D1, Codex-accepted); the NIBRS table allowlist still is.
+        run: async (typedStatement) => {
+          const tables = validateTablesForTab(typedStatement, "nibrs", typeDb);
+          if (!tables.ok) throw new Error(`an owned NIBRS statement read a table outside the NIBRS allowlist (${tables.unknown.join(", ")})`);
+          return normalizeNibrsDisplayRows((await executeWithTimeout(typedStatement)).rows) as Record<string, unknown>[];
+        },
+      });
+      if (compiled.kind === "decline") return nibrsAccountingExit({ parts: [], explanation: compiled.explanation }, "question-type-compile");
+      if (compiled.kind === "clarify") return nibrsAccountingExit({ parts: [], explanation: compiled.explanation }, "question-type-compile", true);
+      // r2 §1 (L12): a typed answer is held to the fixed paths' rule. Every part must be a value its statements or
+      // post-query operations actually used (compiled.applied); only the turn's clause-1 "why" is left to the stated
+      // limitation. Otherwise nothing is delivered and each unapplied part is named.
+      if (!nibrsLegacyBound(nibrsLedger, compiled.applied, new Date(), typedExplainLimitation)) {
+        const unbound = nibrsUnboundParts(nibrsLedger, compiled.applied, new Date(), typedExplainLimitation);
+        console.log(`[request-accounting] NIBRS typed answer ${typeFamily} does not apply: ${unbound.map((p) => `${p.concept}=${p.value ?? p.text}`).join(", ")}`);
+        return nibrsAccountingExit({ parts: unbound, explanation: unbound.map((p) => `I can't apply "${p.text.trim()}" in this answer, so I haven't answered with a number that leaves it out.`).join(" ") }, "question-type-binding");
+      }
+      const typedExplanation = decision.explainLimitation ? `${compiled.explanation} ${decision.explainLimitation}` : compiled.explanation;
+      const typedMs = Date.now() - typedStart;
+      const typedSql = compiled.statements.join(";\n");
+      const typedRows = compiled.rows as Record<string, unknown>[];
+      const hasValue = typedRows.some((row) => ["value", "count", "share", "numerator", "change", "earlier_value", "later_value"].some((c) => row[c] !== null && row[c] !== undefined));
+      const typedProof = finalizeExit({
+        outcome: hasValue ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
+        sql: typedSql, rows: typedRows, columns: compiled.columns, truncated: false,
+        derivation: sealPlanDerivation(typeFamily, typedSql),
+        planFamily: typeFamily, guardrails: ["request-accounting", typeFamily],
+        returnedEntities: returnedEntityKeys(typedRows), narrative: typedExplanation, hasChart: false,
+      });
+      writeNibrsLog(question, typedSql, typedRows.length, null, typedMs, typedExplanation, ["request-accounting", typeFamily], "deterministic", sessionId, null, null, typedProof);
+      return jsonResp(emitFactualPayload(typedProof, {
+        success: true, question, sql: typedSql, explanation: typedExplanation, title: compiled.title,
+        columns: compiled.columns, rows: typedRows, rowCount: typedRows.length, truncated: false, chartConfig: null,
+        chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null }, executionTimeMs: typedMs,
+      } as QueryResponse));
+    }
+
     const inheritedOwnedRequest = isOwnedMultiAgencyRequest(resolutionPlan)
       ? null
       : inheritedMultiAgencyRequest(question, body?.history, "nibrs");
@@ -1189,7 +1359,19 @@ export async function POST(req: NextRequest) {
     // Check response cache (only standalone questions). Continuous-reporter
     // requests are contract-sensitive and must not reuse stale broad-summary SQL.
     const cacheableStandalone = basePromptHistory.length === 0 && !asksContinuousReportingFilter(question);
-    const cached = cacheableStandalone ? getCached(question, "nibrs", cacheValidity) : null;
+    // Stage 2b (plan §6): the cache namespace changed, so no statement cached before request accounting can be served.
+    const cached = cacheableStandalone ? getCached(question, NIBRS_CACHE_TAB, cacheValidity) : null;
+    /** Stage 2b gate (L11): the first point a model or cached statement exists. It never runs; the request is declined. */
+    const nibrsModelSqlGate = (fromCache: boolean) => {
+      const gateMs = Date.now() - routeStart;
+      const gateTags = ["request-accounting", "request-accounting-owner:model-sql", ...(fromCache ? ["request-accounting:cached-statement"] : [])];
+      const gateProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: gateTags, narrative: NIBRS_MODEL_SQL_DECLINE });
+      writeNibrsLog(question, null, 0, null, gateMs, NIBRS_MODEL_SQL_DECLINE, gateTags, activeModelLabel, sessionId, null, null, gateProof);
+      return jsonResp(emitFactualPayload(gateProof, {
+        success: true, question, sql: null as unknown as string, explanation: NIBRS_MODEL_SQL_DECLINE, title: "Not answered",
+        columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: gateMs,
+      } as QueryResponse));
+    };
 
     let geoCorrectionApplied = false;
     // Captured before the server template overwrites claude.explanation, so a
@@ -1200,6 +1382,8 @@ export async function POST(req: NextRequest) {
 
     if (cached) {
       claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.[0] || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
+      // Gate G1 (plan §6): a cached statement is a model statement; it never runs, before any validation.
+      if (NIBRS_MODEL_SQL_NEVER_RUNS && claude.sql) return nibrsModelSqlGate(true);
     } else {
       console.log(`[nibrs][model=${activeModelLabel}] Processing: ${question.slice(0, 100)}`);
       const correctionHint = geoCorrectionHint(question);
@@ -1207,8 +1391,12 @@ export async function POST(req: NextRequest) {
       claude = await translateToSql(applyGeoCorrection(question, correctionHint), promptHistory, activeModel);
       const claudeMs = Date.now() - claudeStart;
       console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
+      // Gate G2 (plan §6): the first model statement never runs -- before any validation, schema check, prepare or retry.
+      if (NIBRS_MODEL_SQL_NEVER_RUNS && claude.sql) return nibrsModelSqlGate(false);
 
-      if (!claude.sql) {
+      // Stage 2b (plan §6): no retry asks the model for SQL on NIBRS -- a text reply is the first answer.
+      if (!claude.sql) rawFirstNoSql = claude.explanation || null;
+      if (!claude.sql && !NIBRS_MODEL_SQL_NEVER_RUNS) {
         rawFirstNoSql = claude.explanation || null;
         // Cause A: a court-process request is settled by the REQUEST policy, not by whatever the
         // model wrote. No second call can turn a police record into a court record, and on GC-009
@@ -1258,7 +1446,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title)) {
+      // Stage 2b: this retry may return SQL, so it does not run on NIBRS; the scaffold text is stripped just below instead.
+      if (!NIBRS_MODEL_SQL_NEVER_RUNS && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title))) {
         scaffoldStripped = true;
         retryCount++;
         console.log(`[nibrs][internal-scaffold] Retrying response that leaked internal scaffold text`);
@@ -1474,6 +1663,8 @@ export async function POST(req: NextRequest) {
       const combinedIssues = combinedGuardrailIssues.join("\n\n");
       console.log(`[nibrs][guardrail-retry] Retrying with ${combinedGuardrailIssues.length} issue(s)`);
       retryCount++;
+      // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
+      if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
       const retryResult = await translateToSql(
         question + "\n\n" + combinedIssues,
         promptHistory,
@@ -1592,6 +1783,8 @@ export async function POST(req: NextRequest) {
           { role: "assistant" as const, content: JSON.stringify({ ...claude, sql }) },
           { role: "user" as const, content: `[SYSTEM: ${tableCheck.message}]` },
         ];
+        // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
+        if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
         const retry = await translateToSql(tableCheck.message, retryHistory, activeModel);
         if (retry.sql) {
           const retryValidation = validateAndSanitize(retry.sql);
@@ -1692,6 +1885,8 @@ export async function POST(req: NextRequest) {
         throw new Error(`Final statement check failed (${finalCheck.stage}): ${finalCheck.reason}`);
       }
       sql = finalCheck.authority.sql;
+      // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
+      if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
       const result = await executeBoundNibrsStatement(finalCheck.authority);
       rows = result.rows;
       columns = result.columns;
@@ -1718,6 +1913,8 @@ export async function POST(req: NextRequest) {
           { role: "user" as const, content: errorInstruction },
         ];
         retryCount++;
+        // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
+        if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
         const retry = await translateToSql(
           isTimeout ? `Rewrite using summary tables: ${question}` : `Fix this SQL error: ${msg}`,
           retryHistory,
@@ -1764,6 +1961,8 @@ export async function POST(req: NextRequest) {
               if (routeNibrsRollupSql(retrySql, true).routed && !retryRollupContext?.available) {
                 throw new Error("NIBRS rollup is unavailable");
               }
+              // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
+              if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
               const retryResult = await executeBoundNibrsStatement(retryFinalCheck.authority);
               rows = retryResult.rows;
               columns = retryResult.columns;
@@ -1807,6 +2006,8 @@ export async function POST(req: NextRequest) {
           const fallbackSql = fallbackContract.sql;
           const fallbackContractFailure = contractFailureResponse(fallbackContract, `contract_campus_rescue_failure:${fallbackContract.enforced.join(",")}`);
           if (fallbackContractFailure) return fallbackContractFailure;
+          // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
+          if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
           const fallbackResult = await executeWithTimeout(fallbackSql);
           if (fallbackResult.rows.length > 0) {
             sql = fallbackSql;
@@ -2218,7 +2419,7 @@ export async function POST(req: NextRequest) {
 
     // Cache successful responses (only standalone questions)
     if (!cached && cacheableStandalone) {
-      setCache(question, "nibrs", { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
+      setCache(question, NIBRS_CACHE_TAB, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? [claude.yAxis] : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
     }
 
     // Step 6: Truncate if needed

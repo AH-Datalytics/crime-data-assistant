@@ -25,7 +25,7 @@ import type { SourceCutoff } from "./city-ranking-builder";
 
 export type NibrsQueryPlan =
   | { kind: "blocked"; place: NibrsResolvedPlace; explanation: string }
-  | { kind: "unavailable"; title: string; explanation: string }
+  | { kind: "unavailable"; title: string; explanation: string; reason?: string }
   | { kind: "deterministic"; query: DeterministicNibrsQuery }
   | { kind: "model"; reason: "no-deterministic-builder" | "followup" };
 
@@ -123,7 +123,7 @@ export function planNibrsQuery(
   if (cityRanking) {
     return cityRanking.kind === "deterministic"
       ? { kind: "deterministic", query: cityRanking.query }
-      : { kind: "unavailable", title: cityRanking.title, explanation: cityRanking.explanation };
+      : { kind: "unavailable", title: cityRanking.title, explanation: cityRanking.explanation, ...(cityRanking.reason ? { reason: cityRanking.reason } : {}) };
   }
 
   // Subject-data check BEFORE peer selection (lib/nibrs-deterministic-queries.ts comparableAgencySubjectCheck): a named
