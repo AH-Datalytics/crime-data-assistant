@@ -83,11 +83,14 @@ const inv = buildInventory(ROOT);
 // Request accounting stage 2b (NIBRS), nibrs-query (+3): the NIBRS accounting exit (follow-up, recognition, type and
 // fixed-path declines or clarifications: capability_path_unavailable | measure_ambiguous), the typed answer
 // (deterministic_plan | no_rows_in_source), and the model-SQL gate (capability_path_unavailable).
+// Request accounting stage 3a (Current), query (+2): the Current typed answer (deterministic_plan | no_rows_in_source) and
+// the Current model-SQL gate inside the stream (capability_path_unavailable). The Current accounting declines reuse the
+// Historical accounting exit (one site), so they add none.
 const EXPECTED = {
-  decisionSites: 130, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3) + stage 2b (3)
-  sealSites: 130, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3) + stage 2b (3)
+  decisionSites: 132, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3) + stage 2b (3) + stage 3a (2)
+  sealSites: 132, // 120 + request accounting stage 1 (2) + GC-051 (2) + stage 2a (3) + stage 2b (3) + stage 3a (2)
   operationalRows: 22,
-  perRouteSealSites: { query: 40, "nibrs-query": 38, "shr-query": 37, "hc-query": 15 },
+  perRouteSealSites: { query: 42, "nibrs-query": 38, "shr-query": 37, "hc-query": 15 },
   /**
    * §2.4(ii): operational rows that are not an unconditionally terminal path. It was 1: the NIBRS deterministic-failure
    * catch logged, returned only on "stop", and otherwise continued into the model path. Request accounting stage 2b (plan
@@ -96,8 +99,8 @@ const EXPECTED = {
   nonTerminalOperationalRows: 0,
   /** §2.4(ii): exactly one terminates by closing the SSE stream rather than by returning. */
   streamClosureTerminations: 1,
-  /** 128 exits log through their route-local closure (118 + request accounting's two + GC-051's two month-coverage exits + stage 2a's three + stage 2b's three); the two source-switch exits call directly. */
-  closurePairedSites: 128,
+  /** 130 exits log through their route-local closure (118 + request accounting's two + GC-051's two month-coverage exits + stage 2a's three + stage 2b's three + stage 3a's two); the two source-switch exits call directly. */
+  closurePairedSites: 130,
   directPairedSites: 2,
 };
 
@@ -207,7 +210,7 @@ check("T7b computed sites select between whole Outcome constants, never parallel
   // (deterministic_plan | no_rows_in_source), each a choice between two whole OUTCOMES constants.
   // Request accounting stage 2b: +2 (nibrs-query), the NIBRS accounting exit (decline | clarification) and the typed answer
   // (deterministic_plan | no_rows_in_source), each a choice between two whole OUTCOMES constants.
-  assert.strictEqual(computed.length, 25, "P2.1's 11 computed sites, the 7 integrated candidate sites, the request-plan answer, GC-051's 2, stage 2a's 2 and stage 2b's 2");
+  assert.strictEqual(computed.length, 26, "P2.1's 11 computed sites, the 7 integrated candidate sites, the request-plan answer, GC-051's 2, stage 2a's 2, stage 2b's 2 and stage 3a's typed answer");
   for (const s of computed) {
     assert.ok(s.outcome.whenTrue && s.outcome.whenFalse, `${s.fingerprint} needs two arms`);
     assert.ok(s.outcome.predicate, `${s.fingerprint} must carry its own predicate`);

@@ -43,6 +43,7 @@ import { detectFollowupTransform } from "../lib/followup-transform";
 import { detectQueryBearingFollowup } from "../lib/query-bearing-followup";
 import { buildCrossSourceFollowupTransform } from "../lib/cross-source-followup";
 import { normalizeHistoryForTab } from "../lib/chat-history";
+import { resolveFollowupRequest } from "../lib/current-effective-request";
 import { branchCondition, extractBranch, extractDeclaration, runRouteExpression } from "./decision1-terminal-harness";
 
 let checks = 0;
@@ -424,9 +425,12 @@ type RouteState = {
 function runRoute(mode: string, q: string, history: Turn[]): RouteState {
   const normalized = normalizeHistoryForTab(history as never, "current" as never);
   const currentAmendment = resolveCurrentFollowupAmendment(q, history, "current");
+  // Request accounting stage 3a (r1.1 F5): the route resolves the effective request once, before the ledger boundary,
+  // with the same precedence; its Step 1 declarations read that resolution.
+  const followupResolution = resolveFollowupRequest({ question: q, rawHistory: history, source: "current", authoritative: null, amendment: currentAmendment });
   const base = {
     plannerMode: mode, followupPlan: null, detectFollowupTransform, buildCrossSourceFollowupTransform,
-    currentAmendment, question: q, history: normalized, body: { history }, isHistorical: false,
+    currentAmendment, question: q, history: normalized, body: { history }, isHistorical: false, followupResolution,
   };
   const followupTransform = runRouteExpression<RouteState["followupTransform"]>(transformDecl.text, base);
   const amendedContract = runRouteExpression<QueryContract | null>(amendedDecl.text, { ...base, followupTransform });

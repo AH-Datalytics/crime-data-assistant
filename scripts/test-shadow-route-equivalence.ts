@@ -210,15 +210,17 @@ async function main() {
     db.pragma("journal_mode = WAL");
     db.exec(`
       CREATE TABLE agencies (ori TEXT, agency_name TEXT, state TEXT, total_months INTEGER);
-      CREATE TABLE agency_monthly (ori TEXT, agency_name TEXT, agency TEXT, state TEXT, year INTEGER, month INTEGER, murders INTEGER, population INTEGER);
+      CREATE TABLE agency_monthly (ori TEXT, agency_name TEXT, agency TEXT, state TEXT, type TEXT, year INTEGER, month INTEGER, offense TEXT, count INTEGER, murders INTEGER, population INTEGER);
       CREATE TABLE agency_population (ori TEXT, year INTEGER, population INTEGER);
     `);
     db.prepare("INSERT INTO agencies VALUES (?,?,?,?)").run("TX0001", "Austin", "TX", 96);
     // `agency` as well as `agency_name`: the shadow omission probe looks for the former,
     // and its absence produced a caught-but-noisy failure on every request.
-    const ins = db.prepare("INSERT INTO agency_monthly VALUES (?,?,?,?,?,?,?,?)");
+    // Request accounting stage 3a: the production RTCI columns (type, offense, count) as well, since a Current number is now
+    // compiled by the application from them.
+    const ins = db.prepare("INSERT INTO agency_monthly VALUES (?,?,?,?,?,?,?,?,?,?,?)");
     for (const year of [2019, 2020, 2021, 2022]) {
-      for (let month = 1; month <= 12; month++) ins.run("TX0001", "Austin", "Austin", "TX", year, month, 3, 950_000);
+      for (let month = 1; month <= 12; month++) ins.run("TX0001", "Austin", "Austin", "TX", "City", year, month, "Murder", 3, 3, 950_000);
     }
     db.prepare("INSERT INTO agency_population VALUES (?,?,?)").run("TX0001", 2022, 950_000);
     db.close();
@@ -305,7 +307,10 @@ async function main() {
       label: "app/api/query",
       importPath: "../app/api/query/route",
       question: "how many murders in Austin, TX each year from 2019 to 2022",
-      coldCalls: ["translate", "explain"],
+      // Request accounting stage 3a: a numeric Current answer is compiled by the application from a supported question type
+      // (here C1 by year), so the cold path makes NO model call and the stub below is never asked. The suite still proves
+      // off and shadow deliver the same bytes.
+      coldCalls: [],
       reply: {
         sql: "SELECT year, SUM(murders) AS murders FROM agency_monthly WHERE agency_name = 'Austin' AND state = 'TX' AND year BETWEEN 2019 AND 2022 GROUP BY year ORDER BY year",
         explanation: "Murders in Austin, TX by year.",

@@ -767,7 +767,9 @@ async function main() {
     // "historical-question-type:<H1-H6>"). A variable, so the family regex below is unchanged.
     // 21 -> 22: request accounting stage 2b -- nibrs-query +1, the NIBRS typed answer's seal (sealPlanDerivation(typeFamily, ...),
     // "nibrs-question-type:<type>"). A variable, so the family regex below is unchanged.
-    assert.strictEqual(sites, 22, "seal-site count moved; re-run the two-pass enumeration");
+    // 22 -> 23: request accounting stage 3a -- query +1, the Current typed answer's seal (sealPlanDerivation(typeFamily, ...),
+    // "current-question-type:<type>"). A variable, so the family regex below is unchanged.
+    assert.strictEqual(sites, 23, "seal-site count moved; re-run the two-pass enumeration");
     const families = new Set<string>();
     for (const f of ROUTES) for (const m of fs.readFileSync(f, "utf8").matchAll(/sealPlanDerivation\(\s*"([a-z0-9-]+)"/g)) families.add(m[1]);
     for (const f of ["lib/nibrs-deterministic-queries.ts", "lib/nibrs-rollup-deterministic.ts", "lib/nibrs-scope-deterministic.ts", "lib/current-indexed-state-deterministic.ts", "lib/multi-city-deterministic.ts", "lib/historical-deterministic-queries.ts", "lib/historical-national-violent.ts"]) {
