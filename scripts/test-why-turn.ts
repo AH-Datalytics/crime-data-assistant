@@ -105,6 +105,21 @@ check(answerTopic("W1", "are some ages unknown", loc, "nibrs") === "This answer 
   check(both.startsWith('60 of the 960 robbery offenses in this answer (6.3%) are recorded as "Other/Unknown".') && both.endsWith("This answer doesn't show age."), `R3.1': each named field bound in written order (${both.slice(0, 80)}...)`);
   const twice = answerTopic("W1", "are location codes and locations unknown", loc, "nibrs") ?? "";
   check((twice.match(/60 of the 960/g) ?? []).length === 1, "R3.1': the same field named twice is answered once");
+  // Polish (Codex r3 item 6): across sub-clauses of one turn, a field already answered adds nothing ("").
+  const seen = new Set<string>();
+  const first = answerTopic("W1", "are location and age codes unknown", loc, "nibrs", seen) ?? "";
+  const again = answerTopic("W1", "ages unknown", loc, "nibrs", seen);
+  check(/doesn't show age\.$/.test(first) && again === "", `polish: a field already answered in the turn is not answered again (${JSON.stringify(again)})`);
+  // Polish amendment 1 (Codex): a clause with no named field marks the field it actually explains (the answer's own).
+  const ages = typed([
+    { period: 2025, place: "Fort Worth, TX", measure: "robbery", unit: "offenders", filter: null, dimension: "age", category: "18-24", count: 40, share: null, note: null },
+    { period: 2025, place: "Fort Worth, TX", measure: "robbery", unit: "offenders", filter: null, dimension: "age", category: "Unknown", count: 10, share: null, note: null },
+  ]);
+  const s2 = new Set<string>();
+  const generic = answerTopic("W1", "are codes unknown", ages, "nibrs", s2) ?? "";
+  const located = answerTopic("W1", "locations unknown", ages, "nibrs", s2);
+  const agedAgain = answerTopic("W1", "ages unknown", ages, "nibrs", s2);
+  check(/"Unknown"/.test(generic) && located === "This answer doesn't show location." && agedAgain === "", `polish A1: a generic clause marks the answer's own field, never another (${JSON.stringify([generic.slice(0, 40), located, agedAgain])})`);
   const nibrsRate = (facts: WhyAnswerFacts["facts"]) => answerTopic("W6", "how the rate is calculated", typed([{ year: 2025, value: 1 }], { facts }), "nibrs") ?? "";
   check(nibrsRate([{ kind: "rate", method: "nibrs-agency-annual", per: 100000, places: ["Fort Worth, TX"] }, { kind: "rate", method: "nibrs-agency-annual", per: 100000, places: ["Columbus, OH"] }])
     === "Each rate is that place's reported count for a year divided by its own population for that year, times 100,000.", "R3.2': one method's facts merge, and several places never get one place's name");

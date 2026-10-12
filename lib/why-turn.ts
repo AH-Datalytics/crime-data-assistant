@@ -65,6 +65,8 @@ function explainClauses(spans: ExplanationSpan[], f: WhyAnswerFacts | null, tab:
   const out: string[] = []; let answered = true; let any = false;
   // Round 3 (R3.0' 4): a sentence already said in this turn is not repeated (one cause decline; a field asked twice).
   const say = (sentence: string) => { if (!out.includes(sentence)) out.push(sentence); };
+  // Polish (Codex r3 item 6): the W1 fields already answered in this turn, so a field named again adds nothing.
+  const seenFields = new Set<string>();
   for (const span of spans) for (const sub of subClauses(span.clause, tab, f)) {
     if (only && !only.includes(sub.topic as "cause" | "W3")) continue;
     any = true;
@@ -72,7 +74,8 @@ function explainClauses(spans: ExplanationSpan[], f: WhyAnswerFacts | null, tab:
     // Owner decision (2026-10-12): a cause gets the decline alone, never a figure or a correction.
     if (sub.topic === "cause") { say(WHY_SENTENCES.cause(tab)); answered = false; continue; }
     if (sub.topic === "unsupported" || !f) { say(WHY_SENTENCES.unsupported(sub.text, sub.leftover)); answered = false; continue; }
-    const sentence = answerTopic(sub.topic, sub.text, f, tab);
+    const sentence = answerTopic(sub.topic, sub.text, f, tab, seenFields);
+    if (sentence === "") continue;
     if (sentence) say(sentence);
     else { say(WHY_SENTENCES.notRecorded(`what's needed to explain why ${sub.text}`)); answered = false; }
   }

@@ -275,15 +275,28 @@ const fieldName = (word: string) => {
   return w.startsWith("location") ? "location" : w.startsWith("age") ? "age" : w === "gender" ? "sex" : w.replace(/s$/, "");
 };
 const namedFields = (text: string) => [...new Set([...text.matchAll(NAMED_FIELD)].map((m) => fieldName(m[1])))];
-function w1(clause: string, f: WhyAnswerFacts): string | null {
+/**
+ * `seen` (polish, Codex r3 item 6): the W1 fields this turn has already answered. A field in it is skipped, whatever
+ * sentence it got; "" means every field asked here was already answered (nothing to add, not "not recorded").
+ */
+function w1(clause: string, f: WhyAnswerFacts, seen: Set<string> = new Set()): string | null {
   const asked = namedFields(clause);
   if (!asked.length) {
     const word = clause.match(FIELD_WORDS)?.[1]?.toLowerCase() ?? "";
-    return w1Field(/code|location/.test(word) ? "location" : word.replace(/s$/, ""), f, false);
+    const field = /code|location/.test(word) ? "location" : word.replace(/s$/, "");
+    // Amendment 1: with no named field, W1 explains the ANSWER's own field, so that is the field marked answered.
+    const ccol = categoryColumn(f);
+    const explained = (ccol ? namedFields(fieldOf(ccol, f))[0] : undefined) ?? field;
+    if (seen.has(explained)) return "";
+    seen.add(explained);
+    return w1Field(field, f, false);
   }
   // Each named field is bound to the answer's own field: equal -> explained; different -> "doesn't show" (never another
   // field's facts in its place).
-  const out = asked.map((field) => w1Field(field, f, true));
+  const fresh = asked.filter((field) => !seen.has(field));
+  if (!fresh.length) return "";
+  for (const field of fresh) seen.add(field);
+  const out = fresh.map((field) => w1Field(field, f, true));
   return out.every((s) => s === null) ? null : out.filter((s): s is string => s !== null).join(" ");
 }
 function w1Field(askedField: string, f: WhyAnswerFacts, bound: boolean): string | null {
@@ -485,10 +498,13 @@ function w6(f: WhyAnswerFacts): string {
 
 /* ============================================================== dispatch */
 
-/** The sentence for one sub-clause about the answer `f` (W1, W2, W4, W5, W6). Null = the answer doesn't record it. */
-export function answerTopic(topic: WhyTopic, clause: string, f: WhyAnswerFacts, tab: WhyTab): string | null {
+/**
+ * The sentence for one sub-clause about the answer `f` (W1, W2, W4, W5, W6). Null = the answer doesn't record it; ""
+ * = nothing new to say (a W1 field this turn already answered, tracked in `seenFields`).
+ */
+export function answerTopic(topic: WhyTopic, clause: string, f: WhyAnswerFacts, tab: WhyTab, seenFields?: Set<string>): string | null {
   switch (topic) {
-    case "W1": return w1(clause, f);
+    case "W1": return w1(clause, f, seenFields);
     case "W2": return w2(clause, f, tab);
     case "W4": return w4(f);
     case "W5": return w5(clause, f);
