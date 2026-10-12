@@ -11,10 +11,12 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { guardModelClient } from "./why-context";
 import type { QueryContext } from "./query-context";
 import { removeCodeFences, removeJsonWithSqlKey } from "./text-sanitize";
 
-const client = new Anthropic();
+// Stage 3b (r1.4 R4.3): in a rebuild, every model call is blocked BEFORE invocation (lib/why-context.ts).
+const client = guardModelClient(new Anthropic());
 
 const EXPLAIN_SYSTEM = `You write one-sentence (max two) descriptions of crime data query results.
 

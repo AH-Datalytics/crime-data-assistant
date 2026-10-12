@@ -98,6 +98,8 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "location:13", pattern: R(String.raw`\bon\s+(?:the\s+)?streets?\b`) },
   { concept: "filter", value: () => "location:22", pattern: R(String.raw`\bat\s+schools?\b`) },
   { concept: "filter", value: () => "location:18", pattern: R(String.raw`\bin\s+parking\s+lots?\b`) },
+  // Stage 3b owner decision (plan r1.3): "commercial" = the business location types (lib/nibrs-codes.ts).
+  { concept: "filter", value: () => "location:commercial", pattern: R(String.raw`\bcommercial\b`) },
   { concept: "filter", value: () => "relationship:ST", pattern: R(String.raw`\bby\s+strangers\b|\bstrangers\b`) },
 ];
 
@@ -283,7 +285,24 @@ function recordWhich(ledger: RequestLedger): void {
 /** NIBRS filler beyond the shared between-filler words: verbs and articles that never restrict. */
 const NIBRS_FILLER = /^(?:had|have|has|were|was|is|are|there|been|the|a|an|in|of|for|with|by|from|at|on|to|me|do|does|did|i|you|see|can|could|show|give|find|get|list|what|which|many|much|data|people|reported|recorded|occurred|it|its|their|lot|all|any|each|per|year|years|over|about|use|using|please|just|also|now|then|those|these|this|that|same|other|than|level|levels|numbers?|crime|police|nationally|happened|provide|one|bar|reflected|where|when|did|occur|committed|by|use)$/i;
 
+/**
+ * Stage 3b (GC-089, plan r1.3): conversational phrases that never restrict, recorded as context before the word filler:
+ * a leading "OK", "(just) do it" (a follow-up's verb), a complaint about the last answer ("this is not even close"),
+ * and "broken down" right before "by" (read as "by").
+ */
+const NIBRS_PHRASE_FILLER = [/^\s*ok(?:ay)?\b[,.]?/i, /\b(?:just\s+)?do\s+it\b/i, /\b(?:this|that)\s+is\s+(?:not|n't)\s+(?:even\s+)?(?:close|right)\b[,.]?/i, /\bbroken\s+down(?=\s+by\b)/i];
+function recordNibrsPhraseFiller(ledger: RequestLedger): void {
+  for (const re of NIBRS_PHRASE_FILLER) {
+    const m = re.exec(ledger.question);
+    if (!m) continue;
+    const span: Span = [m.index, m.index + m[0].length];
+    if (ledger.parts.some((p) => p.span[0] < span[1] && span[0] < p.span[1])) continue;
+    ledger.record({ concept: "filler", span, rule: "nibrs-phrase-filler", state: "context" });
+  }
+}
+
 function recordNibrsFiller(ledger: RequestLedger): void {
+  recordNibrsPhraseFiller(ledger);
   recordBetweenFiller(ledger);
   const q = ledger.question;
   const recorded = [...ledger.parts].sort((a, b) => a.span[0] - b.span[0]);
@@ -390,6 +409,34 @@ export function followupKey(p: Part): string {
  * restriction of a COMPLETE earlier question, or replaces it with a value this turn states, compared value by value per
  * key. Filters are keyed per dimension.
  */
+/**
+ * Stage 3b (plan r1.3, GC-089): a turn that names a measure and is fully recognized stands on its own when the earlier
+ * question was refused at recognition -- there is no complete earlier question to carry from, so nothing is carried and
+ * K2 does not apply to it. K2 is unchanged for every real follow-up.
+ */
+export function nibrsStandaloneTurn(turn: string, priorUserTurns: string[]): boolean {
+  const prev = priorUserTurns[priorUserTurns.length - 1];
+  if (!prev) return false;
+  if (nibrsRecognitionRefusal(accountNibrsRequest(prev)) === null) return false;
+  const ledger = accountNibrsRequest(turn);
+  return nibrsRecognitionRefusal(ledger) === null && ledger.parts.some((p) => p.concept === "measure" && p.state !== "context");
+}
+
+/**
+ * Stage 3b (plan r1.3, GC-089): "(OK,) (just) do it for <year>" rebuilt from the previous USER question with its single
+ * year replaced (or added). Any other period form in the previous question is not this resolver's (null). K2 then checks
+ * the rebuilt question exactly as for every resolver.
+ */
+export function resolveNibrsPeriodReplacement(question: string, priorUserTurns: string[]): { refinedQuestion: string } | null {
+  const m = question.trim().match(/^(?:ok(?:ay)?[,\s]+)?(?:just\s+)?(?:do|run|show)\s+(?:it|this|that|the\s+same)\s+for\s+((?:19|20)\d{2})[\s,.?!]*$/i);
+  if (!m) return null;
+  const prev = priorUserTurns[priorUserTurns.length - 1];
+  if (!prev) return null;
+  const stripped = prev.replace(/\s+(?:in|for|during)\s+(?:19|20)\d{2}\b/gi, "");
+  if (/\b(?:19|20)\d{2}\b/.test(stripped)) return null;
+  return { refinedQuestion: `${stripped.replace(/[\s?.!]+$/, "")} in ${m[1]}` };
+}
+
 export function nibrsFollowupCheck(opts: {
   question: string;
   effective: string | null;
@@ -401,7 +448,8 @@ export function nibrsFollowupCheck(opts: {
   const COMPLETE = "Please ask it as a complete question (the place, what to count and the period).";
   const previous = opts.previousUserTurns[opts.previousUserTurns.length - 1];
   if (!previous) return null;
-  if (opts.isFollowUp(previous)) return { explanation: `This builds on an earlier follow-up, so I can't be sure which conditions from before still apply. ${COMPLETE}` };
+  // Stage 3b (r1.3): a previous turn that stood on its own (nibrsStandaloneTurn) is a complete question, not a follow-up.
+  if (opts.isFollowUp(previous) && !nibrsStandaloneTurn(previous, opts.previousUserTurns.slice(0, -1))) return { explanation: `This builds on an earlier follow-up, so I can't be sure which conditions from before still apply. ${COMPLETE}` };
   if (!opts.effective) return { explanation: `I couldn't rebuild this follow-up together with your earlier question here. ${COMPLETE}` };
   const prev = accountNibrsRequest(previous);
   const turn = accountNibrsRequest(opts.question);

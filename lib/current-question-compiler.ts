@@ -23,11 +23,12 @@
 import { placeIs, periodValuesOfMonths, type CurrentApplied, type PlaceSet } from "./current-legacy-binding";
 import { OFFENSES_OF, ALL7, MEASURE_LABEL, STATE_NAME_BY_CODE, type CurrentSpec, type CPlace, type CPeriod, type SeriesSpec, type ChangeSpec, type PeerSpec } from "./current-question-types";
 import { currentYoyGroupStatements } from "./current-yoy-comparison-deterministic";
+import { recordWhyFacts } from "./why-scope";
 import type { ChartConfig } from "./types";
 
 export type Row = Record<string, string | number | null>;
 export type CompiledAnswer =
-  | { kind: "answer"; sql: string; columns: string[]; rows: Row[]; title: string; explanation: string; chartConfig: ChartConfig | null; applied: CurrentApplied; requestedEntities: string[]; returnedEntities: string[] }
+  | { kind: "answer"; sql: string; columns: string[]; rows: Row[]; title: string; explanation: string; chartConfig: ChartConfig | null; applied: CurrentApplied; requestedEntities: string[]; returnedEntities: string[]; /** Stage 3b (r1.3 producer addition): the answer-level notes as data, for "why" facts. */ notes?: string[] }
   | { kind: "decline"; explanation: string };
 /** `runMany` runs its statements in ONE read transaction (the route wires it to executeManyWithTimeoutSync). */
 export type CompileContext = { run: (sql: string) => Record<string, unknown>[]; runMany: (sqls: string[]) => Record<string, unknown>[][] };
@@ -302,9 +303,16 @@ const sumCells = (c: AgencyCells, xs: YM[], offs: string[]) => { let s = 0; for 
 export function compileCurrentSpec(spec: CurrentSpec, ctx: CompileContext): CompiledAnswer {
   const b = bounds(ctx);
   if (!b) return { kind: "decline", explanation: "I couldn't read which months Current Trends covers, so I haven't answered." };
-  if (spec.type === "series") return compileSeries(spec, ctx, b);
-  if (spec.type === "change") return compileChange(spec, ctx, b);
-  return compilePeers(spec, ctx, b);
+  const answer = spec.type === "series" ? compileSeries(spec, ctx, b) : spec.type === "change" ? compileChange(spec, ctx, b) : compilePeers(spec, ctx, b);
+  // Stage 3b r2 (R2.4'): the rate method these rows were computed by (agencyBucket: the bucket's own year population, a
+  // month not annualized; rollingValue: the 12-month average population), recorded with the places the rows name.
+  if (answer.kind === "answer") {
+    const rated = answer.rows.filter((r) => typeof r.statistic === "string" && /rate_per_100k$/.test(String(r.statistic)));
+    const places = [...new Set(rated.map((r) => String(r.place)))];
+    if (rated.some((r) => String(r.statistic).startsWith("rolling_"))) recordWhyFacts({ kind: "rate", method: "current-rolling", per: 100000, places });
+    else if (rated.length) recordWhyFacts({ kind: "rate", method: "current-period", per: 100000, places });
+  }
+  return answer;
 }
 
 const cutoffOf = (b: Bounds) => ({ year: b.hi[0], month: b.hi[1] });
@@ -573,6 +581,7 @@ function compileChange(spec: ChangeSpec, ctx: CompileContext, b: Bounds): Compil
         return s;
       };
       label = samplePlaceLabel(place); identity = groupRec.scope!;
+      recordWhyFacts({ kind: "group", place: label, members, sample: size }); // Stage 3b r2 (R2.4'): the fixed group as formed here
       endpointOf = (months) => ({ value: members && !missingMonths.length ? total(months) : null, identity: groupRec.scope!, offenses: [...groupRec.offenses], statistic: "count", months: [...months], denominatorYear: null, notes: [] });
       notes.push(members
         ? `${label}: totals for a fixed comparison group of ${fmt(members)} agencies that reported every requested offense in every month of every period compared, from a starting sample of ${fmt(size)} agencies (${fmt(size - members)} excluded because their records did not include every one of those months).`
@@ -621,7 +630,7 @@ function compileChange(spec: ChangeSpec, ctx: CompileContext, b: Bounds): Compil
   const what = MEASURE_LABEL[spec.measure];
   const title = `${what[0].toUpperCase()}${what.slice(1)} ${spec.statistic === "rate" ? "Rate" : "Count"}, ${placeNames.join(", ")}: ${labels.join(" vs ")}`;
   const explanation = [`Current Trends ${what} ${spec.statistic === "rate" ? "rate per 100,000 residents" : "reported count"} for ${placeNames.join(", ")}: ${periods.map(describeSpan).join(" compared with ")}.`, ...spec.uiNotes, ...notes].join(" ");
-  return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, chartConfig: null, applied: a, requestedEntities: placeNames, returnedEntities: placeNames };
+  return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, chartConfig: null, applied: a, requestedEntities: placeNames, returnedEntities: placeNames, notes: [...notes] };
 }
 
 /* ================================================================== C6: similar-sized cities ==================== */

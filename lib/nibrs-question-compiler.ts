@@ -20,12 +20,13 @@
 import type Database from "better-sqlite3";
 import { resolveNibrsPlaces } from "./nibrs-place-resolver";
 import { decideNibrsCompleteness, NIBRS_COMPLETENESS_PROXY_DISCLOSURE, NIBRS_RECENT_MATURATION_DISCLOSURE } from "./nibrs-completeness";
-import { LOCATION_TYPES, WEAPON_TYPES, RACE_CODES } from "./nibrs-codes";
+import { LOCATION_TYPES, WEAPON_TYPES, RACE_CODES, COMMERCIAL_LOCATION_CODES, COMMERCIAL_LOCATION_NAMES } from "./nibrs-codes";
 import {
   MEASURE_CODES, MEASURE_LABEL, PERSON_CODES, GROUP_B, STATE_NAME_BY_CODE, filterLabel,
   type NibrsSpec, type NPlace, type NPeriod, type Unit, type Statistic, type SeriesSpec, type BreakdownSpec, type ShareSpec, type RankSpec, type ChangeSpec,
 } from "./nibrs-question-types";
 import { placeIs, type PlaceSet, type NibrsApplied } from "./nibrs-legacy-binding";
+import { recordWhyFacts } from "./why-scope";
 
 export type Row = Record<string, string | number | null>;
 export type CompiledAnswer =
@@ -93,7 +94,7 @@ const TABLES: Table[] = [
   // weapons, circumstances, relationships, locations, hours
   { key: "victim_circumstance", table: "summary_victim_circumstance", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: new Set(["09A", "09B", "09C", "13A"]), unit: "victims", count: "SUM(victim_count)", dims: { circumstance: { col: "circumstance_code", overlap: true, label: (v) => CIRCUMSTANCE_LABEL[v] ?? v } } },
   { key: "victim_relationship", table: "summary_victim_relationship", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: PERSON_CODES, unit: "victims", count: "SUM(victim_count)", dims: { relationship: { col: "relationship_code", overlap: true, label: (v) => RELATIONSHIP_LABEL[v] ?? v, values: (v) => [v] }, sex: SEX, race: RACE, age: AGE } },
-  { key: "offense_location", table: "summary_offense_location", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: null, unit: "offenses", count: "SUM(offense_count)", dims: { location: { col: "location_type", overlap: false, label: (v) => LOCATION_TYPES[v] ?? v, values: (v) => [v] } } },
+  { key: "offense_location", table: "summary_offense_location", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: null, unit: "offenses", count: "SUM(offense_count)", dims: { location: { col: "location_type", overlap: false, label: (v) => LOCATION_TYPES[v] ?? v, values: (v) => (v === "commercial" ? [...COMMERCIAL_LOCATION_CODES] : [v]) } } },
   { key: "offense_hour", table: "summary_offense_hour", agency: false, state: true, monthly: false, yearCol: "year", stateCol: "state", codeCol: "ucr_offense_code", codes: null, unit: "offenses", count: "SUM(offense_count)", dims: { hour: { col: "incident_hour", overlap: false } } },
   // families
   { key: "dv_trends", table: "summary_dv_trends", agency: false, state: true, monthly: false, yearCol: "data_year", stateCol: "state", codeCol: null, codes: null, family: "domestic_violence", unit: "incidents", count: "SUM(incident_count)",
@@ -493,6 +494,17 @@ function monthEvidence(db: Database.Database, oris: string[], years: number[]): 
 /* ================================================================== compile ====================================== */
 
 export async function compileNibrsSpec(spec: NibrsSpec, ctx: CompileContext): Promise<CompiledAnswer> {
+  const answer = await compileNibrsSpecTypes(spec, ctx);
+  // Stage 3b (owner decision 2026-10-11, plan r1.3): an answer that applies "commercial" names every location type it counted.
+  const commercial = "filters" in spec && Array.isArray(spec.filters) && spec.filters.includes("location:commercial");
+  if (answer.kind === "answer" && commercial) {
+    const n = COMMERCIAL_LOCATION_NAMES;
+    return { ...answer, explanation: `${answer.explanation} "Commercial" here means the business location types: ${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}.` };
+  }
+  return answer;
+}
+
+async function compileNibrsSpecTypes(spec: NibrsSpec, ctx: CompileContext): Promise<CompiledAnswer> {
   const statements: string[] = [];
   const run = async (sql: string) => { statements.push(sql); return ctx.run(sql); };
   try {
@@ -645,6 +657,8 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
         notes.push(NIBRS_COMPLETENESS_PROXY_DISCLOSURE);
         if (place.kind !== "agency") notes.push(`Each 12-month figure sums only the agencies that reported in each month of the window (an agency counts for a month when it has any reported offense that month), so it is not an estimate for agencies that didn't report.`);
         if (place.kind !== "agency" && spec.statistic === "rate") notes.push(RATE_DISCLAIMER);
+        // Stage 3b r3 (R3.2'): agency = count / the end year's population; state or nation = eligible count / (popSum / 12).
+        if (spec.statistic === "rate") recordWhyFacts({ kind: "rate", method: agency ? "nibrs-agency-rolling" : "nibrs-cohort-rolling", per: 100000, places: agency ? [label] : [] });
         continue;
       }
 
@@ -736,9 +750,14 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
               : parts.reduce((a, p) => a + (p.value ?? 0), 0);
         rows.push(row(period, label, measure, unitLabel, filterText, statKey, total, blank.length ? `no complete figure for ${blank.join(", ")}` : partialNote || null));
         postOps.push((a) => post(a).set("combine", true)); // applied-site: period-total
+        // Stage 3b r3 (R3.2''): a pooled clearance rate is the summed cleared over the summed reported.
+        if (spec.statistic === "clearance_rate") recordWhyFacts({ kind: "rate", method: "nibrs-clearance-pooled", per: 100, places: [label] });
       } else {
         for (const y of periodYears) { const v = valueFor(y); rows.push(row(y, label, measure, unitLabel, filterText, statKey, v.value, v.note)); }
         if (periodYears.length > 1 || spec.grain === "year") postOps.push((a) => post(a).push("grains", "year")); // applied-site: per-year-rows
+        // Stage 3b r3 (R3.2'/R3.2''): as valueFor computes each year.
+        if (spec.statistic === "rate") recordWhyFacts({ kind: "rate", method: agency ? "nibrs-agency-annual" : "nibrs-cohort-annual", per: 100000, places: agency ? [label] : [] });
+        if (spec.statistic === "clearance_rate") recordWhyFacts({ kind: "rate", method: "nibrs-clearance", per: 100, places: [label] });
       }
       const form = periodFormValue(spec.period);
       if (form) postOps.push((a) => post(a).push("periodValues", form)); // applied-site: relative-period-resolved-by-years-of
@@ -831,6 +850,8 @@ async function compileBreakdown(spec: BreakdownSpec, ctx: CompileContext, run: R
       denominator = ut ? ut.value : null;
       if (ut) { const why = shareOperands({ ...x.rec, years: set.years }, ut.rec, spec.filters, []); if (why) return { kind: "decline", explanation: operandFailure(why), statements }; denomRecs.push(ut.rec); }
     }
+    // Stage 3b r2 (R2.4'): the denominator actually used for this period's shares (null when none), keyed to its rows.
+    recordWhyFacts({ kind: "breakdown", key: { place: label, measure: spec.measure, period: String(set.period), dimension: dimName, unit: unitLabel }, denominator, overlap: Boolean(d.overlap) });
     if (!byCat.size) { rows.push({ period: set.period, place: label, measure: spec.measure, unit: unitLabel, filter: filterText, dimension: dimName, category: null, count: 0, share: null, note: "none recorded" }); continue; }
     rows.push(...[...byCat.entries()]
       .map(([cat, count]) => ({ period: set.period, place: label, measure: spec.measure, unit: unitLabel, filter: filterText, dimension: dimName, category: d.label ? d.label(cat) : cat, count, share: denominator ? r1((count / denominator) * 100) : null, note }))
@@ -1068,6 +1089,7 @@ async function compileRank(spec: RankSpec, ctx: CompileContext, run: RunFn, stat
     const leftOut = named.length ? `Left out: ${shown.map((e) => `${e.place} (${e.why})`).join("; ")}${named.length > shown.length ? `; and ${named.length - shown.length} more` : ""}.` : "";
     const notes = [ranked && spec.rank!.n && rows.length < spec.rank!.n ? `Only ${rows.length} cities meet the conditions.` : "", leftOut].filter(Boolean);
     post(applied).set("statistic", "clearance_rate"); // applied-site: statistic-computed
+    recordWhyFacts({ kind: "rate", method: "nibrs-clearance", per: 100, places: [] }); // Stage 3b r3 (R3.2''): cleared / reported per city
     return { kind: "answer", columns: RANK, rows, title: `${MEASURE_LABEL[spec.measure]} clearance rate by city, ${year}`, explanation: ["Clearance rate = offenses cleared (by arrest or exceptional means) / offenses reported, for each city's police agency.", ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
   }
   if (spec.entity === "state" && (spec.statistic === "rate" || spec.statistic === "count")) {
@@ -1098,6 +1120,7 @@ async function compileRank(spec: RankSpec, ctx: CompileContext, run: RunFn, stat
     applied.breakdowns = (applied.breakdowns ?? []).filter((d) => d !== "state"); // applied-site: state-grouping-is-the-ranking-not-a-breakdown
     if (spec.rank) post(applied).set("rank", { dir: spec.rank.dir, n: spec.rank.n ?? 0 }); // applied-site: rank-sort-and-slice
     post(applied).set("statistic", spec.statistic === "rate" ? "rate" : "count"); // applied-site: statistic-computed
+    if (spec.statistic === "rate") recordWhyFacts({ kind: "rate", method: "nibrs-cohort-annual", per: 100000, places: [] }); // Stage 3b r3 (R3.2'): each state's count / cohort(st, year).population
     return { kind: "answer", columns: RANK, rows, title: `${MEASURE_LABEL[spec.measure]} ${spec.statistic === "rate" ? "rate" : "count"} by state, ${year}`, explanation: [`States are ranked on the agencies that reported to NIBRS in ${year} (${all.toLocaleString("en-US")} agencies in all); states with fewer reporting agencies are less complete.`, spec.statistic === "rate" ? RATE_DISCLAIMER : "", NIBRS_RECENT_MATURATION_DISCLOSURE].filter(Boolean).join(" "), statements, applied };
   }
   return { kind: "decline", explanation: "I can rank states by a count or a rate, and cities or agencies by clearance rate. This ranking is neither, and no other ranking here could answer it as asked, so I haven't answered with a number.", statements };

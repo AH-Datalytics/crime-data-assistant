@@ -125,6 +125,9 @@ const DELIVERY_HELPERS = {
   },
 };
 
+/** Stage 3b round 2 (R2.6'): the one helper a carried outcome may come from, and the module it must be imported from. */
+const CARRIED_OUTCOME_HELPER = { module: "@/lib/why-context" };
+
 const deliveryHelperCache = new Map();
 
 /**
@@ -286,6 +289,15 @@ function outcomeShape(call, sf, ts, repoRoot) {
                  predicate: expr.condition.getText(sf) };
       }
       return { form: "parallel", predicate: expr.condition.getText(sf), via };
+    }
+    // Stage 3b round 2 (plan r2.1 R2.6'): a "why" exit that composes a CAPTURED inner answer carries that inner site's own
+    // outcome. Admissible only as a call to the reviewed helper `carriedOutcome`, bound exactly like a delivery helper
+    // (an exact, unaliased, non-type-only import from @/lib/why-context, never shadowed). The inner site whose outcome it
+    // carries is itself an inventoried decision site.
+    if (ts.isCallExpression(expr) && ts.isIdentifier(expr.expression) && expr.expression.text === "carriedOutcome") {
+      const binding = deliveryHelperBinding(sf, ts, "carriedOutcome", CARRIED_OUTCOME_HELPER);
+      if (binding !== "bound") return { form: "other", text: "carriedOutcome() - unbound: " + binding };
+      return { form: "carried", via: "carriedOutcome()" };
     }
     // The delivery-helper indirection: one reason derived from the helper is a literal site; more
     // than one is "parallel", which the guards reject.

@@ -104,6 +104,8 @@ import { accountShrRequest, shrRecognitionRefusal, shrKnownAgencyIndex, bindShrP
 import { planShrQuestion, compileShrQuestion, executeCompiledShrQuestion, shrQuestionOutcome, observeShrCutoff, type ShrQuestionDecision } from "@/lib/shr-question-types";
 import type { Part } from "@/lib/request-accounting";
 import { periodsApplied } from "@/lib/shr-period-proof";
+import { guardModelClient, isInnerRun, carriedOutcome } from "@/lib/why-context";
+import { handleWhyTurn, innerRequest } from "@/lib/why-turn";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /**
@@ -185,7 +187,8 @@ export async function POST(req: NextRequest) {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     "unknown";
-  const rateCheck = checkRateLimit(ip);
+  // Stage 3b (r1.4 R4.2): an inner run of a "why" turn was admitted by its outer request; never charged twice.
+  const rateCheck: ReturnType<typeof checkRateLimit> = isInnerRun() ? ({ allowed: true, remaining: 0 } as ReturnType<typeof checkRateLimit>) : checkRateLimit(ip);
   if (!rateCheck.allowed) {
     const retryAfter = Math.ceil((rateCheck.retryAfterMs || 60000) / 1000);
     return jsonResp(
@@ -203,7 +206,7 @@ export async function POST(req: NextRequest) {
 
     // Page token validation
     const pageToken = body?.pageToken as string | undefined;
-    if (!validatePageToken(pageToken)) {
+    if (!isInnerRun() && !validatePageToken(pageToken)) {
       return jsonResp(
         { success: false, error: "Please refresh the page and try again." } as QueryError,
         403
@@ -212,7 +215,7 @@ export async function POST(req: NextRequest) {
 
     // Session-based CAPTCHA throttle
     maybeCleanup();
-    const captchaCheck = checkSessionLimit(sessionId);
+    const captchaCheck: ReturnType<typeof checkSessionLimit> = isInnerRun() ? ({ allowed: true } as ReturnType<typeof checkSessionLimit>) : checkSessionLimit(sessionId);
     if (!captchaCheck.allowed) {
       if (captchaCheck.dailyLimitReached) {
         return jsonResp({ success: false, error: "You've reached the daily query limit. Please come back tomorrow." } as QueryError, 429);
@@ -273,6 +276,33 @@ export async function POST(req: NextRequest) {
         planFamily: null,
         ...opts,
       });
+
+    // Stage 3b (plan §4, r1.4, amendment A1): ONE early branch for a "why" turn. Its data part runs as an inner re-entry
+    // of this route, captured at the proof chokepoints and never delivered; the outer turn composes, finalizes the
+    // composed text as the narrative, logs once and emits once, outside the inner run.
+    if (!isInnerRun()) {
+      const why = await handleWhyTurn(question, body?.history, {
+        tab: "shr",
+        reenter: async (q, h) => { const res = await POST(innerRequest(req, body, q, h) as NextRequest); await res.text(); },
+      });
+      if (why) {
+      const ms = Date.now() - outerStart;
+      // R2.6': a captured inner answer (with its matched input) keeps ITS OWN disposition -- an answer stays an answer, a
+      // clarification a clarification, a decline a decline; composition only appends sentences. Anything else (no capture,
+      // or no matched input) goes to the text exit and is never a carried success.
+      if (why.kind === "data" && why.capture.input) {
+        const cap = why.capture;
+        const whyRows = Array.isArray(cap.payload.rows) ? (cap.payload.rows as unknown[]) : [];
+        const whyProof = finalizeExit({ ...(cap.input as Partial<ProofFinalizationInput>), outcome: carriedOutcome<QueryLogOutcome>(cap.input), narrative: why.text });
+        logQuery(question, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, "shr", why.tags, "deterministic", sessionId, null, null, null, null, proofLogFields(decisionFinalization(whyProof)), outcomeLogFields(asOutcomeRecord(whyProof)));
+        return jsonResp(emitFactualPayload(whyProof, { ...cap.payload, explanation: why.text } as unknown as Parameters<typeof jsonResp>[0]));
+      }
+      const answered = why.kind === "text" && why.answered;
+      const whyTextProof = finalizeExit({ planFamily: "why-turn", guardrails: why.tags, outcome: answered ? OUTCOMES.deterministic_plan : OUTCOMES.capability_path_unavailable, narrative: why.text });
+      logQuery(question, null, 0, null, ms, why.text, "shr", why.tags, "deterministic", sessionId, null, null, null, null, proofLogFields(decisionFinalization(whyTextProof)), outcomeLogFields(asOutcomeRecord(whyTextProof)));
+      return jsonResp(emitFactualPayload(whyTextProof, { success: true, question, sql: null, explanation: why.text, title: answered ? "Explanation" : "Not answered", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms } as unknown as Parameters<typeof jsonResp>[0]));
+      }
+    }
 
     const history = normalizeHistoryForTab(body?.history, "shr");
     const demographicRateFollowup = detectDemographicRateDenominatorFollowup(question, normalizeHistoryAllSources(body?.history));
@@ -1327,7 +1357,8 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     };
     let text = "";
 
-    const client = new Anthropic();
+    // Stage 3b (r1.4 R4.3): blocked before invocation in a rebuild (lib/why-context.ts).
+    const client = guardModelClient(new Anthropic());
     // Rewrite shooting queries to use firearm homicide language the model understands
     let queryForModel = question;
     if (asksShooting && !wantsNonfatal && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {

@@ -20,6 +20,7 @@ import { getNibrsDb } from "./nibrs-db";
 import type { EstablishedIdentity } from "./answer-evidence";
 import type { CompletenessPlan } from "./city-ranking-completeness";
 import { appliedFromContract, placesFromGeographies, type NibrsApplied } from "./nibrs-legacy-binding";
+import { recordWhyFacts } from "./why-scope";
 
 export interface DeterministicNibrsQuery {
   sql: string;
@@ -1485,6 +1486,8 @@ export function buildNibrsStructuredLocalTrendQuery(
 
   const places = resolvedTargets.map((target) => target.label).join(" and ");
   const offenseLabels = resolvedOffenses.map((offense) => offense.label.toLowerCase()).join(", ");
+  // Stage 3b r3 (R3.2'): each value is 100000 * the agency's count / its population for that year (place_reporting).
+  if (isRate) recordWhyFacts({ kind: "rate", method: "nibrs-agency-annual", per: 100000, places: resolvedTargets.map((target) => target.label) });
   return {
     sql,
     title: "NIBRS offense " + (isRate ? "rate " : "") + "trends for " + places,

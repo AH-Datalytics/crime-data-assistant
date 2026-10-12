@@ -9,6 +9,8 @@ import { buildChartConfig } from "@/lib/chart-config";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isInnerRun, recordWhyNotes, recordWhyFacts, carriedOutcome } from "@/lib/why-context";
+import { handleWhyTurn, innerRequest } from "@/lib/why-turn";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { HISTORICAL, RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
@@ -509,7 +511,8 @@ export async function POST(req: NextRequest) {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     "unknown";
-  const rateCheck = checkRateLimit(ip);
+  // Stage 3b (r1.4 R4.2): an inner run of a "why" turn was admitted by its outer request; never charged twice.
+  const rateCheck: ReturnType<typeof checkRateLimit> = isInnerRun() ? ({ allowed: true, remaining: 0 } as ReturnType<typeof checkRateLimit>) : checkRateLimit(ip);
   if (!rateCheck.allowed) {
     const retryAfter = Math.ceil((rateCheck.retryAfterMs || 60000) / 1000);
     return new Response(
@@ -539,7 +542,7 @@ export async function POST(req: NextRequest) {
     sessionId = ((body?.sessionId as string) || "").slice(0, 64) || null;
     // Page token validation — block bots that hit the API directly
     const pageToken = body?.pageToken as string | undefined;
-    if (!validatePageToken(pageToken)) {
+    if (!isInnerRun() && !validatePageToken(pageToken)) {
       return new Response(
         JSON.stringify({ success: false, error: "Please refresh the page and try again." }),
         { status: 403, headers: { "Content-Type": "application/json" } }
@@ -548,7 +551,7 @@ export async function POST(req: NextRequest) {
 
     // Session-based CAPTCHA throttle
     maybeCleanup();
-    const captchaCheck = checkSessionLimit(sessionId);
+    const captchaCheck: ReturnType<typeof checkSessionLimit> = isInnerRun() ? ({ allowed: true } as ReturnType<typeof checkSessionLimit>) : checkSessionLimit(sessionId);
     if (!captchaCheck.allowed) {
       if (captchaCheck.dailyLimitReached) {
         return new Response(
@@ -688,6 +691,47 @@ export async function POST(req: NextRequest) {
       planFamily: null,
       ...opts,
     });
+  // Stage 3b (plan §4, r1.4, amendment A1): ONE early branch for a "why" turn. Its data part -- the masked question of a
+  // mixed turn, or the rebuilt earlier question of a why-only turn -- runs as an inner re-entry of this route, whose
+  // emissions are captured at the proof chokepoints and never delivered. The outer turn composes the text, finalizes it
+  // as the narrative, logs once and emits once, outside the inner run.
+  if (!isInnerRun()) {
+    const why = await handleWhyTurn(recordedQuestion, body?.history, {
+      tab: tab === "historical" ? "historical" : "current",
+      reenter: async (q, h) => { const res = await POST(innerRequest(req, body, q, h) as NextRequest); await res.text(); },
+    });
+    if (why) {
+      const ms = Date.now() - totalStart;
+      // R2.6': a captured inner answer (with its matched input) keeps ITS OWN disposition -- an answer stays an answer, a
+      // clarification a clarification, a decline a decline; composition only appends sentences. Anything else (no capture,
+      // or no matched input) goes to the text exit and is never a carried success.
+      if (why.kind === "data" && why.capture.input) {
+        const cap = why.capture;
+        const whyRows = Array.isArray(cap.payload.rows) ? (cap.payload.rows as unknown[]) : [];
+        const whyProof = finalizeExit({ ...(cap.input as Partial<ProofFinalizationInput>), outcome: carriedOutcome<QueryLogOutcome>(cap.input), narrative: why.text });
+        writeLog(recordedQuestion, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, tab, why.tags, "deterministic", sessionId, null, whyProof);
+        const whyPayload = { ...cap.payload, type: "result" as const, explanation: why.text } as unknown as FactualStreamEvent;
+        const whyStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(whyProof, whyPayload))));
+            controller.close();
+          },
+        });
+        return new Response(whyStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+      }
+      const answered = why.kind === "text" && why.answered;
+      const whyTextProof = finalizeExit({ planFamily: "why-turn", guardrails: why.tags, outcome: answered ? OUTCOMES.deterministic_plan : OUTCOMES.capability_path_unavailable, narrative: why.text });
+      writeLog(recordedQuestion, null, 0, null, ms, why.text, tab, why.tags, "deterministic", sessionId, null, whyTextProof);
+      const whyTextPayload = { type: "result" as const, sql: null as unknown as string, explanation: why.text, title: answered ? "Explanation" : "Not answered", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms } as unknown as FactualStreamEvent;
+      const whyTextStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(whyTextProof, whyTextPayload))));
+          controller.close();
+        },
+      });
+      return new Response(whyTextStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+    }
+  }
   const demographicRateFollowup = detectDemographicRateDenominatorFollowup(
     question,
     normalizeHistoryAllSources(body?.history),
@@ -1579,6 +1623,8 @@ export async function POST(req: NextRequest) {
         sampleResult as unknown as CurrentYoySampleRow[],
         yoyComparisonPlan.offenses.length,
       );
+      // Stage 3b r2 (R2.4'): the fixed comparison group as this year-over-year path formed it (no-op outside an inner run).
+      recordWhyFacts({ kind: "group", place: "United States (sample)", members: comparisonGroup.includedCount, sample: comparisonGroup.startingSampleSize });
       answerRows = answerResult as unknown as CurrentYoyAnswerRow[];
       /*
        * The delivered totals must describe exactly the required cells for exactly the selected
@@ -2243,6 +2289,7 @@ export async function POST(req: NextRequest) {
         compiled = { kind: "decline", explanation: "I couldn't build this Current Trends answer from the data just now, so I haven't answered with a number. Please try again." };
       }
       if (compiled.kind === "decline") return currentAccountingExit({ parts: [], explanation: compiled.explanation }, "question-type-compile");
+      recordWhyNotes(compiled.notes); // Stage 3b: the notes as data for an outer "why" turn (no-op outside an inner run)
       // L12/L13: the answer is delivered only when what its statements applied accounts for every part, by value.
       if (!currentLegacyBound(currentLedger, compiled.applied, currentExplainLimitation)) {
         const unbound = currentUnboundParts(currentLedger, compiled.applied, currentExplainLimitation);

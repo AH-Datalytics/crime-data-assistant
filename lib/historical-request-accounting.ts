@@ -11,7 +11,7 @@
  * ORDER MATTERS: the ledger refuses overlapping claims, so specific rules are recorded before general ones
  * ("motor vehicle theft" before "theft", "sexual assault" before "assault", "clearance rate" before "rate").
  */
-import { RequestLedger, recordContext, recordBetweenFiller, refusalSentences, couldNotInterpret, type Part, type Span } from "./request-accounting";
+import { RequestLedger, recordContext, recordBetweenFiller, refusalSentences, couldNotInterpret, type Part, type Span, recordBrokenDown } from "./request-accounting";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { STATE_NAME_TO_ABBR } from "./state-population";
 import { detectCompletenessQuestion } from "./completeness-intent";
@@ -307,6 +307,7 @@ function recordHistoricalFiller(ledger: RequestLedger): void {
  */
 export function accountHistoricalRequest(question: string): RequestLedger {
   const ledger = new RequestLedger(question);
+  recordBrokenDown(ledger); // Stage 3b r2 (R2.7)
   recordContext(ledger);
   // Typed agency codes first, then places (a place name is the most specific claim: "White Plains" is a place before
   // "white" is a demographic word), then every other rule in its written order.

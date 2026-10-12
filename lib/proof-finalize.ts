@@ -59,6 +59,7 @@ import { attributeOmissions, type OmittedCandidate } from "./omission-attributio
 import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { narrativeDisclosesOmissions } from "./omission-wording";
+import { recordFinalization, recordEmission } from "./why-scope";
 import {
   omittedCandidatesFor,
   requestedEntitiesFromRequest,
@@ -381,7 +382,18 @@ function hypotheticalFor(intended: DeliveryAction, blocker: string | null): Deli
  * MUST be called before the response's first factual byte is written. Never
  * throws. Never mutates its input.
  */
+/**
+ * Stage 3b (amendment A1): every finalization of an INNER run (lib/why-context.ts) is recorded with its own input,
+ * on every path including proof-off, so the outer "why" turn can finalize the composed answer from the same input.
+ * Outside an inner run this records nothing.
+ */
 export function finalizeProof(input: ProofFinalizationInput): ProofFinalization {
+  const finalization = finalizeProofPaths(input);
+  recordFinalization(finalization, input);
+  return finalization;
+}
+
+function finalizeProofPaths(input: ProofFinalizationInput): ProofFinalization {
   const env = input.env ?? process.env;
   // PHASE 1: resolve with the CALLER's family, only to decide whether to do any work.
   // This value must never be the one that authorizes enforcement -- the family is
@@ -853,6 +865,8 @@ export function outcomeLogFields(
  * and nowhere else.
  */
 export function emitFactualPayload<T>(finalization: ProofFinalization, payload: T): SealedPayload<T> {
+  // Stage 3b (A1): an INNER run's emission is captured, paired with its finalization input; the outer turn delivers.
+  recordEmission(finalization, payload);
   if (!finalization.mayAlterDelivery) return payload as SealedPayload<T>;
   // Stage 4 will substitute a clarify/decline payload here when `blocker` is
   // non-null. Until enforcement is approved by the owner, `mayAlterDelivery` is

@@ -756,9 +756,11 @@ export async function POST(req) {
   // Request accounting stage 3a (Current): +1 envelope exit on the query route (the Current typed answer returns its own
   // sealed SSE Response; the Current accounting exit is the Historical one, reused) and +2 sealed stream events (the typed
   // answer and the Current model-SQL gate in the stream).
-  check("H7  real terminal exits: 4 chokepoint, 27 envelope, 0 detached, 0 sealed-by-fallback",
-    [ek.chokepoint, ek["sse-envelope"], ek["detached-carrier"] || 0, ek.sealed || 0], [4, 27, 0, 0]);
-  check("H7b real stream events: 42 sealed", sk.sealed, 42);
+  // Request accounting stage 3b ("why" questions): +2 envelope exits and +2 sealed stream events on the query route (round 2:
+  // the carried why exit and the text why exit each return their own sealed SSE Response carrying the composed answer).
+  check("H7  real terminal exits: 4 chokepoint, 29 envelope (stage 3b: + the query carried and text why exits), 0 detached, 0 sealed-by-fallback",
+    [ek.chokepoint, ek["sse-envelope"], ek["detached-carrier"] || 0, ek.sealed || 0], [4, 29, 0, 0]);
+  check("H7b real stream events: 44 sealed (stage 3b: + the query carried and text why exits)", sk.sealed, 44);
   check("H7c and every unclassified one is registered, so the tree is green",
     [ek.unclassified, sk.unclassified, res.failures.length], [12, 13, 0]);
   // The registries are load-bearing: emptying them must fail loudly.
@@ -812,9 +814,9 @@ export async function POST() {
   check("I2  the seal as the direct event payload IS a sealed delivery",
     m.streamEvents.map((e) => e.kind), ["sealed"]);
   checkTrue("I2b so the tree passes", elig(root).ok, JSON.stringify(elig(root).failures));
-  check("I2c and all 42 real sealed enqueues have this exact shape",
+  check("I2c and all 44 real sealed enqueues have this exact shape",
     res.routes.filter((x) => x.sealed)
-      .reduce((n, x) => n + x.streamEvents.filter((e) => e.kind === "sealed").length, 0), 42);
+      .reduce((n, x) => n + x.streamEvents.filter((e) => e.kind === "sealed").length, 0), 44);
   check("I2d with zero decorative seals in the real tree",
     res.failures.filter((f) => f.kind === "decorative-seal").length, 0);
 }

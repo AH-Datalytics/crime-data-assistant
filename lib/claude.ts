@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { guardModelClient } from "./why-context";
 import { RTCI, HISTORICAL, NIBRS, RTCI_DATA_CUTOFF as DATA_CUTOFF } from "./dynamic-facts";
 import { validateClaudeResponse } from "./claude-schema";
 import { extractJson } from "./extract-json";
@@ -6,7 +7,8 @@ import { removeCodeFences, removeJsonWithSqlKey } from "./text-sanitize";
 import { relativeYearConventionPrompt } from "./time-conventions";
 import { CONSOLIDATED_AGENCIES } from "./agency-consolidations";
 
-const client = new Anthropic();
+// Stage 3b (r1.4 R4.3): in a rebuild, every model call is blocked BEFORE invocation (lib/why-context.ts).
+const client = guardModelClient(new Anthropic());
 
 const SYSTEM_PROMPT = `You are a SQL query generator for the Crime Index Current Trends database. You translate natural language questions about crime data into SQLite queries.
 

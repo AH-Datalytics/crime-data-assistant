@@ -46,6 +46,7 @@ import { validateQueryContractSql, queryContractFailureMessage } from "../lib/qu
 import { applyResultDisclosures } from "../lib/result-disclosure";
 import { mayRefuseAsCourtProcess } from "../lib/clearance-referent";
 import { extractDeclaration, runRouteExpression } from "./decision1-terminal-harness";
+import { resolveNibrsPeriodReplacement } from "../lib/nibrs-request-accounting";
 import { resolvePeerCountFollowup } from "../lib/peer-count-followup";
 import { resolveRankingExplanationFollowup } from "../lib/nibrs-agency-period-ranking";
 import { normalizeHistoryForTab } from "../lib/chat-history";
@@ -258,6 +259,8 @@ console.log("\n=== 5  the NIBRS route's own expression, lifted and run ===");
       clearanceRefinement: resolveClearanceRefinement(q, history, "nibrs"),
       peerFollowup: resolvePeerCountFollowup(q, history, "nibrs"),
       rankingExplanation: resolveRankingExplanationFollowup(q, history),
+      // Stage 3b (plan r1.3): the route's "(just) do it for <year>" resolver, computed as the route computes it.
+      periodReplacement: resolveNibrsPeriodReplacement(q, history.filter((h) => h.role === "user").map((h) => h.content)),
       followupTransform: detectFollowupTransform(q, normalized)
         ?? buildCrossSourceFollowupTransform(q, history as never, "nibrs"),
       question: q,
@@ -377,6 +380,7 @@ for (const [q, why] of [
     clearanceRefinement: resolveClearanceRefinement(raw, HISTORY, "nibrs"),
     peerFollowup: resolvePeerCountFollowup(raw, HISTORY, "nibrs"),
     rankingExplanation: resolveRankingExplanationFollowup(raw, HISTORY),
+    periodReplacement: resolveNibrsPeriodReplacement(raw, HISTORY.filter((h) => h.role === "user").map((h) => h.content)),
     followupTransform: detectFollowupTransform(raw, normalizeHistoryForTab(HISTORY as never, "nibrs" as never)),
     question: raw,
   });

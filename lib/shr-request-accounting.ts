@@ -35,8 +35,7 @@ import { mayRefuseAsCourtProcess } from "./clearance-referent";
 import { STATE_NAME_TO_ABBR } from "./state-population";
 import type { ShrCountPlan } from "./shr-count-plan";
 import {
-  RequestLedger, recordContext, recordBetweenFiller, refusalSentences, type Part, type Span,
-} from "./request-accounting";
+  RequestLedger, recordContext, recordBetweenFiller, refusalSentences, type Part, type Span, recordBrokenDown } from "./request-accounting";
 
 export const SHR_IMMIGRATION_NOT_RECORDED =
   "Homicide Reports (SHR) don't record immigration or citizenship status, so I can't count victims or offenders by it -- and I won't give an unrestricted count in its place.";
@@ -373,6 +372,7 @@ function recordUnresolvedPlaces(ledger: RequestLedger, opts: ShrAccountingOption
 
 export function accountShrRequest(question: string, opts: ShrAccountingOptions = {}): RequestLedger {
   const ledger = new RequestLedger(question);
+  recordBrokenDown(ledger); // Stage 3b r2 (R2.7)
   recordContext(ledger);
   // Not-recorded and named-agency rules first: their connectors must not be claimed by others.
   for (const rule of EARLY_RULES) recordAll(ledger, rule);

@@ -13,6 +13,7 @@
  */
 import type { Part, RequestLedger } from "./request-accounting";
 import { refusalSentences } from "./request-accounting";
+import { COMMERCIAL_LOCATION_NAMES } from "./nibrs-codes";
 
 /* ------------------------------------------------------------------ vocabulary ---------------------------------- */
 
@@ -40,6 +41,12 @@ export const MEASURE_LABEL: Record<string, string> = {
 };
 
 /** Filter value labels, for the delivered `filter` column ("sex: female; age: under 18"). */
+/** The owner-decided commercial location types, named in every answer that applies them (plan r1.3). */
+function commercialList(): string {
+  const n = COMMERCIAL_LOCATION_NAMES;
+  return `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`;
+}
+
 export function filterLabel(dimValue: string): string {
   const [dim, v] = dimValue.split(":");
   const L: Record<string, Record<string, string>> = {
@@ -50,7 +57,7 @@ export function filterLabel(dimValue: string): string {
     bias: { 21: "anti-Jewish", 12: "anti-Black", 11: "anti-White", 32: "anti-Hispanic", 14: "anti-Asian", 24: "anti-Islamic", 41: "anti-gay" },
     loss: { 7: "stolen", 5: "recovered", 4: "damaged", 6: "seized" },
     clearance: { A: "death of offender", B: "prosecution declined", C: "in custody elsewhere", D: "victim refused to cooperate", E: "juvenile, no custody", arrest: "by arrest", exceptional: "by exceptional means" },
-    location: { 20: "residence/home", 13: "highway/road/alley/street", 22: "school/college", 18: "parking lot/garage" },
+    location: { 20: "residence/home", 13: "highway/road/alley/street", 22: "school/college", 18: "parking lot/garage", commercial: `commercial location types (${commercialList()})` },
     relationship: { ST: "stranger" },
   };
   const DIM: Record<string, string> = { drug: "drug type", dv: "category" };

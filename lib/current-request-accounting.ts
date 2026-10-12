@@ -12,7 +12,7 @@
  * Places, years, ranges, thresholds, ranks and change words reuse the accepted Historical rules (stage 2a); months and
  * rolling windows the accepted NIBRS ones (stage 2b). ORDER MATTERS: the ledger refuses overlapping claims.
  */
-import { RequestLedger, recordContext, recordBetweenFiller, refusalSentences, couldNotInterpret, type Part, type Span } from "./request-accounting";
+import { RequestLedger, recordContext, recordBetweenFiller, refusalSentences, couldNotInterpret, type Part, type Span, recordBrokenDown } from "./request-accounting";
 import { recordAll, recordPlaces, numberToken, thresholdValue, changeDirection, type Rule } from "./historical-request-accounting";
 import { detectCompletenessQuestion } from "./completeness-intent";
 
@@ -216,6 +216,7 @@ function recordCurrentFiller(ledger: RequestLedger): void {
  */
 export function accountCurrentRequest(question: string): RequestLedger {
   const ledger = new RequestLedger(question);
+  recordBrokenDown(ledger); // Stage 3b r2 (R2.7)
   recordContext(ledger);
   const early = RULES.filter((r) => EARLY_CONCEPTS.has(r.concept) || MONTH_PERIODS.includes(r));
   for (const rule of early) recordAll(ledger, rule);

@@ -1,3 +1,4 @@
+import { assertModelAllowed } from "./why-scope";
 /**
  * In-memory response cache for Claude API calls.
  * Keyed on normalized question + tab/mode. Cache hit skips the Claude call
@@ -57,6 +58,8 @@ export function __resetResponseCacheForTests(): void {
 }
 
 export function getCached(question: string, tab: string, validity?: string): CachedResponse | null {
+  // Stage 3b (r1.4 R4.3): a rebuild never reads a cached model answer; blocked before the read.
+  assertModelAllowed("cached model answer");
   const key = normalizeKey(question, tab, validity);
   const entry = cache.get(key);
   if (!entry) return null;

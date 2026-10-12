@@ -153,6 +153,14 @@ export const LOCATION_TYPES: Record<string, string> = {
   "58": "Cyberspace",
 };
 
+/**
+ * Stage 3b, owner decision (Jeff, 2026-10-11; plan r1.3): "commercial" on NIBRS means robberies (or any offense) at
+ * BUSINESS location types -- retail, banking, hospitality, offices and gambling. Venues, terminals, parking and industrial
+ * sites are not included. Every answer that applies it names these types.
+ */
+export const COMMERCIAL_LOCATION_CODES = ["02", "03", "05", "07", "08", "09", "12", "14", "17", "19", "21", "23", "24", "40", "41", "47", "55"];
+export const COMMERCIAL_LOCATION_NAMES = COMMERCIAL_LOCATION_CODES.map((c) => LOCATION_TYPES[c]);
+
 export const PROPERTY_LOSS_TYPES: Record<string, string> = {
   "1": "None",
   "2": "Burned",

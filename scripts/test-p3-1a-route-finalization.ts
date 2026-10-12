@@ -231,7 +231,13 @@ console.log("\nR2 — every route finalizes a contract failure with that same ou
   // Every other finalization in the app names catalog members - including via a ternary, which is
   // fine - and none writes an inline {action, reason} object. A hand-written pair is the thing that
   // would put a second author back into the outcome vocabulary.
-  const others = [...byFile.values()].flat().filter((o) => o !== DELIVERED);
+  // Stage 3b round 2 (plan r2.1 R2.6'): the three carried "why" exits pass on the CAPTURED inner site's own outcome through
+  // the reviewed helper; they author no outcome (the inner site is itself inventoried, and the exit inventory binds the
+  // helper exactly). Exactly one per built route.
+  const CARRIED = "carriedOutcome<QueryLogOutcome>(cap.input)";
+  check("R2e2 the carried form appears exactly once per built route (query, nibrs-query, shr-query)",
+    [...byFile.values()].flat().filter((o) => o === CARRIED).length, 3);
+  const others = [...byFile.values()].flat().filter((o) => o !== DELIVERED && o !== CARRIED);
   checkTrue("R2f no finalization anywhere builds an inline action/reason object",
     others.every((o) => o.includes("OUTCOMES.") && !o.includes("{")),
     others.filter((o) => !o.includes("OUTCOMES.") || o.includes("{")).join(" | "));

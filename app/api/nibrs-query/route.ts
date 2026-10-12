@@ -52,6 +52,8 @@ import { pastCompleteCalendarYearsRange } from "@/lib/time-conventions";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { resolveClearanceRefinement } from "@/lib/clearance-refinement-followup";
 import { resolvePeerCountFollowup } from "@/lib/peer-count-followup";
+import { isInnerRun, carriedOutcome } from "@/lib/why-context";
+import { handleWhyTurn, innerRequest } from "@/lib/why-turn";
 import { AGENCY_PERIOD_RANKING_GUARDRAIL, AGENCY_PERIOD_RANKING_FAILURE_TEXT, agencyPeriodRankingFacts, agencyPeriodRankingNote, asExplanationFollowup, resolveRankingExplanationFollowup } from "@/lib/nibrs-agency-period-ranking";
 import { detectNibrsCapabilityOverride } from "@/lib/nibrs-capability-overrides";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
@@ -104,7 +106,7 @@ import { NIBRS_CITY_RANKING_GUARDRAIL, CITY_RANKING_FAILURE_TEXT } from "@/lib/c
 import { rankingValidationContract } from "@/lib/city-ranking";
 import { runOwnedAnnualClearance } from "@/lib/nibrs-owned-family";
 import { NIBRS_CATEGORY_CHANGE_GUARDRAIL, planCategoryChange, recognizeCategoryChange, runOwnedCategoryChange } from "@/lib/nibrs-category-change";
-import { accountNibrsRequest, nibrsRecognitionRefusal, nibrsRequestKind, nibrsFollowupCheck, NIBRS_CACHE_TAB, NIBRS_MODEL_SQL_DECLINE } from "@/lib/nibrs-request-accounting";
+import { accountNibrsRequest, nibrsRecognitionRefusal, nibrsRequestKind, nibrsFollowupCheck, NIBRS_CACHE_TAB, NIBRS_MODEL_SQL_DECLINE, nibrsStandaloneTurn, resolveNibrsPeriodReplacement } from "@/lib/nibrs-request-accounting";
 import { matchNibrsType, MEASURE_CODES } from "@/lib/nibrs-question-types";
 import { compileNibrsSpec } from "@/lib/nibrs-question-compiler";
 import { nibrsLegacyBound, nibrsUnboundParts, typedExplainLimitation, placesFromGeographies, type NibrsApplied } from "@/lib/nibrs-legacy-binding";
@@ -280,7 +282,8 @@ export async function POST(req: NextRequest) {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     "unknown";
-  const rateCheck = checkRateLimit(ip);
+  // Stage 3b (r1.4 R4.2): an inner run of a "why" turn was admitted by its outer request; never charged twice.
+  const rateCheck: ReturnType<typeof checkRateLimit> = isInnerRun() ? ({ allowed: true, remaining: 0 } as ReturnType<typeof checkRateLimit>) : checkRateLimit(ip);
   if (!rateCheck.allowed) {
     const retryAfter = Math.ceil((rateCheck.retryAfterMs || 60000) / 1000);
     return jsonResp(
@@ -362,7 +365,7 @@ export async function POST(req: NextRequest) {
 
     // Page token validation
     const pageToken = body?.pageToken as string | undefined;
-    if (!validatePageToken(pageToken)) {
+    if (!isInnerRun() && !validatePageToken(pageToken)) {
       return jsonResp(
         { success: false, error: "Please refresh the page and try again." } as QueryError,
         403
@@ -371,7 +374,7 @@ export async function POST(req: NextRequest) {
 
     // Session-based CAPTCHA throttle
     maybeCleanup();
-    const captchaCheck = checkSessionLimit(sessionId);
+    const captchaCheck: ReturnType<typeof checkSessionLimit> = isInnerRun() ? ({ allowed: true } as ReturnType<typeof checkSessionLimit>) : checkSessionLimit(sessionId);
     if (!captchaCheck.allowed) {
       if (captchaCheck.dailyLimitReached) {
         return jsonResp({ success: false, error: "You've reached the daily query limit. Please come back tomorrow." } as QueryError, 429);
@@ -391,6 +394,33 @@ export async function POST(req: NextRequest) {
         { success: false, error: "Question too long (max 2000 characters)" } as QueryError,
         400
       );
+    }
+
+    // Stage 3b (plan §4, r1.4, amendment A1): ONE early branch for a "why" turn. Its data part runs as an inner re-entry
+    // of this route, captured at the proof chokepoints and never delivered; the outer turn composes, finalizes the
+    // composed text as the narrative, logs once and emits once, outside the inner run.
+    if (!isInnerRun() && !resolveRankingExplanationFollowup(question, body?.history) /* r1.2: the accepted GC-091 follow-up keeps its own path */) {
+      const why = await handleWhyTurn(question, body?.history, {
+        tab: "nibrs",
+        reenter: async (q, h) => { const res = await POST(innerRequest(req, body, q, h) as NextRequest); await res.text(); },
+      });
+      if (why) {
+      const ms = Date.now() - outerStart;
+      // R2.6': a captured inner answer (with its matched input) keeps ITS OWN disposition -- an answer stays an answer, a
+      // clarification a clarification, a decline a decline; composition only appends sentences. Anything else (no capture,
+      // or no matched input) goes to the text exit and is never a carried success.
+      if (why.kind === "data" && why.capture.input) {
+        const cap = why.capture;
+        const whyRows = Array.isArray(cap.payload.rows) ? (cap.payload.rows as unknown[]) : [];
+        const whyProof = finalizeExit({ ...(cap.input as Partial<ProofFinalizationInput>), outcome: carriedOutcome<QueryLogOutcome>(cap.input), narrative: why.text });
+        writeNibrsLog(question, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, why.tags, "deterministic", sessionId, null, null, whyProof);
+        return jsonResp(emitFactualPayload(whyProof, { ...cap.payload, explanation: why.text } as unknown as Parameters<typeof jsonResp>[0]));
+      }
+      const answered = why.kind === "text" && why.answered;
+      const whyTextProof = finalizeExit({ planFamily: "why-turn", guardrails: why.tags, outcome: answered ? OUTCOMES.deterministic_plan : OUTCOMES.capability_path_unavailable, narrative: why.text });
+      writeNibrsLog(question, null, 0, null, ms, why.text, why.tags, "deterministic", sessionId, null, null, whyTextProof);
+      return jsonResp(emitFactualPayload(whyTextProof, { success: true, question, sql: null, explanation: why.text, title: answered ? "Explanation" : "Not answered", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms } as unknown as Parameters<typeof jsonResp>[0]));
+      }
     }
 
     // Query-bearing follow-ups (prior SQL + a change request) must reach the
@@ -462,10 +492,16 @@ export async function POST(req: NextRequest) {
     const rankingExplanation = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement || peerFollowup
       ? null
       : resolveRankingExplanationFollowup(question, body?.history);
-    const plannerQuestion = peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? question;
+    // Stage 3b (plan r1.3, GC-089): "(just) do it for <year>" from the previous USER question, only where no resolver above
+    // claimed the turn; K2 below checks it like every resolver.
+    const priorUserForPeriod = normalizeHistoryForTab(body?.history, "nibrs", 50).filter((m) => m.role === "user").map((m) => m.content);
+    const periodReplacement = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") || followupTransform || clearanceRefinement || peerFollowup || rankingExplanation
+      ? null
+      : resolveNibrsPeriodReplacement(question, priorUserForPeriod);
+    const plannerQuestion = peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? periodReplacement?.refinedQuestion ?? question;
     const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.reconstructedQuestion
-      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
+      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? periodReplacement?.refinedQuestion ?? followupTransform?.contextQuestion ?? question);
 
     // ── Request accounting, stage 2b (NIBRS; plan docs/superpowers/plans/2026-10-09-request-accounting-stage2b-nibrs.md) ──
     // ONE ledger, on the effective question (an authoritative reconstruction, else a resolver's refined question, else the
@@ -495,7 +531,7 @@ export async function POST(req: NextRequest) {
     const priorNibrsTurns = normalizeHistoryForTab(body?.history, "nibrs", 50).filter((m) => m.role === "user").map((m) => m.content);
     const nibrsResolverQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")
       ? followupPlan.reconstructedQuestion
-      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? followupTransform?.contextQuestion ?? null);
+      : (clearanceRefinement?.refinedQuestion ?? peerFollowup?.refinedQuestion ?? rankingExplanation?.refinedQuestion ?? periodReplacement?.refinedQuestion ?? followupTransform?.contextQuestion ?? null);
     // r2 (task 0): a TEXT turn that a resolver rebuilt (the ranking-explanation follow-up is always a "why" turn) is
     // checked too; a TEXT follow-up nobody rebuilt keeps the model's text reply.
     if (!nibrsNumeric && nibrsResolverQuestion !== null && priorNibrsTurns.length > 0) {
@@ -504,7 +540,8 @@ export async function POST(req: NextRequest) {
     }
     if (nibrsNumeric) {
       const isNibrsFollowup = priorNibrsTurns.length > 0
-        && (isFollowUp(question) || Boolean(queryBearingFollowup) || followupPlan?.kind === "query_bearing" || nibrsResolverQuestion !== null);
+        && (isFollowUp(question) || Boolean(queryBearingFollowup) || followupPlan?.kind === "query_bearing" || nibrsResolverQuestion !== null)
+        && !(nibrsResolverQuestion === null && nibrsStandaloneTurn(question, priorNibrsTurns)); // Stage 3b (r1.3)
       if (isNibrsFollowup) {
         const carried = nibrsFollowupCheck({ question, effective: nibrsResolverQuestion, previousUserTurns: priorNibrsTurns, isFollowUp });
         if (carried) return nibrsAccountingExit({ parts: [], explanation: carried.explanation }, "followup");

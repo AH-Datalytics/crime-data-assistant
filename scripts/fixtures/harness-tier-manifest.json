@@ -2410,6 +2410,15 @@
       "seed_profile": "empty",
       "requires": [],
       "note": "request accounting stage 3a (Current Trends): unit checks of the ledger, question types or binding; no database, no route, no network"
+    },
+    {
+      "id": "test-why-turn",
+      "tier": "F",
+      "script": "scripts/test-why-turn.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "request accounting stage 3b (why questions): unit checks of spans, topics, templates and the scoped inner run, plus the wiring structure; no database, no route, no network"
     }
   ]
 }

@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { guardModelClient } from "./why-context";
 import { getNibrsDb } from "./nibrs-db";
 import { NIBRS, RTCI, formatRowCount, NIBRS_DATA_CUTOFF as DATA_CUTOFF } from "./dynamic-facts";
 import { validateClaudeResponse } from "./claude-schema";
@@ -12,7 +13,8 @@ import {
 } from "./nibrs-codes";
 import { pastCompleteCalendarYearsRange, relativeYearConventionPrompt } from "./time-conventions";
 
-const client = new Anthropic();
+// Stage 3b (r1.4 R4.3): in a rebuild, every model call is blocked BEFORE invocation (lib/why-context.ts).
+const client = guardModelClient(new Anthropic());
 
 const UCR_VIOLENT_LIST = formatNibrsCodeList(NIBRS_UCR_VIOLENT_CODES);
 const UCR_PROPERTY_LIST = formatNibrsCodeList(NIBRS_UCR_PROPERTY_CODES);
