@@ -58,7 +58,7 @@ redecode = load(os.path.join(HERE, "redecode-hate-crime-bias.py"), "redecode_hat
 ref = json.load(open(hcb.REFERENCE_PATH, encoding="utf-8"))
 check(len(ref["modern"]) == 36, f"T1: 36 modern codes ({len(ref['modern'])})")
 check(ref["modern"]["15"] == "Anti-Multiple Races, Group" and ref["modern"]["41"] == "Anti-Gay (Male)" and ref["modern"]["85"] == "Anti-Sikh"
-      and ref["modern"]["72"] == "Anti-Gender Nonconforming" and ref["modern"]["88"] == "None" and ref["modern"]["99"] == "Unknown",
+      and ref["modern"]["72"] == "Anti-Gender Non-Conforming" and ref["modern"]["88"] == "None" and ref["modern"]["99"] == "Unknown",  # 72: CDE wording (CDE codebook fix 2026-10-13)
       "T1: spot labels (15, 41, 72, 85, 88, 99)")
 check(sorted(k for k in ref["beforeYear"] if not k.startswith("_")) == ["14", "31", "33", "43"], "T1: year rules for 14, 31, 33, 43 only")
 

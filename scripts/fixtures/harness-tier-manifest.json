@@ -1100,6 +1100,33 @@
       "note": "hate crime bias-code hotfix: the FBI decoder, the importer, and the re-decode on its own temporary fixture databases; no app database, no network"
     },
     {
+      "id": "test_cde_codebooks",
+      "tier": "F",
+      "script": "scripts/test_cde_codebooks.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "CDE codebook fix: every code table the app uses, checked against the FBI CDE codebook files in scripts/fixtures/cde; no app database, no network"
+    },
+    {
+      "id": "test_hate_crime_location_redecode",
+      "tier": "F",
+      "script": "scripts/test_hate_crime_location_redecode.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "CDE codebook fix: the hate crime location re-decode on its own temporary fixture databases and master files; no app database, no network"
+    },
+    {
+      "id": "test_codebook_data_steps",
+      "tier": "F",
+      "script": "scripts/test_codebook_data_steps.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "CDE codebook fix: the SHR relabel and the NIBRS lookup-table rebuild on their own temporary fixture databases; no app database, no network"
+    },
+    {
       "id": "test-scorecard-format",
       "tier": "F",
       "script": "scripts/test-scorecard-format.ts",

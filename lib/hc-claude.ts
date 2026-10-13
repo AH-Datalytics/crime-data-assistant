@@ -84,7 +84,7 @@ One row per incident-offense combination. Multi-offense incidents are exploded (
 | offense_code | TEXT | NIBRS 3-char code |
 | offense_name | TEXT | Decoded offense name |
 | offense_victims | INTEGER | Victims for this specific offense |
-| location | TEXT | Decoded location name. Common values: Residence/Home, Highway/Road/Street, School/College, School-Elementary/Secondary, School-College/University, Church/Synagogue/Temple/Mosque, Parking Lot/Garage, Commercial/Office Building, Other/Unknown. Use LIKE '%keyword%' for partial matches. |
+| location | TEXT | Decoded location name. Common values: Residence/Home, Highway/Road/Alley/Street/Sidewalk, School/College, School-Elementary/Secondary, School-College/University, Church/Synagogue/Temple/Mosque, Parking/Drop Lot/Garage, Commercial/Office Building, Other/Unknown. Names follow the FBI CDE codebook; 'Location not confirmed' marks rows whose location code could not be read from the FBI master file. Use LIKE '%keyword%' for partial matches. |
 | bias_code | TEXT | 2-char bias code |
 | bias_desc | TEXT | Full bias description (e.g., "Anti-Black or African American") |
 | bias_category | TEXT | Grouped: Race/Ethnicity/Ancestry, Religion, Sexual Orientation, Disability, Gender, Gender Identity |
@@ -97,11 +97,11 @@ One row per incident-offense combination. Multi-offense incidents are exploded (
 ### BIAS CODE REFERENCE
 Common bias_desc values (use LIKE for partial matching when unsure):
 - Race/Ethnicity/Ancestry: "Anti-Black or African American", "Anti-White", "Anti-Hispanic or Latino", "Anti-Asian", "Anti-American Indian or Alaska Native", "Anti-Arab", "Anti-Other Race/Ethnicity/Ancestry"
-- Religion: "Anti-Jewish", "Anti-Islamic (Muslim)", "Anti-Catholic", "Anti-Protestant", "Anti-Buddhist", "Anti-Hindu", "Anti-Sikh", "Anti-Eastern Orthodox", "Anti-Mormon", "Anti-Jehovah's Witness", "Anti-Other Religion", "Anti-Atheism/Agnosticism"
-- Sexual Orientation: "Anti-Gay (Male)", "Anti-Lesbian", "Anti-Lesbian, Gay, Bisexual, or Transgender (Mixed Group)", "Anti-Heterosexual", "Anti-Bisexual"
+- Religion: "Anti-Jewish", "Anti-Islamic (Muslim)", "Anti-Catholic", "Anti-Protestant", "Anti-Buddhist", "Anti-Hindu", "Anti-Sikh", "Anti-Eastern Orthodox (Russian, Greek, Other)", "Anti-Church of Jesus Christ", "Anti-Jehovah's Witness", "Anti-Other Religion", "Anti-Atheism/Agnosticism"
+- Sexual Orientation: "Anti-Gay (Male)", "Anti-Lesbian (Female)", "Anti-Lesbian, Gay, Bisexual, or Transgender (Mixed Group)", "Anti-Heterosexual", "Anti-Bisexual"
 - Disability: "Anti-Physical Disability", "Anti-Mental Disability"
 - Gender: "Anti-Male", "Anti-Female"
-- Gender Identity: "Anti-Transgender", "Anti-Gender Nonconforming"
+- Gender Identity: "Anti-Transgender", "Anti-Gender Non-Conforming"
 
 When the user says "antisemitic" or "anti-Jewish" → bias_desc = 'Anti-Jewish'
 When the user says "anti-Black" or "anti-African American" → bias_desc LIKE '%Anti-Black%'

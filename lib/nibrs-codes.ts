@@ -59,6 +59,25 @@ export const UCR_CODES: Record<string, string> = {
   "90I": "Runaway",
   "90J": "Trespass of Real Property",
   "90Z": "All Other Offenses",
+  // Completed from the FBI CDE codebook (scripts/fixtures/cde/).
+  "210": "Extortion/Blackmail",
+  "64A": "Human Trafficking, Commercial Sex Acts",
+  "64B": "Human Trafficking, Involuntary Servitude",
+  "58B": "Export Violations",
+  "58A": "Import Violations",
+  "61A": "Federal Liquor Offenses",
+  "61B": "Federal Tobacco Offenses",
+  "49C": "Flight to Avoid Deportation",
+  "26H": "Money Laundering",
+  "49B": "Flight to Avoid Prosecution",
+  "49A": "Harboring Escapee/Concealing from Arrest",
+  "30A": "Illegal Entry into the United States",
+  "30B": "False Citizenship",
+  "30C": "Smuggling Aliens",
+  "30D": "Re-entry after Deportation",
+  "90K": "Failure to Appear",
+  "90L": "Federal Resource Violations",
+  "90M": "Perjury",
 };
 
 export const NIBRS_UCR_VIOLENT_CODES = ["09A", "11A", "11B", "11C", "120", "13A"] as const;
@@ -175,6 +194,18 @@ export const WEAPON_TYPES: Record<string, string> = {
   "90": "Other",
   "95": "Unknown",
   "99": "None",
+  // Completed from the FBI CDE codebook (scripts/fixtures/cde/).
+  "11A": "Firearm (Automatic)",
+  "12A": "Handgun (Automatic)",
+  "13A": "Rifle (Automatic)",
+  "14A": "Shotgun (Automatic)",
+  "15A": "Other Firearm (Automatic)",
+  "01": "Unarmed",
+  "16": "Lethal Cutting Instrument",
+  "17": "Club/Blackjack/Brass Knuckles",
+  "55": "Pushed or Thrown Out Window",
+  "75": "Drowning",
+  "80": "Strangulation - Include Hanging",
 };
 
 export const RACE_CODES: Record<string, string> = {
@@ -184,10 +215,14 @@ export const RACE_CODES: Record<string, string> = {
   A: "Asian",
   P: "Native Hawaiian/Pacific Islander",
   U: "Unknown",
+  // Completed from the FBI CDE codebook (scripts/fixtures/cde/).
+  M: "Multiple",
 };
 
 export const ETHNICITY_CODES: Record<string, string> = {
   H: "Hispanic or Latino",
   N: "Not Hispanic or Latino",
   U: "Unknown",
+  // Completed from the FBI CDE codebook (scripts/fixtures/cde/).
+  M: "Multiple",
 };
