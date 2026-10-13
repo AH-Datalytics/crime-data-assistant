@@ -1255,7 +1255,10 @@ class OfflineSafety(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target = os.path.join(tmp, "crime_data.db")
             with self.assertRaises(core.BuildError):
-                import_historical.main(["--db", target, "--source-dir", tmp])
+                # --state-workbook is required since the historical national rape fix (amendment 1/2); the refusal
+                # this test proves still comes before anything is opened.
+                import_historical.main(["--db", target, "--source-dir", tmp,
+                                        "--state-workbook", os.path.join(tmp, "State_National_Historical.xlsx")])
             self.assertFalse(os.path.exists(target), "a refused destination was still created")
 
     def test_a_rebuildable_copy_is_accepted_by_the_importer_guard(self):

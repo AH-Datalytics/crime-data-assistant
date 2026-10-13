@@ -200,6 +200,16 @@ hc_loc_line = next((l for l in src("lib/hc-claude.ts").splitlines() if l.startsw
 hc_named = [v.strip() for v in re.search(r"Common values: (.*?)\.(?: |$)", hc_loc_line).group(1).split(", ")] if "Common values: " in hc_loc_line else []
 hc_unknown = [v for v in hc_named if v not in set(LOCATION.values()) | {"Location not confirmed"}]
 check(hc_named and not hc_unknown, f"hate crime prompt: every location value named is a CDE location name ({hc_unknown})")
+
+# ---------------------------------------------------------------- Historical prompt (historical national rape fix, prereg 2026-10-13)
+# The region codes historical_agency holds in production (audit/cde-codebook-audit-2026-10-13/historical-server-check.txt).
+HISTORICAL_REGIONS = {"nst", "mdn", "sth", "wst"}
+claude_ts = src("lib/claude.ts")
+region_line = next((l for l in claude_ts.splitlines() if l.startswith("- region TEXT")), "")
+named_regions = set(re.findall(r"'([a-z]+)'", region_line))
+check(named_regions == HISTORICAL_REGIONS, f"historical prompt: the region codes named are the codes the data holds ({sorted(named_regions)})")
+division_line = next((l for l in claude_ts.splitlines() if l.startswith("- division TEXT")), "")
+check(bool(re.search(r"\bempty\b", division_line, re.I)), f"historical prompt: the division column is described as empty ({division_line[:80]})")
 audit("hate crime bias (modern)", dict(hcb.MODERN), {**BIAS, "88": "None", "99": "Unknown"})
 audit("hate crime offense", dict(hci.OFFENSE_CODES), OFFENSE, {c: "not a hate crime offense in CDE (hc_flag f)" for c in cde("NIBRS_OFFENSE_TYPE.csv", "offense_code", "hc_flag") if cde("NIBRS_OFFENSE_TYPE.csv", "offense_code", "hc_flag")[c] != "t"})
 audit("hate crime state", dict(hci.STATES), STATE, {"99": "CDE 'Other', not used in hate crime files"})

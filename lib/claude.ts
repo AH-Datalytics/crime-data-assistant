@@ -771,9 +771,9 @@ One row per agency.
 - agency TEXT — agency name
 - state TEXT — 2-letter lowercase abbreviation (e.g., 'tx', 'ca', 'ny')
 - type TEXT — one of: city, county, state_police, state_agency, university, tribal, federal, other, state, nation
-- region TEXT — Census region (e.g., 'wst', 'sth', 'mwst', 'nrthst')
-- division TEXT — Census division
-- size TEXT — agency size category (e.g., 'lg', 'sm', 'md')
+- region TEXT — Census region code: 'nst' (Northeast), 'mdn' (Midwest), 'sth' (South), 'wst' (West); NULL for some agencies. For region questions, use the state lists under REGION QUERIES.
+- division TEXT — empty (NULL for every agency); do not use it
+- size TEXT — source size class 'sm', 'md', 'lg' or 'xl' (often NULL); the source does not define the classes, so answer size questions from population instead
 - latitude REAL, longitude REAL — agency coordinates (often NULL)
 - start TEXT, end TEXT — reporting period (e.g., '1958-01', '2024-12')
 

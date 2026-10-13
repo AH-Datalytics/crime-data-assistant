@@ -19,4 +19,4 @@ sha256:
 - `337c30b5cdfa41c2a3d1ec397e7e6820ec327772171c1f07958761322751764c` NIBRS_WEAPON_TYPE.csv
 - `a2fa086ff640665101774e45736df3d1f11a18b1ddeaa456e0fd63e894003646` REF_RACE.csv
 - `afa998d3f3e01d42c7c35c3e3128c897af7567eef99bd2ba839e14192f0204e5` REF_STATE.csv
-- `8944ea52a2856ae6bc04f3ba6db9c5f1cb5019cb7629a8db6efe9983e782e88a` shr-codebook.json
+- `dc92bd1f39be8ff63d6d2834bbdb95639e301cd9ee31386641a0da3549fb4e33` shr-codebook.json (LF; was 8944ea52... with CRLF in 899193b: historical national rape fix amendment 2)

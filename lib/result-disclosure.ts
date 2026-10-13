@@ -9,6 +9,7 @@ import { applyAgencyDisclosure, describeMultiAgency, countyRequestFromQuestion, 
 import { classifyClearanceReferent, MIXED_REFERENT_NOTE } from "./clearance-referent";
 import { establishIdentities, checkRequestedMembers, mayAssertAgencyFacts, type AnswerEvidence } from "./answer-evidence";
 import { withChicagoAssaultComparability } from "./chicago-assault-comparability";
+import { withHistoricalNationalRapeNotes } from "./historical-national-rape";
 import { monthCoverageFromRows, describeMonths, monthPointsFromRows, returnedMonthRange, applyPeriodDisclosure, partialPeriodIsRelevant } from "./period-comparison";
 import {
   explicitStateSubstateMismatch,
@@ -870,6 +871,11 @@ export function applyResultDisclosures(opts: {
    * A county answered by a sheriff's agency must say so.
    */
   resolvedAgency?: ResolvedAgency;
+  /**
+   * Historical national rape fix (2026-10-13). The correction state read in the SAME snapshot as `rows`
+   * (lib/historical-national-rape.ts). Present: its notes are applied (or stripped). Absent: no change.
+   */
+  historicalNationalRapeCorrected?: boolean;
 }): string {
   let explanation = normalizeDcExplanation(normalizeClearanceRateExplanation(opts.explanation, opts.sql), opts.sql);
   explanation = normalizeStateRankingScope(explanation, opts.rows);
@@ -1052,6 +1058,11 @@ export function applyResultDisclosures(opts: {
 
   explanation = withReturnedCoverage(explanation, opts.question, opts.sql, opts.rows);
   explanation = withChicagoAssaultComparability(explanation, opts.sql, opts.rows);
+  // Historical national rape fix (2026-10-13): the definition and 2021 notes for the state the rows were read in. Only when
+  // the caller supplies that state; without it this chokepoint is byte-identical to before.
+  if (opts.tab === "historical" && typeof opts.historicalNationalRapeCorrected === "boolean") {
+    explanation = withHistoricalNationalRapeNotes(explanation, opts.sql, opts.rows, opts.historicalNationalRapeCorrected);
+  }
 
   const period = yearRangeFromRows(opts.rows) || yearRangeFromSql(opts.sql);
   if (period) {

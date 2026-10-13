@@ -33,7 +33,87 @@ def parse_args(argv=None):
         help='directory holding geographies.csv, populations.csv and the historical_* CSVs '
              '("Crime and Staffing - HO Ready/final files")',
     )
+    parser.add_argument(
+        "--state-workbook", required=True,
+        help="State_National_Historical.xlsx (historical_state_national); it is not in the --source-dir folder",
+    )
     return parser.parse_args(argv)
+
+
+def load_state_national(conn, workbook_path):
+    """Step 6: historical_state_national from the state/national workbook, then the reviewed national rape correction.
+
+    Amendment 1 (historical national rape fix, 2026-10-13): this step read an undefined data-directory constant after the importer
+    stopped using module path constants, so it could not run; the workbook path is now an argument. The national rape
+    row is corrected to CIUS Table 1 for the reviewed years (historical_core.correct_national_rape), and an unreviewed
+    future national year stops the import. Does not commit: the caller's final commit does.
+    """
+    cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS historical_state_national")
+    cur.execute("""
+        CREATE TABLE historical_state_national (
+            state                  TEXT,
+            year                   INTEGER,
+            population             INTEGER,
+            murder                 INTEGER,
+            rape                   INTEGER,
+            robbery                INTEGER,
+            aggravated_assault     INTEGER,
+            burglary               INTEGER,
+            theft                  INTEGER,
+            auto_theft             INTEGER,
+            total_offenses         INTEGER,
+            murder_rate            REAL,
+            rape_rate              REAL,
+            robbery_rate           REAL,
+            aggravated_assault_rate REAL,
+            burglary_rate          REAL,
+            theft_rate             REAL,
+            auto_theft_rate        REAL,
+            total_offenses_rate    REAL,
+            PRIMARY KEY (state, year)
+        )
+    """)
+
+    df_state = pd.read_excel(workbook_path)
+    df_state = df_state.drop(columns=["table", "file"], errors="ignore")
+    df_state = df_state.rename(columns={
+        "murder_and_nonnegligent_manslaughter": "murder",
+        "murder_and_nonnegligent_manslaughter_rate": "murder_rate",
+    })
+    df_state = df_state.replace("", np.nan)
+
+    def sanitize(val):
+        if pd.isna(val) if not isinstance(val, str) else False:
+            return None
+        if hasattr(val, 'total_seconds'):
+            return None
+        if hasattr(val, 'timestamp'):
+            return None
+        return val
+
+    for col in df_state.columns:
+        df_state[col] = df_state[col].apply(sanitize)
+    df_state = df_state.where(df_state.notna(), None)
+
+    dest_cols = [
+        "state", "year", "population", "murder", "rape", "robbery",
+        "aggravated_assault", "burglary", "theft", "auto_theft",
+        "total_offenses", "murder_rate", "rape_rate", "robbery_rate",
+        "aggravated_assault_rate", "burglary_rate", "theft_rate",
+        "auto_theft_rate", "total_offenses_rate",
+    ]
+    df_state = df_state[dest_cols]
+
+    cur.executemany(
+        f"INSERT OR REPLACE INTO historical_state_national ({', '.join(dest_cols)}) VALUES ({', '.join(['?'] * len(dest_cols))})",
+        df_state.values.tolist(),
+    )
+    count = cur.execute("SELECT COUNT(*) FROM historical_state_national").fetchone()[0]
+    print(f"historical_state_national: {count:,} rows")
+    historical_core.refuse_unreviewed_national_years(conn)
+    corrected = historical_core.correct_national_rape(conn)
+    print("historical_state_national: national rape corrected to CIUS Table 1 for " + ", ".join(str(y) for y in sorted(corrected)))
 
 
 def main(argv=None):
@@ -283,69 +363,8 @@ def main(argv=None):
     count = cur.execute("SELECT COUNT(*) FROM historical_staffing").fetchone()[0]
     print(f"historical_staffing: {count:,} rows")
 
-    # ── 6. historical_state_national (unchanged — from Excel) ─────────────
-    cur.execute("DROP TABLE IF EXISTS historical_state_national")
-    cur.execute("""
-        CREATE TABLE historical_state_national (
-            state                  TEXT,
-            year                   INTEGER,
-            population             INTEGER,
-            murder                 INTEGER,
-            rape                   INTEGER,
-            robbery                INTEGER,
-            aggravated_assault     INTEGER,
-            burglary               INTEGER,
-            theft                  INTEGER,
-            auto_theft             INTEGER,
-            total_offenses         INTEGER,
-            murder_rate            REAL,
-            rape_rate              REAL,
-            robbery_rate           REAL,
-            aggravated_assault_rate REAL,
-            burglary_rate          REAL,
-            theft_rate             REAL,
-            auto_theft_rate        REAL,
-            total_offenses_rate    REAL,
-            PRIMARY KEY (state, year)
-        )
-    """)
-
-    df_state = pd.read_excel(f"{DATA_DIR}/State_National_Historical.xlsx")
-    df_state = df_state.drop(columns=["table", "file"], errors="ignore")
-    df_state = df_state.rename(columns={
-        "murder_and_nonnegligent_manslaughter": "murder",
-        "murder_and_nonnegligent_manslaughter_rate": "murder_rate",
-    })
-    df_state = df_state.replace("", np.nan)
-
-    def sanitize(val):
-        if pd.isna(val) if not isinstance(val, str) else False:
-            return None
-        if hasattr(val, 'total_seconds'):
-            return None
-        if hasattr(val, 'timestamp'):
-            return None
-        return val
-
-    for col in df_state.columns:
-        df_state[col] = df_state[col].apply(sanitize)
-    df_state = df_state.where(df_state.notna(), None)
-
-    dest_cols = [
-        "state", "year", "population", "murder", "rape", "robbery",
-        "aggravated_assault", "burglary", "theft", "auto_theft",
-        "total_offenses", "murder_rate", "rape_rate", "robbery_rate",
-        "aggravated_assault_rate", "burglary_rate", "theft_rate",
-        "auto_theft_rate", "total_offenses_rate",
-    ]
-    df_state = df_state[dest_cols]
-
-    cur.executemany(
-        f"INSERT OR REPLACE INTO historical_state_national ({', '.join(dest_cols)}) VALUES ({', '.join(['?'] * len(dest_cols))})",
-        df_state.values.tolist(),
-    )
-    count = cur.execute("SELECT COUNT(*) FROM historical_state_national").fetchone()[0]
-    print(f"historical_state_national: {count:,} rows")
+    # ── 6. historical_state_national (from the state/national workbook) ───
+    load_state_national(conn, args.state_workbook)
 
     # ── 7. Indexes ────────────────────────────────────────────────────────
     cur.execute("CREATE INDEX IF NOT EXISTS idx_hac_ori_year ON historical_agency_crime (ori, year)")

@@ -1,0 +1,90 @@
+{
+ "_source": "FBI Crime in the United States, Table 1 (national estimates, volume and rate per 100,000), 2006-2025 edition: CIUS_Table_1_Crime_in_the_United_States_by_Volume_and_Rate_per_100000_Inhabitants_2006-2025.xlsx",
+ "_source_sha256": "551f29bdc277cf935bccee69733d4af625bdbdd010258e2216a39a8e26fabdff",
+ "_notes": {
+  "rape": "revised definition for 2013-2025 (Table 1 note 3)",
+  "2021": "Table 1 note 4: 2021 estimates are not nationally representative and not comparable to other years"
+ },
+ "years": {
+  "2017": {
+   "population": 325719178,
+   "murder": 17276,
+   "rape": 136646,
+   "robbery": 310107,
+   "aggravated_assault": 794909,
+   "burglary": 1383985,
+   "theft": 5472067,
+   "auto_theft": 764128
+  },
+  "2018": {
+   "population": 327167434,
+   "murder": 16366,
+   "rape": 144505,
+   "robbery": 274084,
+   "aggravated_assault": 790857,
+   "burglary": 1220251,
+   "theft": 5185920,
+   "auto_theft": 743717
+  },
+  "2019": {
+   "population": 328239355,
+   "murder": 16501,
+   "rape": 143316,
+   "robbery": 257273,
+   "aggravated_assault": 792695,
+   "burglary": 1086763,
+   "theft": 5038411,
+   "auto_theft": 708858
+  },
+  "2020": {
+   "population": 329484123,
+   "murder": 21758,
+   "rape": 131998,
+   "robbery": 234648,
+   "aggravated_assault": 893836,
+   "burglary": 1008380,
+   "theft": 4544507,
+   "auto_theft": 803275
+  },
+  "2021": {
+   "population": 331894354,
+   "murder": 21445,
+   "rape": 144797,
+   "robbery": 186714,
+   "aggravated_assault": 876834,
+   "burglary": 874159,
+   "theft": 4236746,
+   "auto_theft": 801753
+  },
+  "2022": {
+   "population": 333287557,
+   "murder": 21923,
+   "rape": 143607,
+   "robbery": 224072,
+   "aggravated_assault": 908572,
+   "burglary": 908450,
+   "theft": 4715230,
+   "auto_theft": 946648
+  },
+  "2023": {
+   "population": 334914895,
+   "murder": 19935,
+   "rape": 136808,
+   "robbery": 225669,
+   "aggravated_assault": 895644,
+   "burglary": 847971,
+   "theft": 4569488,
+   "auto_theft": 1078227
+  },
+  "2024": {
+   "population": 340110988,
+   "murder": 17206,
+   "rape": 133405,
+   "robbery": 207399,
+   "aggravated_assault": 876153,
+   "burglary": 785533,
+   "theft": 4333504,
+   "auto_theft": 870686
+  }
+ }
+}

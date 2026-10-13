@@ -1127,6 +1127,24 @@
       "note": "CDE codebook fix: the SHR relabel and the NIBRS lookup-table rebuild on their own temporary fixture databases; no app database, no network"
     },
     {
+      "id": "test_historical_national_rape",
+      "tier": "F",
+      "script": "scripts/test_historical_national_rape.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "historical national rape fix: the CIUS Table 1 correction, its guards, the importer step and the one-off script on temporary fixture databases; no app database, no network"
+    },
+    {
+      "id": "test-historical-national-rape",
+      "tier": "F",
+      "script": "scripts/test-historical-national-rape.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "historical national rape fix: the one-snapshot correction state, the definition and 2021 notes, and the cache data version, on temporary fixture databases; no app database, no network"
+    },
+    {
       "id": "test-scorecard-format",
       "tier": "F",
       "script": "scripts/test-scorecard-format.ts",
