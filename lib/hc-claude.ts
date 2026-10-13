@@ -101,7 +101,7 @@ Common bias_desc values (use LIKE for partial matching when unsure):
 - Sexual Orientation: "Anti-Gay (Male)", "Anti-Lesbian", "Anti-Lesbian, Gay, Bisexual, or Transgender (Mixed Group)", "Anti-Heterosexual", "Anti-Bisexual"
 - Disability: "Anti-Physical Disability", "Anti-Mental Disability"
 - Gender: "Anti-Male", "Anti-Female"
-- Gender Identity: "Anti-Transgender", "Anti-Gender Non-Conforming"
+- Gender Identity: "Anti-Transgender", "Anti-Gender Nonconforming"
 
 When the user says "antisemitic" or "anti-Jewish" → bias_desc = 'Anti-Jewish'
 When the user says "anti-Black" or "anti-African American" → bias_desc LIKE '%Anti-Black%'

@@ -14,6 +14,13 @@ import time
 import sys
 import argparse
 from datetime import datetime
+from collections import Counter
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from hate_crime_bias import decode as decode_bias  # noqa: E402
+
+# Codes not in the FBI list seen during this run (reported at the end, never given a label).
+UNLISTED_BIAS = Counter()
 
 # ── Code Lookups ──────────────────────────────────────────────
 
@@ -28,46 +35,8 @@ STATES = {
     '62':'VI','45':'VA','44':'VT','46':'WA','48':'WI','47':'WV','49':'WY',
 }
 
-BIAS_CODES = {
-    '11':'Anti-White','12':'Anti-Black or African American',
-    '13':'Anti-American Indian or Alaska Native','14':'Anti-Asian',
-    '15':'Anti-Native Hawaiian or Other Pacific Islander',
-    '16':'Anti-Multiple Races, Group','19':'Anti-Arab',
-    '21':'Anti-Jewish','22':'Anti-Catholic','23':'Anti-Protestant',
-    '24':'Anti-Islamic (Muslim)','25':'Anti-Other Religion',
-    '26':'Anti-Multiple Religions, Group','27':'Anti-Atheism/Agnosticism',
-    '28':'Anti-Arab','29':'Anti-Sikh',
-    '31':'Anti-Gay (Male)','32':'Anti-Lesbian',
-    '33':'Anti-LGBT (Mixed Group)','34':'Anti-Heterosexual',
-    '35':'Anti-Bisexual',
-    '41':'Anti-Physical Disability','42':'Anti-Mental Disability',
-    '43':'Anti-Male','44':'Anti-Female',
-    '45':'Anti-Gender Non-Conforming',
-    '51':'Anti-Male','52':'Anti-Female',
-    '61':'Anti-Transgender','62':'Anti-Gender Non-Conforming',
-    '71':'Anti-Sikh','72':'Anti-Hindu','73':'Anti-Mormon',
-    '74':"Anti-Jehovah's Witness",'75':'Anti-Other Christian',
-    '76':'Anti-Eastern Orthodox','81':'Anti-Buddhist',
-}
-
-# Bias categories for summary grouping
-def bias_category(bias_desc):
-    if not bias_desc:
-        return 'Unknown'
-    b = bias_desc.lower()
-    if 'race' in b or 'white' in b or 'black' in b or 'indian' in b or 'asian' in b or 'pacific' in b or 'arab' in b or 'multiple races' in b:
-        return 'Race/Ethnicity/Ancestry'
-    if 'jewish' in b or 'catholic' in b or 'protestant' in b or 'islamic' in b or 'muslim' in b or 'religion' in b or 'atheism' in b or 'sikh' in b or 'hindu' in b or 'mormon' in b or 'jehovah' in b or 'christian' in b or 'orthodox' in b or 'buddhist' in b:
-        return 'Religion'
-    if 'gay' in b or 'lesbian' in b or 'lgbt' in b or 'heterosexual' in b or 'bisexual' in b:
-        return 'Sexual Orientation'
-    if 'disability' in b:
-        return 'Disability'
-    if 'transgender' in b or 'gender non-conforming' in b:
-        return 'Gender Identity'
-    if 'male' in b or 'female' in b:
-        return 'Gender'
-    return 'Other'
+# Bias codes: decoded by (code, data year) from the FBI list in scripts/hate_crime_bias.py (hotfix 2026-10-12;
+# the table that was here mislabeled 23 codes, and grouped by keyword).
 
 OFFENSE_CODES = {
     '09A':'Murder','09B':'Negligent Manslaughter','09C':'Justifiable Homicide',
@@ -236,7 +205,9 @@ def parse_year(text):
 
                 offense_name = OFFENSE_CODES.get(oc, oc)
                 location = LOCATION_CODES.get(loc_code, loc_code)
-                bias_desc = BIAS_CODES.get(bias_code, bias_code)
+                bias_desc, bias_group, _unresolved, listed = decode_bias(bias_code, int(year) if year.isdigit() else None)
+                if not listed:
+                    UNLISTED_BIAS[bias_code] += 1
 
                 # Age breakdowns (2020+ only)
                 adult_victims = num(safe(line, 301, 304)) if len(line) >= 307 else None
@@ -269,7 +240,7 @@ def parse_year(text):
                     'location': location,
                     'bias_code': bias_code,
                     'bias_desc': bias_desc,
-                    'bias_category': bias_category(bias_desc),
+                    'bias_category': bias_group,
                     'victim_types': victim_types,
                     'adult_victims': adult_victims,
                     'juvenile_victims': juvenile_victims,
@@ -342,7 +313,9 @@ def dedupe_hate_crime_incidents(conn, years):
 
 
 
-def rebuild_hate_crime_derived_tables(conn, all_bh_counts=None):
+def rebuild_hate_crime_derived_tables(conn, all_bh_counts=None, commit=True):
+    """Rebuild the summary and participation tables. commit=False leaves the transaction to the caller (the
+    re-decode validates before it commits)."""
     all_bh_counts = all_bh_counts or {}
     existing_total_agencies = {}
     if conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'hate_crime_participation'").fetchone():
@@ -449,7 +422,8 @@ def rebuild_hate_crime_derived_tables(conn, all_bh_counts=None):
 
     conn.execute("CREATE INDEX idx_hcp_year ON hate_crime_participation(year)")
     conn.execute("CREATE INDEX idx_hcp_state ON hate_crime_participation(state, year)")
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def main():
@@ -640,6 +614,9 @@ def main():
     print("\nBias category breakdown:")
     for cat, cnt in bias_cats:
         print(f"  {cat}: {cnt:,}")
+    if UNLISTED_BIAS:
+        print("\nWARNING: bias codes not in the FBI list (stored as themselves, group Other): "
+              + ", ".join(f"{c or '(blank)'} x{n}" for c, n in sorted(UNLISTED_BIAS.items())))
 
     conn.close()
 
