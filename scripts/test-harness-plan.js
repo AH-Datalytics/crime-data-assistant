@@ -110,4 +110,24 @@ check("every real command resolves a runner", () => {
   }
 });
 
+check("every powershell command is declared win32, and every win32 declaration is a powershell command", () => {
+  // The canonical harness runs on Linux, where `powershell` (Windows PowerShell 5.1) does not exist.
+  // A new .ps1 suite added without the declaration would fail there for the wrong reason; a win32
+  // declaration on anything else would turn a runnable command into a skip. Both directions, derived.
+  const pkg = require(path.join(__dirname, "..", "package.json"));
+  const { loadManifest, reconcile } = require("./lib/tier-manifest");
+  const plan = planHarness(pkg.scripts, ENTRY_POINTS);
+  const { matched } = reconcile(loadManifest(), plan.commands);
+  const powershell = matched.filter(({ command }) => command.runner === "powershell");
+  assert.ok(powershell.length > 0, "no powershell command in the plan; this check would be vacuous");
+  for (const { command, entry } of matched) {
+    if (command.runner === "powershell") {
+      assert.equal(entry.platform, "win32", `${entry.id} runs under powershell but is not declared win32`);
+    } else {
+      assert.equal(entry.platform, undefined, `${entry.id} is declared ${entry.platform} but runs under ${command.runner}`);
+    }
+  }
+  console.log(`      ${powershell.length} powershell command(s), all declared win32`);
+});
+
 console.log(`harness plan tests: ${passed} passed`);

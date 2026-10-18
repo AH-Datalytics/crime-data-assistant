@@ -1,0 +1,23 @@
+{
+  "note": "Paths whose change makes the canonical workflow run the Windows PowerShell 5.1 suites (scripts/run-platform-suites.js win32) and the powershell exit-code mutation. Read by scripts/detect-windows-suites.js. scripts/test-windows-suite-gate.js requires these to cover every file the declared win32 suites load or read (followed through $PSScriptRoot references), every module the Windows job's two commands load, and the files that declare or derive their command set. Scheduled and manually dispatched runs, and any diff that cannot be established, run the suites regardless of this list.",
+  "patterns": [
+    "**/*.ps1",
+    "**/*.psm1",
+    "**/*.psd1",
+    ".gitattributes",
+    ".github/workflows/canonical-harness.yml",
+    "package.json",
+    "package-lock.json",
+    "scripts/run-harness.js",
+    "scripts/run-platform-suites.js",
+    "scripts/detect-windows-suites.js",
+    "scripts/test-harness-mutations.js",
+    "scripts/lib/harness-plan.js",
+    "scripts/lib/tier-manifest.js",
+    "scripts/lib/fixture-db.js",
+    "scripts/lib/corpus-registry.js",
+    "scripts/fixtures/harness-tier-manifest.json",
+    "scripts/fixtures/corpus-registry.json",
+    "scripts/fixtures/windows-suite-triggers.json"
+  ]
+}

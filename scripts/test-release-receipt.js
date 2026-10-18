@@ -319,6 +319,8 @@ check("C11 release_identity_verified is unreachable while L1 is unverified, even
     assert.equal(r.links[id].state, "pass", `${id} must PASS so this scenario isolates L1 and L6`);
   }
   assert.equal(r.links.L1.state, "unverified");
+  // The same on every platform: these pids are invented, so L6 must not read the real /proc for them.
+  assert.equal(r.links.L6.state, "unverified", "L6 must be unverified here, not failed against an unrelated process");
   assert.equal(r.verdicts.artifact_identity, "artifact_identity_verified",
     "L2-L5 all passing is exactly what artifact identity means");
   assert.equal(r.verdicts.release_identity, "release_identity_unverified",
