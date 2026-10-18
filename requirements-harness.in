@@ -47,6 +47,12 @@ requests
 pandas
 numpy
 
+# scripts/test_historical_national_rape.py (P4) calls import_historical.load_state_national, which reads the
+# state/national workbook with pandas.read_excel (import_historical.py:78). pandas loads openpyxl at CALL time
+# for .xlsx, so no import statement names it and the closure checker cannot see it. The first hosted run of the
+# CDE codebook PR (#32, run 39146113446) failed P4 with ModuleNotFoundError: openpyxl.
+openpyxl
+
 # DELIBERATELY ABSENT: anthropic.
 #
 # eval/stress-test.py:112 and eval/run-eval.py:288 import it INSIDE functions that the --print-target
