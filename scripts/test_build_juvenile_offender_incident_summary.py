@@ -46,7 +46,22 @@ with tempfile.TemporaryDirectory() as tmp:
     db.commit()
     db.close()
 
+    # The builder refuses to start with under 20 GiB free on the work volume. This fixture needs a
+    # few kilobytes, so the test states the free space rather than inheriting the host's: the hosted
+    # Linux runner has less than 20 GiB free in its temp directory, and the result must not depend on
+    # which machine ran it. The guard itself is pinned first, so stating the space cannot hide it.
+    real_free_bytes = builder.free_bytes
+    builder.free_bytes = lambda path: 20 * 1024**3 - 1
+    try:
+        builder.build(source, root / "refused.db")
+        raise AssertionError("the builder started with less than 20 GiB free")
+    except RuntimeError as error:
+        assert "At least 20 GiB free" in str(error), error
+    assert not (root / "refused.db").exists(), "a refused build still created its work database"
+    builder.free_bytes = lambda path: 20 * 1024**3
+
     builder.build(source, work)
+    builder.free_bytes = real_free_bytes
     result = sqlite3.connect(work)
     rows = {
         (row[0], row[1]): row[2]

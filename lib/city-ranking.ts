@@ -40,7 +40,7 @@
  * OWNED FAILURE IS STILL OWNED. A request this family recognises but cannot carry returns an
  * `unsupported` description, never null. `null` means only "not this family".
  */
-import { buildQueryContract } from "./query-contract";
+import { buildQueryContract, hasCodelessFamily } from "./query-contract";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { STATE_NAME_TO_ABBR } from "./state-population";
 import { UCR_CODES } from "./nibrs-codes";
@@ -698,7 +698,9 @@ function resolveOffense(
   claimText: string, source: CityRankingSource
 ): { offense: OffenseIdentity; label: string; caveats: string[] } | null {
   if (source === "nibrs") {
-    return nibrsOffense(claimText, buildQueryContract(claimText, source)?.metric.offenseCodes ?? []);
+    const claimContract = buildQueryContract(claimText, source);
+    if (claimContract && hasCodelessFamily(claimContract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
+    return nibrsOffense(claimText, claimContract?.metric.offenseCodes ?? []);
   }
   if (source === "shr") return shrOffense(claimText);
   return currentOffense(claimText);

@@ -1,4 +1,4 @@
-import { buildQueryContract, type QueryContractGeography, type QueryContractOffense } from "./query-contract";
+import { buildQueryContract, hasCodelessFamily, type QueryContractGeography, type QueryContractOffense } from "./query-contract";
 import { pastCompleteCalendarYearsRange, relativeYearRangeForQuestion } from "./time-conventions";
 import { hasUnresolvedDemographicToken } from "./demographic-rate-intent";
 import { asksClearanceTypeBreakdown } from "./clearance-type-intent";
@@ -77,6 +77,7 @@ export function buildNibrsJuvenileOffenderIncidentQuery(
 ): DeterministicNibrsQuery | null {
   if (!asksForIncidentsWithJuvenileOffender(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.unit !== "count") return null;
 
   const knownScopes = incidentOffenseScopes as Record<string, string[]>;
@@ -314,6 +315,7 @@ export function buildNibrsClearanceTypeBreakdownQuery(
 ): DeterministicNibrsQuery | null {
   if (!asksClearanceTypeBreakdown(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.offenseCodes.length !== 1) return null;
   if (contract.geography.kind !== "city" && contract.geography.kind !== "state") return null;
   // One geography predicate only -- see buildNibrsClearanceMethodQuery.
@@ -406,6 +408,7 @@ export function buildNibrsClearanceMethodQuery(
 ): DeterministicNibrsQuery | null {
   if (!asksClearanceMethodBreakdown(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.offenseCodes.length !== 1) return null;
   if (contract.geography.kind !== "city" && contract.geography.kind !== "state") return null;
   // This builder emits ONE geography predicate. Asked about several places it
@@ -557,6 +560,7 @@ export function comparableAgencySubjectCheck(
 ): ComparableSubjectCheck | null {
   if (!asksComparableAgencyClearance(question) || !resolutionPlan) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.offenseCodes.length === 0) return null;
   const targets = resolutionPlan.places.filter((place) => place.status === "resolved" && place.kind === "city_police");
   if (targets.length !== 1 || resolutionPlan.places.length !== 1) return null;
@@ -622,6 +626,7 @@ export function buildNibrsComparableAgencyClearanceQuery(
 ): DeterministicNibrsQuery | null {
   if (!asksComparableAgencyClearance(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.offenseCodes.length === 0 || !resolutionPlan) return null;
   const targets = resolutionPlan.places.filter((place) => place.status === "resolved" && place.kind === "city_police");
   if (targets.length !== 1 || resolutionPlan.places.length !== 1) return null;
@@ -741,6 +746,7 @@ export function buildNibrsLocalCityOffenseCountQuery(
   resolutionPlan?: NibrsPlaceResolutionPlan | null
 ): DeterministicNibrsQuery | null {
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract) return null;
   if (contract.geography.kind !== "city" || !contract.geography.name || !contract.geography.state) return null;
   if (contract.metric.unit !== "count") return null;
@@ -997,6 +1003,7 @@ export function buildNibrsLocalDemographicQuery(
   resolutionPlan?: NibrsPlaceResolutionPlan | null
 ): DeterministicNibrsQuery | null {
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || !["count", "ratio"].includes(contract.metric.unit)) return null;
   if (contract.metric.unsupportedReason) return null;
   const role = demographicRole(question);
@@ -1295,6 +1302,7 @@ export function buildNibrsStructuredLocalTrendQuery(
   resolutionPlan?: NibrsPlaceResolutionPlan | null
 ): DeterministicNibrsQuery | null {
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || !["count", "rate_per_100k"].includes(contract.metric.unit)) return null;
   const isRate = contract.metric.unit === "rate_per_100k";
   if (isRate && /\bper\s*(?:10k|10,?000|1k|1,?000|million|1m)\b/i.test(question)) return null;
@@ -1678,6 +1686,7 @@ function asksSpecificMonths(question: string): boolean {
  */
 export function asksAnnualClearanceFamily(question: string): boolean {
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return false; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract) return false;
   if (contract.metric.unit !== "clearance_rate") return false;
   if (!contract.breakdowns.includes("year")) return false;
@@ -1726,6 +1735,7 @@ export function buildNibrsAnnualClearanceQuery(
   // Owned, but out of this family's reach: the caller declines with the reason above.
   if (asksSpecificMonths(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract) return null;
 
   const startYear = contract.time.startYear!;

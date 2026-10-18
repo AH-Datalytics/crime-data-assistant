@@ -1279,11 +1279,26 @@ class OfflineSafety(unittest.TestCase):
     def test_a_collision_hiding_behind_letter_case_is_still_a_collision(self):
         # Windows paths are case-insensitive, so comparing them case-sensitively lets an output
         # sit on an input under a different spelling.
+        #
+        # Where the filesystem itself folds case, the real call is the test. On a case-sensitive
+        # filesystem (the Linux CI runner) the two spellings really are two files, so the Windows
+        # rule is exercised by giving the guard Windows path folding (ntpath.normcase) -- the same
+        # assertion, against the same code, on every platform.
         with tempfile.TemporaryDirectory() as tmp:
             source = os.path.join(tmp, "Geographies.csv")
             open(source, "w").close()
-            with self.assertRaises(core.BuildError):
-                core.assert_distinct_outputs([source], [os.path.join(tmp, "geographies.csv")])
+            other = os.path.join(tmp, "geographies.csv")
+            if os.path.exists(other):
+                with self.assertRaises(core.BuildError):
+                    core.assert_distinct_outputs([source], [other])
+            else:
+                import ntpath
+                from unittest import mock
+                with mock.patch.object(core.os.path, "normcase", ntpath.normcase):
+                    with self.assertRaises(core.BuildError):
+                        core.assert_distinct_outputs([source], [other])
+                # Non-vacuity: unpatched, the case-sensitive filesystem's answer stands.
+                core.assert_distinct_outputs([source], [other])
 
     def test_an_existing_manifest_is_refused_before_anything_is_written(self):
         # assert_distinct_outputs stopped inputs being clobbered, but the manifest was later

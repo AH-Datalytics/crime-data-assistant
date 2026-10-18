@@ -52,18 +52,38 @@ def ok(message):
 
 
 def read_declaration():
-    """Direct roots, and the pinned pip version this script's parser coupling is reviewed against."""
-    roots, pinned_pip = [], None
+    """Direct roots, the pinned pip version this script's parser coupling is reviewed against, and the
+    platform the lock was resolved on."""
+    roots, pinned_pip, lock_platform = [], None, None
     for line in DECLARATION.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         m = re.match(r"^#\s*harness-env:\s*pip==([0-9][0-9A-Za-z.\-]*)\s*$", stripped)
         if m:
             pinned_pip = m.group(1)
             continue
+        m = re.match(r"^#\s*harness-env:\s*lock-platform=([a-z0-9]+)\s*$", stripped)
+        if m:
+            lock_platform = m.group(1)
+            continue
         if not stripped or stripped.startswith("#"):
             continue
         roots.append(re.split(r"[<>=!;\[ ]", stripped)[0])
-    return roots, pinned_pip
+    return roots, pinned_pip, lock_platform
+
+
+# The marker variables that name a platform, for each platform a lock may be resolved on. Only these
+# are substituted; every other marker (python_version, implementation, ...) keeps the running value.
+PLATFORM_MARKERS = {
+    "win32": {"sys_platform": "win32", "platform_system": "Windows", "os_name": "nt"},
+    "linux": {"sys_platform": "linux", "platform_system": "Linux", "os_name": "posix"},
+}
+
+
+def lock_environment(environment, lock_platform):
+    """The running marker environment with its platform markers replaced by the lock's platform."""
+    env = dict(environment)
+    env.update(PLATFORM_MARKERS[lock_platform])
+    return env
 
 
 def read_lock():
@@ -139,9 +159,14 @@ def main():
     from pip._vendor.packaging.utils import canonicalize_name
     import pip
 
-    roots_raw, pinned_pip = read_declaration()
+    roots_raw, pinned_pip, lock_platform = read_declaration()
     if not roots_raw:
         fail(f"{DECLARATION.name} declares no direct packages")
+        return 1
+    if lock_platform not in PLATFORM_MARKERS:
+        fail(f"{DECLARATION.name} has no valid `# harness-env: lock-platform=<platform>` line "
+             f"(known: {', '.join(sorted(PLATFORM_MARKERS))}); the platform the lock was resolved on "
+             "is undocumented")
         return 1
 
     # The parser coupling, asserted before the parser is trusted.
@@ -180,13 +205,23 @@ def main():
 
     # THE CHECK THE FORGED `# via` DEFEATED BEFORE. Reachability is computed from metadata, so a package
     # in the lock that nothing actually requires has no path here regardless of what a comment claims.
-    not_required = sorted(locked - reachable)
+    #
+    # The lock is resolved for one platform (lock-platform in the declaration). When this interpreter
+    # runs elsewhere, a locked package may be required only on the lock's platform -- pandas requires
+    # tzdata only on win32 -- so the same traversal is also evaluated with the lock's platform markers.
+    # A package reachable on NEITHER is still a failure: that is the forged-entry case, unchanged.
+    reachable_for_lock, _ = reachable_from(roots, installed, lock_environment(environment, lock_platform))
+    lock_platform_only = sorted((locked - reachable) & reachable_for_lock)
+    not_required = sorted(locked - reachable - reachable_for_lock)
     if not_required:
         fail("locked but NOT reachable from any declared root through real dependency metadata: "
              + ", ".join(not_required)
              + " -- a `# via` comment is not evidence; nothing requires these")
     else:
         ok("every locked package is reachable from a declared root through real metadata")
+    if lock_platform_only:
+        ok(f"required only on the lock's platform ({lock_platform}), installed but unused here: "
+           + ", ".join(lock_platform_only))
 
     not_locked = sorted(reachable - locked)
     if not_locked:
@@ -210,6 +245,7 @@ def main():
     print(f"    locked    : {', '.join(sorted(locked))}")
     print(f"    markers   : sys_platform={environment.get('sys_platform')} "
           f"python_version={environment.get('python_version')} extra=<unset>")
+    print(f"    lock      : resolved for {lock_platform}")
     print("")
     if problems:
         print(f"python environment verification: {len(problems)} problem(s)")

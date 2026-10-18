@@ -438,8 +438,12 @@ check("NO package name or version from the lock appears in the workflow", () => 
 
 check("the harness runs under the venv interpreter, proven in the workflow", () => {
   assert.match(workflow, /GITHUB_PATH/, "the venv is never put on PATH for later steps");
-  assert.match(workflow, /cygpath -w/,
-    "the PATH entry is not converted to a Windows path, so the runner would not use it");
+  // The canonical job runs on Linux (ubuntu-24.04), where a venv's interpreter lives in bin/. The
+  // Windows form (Scripts/ via cygpath -w) belonged to the windows-latest job this replaced.
+  assert.match(workflow, /echo "\$PWD\/\.ci-venv\/bin" >> "\$GITHUB_PATH"/,
+    "the venv's bin directory is not put on PATH, so the harness's `python` would not be the venv");
+  assert.match(workflow, /VENV_PY="\.ci-venv\/bin\/python"/,
+    "the isolation proof does not use the venv's own interpreter");
   // The decisive assertion: before running the suite, `python` must BE the venv.
   assert.match(workflow, /the harness interpreter is the venv|resolves to the venv/i,
     "the workflow does not assert that the harness's `python` is the venv interpreter");
