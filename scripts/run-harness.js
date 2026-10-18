@@ -10,7 +10,12 @@
  *
  *   passed   ran, succeeded
  *   failed   ran, did not succeed
- *   skipped  deliberately not run, with tier + reason + corpus requirement -- TIER C ONLY
+ *   skipped  deliberately not run, for one of exactly two DECLARED reasons:
+ *              - Tier C: the declared corpus set did not verify (tier + reason + corpus requirement)
+ *              - platform: the manifest entry declares `platform` and this host is a different one.
+ *                The run reports it under its own verdict line, `platform_partial`, and the platform
+ *                that does run it is a separate required job (the canonical workflow's Windows gate).
+ *            Any other skip of a Tier F command is a run defect.
  *   blocked  never ran because a prerequisite failed
  *
  * `blocked` exists because collapsing it into `skipped` would let a dependency failure disguise itself
@@ -368,6 +373,16 @@ function main(argv) {
       continue;
     }
 
+    // A declared platform abstention. Only the manifest can declare one (validated there: Tier F, a
+    // closed platform set), so nothing a command prints and no host condition can create it, and on the
+    // declared platform the command runs exactly as before.
+    if (entry && entry.platform && entry.platform !== process.platform) {
+      results.push({ ...record, state: SKIPPED, platform_required: entry.platform,
+        reason: `declared platform ${entry.platform}; this host is ${process.platform}` });
+      process.stdout.write(`  skip ${id} (declared platform ${entry.platform})\n`);
+      continue;
+    }
+
     // Tier C abstains unless its DECLARED corpus set is PROVEN. This is the reachability gate: not
     // "is a database present" but "did every corpus this command declares verify against reviewed
     // registry expectation, out of one active snapshot set".
@@ -490,9 +505,17 @@ function report(results, plan, options, fatal, advisories) {
   if (tally.blocked) {
     console.log(`\nblocked: ${tally.blocked} command(s) never ran because a prerequisite failed`);
   }
-  if (tally.skipped) {
+  const platformSkips = results.filter((x) => x.state === SKIPPED && x.platform_required);
+  const corpusSkips = results.filter((x) => x.state === SKIPPED && !x.platform_required);
+  if (platformSkips.length) {
+    console.log(`\nskipped (declared platform, not this host's ${process.platform}):`);
+    for (const r of platformSkips) {
+      console.log(`  ${r.id}  [tier ${r.tier}]  needs ${r.platform_required}`);
+    }
+  }
+  if (corpusSkips.length) {
     console.log("\nskipped (Tier C, declared corpus set not verified):");
-    for (const r of results.filter((x) => x.state === SKIPPED)) {
+    for (const r of corpusSkips) {
       console.log(`  ${r.id}  [tier ${r.tier}]`);
       console.log(`      requires:  ${r.corpus_requirement}`);
       console.log(`      declares:  ${(r.corpus_ids || []).join(", ") || "(none)"}`);
@@ -517,7 +540,16 @@ function report(results, plan, options, fatal, advisories) {
     return fatal.length ? 1 : 0;
   }
 
-  // The two verdicts, always both, never merged.
+  // A skip has exactly two declared sources (see the header). A Tier F skip without a platform
+  // declaration, or a platform skip outside Tier F, has neither, so it is a defect -- never a pass.
+  for (const r of results.filter((x) => x.state === SKIPPED)) {
+    if (r.platform_required ? r.tier !== "F" : r.tier !== "C") {
+      fatal.push(`undeclared skip: ${r.id} (tier ${r.tier}) was skipped without a declaration ` +
+        `that licenses it`);
+    }
+  }
+
+  // The verdicts, always all of them, never merged.
   const tierF = results.filter((r) => r.tier === "F");
   const fixtureVerdict = tierF.some((r) => r.state === FAILED || r.state === BLOCKED)
     ? "fixture_failed" : "fixture_passed";
@@ -542,6 +574,17 @@ function report(results, plan, options, fatal, advisories) {
   console.log(`verdict  corpus:  ${corpusVerdict}` +
     (skippedC.length ? `   (${skippedC.length} of ${tierC.length} Tier C command(s) skipped)` : "") +
     (failedC.length ? `   (${failedC.length} Tier C command(s) FAILED against verified corpora)` : ""));
+  // THE PLATFORM VERDICT. `platform_partial` is an honest outcome, like corpus_not_certified: it says
+  // which commands this host did not run, and it never turns fixture_passed into a claim about them.
+  const platformVerdict = platformSkips.length ? "platform_partial" : "platform_complete";
+  console.log(`verdict  platform: ${platformVerdict}` + (platformSkips.length
+    ? `   (${platformSkips.length} Tier F command(s) declared for ` +
+      `${[...new Set(platformSkips.map((r) => r.platform_required))].join(", ")} did not run here)`
+    : ""));
+  if (platformVerdict === "platform_partial") {
+    console.log("         This run did NOT execute every command. The skipped ones are certified only " +
+      "by a run on their declared platform.");
+  }
   if (corpusVerdict === "corpus_not_certified") {
     console.log("         This run did NOT certify data integrity. It must not be described as " +
       "\"passed\".");

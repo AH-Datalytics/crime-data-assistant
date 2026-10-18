@@ -44,6 +44,13 @@ const MANIFEST_PATH = path.join(REPO, "scripts", "fixtures", "harness-tier-manif
 
 const TIERS = ["F", "C"];
 
+/**
+ * Platforms an entry may declare. `win32` is the four Windows PowerShell 5.1 suites: the canonical
+ * harness runs on Linux, where they are a declared skip, and the canonical workflow's Windows job runs
+ * them (scripts/run-platform-suites.js). Adding a platform is a deliberate edit here and needs a job.
+ */
+const PLATFORMS = ["win32"];
+
 function loadManifest(file) {
   const source = fs.readFileSync(file || MANIFEST_PATH, "utf8");
   const parsed = JSON.parse(source);
@@ -121,6 +128,16 @@ function validateManifest(manifest, options) {
       if (!Array.isArray(entry.blocks) || entry.blocks.length === 0) {
         problems.push(`${label}: blocks must be a non-empty array of entry ids, or be absent`);
       }
+    }
+
+    // A declared platform: the ONLY licence a Tier F command has to be skipped (run-harness.js), so the
+    // set is closed and Tier C, whose licence is its corpus, may not borrow it.
+    if (entry.platform !== undefined) {
+      if (!PLATFORMS.includes(entry.platform)) {
+        problems.push(`${label}: platform must be one of ${PLATFORMS.join(", ")}, got ` +
+          `${JSON.stringify(entry.platform)}`);
+      }
+      if (entry.tier !== "F") problems.push(`${label}: only tier F may declare a platform`);
     }
 
     problems.push(...validateRequires(label, entry));
@@ -261,6 +278,7 @@ function reconcile(manifest, commands) {
 module.exports = {
   MANIFEST_PATH,
   TIERS,
+  PLATFORMS,
   loadManifest,
   validateManifest,
   validateRequires,

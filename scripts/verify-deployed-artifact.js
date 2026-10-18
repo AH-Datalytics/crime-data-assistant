@@ -491,8 +491,16 @@ function checkL5(receipt, pids, readers, digestedPaths) {
   return link("L5", worst(states), findings, { workers: perWorker, expected, split });
 }
 
-/** L6, both halves reported separately. */
-function checkL6(releaseDir, receipt, pids) {
+/**
+ * L6, both halves reported separately.
+ *
+ * `readers` is verify()'s in-process test seam (see there). When it is supplied, half B reads worker
+ * interpreters ONLY through `readers.toolchain`, and is `unverified` without one: the injected pids
+ * belong to an invented worker set, and reading the real /proc for them on a Linux host compared the
+ * receipt against whatever unrelated process held that pid (first seen on the hosted Linux runner,
+ * 2026-10-09). With no seam -- the only shape main() can produce -- behaviour is unchanged.
+ */
+function checkL6(releaseDir, receipt, pids, readers) {
   if (!receipt) return link("L6", UNVERIFIED, ["no receipt to compare toolchains against"]);
   let policy;
   try {
@@ -505,7 +513,16 @@ function checkL6(releaseDir, receipt, pids) {
     npm: receipt.build_npm
   });
   let halfB;
-  if (process.platform !== "linux") {
+  if (readers) {
+    if (typeof readers.toolchain !== "function") {
+      halfB = { state: UNVERIFIED, findings: ["test readers supplied without a toolchain reader; the real /proc is not consulted for injected pids"] };
+    } else if (!pids || pids.length === 0) {
+      halfB = { state: UNVERIFIED, findings: ["no worker pids were readable"] };
+    } else {
+      const workers = pids.map((pid) => readers.toolchain(pid)).filter(Boolean);
+      halfB = toolchain.compareExecutables(receipt.build_node, workers);
+    }
+  } else if (process.platform !== "linux") {
     halfB = { state: UNVERIFIED, findings: [`executable comparison needs /proc; this host is ${process.platform}`] };
   } else if (!pids || pids.length === 0) {
     halfB = { state: UNVERIFIED, findings: ["no worker pids were readable"] };
@@ -558,7 +575,7 @@ function verify(options, testReaders) {
   // `unverified`, which would mask a link dropping out of the verdict arithmetic entirely -- a
   // mutation proved that hole was real.
   links.L5 = checkL5(receipt, options.pids, testReaders, links.L3.digested_paths);
-  links.L6 = checkL6(releaseDir, receipt, options.pids);
+  links.L6 = checkL6(releaseDir, receipt, options.pids, testReaders);
 
   const artifactStates = [links.L2.state, links.L3.state, links.L4.state, links.L5.state];
   const artifact = worst(artifactStates);

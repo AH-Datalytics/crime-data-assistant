@@ -457,16 +457,24 @@ check("C5/C6 real symlink and executable-bit behaviour on Linux", () => {
   fs.copyFileSync(POLICY_FILE, path.join(work, "policy.json"));
   fs.writeFileSync(path.join(work, "probe.js"), probeSource());
 
+  // The probe takes its module directory and its scratch directory as arguments. Inside the container
+  // they are /w and the container's own /tmp. On a Linux HOST they are this throwaway directory and a
+  // fresh directory inside it: the probe once hardcoded /w and /tmp, so the host path could not load
+  // its module (first exercised on the hosted Linux runner, 2026-10-09) and would have written into
+  // the runner's shared /tmp.
   let out;
   if (classification === HOST_LINUX) {
-    out = spawnSync(process.execPath, [path.join(work, "probe.js")], { encoding: "utf8", cwd: work });
+    const scratch = path.join(work, "scratch");
+    fs.mkdirSync(scratch);
+    out = spawnSync(process.execPath, [path.join(work, "probe.js"), work, scratch],
+      { encoding: "utf8", cwd: work });
   } else {
     // --network none, and only this throwaway directory is mounted: no credentials, no databases, no
     // developer checkout, no production path.
     out = spawnSync("docker", [
       "run", "--rm", "--network", "none",
       "-v", `${work}:/w`, "-w", "/w",
-      "node:24-alpine", "node", "/w/probe.js"
+      "node:24-alpine", "node", "/w/probe.js", "/w", "/tmp"
     ], { encoding: "utf8", timeout: 180000 });
   }
   const text = (out.stdout || "") + (out.stderr || "");
@@ -481,32 +489,34 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
-const m = require("/w/lib/artifact-manifest.js");
-const policy = m.loadPolicy("/w/policy.json");
-const root = "/tmp/release";
+const [W, T] = process.argv.slice(2);
+assert.ok(W && T && path.isAbsolute(W) && path.isAbsolute(T), "usage: probe.js <module dir> <scratch dir>");
+const m = require(W + "/lib/artifact-manifest.js");
+const policy = m.loadPolicy(W + "/policy.json");
+const root = T + "/release";
 fs.rmSync(root, { recursive: true, force: true });
 fs.mkdirSync(root + "/shared", { recursive: true });
 
 // A "shared" target whose content must never enter the manifest.
-fs.writeFileSync("/tmp/shared-secret", "SECRET_VALUE_MUST_NOT_BE_HASHED\\n");
+fs.writeFileSync(T + "/shared-secret", "SECRET_VALUE_MUST_NOT_BE_HASHED\\n");
 fs.writeFileSync(root + "/app.txt", "app\\n");
-fs.symlinkSync("/tmp/shared-secret", root + "/.env");
+fs.symlinkSync(T + "/shared-secret", root + "/.env");
 
 let records = m.walkRelease(root, policy);
 const link = records.find((r) => r.path === ".env");
 assert.ok(link, "the symlink must be recorded");
 assert.equal(link.type, "symlink");
-assert.equal(link.target, "/tmp/shared-secret");
+assert.equal(link.target, T + "/shared-secret");
 assert.ok(!("sha256" in link) && !("size" in link), "a link must carry no content digest");
-const secretHash = require("node:crypto").createHash("sha256").update(fs.readFileSync("/tmp/shared-secret")).digest("hex");
+const secretHash = require("node:crypto").createHash("sha256").update(fs.readFileSync(T + "/shared-secret")).digest("hex");
 assert.ok(!m.serialize(records).toString().includes(secretHash), "the target's digest must appear nowhere");
 console.log("link target never read: recorded as target text only");
 
 // C5 -- repoint the link; the target is still never read.
 const before = m.digestRecords(records);
-fs.writeFileSync("/tmp/shared-other", "SECRET_VALUE_MUST_NOT_BE_HASHED\\n"); // identical CONTENT
+fs.writeFileSync(T + "/shared-other", "SECRET_VALUE_MUST_NOT_BE_HASHED\\n"); // identical CONTENT
 fs.unlinkSync(root + "/.env");
-fs.symlinkSync("/tmp/shared-other", root + "/.env");
+fs.symlinkSync(T + "/shared-other", root + "/.env");
 records = m.walkRelease(root, policy);
 assert.notEqual(m.digestRecords(records), before, "repointing a link must change the digest");
 const diff = m.compareRecords([link], records.filter((r) => r.path === ".env"));
@@ -522,9 +532,9 @@ assert.equal(after.find((r) => r.path === "app.txt").exec, true);
 console.log("C6 exec bit flip detected (content unchanged, digest moved)");
 
 // A symlinked DIRECTORY must not be descended into.
-fs.mkdirSync("/tmp/outside/deep", { recursive: true });
-fs.writeFileSync("/tmp/outside/deep/leak.txt", "leak\\n");
-fs.symlinkSync("/tmp/outside", root + "/linked-dir");
+fs.mkdirSync(T + "/outside/deep", { recursive: true });
+fs.writeFileSync(T + "/outside/deep/leak.txt", "leak\\n");
+fs.symlinkSync(T + "/outside", root + "/linked-dir");
 const withDir = m.walkRelease(root, policy);
 assert.ok(withDir.some((r) => r.path === "linked-dir" && r.type === "symlink"), "a linked dir is a link");
 assert.ok(!withDir.some((r) => r.path.includes("leak.txt")), "the walker must not descend through a link");

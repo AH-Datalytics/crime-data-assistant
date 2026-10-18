@@ -5,18 +5,30 @@
 # registry. Both were measured on one workstation, twice. This workflow turns that into "green on a
 # machine no developer configured", which is the remaining precondition for S2-3 alongside P1.4.
 #
-# WHY windows-latest AND NOT UBUNTU. Four commands in the derived plan are invoked as
-# `powershell -NoProfile -ExecutionPolicy Bypass -File ...`. `powershell` is the Windows PowerShell 5.1
-# executable; GitHub's Ubuntu images ship PowerShell 7 as `pwsh` and have no `powershell` on PATH. On
-# top of that, scripts/test-nibrs-remote-shell.ps1 needs a real `bash` for `bash -n`, and
-# test-harness-plan.js / test-harness-mutations.js assert on the `powershell` runner token. So Linux
-# would require editing the harness -- and CI must certify the harness that exists, not a variant
-# authored for CI.
+# WHY LINUX, AND A SEPARATE WINDOWS JOB (2026-10-09, docs/superpowers/plans/2026-10-09-ci-harness-
+# minutes.md, stage 1). The harness ran on windows-latest until then: about 41 minutes a run, billed at
+# twice the Linux rate. Measured on ubuntu (stage 0, run 37960633215) the same derived plan took about
+# 10 minutes. So the canonical job runs on Linux, and the only commands Linux cannot run -- the four
+# Windows PowerShell 5.1 suites, `powershell -File scripts/test-nibrs-*.ps1` -- are declared
+# `platform: "win32"` in the tier manifest. The Linux run reports them as a declared platform skip
+# under its own verdict line (`platform_partial`), and the `windows-suites` job runs exactly those
+# commands, derived from the same plan and manifest, plus the powershell exit-code mutation.
 #
-# WHY `shell: bash` FOR THE STEPS. Every step's script below was executed locally, byte-for-byte, in the
-# same Git bash that windows-latest ships and that the harness already depends on. Choosing a shell whose
-# behaviour could not be validated here would have put unverified logic into the one place that is
-# supposed to be the check.
+# THE WINDOWS GATE FAILS CLOSED. `windows-detect` decides whether a change can affect the Windows
+# suites (scripts/detect-windows-suites.js, triggers in scripts/fixtures/windows-suite-triggers.json).
+# `windows-gate` always runs and passes in exactly two cases: detection succeeded and said "not needed",
+# or the Windows job ran and passed. A failed or cancelled detection, a missing output, or a skipped
+# Windows job that was needed all fail it. Scheduled runs and manual dispatches force the Windows job,
+# and so does any diff the detector cannot establish. scripts/test-windows-suite-gate.js asserts this
+# structure, so editing it away fails the harness.
+#
+# The required checks are `canonical harness (linux, LF)` and `canonical harness (windows gate)`.
+#
+# WHAT IS NOT CLAIMED. Neither job runs a CRLF checkout; CRLF determinism stays covered by
+# scripts/test-checkout-determinism.js's attribute, byte and digest assertions, which run here.
+#
+# WHY `shell: bash` FOR THE STEPS. One shell for every job: GNU bash on Linux, and the Git bash that
+# windows-latest ships (which the Windows suites already depend on) on Windows.
 #
 # WHAT THIS DOES NOT CLAIM. GitHub-hosted runners have general outbound internet access and nibrsai.com
 # is publicly reachable, so this workflow does not make production unreachable. It configures no
@@ -36,6 +48,10 @@ on:
   pull_request:
     branches: [dev, master]
   workflow_dispatch:
+  # Weekly, so the Windows suites run at least once a week whatever the path triggers decided. A
+  # scheduled run uses the default branch's copy of this file.
+  schedule:
+    - cron: "17 11 * * 1"
 
 # No `paths-ignore`, and that is measured rather than lazy: four registered commands read tracked files
 # under docs/ (test-operation-taxonomy, test-stage2b-workbook, test-stage2b-decision-readiness-audit,
@@ -51,18 +67,19 @@ concurrency:
 
 jobs:
   canonical-harness:
-    name: canonical harness (windows, LF)
-    runs-on: windows-latest
+    name: canonical harness (linux, LF)
+    # Pinned image, not ubuntu-latest: the sqlite3 command-line program below is the image's packaged
+    # build, asserted by exact version, so the image is part of the environment this job certifies.
+    runs-on: ubuntu-24.04
     # OUTER cap. It must stay STRICTLY GREATER than the harness step's own cap below, because a step
     # timeout only kills that step -- the job still has to redact, publish the artifact and run the
     # diagnostics that say WHAT timed out. If the two were equal the job would be killed at the same
     # instant as the step, and a hung harness would produce no evidence of having hung, which is the
     # failure mode that cost a whole run to diagnose on 2026-08-26.
     #
-    # 135 = 120 for the harness + 15 for setup (checkout, Node/Python pinning, venv, npm ci, the
-    # sqlite3 provisioning) and the post-harness safety steps. Green runs are unaffected: billing stops
-    # when the work finishes, so headroom is free unless it is used.
-    timeout-minutes: 135
+    # 55 = 40 for the harness + 15 for setup and the post-harness safety steps. Green runs are
+    # unaffected: billing stops when the work finishes, so headroom is free unless it is used.
+    timeout-minutes: 55
     permissions:
       # GITHUB_TOKEN is used by actions/checkout to read the repository, and for nothing else. The job
       # has no write permission of any kind, and `persist-credentials: false` removes the token from the
@@ -185,7 +202,7 @@ jobs:
           # hosted image. The environment the harness runs under has to be one this workflow built.
           python -m venv .ci-venv
 
-          VENV_PY=".ci-venv/Scripts/python.exe"
+          VENV_PY=".ci-venv/bin/python"
           [ -x "$VENV_PY" ] || { echo "::error::the venv interpreter was not created"; exit 1; }
 
           echo "--- proving isolation ---"
@@ -215,9 +232,9 @@ jobs:
             echo "  absent before install: $pkg"
           done
 
-          # Put the venv first on PATH for every later step, in the Windows form the runner needs, so
-          # the harness's bare `python` is this interpreter and not the tool-cache one.
-          cygpath -w "$PWD/.ci-venv/Scripts" >> "$GITHUB_PATH"
+          # Put the venv's bin directory first on PATH for every later step, so the harness's bare
+          # `python` is this interpreter and not the tool-cache one.
+          echo "$PWD/.ci-venv/bin" >> "$GITHUB_PATH"
 
       - name: Install the locked Python environment
         run: |
@@ -255,12 +272,13 @@ jobs:
           # THE AUTHORITATIVE reverse-containment check, and the only one that can see a forged `# via`.
           # It reads the direct roots from the declaration, traverses the INSTALLED distributions' own
           # metadata through importlib.metadata, evaluates each requirement's markers for this
-          # Windows/CPython environment, canonicalizes names, and requires
+          # environment -- and for the platform the lock was resolved on, recorded in the declaration
+          # as `lock-platform` -- canonicalizes names, and requires
           #
           #     declared roots  subset-of  metadata-reachable  ==  locked  ==  installed
           #
-          # so a locked package nothing actually requires has no path and fails, whatever a comment in
-          # the lock claims about it.
+          # so a locked package nothing requires on either platform has no path and fails, whatever a
+          # comment in the lock claims about it.
           python scripts/verify_python_environment.py
 
       - name: Assert the harness interpreter is the venv
@@ -318,69 +336,42 @@ jobs:
       # ---------------------------------------------------------------- the sqlite3 command-line program
       # scripts/test-shr-post-import-runtime.ts runs the REAL `sqlite3` CLI: the SHR post-import runtime
       # preflights it and runs ANALYZE through it, and neither better-sqlite3 nor Python's sqlite3 module
-      # provides that executable. The runner image does not supply it, and PR #18's required run failed
-      # there (2026-10-01). It is provisioned here from sqlite.org at one pinned release, verified
-      # against the SHA3-256 sqlite.org publishes for that file AND a pinned SHA-256, extracted with
-      # Python's standard library into RUNNER_TEMP, and put first on PATH for later steps. The test
-      # resolves it by name, so nothing else changes. Bumping the release means updating all four pins.
-      - name: Provision the pinned sqlite3 CLI
-        env:
-          SQLITE_URL: https://www.sqlite.org/2026/sqlite-tools-win-x64-3530400.zip
-          SQLITE_BYTES: "6557792"
-          SQLITE_SHA3_256: 88b4659fe747896b853af10157316b4ade143553efb89c1c8ca7423a278dcc8b
-          SQLITE_SHA256: f46ee2475de4cbe287e6e5f7d43c838796b14e7379cd216bdbb28d391429f9fc
+      # provides that executable. On the Windows runner it had to be downloaded and hash-pinned. The
+      # ubuntu-24.04 image ships it as the distribution's signed `sqlite3` package, so this step proves
+      # the binary on PATH is that package's, unmodified (dpkg --verify), at the exact version the
+      # Linux measurement ran (3.45.1). A different image or package version stops the run here rather
+      # than silently changing what the test exercised.
+      - name: Assert sqlite3 is the image's packaged 3.45.1 and works
         run: |
           set -euo pipefail
-          dir="$RUNNER_TEMP/sqlite-cli"
-          zip="$RUNNER_TEMP/sqlite-tools.zip"
-          mkdir -p "$dir"
-          curl --fail --silent --show-error --location --max-time 120 --retry 2 -o "$zip" "$SQLITE_URL"
-          bytes="$(stat -c %s "$zip")"
-          [ "$bytes" = "$SQLITE_BYTES" ] || { echo "::error::sqlite download is $bytes bytes, expected $SQLITE_BYTES"; exit 1; }
-          # Both digests read the file from stdin: with a Windows path (RUNNER_TEMP has backslashes)
-          # sha256sum escapes its output line and prefixes the hash with "\".
-          sha3="$(openssl dgst -sha3-256 < "$zip" | awk '{print $NF}')"
-          [ "$sha3" = "$SQLITE_SHA3_256" ] || { echo "::error::sqlite SHA3-256 mismatch: $sha3"; exit 1; }
-          sha2="$(sha256sum < "$zip" | cut -d' ' -f1)"
-          [ "$sha2" = "$SQLITE_SHA256" ] || { echo "::error::sqlite SHA-256 mismatch: $sha2"; exit 1; }
-          python -c "import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extract('sqlite3.exe', sys.argv[2])" "$zip" "$dir"
-          cygpath -w "$dir" >> "$GITHUB_PATH"
-          echo "provisioned sqlite3 3.53.4 into $dir (verified size, SHA3-256, SHA-256)"
-
-      - name: Assert sqlite3 resolves to the provisioned binary and works
-        run: |
-          set -euo pipefail
-          expected="$(cygpath -u "$RUNNER_TEMP/sqlite-cli/sqlite3.exe")"
           resolved="$(command -v sqlite3)"
-          # Git Bash reports the resolved command without its .exe suffix; compare without it.
-          actual="$(cygpath -u "$resolved")"
-          [ "${actual%.exe}" = "${expected%.exe}" ] || { echo "::error::sqlite3 resolves to $resolved, not $expected"; exit 1; }
+          [ "$resolved" = "/usr/bin/sqlite3" ] || { echo "::error::sqlite3 resolves to $resolved, not /usr/bin/sqlite3"; exit 1; }
+          owner="$(dpkg -S /usr/bin/sqlite3 | cut -d: -f1)"
+          [ "$owner" = "sqlite3" ] || { echo "::error::/usr/bin/sqlite3 belongs to package '$owner', not sqlite3"; exit 1; }
+          # Both must hold: dpkg --verify exits 0 AND reports nothing. A verification that errored
+          # (stderr only, non-zero exit) is not a clean package, so its exit status is never discarded.
+          verify_rc=0
+          altered="$(dpkg --verify sqlite3 2>&1)" || verify_rc=$?
+          [ "$verify_rc" -eq 0 ] || { echo "::error::dpkg --verify sqlite3 failed (exit $verify_rc): $altered"; exit 1; }
+          [ -z "$altered" ] || { echo "::error::the sqlite3 package's files differ from its recorded digests: $altered"; exit 1; }
           version="$(sqlite3 --version | cut -d' ' -f1)"
-          [ "$version" = "3.53.4" ] || { echo "::error::sqlite3 reports version $version, expected 3.53.4"; exit 1; }
+          [ "$version" = "3.45.1" ] || { echo "::error::sqlite3 reports version $version, expected 3.45.1 -- stop condition, re-measure before moving the pin"; exit 1; }
           answer="$(sqlite3 :memory: 'SELECT 6 * 7;')"
           [ "$answer" = "42" ] || { echo "::error::sqlite3 cannot run an in-memory query (got '$answer')"; exit 1; }
-          echo "sqlite3 $version at $resolved runs an in-memory query"
+          echo "sqlite3 $version from package $(dpkg-query -W -f='${Version}' sqlite3) at $resolved runs an in-memory query"
 
       # ---------------------------------------------------------------- the one canonical invocation
       - name: Run the canonical harness
         id: harness
         # INNER cap: the bounded ceiling for a genuinely hung harness.
         #
-        # MEASURED, not guessed. The suite runs 25-30 minutes on this runner -- 28m08s and 24m59s on
-        # two consecutive pull-request checks -- so a 30-minute cap sat inside the observed range and
-        # which side a run landed on was runner variance. On 2026-08-26 the SAME commit passed as a
-        # pull-request check at 28m08s and was killed as a push run at 30m: run 33006411596 died with
-        # "has timed out after 30 minutes" having logged 169 of 175 commands `ok`, with no tally and
-        # no verdict. Nothing was wrong with the code; the cap was.
-        #
-        # 45 was 50% headroom over that boundary while the suite had ~175 commands. The Phase 3
-        # integration took it to 235: on 2026-10-01 run 36803093295 finished the whole harness in
-        # 35.2 minutes, and run 36860570626 (same suite) was killed at 45 minutes after 120 `ok`
-        # commands, having run that identical prefix 2.7 times slower. Scaling the full 35.2 minutes by
-        # that factor gives ~95 minutes (an estimate, not an observed run), so the cap is 120: ~25
-        # minutes above it. It does NOT slow a green run, and it does not weaken anything: the suite
-        # is unchanged, per-command limits are unchanged, and a harness that truly hangs is still killed.
-        timeout-minutes: 120
+        # MEASURED, not guessed. On the Windows runner the 235-command suite took 22-66 minutes for
+        # similar code (runner variance up to 2.7x), which is why that cap was 120. On ubuntu the same
+        # plan took 9.9 minutes cold and 9.6 warm (stage 0, run 37960633215, 2 cores). 40 minutes is 4x
+        # that, above the worst variance factor ever observed. It does NOT slow a green run, and it does
+        # not weaken anything: the suite is unchanged, per-command limits are unchanged, and a harness
+        # that truly hangs is still killed.
+        timeout-minutes: 40
         run: |
           set -euo pipefail
           # The single canonical entry point. No --only (it disables whole-run coverage checks, so a
@@ -419,8 +410,8 @@ jobs:
             console.log("the derived tally reconciles");
           '
 
-      # ---------------------------------------------------------------- both verdicts, verbatim
-      - name: Report both verdicts
+      # ---------------------------------------------------------------- the verdicts, verbatim
+      - name: Report the verdicts
         if: always()
         run: |
           set -uo pipefail
@@ -464,10 +455,11 @@ jobs:
             echo "  ok: exactly one $label line"
           }
 
-          need_exactly_one "derived plan"    '^harness plan: '
-          need_exactly_one "tally"           '^tally: '
-          need_exactly_one "fixture verdict" '^verdict[[:space:]]+fixture:'
-          need_exactly_one "corpus verdict"  '^verdict[[:space:]]+corpus:'
+          need_exactly_one "derived plan"     '^harness plan: '
+          need_exactly_one "tally"            '^tally: '
+          need_exactly_one "fixture verdict"  '^verdict[[:space:]]+fixture:'
+          need_exactly_one "corpus verdict"   '^verdict[[:space:]]+corpus:'
+          need_exactly_one "platform verdict" '^verdict[[:space:]]+platform:'
 
           # When the runner says the corpus was not certified it also prints the sentence that stops a
           # green tick being read as data certification. If it said the first and not the second, the
@@ -478,6 +470,13 @@ jobs:
           case "$corpus_line" in
             *corpus_not_certified*)
               need_exactly_one "not-certified warning" 'This run did NOT certify data integrity'
+              ;;
+          esac
+          # The same rule for the platform verdict: `platform_partial` must carry its sentence.
+          platform_line="$(grep -E '^verdict[[:space:]]+platform:' harness-run.log)" || platform_line=""
+          case "$platform_line" in
+            *platform_partial*)
+              need_exactly_one "not-every-command warning" 'This run did NOT execute every command'
               ;;
           esac
 
@@ -492,16 +491,17 @@ jobs:
             echo ""
             echo '```'
             grep -E '^harness plan: |^manifest: |^tally: ' harness-run.log
-            grep -E '^verdict[[:space:]]+(fixture|corpus):' harness-run.log
-            grep -E 'This run did NOT certify data integrity' harness-run.log || true
+            grep -E '^verdict[[:space:]]+(fixture|corpus|platform):' harness-run.log
+            grep -E 'This run did NOT certify data integrity|This run did NOT execute every command' harness-run.log || true
             echo '```'
             echo ""
             echo "_\`fixture_passed\` is required. \`corpus_not_certified\` is an accepted honest outcome:"
             echo "no corpus is configured in CI, so Tier C is skipped by design and this run certifies"
-            echo "fixture behaviour only, not data integrity._"
+            echo "fixture behaviour only, not data integrity. \`platform_partial\` is too: the commands"
+            echo "declared for Windows are certified by the \`canonical harness (windows gate)\` check._"
           } >> "$GITHUB_STEP_SUMMARY"
-          # The one remaining `|| true` is on the warning sentence, whose presence has ALREADY been
-          # required above when it applies; on a certified run it is legitimately absent.
+          # The one remaining `|| true` is on the warning sentences, whose presence has ALREADY been
+          # required above when they apply; on a certified, complete run they are legitimately absent.
 
       # ---------------------------------------------------------------- redaction gates publication
       - name: Redact-check the diagnostics
@@ -632,3 +632,154 @@ jobs:
             harness-run.log
           retention-days: 14
           if-no-files-found: warn
+
+  # ================================================================== the Windows PowerShell 5.1 suites
+  windows-detect:
+    name: windows suites (change detection)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      needed: ${{ steps.detect.outputs.needed }}
+      reason: ${{ steps.detect.outputs.reason }}
+    steps:
+      - name: Check out the repository with history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: false
+          # The diff needs the push's `before` commit, or the pull-request merge commit's parents.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+
+      - name: Decide whether the Windows suites must run
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          node scripts/detect-windows-suites.js
+
+  windows-suites:
+    name: windows suites (powershell 5.1)
+    needs: windows-detect
+    if: needs.windows-detect.result == 'success' && needs.windows-detect.outputs.needed == 'true'
+    runs-on: windows-latest
+    # A cap for a hung suite, not an estimate; the first runs of this job are the measurement.
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Configure an LF checkout before any file is written
+        run: |
+          set -euo pipefail
+          # The same checkout the suites were certified under in the Windows canonical job.
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: false
+          fetch-depth: 1
+
+      - name: Assert the working tree really is LF
+        run: |
+          set -euo pipefail
+          eol="$(mktemp)"
+          git ls-files --eol > "$eol"
+          tracked=$(wc -l < "$eol" | tr -d '[:space:]')
+          crlf=$(grep -c 'w/crlf' "$eol" || true)
+          mixed=$(grep -c 'w/mixed' "$eol" || true)
+          [ "$tracked" -gt 0 ] || { echo "::error::no tracked files enumerated"; exit 1; }
+          if [ "$crlf" -ne 0 ] || [ "$mixed" -ne 0 ]; then
+            echo "::error::the checkout is not LF: $crlf file(s) w/crlf, $mixed w/mixed"
+            exit 1
+          fi
+          echo "the checkout is uniformly LF across $tracked tracked paths"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+
+      - name: Assert Node and Windows PowerShell 5.1
+        run: |
+          set -euo pipefail
+          node_actual="$(node -v)"
+          [ "$node_actual" = "v24.14.0" ] || { echo "::error::Node resolved to $node_actual, not v24.14.0"; exit 1; }
+          ps="$(powershell -NoProfile -Command '$PSVersionTable.PSVersion.Major.ToString() + "." + $PSVersionTable.PSVersion.Minor.ToString()' | tr -d '\r')"
+          [ "$ps" = "5.1" ] || { echo "::error::powershell is $ps, not Windows PowerShell 5.1"; exit 1; }
+          echo "node $node_actual, Windows PowerShell $ps"
+
+      # No npm install: both commands use only Node's standard library, and the suites need only
+      # Windows PowerShell 5.1 and Git bash.
+      - name: Run the commands the plan declares for win32
+        run: |
+          set -euo pipefail
+          node scripts/run-platform-suites.js win32 --json platform-report.json
+
+      - name: Certify the powershell runner's exit codes by mutation
+        run: |
+          set -euo pipefail
+          node scripts/test-harness-mutations.js --runner powershell
+
+  windows-gate:
+    name: canonical harness (windows gate)
+    needs: [windows-detect, windows-suites]
+    # ALWAYS evaluated, so the required check exists on every run and can never be skipped into a pass.
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Pass only on "not needed" or on a passing Windows run
+        env:
+          DETECT_RESULT: ${{ needs.windows-detect.result }}
+          NEEDED: ${{ needs.windows-detect.outputs.needed }}
+          REASON: ${{ needs.windows-detect.outputs.reason }}
+          SUITES_RESULT: ${{ needs.windows-suites.result }}
+        run: |
+          set -euo pipefail
+          echo "detection: $DETECT_RESULT, needed=${NEEDED:-<missing>} ($REASON)"
+          echo "windows suites: $SUITES_RESULT"
+          if [ "$DETECT_RESULT" != "success" ]; then
+            echo "::error::change detection did not succeed ($DETECT_RESULT); the Windows suites are uncertified"
+            exit 1
+          fi
+          case "$NEEDED" in
+            false)
+              if [ "$SUITES_RESULT" != "skipped" ]; then
+                echo "::error::detection said not needed but the Windows job reports $SUITES_RESULT"
+                exit 1
+              fi
+              echo "not needed: $REASON"
+              ;;
+            true)
+              if [ "$SUITES_RESULT" != "success" ]; then
+                echo "::error::the Windows suites were needed and did not pass ($SUITES_RESULT)"
+                exit 1
+              fi
+              echo "the Windows suites ran and passed"
+              ;;
+            *)
+              echo "::error::detection produced no usable decision ('$NEEDED')"
+              exit 1
+              ;;
+          esac
