@@ -60,108 +60,125 @@ LOCATION_TYPES = [
     ("58", "Cyberspace"),
 ]
 
+# Property description codes: the FBI CDE codebook (scripts/fixtures/cde/NIBRS_PROP_DESC_TYPE.csv). The earlier list shifted 74-99.
 PROPERTY_DESCRIPTIONS = [
     ("01", "Aircraft"),
     ("02", "Alcohol"),
-    ("03", "Automobiles"),
+    ("03", "Automobile"),
     ("04", "Bicycles"),
     ("05", "Buses"),
-    ("06", "Clothes/Furs"),
-    ("07", "Computer Hardware/Software"),
+    ("06", "Clothes/ Furs"),
+    ("07", "Computer Hard/ Software"),
     ("08", "Consumable Goods"),
-    ("09", "Credit/Debit Cards"),
-    ("10", "Drugs/Narcotics"),
-    ("11", "Drug/Narcotic Equipment"),
+    ("09", "Credit/ Debit cards"),
+    ("10", "Drugs/ Narcotics"),
+    ("11", "Drug Equipment"),
     ("12", "Farm Equipment"),
     ("13", "Firearms"),
     ("14", "Gambling Equipment"),
-    ("15", "Heavy Construction/Industrial Equipment"),
+    ("15", "Industrial Equipment"),
     ("16", "Household Goods"),
-    ("17", "Jewelry/Precious Metals/Gems"),
+    ("17", "Jewelry/ Precious Metals"),
     ("18", "Livestock"),
     ("19", "Merchandise"),
     ("20", "Money"),
     ("21", "Negotiable Instruments"),
-    ("22", "Nonnegotiable Instruments"),
-    ("23", "Office-type Equipment"),
+    ("22", "Non Negotiable Instruments"),
+    ("23", "Office Equipment"),
     ("24", "Other Motor Vehicles"),
-    ("25", "Purses/Handbags/Wallets"),
-    ("26", "Radios/TVs/VCRs/DVD Players"),
-    ("27", "Recordings—Audio/Visual"),
+    ("25", "Purse/ Wallet"),
+    ("26", "Radio/ TV/ VCR"),
+    ("27", "Recordings"),
     ("28", "Recreational Vehicles"),
-    ("29", "Structures—Single Occupancy Dwellings"),
-    ("30", "Structures—Other Dwellings"),
-    ("31", "Structures—Other Commercial/Business"),
-    ("32", "Structures—Industrial/Manufacturing"),
-    ("33", "Structures—Public/Community"),
-    ("34", "Structures—Storage"),
-    ("35", "Structures—Other"),
+    ("29", "Structure/ Single dwelling"),
+    ("30", "Structure/ Other residence"),
+    ("31", "Structure/ Other commercial"),
+    ("32", "Structure/ Other industrial"),
+    ("33", "Structure/ Public"),
+    ("34", "Structure/ Storage"),
+    ("35", "Structure/ Other"),
     ("36", "Tools"),
     ("37", "Trucks"),
-    ("38", "Vehicle Parts/Accessories"),
+    ("38", "Vehicle Parts"),
     ("39", "Watercraft"),
-    ("41", "Aircraft Parts/Accessories"),
-    ("42", "Artistic Supplies/Accessories"),
+    ("41", "Aircraft Parts/ Accessories"),
+    ("42", "Artistic Supplies/ Accessories"),
     ("43", "Building Materials"),
-    ("44", "Camping/Hunting/Fishing Equipment/Supplies"),
+    ("44", "Camping/ Hunting/ Fishing Equipment/ Supplies"),
     ("45", "Chemicals"),
-    ("46", "Collections/Collectibles"),
+    ("46", "Collections/ Collectibles"),
     ("47", "Crops"),
-    ("48", "Documents/Personal or Business"),
+    ("48", "Documents/ Personal or Business"),
     ("49", "Explosives"),
     ("59", "Firearm Accessories"),
     ("64", "Fuel"),
     ("65", "Identity Documents"),
-    ("66", "Identity—Intangible"),
+    ("66", "Identity-Intangible"),
     ("67", "Law Enforcement Equipment"),
-    ("68", "Lawn/Yard/Garden Equipment"),
+    ("68", "Lawn/ Yard/ Garden Equipment"),
     ("69", "Logging Equipment"),
-    ("70", "Medical/Medical Lab Equipment"),
+    ("70", "Medical/ Medical Lab Equipment"),
     ("71", "Metals, Non-Precious"),
     ("72", "Musical Instruments"),
     ("73", "Pets"),
-    ("74", "Pharmaceuticals"),
-    ("75", "Phone/Cell Phone"),
-    ("76", "Photographic/Optical Equipment"),
-    ("77", "Portable Electronic Communications"),
-    ("78", "Recreational/Sports Equipment"),
-    ("79", "Other"),
-    ("80", "Pending Inventory"),
-    ("88", "Special Category"),
-    ("99", "Unknown"),
+    ("74", "Photographic/ Optical Equipment"),
+    ("75", "Portable Electronic Communications"),
+    ("76", "Recreational/ Sports Equipment"),
+    ("77", "Other"),
+    ("78", "Trailers"),
+    ("79", "Watercraft Equipment/ Parts/ Accessories"),
+    ("80", "Weapons-Other"),
+    ("88", "Pending Inventory"),
+    ("99", "Special"),
 ]
 
+# WEAPON_CODES: completed from the FBI CDE codebook (scripts/fixtures/cde/).
 WEAPON_CODES = [
+    ("01", "Unarmed"),
     ("11", "Firearm (type not stated)"),
     ("12", "Handgun"),
     ("13", "Rifle"),
     ("14", "Shotgun"),
     ("15", "Other Firearm"),
+    ("16", "Lethal Cutting Instrument"),
+    ("17", "Club/Blackjack/Brass Knuckles"),
     ("20", "Knife/Cutting Instrument"),
     ("30", "Blunt Object"),
     ("35", "Motor Vehicle"),
     ("40", "Personal Weapons (hands, fists, feet)"),
     ("50", "Poison"),
+    ("55", "Pushed or Thrown Out Window"),
     ("60", "Explosives"),
     ("65", "Fire/Incendiary Device"),
     ("70", "Drugs/Narcotics/Sleeping Pills"),
+    ("75", "Drowning"),
+    ("80", "Strangulation - Include Hanging"),
     ("85", "Asphyxiation"),
     ("90", "Other"),
     ("95", "Unknown"),
     ("99", "None"),
+    ("11A", "Firearm (Automatic)"),
+    ("12A", "Handgun (Automatic)"),
+    ("13A", "Rifle (Automatic)"),
+    ("14A", "Shotgun (Automatic)"),
+    ("15A", "Other Firearm (Automatic)"),
 ]
 
+# RACE_CODES: completed from the FBI CDE codebook (scripts/fixtures/cde/).
 RACE_CODES = [
-    ("W", "White"),
+    ("A", "Asian"),
     ("B", "Black or African American"),
     ("I", "American Indian or Alaska Native"),
-    ("A", "Asian"),
+    ("M", "Multiple"),
     ("P", "Native Hawaiian or Other Pacific Islander"),
     ("U", "Unknown"),
+    ("W", "White"),
 ]
 
+# ETHNICITY_CODES: completed from the FBI CDE codebook (scripts/fixtures/cde/).
 ETHNICITY_CODES = [
     ("H", "Hispanic or Latino"),
+    ("M", "Multiple"),
     ("N", "Not Hispanic or Latino"),
     ("U", "Unknown"),
 ]
@@ -192,7 +209,7 @@ def main():
     parser.add_argument("--db", default="/opt/nibrs/nibrs.db")
     args = parser.parse_args()
 
-    conn = sqlite3.connect(args.db, timeout=30)
+    conn = sqlite3.connect(args.db, timeout=30, isolation_level=None)
     conn.execute("PRAGMA busy_timeout=30000")
 
     tables = {
@@ -226,15 +243,23 @@ def main():
         },
     }
 
-    for name, info in tables.items():
-        conn.execute(f"CREATE TABLE IF NOT EXISTS {name} {info['schema']}")
-        conn.execute(f"DELETE FROM {name}")
-        placeholders = ",".join("?" * len(info["data"][0]))
-        conn.executemany(f"INSERT INTO {name} VALUES ({placeholders})", info["data"])
-        cnt = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
-        print(f"  {name}: {cnt} rows")
-
-    conn.commit()
+    # One transaction for every table (CDE codebook fix 2026-10-13): readers see the old tables or the new ones, never a mix.
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        for name, info in tables.items():
+            conn.execute(f"CREATE TABLE IF NOT EXISTS {name} {info['schema']}")
+            conn.execute(f"DELETE FROM {name}")
+            placeholders = ",".join("?" * len(info["data"][0]))
+            conn.executemany(f"INSERT INTO {name} VALUES ({placeholders})", info["data"])
+            cnt = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+            if cnt != len(info["data"]):
+                raise RuntimeError(f"{name}: {cnt} rows, expected {len(info['data'])}")
+            print(f"  {name}: {cnt} rows")
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        conn.close()
+        raise
     print("Done")
     conn.close()
 

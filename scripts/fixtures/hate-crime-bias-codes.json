@@ -1,0 +1,104 @@
+{
+ "kind": "FBI hate crime bias motivation codes: the reference for the hotfix decoder (Codex plan r1 findings 1 and 3)",
+ "sources": {
+  "G2015": "FBI Hate Crime Data Collection Guidelines ver. 2 (2015), FBI-Hate-Crime-Data-Collection-Guidelines-Ver-2-2015.pdf: printed p.5 (codes incl. 24, 41), p.26 (88 None, 99 Unknown)",
+  "B2013": "UCR State Program Bulletin 13-3 (Aug 2013) s.2.4, FBI-UCR-State-Program-Bulletin-2013-08.pdf: code 43 Anti-Homosexual changed to Anti-LGBT (Mixed Group) beginning January 2013; s.2.3 Arab and the added religions implemented in 2015",
+  "H2004": "UCR Handbook 2004, Hate Crime Incident Report form 1-699 (printed p.119), FBI-UCR-Handbook-2004.pdf, image handbook-p119-form-0.jpg: the pre-2013 list (no 16, no 28-29, no 31, no 61-62, 71-72, 81-85)",
+  "DATA": "local hate_crime.db by-year counts: code 31 present 1991-2003 (2001: 271, the post-9/11 rise), absent 2004-2013, present 2014-2025",
+  "A2015": "FBI Hate Crime Statistics 2015, About Hate Crime (FBI-Hate-Crime-2015-About.pdf): p.3 the OMB race/ethnicity revision (Asian; Native Hawaiian or Other Pacific Islander; Hispanic or Latino / Not Hispanic or Latino) collected from 2013; p.3-4 anti-Arab and the added religions from 2015, and the anti-Not Hispanic or Latino bias type became anti-Other Race/Ethnicity/Ancestry",
+  "CDE2026": "FBI CDE NIBRS_BIAS_LIST (scripts/fixtures/cde/): current wording for 28, 42, 72, 81 (2026-10-13; meanings unchanged)"
+ },
+ "group": {
+  "Race/Ethnicity/Ancestry": "11-16, 31-33",
+  "Religion": "21-29, 81-85",
+  "Sexual Orientation": "41-45",
+  "Disability": "51-52",
+  "Gender": "61-62",
+  "Gender Identity": "71-72",
+  "Other": "88, 99, and any unlisted code"
+ },
+ "modern": {
+  "11": "Anti-White",
+  "12": "Anti-Black or African American",
+  "13": "Anti-American Indian or Alaska Native",
+  "14": "Anti-Asian",
+  "15": "Anti-Multiple Races, Group",
+  "16": "Anti-Native Hawaiian or Other Pacific Islander",
+  "21": "Anti-Jewish",
+  "22": "Anti-Catholic",
+  "23": "Anti-Protestant",
+  "24": "Anti-Islamic (Muslim)",
+  "25": "Anti-Other Religion",
+  "26": "Anti-Multiple Religions, Group",
+  "27": "Anti-Atheism/Agnosticism",
+  "28": "Anti-Church of Jesus Christ",
+  "29": "Anti-Jehovah's Witness",
+  "31": "Anti-Arab",
+  "32": "Anti-Hispanic or Latino",
+  "33": "Anti-Other Race/Ethnicity/Ancestry",
+  "41": "Anti-Gay (Male)",
+  "42": "Anti-Lesbian (Female)",
+  "43": "Anti-Lesbian, Gay, Bisexual, or Transgender (Mixed Group)",
+  "44": "Anti-Heterosexual",
+  "45": "Anti-Bisexual",
+  "51": "Anti-Physical Disability",
+  "52": "Anti-Mental Disability",
+  "61": "Anti-Male",
+  "62": "Anti-Female",
+  "71": "Anti-Transgender",
+  "72": "Anti-Gender Non-Conforming",
+  "81": "Anti-Eastern Orthodox (Russian, Greek, Other)",
+  "82": "Anti-Other Christian",
+  "83": "Anti-Buddhist",
+  "84": "Anti-Hindu",
+  "85": "Anti-Sikh",
+  "88": "None",
+  "99": "Unknown"
+ },
+ "beforeYear": {
+  "14": [
+   {
+    "before": 2013,
+    "label": "Anti-Asian/Pacific Islander",
+    "source": "H2004 form; A2015 p.3 (race revision collected from 2013)"
+   }
+  ],
+  "31": [
+   {
+    "before": 2015,
+    "label": "Bias code 31 (meaning not confirmed before 2015)",
+    "group": "Other",
+    "unresolved": true,
+    "source": "A2015: anti-Arab collected from 2015; H2004 has no 31; the 1991-2003 rows (2001: 271) have no cited meaning (Codex r2 clarification 1: left unresolved)"
+   }
+  ],
+  "33": [
+   {
+    "before": 2013,
+    "label": "Anti-Other Ethnicity/National Origin",
+    "source": "H2004"
+   },
+   {
+    "before": 2015,
+    "label": "Anti-Not Hispanic or Latino",
+    "source": "A2015 p.3-4 (Not Hispanic or Latino collected from 2013; became Other Race/Ethnicity/Ancestry in 2015)"
+   }
+  ],
+  "43": [
+   {
+    "before": 2013,
+    "label": "Anti-Homosexual (Gay and Lesbian)",
+    "source": "B2013 s.2.4; H2004"
+   }
+  ],
+  "_rule": "for a row with year < before, the FIRST matching entry (in order) gives the label and group; otherwise the modern label"
+ },
+ "sameMeaningOlderWording": {
+  "12": "Anti-Black",
+  "13": "Anti-American Indian/Alaskan Native",
+  "32": "Anti-Hispanic",
+  "41": "Anti-Male Homosexual (Gay)",
+  "42": "Anti-Female Homosexual (Lesbian)",
+  "_note": "older forms used different wording for the SAME meaning; the decoder keeps the modern label so one query matches every year"
+ }
+}

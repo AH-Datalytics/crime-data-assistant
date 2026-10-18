@@ -227,6 +227,18 @@ const ENVIRONMENT_PROVIDED = {
   pip: { declarationPin: /^#\s*harness-env:\s*pip==([0-9][0-9A-Za-z.\-]*)\s*$/m },
 };
 
+/**
+ * Packages a DECLARED library loads at call time, so no import statement names them.
+ *
+ * `openpyxl` is the engine pandas loads inside `read_excel` for .xlsx files. scripts/import_historical.py reads
+ * the state/national workbook that way, and scripts/test_historical_national_rape.py (P4) exercises it; the first
+ * hosted run of PR #32 (39146113446) failed there with ModuleNotFoundError. The declaration is valid only while a
+ * measured file that imports the loader also makes the call, which is checked below rather than trusted.
+ */
+const LOADER_REQUIRED = {
+  openpyxl: { loader: "pandas", call: /\.read_excel\(/ },
+};
+
 /** Every bracketed array literal in `text` that contains `needle`. */
 function arrayLiteralsContaining(text, needle) {
   const out = [];
@@ -293,8 +305,23 @@ check("FORWARD containment: every third-party import is declared or reasonably e
 });
 
 check("every declared package is actually imported -- no dead declarations", () => {
-  const unused = declaration.filter((p) => !Object.prototype.hasOwnProperty.call(closure, p));
+  const unused = declaration.filter((p) => !Object.prototype.hasOwnProperty.call(closure, p)
+    && !Object.prototype.hasOwnProperty.call(LOADER_REQUIRED, p));
   assert.deepEqual(unused, [], `declared but never imported: ${unused.join(", ")}`);
+});
+
+check("every loader-required package is declared and its call site still exists", () => {
+  for (const [pkg, rule] of Object.entries(LOADER_REQUIRED)) {
+    assert.ok(declaration.includes(pkg), `${pkg} is loader-required but not declared in ${IN_FILE}`);
+    const importers = closure[rule.loader] || [];
+    assert.ok(importers.length > 0, `${pkg} needs ${rule.loader}, which no measured file imports`);
+    // closure entries read "<file>:<line>  via <importer>:<line>"; the file is the text before the first colon.
+    const files = [...new Set(importers.map((e) => String(e).split(":")[0]))];
+    const callers = files.filter((f) => rule.call.test(read(f)));
+    assert.ok(callers.length > 0,
+      `no measured file that imports ${rule.loader} calls ${rule.call}; the ${pkg} declaration is now dead`);
+    console.log(`        ${pkg}: loaded by ${rule.loader} at ${callers.join(", ")}`);
+  }
 });
 
 check("the anthropic exclusion is CALL-PATH specific and still holds", () => {

@@ -1311,3 +1311,87 @@ def open_build_database(path):
     conn = sqlite3.connect(path)
     create_core_tables(conn)
     return conn
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# The national rape row (historical national rape fix, 2026-10-13; plan docs/superpowers/plans/
+# 2026-10-13-historical-national-rape-fix.md r4, Codex-accepted).
+#
+# historical_state_national's 'United States' row carries CIUS Table 1's national estimates for every offense EXCEPT
+# rape, which sat at 69-74% of Table 1's revised-definition value from 2013 on (audit/cde-codebook-audit-2026-10-13/
+# historical-rape-source/TASK0.md). The state rows switch to the revised definition in 2017, so the national rape value
+# is replaced from 2017 on with Table 1's, from the reviewed fixture. 2010-2016 is left as it is.
+
+CIUS_TABLE1_FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "cius-table1-2017-2024.json")
+NATIONAL_RAPE_CORRECTION_TABLE = "historical_national_rape_correction"
+NATIONAL_RAPE_CORRECTION_NAME = "national-rape-cius-t1-2017-2024"
+NATIONAL_RAPE_LAST_REVIEWED_YEAR = 2024
+_OTHER_OFFENSES = ("murder", "robbery", "aggravated_assault", "burglary", "theft", "auto_theft")
+_OFFENSE_TOLERANCE = 0.06  # confirms the row is Table 1's series; it never chooses a value
+
+
+class NationalRapeCorrectionError(Exception):
+    """A precondition of the national rape correction does not hold; nothing was changed."""
+
+
+def load_cius_table1(path=CIUS_TABLE1_FIXTURE):
+    with open(path, encoding="utf-8") as fh:
+        doc = json.load(fh)
+    return doc, {int(y): v for y, v in doc["years"].items()}
+
+
+def _national_rows(conn, year):
+    return conn.execute(
+        "SELECT state, population, murder, rape, robbery, aggravated_assault, burglary, theft, auto_theft, total_offenses "
+        "FROM historical_state_national WHERE UPPER(TRIM(state)) = 'UNITED STATES' AND year = ?", (year,)).fetchall()
+
+
+def refuse_unreviewed_national_years(conn):
+    """Any national year after the last reviewed one stops the import until it is reviewed (no numerical tolerance)."""
+    years = [r[0] for r in conn.execute(
+        "SELECT DISTINCT year FROM historical_state_national WHERE UPPER(TRIM(state)) = 'UNITED STATES' AND year > ? ORDER BY year",
+        (NATIONAL_RAPE_LAST_REVIEWED_YEAR,))]
+    if years:
+        raise NationalRapeCorrectionError(
+            f"national year(s) {years} are after {NATIONAL_RAPE_LAST_REVIEWED_YEAR}, the last reviewed year of the national rape "
+            "correction; review them (source, definition) before importing")
+
+
+def correct_national_rape(conn, fixture_path=CIUS_TABLE1_FIXTURE):
+    """Set the national rape row for the reviewed years to CIUS Table 1's value, inside the caller's transaction.
+
+    Every precondition is checked for every year before anything is written; a failure raises
+    NationalRapeCorrectionError and changes nothing. rape_rate and total_offenses_rate follow the stored formula
+    (value * 100000 / population); total_offenses moves by exactly the rape delta, so any existing difference between it
+    and its parts is preserved. Records a provenance row in historical_national_rape_correction. Never commits.
+    Returns {year: {"old": ..., "new": ..., "delta": ...}}.
+    """
+    doc, table1 = load_cius_table1(fixture_path)
+    plan = {}
+    for year, ref in sorted(table1.items()):
+        rows = _national_rows(conn, year)
+        if len(rows) != 1:
+            raise NationalRapeCorrectionError(f"{year}: {len(rows)} national rows (exactly one required)")
+        state, population, murder, rape, robbery, aggravated, burglary, theft, auto_theft, total = rows[0]
+        if state != "United States":
+            raise NationalRapeCorrectionError(f"{year}: the national row is named {state!r}")
+        if not isinstance(population, int) or population <= 0 or population != ref["population"]:
+            raise NationalRapeCorrectionError(f"{year}: population {population} is not Table 1's {ref['population']}")
+        stored = dict(zip(_OTHER_OFFENSES, (murder, robbery, aggravated, burglary, theft, auto_theft)))
+        for name, value in stored.items():
+            if not isinstance(value, int) or abs(value - ref[name]) > _OFFENSE_TOLERANCE * ref[name]:
+                raise NationalRapeCorrectionError(f"{year}: {name} {value} is not Table 1's series ({ref[name]})")
+        if not isinstance(rape, int) or not isinstance(total, int):
+            raise NationalRapeCorrectionError(f"{year}: rape or total_offenses is not an integer")
+        plan[year] = {"old": rape, "new": ref["rape"], "delta": ref["rape"] - rape, "population": population, "total": total}
+    for year, p in plan.items():
+        new_total = p["total"] + p["delta"]
+        conn.execute(
+            "UPDATE historical_state_national SET rape = ?, rape_rate = ? * 100000.0 / population, total_offenses = ?, "
+            "total_offenses_rate = ? * 100000.0 / population WHERE state = 'United States' AND year = ?",
+            (p["new"], p["new"], new_total, new_total, year))
+    conn.execute(f"CREATE TABLE IF NOT EXISTS {NATIONAL_RAPE_CORRECTION_TABLE} "
+                 "(name TEXT PRIMARY KEY, applied_at TEXT, source_sha256 TEXT, years TEXT, source TEXT)")
+    conn.execute(f"INSERT OR REPLACE INTO {NATIONAL_RAPE_CORRECTION_TABLE} VALUES (?, datetime('now'), ?, ?, ?)",
+                 (NATIONAL_RAPE_CORRECTION_NAME, doc["_source_sha256"], f"{min(plan)}-{max(plan)}", doc["_source"]))
+    return {y: {k: p[k] for k in ("old", "new", "delta")} for y, p in plan.items()}

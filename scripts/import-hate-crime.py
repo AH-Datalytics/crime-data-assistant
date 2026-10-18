@@ -14,6 +14,13 @@ import time
 import sys
 import argparse
 from datetime import datetime
+from collections import Counter
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from hate_crime_bias import decode as decode_bias  # noqa: E402
+
+# Codes not in the FBI list seen during this run (reported at the end, never given a label).
+UNLISTED_BIAS = Counter()
 
 # ── Code Lookups ──────────────────────────────────────────────
 
@@ -26,48 +33,11 @@ STATES = {
     '30':'NM','27':'NV','31':'NY','34':'OH','35':'OK','36':'OR','37':'PA',
     '53':'PR','38':'RI','39':'SC','40':'SD','41':'TN','42':'TX','43':'UT',
     '62':'VI','45':'VA','44':'VT','46':'WA','48':'WI','47':'WV','49':'WY',
+    '69':'MP','98':'FS',  # FBI CDE REF_STATE: Northern Mariana Islands; Federal agencies
 }
 
-BIAS_CODES = {
-    '11':'Anti-White','12':'Anti-Black or African American',
-    '13':'Anti-American Indian or Alaska Native','14':'Anti-Asian',
-    '15':'Anti-Native Hawaiian or Other Pacific Islander',
-    '16':'Anti-Multiple Races, Group','19':'Anti-Arab',
-    '21':'Anti-Jewish','22':'Anti-Catholic','23':'Anti-Protestant',
-    '24':'Anti-Islamic (Muslim)','25':'Anti-Other Religion',
-    '26':'Anti-Multiple Religions, Group','27':'Anti-Atheism/Agnosticism',
-    '28':'Anti-Arab','29':'Anti-Sikh',
-    '31':'Anti-Gay (Male)','32':'Anti-Lesbian',
-    '33':'Anti-LGBT (Mixed Group)','34':'Anti-Heterosexual',
-    '35':'Anti-Bisexual',
-    '41':'Anti-Physical Disability','42':'Anti-Mental Disability',
-    '43':'Anti-Male','44':'Anti-Female',
-    '45':'Anti-Gender Non-Conforming',
-    '51':'Anti-Male','52':'Anti-Female',
-    '61':'Anti-Transgender','62':'Anti-Gender Non-Conforming',
-    '71':'Anti-Sikh','72':'Anti-Hindu','73':'Anti-Mormon',
-    '74':"Anti-Jehovah's Witness",'75':'Anti-Other Christian',
-    '76':'Anti-Eastern Orthodox','81':'Anti-Buddhist',
-}
-
-# Bias categories for summary grouping
-def bias_category(bias_desc):
-    if not bias_desc:
-        return 'Unknown'
-    b = bias_desc.lower()
-    if 'race' in b or 'white' in b or 'black' in b or 'indian' in b or 'asian' in b or 'pacific' in b or 'arab' in b or 'multiple races' in b:
-        return 'Race/Ethnicity/Ancestry'
-    if 'jewish' in b or 'catholic' in b or 'protestant' in b or 'islamic' in b or 'muslim' in b or 'religion' in b or 'atheism' in b or 'sikh' in b or 'hindu' in b or 'mormon' in b or 'jehovah' in b or 'christian' in b or 'orthodox' in b or 'buddhist' in b:
-        return 'Religion'
-    if 'gay' in b or 'lesbian' in b or 'lgbt' in b or 'heterosexual' in b or 'bisexual' in b:
-        return 'Sexual Orientation'
-    if 'disability' in b:
-        return 'Disability'
-    if 'transgender' in b or 'gender non-conforming' in b:
-        return 'Gender Identity'
-    if 'male' in b or 'female' in b:
-        return 'Gender'
-    return 'Other'
+# Bias codes: decoded by (code, data year) from the FBI list in scripts/hate_crime_bias.py (hotfix 2026-10-12;
+# the table that was here mislabeled 23 codes, and grouped by keyword).
 
 OFFENSE_CODES = {
     '09A':'Murder','09B':'Negligent Manslaughter','09C':'Justifiable Homicide',
@@ -82,29 +52,84 @@ OFFENSE_CODES = {
     '240':'Motor Vehicle Theft',
     '290':'Vandalism/Destruction of Property',
     '520':'Weapon Violations','720':'Animal Cruelty','90Z':'All Other',
+    # Completed from the FBI CDE codebook (hate-crime offenses, scripts/fixtures/cde/NIBRS_OFFENSE_TYPE.csv).
+    '23*':"Not Specified",
+    '250':"Counterfeiting/Forgery",
+    '26A':"False Pretenses/Swindle/Confidence Game",
+    '26B':"Credit Card/Automated Teller Machine Fraud",
+    '26C':"Impersonation",
+    '26D':"Welfare Fraud",
+    '26E':"Wire Fraud",
+    '26F':"Identity Theft",
+    '26G':"Hacking/Computer Invasion",
+    '270':"Embezzlement",
+    '280':"Stolen Property Offenses",
+    '35A':"Drug/Narcotic Violations",
+    '35B':"Drug Equipment Violations",
+    '36A':"Incest",
+    '36B':"Statutory Rape",
+    '370':"Pornography/Obscene Material",
+    '39A':"Betting/Wagering",
+    '39B':"Operating/Promoting/Assisting Gambling",
+    '39C':"Gambling Equipment Violation",
+    '39D':"Sports Tampering",
+    '40A':"Prostitution",
+    '40B':"Assisting or Promoting Prostitution",
+    '40C':"Purchasing Prostitution",
+    '510':"Bribery",
+    '64A':"Human Trafficking, Commercial Sex Acts",
+    '64B':"Human Trafficking, Involuntary Servitude"
 }
 
+# Location codes: the FBI CDE codebook (scripts/fixtures/cde/NIBRS_LOCATION_TYPE.csv; CDE's own decoded hate crime
+# dataset agrees on every code). The earlier table numbered the newer locations 26-50; CDE numbers them 37-58.
 LOCATION_CODES = {
-    '01':'Air/Bus/Train Terminal','02':'Bank','03':'Bar/Nightclub',
-    '04':'Church/Synagogue/Temple/Mosque','05':'Commercial/Office Building',
-    '06':'Construction Site','07':'Convenience Store',
-    '08':'Department/Discount Store','09':'Drug Store/Doctor/Hospital',
-    '10':'Field/Woods','11':'Government/Public Building',
-    '12':'Grocery/Supermarket','13':'Highway/Road/Street',
-    '14':'Hotel/Motel','15':'Jail/Prison','16':'Lake/Waterway',
-    '17':'Liquor Store','18':'Parking Lot/Garage',
-    '19':'Rental Storage','20':'Residence/Home','21':'Restaurant',
-    '22':'School/College','23':'Service/Gas Station',
-    '24':'Specialty Store','25':'Other/Unknown',
-    '26':'Amusement Park','27':'Arena/Stadium','28':'ATM',
-    '29':'Auto Dealership','30':'Camp/Campground',
-    '32':'Daycare Facility','33':'Dock/Wharf','34':'Farm',
-    '35':'Gambling Facility','36':'Industrial Site',
-    '37':'Military Installation','38':'Park/Playground',
-    '39':'Rest Area','40':'School-Elementary/Secondary',
-    '41':'School-College/University','42':'Shelter/Mission/Homeless',
-    '43':'Shopping Mall','44':'Tribal Lands',
-    '46':'Community Center','48':'Abandoned Structure','50':'Cyberspace',
+    '01':"Air/Bus/Train Terminal",
+    '02':"Bank/Savings and Loan",
+    '03':"Bar/Nightclub",
+    '04':"Church/Synagogue/Temple/Mosque",
+    '05':"Commercial/Office Building",
+    '06':"Construction Site",
+    '07':"Convenience Store",
+    '08':"Department/Discount Store",
+    '09':"Drug Store/Doctor's Office/Hospital",
+    '10':"Field/Woods",
+    '11':"Government/Public Building",
+    '12':"Grocery/Supermarket",
+    '13':"Highway/Road/Alley/Street/Sidewalk",
+    '14':"Hotel/Motel/Etc.",
+    '15':"Jail/Prison/Penitentiary/Corrections Facility",
+    '16':"Lake/Waterway/Beach",
+    '17':"Liquor Store",
+    '18':"Parking/Drop Lot/Garage",
+    '19':"Rental Storage Facility",
+    '20':"Residence/Home",
+    '21':"Restaurant",
+    '22':"School/College",
+    '23':"Service/Gas Station",
+    '24':"Specialty Store",
+    '25':"Other/Unknown",
+    '37':"Abandoned/Condemned Structure",
+    '38':"Amusement Park",
+    '39':"Arena/Stadium/Fairgrounds/Coliseum",
+    '40':"ATM Separate from Bank",
+    '41':"Auto Dealership New/Used",
+    '42':"Camp/Campground",
+    '44':"Daycare Facility",
+    '45':"Dock/Wharf/Freight/Modal Terminal",
+    '46':"Farm Facility",
+    '47':"Gambling Facility/Casino/Race Track",
+    '48':"Industrial Site",
+    '49':"Military Installation",
+    '50':"Park/Playground",
+    '51':"Rest Area",
+    '52':"School-College/University",
+    '53':"School-Elementary/Secondary",
+    '54':"Shelter-Mission/Homeless",
+    '55':"Shopping Mall",
+    '56':"Tribal Lands",
+    '57':"Community Center",
+    '58':"Cyberspace",
 }
 
 RACE_CODES = {
@@ -113,7 +138,7 @@ RACE_CODES = {
     'M':'Multiple','U':'Unknown',
 }
 
-ETH_CODES = {'H':'Hispanic or Latino','N':'Not Hispanic or Latino','U':'Unknown'}
+ETH_CODES = {'H':'Hispanic or Latino','N':'Not Hispanic or Latino','U':'Unknown','M':'Multiple'}  # FBI CDE NIBRS_ETHNICITY
 
 HATE_CRIME_DUPLICATE_COLUMNS = [
     'year', 'state', 'state_name', 'ori', 'agency_name', 'population',
@@ -143,9 +168,26 @@ def download_year(year):
         return None
     url = list(data.values())[0]
     r = requests.get(url)
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    name = z.namelist()[0]
-    return z.read(name).decode('latin1')
+    return master_text_for_year(zipfile.ZipFile(io.BytesIO(r.content)), year)
+
+
+def master_text_for_year(z, year):
+    """The member whose batch-header year is `year` (nested zips included); else the first member, as before."""
+    texts = []
+    for name in z.namelist():
+        data = z.read(name)
+        if name.lower().endswith('.zip'):
+            inner = zipfile.ZipFile(io.BytesIO(data))
+            texts += [inner.read(n).decode('latin1') for n in inner.namelist()]
+        else:
+            texts.append(data.decode('latin1'))
+    for text in texts:
+        for line in text.split('\n'):
+            if line[:2] == 'BH':
+                if safe(line, 225, 229).strip() == str(year):
+                    return text
+                break
+    return texts[0] if texts else None
 
 def parse_year_csv(value):
     years = set()
@@ -236,7 +278,9 @@ def parse_year(text):
 
                 offense_name = OFFENSE_CODES.get(oc, oc)
                 location = LOCATION_CODES.get(loc_code, loc_code)
-                bias_desc = BIAS_CODES.get(bias_code, bias_code)
+                bias_desc, bias_group, _unresolved, listed = decode_bias(bias_code, int(year) if year.isdigit() else None)
+                if not listed:
+                    UNLISTED_BIAS[bias_code] += 1
 
                 # Age breakdowns (2020+ only)
                 adult_victims = num(safe(line, 301, 304)) if len(line) >= 307 else None
@@ -267,9 +311,10 @@ def parse_year(text):
                     'offense_name': offense_name,
                     'offense_victims': offense_victims,
                     'location': location,
+                    'location_code': loc_code,
                     'bias_code': bias_code,
                     'bias_desc': bias_desc,
-                    'bias_category': bias_category(bias_desc),
+                    'bias_category': bias_group,
                     'victim_types': victim_types,
                     'adult_victims': adult_victims,
                     'juvenile_victims': juvenile_victims,
@@ -342,7 +387,9 @@ def dedupe_hate_crime_incidents(conn, years):
 
 
 
-def rebuild_hate_crime_derived_tables(conn, all_bh_counts=None):
+def rebuild_hate_crime_derived_tables(conn, all_bh_counts=None, commit=True):
+    """Rebuild the summary and participation tables. commit=False leaves the transaction to the caller (the
+    re-decode validates before it commits)."""
     all_bh_counts = all_bh_counts or {}
     existing_total_agencies = {}
     if conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'hate_crime_participation'").fetchone():
@@ -449,7 +496,8 @@ def rebuild_hate_crime_derived_tables(conn, all_bh_counts=None):
 
     conn.execute("CREATE INDEX idx_hcp_year ON hate_crime_participation(year)")
     conn.execute("CREATE INDEX idx_hcp_state ON hate_crime_participation(state, year)")
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def main():
@@ -523,6 +571,7 @@ def main():
         offense_name TEXT,
         offense_victims INTEGER,
         location TEXT,
+        location_code TEXT,
         bias_code TEXT,
         bias_desc TEXT,
         bias_category TEXT,
@@ -532,6 +581,9 @@ def main():
         adult_offenders INTEGER,
         juvenile_offenders INTEGER
     )""")
+    # CDE codebook fix (2026-10-13): the raw location code is kept, so a label can always be re-derived from it.
+    if 'location_code' not in [r[1] for r in conn.execute("PRAGMA table_info(hate_crime_incidents)")]:
+        conn.execute("ALTER TABLE hate_crime_incidents ADD COLUMN location_code TEXT")
     conn.commit()
 
     if args.verify_raw_duplicates:
@@ -552,8 +604,8 @@ def main():
         total_individual_victims, total_offenders, offender_race, offender_ethnicity,
         offense_group, offense_code, offense_name, offense_victims,
         location, bias_code, bias_desc, bias_category, victim_types,
-        adult_victims, juvenile_victims, adult_offenders, juvenile_offenders
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
+        adult_victims, juvenile_victims, adult_offenders, juvenile_offenders, location_code
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
 
     total_incidents = 0
     all_bh_counts = {}  # year -> {state -> count}
@@ -585,7 +637,7 @@ def main():
             i['offense_victims'], i['location'], i['bias_code'], i['bias_desc'],
             i['bias_category'], i['victim_types'],
             i['adult_victims'], i['juvenile_victims'],
-            i['adult_offenders'], i['juvenile_offenders'],
+            i['adult_offenders'], i['juvenile_offenders'], i['location_code'],
         ) for i in incidents]
 
         conn.executemany(insert_sql, rows)
@@ -640,6 +692,9 @@ def main():
     print("\nBias category breakdown:")
     for cat, cnt in bias_cats:
         print(f"  {cat}: {cnt:,}")
+    if UNLISTED_BIAS:
+        print("\nWARNING: bias codes not in the FBI list (stored as themselves, group Other): "
+              + ", ".join(f"{c or '(blank)'} x{n}" for c, n in sorted(UNLISTED_BIAS.items())))
 
     conn.close()
 

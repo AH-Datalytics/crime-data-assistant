@@ -331,7 +331,15 @@ async function main() {
     const served = fs.readFileSync(SERVED, "utf8");
     const now = fs.readFileSync(IMPORTER, "utf8");
     const block = (text: string, start: string, end: string) => { const i = text.indexOf(start); const j = text.indexOf(end, i); assert.ok(i >= 0 && j > i, start); return text.slice(i, j); };
-    assert.strictEqual(block(now, "const STATE_CODES", "// Download a file"), block(served, "const STATE_CODES", "// Download a file"));
+    // The one approved change since the served bytes: the FBI CDE codebook fix (2026-10-13,
+    // audit/cde-codebook-fixes-2026-10-13): 30/31 added, 40 = CDE's "Domestic Violence". Any other change still fails.
+    const CDE_FROM = "const CIRCUMSTANCE_CODES = {\n  '02'";
+    const CDE_TO = "// Circumstance names: the FBI CDE codebook (scripts/fixtures/cde/shr-codebook.json). 30/31 added; 40 is CDE's\n// \"Domestic Violence\" (formerly labeled \"Lover's Triangle\" here). 30/31 have no CDE grouping, so their group is \"Unknown\".\n" + CDE_FROM;
+    const OLD_40 = "  '40':\"Lover's Triangle\",'41':'Child Killed by Babysitter',\n";
+    const NEW_40 = "  '30':'Human Trafficking/Commercial Sex Acts','31':'Human Trafficking/Involuntary Servitude',\n  '40':'Domestic Violence','41':'Child Killed by Babysitter',\n";
+    const servedBlock = block(served, "const STATE_CODES", "// Download a file").replace(/\r\n/g, "\n");
+    assert.ok(servedBlock.split(CDE_FROM).length === 2 && servedBlock.split(OLD_40).length === 2, "the served block has the pre-CDE circumstance table");
+    assert.strictEqual(block(now, "const STATE_CODES", "// Download a file").replace(/\r\n/g, "\n"), servedBlock.replace(CDE_FROM, CDE_TO).replace(OLD_40, NEW_40));
     for (const sql of ["INSERT INTO incidents (year, month, state, ori, agency, population, situation,", "INSERT INTO victims (incident_id, victim_num, age, age_num, sex, race, ethnicity)"]) {
       assert.strictEqual(block(now, sql, "`);"), block(served, sql, "`);"), sql);
     }

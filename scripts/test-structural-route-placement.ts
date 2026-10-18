@@ -65,7 +65,14 @@ function handlerLines(name: string): { lines: string[]; start: number } {
  * scan reported success over an execution it could not see. The type argument is skipped now.
  */
 const EXECUTION_HELPER =
-  /(?:executeManyWithTimeoutSync|executeWithTimeoutSync|executeWithTimeout|(?:\w+\.)?prepare)\s*(?:<[^(\n]*>)?\s*\(\s*([^)]*)/;
+  /(?:executeManyWithTimeoutSync|executeWithCorrectionState|executeWithTimeoutSync|executeWithTimeout|(?:\w+\.)?prepare)\s*(?:<[^(\n]*>)?\s*\(\s*([^)]*)/;
+
+/*
+ * `executeWithCorrectionState(db, <sql>, timeout)` (historical national rape fix, amendment 2) runs its SQL ARGUMENT
+ * itself, with the correction-state reads, in one snapshot. Its SQL is the second argument, so it is read exactly as
+ * `db.prepare(<sql>)` is read: a guarded plan's `.sql` or a validated model-SQL variable.
+ */
+const CORRECTION_STATE_HELPER = /executeWithCorrectionState\s*\(\s*db\s*,\s*([^,)]+)/;
 
 /** Helpers that take an ARRAY of statements rather than one prepared statement. */
 const MULTI_STATEMENT_HELPER = /executeManyWithTimeoutSync\s*(?:<[^(\n]*>)?\s*\(/;
@@ -230,6 +237,8 @@ for (const route of ROUTES) {
       }
 
       let arg = (m[1] ?? "").trim();
+      const correctionState = line.match(CORRECTION_STATE_HELPER);
+      if (correctionState) arg = correctionState[1].trim();
 
       // `db.prepare(\n  unguardedSql\n)` puts the argument on the NEXT line. Treating an empty
       // same-line argument as a literal continuation accepted exactly the injection this test
@@ -361,7 +370,8 @@ for (const route of ROUTES) {
       if (i + 1 < start) return false;
       const m = line.match(EXECUTION_HELPER);
       if (!m) return false;
-      const inner = (m[1] ?? "").trim()
+      const correctionState = line.match(CORRECTION_STATE_HELPER);
+      const inner = correctionState ? correctionState[1].trim() : (m[1] ?? "").trim()
         .replace(/^db\s*,\s*db\.prepare\(\s*/, "").replace(/\).*$/, "").trim();
       return MODEL_SQL_VARIABLES.has(inner);
     }) + 1;

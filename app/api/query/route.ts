@@ -115,6 +115,7 @@ import {
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
+import { readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity } from "@/lib/historical-national-rape";
 import { OUTCOMES, type QueryLogOutcome, SourceId } from "@/lib/proof-contract";
 import type { QueryContract } from "@/lib/query-contract";
 
@@ -627,7 +628,11 @@ export async function POST(req: NextRequest) {
    * authored under conditions no longer in force (handoff §4, §13). dataVersion is
    * null until Stage 2 builds the source-health registry.
    */
-  const cacheValidity = cacheValiditySignature(proofSourceId, null);
+  const baseCacheValidity = cacheValiditySignature(proofSourceId, null);
+  // Historical national rape fix (amendment 3): on the Historical model path this becomes
+  // historicalCacheValidity(base, state) -- base unchanged while uncorrected, a mode-independent `|hnr=1` suffix once
+  // corrected -- set from a pre-read before the cache lookup, then from the answer's own snapshot before the store.
+  let cacheValidity = baseCacheValidity;
 
   /**
    * The question the proof layer reasons about: the RECONSTRUCTED one for follow-ups.
@@ -1597,12 +1602,15 @@ export async function POST(req: NextRequest) {
     ? buildHistoricalNationalViolentCountPlan(question)
     : null;
   let nationalRows: Record<string, unknown>[] | null = null;
+  let nationalCorrected: boolean | undefined;
   const nationalRefusal = nationalPlan ? deterministicPlanRefusal({ question, source: tab, sql: nationalPlan.sql }) : null;
   if (nationalRefusal) console.log(`[structural] historical national violent plan refused: ${nationalRefusal.ruleIds.join(", ")}`);
   if (nationalPlan?.sql && !nationalRefusal) {
     try {
       const db = getDb();
-      nationalRows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(nationalPlan.sql), 30000);
+      const nationalRead = executeWithCorrectionState(db, nationalPlan.sql, 30000);
+      nationalRows = nationalRead.rows;
+      nationalCorrected = nationalRead.corrected;
     } catch (err) {
       console.warn("[historical-national-violent] owned national query failed; declining", err);
     }
@@ -1669,6 +1677,7 @@ export async function POST(req: NextRequest) {
           explanation: composite?.narrative ?? historicalCityChange.explanation,
           question, sql: historicalCityChange.sql, rows, tab,
           resultState: genericResultState({ sql: historicalCityChange.sql, rows }),
+          historicalNationalRapeCorrected: nationalCorrected,
         });
         historicalCityChange.title = alignTitleYearRange(historicalCityChange.title, rows);
       }
@@ -2019,6 +2028,7 @@ export async function POST(req: NextRequest) {
         const systemPrompt = isHistorical ? getHistoricalSystemPrompt() : undefined;
 
         // Check response cache (only standalone questions)
+        if (isHistorical) cacheValidity = historicalCacheValidity(baseCacheValidity, readCorrectionState(getDb()));
         const cached = promptHistory.length === 0 ? getCached(question, tab, cacheValidity) : null;
         let fromCache = false;
 
@@ -2431,6 +2441,8 @@ export async function POST(req: NextRequest) {
 
         let rows: Record<string, unknown>[];
         let columns: string[];
+        // Historical national rape fix: the correction state read in the same snapshot as `rows` (Historical only).
+        let historicalCorrected: boolean | undefined;
         // COVER batch: an entirely null series dropped from the table below, stated as returned values in every answer version.
         let allNullSeriesNote = "";
 
@@ -2448,7 +2460,15 @@ export async function POST(req: NextRequest) {
             firedGuardrails.push("schema-column-corrected");
           }
           const stmt = db.prepare(sql);
-          const result = executeWithTimeoutSync<Record<string, unknown>>(db, stmt, 30000);
+          let result: Record<string, unknown>[];
+          if (isHistorical) {
+            const read = executeWithCorrectionState(db, sql, 30000);
+            result = read.rows;
+            historicalCorrected = read.corrected;
+            cacheValidity = historicalCacheValidity(baseCacheValidity, read.corrected);
+          } else {
+            result = executeWithTimeoutSync<Record<string, unknown>>(db, stmt, 30000);
+          }
           columns = stmt.columns().map((c) => c.name);
           rows = result;
         } catch (dbErr) {
@@ -2505,7 +2525,15 @@ export async function POST(req: NextRequest) {
                   firedGuardrails.push("schema-column-corrected");
                 }
                 const retryStmt = db.prepare(retrySql);
-                const retryResult = executeWithTimeoutSync<Record<string, unknown>>(db, retryStmt, 30000);
+                let retryResult: Record<string, unknown>[];
+                if (isHistorical) {
+                  const read = executeWithCorrectionState(db, retrySql, 30000);
+                  retryResult = read.rows;
+                  historicalCorrected = read.corrected;
+                  cacheValidity = historicalCacheValidity(baseCacheValidity, read.corrected);
+                } else {
+                  retryResult = executeWithTimeoutSync<Record<string, unknown>>(db, retryStmt, 30000);
+                }
                 columns = retryStmt.columns().map((c) => c.name);
                 rows = retryResult;
                 sql = retrySql;
@@ -3056,6 +3084,9 @@ export async function POST(req: NextRequest) {
         // AGENCY+RANK batch: the scoped Chicago assault comparability limitation (lib/chicago-assault-comparability.ts),
         // in this first text (also the fallback and cache entry) and again, idempotently, in applyResultDisclosures.
         claude.explanation = withChicagoAssaultComparability(claude.explanation || "", sql, rows);
+        if (isHistorical && typeof historicalCorrected === "boolean") {
+          claude.explanation = withHistoricalNationalRapeNotes(claude.explanation || "", sql, rows, historicalCorrected);
+        }
 
         const finalization = finalizeExit({
           outcome: OUTCOMES.model_sql_validated,
@@ -3143,7 +3174,7 @@ export async function POST(req: NextRequest) {
                 kind: /sheriff/i.test(countyAgency.agency) ? "county_sheriff" : "other",
               }
             : undefined;
-          postExplanation = applyResultDisclosures({ explanation: postExplanation, question: deliveryQuestion, sql, rows, tab, resultState, resolvedAgency });
+          postExplanation = applyResultDisclosures({ explanation: postExplanation, question: deliveryQuestion, sql, rows, tab, historicalNationalRapeCorrected: historicalCorrected, resultState, resolvedAgency });
           if (allNullSeriesNote && !postExplanation.includes(allNullSeriesNote)) postExplanation += `\n\n${allNullSeriesNote}`;
           // A later explanation must not quietly drop the withholding the first answer carried.
           postExplanation = appendWithheldChangeNote(presentation.strip(postExplanation), presentation.note);
@@ -3229,7 +3260,7 @@ export async function POST(req: NextRequest) {
             const retryState = isHistorical
               ? genericResultState({ sql, rows })
               : currentTrendsResultState(db, { sql, rows });
-            retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question: deliveryQuestion, sql, rows, tab, resultState: retryState });
+            retryExplanation = applyResultDisclosures({ explanation: retryExplanation, question: deliveryQuestion, sql, rows, tab, historicalNationalRapeCorrected: historicalCorrected, resultState: retryState });
             if (allNullSeriesNote && !retryExplanation.includes(allNullSeriesNote)) retryExplanation += `\n\n${allNullSeriesNote}`;
             retryExplanation = appendWithheldChangeNote(presentation.strip(retryExplanation), presentation.note);
             if (missingLowerBoundNote(deliveryQuestion, sql, rows) && !firedGuardrails.includes("lower-bound-disclosed")) firedGuardrails.push("lower-bound-disclosed");

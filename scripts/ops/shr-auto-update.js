@@ -95,12 +95,15 @@ const RELATIONSHIP_GROUPS = {};
 RELATIONSHIP_GROUPS['ST'] = 'Stranger';
 RELATIONSHIP_GROUPS['UN'] = 'Unknown';
 
+// Circumstance names: the FBI CDE codebook (scripts/fixtures/cde/shr-codebook.json). 30/31 added; 40 is CDE's
+// "Domestic Violence" (formerly labeled "Lover's Triangle" here). 30/31 have no CDE grouping, so their group is "Unknown".
 const CIRCUMSTANCE_CODES = {
   '02':'Rape','03':'Robbery','05':'Burglary','06':'Larceny',
   '07':'Motor Vehicle Theft','09':'Arson','10':'Prostitution',
   '17':'Other Sex Offenses','32':'Abortion','18':'Narcotic Drug Laws',
   '19':'Gambling','26':'Other Felony',
-  '40':"Lover's Triangle",'41':'Child Killed by Babysitter',
+  '30':'Human Trafficking/Commercial Sex Acts','31':'Human Trafficking/Involuntary Servitude',
+  '40':'Domestic Violence','41':'Child Killed by Babysitter',
   '42':'Brawl (Alcohol)','43':'Brawl (Narcotics)',
   '44':'Argument Over Money/Property','45':'Other Arguments',
   '46':'Gangland Killings','47':'Juvenile Gang Killings',

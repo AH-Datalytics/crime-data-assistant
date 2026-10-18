@@ -11,6 +11,15 @@ set -e
 APP_DIR="/opt/nibrs/current"
 DB_PATH="/opt/nibrs/hate_crime.db"
 SCRIPT="$APP_DIR/scripts/import-hate-crime.py"
+
+# One exclusive lock for the whole run, shared with scripts/redecode-hate-crime-bias.py (hotfix 2026-10-12): an import
+# and a re-decode never touch the database at the same time. Held until this script exits.
+LOCK_PATH="$(dirname "$DB_PATH")/hate_crime.lock"
+exec 9>>"$LOCK_PATH"
+if ! flock -n 9; then
+    echo "[$(date)] $LOCK_PATH is held (a re-decode or another import is running); skipping this run."
+    exit 0
+fi
 CURRENT_YEAR=$(date +%Y)
 CURRENT_MONTH=$((10#$(date +%m)))
 
