@@ -1,4 +1,4 @@
-import { buildQueryContract, type QueryContract } from "./query-contract";
+import { buildQueryContract, hasCodelessFamily, type QueryContract } from "./query-contract";
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { DeterministicNibrsQuery } from "./nibrs-deterministic-queries";
 
@@ -101,6 +101,7 @@ LIMIT 1000`;
 export function buildNibrsContinuousReporterQuery(question: string): DeterministicNibrsQuery | null {
   if (!/\b(?:continuous(?:ly)?|consistent(?:ly)?\s+report(?:ing|ers?)?|reported\s+all\s+12\s+months|reported\s+every\s+year)\b/i.test(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.unit !== "count" || !contract.comparability.continuousReporters) return null;
   if (contract.geographies.some((geo) => ["city", "county", "campus"].includes(geo.kind) || Boolean(geo.name))) return null;
   if (/\b(?:rate|per\s*(?:capita|100k|100,?000)|share|percent(?:age)?|monthly|by\s+month)\b/i.test(question)) return null;
@@ -141,6 +142,7 @@ export function buildNibrsContinuousReporterQuery(question: string): Determinist
 export function buildNibrsCountywideDemographicQuery(question: string): DeterministicNibrsQuery | null {
   if (!/\bcountywide\b/i.test(question)) return null;
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.unit !== "count" || contract.comparability.continuousReporters) return null;
   if (/\b(?:rate|per\s*(?:capita|100k|100,?000)|share|percent(?:age)?|monthly|by\s+month)\b/i.test(question)) return null;
   const county = contract.geographies.find((geo) => geo.kind === "county" && geo.name);

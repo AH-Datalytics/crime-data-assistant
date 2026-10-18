@@ -79,11 +79,12 @@ nMonth.run("TX03", 2024, 1, "TX", "23C", 999);    // wrong year
 nMonth.run("TX03", 2025, 1, "TX", "23H", 888);    // wrong offense (All Other Larceny, not Shoplifting)
 nMonth.run("TX01", 2025, 2, "TX", "23C", 460);    // a second month, so the year aggregates
 nMonth.run("TX01", 2025, 9, "TX", "23C", 1000);   // AFTER a July cutoff
-// GC-063's own witness: carjackings, two codes.
+// Human trafficking rows (64A/64B). Carjacking hotfix (2026-10-10): GC-063 used to rank these as carjackings;
+// a carjacking ranking must never read them.
 nMonth.run("TX01", 2025, 1, "TX", "64A", 30);
 nMonth.run("TX01", 2025, 1, "TX", "64B", 10);
 nMonth.run("TX03", 2025, 1, "TX", "64A", 2);
-nMonth.run("TX07", 2025, 1, "TX", "64A", 0);      // recorded zero carjackings
+nMonth.run("TX07", 2025, 1, "TX", "64A", 0);
 // Murders, for the cross-offense counterpart and the period tests. (NIBRS counts are exercised with
 // murders because the contract resolves no unit at all for "shoplifting counts".)
 nMonth.run("TX01", 2025, 1, "TX", "09A", 300);
@@ -237,8 +238,8 @@ const FILLER_PAIRS: { rule: string; supported: string; counterpart: string; sour
   },
   {
     rule: "question-opener", source: "nibrs",
-    supported: "which cities in Texas had the highest rate of carjackings in 2025?",
-    counterpart: "which cities in Texas besides suburbs had the highest rate of carjackings in 2025?",
+    supported: "which cities in Texas had the highest rate of murders in 2025?",
+    counterpart: "which cities in Texas besides suburbs had the highest rate of murders in 2025?",
   },
   {
     rule: "trailing-punctuation", source: "nibrs",
@@ -252,8 +253,8 @@ const FILLER_PAIRS: { rule: string; supported: string; counterpart: string; sour
   },
   {
     rule: "auxiliary", source: "nibrs",
-    supported: "which cities in Texas had the highest rate of carjackings in 2025?",
-    counterpart: "which cities in Texas nearly had the highest rate of carjackings in 2025?",
+    supported: "which cities in Texas had the highest rate of murders in 2025?",
+    counterpart: "which cities in Texas nearly had the highest rate of murders in 2025?",
   },
   {
     rule: "determiner", source: "current",
@@ -262,8 +263,8 @@ const FILLER_PAIRS: { rule: string; supported: string; counterpart: string; sour
   },
   {
     rule: "punctuation", source: "nibrs",
-    supported: "which cities in Texas (min 250k) had the highest rate of carjackings in 2025?",
-    counterpart: "which cities in Texas (excluding suburbs) had the highest rate of carjackings in 2025?",
+    supported: "which cities in Texas (min 250k) had the highest rate of murders in 2025?",
+    counterpart: "which cities in Texas (excluding suburbs) had the highest rate of murders in 2025?",
   },
 ];
 
@@ -511,7 +512,7 @@ check("CHECK 1 — a FAILED clause never reaches the default that would have cov
  */
 const COUNT_FORMS: { ranked: string; clause: string; supported: boolean; note: string }[] = [
   { ranked: "murder", clause: "at least 100 murders", supported: true, note: "direct crime noun" },
-  { ranked: "carjacking", clause: "at least 100 carjackings", supported: true, note: "direct crime noun" },
+  { ranked: "robbery", clause: "at least 100 robberies", supported: true, note: "direct crime noun" },
   { ranked: "motor vehicle theft", clause: "at least 100 motor vehicle thefts", supported: true, note: "multi-word crime noun matched in full" },
   { ranked: "aggravated assault", clause: "at least 100 aggravated assaults", supported: true, note: "a qualifier that IS part of the offense name" },
   { ranked: "shoplifting", clause: "at least 100 shoplifting offenses", supported: true, note: "offense phrase then a generic noun" },
@@ -651,16 +652,20 @@ check("GC-062 executed returns every eligible city, including the recorded zero"
   assert.ok(!names.includes("HARRIS SO"), "not a city agency");
 });
 
-check("GC-063 carries Texas, the 250k floor and BOTH carjacking codes, and delivers its figures", () => {
-  const { plan, rows, names } = run(nibrs, GC063, "nibrs");
+check("GC-063 (carjackings) is declined, never ranked from the human-trafficking codes 64A/64B", () => {
+  // Carjacking hotfix (2026-10-10): carjacking has no NIBRS code (robbery 120 with a stolen vehicle), so a code
+  // ranking cannot answer it. This check used to require 64A/64B here, which pinned the defect.
+  const plan = declined(GC063, "nibrs", "offense-unresolved");
+  assert.ok(!JSON.stringify(plan).includes("64A") && !JSON.stringify(plan).includes("64B"));
+});
+
+check("GC-063's shape with a coded offense carries Texas and the 250k floor, and delivers its figures", () => {
+  const { plan, names } = run(nibrs, GC063.replace("carjackings", "murders"), "nibrs");
   assert.deepEqual(plan.scope, { kind: "state", code: "TX", name: "Texas" });
   assert.deepEqual(plan.eligibility, [{ kind: "population", comparison: ">=", value: 250000 }]);
-  assert.deepEqual(plan.offense, { kind: "nibrs_codes", codes: ["64A", "64B"] });
+  assert.deepEqual(plan.offense, { kind: "nibrs_codes", codes: ["09A"] });
   assert.equal(plan.resultCount, DEFAULT_RESULT_COUNT, "no count was asked for, so the existing default applies");
-  assert.equal(rows.find((r) => r.city === "HOUSTON")!.offenses, 40, "both codes contribute to one figure");
-  assert.equal(rows.find((r) => r.city === "LUBBOCK")!.offenses, 2);
-  assert.equal(rows.find((r) => r.city === "BOUNDARY")!.offenses, 0, "a recorded zero appears");
-  assert.deepEqual(names, ["HOUSTON", "LUBBOCK", "BOUNDARY"], "ordered by rate, highest first");
+  assert.deepEqual(names, ["HOUSTON", "AUSTIN"], "ordered by rate, highest first");
 });
 
 check("GC-039 resolves its period from an OBSERVED cutoff and says the year is partial", () => {
@@ -1026,7 +1031,7 @@ check("contradictory unit contributions on the ranking still decline", () => {
 check("built statements are accepted by the real contract validator and the real plan guard", () => {
   const supported: [string, CityRankingSource][] = [
     [GC062, "nibrs"],
-    [GC063, "nibrs"],
+    [GC063.replace("carjackings", "murders"), "nibrs"],
     ["Rank cities in Texas by shoplifting rate in 2025 with at least 100 shoplifting offenses", "nibrs"],
     ["Bottom 2 cities in Texas by shoplifting rate in 2025", "nibrs"],
     ["Top 10 cities in Texas with fewer than 250000 people by shoplifting rate in 2025", "nibrs"],

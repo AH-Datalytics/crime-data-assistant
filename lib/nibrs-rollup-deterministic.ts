@@ -1,4 +1,4 @@
-import { buildQueryContract } from "./query-contract";
+import { buildQueryContract, hasCodelessFamily } from "./query-contract";
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { DeterministicNibrsQuery } from "./nibrs-deterministic-queries";
 
@@ -16,6 +16,7 @@ export function buildNibrsJuvenileArrestsByRaceQuery(
   if (/\b(?:continuous(?:ly)?|consistent(?:ly)?|city|county|agency|ori)\b/i.test(question)) return null;
 
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || (contract.geography.kind !== "state" && contract.geography.kind !== "national" && contract.geography.kind !== "unknown")) return null;
   const fallback = pastCompleteCalendarYearsRange(5);
   const start = contract.time.startYear ?? fallback.start;
@@ -71,6 +72,7 @@ export function buildNibrsNationalArrestQuery(
   if (/\b(?:race|racial|ethnicity|hispanic|latino|sex|gender|age|juvenile|youth|weapon|rate|per\s*(?:capita|100k|100,?000)|share|percent|monthly|by\s+month)\b/i.test(question)) return null;
 
   const contract = buildQueryContract(question, "nibrs");
+  if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract) return null;
   const explicitlyNational = /\b(?:national(?:ly)?|nationwide|united states|america)\b|\bu\.?s\.?(?:\s|$)/i.test(question);
   const implicitNational = contract.geography.kind === "unknown";
