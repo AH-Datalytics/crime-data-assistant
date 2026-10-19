@@ -122,7 +122,7 @@ import {
 } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
-import { readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity } from "@/lib/historical-national-rape";
+import { readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity, withTypedHistoricalRapeNotes, typedCorrectionState, TYPED_STATE_CHANGED } from "@/lib/historical-national-rape";
 import { OUTCOMES, type QueryLogOutcome, SourceId } from "@/lib/proof-contract";
 import type { QueryContract } from "@/lib/query-contract";
 
@@ -2045,6 +2045,8 @@ export async function POST(req: NextRequest) {
     if (decision.kind === "clarify") return historicalAccountingExit({ parts: [], explanation: decision.explanation }, "question-type", true);
     if (decision.kind === "spec") {
       const typeFamily = `historical-question-type:${decision.spec.type}`;
+      // The rape-correction state of each typed statement, read in that statement's own snapshot (plan 2026-10-18 r2 §1).
+      const statementStates: boolean[] = [];
       const compiled = compileHistoricalSpec(decision.spec, {
         db: typeDb,
         // A typed statement is built from the issued spec, whose every part was checked by value. The structural guard
@@ -2055,12 +2057,15 @@ export async function POST(req: NextRequest) {
         execute: (typedStatement) => {
           const tables = validateTablesForTab(typedStatement, "historical", typeDb);
           if (!tables.ok) throw new Error(`an owned Historical statement read a table outside the Historical allowlist (${tables.unknown.join(", ")})`);
-          const db = typeDb;
-          return executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(typedStatement), 30000);
+          const read = executeWithCorrectionState(typeDb, typedStatement, 30000);
+          statementStates.push(read.corrected);
+          return read.rows;
         },
       });
       if (compiled.kind === "decline") return historicalAccountingExit({ parts: [], explanation: compiled.explanation }, "question-type-compile");
-      const typedExplanation = decision.explainLimitation ? `${compiled.explanation} ${decision.explainLimitation}` : compiled.explanation;
+      const typedState = typedCorrectionState(statementStates);
+      if (typedState === "changed") return historicalAccountingExit({ parts: [], explanation: TYPED_STATE_CHANGED }, "question-type-compile");
+      const typedExplanation = withTypedHistoricalRapeNotes(decision.explainLimitation ? `${compiled.explanation} ${decision.explainLimitation}` : compiled.explanation, compiled.deliveredSeries, typedState);
       const ms = Date.now() - totalStart;
       const hasValue = compiled.rows.some((row) => ["value", "change", "percent_change"].some((c) => row[c] !== null && row[c] !== undefined));
       const typedProof = finalizeExit({

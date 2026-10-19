@@ -14,6 +14,7 @@
  *   staffing              historical_staffing, agency only; no "Employees*" substitution.
  */
 import type Database from "better-sqlite3";
+import type { TypedDeliveredSeries } from "./historical-national-rape";
 import { findConsolidatedAgency } from "./agency-consolidations";
 import { historicalCountyAgencyPredicate } from "./historical-county-identity";
 import { STATE_NAME_TO_ABBR } from "./state-population";
@@ -34,6 +35,8 @@ export type CompiledAnswer = {
   /** Requested and returned entity labels, for the proof layer. */
   requestedEntities: string[];
   returnedEntities: string[];
+  /** One entry per delivered series, with the years whose delivered value is not null (the rape-correction notes). */
+  deliveredSeries: TypedDeliveredSeries[];
 };
 export type CompileResult = CompiledAnswer | { kind: "decline"; explanation: string };
 
@@ -289,6 +292,7 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
   const sqls: string[] = [];
   const notes: string[] = [];
   const returned: string[] = [];
+  const delivered: TypedDeliveredSeries[] = [];
   let anyYears = false;
   let periodWords = "";
   for (const t of targets) {
@@ -321,6 +325,8 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
         const missing = cells.filter((x) => x.c.value === null).map((x) => x.y);
         const value = valued.length ? valued.reduce((a, x) => a + (x.c.value as number), 0) : null;
         const period = `${Math.min(...resolved.years)}-${Math.max(...resolved.years)}`;
+        // A period total's series years are the years summed into it (plan r2 §2).
+        delivered.push({ source: t.source, placeKind: t.place.kind, measure: m, statistic: spec.statistic, years: valued.map((x) => x.y) });
         rows.push({ period, place: t.label, measure: m, statistic: spec.statistic, value, years_with_reports: valued.length, note: missing.length ? `no report for ${yearsText(missing).replace(/–/g, "-")}` : null });
         if (valued.length) gotValue = true;
         if (missing.length) notes.push(valued.length
@@ -329,6 +335,7 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
         continue;
       }
       const byNote = new Map<string, number[]>();
+      delivered.push({ source: t.source, placeKind: t.place.kind, measure: m, statistic: spec.statistic, years: cells.filter((x) => x.c.value !== null).map((x) => x.y) });
       for (const { y, c } of cells) {
         const rounded = spec.statistic === "count" ? c.value : r1(c.value);
         rows.push({ year: y, place: t.label, measure: m, statistic: spec.statistic, value: rounded, note: c.note });
@@ -359,7 +366,7 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
     type: "line", xAxis: "year", yAxis: ["value"], title,
     yAxisLabel: spec.statistic === "count" ? "Count" : STAT_WORD[spec.statistic],
   } as unknown as ChartConfig;
-  return { kind: "answer", sql: sqls.join(";\n"), columns, rows, title, explanation, chartConfig, requestedEntities: targets.map((t) => t.label), returnedEntities: returned };
+  return { kind: "answer", sql: sqls.join(";\n"), columns, rows, title, explanation, chartConfig, requestedEntities: targets.map((t) => t.label), returnedEntities: returned, deliveredSeries: delivered };
 }
 
 function statesInTable(deps: CompileDeps): string[] {
@@ -460,7 +467,9 @@ function compileRank(spec: RankSpec, deps: CompileDeps): CompileResult {
   if (rows.length === 0) return { kind: "decline", explanation: `No ${entityWord}${scopeWord} have a ${what} for ${year}${minWord}. ${excluded}`.trim() };
   const title = spec.rank ? `${spec.rank.dir === "top" ? "Top" : "Bottom"} ${spec.rank.n} ${capital(entityWord)}${scopeWord} by ${capital(what)}, ${year}` : `${capital(what)} by ${capital(entityWord.replace(/ies$/, "y").replace(/s$/, ""))}${scopeWord}, ${year}`;
   const chartConfig = { type: "bar", xAxis: "place", yAxis: ["value"], title } as unknown as ChartConfig;
-  return { kind: "answer", sql, columns: ["rank", "place", "year", "measure", "statistic", "value", "population"], rows, title, explanation, chartConfig, requestedEntities: [], returnedEntities: rows.map((r) => r.place) };
+  // One series per delivered row, with that row's own place kind: a state row is never national, whatever the scope.
+  const deliveredSeries: TypedDeliveredSeries[] = chosen.map((e) => ({ source, placeKind: spec.entity === "state" ? "state" : "agency", measure: spec.measure, statistic: spec.statistic, years: e.value === null ? [] : [year] }));
+  return { kind: "answer", sql, columns: ["rank", "place", "year", "measure", "statistic", "value", "population"], rows, title, explanation, chartConfig, requestedEntities: [], returnedEntities: rows.map((r) => r.place), deliveredSeries };
 }
 
 function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
@@ -481,11 +490,13 @@ function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
   const sqls: string[] = [];
   const notes: string[] = [];
   const returned: string[] = [];
+  const delivered: TypedDeliveredSeries[] = [];
   for (const t of targets) {
     const reader = t.reader([spec.earlier, later], [spec.measure]);
     sqls.push(reader.sql);
     const e = reader.cell(spec.earlier, spec.measure);
     const l = reader.cell(later, spec.measure);
+    delivered.push({ source: t.source, placeKind: t.place.kind, measure: spec.measure, statistic: spec.base, years: [e.value === null ? null : spec.earlier, l.value === null ? null : later].filter((y): y is number => y !== null) });
     let change: number | null = null, pct: number | null = null, note: string | null = null;
     if (e.value === null || l.value === null) {
       note = [e.value === null ? `${e.note} for ${spec.earlier}` : null, l.value === null ? `${l.note} for ${later}` : null].filter(Boolean).join("; ");
@@ -503,7 +514,7 @@ function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
   const anchorWord = spec.later === "anchor" ? ` ${later} is the latest year in this data.` : "";
   const explanation = `Change in ${what} from ${spec.earlier} to ${later} for ${targets.map((t) => t.label).join(", ")} (${[...new Set(targets.map((t) => sourceWord(t.source)))].join(" and ")}). Percent change uses ${spec.earlier} as the base.${anchorWord} ${notes.join(" ")}`.replace(/\s+/g, " ").trim();
   const title = `Change in ${capital(what)}, ${spec.earlier} to ${later}`;
-  return { kind: "answer", sql: sqls.join(";\n"), columns: ["place", "measure", "statistic", "earlier_year", "earlier_value", "later_year", "later_value", "change", "percent_change", "note"], rows, title, explanation, chartConfig: null, requestedEntities: targets.map((t) => t.label), returnedEntities: returned };
+  return { kind: "answer", sql: sqls.join(";\n"), columns: ["place", "measure", "statistic", "earlier_year", "earlier_value", "later_year", "later_value", "change", "percent_change", "note"], rows, title, explanation, chartConfig: null, requestedEntities: targets.map((t) => t.label), returnedEntities: returned, deliveredSeries: delivered };
 }
 
 function capital(s: string): string { return s ? s[0].toUpperCase() + s.slice(1) : s; }
