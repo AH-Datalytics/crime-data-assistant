@@ -246,60 +246,7 @@ export function buildCurrentYoyComparisonPlan(question: string): CurrentYoyCompa
    * answer-measure guard. The two evidence reads project counts and identifiers and are not
    * answers; they are accounted for by name in the route-placement suite.
    */
-  const yearList = sqlNumberList(years);
-  const offenseListSql = sqlStringList(offense.offenses);
-  const withClause = `WITH req AS (
-  SELECT am.year AS year, am.month AS month
-  FROM agency_monthly am
-  JOIN sample_agencies sa ON sa.ori = am.ori
-  WHERE am.year IN (${yearList})
-  GROUP BY am.year, am.month
-), need AS (
-  SELECT COUNT(*) * ${offense.offenses.length} AS n FROM req
-), supplied AS (
-  SELECT am.ori AS ori
-  FROM agency_monthly am
-  JOIN sample_agencies sa ON sa.ori = am.ori
-  JOIN req r ON r.year = am.year AND r.month = am.month
-  WHERE am.offense IN (${offenseListSql})
-    AND am.count IS NOT NULL
-  GROUP BY am.ori, am.year, am.month, am.offense
-), eligible AS (
-  SELECT ori FROM supplied GROUP BY ori HAVING COUNT(*) = (SELECT n FROM need)
-)`;
-
-  // Evidence read 1: the required periods, established without reference to the requested offences.
-  const periodSql = `${withClause}
-SELECT year, month FROM req ORDER BY year, month`;
-
-  /*
-   * Evidence read 2: the STARTING SAMPLE SIZE, read independently of whether anything qualifies.
-   *
-   * This used to ride along on the membership rows as `(SELECT COUNT(...)) AS sample_size`. When no
-   * agency qualified, `eligible` returned no rows, so the sample size vanished with them and the
-   * answer reported a starting sample of zero and zero exclusions — false accounting of the source
-   * on the exact path where the reader most needs the truth. It is its own statement now, always one
-   * row, and deliberately carries no agency identifier so it can never be miscounted as a member.
-   */
-  const sampleSql = `SELECT COUNT(DISTINCT ori) AS sample_size FROM sample_agencies`;
-
-  // Evidence read 3: group membership. Identifiers only; metadata is kept out of these rows.
-  const membershipSql = `${withClause}
-SELECT e.ori AS ori FROM eligible e ORDER BY e.ori`;
-
-  // The answer read: group-only totals, from the same snapshot as the membership that defined them.
-  const sql = `${withClause}
-SELECT am.year AS year,
-    am.month AS month,
-    am.offense AS offense,
-    SUM(am.count) AS offense_count
-  FROM agency_monthly am
-  JOIN eligible e ON e.ori = am.ori
-  JOIN req r ON r.year = am.year AND r.month = am.month
-  WHERE am.offense IN (${offenseListSql})
-    AND am.count IS NOT NULL
-  GROUP BY am.year, am.month, am.offense
-  ORDER BY am.year, am.month, am.offense`;
+  const { periodSql, sampleSql, membershipSql, sql } = currentYoyGroupStatements({ years }, offense.offenses, null);
 
   const label = offense.label;
   const titleLabel = label.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
@@ -321,6 +268,83 @@ SELECT am.year AS year,
     chartMeta: { source: "RTCI", agencyCount: 0, population: null },
     asksWholeChain: /\b(?:every|each)\s+year\b|\byear\s+(?:after|on)\s+year\b/i.test(question),
   };
+}
+
+/**
+ * The fixed comparison group's four statements, shared by this path and the stage 3a typed change (C5) for a state or the
+ * nation (plan 2026-10-10-request-accounting-stage3a-current.md r1.2). One `WITH` prefix scopes the required periods,
+ * the membership and the totals together, so the three reads still describe the same scope and run in one snapshot.
+ *
+ *   - `periods`: whole years (this path) or the explicit months a request names (C5: "January to May 2025 vs ...").
+ *   - `state`: null for the national sample (this path), or one state's sample agencies.
+ *
+ * With `{ years }` and no state the statements are, character for character, the ones this path has always issued.
+ */
+export function currentYoyGroupStatements(
+  periods: { years: number[] } | { months: [number, number][] },
+  offenses: string[],
+  state: string | null,
+): { periodSql: string; sampleSql: string; membershipSql: string; sql: string } {
+  const periodFilter = "years" in periods
+    ? `am.year IN (${sqlNumberList(periods.years)})`
+    : `(am.year * 100 + am.month) IN (${sqlNumberList(periods.months.map(([y, m]) => y * 100 + m))})`;
+  const stateFilter = state === null ? "" : `\n    AND sa.state = ${sqlStringList([state])}`;
+  const offenseListSql = sqlStringList(offenses);
+  const withClause = `WITH req AS (
+  SELECT am.year AS year, am.month AS month
+  FROM agency_monthly am
+  JOIN sample_agencies sa ON sa.ori = am.ori
+  WHERE ${periodFilter}${stateFilter}
+  GROUP BY am.year, am.month
+), need AS (
+  SELECT COUNT(*) * ${offenses.length} AS n FROM req
+), supplied AS (
+  SELECT am.ori AS ori
+  FROM agency_monthly am
+  JOIN sample_agencies sa ON sa.ori = am.ori
+  JOIN req r ON r.year = am.year AND r.month = am.month
+  WHERE am.offense IN (${offenseListSql})
+    AND am.count IS NOT NULL${stateFilter}
+  GROUP BY am.ori, am.year, am.month, am.offense
+), eligible AS (
+  SELECT ori FROM supplied GROUP BY ori HAVING COUNT(*) = (SELECT n FROM need)
+)`;
+
+  // Evidence read 1: the required periods, established without reference to the requested offences.
+  const periodSql = `${withClause}
+SELECT year, month FROM req ORDER BY year, month`;
+
+  /*
+   * Evidence read 2: the STARTING SAMPLE SIZE, read independently of whether anything qualifies.
+   *
+   * This used to ride along on the membership rows as `(SELECT COUNT(...)) AS sample_size`. When no
+   * agency qualified, `eligible` returned no rows, so the sample size vanished with them and the
+   * answer reported a starting sample of zero and zero exclusions — false accounting of the source
+   * on the exact path where the reader most needs the truth. It is its own statement now, always one
+   * row, and deliberately carries no agency identifier so it can never be miscounted as a member.
+   */
+  const sampleSql = state === null
+    ? `SELECT COUNT(DISTINCT ori) AS sample_size FROM sample_agencies`
+    : `SELECT COUNT(DISTINCT ori) AS sample_size FROM sample_agencies WHERE state = ${sqlStringList([state])}`;
+
+  // Evidence read 3: group membership. Identifiers only; metadata is kept out of these rows.
+  const membershipSql = `${withClause}
+SELECT e.ori AS ori FROM eligible e ORDER BY e.ori`;
+
+  // The answer read: group-only totals, from the same snapshot as the membership that defined them.
+  const sql = `${withClause}
+SELECT am.year AS year,
+    am.month AS month,
+    am.offense AS offense,
+    SUM(am.count) AS offense_count
+  FROM agency_monthly am
+  JOIN eligible e ON e.ori = am.ori
+  JOIN req r ON r.year = am.year AND r.month = am.month
+  WHERE am.offense IN (${offenseListSql})
+    AND am.count IS NOT NULL
+  GROUP BY am.year, am.month, am.offense
+  ORDER BY am.year, am.month, am.offense`;
+  return { periodSql, sampleSql, membershipSql, sql };
 }
 
 /**

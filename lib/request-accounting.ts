@@ -309,6 +309,18 @@ export function recordContext(ledger: RequestLedger): void {
  * After the source's recognizers: a single filler word standing between two recorded parts is
  * `context`. A filler word at either edge, or next to residue, stays residue.
  */
+/**
+ * Stage 3b round 2 (plan r1.3 / r2 R2.7): "broken down" immediately before "by" restricts nothing -- "robberies broken down
+ * by month" asks for "robberies by month" -- so it is recorded as context. Every tab's accounting calls this.
+ */
+export function recordBrokenDown(ledger: RequestLedger): void {
+  const m = /\bbroken\s+down(?=\s+by\b)/i.exec(ledger.question);
+  if (!m) return;
+  const span: Span = [m.index, m.index + m[0].length];
+  if (ledger.parts.some((p) => p.span[0] < span[1] && span[0] < p.span[1])) return;
+  ledger.record({ concept: "filler", span, rule: "broken-down", state: "context" });
+}
+
 export function recordBetweenFiller(ledger: RequestLedger): void {
   const q = ledger.question;
   for (const piece of ledger.residue()) {

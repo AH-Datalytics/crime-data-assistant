@@ -170,6 +170,8 @@ const MODEL_SQL_VARIABLES = new Set(["sql", "retrySql", "rollingSql", "fallbackS
 // typedStatement: request accounting stage 2a -- a Historical statement built by lib/historical-question-compiler.ts from an
 // issued H1-H6 spec (every request part checked by value), never from model text; table-allowlisted before it runs.
 const APPLICATION_BUILT_LOOKUPS = new Set(["oriQuery", "cdeQuery", "typedStatement"]);
+// typedStatements: request accounting stage 3a r2 -- the Current typed compiler's fixed-group statements run in one snapshot.
+const APPLICATION_BUILT_STATEMENT_ARRAYS = new Set(["typedStatements"]);
 
 /**
  * Already-prepared statements passed to an execution helper by variable.
@@ -214,6 +216,11 @@ for (const route of ROUTES) {
          */
         const call = callText(lines, index);
         const body = stripLineComments(call.slice(call.indexOf("(")));
+        // Request accounting stage 3a r2 (F2): the Current typed compiler's fixed-group statements, built by
+        // lib/current-question-compiler.ts from the shared selection (currentYoyGroupStatements, the same statements the
+        // guarded year-over-year plan runs), passed as one application-built array so they share one snapshot.
+        const passedArray = body.match(/^\(\s*\w+\s*,\s*(\w+)\s*,/);
+        if (passedArray && APPLICATION_BUILT_STATEMENT_ARRAYS.has(passedArray[1])) return;
         const arrayMatch = body.match(/\[([^\]]*)\]/);
         if (!arrayMatch) {
           unaccounted.push(`${route}:${index + 1} multi-statement call with no statement array found`);

@@ -197,7 +197,10 @@ export function detectFollowupTransform(question: string, history: PromptHistory
 
   // "what about <place>?" REPLACES the prior geography — same question, new
   // place (MS06). Users who want both say "compare to <place>", handled below.
-  const replacementTarget = question.match(/^\s*(?:what|how)\s+about\s+(.+?)\s*\??\s*$/i);
+  // "now do it for <place>", "do the same for <place>", "same for <place>", "run it for <place>" ask the same thing
+  // (request accounting 2b, owner decision 2026-10-09: rebuilt rather than declined).
+  const replacementTarget = question.match(/^\s*(?:what|how)\s+about\s+(.+?)\s*\??\s*$/i)
+    ?? question.match(/^\s*(?:(?:ok(?:ay)?|now|and|then)[,\s]+)*(?:(?:do|run|show|repeat|try)\s+(?:it|this|that|the\s+same(?:\s+(?:thing|question|query))?)|(?:the\s+)?same(?:\s+(?:thing|question|query))?)\s+for\s+(.+?)\s*[.?!]?\s*$/i);
   if (replacementTarget && resolveGeoPlaces(replacementTarget[1]).mentions.length > 0 && hasPriorSql(history)) {
     const priorQuestion = latestPriorUserQuestion(history);
     if (priorQuestion) {

@@ -13,6 +13,7 @@
  *   clearance             historical_agency_clearance (agency) / national_clearance_rate (nation).
  *   staffing              historical_staffing, agency only; no "Employees*" substitution.
  */
+import { recordWhyFacts } from "./why-scope";
 import type Database from "better-sqlite3";
 import type { TypedDeliveredSeries } from "./historical-national-rape";
 import { findConsolidatedAgency } from "./agency-consolidations";
@@ -252,6 +253,9 @@ function seriesTarget(deps: CompileDeps, spec: { family: SeriesSpec["family"]; s
     const reader = sid === "agency_crime" ? (ys: number[], ms: Measure[]) => agencyCrimeReader(deps, agency.ori, ys, spec.statistic, ms)
       : sid === "agency_clearance" ? (ys: number[], ms: Measure[]) => clearanceReader(deps, { kind: "agency", ori: agency.ori }, ys, ms)
         : (ys: number[], ms: Measure[]) => staffingReader(deps, agency.ori, ys, spec.statistic, ms);
+    // Stage 3b r2 (R2.4'): an agency crime rate is that agency's count for a year divided by its population for that year
+    // (agencyCrimeReader's SQL: count * per / population); recorded with the place it names.
+    if (sid === "agency_crime" && spec.statistic !== "count") recordWhyFacts({ kind: "rate", method: "historical-annual", per: String(spec.statistic).includes("1000") && !String(spec.statistic).includes("100k") ? 1000 : 100000, places: [agency.label] });
     return { place, label: agency.label, source: sid, reader };
   }
   const stateName = place.kind === "national" ? "United States" : place.name;

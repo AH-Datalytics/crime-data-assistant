@@ -1,3 +1,4 @@
+import { isInnerRun } from "./why-scope";
 import Database from "better-sqlite3";
 import path from "path";
 import os from "os";
@@ -284,6 +285,8 @@ export function logQuery(
    */
   outcomeFields: OutcomeLogFields = EMPTY_OUTCOME_LOG_FIELDS
 ): number | null {
+  // Stage 3b (r1.4 R4.2): an inner run of a "why" turn writes no log row; the outer turn logs once.
+  if (isInnerRun()) return null;
   const db = getWriteDb();
   if (db) {
     try {

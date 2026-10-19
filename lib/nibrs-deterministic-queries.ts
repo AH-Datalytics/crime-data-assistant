@@ -19,6 +19,8 @@ import { fetchNibrsPeerCandidates, type PeerCandidateSource } from "./peer-adapt
 import { getNibrsDb } from "./nibrs-db";
 import type { EstablishedIdentity } from "./answer-evidence";
 import type { CompletenessPlan } from "./city-ranking-completeness";
+import { appliedFromContract, placesFromGeographies, type NibrsApplied } from "./nibrs-legacy-binding";
+import { recordWhyFacts } from "./why-scope";
 
 export interface DeterministicNibrsQuery {
   sql: string;
@@ -59,6 +61,11 @@ export interface DeterministicNibrsQuery {
   guardrail: string;
   /** City rankings only: the shared S1 completeness plan (lib/city-ranking-completeness.ts). */
   completeness?: CompletenessPlan;
+  /**
+   * Request accounting stage 2b (plan §5): the values this builder used to build its statement, from its own variables.
+   * The route keeps the plan only when these account for every part of the request (lib/nibrs-legacy-binding.ts).
+   */
+  applied?: NibrsApplied;
 }
 
 function sqlString(value: string): string {
@@ -128,6 +135,10 @@ ORDER BY ${dimensions.join(", ")}`,
     xAxisLabel: monthly ? "Month" : "Year",
     yAxisLabel: "Incidents",
     guardrail: "deterministic-nibrs-juvenile-offender-incidents",
+    applied: appliedFromContract(contract, years, {
+      codeGroups: [knownScopes[offenseScope] ?? [offenseScope]],
+      units: ["incidents", "offenders"], statistic: "count", grains: monthly ? ["month"] : ["year"], filters: ["age:Under 18"],
+    }),
   };
 }
 
@@ -149,6 +160,8 @@ interface YearScope {
   periodText: string;
   startYear: number | null;
   endYear: number | null;
+  /** Stage 2b: the period was the builder's default, not a stated period (applied as "no period part"). */
+  defaulted?: boolean;
 }
 
 function allAvailableYearsRequested(question: string): boolean {
@@ -189,7 +202,7 @@ function yearScope(column: string, question: string): YearScope {
     };
   }
   if (allAvailableYearsRequested(question)) {
-    return { predicate: "1 = 1", periodText: " over all available years", startYear: null, endYear: null };
+    return { predicate: "1 = 1", periodText: " over all available years", startYear: null, endYear: null, defaulted: true };
   }
 
   const fallback = pastCompleteCalendarYearsRange(5);
@@ -198,6 +211,7 @@ function yearScope(column: string, question: string): YearScope {
     periodText: " for the default last five complete calendar years",
     startYear: fallback.start,
     endYear: fallback.end,
+    defaulted: true,
   };
 }
 
@@ -399,6 +413,9 @@ LIMIT 1000`.trim();
     xAxisLabel: "Clearance type",
     yAxisLabel: "Offenses",
     guardrail: "deterministic-nibrs-clearance-type-breakdown",
+    applied: appliedFromContract(contract, years, {
+      clearance: true, units: ["offenses"], statistic: "count", breakdowns: ["clearance-type"], grains: ["year"],
+    }),
   };
 }
 
@@ -475,6 +492,11 @@ LIMIT 1000`.trim();
     xAxisLabel: "Year",
     yAxisLabel: "Clearance rate (%)",
     guardrail: "deterministic-nibrs-clearance-method",
+    // Both methods are shown side by side: "by arrest" and "exceptional means" are its two columns.
+    applied: appliedFromContract(contract, years, {
+      clearance: true, units: ["offenses"], statistic: "count", breakdowns: ["clearance-method"],
+      filters: ["clearance:arrest", "clearance:exceptional"], grains: ["year"],
+    }),
   };
 }
 
@@ -738,6 +760,12 @@ LIMIT 1000`;
     xAxisLabel: "Year",
     yAxisLabel: "Clearance rate (%)",
     guardrail: "deterministic-nibrs-comparable-agency-clearance",   // literal: the taxonomy enumerates families by it (= PEER_COMPARISON_GUARDRAIL)
+    applied: appliedFromContract(contract, {
+      startYear: resolutionPlan.startYear, endYear: resolutionPlan.endYear, defaulted: contract.time.startYear === null,
+    }, {
+      operations: ["peer"], peerCount, clearance: true, statistic: "clearance_rate", units: ["offenses"], grains: ["year"], versus: "any",
+      ...(methodBreakdown ? { breakdowns: ["clearance-method"], filters: ["clearance:arrest", "clearance:exceptional"] } : {}),
+    }),
   };
 }
 
@@ -855,6 +883,9 @@ LIMIT 1000`.trim()
     xAxisLabel: monthly ? "Year / month" : "Year",
     yAxisLabel: label.charAt(0).toUpperCase() + label.slice(1),
     guardrail: "deterministic-nibrs-local-city-offense-count",
+    applied: appliedFromContract(contract, years, {
+      units: [usesPersonTable ? "victims" : "offenses"], statistic: "count", grains: monthly ? ["month"] : ["year"],
+    }),
   };
 }
 /**
@@ -1116,6 +1147,11 @@ export function buildNibrsLocalDemographicQuery(
     xAxisLabel: annual ? "Year and " + dimensionLabel : dimensionLabel.charAt(0).toUpperCase() + dimensionLabel.slice(1),
     yAxisLabel: isShare ? "Share (%)" : config.label.charAt(0).toUpperCase() + config.label.slice(1),
     guardrail: isShare ? "deterministic-nibrs-local-demographic-share" : "deterministic-nibrs-local-demographic-count",
+    applied: appliedFromContract(contract, years, {
+      units: [{ victim: "victims", offender: "offenders", arrestee: "arrests" }[role]],
+      statistic: isShare ? "share" : "count", share: isShare,
+      breakdowns: [dimension === "age_group" ? "age" : dimension], grains: annual ? ["year"] : [],
+    }),
   };
 }
 
@@ -1233,6 +1269,8 @@ function buildOwnedMultiAgencyOffenderAgeQuery(
     xAxisLabel: "Age group",
     yAxisLabel: "Offenders",
     guardrail: "deterministic-nibrs-local-demographic-count",
+    // Every member is a place this statement reads (one column each).
+    applied: appliedFromContract(contract, years, { places: placesFromGeographies(contract.geographies), units: ["offenders"], statistic: "count", breakdowns: ["age"], versus: "places" }),
     // Carried, not recoverable from the column names: see `memberColumns` on the type.
     memberColumns: series.map((item) => ({
       column: item.alias, placeKey: item.placeKey, contractIndex: item.contractIndex, placeLabel: item.placeLabel,
@@ -1448,6 +1486,8 @@ export function buildNibrsStructuredLocalTrendQuery(
 
   const places = resolvedTargets.map((target) => target.label).join(" and ");
   const offenseLabels = resolvedOffenses.map((offense) => offense.label.toLowerCase()).join(", ");
+  // Stage 3b r3 (R3.2'): each value is 100000 * the agency's count / its population for that year (place_reporting).
+  if (isRate) recordWhyFacts({ kind: "rate", method: "nibrs-agency-annual", per: 100000, places: resolvedTargets.map((target) => target.label) });
   return {
     sql,
     title: "NIBRS offense " + (isRate ? "rate " : "") + "trends for " + places,
@@ -1467,6 +1507,12 @@ export function buildNibrsStructuredLocalTrendQuery(
     xAxisLabel: "Year",
     yAxisLabel: isRate ? "Rate per 100,000" : "Reported count",
     guardrail: isRate ? "deterministic-nibrs-structured-local-rate" : "deterministic-nibrs-structured-local-trend",
+    // Each offense in its own unit (structuredOffenseSelect): person crimes by victim, the rest by offense.
+    applied: appliedFromContract(contract, years, {
+      places: placesFromGeographies(targetGeographies.map(({ geography }) => geography)),
+      units: [...new Set(contract.metric.offenses.map((o) => (o.codes.every((c) => PERSON_COUNT_CODES.has(c)) ? "victims" : "offenses")))],
+      statistic: isRate ? "rate" : "count", grains: ["year"], versus: "places",
+    }),
     // Carried, not recoverable from the column names: see `memberColumns` on the type.
     memberColumns: series.map((item) => ({
       column: item.alias, placeKey: item.placeKey, contractIndex: item.contractIndex, placeLabel: item.placeLabel,
@@ -1475,6 +1521,24 @@ export function buildNibrsStructuredLocalTrendQuery(
   };
 }
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/**
+ * Stage 2b r2.2 (Jeff's decision on Codex probe review-4): a by-year local demographic answer names each requested
+ * year that has no rows, instead of skipping it silently. That path shows a past year only when the agency reported
+ * all 12 months, so an absent year has two possible reasons, and both are stated. Rows are untouched; an answer with
+ * rows in every requested year gets no note.
+ */
+export function demographicMissingYearsNote(query: Pick<DeterministicNibrsQuery, "guardrail" | "applied" | "title">, rows: Record<string, unknown>[]): string | null {
+  if (!/^deterministic-nibrs-local-demographic-(?:count|share)$/.test(query.guardrail)) return null;
+  const years = query.applied?.years;
+  if (!years || !query.applied?.grains?.includes("year") || years.end <= years.start) return null;
+  const present = new Set(rows.map((r) => Number(r.year)).filter((y) => Number.isFinite(y)));
+  const missing: number[] = [];
+  for (let y = years.start; y <= years.end; y += 1) if (!present.has(y)) missing.push(y);
+  if (!missing.length) return null;
+  const list = missing.length === 1 ? String(missing[0]) : `${missing.slice(0, -1).join(", ")} or ${missing[missing.length - 1]}`;
+  return `There are no rows for ${list}: either none were recorded that year, or the agency didn't report all 12 months (past years are shown only when complete).`;
+}
 
 /**
  * COVER batch (Codex :34982): for each blank rate in a structured local rate answer, say why it is blank using only
@@ -1584,6 +1648,14 @@ LIMIT 1000`.trim();
     xAxisLabel: "Year",
     yAxisLabel: "Domestic violence share (%)",
     guardrail: "deterministic-nibrs-dv-assault-share",
+    // Numerator and denominator from different tables (r1.1 R3: preserved), bound by value: aggravated-assault victims,
+    // the domestic-violence circumstance, a share, the state or nation, the year scope.
+    applied: (() => {
+      const c = buildQueryContract(question, "nibrs");
+      return c ? appliedFromContract(c, years, {
+        codeGroups: [["13A"]], families: ["domestic_violence"], units: ["victims"], statistic: "share", share: true, grains: ["year"],
+      }) : undefined;
+    })(),
   };
 }
 
@@ -1809,6 +1881,9 @@ export function buildNibrsAnnualClearanceQuery(
     xAxisLabel: "Year",
     yAxisLabel: offense.label,
     guardrail: "nibrs-annual-clearance",
+    applied: appliedFromContract(contract, { startYear, endYear }, {
+      clearance: true, statistic: "clearance_rate", units: ["offenses"], grains: ["year"],
+    }),
   };
 }
 

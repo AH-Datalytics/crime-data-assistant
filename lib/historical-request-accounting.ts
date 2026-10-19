@@ -11,12 +11,12 @@
  * ORDER MATTERS: the ledger refuses overlapping claims, so specific rules are recorded before general ones
  * ("motor vehicle theft" before "theft", "sexual assault" before "assault", "clearance rate" before "rate").
  */
-import { RequestLedger, recordContext, recordBetweenFiller, refusalSentences, couldNotInterpret, type Part, type Span } from "./request-accounting";
+import { RequestLedger, recordContext, recordBetweenFiller, refusalSentences, couldNotInterpret, type Part, type Span, recordBrokenDown } from "./request-accounting";
 import { resolveGeoPlaces } from "./geo-place-resolver";
 import { STATE_NAME_TO_ABBR } from "./state-population";
 import { detectCompletenessQuestion } from "./completeness-intent";
 
-type Rule = {
+export type Rule = {
   concept: string;
   pattern: RegExp;
   value?: (m: RegExpExecArray) => string;
@@ -199,7 +199,7 @@ export function thresholdValue(text: string): string {
   return `${op}|${digits.replace(/^0+(?=\d)/, "")}${mult}`;
 }
 
-function recordAll(ledger: RequestLedger, rule: Rule): void {
+export function recordAll(ledger: RequestLedger, rule: Rule): void {
   const pattern = new RegExp(rule.pattern.source, rule.pattern.flags.includes("g") ? rule.pattern.flags : rule.pattern.flags + "g");
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(ledger.question))) {
@@ -227,7 +227,7 @@ const CITY_OF = /(?:\bthe\s+)?\bcity\s+of\s+$/i;
 const DC = /\bWashington,?\s+D\.?\s?C\b|\bD\.C\b|\bDistrict\s+of\s+Columbia\b/gi;
 const US_BEFORE_ENTITY = /\b(?:the\s+)?us\b(?=\s+(?:cities|states|counties|agencies|police|towns))/gi;
 
-function recordPlaces(ledger: RequestLedger): void {
+export function recordPlaces(ledger: RequestLedger): void {
   const q0 = ledger.question;
   // Washington, D.C. is the city agency (as the accepted change paths read it); "District of Columbia" alone is the state row.
   let m: RegExpExecArray | null;
@@ -307,6 +307,7 @@ function recordHistoricalFiller(ledger: RequestLedger): void {
  */
 export function accountHistoricalRequest(question: string): RequestLedger {
   const ledger = new RequestLedger(question);
+  recordBrokenDown(ledger); // Stage 3b r2 (R2.7)
   recordContext(ledger);
   // Typed agency codes first, then places (a place name is the most specific claim: "White Plains" is a place before
   // "white" is a demographic word), then every other rule in its written order.

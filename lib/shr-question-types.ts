@@ -22,6 +22,7 @@ import { resolveShrCountyScope, type ShrScopeBinding, type ShrCountyScopeResolut
 import { STATE_NAME_TO_ABBR } from "./state-population";
 import type { RequestLedger, Part } from "./request-accounting";
 import { refusalSentences } from "./request-accounting";
+import { recordWhyFacts } from "./why-scope";
 import {
   cachedYearClassAvailability, unresolvedInScopes, unresolvedDisclosure, unresolvedLimitation,
   YEAR_CLASS_UNAVAILABLE_TEXT, SHR_YEAR_CLASS_TABLE, type ClassScope,
@@ -1429,6 +1430,8 @@ export function shrQuestionOutcome(db: Database.Database, compiled: CompiledShrQ
     if (rows.some((r) => r[compiled.valueColumn] == null && (r.shr_records === "no known ages" || (r.shr_records === undefined && Number(r.victims_with_known_age) === 0)))) out.push("Where no victim has a recorded age, there is no age figure.");
   }
   if (spec.type === "agency-rate") {
+    // Stage 3b r3 (R3.2'): victims / the one distinct positive population on the agency's own incident rows that year.
+    recordWhyFacts({ kind: "rate", method: "shr-agency-annual", per: 100000, places: [...new Set(rows.map((r) => String(r.place ?? "")).filter(Boolean))] });
     const noPop = rows.filter((r) => r.population_status === "no population recorded").map((r) => r.year);
     const conflict = rows.filter((r) => r.population_status === "conflicting population recorded").map((r) => r.year);
     if (noPop.length) out.push(`No population is recorded for ${noPop.join(", ")}, so ${noPop.length === 1 ? "that year has" : "those years have"} no rate. A year with no homicide reports carries no population in this data, so it can't be given a rate of zero.`);

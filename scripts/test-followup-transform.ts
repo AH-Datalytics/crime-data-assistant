@@ -60,6 +60,20 @@ const shrFatalShootingTrendHistory: PromptHistoryMessage[] = [
 }
 
 {
+  // "now do it for <place>" and its siblings are the same replacement (request accounting 2b, owner decision 2026-10-09).
+  for (const q of ["now do it for Dallas", "Do the same for Dallas.", "same for Dallas?", "ok, run it for Dallas", "now do the same thing for Dallas"]) {
+    const transform = detectFollowupTransform(q, currentMonthlyTrendHistory);
+    assert(transform, `${q} should replace the geography`);
+    assert.equal(transform.name, "replace_geography");
+    assert.match(transform.contextQuestion || "", /Dallas/);
+    assert.doesNotMatch(transform.contextQuestion || "", /Houston/, "prior geography must be replaced, not kept");
+  }
+  assert.equal(detectFollowupTransform("now do it for robberies", currentMonthlyTrendHistory), null, "a non-place target is not a geography replacement");
+  assert.equal(detectFollowupTransform("now do it for 2020", currentMonthlyTrendHistory), null, "a year is not a geography replacement");
+  assert.equal(detectFollowupTransform("now do it for Dallas", []), null, "no prior answer, nothing to rebuild");
+}
+
+{
   const transform = detectFollowupTransform("Compare it to Dallas.", currentMonthlyTrendHistory);
   assert(transform, "compare it to <place> should be detected");
   assert.equal(transform.name, "compare_geographies");

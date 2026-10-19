@@ -1,3 +1,4 @@
+import { isInnerRun } from "./why-scope";
 import { createHash, randomUUID } from "crypto";
 import type Database from "better-sqlite3";
 import { detectAndPivotChartData } from "./chart-layout";
@@ -236,6 +237,8 @@ export function chartAuditSchemaAvailable(db: Database.Database): boolean {
 }
 
 export function persistChartAuditArtifact(db: Database.Database | null, artifact: ChartAuditArtifact, queryLogId?: number | bigint | null): boolean {
+  // Stage 3b (r1.4 R4.2): an inner run of a "why" turn persists nothing; the outer turn is the record.
+  if (isInnerRun()) return false;
   if (!db || !chartAuditSchemaAvailable(db)) return false;
   try {
     db.prepare(`INSERT INTO chart_audit_artifacts (

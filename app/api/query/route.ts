@@ -9,6 +9,8 @@ import { buildChartConfig } from "@/lib/chart-config";
 import { serializeChartConfigForLog } from "@/lib/chart-config-log";
 import { attachChartAuditToPayload, createChartAuditRequestId } from "@/lib/chart-audit";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isInnerRun, recordWhyNotes, recordWhyFacts, carriedOutcome } from "@/lib/why-context";
+import { handleWhyTurn, innerRequest } from "@/lib/why-turn";
 import { checkSessionLimit, maybeCleanup } from "@/lib/captcha";
 import { HISTORICAL, RTCI } from "@/lib/dynamic-facts";
 import { generateExplanation, sanitizeExplanation } from "@/lib/explain";
@@ -40,7 +42,6 @@ import { buildNoSqlFallbackMessage, courtProcessNoSqlIsTerminal, selectNoSqlRefu
 import { boundedModelResponseJson } from "@/lib/no-sql-retry";
 import { buildCompletenessAnswer, detectCompletenessQuestion, loadCompletenessRows } from "@/lib/completeness-intent";
 import { CURRENT_MONTH_COVERAGE_GUARDRAIL, MONTH_COVERAGE_FAILED, monthCoverageAnswer, monthCoverageSql, ownsMonthCoverage } from "@/lib/current-month-coverage";
-import { detectFollowupTransform } from "@/lib/followup-transform";
 import { resolveCurrentFollowupAmendment } from "@/lib/current-followup-amendment";
 import { getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { getCountyScopeClarification } from "@/lib/county-clarifier";
@@ -86,7 +87,6 @@ import {
 import { deterministicPlanRefusal } from "@/lib/deterministic-plan-guard";
 import { detectQueryBearingFollowup } from '@/lib/query-bearing-followup';
 import { planFollowupSafe } from '@/lib/followup-planner';
-import { buildCrossSourceFollowupTransform } from '@/lib/cross-source-followup';
 import { plannerModeForSource } from '@/lib/followup-planner-mode';
 import { findVerifiedCurrentAgency } from '@/lib/current-agency-availability';
 import { explainEmptyCurrentTrendsResult } from "@/lib/current-trends-empty-reason";
@@ -94,10 +94,15 @@ import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { implausiblePopulationDenominator } from "@/lib/rate-denominator-safety";
 import { buildHistoricalScorecard } from "@/lib/historical-scorecard";
 import { accountHistoricalRequest, historicalRecognitionRefusal, historicalRequestKind, HISTORICAL_CACHE_TAB, HISTORICAL_MODEL_SQL_DECLINE, historicalFollowupCheck } from "@/lib/historical-request-accounting";
+import { accountCurrentRequest, currentRecognitionRefusal, currentRequestKind, currentFollowupCheck, CURRENT_CACHE_TAB, CURRENT_MODEL_SQL_DECLINE } from "@/lib/current-request-accounting";
+import { currentLegacyBound, currentUnboundParts, currentExplainLimitation, placeIs as currentPlaceIs, type CurrentApplied } from "@/lib/current-legacy-binding";
+import { matchCurrentType, OFFENSES_OF as CURRENT_OFFENSES_OF } from "@/lib/current-question-types";
+import { compileCurrentSpec } from "@/lib/current-question-compiler";
+import { resolveFollowupRequest } from "@/lib/current-effective-request";
 import { matchHistoricalType } from "@/lib/historical-question-types";
 import { compileHistoricalSpec, historicalSourceBounds } from "@/lib/historical-question-compiler";
 import { historicalLegacyBound, measureForOffenseColumn, placeIs, rangeKeys, type LegacyApplied } from "@/lib/historical-legacy-binding";
-import type { Part as AccountingPart } from "@/lib/request-accounting";
+import { refusalSentences, type Part as AccountingPart } from "@/lib/request-accounting";
 import {
   consolidatedDisplayText,
   consolidationTargetSatisfied,
@@ -423,6 +428,13 @@ function isSameResultFollowup(question: string, rawHistory?: unknown): boolean {
  */
 const HISTORICAL_MODEL_SQL_NEVER_RUNS: boolean = true;
 
+/**
+ * Request accounting, stage 3a (plan 2026-10-10-request-accounting-stage3a-current.md §6): no model-written statement ever
+ * runs on the Current Trends tab, and the model is never asked again for one. Numbers come only from a fixed path that
+ * applies the whole request (and the owner policy) or from a supported question type (lib/current-question-types.ts).
+ */
+const CURRENT_MODEL_SQL_NEVER_RUNS: boolean = true;
+
 function shouldSkipHistoricalPlaceLookup(question: string, rawHistory?: unknown): boolean {
   const hasHistory = Array.isArray(rawHistory) && rawHistory.length > 0;
   return isSameResultFollowup(question, rawHistory) || (hasHistory && isFollowUp(question));
@@ -499,7 +511,8 @@ export async function POST(req: NextRequest) {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     "unknown";
-  const rateCheck = checkRateLimit(ip);
+  // Stage 3b (r1.4 R4.2): an inner run of a "why" turn was admitted by its outer request; never charged twice.
+  const rateCheck: ReturnType<typeof checkRateLimit> = isInnerRun() ? ({ allowed: true, remaining: 0 } as ReturnType<typeof checkRateLimit>) : checkRateLimit(ip);
   if (!rateCheck.allowed) {
     const retryAfter = Math.ceil((rateCheck.retryAfterMs || 60000) / 1000);
     return new Response(
@@ -529,7 +542,7 @@ export async function POST(req: NextRequest) {
     sessionId = ((body?.sessionId as string) || "").slice(0, 64) || null;
     // Page token validation — block bots that hit the API directly
     const pageToken = body?.pageToken as string | undefined;
-    if (!validatePageToken(pageToken)) {
+    if (!isInnerRun() && !validatePageToken(pageToken)) {
       return new Response(
         JSON.stringify({ success: false, error: "Please refresh the page and try again." }),
         { status: 403, headers: { "Content-Type": "application/json" } }
@@ -538,7 +551,7 @@ export async function POST(req: NextRequest) {
 
     // Session-based CAPTCHA throttle
     maybeCleanup();
-    const captchaCheck = checkSessionLimit(sessionId);
+    const captchaCheck: ReturnType<typeof checkSessionLimit> = isInnerRun() ? ({ allowed: true } as ReturnType<typeof checkSessionLimit>) : checkSessionLimit(sessionId);
     if (!captchaCheck.allowed) {
       if (captchaCheck.dailyLimitReached) {
         return new Response(
@@ -678,6 +691,47 @@ export async function POST(req: NextRequest) {
       planFamily: null,
       ...opts,
     });
+  // Stage 3b (plan §4, r1.4, amendment A1): ONE early branch for a "why" turn. Its data part -- the masked question of a
+  // mixed turn, or the rebuilt earlier question of a why-only turn -- runs as an inner re-entry of this route, whose
+  // emissions are captured at the proof chokepoints and never delivered. The outer turn composes the text, finalizes it
+  // as the narrative, logs once and emits once, outside the inner run.
+  if (!isInnerRun()) {
+    const why = await handleWhyTurn(recordedQuestion, body?.history, {
+      tab: tab === "historical" ? "historical" : "current",
+      reenter: async (q, h) => { const res = await POST(innerRequest(req, body, q, h) as NextRequest); await res.text(); },
+    });
+    if (why) {
+      const ms = Date.now() - totalStart;
+      // R2.6': a captured inner answer (with its matched input) keeps ITS OWN disposition -- an answer stays an answer, a
+      // clarification a clarification, a decline a decline; composition only appends sentences. Anything else (no capture,
+      // or no matched input) goes to the text exit and is never a carried success.
+      if (why.kind === "data" && why.capture.input) {
+        const cap = why.capture;
+        const whyRows = Array.isArray(cap.payload.rows) ? (cap.payload.rows as unknown[]) : [];
+        const whyProof = finalizeExit({ ...(cap.input as Partial<ProofFinalizationInput>), outcome: carriedOutcome<QueryLogOutcome>(cap.input), narrative: why.text });
+        writeLog(recordedQuestion, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, tab, why.tags, "deterministic", sessionId, null, whyProof);
+        const whyPayload = { ...cap.payload, type: "result" as const, explanation: why.text } as unknown as FactualStreamEvent;
+        const whyStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(whyProof, whyPayload))));
+            controller.close();
+          },
+        });
+        return new Response(whyStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+      }
+      const answered = why.kind === "text" && why.answered;
+      const whyTextProof = finalizeExit({ planFamily: "why-turn", guardrails: why.tags, outcome: answered ? OUTCOMES.deterministic_plan : OUTCOMES.capability_path_unavailable, narrative: why.text });
+      writeLog(recordedQuestion, null, 0, null, ms, why.text, tab, why.tags, "deterministic", sessionId, null, whyTextProof);
+      const whyTextPayload = { type: "result" as const, sql: null as unknown as string, explanation: why.text, title: answered ? "Explanation" : "Not answered", columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: ms } as unknown as FactualStreamEvent;
+      const whyTextStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(whyTextProof, whyTextPayload))));
+          controller.close();
+        },
+      });
+      return new Response(whyTextStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+    }
+  }
   const demographicRateFollowup = detectDemographicRateDenominatorFollowup(
     question,
     normalizeHistoryAllSources(body?.history),
@@ -797,6 +851,58 @@ export async function POST(req: NextRequest) {
     const recognitionRefusal = historicalRecognitionRefusal(historicalLedger);
     if (recognitionRefusal) return historicalAccountingExit(recognitionRefusal, "recognition");
   }
+
+  // ── Request accounting, stage 3a (Current Trends; plan 2026-10-10-request-accounting-stage3a-current.md r1.2) ─────────
+  // ONE ledger, on the EFFECTIVE request (r1.1 F5: the same resolution the model-path guardrails read), before any exit
+  // that can deliver a number. A follow-up is checked against a complete earlier question (K2). Fixed paths own a request
+  // only when their applied values account for every part AND the owner policy allows them (r1.1 F1). Recognition refusals
+  // are applied at the typed stage, after the fixed paths' own declines (a refused part can never be applied, so no
+  // fixed path can deliver a number for it).
+  const currentAmendment = resolveCurrentFollowupAmendment(question, body?.history, tab === "historical" ? "historical" : "current");
+  const followupResolution = resolveFollowupRequest({
+    question, rawHistory: body?.history, source: tab === "historical" ? "historical" : "current",
+    authoritative: plannerMode === "authoritative" && followupPlan?.kind === "query_bearing" ? followupPlan : null,
+    amendment: currentAmendment,
+  });
+  const currentLedger = tab === "current" ? accountCurrentRequest(followupResolution.question) : null;
+  const currentNumeric = Boolean(currentLedger && currentRequestKind(currentLedger) === "numeric");
+  /** The sealed exit for every Current accounting decline or clarification (the Historical exit's shape). */
+  const currentAccountingExit = historicalAccountingExit;
+  if (currentLedger) {
+    // A continuation of a question asked on another tab is rebuilt as a context summary, not a complete question, so it
+    // can't be answered here by value: it is declined by name (the 2a rule for a follow-up nothing rebuilt).
+    if (followupResolution.resolver === "cross-source" && currentNumeric) {
+      return currentAccountingExit({ parts: [], explanation: "This continues a question from another tab, and I can't rebuild it here as a complete Current Trends question. Please ask it here as a complete question (the place, what to count and the period)." }, "followup");
+    }
+    const priorCurrentTurns = normalizeHistoryForTab(body?.history, "current", 50).filter((m) => m.role === "user").map((m) => m.content);
+    const rebuilt = followupResolution.resolver !== null;
+    const isCurrentFollowup = priorCurrentTurns.length > 0 && (isFollowUp(question) || Boolean(queryBearingFollowup) || followupPlan?.kind === "query_bearing" || rebuilt);
+    if (isCurrentFollowup && (currentNumeric || rebuilt)) {
+      const carried = currentFollowupCheck({ question, effective: rebuilt ? followupResolution.question : null, previousUserTurns: priorCurrentTurns, isFollowUp, earlierOnly: !currentNumeric });
+      if (carried) {
+        // A follow-up nothing rebuilt that also names what Current Trends doesn't track says so too.
+        const turnRefusal = rebuilt ? null : currentRecognitionRefusal(accountCurrentRequest(question));
+        return currentAccountingExit({ parts: turnRefusal?.parts ?? [], explanation: turnRefusal ? `${turnRefusal.explanation} ${carried.explanation}` : carried.explanation }, "followup");
+      }
+    }
+    // What Current Trends doesn't track is declined here, before any clarifying question (the 2a/2b order): asking
+    // "violent, property or both?" about juvenile crime asks the wrong question. Words it couldn't interpret are declined
+    // at the typed stage instead, after the fixed paths' own declines (the city ranking names them in its own words).
+    if (currentNumeric) {
+      const notTracked = currentLedger.refusedAtRecognition().filter((p) => p.state === "not-recorded");
+      if (notTracked.length) return currentAccountingExit({ parts: notTracked, explanation: refusalSentences(notTracked).join(" ") }, "recognition");
+    }
+  }
+  /** A fixed path keeps a Current request only when its applied values account for every part and the policy allows them. */
+  const currentOwns = <T,>(plan: T | null, applied: (p: T) => CurrentApplied | "decline"): T | null => {
+    if (!plan || !currentLedger) return plan;
+    const a = applied(plan);
+    if (a === "decline") return plan;
+    if (currentLegacyBound(currentLedger, a)) return plan;
+    console.log(`[request-accounting][current] fixed path not owning; unbound: ${currentUnboundParts(currentLedger, a).map((p) => `${p.concept}=${p.value ?? p.text}`).join(", ") || "(owner policy)"}`);
+    return null;
+  };
+  const currentMeasureOf = (offenses: string[]): string | null => Object.entries(CURRENT_OFFENSES_OF).find(([, o]) => o.length === offenses.length && o.every((x) => offenses.includes(x)))?.[0] ?? null;
   /**
    * A fixed path keeps a Historical request only when its applied values account for every part (C1); else null.
    * Plan r3 §1: for EVERY Historical request, whatever its TEXT/NUMERIC classification -- a request carrying "why" is never
@@ -859,7 +965,8 @@ export async function POST(req: NextRequest) {
   // GC-051 batch (lib/current-month-coverage.ts): a standalone Current Trends "what months does YEAR include?" is answered
   // from the year-bound months present in national_monthly -- proved before it runs, and with "no months" and "the check
   // failed" kept apart. Owned only with no conversation history; every other turn continues exactly as before.
-  const monthCoverage = tab === "current" ? ownsMonthCoverage(question, body?.history) : null;
+  // Stage 3a: bound by value (the coverage operation and the year it reads).
+  const monthCoverage = tab === "current" ? currentOwns(ownsMonthCoverage(question, body?.history), (mc) => ({ operations: ["coverage-lookup"], periodValues: [`year:${mc.year}`] })) : null;
   if (monthCoverage) {
     const monthCoveragePlan = { sql: monthCoverageSql(monthCoverage.year) };
     const monthCoverageRefusal = deterministicPlanRefusal({ question, source: tab, sql: monthCoveragePlan.sql });
@@ -910,8 +1017,10 @@ export async function POST(req: NextRequest) {
 
   const completenessIntent = detectCompletenessQuestion(capabilityQuestion);
   // Plan r3 §1: bound for every Historical request, not only NUMERIC ones.
-  const completenessOwned = !(tab === "historical" && historicalLedger)
-    || historicalLegacyBound(historicalLedger, { operations: ["completeness"], periodKeys: completenessIntent?.year ? [`year:${completenessIntent.year}`] : [] });
+  const completenessOwned = (!(tab === "historical" && historicalLedger)
+    || historicalLegacyBound(historicalLedger, { operations: ["completeness"], periodKeys: completenessIntent?.year ? [`year:${completenessIntent.year}`] : [] }))
+    // Stage 3a: bound the same way on Current.
+    && Boolean(currentOwns(completenessIntent, (ci) => ({ operations: ["completeness"], periodValues: ci.year ? [`year:${ci.year}`] : [] })));
   if (completenessIntent && (tab === "current" || tab === "historical") && completenessOwned) {
     const source = tab === "historical" ? "historical" : "current";
     const completenessAnswer = buildCompletenessAnswer(source, loadCompletenessRows(source, getDb()), new Date().getFullYear(), completenessIntent.year);
@@ -1041,7 +1150,8 @@ export async function POST(req: NextRequest) {
   const crimeTypeAsk = getBlockingGeoClarification(crimeTypeQuestion)
     ? null
     : shouldAskCrimeType(crimeTypeQuestion, normalizeHistoryAllSources(body?.history));
-  if (crimeTypeAsk?.needsClarification) {
+  // Stage 3a (owner list, C3): an "overview" names all seven offenses, so it doesn't ask violent, property or both.
+  if (crimeTypeAsk?.needsClarification && !currentLedger?.parts.some((p) => p.concept === "overview")) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({ outcome: OUTCOMES.measure_ambiguous, planFamily: "crime-type:violent-property-both" });
     writeLog(question, null, 0, null, ms, crimeTypeAsk.clarificationQuestion, tab, ["crime-type:violent-property-both"], "deterministic", sessionId, null, proof);
@@ -1111,8 +1221,8 @@ export async function POST(req: NextRequest) {
   // between the anchor and now cannot be resolved — a year the parser cannot read, or a word with
   // more than one plausible meaning — it is NOT stepped over to reach the older topic. Asking
   // costs a turn; guessing changes the question. Placed after the geographic and crime-type gates,
-  // so a turn still puts at most one question to the reader.
-  const currentAmendment = resolveCurrentFollowupAmendment(question, body?.history, tab === "historical" ? "historical" : "current");
+  // so a turn still puts at most one question to the reader. (Stage 3a r1.1 F5: `currentAmendment` is resolved early, beside
+  // the request-accounting boundary; this clarification is still delivered here.)
   if (currentAmendment.kind === "clarify") {
     const ms = Date.now() - totalStart;
     const planFamily = `current-amendment:${currentAmendment.reason}`;
@@ -1185,7 +1295,23 @@ export async function POST(req: NextRequest) {
    * that cannot be planned or executed does NOT fall through to the model path. Falling through is
    * how a request with these guarantees quietly becomes generated SQL that has none of them.
    */
-  const cityRanking = tab === "current" ? recognizeCityRanking(question, "current") : null;
+  // Stage 3a (r1.1 F1): a recognized ranking delivers only when it applies every part by value; its own declines stand.
+  // C4 keeps its accepted coverage disclosure (first and last month per city), the one stated exception to §4.2.
+  const cityRanking = tab === "current" ? currentOwns(recognizeCityRanking(question, "current"), (r) => {
+    if (r.kind !== "ranking") return "decline";
+    const offenseId = r.offense.kind === "current_offense" ? currentMeasureOf([r.offense.value]) : null;
+    const floors = r.eligibility.flatMap((e) => (e.kind === "population" && (e.comparison === ">=" || e.comparison === ">") ? [{ op: e.comparison, amount: e.value }] : []));
+    return {
+      places: r.scope.kind === "nationwide" ? currentPlaceIs.national : currentPlaceIs.state(r.scope.name),
+      measures: offenseId ? [offenseId] : [],
+      statistic: r.sort.quantity === "rate_per_100k" ? "rate" : r.sort.quantity === "count" ? "count" : null,
+      rank: { dir: r.sort.direction === "desc" ? "top" : "bottom", n: r.resultCount },
+      periodValues: r.period.kind === "explicit" ? [`year:${r.period.year}`] : [],
+      thresholds: floors,
+      countThresholds: r.eligibility.flatMap((e) => (e.kind === "count" ? [{ op: e.comparison, amount: e.value }] : [])),
+      entities: r.entityLevel === "city" ? ["city"] : ["agency", "city"],
+    };
+  }) : null;
   if (cityRanking) {
     const built = cityRanking.kind === "ranking"
       ? buildCityRanking(cityRanking, {
@@ -1363,8 +1489,11 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Stage 3a (r1.1 F1): this plan computes state and national RATES (lib/current-indexed-state-deterministic.ts), which the
+  // owner policy forbids on Current (ruling 3), so it no longer owns a request: the policy check refuses what it applies,
+  // and the request reaches the supported types, which decline a state or national rate with the Historical pointer.
   const indexedStatePlan = tab === "current"
-    ? buildCurrentIndexedStatePlan(question, body?.history)
+    ? currentOwns(buildCurrentIndexedStatePlan(question, body?.history), () => ({ statistic: "rate", places: currentPlaceIs.national }))
     : null;
   // Structural proof BEFORE execution. This branch returns long before runContractValidation is
   // defined, so without this it executed with no proof at all. A refused plan is simply not used;
@@ -1439,8 +1568,17 @@ export async function POST(req: NextRequest) {
    * only to decide matched/unequal/unestablished, and it shares its scope clause verbatim with the
    * gated statement.
    */
+  // Stage 3a: bound by value -- the national sample, the topic's offenses, counts, each requested year, by year.
   const yoyComparisonPlan = !planSaysQueryBearing && tab === "current"
-    ? buildCurrentYoyComparisonPlan(question)
+    ? currentOwns(buildCurrentYoyComparisonPlan(question), (p) => {
+      const first = p.years[0]; const last = p.years[p.years.length - 1];
+      const measure = currentMeasureOf(p.offenses);
+      return {
+        places: currentPlaceIs.national, measures: measure ? [measure] : [], statistic: "count",
+        change: ["increase", "decrease", "neutral"], grains: ["year", "trend"], versus: "periods",
+        periodValues: [`range:${first}:${last}`, `between:${first}:${last}`, ...p.years.map((y) => `year:${y}`)],
+      };
+    })
     : null;
   const yoyComparisonRefusal = deterministicPlanRefusal({ question, source: tab, sql: yoyComparisonPlan?.sql });
   if (yoyComparisonRefusal) console.log(`[structural] current yoy comparison plan refused: ${yoyComparisonRefusal.ruleIds.join(", ")}`);
@@ -1485,6 +1623,8 @@ export async function POST(req: NextRequest) {
         sampleResult as unknown as CurrentYoySampleRow[],
         yoyComparisonPlan.offenses.length,
       );
+      // Stage 3b r2 (R2.4'): the fixed comparison group as this year-over-year path formed it (no-op outside an inner run).
+      recordWhyFacts({ kind: "group", place: "United States (sample)", members: comparisonGroup.includedCount, sample: comparisonGroup.startingSampleSize });
       answerRows = answerResult as unknown as CurrentYoyAnswerRow[];
       /*
        * The delivered totals must describe exactly the required cells for exactly the selected
@@ -1596,7 +1736,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const multiCityTrend = historicalOwns(!planSaysQueryBearing && (tab === "current" || tab === "historical")
+  // Stage 3a (task 0 finding): the Current branch of this plan counts an unreported month as 0 (`ELSE 0`), so it no longer
+  // owns a Current request; named places side by side are the supported type C2, which keeps absence apart from zero.
+  const multiCityTrend = historicalOwns(!planSaysQueryBearing && tab === "historical"
     ? buildMultiCityTrendPlan(question, tab)
     : null, (plan) => {
       const a = plan.applied;
@@ -1982,7 +2124,12 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const metadata = historicalOwns(planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb()), () => ({ operations: ["coverage-lookup", "completeness"] }));
+  const metadata = currentOwns(historicalOwns(planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb()), () => ({ operations: ["coverage-lookup", "completeness"] })), (m) => ({
+    operations: ["coverage-lookup", "completeness"],
+    // Stage 3a: a count of agencies, cities or states is what these columns hold ("how many agencies are covered?").
+    ...(m.columns.some((c) => /_count$/.test(c)) ? { statistic: "count" as const } : {}),
+    entities: m.columns.some((c) => /^agency/.test(c)) ? ["agency"] : m.columns.some((c) => /^city/.test(c)) ? ["city"] : m.columns.some((c) => /^state/.test(c)) ? ["state"] : [],
+  }));
   if (metadata) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({
@@ -2101,6 +2248,88 @@ export async function POST(req: NextRequest) {
       return new Response(typedStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
     }
     // `none`: no measure to answer with; the model may reply in text below, and its SQL never runs (K7).
+  }
+
+  // ── Request accounting, stage 3a: a NUMERIC Current request no fixed path owned or declined is answered by one of the
+  // supported question types (C1-C3, C5, C6) with application-built statements, or declined/clarified by name. Its model
+  // SQL never runs. Recognition refusals (what Current Trends doesn't track, words it couldn't interpret) come first.
+  if (currentNumeric && currentLedger) {
+    const recognition = currentRecognitionRefusal(currentLedger);
+    if (recognition) return currentAccountingExit(recognition, "recognition");
+    const decision = matchCurrentType(currentLedger);
+    if (decision.kind === "decline") return currentAccountingExit({ parts: decision.parts, explanation: decision.explanation }, "question-type");
+    if (decision.kind === "clarify") return currentAccountingExit({ parts: [], explanation: decision.explanation }, "question-type", true);
+    if (decision.kind === "spec") {
+      const typeFamily = `current-question-type:${decision.spec.type}`;
+      const typeDb = getDb();
+      // Typed statements are built from the issued spec and skip the structural guard (the 2a D1 ruling); the table
+      // allowlist still applies to every statement.
+      // Plan §4.5: a compile or execution failure is a named decline, never a thrown error and never a model fallback.
+      let compiled: ReturnType<typeof compileCurrentSpec>;
+      try {
+        compiled = compileCurrentSpec(decision.spec, {
+          run: (typedStatement) => {
+            const tables = validateTablesForTab(typedStatement, "current", typeDb);
+            if (!tables.ok) throw new Error(`an owned Current statement read a table outside the Current allowlist (${tables.unknown.join(", ")})`);
+            const db = typeDb;
+            return executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(typedStatement), 30000);
+          },
+          // r2 F2: statements that must describe one moment (the fixed comparison group) run in ONE worker and one read
+          // transaction, exactly as the accepted year-over-year path runs the same four statements.
+          runMany: (typedStatements) => {
+            for (const s of typedStatements) {
+              const tables = validateTablesForTab(s, "current", typeDb);
+              if (!tables.ok) throw new Error(`an owned Current statement read a table outside the Current allowlist (${tables.unknown.join(", ")})`);
+            }
+            return executeManyWithTimeoutSync<Record<string, unknown>>(typeDb, typedStatements, 30000);
+          },
+        });
+      } catch (err) {
+        console.warn("[request-accounting][current] typed answer failed; declining", err);
+        compiled = { kind: "decline", explanation: "I couldn't build this Current Trends answer from the data just now, so I haven't answered with a number. Please try again." };
+      }
+      if (compiled.kind === "decline") return currentAccountingExit({ parts: [], explanation: compiled.explanation }, "question-type-compile");
+      recordWhyNotes(compiled.notes); // Stage 3b: the notes as data for an outer "why" turn (no-op outside an inner run)
+      // L12/L13: the answer is delivered only when what its statements applied accounts for every part, by value.
+      if (!currentLegacyBound(currentLedger, compiled.applied, currentExplainLimitation)) {
+        const unbound = currentUnboundParts(currentLedger, compiled.applied, currentExplainLimitation);
+        const named = unbound.map((p) => `"${p.text.trim()}"`).join(" and ") || "every part of the question";
+        return currentAccountingExit({ parts: unbound, explanation: `I couldn't apply ${named} to this answer, so I haven't answered with a number that leaves it out. ${CURRENT_MODEL_SQL_DECLINE}` }, "question-type-binding");
+      }
+      const typedExplanation = decision.explainLimitation ? `${compiled.explanation} ${decision.explainLimitation}` : compiled.explanation;
+      const ms = Date.now() - totalStart;
+      const hasValue = compiled.rows.some((row) => row.value !== null && row.value !== undefined);
+      const typedProof = finalizeExit({
+        outcome: hasValue ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
+        sql: compiled.sql,
+        rows: compiled.rows,
+        columns: compiled.columns,
+        derivation: sealPlanDerivation(typeFamily, compiled.sql),
+        planFamily: typeFamily,
+        guardrails: ["request-accounting", typeFamily],
+        requestedEntities: compiled.requestedEntities,
+        returnedEntities: compiled.returnedEntities,
+        hasChart: Boolean(compiled.chartConfig),
+        narrative: typedExplanation,
+        db: typeDb,
+      });
+      const typedChartMeta = { source: "RTCI", agencyCount: 0, population: null };
+      writeLog(question, compiled.sql, compiled.rows.length, null, ms, typedExplanation, tab, ["request-accounting", typeFamily], "deterministic", sessionId,
+        serializeChartConfigForLog(compiled.chartConfig, compiled.columns, typedChartMeta), typedProof);
+      const typedStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(typedProof, {
+            type: "result", requestId: chartAuditRequestId, chartAuditSource: tab, sql: compiled.sql, explanation: typedExplanation, title: compiled.title,
+            columns: compiled.columns, rows: compiled.rows, rowCount: compiled.rows.length, truncated: false, chartConfig: compiled.chartConfig,
+            chartMeta: typedChartMeta,
+            executionTimeMs: ms,
+          }))));
+          controller.close();
+        },
+      });
+      return new Response(typedStream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-RateLimit-Remaining": String(rateCheck.remaining) } });
+    }
+    // `none`: no measure to answer with; the model may reply in text below, and its SQL never runs (§6).
   }
 
   const stream = new ReadableStream({
@@ -2224,14 +2453,15 @@ export async function POST(req: NextRequest) {
         // amendments that followed it, reading only the bounded history the client already sends.
         // It sits AFTER the transforms the product already recognizes, so "what about Detroit" keeps
         // its existing behavior, and no planner mode is changed to make it fire.
-        const followupTransform = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.transform : (detectFollowupTransform(question, history) ?? (currentAmendment.kind === "composed" ? currentAmendment.transform : null) ?? buildCrossSourceFollowupTransform(question, body?.history, isHistorical ? "historical" : "current"));
+        // Stage 3a (r1.1 F5): the one resolution the request-accounting ledger read, with the same precedence as before.
+        const followupTransform = followupResolution.transform;
         // The contract travels only when the amendment's own transform is the one in force.
         const amendedContract = (currentAmendment.kind === "composed" && followupTransform === currentAmendment.transform) ? currentAmendment.contract : null;
         // Bare clarifier answers ("Countywide total") carry no county name — use
         // the transform's reconstructed question so guardrails see the geography.
         // For an amendment this is the contract's rendering, which the amendment has already
         // verified reads back to the same request; the text-only guardrails below read it.
-        const guardrailQuestion = (plannerMode === "authoritative" && followupPlan?.kind === "query_bearing") ? followupPlan.reconstructedQuestion : (followupTransform?.contextQuestion ?? question);
+        const guardrailQuestion = followupResolution.question;
         // The validator checks the SQL against the contract itself. Its question stays the reader's
         // own words, for the rules about meaning an amendment does not carry.
         contractQuestion = amendedContract ? question : guardrailQuestion;
@@ -2273,7 +2503,7 @@ export async function POST(req: NextRequest) {
 
         // Check response cache (only standalone questions)
         if (isHistorical) cacheValidity = historicalCacheValidity(baseCacheValidity, readCorrectionState(getDb()));
-        const cached = promptHistory.length === 0 ? getCached(question, tab === "historical" ? HISTORICAL_CACHE_TAB : tab, cacheValidity) : null;
+        const cached = promptHistory.length === 0 ? getCached(question, tab === "historical" ? HISTORICAL_CACHE_TAB : CURRENT_CACHE_TAB, cacheValidity) : null;
         let fromCache = false;
 
         let claude: Awaited<ReturnType<typeof translateToSql>>;
@@ -2290,7 +2520,8 @@ export async function POST(req: NextRequest) {
             systemPrompt
           );
 
-          if (!claude.sql && !isOverBudget()) {
+          // Stage 3a (§6): on Current the model is never asked again for a statement.
+          if (!claude.sql && !isOverBudget() && !(tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS)) {
             // Cause A: a court-process request is settled by the REQUEST policy, not by whatever the
             // model wrote. No second call can turn a police record into a court record, so this
             // request goes straight to the terminal exit and its policy explanation.
@@ -2325,7 +2556,23 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        if (!fromCache && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title)) && !isOverBudget()) {
+        // Request accounting, stage 3a (§6): no model-written or cached statement produces a Current number. This is the FIRST
+        // point a statement exists (the cache read or the first model reply), before any retry, validation, prepare or
+        // execution; a reply with no statement continues to the text-only exit below.
+        if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS && claude.sql) {
+          const gateMs = Date.now() - totalStart;
+          const gateTags = ["request-accounting", "request-accounting-owner:model-sql", ...(fromCache ? ["request-accounting:cached-statement"] : [])];
+          const gateProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: gateTags });
+          writeLog(question, null, 0, null, gateMs, CURRENT_MODEL_SQL_DECLINE, tab, gateTags, "haiku-4.5", sessionId, null, gateProof);
+          controller.enqueue(encoder.encode(sseEvent(emitFactualPayload(gateProof, {
+            type: "result", sql: null as unknown as string, explanation: CURRENT_MODEL_SQL_DECLINE, title: "Not answered",
+            columns: [], rows: [], rowCount: 0, truncated: false, chartConfig: null, chartMeta: null, executionTimeMs: gateMs,
+          }))));
+          close();
+          return;
+        }
+
+        if (!fromCache && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title)) && !isOverBudget() && !(tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS)) {
           console.log(`[query][internal-scaffold] Retrying response that leaked internal scaffold text`);
           try {
             const retryResult = await translate(
@@ -2371,7 +2618,8 @@ export async function POST(req: NextRequest) {
         // wrong question for a court-process request. Confirming that Houston is in Current Trends
         // does not make a conviction rate available, so this second call is skipped for the same
         // established family rather than pressing the model to produce a statement it should not.
-        if (!claude.sql && tab === "current" && !isOverBudget() && !courtProcessNoSqlIsTerminal(guardrailQuestion)) {
+        // Stage 3a (§6): this retry asks the model for a statement, so it does not run on Current.
+        if (!claude.sql && tab === "current" && !CURRENT_MODEL_SQL_NEVER_RUNS && !isOverBudget() && !courtProcessNoSqlIsTerminal(guardrailQuestion)) {
 
           const verifiedAgency = findVerifiedCurrentAgency(question, getDb());
           if (verifiedAgency) {
@@ -2443,6 +2691,8 @@ export async function POST(req: NextRequest) {
         // Request accounting, stage 2a (K7): no model-written statement produces a Historical number. This is the FIRST
         // point a statement exists (from the model or from the response cache), before any validation, schema check,
         // prepare or retry, so neither a schema failure nor a cached entry can reach an execution.
+        // Request accounting stage 3a (defensive): unreachable while the Current gate above stands.
+        if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS && claude.sql) throw new Error("request accounting: a Current model statement may not reach validation (3a §6)");
         if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) {
           const gateMs = Date.now() - totalStart;
           const gateTags = ["request-accounting", "request-accounting-owner:model-sql", ...(fromCache ? ["request-accounting:cached-statement"] : [])];
@@ -2666,6 +2916,7 @@ export async function POST(req: NextRequest) {
               // Request accounting stage 2a (K7, defensive): unreachable while the gate above stands; if it were removed, a Historical
               // model statement still fails closed here instead of being retried into an execution.
               if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
+              if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Current model statement may not be retried (3a §6)");
               const retry = await translate(tableCheck.message, retryHistory, systemPrompt);
               if (retry.sql) {
                 const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
@@ -2769,6 +3020,7 @@ export async function POST(req: NextRequest) {
           // Request accounting stage 2a (K7, defensive): unreachable while the gate above stands; if it were removed, a Historical
           // model statement still fails closed here instead of being retried into an execution.
           if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
+              if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Current model statement may not be retried (3a §6)");
           const retry = await translate(
             retryInstruction,
             retryHistory,
@@ -3499,7 +3751,7 @@ export async function POST(req: NextRequest) {
           writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), deliveredFinalization);
           // Cache successful responses (only standalone questions)
           if (!fromCache && promptHistory.length === 0 && sql) {
-            setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
+            setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : CURRENT_CACHE_TAB, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         } catch {
           // Retry post-query explanation once before falling back
@@ -3577,7 +3829,7 @@ export async function POST(req: NextRequest) {
             writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), finalization);
           }
           if (!fromCache && promptHistory.length === 0 && sql) {
-            setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : tab, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
+            setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : CURRENT_CACHE_TAB, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         }
       } catch (err) {

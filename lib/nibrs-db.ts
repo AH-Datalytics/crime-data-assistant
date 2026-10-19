@@ -1,3 +1,4 @@
+import { isInnerRun } from "./why-scope";
 import Database from "better-sqlite3";
 import { execFile } from "node:child_process";
 import path from "path";
@@ -184,6 +185,8 @@ export function logNibrsQuery(
    */
   outcomeFields: OutcomeLogFields = EMPTY_OUTCOME_LOG_FIELDS
 ): number | null {
+  // Stage 3b (r1.4 R4.2): an inner run of a "why" turn writes no log row; the outer turn logs once.
+  if (isInnerRun()) return null;
   // Write to shared query_log.db via rtci-db's getWriteDb
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getWriteDb } = require("@/lib/rtci-db");
