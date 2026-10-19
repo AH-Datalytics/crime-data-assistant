@@ -2057,7 +2057,8 @@ export async function POST(req: NextRequest) {
         execute: (typedStatement) => {
           const tables = validateTablesForTab(typedStatement, "historical", typeDb);
           if (!tables.ok) throw new Error(`an owned Historical statement read a table outside the Historical allowlist (${tables.unknown.join(", ")})`);
-          const read = executeWithCorrectionState(typeDb, typedStatement, 30000);
+          const db = typeDb;
+          const read = executeWithCorrectionState(db, typedStatement, 30000);
           statementStates.push(read.corrected);
           return read.rows;
         },
