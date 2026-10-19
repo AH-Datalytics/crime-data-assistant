@@ -101,6 +101,9 @@ const SELF_CALCULATING_FAMILIES: ReadonlySet<string> = new Set([
   // model-written SQL restores exactly the confusion of eligibility with the ranked measure that
   // the family replaced, so it stops here like the clearance family does.
   "deterministic-city-ranking-nibrs",
+  // GC-091 batch: the agency-period ranking sums one row per agency over the period; the model-written SQL it replaced
+  // split agencies into population-year rows. Its failure stops, like the city ranking.
+  "deterministic-nibrs-agency-period-ranking",
 ]);
 
 export function ownsItsCalculation(guardrail: string | null | undefined): boolean {
@@ -314,8 +317,10 @@ export function decideDeterministicFailure(
         runsAnnualClearanceFlow(query.guardrail)
           ? "I couldn't complete that yearly clearance query, and I'm not going to substitute a " +
             "figure I can't account for."
-          : "I couldn't complete that city ranking, and I'm not going to substitute one I can't " +
-            "account for.",
+          : query.guardrail === "deterministic-nibrs-agency-period-ranking"
+            ? "I couldn't complete that agency ranking, and I'm not going to substitute one I can't account for."
+            : "I couldn't complete that city ranking, and I'm not going to substitute one I can't " +
+              "account for.",
         genericResultState({ sql: query.sql, rows: [], productError: failureMessage }),
         null,
       ),

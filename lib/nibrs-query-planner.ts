@@ -20,6 +20,7 @@ import { buildNibrsJuvenileArrestsByRaceQuery, buildNibrsNationalArrestQuery } f
 import { buildNibrsContinuousReporterQuery, buildNibrsCountywideDemographicQuery } from "./nibrs-scope-deterministic";
 import { resolveNibrsRollupPath } from "./nibrs-rollup-router";
 import { planNibrsCityRanking, cityRankingFollowupUnavailable } from "./city-ranking-nibrs";
+import { planNibrsAgencyPeriodRanking, recognizeAgencyPeriodRanking } from "./nibrs-agency-period-ranking";
 import type { SourceCutoff } from "./city-ranking-builder";
 
 export type NibrsQueryPlan =
@@ -89,6 +90,10 @@ export function planNibrsQuery(
      */
     const ranking = cityRankingFollowupUnavailable(question);
     if (ranking) return ranking;
+    // GC-091 batch: the same rule for the owned agency-period ranking -- declined, never handed to model SQL.
+    if (recognizeAgencyPeriodRanking(question)) {
+      return { kind: "unavailable", title: "Ranking Not Available", explanation: "I build this agency ranking myself rather than generating a query for it, and I can't do that as a follow-up to the previous answer. Ask the ranking as a standalone question — naming the period and how many agencies — and I'll build it." };
+    }
     return { kind: "model", reason: "followup" };
   }
 
@@ -105,6 +110,15 @@ export function planNibrsQuery(
    * owns its failures too: an unsupported recognition returns an `unavailable` plan rather than
    * falling through to model-written SQL, which is the silent fallback this family must not have.
    */
+  // GC-091 batch (lib/nibrs-agency-period-ranking.ts): "top N police agencies by murders" over a period of years, one
+  // row per agency. Positively recognized whole-turn forms only; it never claims a city-ranking request (no city noun).
+  const agencyRanking = planNibrsAgencyPeriodRanking(question, options.dataCutoff ?? null);
+  if (agencyRanking) {
+    return agencyRanking.kind === "deterministic"
+      ? { kind: "deterministic", query: agencyRanking.query }
+      : { kind: "unavailable", title: agencyRanking.title, explanation: agencyRanking.explanation };
+  }
+
   const cityRanking = planNibrsCityRanking(question, options.dataCutoff ?? null);
   if (cityRanking) {
     return cityRanking.kind === "deterministic"

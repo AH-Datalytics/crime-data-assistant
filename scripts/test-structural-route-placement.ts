@@ -132,6 +132,9 @@ const GUARDED_PLANS: Record<string, string> = {
   // The owned U.S. annual violent-crime count (lib/historical-national-violent.ts, Codex :36558): proved and read
   // before the Historical deterministic chain; a refused or unreadable plan becomes its no-query decline.
   nationalPlan: "nationalRefusal",
+  // GC-051 batch: the owned Current month-coverage read (lib/current-month-coverage.ts), proved before it runs; a refused or
+  // failed read is answered as a failed check, never as "no months" and never by model SQL.
+  monthCoveragePlan: "monthCoverageRefusal",
 };
 
 /**
@@ -164,7 +167,9 @@ const MODEL_SQL_VARIABLES = new Set(["sql", "retrySql", "rollingSql", "fallbackS
  * input. They answer metadata questions (which ORI, which offense name) rather than returning a
  * factual series. Listed individually so a NEW identifier cannot join them silently.
  */
-const APPLICATION_BUILT_LOOKUPS = new Set(["oriQuery", "cdeQuery"]);
+// typedStatement: request accounting stage 2a -- a Historical statement built by lib/historical-question-compiler.ts from an
+// issued H1-H6 spec (every request part checked by value), never from model text; table-allowlisted before it runs.
+const APPLICATION_BUILT_LOOKUPS = new Set(["oriQuery", "cdeQuery", "typedStatement"]);
 
 /**
  * Already-prepared statements passed to an execution helper by variable.

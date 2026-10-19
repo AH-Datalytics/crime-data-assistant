@@ -13,6 +13,12 @@
  *   T6 idempotent: twice -> one copy; a text carrying a note in an uncorrected state is stripped of it
  *   T7 the Historical cache data version differs between the two states; other tabs are not given one
  *   T8 applyResultDisclosures: with the input it applies the notes; without it the output is byte-identical
+ *   (plan 2026-10-18-stack-typed-historical-rape-notes r2, stage 2a's typed answers:)
+ *   T9  the model-path function's outputs are unchanged by the shared rules (pinned texts)
+ *   T10 typedRapeNoteSeries: which delivered series are eligible (rape counts; the national violent count AND rate)
+ *   T11 typed answers through the compiler, per delivered series: by year, single year, 2021, period total, violent rate,
+ *       H6 change, H4 state ranking, a state, uncorrected, idempotent
+ *   T12 typedCorrectionState: agreeing states give the state; disagreeing give "changed"; none gives false
  *
  * Run: npx tsx scripts/test-historical-national-rape.ts
  */
@@ -24,7 +30,11 @@ import Database from "better-sqlite3";
 import {
   N1_STATE_NATIONAL_DEFINITION, N2_COMPOSITE_DEFINITION, N3_2021_LIMITATION, CORRECTION_STATE_SQL,
   readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity,
+  typedRapeNoteSeries, withTypedHistoricalRapeNotes, typedCorrectionState, type TypedDeliveredSeries,
 } from "../lib/historical-national-rape";
+import { accountHistoricalRequest } from "../lib/historical-request-accounting";
+import { matchHistoricalType } from "../lib/historical-question-types";
+import { compileHistoricalSpec, historicalSourceBounds } from "../lib/historical-question-compiler";
 import { applyResultDisclosures } from "../lib/result-disclosure";
 import { cacheValiditySignature } from "../lib/proof-cache-validity";
 
@@ -169,6 +179,124 @@ check("T8: without the input the output is byte-identical to the input-free call
   const plain = applyResultDisclosures(args);
   assert.ok(!plain.includes(N1_STATE_NATIONAL_DEFINITION));
   assert.equal(applyResultDisclosures({ ...args, historicalNationalRapeCorrected: undefined }), plain);
+});
+
+/* ---------------- stage 2a typed answers (plan r2) ---------------- */
+check("T9: the model path's texts are pinned through the shared rules", () => {
+  assert.equal(withHistoricalNationalRapeNotes(BASE, NAT_RAPE(2015, 2022), series(2015, 2022), true), `${BASE} ${N1_STATE_NATIONAL_DEFINITION} ${N3_2021_LIMITATION}`);
+  assert.equal(withHistoricalNationalRapeNotes(BASE, COMPOSITE(2016, 2021), compRows(2016, 2021), true), `${BASE} ${N2_COMPOSITE_DEFINITION} ${N3_2021_LIMITATION}`);
+  assert.equal(withHistoricalNationalRapeNotes(BASE, STATE_RAPE, series(2020, 2022), true), BASE); // a state's 2021: no N3
+  assert.equal(withHistoricalNationalRapeNotes(`${BASE} ${N1_STATE_NATIONAL_DEFINITION}`, null, [], true), BASE);
+});
+
+const ds = (o: Partial<TypedDeliveredSeries>): TypedDeliveredSeries => ({ source: "state_national", placeKind: "national", measure: "rape", statistic: "count", years: [2016, 2017], ...o });
+check("T10: eligibility of delivered series", () => {
+  const [natRape, stRape, natViolent, natViolentRate, stViolent, natRapeRate, total, agencyRape, property] = typedRapeNoteSeries([
+    ds({}), ds({ placeKind: "state" }), ds({ measure: "violent" }), ds({ measure: "violent", statistic: "rate_per_100k" }),
+    ds({ measure: "violent", placeKind: "state" }), ds({ statistic: "rate_per_100k" }), ds({ measure: "total" }),
+    ds({ source: "agency_crime", placeKind: "agency" }), ds({ measure: "property" }),
+  ]);
+  assert.deepEqual([natRape.rapeCount, natRape.national, natRape.violentComposite], [true, true, false]);
+  assert.deepEqual([stRape.rapeCount, stRape.national], [true, false]);
+  assert.equal(natViolent.violentComposite, true);
+  assert.equal(natViolentRate.violentComposite, true);
+  for (const none of [stViolent, natRapeRate, total, agencyRape, property]) assert.ok(!none.rapeCount && !none.violentComposite);
+});
+
+// A fixture with every column the compiler reads, 2014-2022, in the corrected or uncorrected state.
+function typedFixture(correctedState: boolean): Database.Database {
+  const db = new Database(":memory:");
+  const ddl = fs.readFileSync("scripts/fixtures/operation-taxonomy/crime_data.ddl.sql", "utf8").split(";").map((s) => s.trim()).filter((s) => /^CREATE\s+(TABLE|INDEX)/i.test(s) && /historical_|agency_county_crosswalk/.test(s));
+  for (const stmt of ddl) db.exec(stmt);
+  const ins = db.prepare("INSERT INTO historical_state_national (state, year, population, murder, rape, robbery, aggravated_assault, burglary, theft, auto_theft, murder_rate, rape_rate, robbery_rate, aggravated_assault_rate, burglary_rate, theft_rate, auto_theft_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  for (const [state, k] of [["United States", 100], ["Texas", 10], ["Ohio", 5]] as [string, number][]) {
+    for (let y = 2014; y <= 2022; y += 1) {
+      const rape = state === "United States" && y === 2018 ? (correctedState ? 144505 : 103321) : 1000 * k + y;
+      ins.run(state, y, 1000000 * k, 10 * k, rape, 20 * k, 30 * k, 40 * k, 50 * k, 60 * k, 1, 2, 3, 4, 5, 6, 7);
+    }
+  }
+  if (correctedState) {
+    db.exec("CREATE TABLE historical_national_rape_correction (name TEXT PRIMARY KEY, applied_at TEXT, source_sha256 TEXT, years TEXT)");
+    db.prepare("INSERT INTO historical_national_rape_correction VALUES ('national-rape-cius-t1-2017-2024', 'now', '551f29bd', '2017-2024')").run();
+  }
+  return db;
+}
+const NOW = new Date(Date.UTC(2023, 5, 1));
+// The route's typed block without the response: each statement read with its own state, the states combined, the notes applied.
+function typedAnswer(db: Database.Database, question: string): { text: string; rows: Record<string, unknown>[]; type: string; delivered: TypedDeliveredSeries[] } {
+  const decision = matchHistoricalType(accountHistoricalRequest(question), { bounds: (s) => historicalSourceBounds(db, s), now: NOW });
+  if (decision.kind !== "spec") throw new Error(`"${question}" did not issue a spec (${decision.kind})`);
+  const states: boolean[] = [];
+  const executeMany = (d: Database.Database, ss: string[]) => d.transaction(() => ss.map((x) => d.prepare(x).all() as Record<string, unknown>[]))();
+  const compiled = compileHistoricalSpec(decision.spec, { db, now: NOW, execute: (sql) => { const r = executeWithCorrectionState(db, sql, 30000, { executeMany }); states.push(r.corrected); return r.rows; } });
+  if (compiled.kind !== "answer") throw new Error(`"${question}" declined: ${compiled.explanation}`);
+  const state = typedCorrectionState(states);
+  if (state === "changed") throw new Error("state changed");
+  return { text: withTypedHistoricalRapeNotes(compiled.explanation, compiled.deliveredSeries, state), rows: compiled.rows, type: decision.spec.type, delivered: compiled.deliveredSeries };
+}
+const CORR = typedFixture(true), UNCORR = typedFixture(false);
+const ALL_NOTES = [N1_STATE_NATIONAL_DEFINITION, N2_COMPOSITE_DEFINITION, N3_2021_LIMITATION];
+const has = (t: string, ...ns: string[]) => ns.every((n) => t.includes(n));
+const lacks = (t: string, ...ns: string[]) => ns.every((n) => !t.includes(n));
+
+check("T11: H1 national rape 2015-2019 by year -> N1 only, 2018 = 144,505", () => {
+  const a = typedAnswer(CORR, "rapes in the United States by year from 2015 to 2019");
+  assert.equal(a.rows.find((r) => r.year === 2018)?.value, 144505);
+  assert.ok(has(a.text, N1_STATE_NATIONAL_DEFINITION) && lacks(a.text, N2_COMPOSITE_DEFINITION, N3_2021_LIMITATION), a.text);
+});
+check("T11: H1 national rape 2018 -> no N1, no N3", () => {
+  const a = typedAnswer(CORR, "rapes in the United States in 2018");
+  assert.ok(lacks(a.text, ...ALL_NOTES), a.text);
+});
+check("T11: H1 national rape 2020-2022 -> N3, no N1", () => {
+  const a = typedAnswer(CORR, "rapes in the United States by year from 2020 to 2022");
+  assert.ok(has(a.text, N3_2021_LIMITATION) && lacks(a.text, N1_STATE_NATIONAL_DEFINITION), a.text);
+});
+check("T11: H1 period total of national rapes 2015-2019 -> N1 (the sum adds both definitions)", () => {
+  const a = typedAnswer(CORR, "total rapes in the United States from 2015 to 2019");
+  assert.ok("period" in a.rows[0], JSON.stringify(a.rows[0]));
+  assert.deepEqual(a.delivered[0].years, [2015, 2016, 2017, 2018, 2019]);
+  assert.ok(has(a.text, N1_STATE_NATIONAL_DEFINITION) && lacks(a.text, N3_2021_LIMITATION), a.text);
+});
+check("T11: H1 national violent crime rate 2016-2018 -> N2", () => {
+  const a = typedAnswer(CORR, "violent crime rate in the United States by year from 2016 to 2018");
+  assert.equal(a.delivered[0].statistic, "rate_per_100k");
+  assert.ok(has(a.text, N2_COMPOSITE_DEFINITION) && lacks(a.text, N1_STATE_NATIONAL_DEFINITION), a.text);
+});
+check("T11: H6 national rape change 2016 to 2018 -> N1", () => {
+  const a = typedAnswer(CORR, "change in rapes in the United States from 2016 to 2018");
+  assert.equal(a.type, "H6");
+  assert.ok(has(a.text, N1_STATE_NATIONAL_DEFINITION), a.text);
+});
+check("T11: H4 state ranking of rape counts in 2021 -> no N3 (state rows are not national)", () => {
+  const a = typedAnswer(CORR, "top 2 states by rapes in 2021");
+  assert.equal(a.type, "H4");
+  assert.ok(a.delivered.length > 0 && a.delivered.every((d) => d.placeKind === "state"));
+  assert.ok(lacks(a.text, ...ALL_NOTES), a.text);
+});
+check("T11: Texas rape 2015-2019 -> N1; 2020-2022 -> no N3", () => {
+  assert.ok(has(typedAnswer(CORR, "rapes in Texas by year from 2015 to 2019").text, N1_STATE_NATIONAL_DEFINITION));
+  assert.ok(lacks(typedAnswer(CORR, "rapes in Texas by year from 2020 to 2022").text, ...ALL_NOTES));
+});
+check("T11: uncorrected -> no note on any of them, and the old 2018 value", () => {
+  for (const q of ["rapes in the United States by year from 2015 to 2019", "rapes in the United States by year from 2020 to 2022", "total rapes in the United States from 2015 to 2019", "violent crime rate in the United States by year from 2016 to 2018"]) {
+    const a = typedAnswer(UNCORR, q);
+    assert.ok(lacks(a.text, ...ALL_NOTES), `${q}: ${a.text}`);
+  }
+  assert.equal(typedAnswer(UNCORR, "rapes in the United States by year from 2015 to 2019").rows.find((r) => r.year === 2018)?.value, 103321);
+});
+check("T11: idempotent, and a stale note is stripped when uncorrected", () => {
+  const delivered = [ds({ years: [2015, 2016, 2017] })];
+  const once = withTypedHistoricalRapeNotes(BASE, delivered, true);
+  assert.ok(once.includes(N1_STATE_NATIONAL_DEFINITION));
+  assert.equal(withTypedHistoricalRapeNotes(once, delivered, true), once);
+  assert.equal(withTypedHistoricalRapeNotes(once, delivered, false), BASE);
+});
+check("T12: typedCorrectionState", () => {
+  assert.equal(typedCorrectionState([true, true]), true);
+  assert.equal(typedCorrectionState([false, false, false]), false);
+  assert.equal(typedCorrectionState([true, false]), "changed");
+  assert.equal(typedCorrectionState([]), false);
 });
 
 console.log(`\nhistorical national rape: ${passed} passed, ${failed} failed`);

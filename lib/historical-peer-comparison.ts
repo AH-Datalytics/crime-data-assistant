@@ -46,6 +46,8 @@ export interface HistoricalPeerPlan {
    * membership on the same contract as NIBRS rather than on that coincidence.
    */
   selectedPeers: EstablishedIdentity[];
+  /** Request accounting stage 2a: what this plan applied (subject, metric, period); absent on a limitation. */
+  applied?: { subject: { name: string; state: string }; metric: "homicide" | "violent_clearance"; period: { start: number; end: number } | null };
 }
 
 const sq = (v: string) => `'${String(v).replace(/'/g, "''")}'`;
@@ -192,6 +194,7 @@ LIMIT 5000`;
     expectedEntityCount: selection.entities.length,
     selectedLabels: selection.entities.map((e) => e.agency),
     selectedPeers: selection.entities.map((e) => ({ id: e.ori ?? null, label: e.agency })),
+    applied: { subject: { name: candidate.name, state: candidate.state.toUpperCase() }, metric: metric.kind, period },
   };
 }
 
