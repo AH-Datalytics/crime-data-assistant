@@ -191,7 +191,8 @@ console.log("\n7 - placement in the route, the prompt and the retired retries");
   // Owned count (reassessment ruling): the conflict question precedes every builder; the owned gate
   // precedes the cache and the model; the model path no longer binds or receives a county scope.
   const conflictAt = route.indexOf("if (shrRequestedMeasure(guardrailQuestion) === \"conflict\") {");
-  const ownedGate = route.indexOf("if (shrOwnedCountFamily(guardrailQuestion)) {");
+  // Request accounting (plan r2.1): the owned count also requires that nothing restricts which records are counted.
+  const ownedGate = route.indexOf("if (shrOwnedCountFamily(guardrailQuestion) && !shrHasRowRestriction(requestLedger)) {");
   check(conflictAt > 0 && conflictAt < route.indexOf("const murderPlan = murderDb ? buildShrMurderPlan(question, murderDb) : null;")
     && ownedGate > route.indexOf("} else if (county) {") && ownedGate < route.indexOf("// Check response cache (only for standalone questions, not follow-ups)")
     && !route.includes("const modelCountyRequest = shrCountyRequest(guardrailQuestion);") && !route.includes("shrScopeGuidance("),

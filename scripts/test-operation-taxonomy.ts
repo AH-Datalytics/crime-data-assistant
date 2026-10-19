@@ -760,7 +760,8 @@ async function main() {
     // moved: query +2 (cityRankingPlan.guardrail, yoyComparisonPlan.guardrail), nibrs-query +2
     // (NIBRS_CATEGORY_CHANGE_GUARDRAIL, ownedQuery.guardrail), shr-query +2 ("owned-shr-count",
     // SHR_CITY_RANKING_GUARDRAIL). Only the string-literal one is visible to the family regex below.
-    assert.strictEqual(sites, 18, "seal-site count moved; re-run the two-pass enumeration");
+    // 18 -> 19: request accounting stage 1 (plan r2.1) -- shr-query +1, the owned request-plan seal ("owned-shr-request-plan").
+    assert.strictEqual(sites, 19, "seal-site count moved; re-run the two-pass enumeration");
     const families = new Set<string>();
     for (const f of ROUTES) for (const m of fs.readFileSync(f, "utf8").matchAll(/sealPlanDerivation\(\s*"([a-z0-9-]+)"/g)) families.add(m[1]);
     for (const f of ["lib/nibrs-deterministic-queries.ts", "lib/nibrs-rollup-deterministic.ts", "lib/nibrs-scope-deterministic.ts", "lib/current-indexed-state-deterministic.ts", "lib/multi-city-deterministic.ts", "lib/historical-deterministic-queries.ts", "lib/historical-national-violent.ts"]) {
@@ -788,6 +789,8 @@ async function main() {
       "owned-shr-count", "nibrs-annual-clearance",
       // National violent-crime batch (Codex :36558/:36622): the owned U.S. annual violent-crime count.
       "deterministic-historical-national-violent-count",
+      // Request accounting stage 1 (plan r2.1): every SHR number with conditions comes from the application-compiled request plan.
+      "owned-shr-request-plan",
     ].sort();
     assert.deepStrictEqual([...families].sort(), PINNED, "family set drifted: a builder was added, renamed, or removed");
   });

@@ -69,18 +69,23 @@ const inv = buildInventory(ROOT);
  * SHR agency/year classification (Codex combined ruling, 2026-10-02), shr-query (+2): the limited answer when a
  * City/County-dependent statement matched no classified agency while unclassified agencies are in its scope, on the
  * model path and on the deterministic name-match fallback (reporting_coverage_insufficient x2) -- never an apparent zero.
+ * Request accounting, stage 1 (plan docs/superpowers/plans/2026-10-07-request-accounting-stage1.md), shr-query (+1): the
+ * recognition gate's decline when a part of the request is not recorded in SHR or could not be interpreted
+ * (capability_path_unavailable), before every answer planner -- never a broader number in its place.
+ * Request accounting plan r2.1, shr-query (+1 decision, +1 operational): the owned request-plan answer
+ * (deterministic_plan | all_values_null) and its database-error catch (OPERATIONAL_RECORD).
  */
 const EXPECTED = {
-  decisionSites: 120,
-  sealSites: 120,
-  operationalRows: 21,
-  perRouteSealSites: { query: 35, "nibrs-query": 35, "shr-query": 35, "hc-query": 15 },
+  decisionSites: 122,
+  sealSites: 122,
+  operationalRows: 22,
+  perRouteSealSites: { query: 35, "nibrs-query": 35, "shr-query": 37, "hc-query": 15 },
   /** §2.4(ii): exactly one operational row is not an unconditionally terminal path. */
   nonTerminalOperationalRows: 1,
   /** §2.4(ii): exactly one terminates by closing the SSE stream rather than by returning. */
   streamClosureTerminations: 1,
-  /** 118 exits log through their route-local closure; the two source-switch exits call directly. */
-  closurePairedSites: 118,
+  /** 120 exits log through their route-local closure; the two source-switch exits call directly. */
+  closurePairedSites: 120,
   directPairedSites: 2,
 };
 
@@ -184,7 +189,8 @@ check("T7b computed sites select between whole Outcome constants, never parallel
     (s) => s.outcome.form === "computed" || s.outcome.form === "hoisted");
   // P2.1 measured 11; the integration adds the 7 computed candidate sites enumerated at EXPECTED (query 2,
   // nibrs-query 2, shr-query 3), each a choice between two whole OUTCOMES constants with its own predicate.
-  assert.strictEqual(computed.length, 18, "P2.1's 11 computed sites plus the 7 integrated candidate sites");
+  // Request accounting plan r2.1 adds 1: the owned request-plan answer (deterministic_plan | all_values_null).
+  assert.strictEqual(computed.length, 19, "P2.1's 11 computed sites, the 7 integrated candidate sites and the request-plan answer");
   for (const s of computed) {
     assert.ok(s.outcome.whenTrue && s.outcome.whenFalse, `${s.fingerprint} needs two arms`);
     assert.ok(s.outcome.predicate, `${s.fingerprint} must carry its own predicate`);

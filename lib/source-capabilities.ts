@@ -215,6 +215,9 @@ function asksNonCourtOutOfScopeTopic(question: string): boolean {
   return /\b(immigration status|illegal immigrant|undocumented|GARS|GVRS|gun violence restraining|red flag law)\b/i.test(question);
 }
 
+/** The accepted reader-facing sentence for a court-process or policy topic (also used by SHR request accounting). */
+export const COURT_POLICY_TOPIC_MESSAGE = "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.";
+
 function asksOutOfScopeTopic(question: string): boolean {
   if (asksNonCourtOutOfScopeTopic(question)) return true;
   // Decision 1: decide by referent, never by keyword.
@@ -270,7 +273,7 @@ export const SOURCE_CAPABILITY_RULES: SourceCapabilityRule[] = [
     source,
     severity: "unsupported",
     when: ({ question }) => asksOutOfScopeTopic(question),
-    message: "The available FBI datasets track reported crime and law-enforcement reporting, not court outcomes, incarceration, fines, immigration status, or policy registries.",
+    message: COURT_POLICY_TOPIC_MESSAGE,
   })),
   ...ALL_QUERY_SOURCES.map((source): SourceCapabilityRule => ({
     id: "demographic-rate-unsupported",
