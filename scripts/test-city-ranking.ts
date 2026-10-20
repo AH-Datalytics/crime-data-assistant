@@ -34,6 +34,10 @@ import { buildCityRanking, resolvePeriod, IDENTITY_UNIQUENESS } from "../lib/cit
 import { validateQueryContractSql, queryContractFailureMessage } from "../lib/query-contract-validator";
 import { deterministicPlanRefusal } from "../lib/deterministic-plan-guard";
 import { buildQueryContract } from "../lib/query-contract";
+import { planNibrsCityRanking } from "../lib/city-ranking-nibrs";
+import { decideCandidates, completenessOf } from "../lib/city-ranking-completeness";
+import { accountNibrsRequest, nibrsRecognitionRefusal } from "../lib/nibrs-request-accounting";
+import { nibrsUnboundParts, type NibrsApplied } from "../lib/nibrs-legacy-binding";
 
 let passed = 0;
 let failed = 0;
@@ -91,6 +95,25 @@ nMonth.run("TX01", 2025, 1, "TX", "09A", 300);
 nMonth.run("TX01", 2025, 2, "TX", "09A", 60);
 nMonth.run("TX01", 2025, 9, "TX", "09A", 1000);   // AFTER a July cutoff
 nMonth.run("TX02", 2025, 1, "TX", "09A", 50);
+
+// GC-063 (answer batch A): carjacking's own derived table, in the production column order. Several months, a
+// population change across agency-years, a city under the floor, another state, a non-City agency and an agency of
+// unknown type.
+nibrs.exec("CREATE TABLE summary_carjacking_monthly(year INTEGER, month INTEGER, state TEXT, ori TEXT, offense_count INTEGER);");
+nAgency.run("TX09", 2025, "SAN ANTONIO", "TX", 1500000, "City");
+nAgency.run("TX09", 2024, "SAN ANTONIO", "TX", 1400000, "City");    // another year's population is not used for 2025
+nAgency.run("TX10", 2025, "UNKNOWNVILLE", "TX", 300000, null);      // otherwise eligible, type unknown
+const nCarjack = nibrs.prepare("INSERT INTO summary_carjacking_monthly VALUES(?,?,?,?,?)");
+nCarjack.run(2025, 1, "TX", "TX01", 40);
+nCarjack.run(2025, 2, "TX", "TX01", 20);    // HOUSTON 60 / 2.3m = 2.61
+nCarjack.run(2025, 1, "TX", "TX09", 30);
+nCarjack.run(2025, 3, "TX", "TX09", 15);    // SAN ANTONIO 45 / 1.5m = 3.00
+nCarjack.run(2024, 1, "TX", "TX09", 99);    // wrong year
+nCarjack.run(2025, 1, "TX", "TX02", 5);     // AUSTIN 5 / 1m = 0.50
+nCarjack.run(2025, 1, "TX", "TX05", 50);    // WACO: under the 250k floor
+nCarjack.run(2025, 1, "NM", "NM01", 80);    // ALBUQUERQUE: another state
+nCarjack.run(2025, 1, "TX", "TX06", 70);    // HARRIS SO: not a city agency
+nCarjack.run(2025, 1, "TX", "TX10", 9);     // UNKNOWNVILLE: unknown type, so not ranked as a city
 
 const current = new Database(":memory:");
 current.exec(`
@@ -652,11 +675,55 @@ check("GC-062 executed returns every eligible city, including the recorded zero"
   assert.ok(!names.includes("HARRIS SO"), "not a city agency");
 });
 
-check("GC-063 (carjackings) is declined, never ranked from the human-trafficking codes 64A/64B", () => {
-  // Carjacking hotfix (2026-10-10): carjacking has no NIBRS code (robbery 120 with a stolen vehicle), so a code
-  // ranking cannot answer it. This check used to require 64A/64B here, which pinned the defect.
-  const plan = declined(GC063, "nibrs", "offense-unresolved");
-  assert.ok(!JSON.stringify(plan).includes("64A") && !JSON.stringify(plan).includes("64B"));
+check("GC-063 (carjackings) is ranked from the derived carjacking table, never from the human-trafficking codes 64A/64B", () => {
+  // Answer batch A (2026-10-20): carjacking has no NIBRS code (it is robbery 120 with a stolen vehicle), so it is
+  // never built from codes (carjacking hotfix, 2026-10-10); it has its own derived table, summary_carjacking_monthly.
+  const { plan, built, rows, names } = run(nibrs, GC063, "nibrs");
+  assert.deepEqual(plan.offense, { kind: "nibrs_carjacking" });
+  assert.deepEqual(plan.scope, { kind: "state", code: "TX", name: "Texas" });
+  assert.deepEqual(plan.eligibility, [{ kind: "population", comparison: ">=", value: 250000 }]);
+  assert.match(built.sql, /FROM summary_carjacking_monthly s JOIN agencies a ON a\.ori = s\.ori AND a\.year = s\.year/);
+  assert.doesNotMatch(built.sql, /ucr_offense_code|summary_city_monthly|64A|64B|'120'/);
+  assert.deepEqual(names, ["SAN ANTONIO", "HOUSTON", "AUSTIN"], "rate order; WACO, ALBUQUERQUE, HARRIS SO, UNKNOWNVILLE excluded");
+  assert.deepEqual(rows.map((r) => r.rate_per_100k), [3, 2.61, 0.5]);
+  assert.equal(rows[0].population, 1500000, "the 2025 population, not 2024's");
+  assert.deepEqual([rows[0].first_month, rows[0].last_month], [1, 3], "the span is reported, not certified complete");
+  assert.match(built.caveats.join(" "), /derived measure: robbery incidents in which a motor vehicle was stolen/);
+  assert.match(built.caveats.join(" "), /do not rule out missing months/);
+  // Completeness: the candidates statement reads the same table, and the unknown-type agency is the unresolved one.
+  const candidates = rowsOf(nibrs, built.completeness!.candidatesSql);
+  assert.match(built.completeness!.candidatesSql, /FROM summary_carjacking_monthly s/);
+  assert.deepEqual(candidates.map((r) => r.city), ["UNKNOWNVILLE"]);
+  assert.equal(built.completeness!.ranked([]), built.sql);
+  // The existing decision, as the route runs it: UNKNOWNVILLE (9 / 300,000 = 3.00 per 100k) is an eligible agency of
+  // unknown type that would place within the ranking, so the ranking is delivered as PARTIAL, naming it.
+  const decision = decideCandidates(built.completeness!, candidates);
+  assert.equal(decision.kind, "decided");
+  if (decision.kind === "decided") {
+    assert.deepEqual(decision.unresolved.map((c) => c.ori), ["TX10"]);
+    assert.deepEqual(decision.conflicted, []);
+    const result = completenessOf(built.completeness!, decision, rows, built.title);
+    assert.equal(result.complete, false, "an unresolved agency that would rank prevents an unqualified complete ranking");
+    assert.match(result.sentences.join(" "), /This ranking is incomplete: one agency .*UNKNOWNVILLE/);
+  }
+});
+
+check("carjacking beside another offense, in either order, and domestic violence are still declined", () => {
+  for (const q of ["which cities had the most carjackings and robberies in 2025?", "which cities had the most robberies and carjackings in 2025?", "which cities had the most domestic violence in 2025?"]) {
+    const plan = recognizeCityRanking(q, "nibrs");
+    assert.ok(!plan || plan.kind === "unsupported", `declined: ${q}`);
+  }
+});
+
+check("the GC-063 ranking binds every part of the request in NIBRS request accounting (carjacking by family value)", () => {
+  const p = planNibrsCityRanking(GC063, { year: 2026, month: 7, observed: true } as never);
+  assert.ok(p && p.kind === "deterministic");
+  const applied = (p as { query: { applied: NibrsApplied } }).query.applied;
+  assert.deepEqual(applied.families, ["carjacking"]);
+  assert.deepEqual(applied.codeGroups, []);
+  const ledger = accountNibrsRequest(GC063);
+  assert.equal(nibrsRecognitionRefusal(ledger), null);
+  assert.deepEqual(nibrsUnboundParts(ledger, applied).map((x) => x.text), []);
 });
 
 check("GC-063's shape with a coded offense carries Texas and the 250k floor, and delivers its figures", () => {

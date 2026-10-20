@@ -127,6 +127,7 @@ function sameOffense(a: OffenseIdentity, b: OffenseIdentity): boolean {
   if (a.kind === "nibrs_codes" && b.kind === "nibrs_codes") {
     return a.codes.length === b.codes.length && a.codes.every((code, i) => code === b.codes[i]);
   }
+  if (a.kind === "nibrs_carjacking" && b.kind === "nibrs_carjacking") return true;
   return false;
 }
 
@@ -327,15 +328,19 @@ export function buildCityRanking(
     // Recognition declines this (Codex GC-057 ruling, option B); a hand-built request must not
     // quietly become a city ranking either.
     if (jurisdiction) throw new Error("city-ranking: refusing to build a NIBRS jurisdiction ranking as a city ranking");
-    if (request.offense.kind !== "nibrs_codes") return null;
-    const codes = request.offense.codes.map(quote).join(", ");
+    if (request.offense.kind !== "nibrs_codes" && request.offense.kind !== "nibrs_carjacking") return null;
+    // Carjacking (GC-063) reads its own derived table, which has the same year/month/ori/offense_count shape and no
+    // offense code; every other clause -- the agencies join, city type, population, period, scope, rate -- is shared.
+    const carjacking = request.offense.kind === "nibrs_carjacking";
+    const offenseTable = carjacking ? "summary_carjacking_monthly" : "summary_city_monthly";
+    const codes = request.offense.kind === "nibrs_codes" ? request.offense.codes.map(quote).join(", ") : "";
     /*
      * NIBRS keeps the city name on the identity table, so this join is not optional -- but it is on
      * exactly `agencies`' declared PRIMARY KEY (ori, year), which is what stops it multiplying the
      * measure. See IDENTITY_UNIQUENESS above.
      */
     const where = [
-      `s.ucr_offense_code IN (${codes})`,
+      ...(carjacking ? [] : [`s.ucr_offense_code IN (${codes})`]),
       `s.year = ${period.year}`,
       "a.agency_type = 'City'",
       ...populationPredicates(request.eligibility, "a.population"),
@@ -354,7 +359,7 @@ export function buildCityRanking(
       "SELECT a.city AS city, a.state AS state, SUM(s.offense_count) AS offenses" +
       (rate ? ", a.population AS population, ROUND(SUM(s.offense_count) * 100000.0 / a.population, 2) AS rate_per_100k" : "") +
       ", MIN(s.month) AS first_month, MAX(s.month) AS last_month" +
-      " FROM summary_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year" +
+      ` FROM ${offenseTable} s JOIN agencies a ON a.ori = s.ori AND a.year = s.year` +
       ` WHERE ${where.join(" AND ")}` +
       " GROUP BY a.ori, a.city, a.state" + (rate ? ", a.population" : "") +
       (having.length > 0 ? ` HAVING ${having.join(" AND ")}` : "") +
@@ -373,7 +378,7 @@ export function buildCityRanking(
       candidatesSql:
         "SELECT a.ori AS ori, a.city AS city, a.state AS state, a.agency_type AS recorded_type, a.population AS population" +
         ", SUM(s.offense_count) AS offenses" +
-        " FROM summary_city_monthly s JOIN agencies a ON a.ori = s.ori AND a.year = s.year" +
+        ` FROM ${offenseTable} s JOIN agencies a ON a.ori = s.ori AND a.year = s.year` +
         ` WHERE ${unresolvedWhere.join(" AND ")}` +
         " GROUP BY a.ori, a.city, a.state, a.agency_type, a.population" +
         (having.length > 0 ? ` HAVING ${having.join(" AND ")}` : "") +

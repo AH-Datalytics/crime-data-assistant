@@ -30,6 +30,8 @@ function cityRankingApplied(r: CityRankingRequest): NibrsApplied {
   return {
     places: r.scope.kind === "nationwide" ? placeIs.national : placeIs.state(r.scope.name),
     codeGroups: r.offense.kind === "nibrs_codes" ? [r.offense.codes] : [],
+    // Carjacking is bound by its family value, never as robbery or all offenses (GC-063).
+    ...(r.offense.kind === "nibrs_carjacking" ? { families: ["carjacking"] } : {}),
     statistic: r.sort.quantity === "rate_per_100k" ? "rate" : r.sort.quantity === "count" ? "count" : null,
     rank: { dir: r.sort.direction === "desc" ? "top" : "bottom", n: r.resultCount },
     years: r.period.kind === "explicit" ? { start: r.period.year, end: r.period.year } : null,

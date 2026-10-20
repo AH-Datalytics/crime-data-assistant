@@ -33,6 +33,7 @@ import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-history";
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage, limitationReply, selectNoSqlRefusal } from "@/lib/refusal-safety";
+import { observeAccountingInput } from "@/lib/accounting-input-probe";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { applyChartCustomizations } from "@/lib/chart-customization";
@@ -349,9 +350,11 @@ export async function POST(req: NextRequest) {
       ))
       : [];
     const followupShrGuidance = formatShrResolutionGuidance(followupShrPlaces);
+    // A NEW array in both branches: the place guidance below is the app's instruction to the model, and pushing it onto
+    // `history` itself made request accounting read it as an earlier user turn (GC-026, GC-078).
     const promptHistory = followupTransform
       ? [...history, { role: "user" as const, content: followupTransform.instruction }]
-      : history;
+      : [...history];
     if (followupShrGuidance) promptHistory.push({ role: "user" as const, content: followupShrGuidance });
     const start = Date.now();
     const routingMeta = parseRoutingLogMeta(body);
@@ -506,6 +509,7 @@ export async function POST(req: NextRequest) {
     const earlierTurns = accountedQuestion === question
       ? history.filter((m) => m.role === "user").map((m) => String(m.content ?? "")).filter((t) => t.trim() && t.trim() !== question.trim())
       : [];
+    observeAccountingInput("shr", accountedQuestion, earlierTurns);
     const requestLedger = accountShrRequest(accountedQuestion, { ...(accountingDb ? { knownAgency: shrKnownAgencyIndex(accountingDb) } : {}), earlierTurns });
     // ONE sealed exit for every accounting decline: the recognition gate here, and each owning path's
     // binding below (a part its plan cannot apply is a terminal limitation, never a fall-through).
@@ -521,7 +525,17 @@ export async function POST(req: NextRequest) {
       }));
     };
     const accountingRefusal = shrRecognitionRefusal(requestLedger);
-    if (accountingRefusal) return accountingExit(accountingRefusal, "recognition");
+    if (accountingRefusal) {
+      // When accounting refuses only parts it could not READ, and the capability policy establishes a limitation for
+      // the whole request (a per-capita rate for a demographic group, which this source cannot denominate and, for
+      // arrests or other offenses, does not hold), that limitation is the accurate reply; the unread parts are a
+      // symptom of it (GC-026). A substantive not-recorded refusal (overdose deaths, immigration status, court
+      // outcomes) is never replaced: it is the more precise answer and offers no substitute.
+      const onlyUnread = accountingRefusal.parts.every((p) => p.state === "not-interpreted");
+      const established = onlyUnread ? selectNoSqlRefusal(question, "shr") : null;
+      if (established?.reason === "demographic-rate-denominator") return accountingExit({ parts: accountingRefusal.parts, explanation: established.explanation }, "recognition");
+      return accountingExit(accountingRefusal, "recognition");
+    }
     // Parts every owning path may carry: context is already terminal; these never restrict.
     const carried = anyOf(shrPart.countStatistic, shrPart.victimRole, shrPart.victimUnit, shrPart.concept("presentation"));
 

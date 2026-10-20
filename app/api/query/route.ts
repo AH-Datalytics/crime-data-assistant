@@ -2486,9 +2486,10 @@ export async function POST(req: NextRequest) {
               `${entry.alias}, ${entry.state} MUST query historical_agency ORI ${entry.historicalOri} (${entry.historicalAgency}) and MUST display only ${entry.alias}`,
             ).join("; ")}. Do not query a predecessor ORI or use a source-specific agency name in output.`
           : undefined;
+        // A NEW array in both branches, so the instructions pushed below never become turns of `history` itself.
         const promptHistory = followupTransform
           ? [...history, { role: "user" as const, content: followupTransform.instruction }]
-          : history;
+          : [...history];
         if (consolidationInstruction) promptHistory.push({ role: "user" as const, content: consolidationInstruction });
         // The user chose one of a county's two law enforcement agencies. Tell the model which
         // ORI that is -- and note that the contract validator checks the SQL actually uses it,

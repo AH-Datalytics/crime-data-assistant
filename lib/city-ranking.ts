@@ -52,6 +52,9 @@ export type CityRankingSource = "current" | "nibrs" | "shr";
 export type OffenseIdentity =
   | { kind: "current_offense"; value: string }
   | { kind: "nibrs_codes"; codes: string[] }
+  // The dataset's derived carjacking measure: robbery (120) incidents with a stolen motor vehicle, pre-aggregated in
+  // summary_carjacking_monthly. NIBRS has no separate carjacking offense code.
+  | { kind: "nibrs_carjacking" }
   // SHR counts VICTIM records: "homicide" is every homicide type, "murder" is homicide_type 'Murder'
   // (the owned-count definitions in lib/shr-murder-licence.ts, unchanged).
   | { kind: "shr_victims"; measure: "homicide" | "murder" };
@@ -663,6 +666,10 @@ function nibrsOffense(claimText: string, codes: string[]): { offense: OffenseIde
   return null;
 }
 
+export const NIBRS_CARJACKING_LABEL = "Carjacking";
+export const NIBRS_CARJACKING_DEFINITION =
+  "Carjacking here is this dataset's derived measure: robbery incidents in which a motor vehicle was stolen. NIBRS has no separate carjacking offense.";
+
 const SEXUAL_ASSAULT_CAVEAT =
   "This database uses the FBI's UCR category \"Rape\" (forcible rape, sodomy, and sexual assault " +
   "with an object), not the broader legal definition of sexual assault, which varies by jurisdiction.";
@@ -699,7 +706,15 @@ function resolveOffense(
 ): { offense: OffenseIdentity; label: string; caveats: string[] } | null {
   if (source === "nibrs") {
     const claimContract = buildQueryContract(claimText, source);
-    if (claimContract && hasCodelessFamily(claimContract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
+    if (claimContract && hasCodelessFamily(claimContract)) {
+      // Carjacking ALONE has its own derived measure (GC-063). Anything else code-less, or carjacking beside another
+      // offense, is still declined (carjacking hotfix, 2026-10-10): it is never built from offense codes here.
+      const offenses = claimContract.metric.offenses;
+      if (offenses.length === 1 && offenses[0].topic === "carjacking") {
+        return { offense: { kind: "nibrs_carjacking" }, label: NIBRS_CARJACKING_LABEL, caveats: [NIBRS_CARJACKING_DEFINITION] };
+      }
+      return null;
+    }
     return nibrsOffense(claimText, claimContract?.metric.offenseCodes ?? []);
   }
   if (source === "shr") return shrOffense(claimText);
@@ -712,6 +727,7 @@ const sameIdentity = (a: OffenseIdentity, b: OffenseIdentity): boolean => {
   if (a.kind === "nibrs_codes" && b.kind === "nibrs_codes") {
     return a.codes.length === b.codes.length && a.codes.every((code, i) => code === b.codes[i]);
   }
+  if (a.kind === "nibrs_carjacking" && b.kind === "nibrs_carjacking") return true;
   return false;
 };
 

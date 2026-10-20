@@ -3,7 +3,7 @@
  * condition is refused at recognition, and its supported counterpart is not. Pure recognition: no
  * database, no route, no model.
  */
-import { accountShrRequest, shrRecognitionRefusal, SHR_IMMIGRATION_NOT_RECORDED } from "../lib/shr-request-accounting";
+import { accountShrRequest, shrRecognitionRefusal, SHR_IMMIGRATION_NOT_RECORDED, SHR_OVERDOSE_NOT_RECORDED } from "../lib/shr-request-accounting";
 
 let checks = 0;
 let failures = 0;
@@ -119,6 +119,28 @@ check(conceptOf("Number of overdose deaths in NJ since 1990", "NJ")?.concept ===
   check(!knives.parts.some((p) => p.inherited && p.concept === "weapon"), "a restated weapon restriction replaces the earlier one");
   const monthly = accountShrRequest("what about by month?", { earlierTurns: ["murders in Texas by year in 2025"] });
   check(!monthly.parts.some((p) => p.inherited && /by year/i.test(p.text)) && monthly.parts.some((p) => p.inherited && /2025/.test(p.text)), "a new grouping replaces the old grouping and keeps the year");
+}
+
+// Answer batch A (2026-10-20). GC-106: overdose deaths are not a weapon; they are declined, never answered as
+// Narcotics/Drugs homicides. The narcotics weapon and drug-related controls are unchanged.
+{
+  for (const q of ["Number of overdose deaths in NJ since 1990", "drug overdoses in Ohio", "opioid overdose deaths in Florida in 2020", "how many people died of an overdose in Texas"]) {
+    const l = accountShrRequest(q);
+    const r = shrRecognitionRefusal(l);
+    check(r?.explanation === SHR_OVERDOSE_NOT_RECORDED, `overdose is not recorded: "${q}"`);
+    check(!l.parts.some((p) => p.concept === "weapon"), `overdose is never read as a weapon: "${q}"`);
+  }
+  check(/do not provide a count of all overdose deaths/.test(SHR_OVERDOSE_NOT_RECORDED) && !/\d/.test(SHR_OVERDOSE_NOT_RECORDED), "the overdose limitation offers no number");
+  const narcotics = accountShrRequest("homicides with narcotics in NJ");
+  check(shrRecognitionRefusal(narcotics) === null && narcotics.parts.some((p) => p.concept === "weapon" && /narcotics/.test(p.text)), "homicides with narcotics stay the drug weapon");
+  const related = accountShrRequest("drug-related homicides in Ohio in 2020");
+  check(shrRecognitionRefusal(related) === null, "drug-related homicides are unchanged");
+}
+// GC-026 / GC-078: the questions as asked, with only the user's own (empty) history, carry no instruction text.
+{
+  const chicago = shrRecognitionRefusal(accountShrRequest("arrest rate by race for robbery in Chicago", { earlierTurns: [] }));
+  check(chicago?.parts.map((p) => p.text).join("|") === "arrest", "GC-026 with no earlier turns: only \"arrest\" is unread (no instruction text)");
+  check(shrRecognitionRefusal(accountShrRequest("Trends in crime in Mesa, Arizona, since 2017", { earlierTurns: [] })) === null, "GC-078 with no earlier turns: nothing is refused");
 }
 
 // Every character is accounted for, and nothing is undischarged.
