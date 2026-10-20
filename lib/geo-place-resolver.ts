@@ -1,6 +1,7 @@
 ﻿import { GEO_PLACE_CATALOG, type GeoPlaceCatalogEntry, type GeoPlaceKind } from "./geo-place-catalog";
 import { fuzzyResolvePlace } from "./geo-fuzzy";
 import { isCommonEnglishWord } from "./english-common-words";
+import { isCrimeVocabularyWord } from "./crime-vocabulary";
 
 export type GeoPlaceCandidate = {
   id: string;
@@ -159,7 +160,9 @@ function fuzzyFallbackMention(input: string): GeoPlaceMention | null {
      * untouched, so a town whose name is an English word (Early TX, Reading PA, Mobile AL) still
      * resolves from an explicit reference.
      */
-    if (span.keys.length > 0 && span.keys.every((key) => isCommonEnglishWord(key))) continue;
+    // Crime/data vocabulary is likewise not a spelling correction ("hate" -> Fate, TX; "crime" -> Crane, MO): see
+    // lib/crime-vocabulary.ts for the measured defect and where the words come from.
+    if (span.keys.length > 0 && span.keys.every((key) => isCommonEnglishWord(key) || isCrimeVocabularyWord(key))) continue;
     const result = fuzzyResolvePlace(span.text);
     if (!result.best) continue;
     const cap = span.strict ? 1 : 2; // place-at-start must be within one typo
