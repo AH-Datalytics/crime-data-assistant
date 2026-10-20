@@ -28,6 +28,9 @@ import { buildQueryContract } from "../lib/query-contract";
 import { geoCorrectionHint } from "../lib/geo-correction";
 import { asksSubCityGeography } from "../lib/capability-overrides";
 import { COMMON_ENGLISH_WORD_COUNT, isCommonEnglishWord } from "../lib/english-common-words";
+import { CODEBOOK_WORD_COUNT, CODEBOOK_WORD_LIST, PRODUCT_TERM_COUNT, isCrimeVocabularyWord } from "../lib/crime-vocabulary";
+import fs from "node:fs";
+import path from "node:path";
 
 let checks = 0;
 let failures = 0;
@@ -273,6 +276,82 @@ check(isCommonEnglishWord("early") === true, '"early" belongs in the vocabulary 
 check(isCommonEnglishWord("") === false, "an empty token must never count as a common word");
 check(isCommonEnglishWord("all cities") === false, "the predicate takes one token, not a phrase");
 check(isCommonEnglishWord("ALL") === true, "lookup must be case-insensitive, matching the resolver's token keys");
+
+/* ------------------------------------------------------------------ */
+/*  I - crime/data vocabulary (lib/crime-vocabulary.ts, 2026-10-20)    */
+/* ------------------------------------------------------------------ */
+console.log("");
+console.log("I - crime/data vocabulary is not a spelling correction");
+
+{
+  // I1. The frozen codebook words equal a fresh extraction from the shipped CDE fixtures, by the documented rule.
+  const DIR = path.join(__dirname, "fixtures", "cde");
+  const COLUMNS: Record<string, string[]> = {
+    "NIBRS_OFFENSE_TYPE.csv": ["offense_name", "crime_against", "offense_category_name"],
+    "NIBRS_WEAPON_TYPE.csv": ["weapon_name"], "NIBRS_LOCATION_TYPE.csv": ["location_name"],
+    "NIBRS_BIAS_LIST.csv": ["bias_category", "bias_desc"], "NIBRS_VICTIM_TYPE.csv": ["victim_type_name"],
+    "NIBRS_RELATIONSHIP.csv": ["relationship_name"], "NIBRS_CLEARED_EXCEPT.csv": ["cleared_except_name"],
+    "NIBRS_PROP_DESC_TYPE.csv": ["prop_desc_name"], "NIBRS_PROP_LOSS_TYPE.csv": ["prop_loss_name"],
+    "NIBRS_SUSPECTED_DRUG_TYPE.csv": ["suspected_drug_name"], "NIBRS_ETHNICITY.csv": ["ethnicity_name"], "REF_RACE.csv": ["race_desc"],
+  };
+  const parseCsv = (text: string): Record<string, string>[] => {
+    const rows: string[][] = []; let row: string[] = []; let f = ""; let q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === '"' && text[i + 1] === '"') { f += '"'; i++; } else if (c === '"') q = false; else f += c; }
+      else if (c === '"') q = true; else if (c === ",") { row.push(f); f = ""; }
+      else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; } else f += c;
+    }
+    if (f || row.length) { row.push(f); rows.push(row); }
+    const [h, ...rest] = rows.filter((r) => r.some((x) => x !== ""));
+    return rest.map((r) => Object.fromEntries(h.map((k, i) => [k, r[i] ?? ""])));
+  };
+  const labels: string[] = [];
+  for (const [file, cols] of Object.entries(COLUMNS)) for (const r of parseCsv(fs.readFileSync(path.join(DIR, file), "utf8"))) for (const c of cols) labels.push(r[c]);
+  const shr = JSON.parse(fs.readFileSync(path.join(DIR, "shr-codebook.json"), "utf8"));
+  for (const k of ["weapon", "relationship", "circumstance"]) for (const v of Object.values(shr[k] as Record<string, unknown>)) labels.push(typeof v === "string" ? v : String((v as { name?: string }).name ?? ""));
+  const fresh = new Set<string>(); const exactPlaces = new Set<string>();
+  for (const l of labels) for (const w of l.toLowerCase().split(/[^a-z]+/)) {
+    if (w.length < 3 || isCommonEnglishWord(w) || fresh.has(w) || exactPlaces.has(w)) continue;
+    const exact = resolveGeoPlaces(w).mentions.some((m) => m.candidates.length > 0 && !/fuzzy/i.test(m.reason ?? "") && m.text.toLowerCase() === w);
+    if (exact) exactPlaces.add(w); else fresh.add(w);
+  }
+  const frozen = [...CODEBOOK_WORD_LIST].sort().join(" ");
+  check(frozen === [...fresh].sort().join(" "), "the frozen codebook words must equal a fresh extraction from scripts/fixtures/cde");
+  check([...exactPlaces].sort().join(" ") === "alaska arab center foster friend garden mission pacific register rifle temple",
+    `the excluded exact-place words changed: ${[...exactPlaces].sort().join(" ")}`);
+  // I2. Bounded and separate: the ordinary-English list (with its second consumer) is unchanged.
+  check(CODEBOOK_WORD_COUNT === 499, `codebook words must be 499 (got ${CODEBOOK_WORD_COUNT})`);
+  check(PRODUCT_TERM_COUNT === 12, `product terms must be 12 (got ${PRODUCT_TERM_COUNT})`);
+  check(!isCommonEnglishWord("hate") && !isCommonEnglishWord("crime"), "the ordinary-English list must be unchanged (its SHR consumer is out of scope)");
+  for (const place of ["alaska", "rifle", "temple", "taft", "fate", "crane", "americus"]) check(!isCrimeVocabularyWord(place), `"${place}" is a place name and must not be crime vocabulary`);
+  check(isCrimeVocabularyWord("thefts") && isCrimeVocabularyWord("robberies") && isCrimeVocabularyWord("crimes"), "simple plurals must count");
+  check(!isCrimeVocabularyWord("") && !isCrimeVocabularyWord("hate crime"), "one token only; empty never matches");
+
+  // I3. The measured phantoms (probe, 2026-10-20): no correction hint and no fuzzy place for any of them.
+  const words = ["hate", "crime", "crimes", "theft", "thefts", "drugs", "gambling", "clearance", "arsons", "auto", "bank", "park", "gang", "guns", "adult", "age", "america", "ori"];
+  const templates = ["Number of {w} by year", "Show the trend of {w} since 2015", "What were the locations of {w} crimes in 2023?",
+    "Rise in {w} since 2020", "Increase in {w} nationally", "Data for {w} in 2023", "Changes in {w} over time", "Percent of {w} involving guns"];
+  for (const w of words) for (const t of templates) {
+    const q = t.replace("{w}", w);
+    check(geoCorrectionHint(q) === null, `no correction hint for "${q}" (got ${geoCorrectionHint(q)})`);
+    check(identity(q) === null, `no place for "${q}" (got ${identity(q)})`);
+  }
+  // I4. Real questions from the production query log that the live release turned into phantom towns.
+  for (const q of ["What were the most common locations of hate crimes in 2023?", "Show me trends in hate crime",
+    "What is the trend for crime on transit systems?", "I want to learn about racial disparities in clearance rates",
+    "which 5 cities saw the biggest swings in auto thefts from 2021 to 2023?", "homicide rates for gender and race",
+    "trend for white collar property crime", "show me the change in non-violent crimes from 2000 to 2015",
+    "number of homicides for non-Hispanic Whites and non-Hispanic Blacks", "What is the crime rate in America?"]) {
+    check(geoCorrectionHint(q) === null, `no phantom correction for "${q}" (got ${geoCorrectionHint(q)})`);
+  }
+  // I5. Exact places that share these words still resolve; real typos are still corrected.
+  for (const [q, want] of [["theft in Taft, CA", "Taft, CA"], ["hate crimes in Fate, TX", "Fate, TX"], ["crime in Crane, MO", "Crane, MO"],
+    ["Crime in Americus, GA", "Americus, GA"], ["drug arrests in Driggs, ID", "Driggs, ID"], ["murders in new orlens", "New Orleans, LA"]] as const) {
+    check(identity(q) === want, `"${q}" must resolve to ${want} (got ${identity(q) ?? "none"})`);
+  }
+  check(/New Orleans, LA/.test(geoCorrectionHint("murders in new orlens") ?? ""), "a real typo must still get its correction hint");
+}
 
 console.log("");
 console.log(`checks: ${checks}   failures: ${failures}`);
