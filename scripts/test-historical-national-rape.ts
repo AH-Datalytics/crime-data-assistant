@@ -32,6 +32,7 @@ import {
   readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity,
   typedRapeNoteSeries, withTypedHistoricalRapeNotes, typedCorrectionState, type TypedDeliveredSeries,
 } from "../lib/historical-national-rape";
+import { RAPE_DEFINITION_CAVEAT } from "../lib/historical-rape-series";
 import { accountHistoricalRequest } from "../lib/historical-request-accounting";
 import { matchHistoricalType } from "../lib/historical-question-types";
 import { compileHistoricalSpec, historicalSourceBounds } from "../lib/historical-question-compiler";
@@ -298,6 +299,67 @@ check("T12: typedCorrectionState", () => {
   assert.equal(typedCorrectionState([true, false]), "changed");
   assert.equal(typedCorrectionState([]), false);
 });
+
+// Answer batch A (2026-10-20), GC-085: a typed rape-COUNT series delivered on both sides of the FBI's 2013 definition
+// change carries the 2013 sentence once, before N1, from the DELIVERED years.
+function wideFixture(nullBefore2013: boolean): Database.Database {
+  const db = new Database(":memory:");
+  const ddl = fs.readFileSync("scripts/fixtures/operation-taxonomy/crime_data.ddl.sql", "utf8").split(";").map((s) => s.trim()).filter((s) => /^CREATE\s+(TABLE|INDEX)/i.test(s) && /historical_|agency_county_crosswalk/.test(s));
+  for (const stmt of ddl) db.exec(stmt);
+  const ins = db.prepare("INSERT INTO historical_state_national (state, year, population, murder, rape, robbery, aggravated_assault, burglary, theft, auto_theft, murder_rate, rape_rate, robbery_rate, aggravated_assault_rate, burglary_rate, theft_rate, auto_theft_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  for (const [state, k] of [["United States", 100], ["Texas", 10]] as [string, number][]) {
+    for (let y = 2010; y <= 2024; y += 1) {
+      const rape = nullBefore2013 && y <= 2012 ? null : (state === "United States" && y === 2018 ? 144505 : 1000 * k + y);
+      ins.run(state, y, 1000000 * k, 10 * k, rape, 20 * k, 30 * k, 40 * k, 50 * k, 60 * k, 1, 2, 3, 4, 5, 6, 7);
+    }
+  }
+  db.exec("CREATE TABLE historical_national_rape_correction (name TEXT PRIMARY KEY, applied_at TEXT, source_sha256 TEXT, years TEXT)");
+  db.prepare("INSERT INTO historical_national_rape_correction VALUES ('national-rape-cius-t1-2017-2024', 'now', '551f29bd', '2017-2024')").run();
+  return db;
+}
+{
+  const WIDE = wideFixture(false), WIDE_GAP = wideFixture(true);
+  const WIDE_NOW = new Date(Date.UTC(2026, 5, 1));
+  const wideAnswer = (db: Database.Database, q: string) => {
+    const decision = matchHistoricalType(accountHistoricalRequest(q), { bounds: (s) => historicalSourceBounds(db, s), now: WIDE_NOW });
+    if (decision.kind !== "spec") throw new Error(`"${q}" did not issue a spec (${decision.kind})`);
+    const states: boolean[] = [];
+    const executeMany = (d: Database.Database, ss: string[]) => d.transaction(() => ss.map((x) => d.prepare(x).all() as Record<string, unknown>[]))();
+    const compiled = compileHistoricalSpec(decision.spec, { db, now: WIDE_NOW, execute: (sql) => { const r = executeWithCorrectionState(db, sql, 30000, { executeMany }); states.push(r.corrected); return r.rows; } });
+    if (compiled.kind !== "answer") throw new Error(`"${q}" declined: ${compiled.explanation}`);
+    return withTypedHistoricalRapeNotes(compiled.explanation, compiled.deliveredSeries, typedCorrectionState(states) === true);
+  };
+  const count = (t: string, s: string) => t.split(s).length - 1;
+  check("GC-085: national, sexual assault, 2010-2024 -> the 2013 sentence once, before N1 (which keeps the 2017 switch)", () => {
+    const t = wideAnswer(WIDE, "national, sexual assault, 2010-2024");
+    assert.equal(count(t, RAPE_DEFINITION_CAVEAT), 1, t);
+    assert.ok(t.includes(N1_STATE_NATIONAL_DEFINITION), t);
+    assert.ok(t.indexOf(RAPE_DEFINITION_CAVEAT) < t.indexOf(N1_STATE_NATIONAL_DEFINITION), t);
+  });
+  check("GC-085: rapes in the United States 2014-2024 -> no 2013 sentence", () => {
+    assert.ok(!wideAnswer(WIDE, "rapes in the United States by year from 2014 to 2024").includes(RAPE_DEFINITION_CAVEAT));
+  });
+  check("GC-085: requested 2010-2024 but values only from 2013 -> no 2013 sentence (delivered, not requested, years)", () => {
+    assert.ok(!wideAnswer(WIDE_GAP, "rapes in the United States by year from 2010 to 2024").includes(RAPE_DEFINITION_CAVEAT));
+  });
+  check("GC-085: a rape RATE 2010-2024 -> no 2013 sentence", () => {
+    assert.ok(!wideAnswer(WIDE, "rape rate in the United States by year from 2010 to 2024").includes(RAPE_DEFINITION_CAVEAT));
+  });
+  check("GC-085: rapes in the United States 2010-2012 (all before 2013) -> no 2013 sentence", () => {
+    assert.ok(!wideAnswer(WIDE, "rapes in the United States by year from 2010 to 2012").includes(RAPE_DEFINITION_CAVEAT));
+  });
+  check("GC-085: the national rape CLEARANCE rate 2010-2024 -> no 2013 sentence", () => {
+    WIDE.exec("CREATE TABLE IF NOT EXISTS national_clearance_rate (year INTEGER PRIMARY KEY, violent_rate REAL, property_rate REAL, murder_rate REAL, rape_rate REAL, robbery_rate REAL, assault_rate REAL, burglary_rate REAL, theft_rate REAL, auto_theft_rate REAL)");
+    const ins = WIDE.prepare("INSERT OR REPLACE INTO national_clearance_rate VALUES (?,?,?,?,?,?,?,?,?,?)");
+    for (let y = 2010; y <= 2024; y += 1) ins.run(y, 45, 17, 60, 30 + (y % 5), 29, 52, 14, 16, 12);
+    const t = wideAnswer(WIDE, "rape clearance rate in the United States by year from 2010 to 2024");
+    assert.match(t, /clear/i, t);
+    assert.ok(!t.includes(RAPE_DEFINITION_CAVEAT), t);
+  });
+  check("GC-085: murders 2010-2024 -> no 2013 sentence", () => {
+    assert.ok(!wideAnswer(WIDE, "murders in the United States by year from 2010 to 2024").includes(RAPE_DEFINITION_CAVEAT));
+  });
+}
 
 console.log(`\nhistorical national rape: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

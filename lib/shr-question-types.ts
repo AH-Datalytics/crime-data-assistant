@@ -118,7 +118,7 @@ const WEAPON_RULES: ValueRule[] = [
   { ask: /strangl|chok/i, p: inc("weapon_group", "in", ["Strangulation"]), label: "strangulation" },
   { ask: /asphyx|suffocat|drown/i, p: inc("weapon_group", "in", ["Asphyxiation"]), label: "asphyxiation" },
   { ask: /\bfire\b|arson|burn/i, p: inc("weapon_group", "in", ["Fire"]), label: "fire" },
-  { ask: /drug|narcotic|overdose/i, p: inc("weapon_group", "in", ["Narcotics/Drugs"]), label: "narcotics or drugs" },
+  { ask: /drug|narcotic/i, p: inc("weapon_group", "in", ["Narcotics/Drugs"]), label: "narcotics or drugs" },
   { ask: /poison/i, p: inc("weapon_group", "in", ["Poison"]), label: "poison" },
 ];
 

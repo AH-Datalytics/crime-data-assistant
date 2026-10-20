@@ -1638,6 +1638,15 @@
       "note": "measured: prepared no SQLite statement at all in a clean clone"
     },
     {
+      "id": "test-shr-guidance-isolation-route",
+      "tier": "F",
+      "script": "scripts/test-shr-guidance-isolation-route.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "answer batch A: the real SHR POST handler on its own temporary fixture databases (built from scripts/fixtures/operation-taxonomy DDL), model stubbed, network refused"
+    },
+    {
       "id": "test-harness-contract",
       "tier": "F",
       "script": "scripts/test-harness-contract.js",

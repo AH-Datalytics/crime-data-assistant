@@ -16,6 +16,7 @@
 import { recordWhyFacts } from "./why-scope";
 import type Database from "better-sqlite3";
 import type { TypedDeliveredSeries } from "./historical-national-rape";
+import { RAPE_DEFINITION_CAVEAT } from "./historical-rape-series";
 import { findConsolidatedAgency } from "./agency-consolidations";
 import { historicalCountyAgencyPredicate } from "./historical-county-identity";
 import { STATE_NAME_TO_ABBR } from "./state-population";
@@ -360,7 +361,11 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
   const lead = spec.total
     ? `Total ${MEASURE_LABEL[spec.measures[0]]} in ${placeWords}, ${periodWords} (${sources}).`
     : `${capital(measureWords)} for ${placeWords}, ${periodWords}${spec.type === "H1" && rows.length === 1 ? "" : ", by year"} (${sources}).`;
-  const rapeNote = spec.measures.includes("rape") ? " Rape here is the FBI UCR rape category, which can be narrower than legal definitions of sexual assault." : "";
+  // GC-085: one delivered rape-COUNT series with values on both sides of the FBI's 2013 definition change carries the
+  // application's 2013 sentence (the model path's rule), from the years actually delivered, not those requested.
+  const crossesRapeRedefinition = delivered.some((d) => d.measure === "rape" && d.statistic === "count" && d.years.some((y) => y <= 2012) && d.years.some((y) => y >= 2013));
+  const rapeNote = (spec.measures.includes("rape") ? " Rape here is the FBI UCR rape category, which can be narrower than legal definitions of sexual assault." : "")
+    + (crossesRapeRedefinition ? ` ${RAPE_DEFINITION_CAVEAT}` : "");
   const countyNote = targets.some((t) => t.place.kind === "agency" && t.place.agencyKind === "county") ? " A county figure here is the county (sheriff's) agency's own report, not a countywide total of every agency in the county." : "";
   const staffNote = spec.family === "staffing" ? " Years marked as having only total employees are shown without an officer or civilian figure; nothing is substituted." : "";
   const anchorNote = anchor !== undefined ? ` ${anchor} is the latest year all of these sources have, so every series stops there.` : "";

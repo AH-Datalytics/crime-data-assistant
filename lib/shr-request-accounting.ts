@@ -40,6 +40,9 @@ import {
 export const SHR_IMMIGRATION_NOT_RECORDED =
   "Homicide Reports (SHR) don't record immigration or citizenship status, so I can't count victims or offenders by it -- and I won't give an unrestricted count in its place.";
 
+export const SHR_OVERDOSE_NOT_RECORDED =
+  "Homicide Reports do not provide a count of all overdose deaths. Drug-weapon homicide counts are not an overdose-death count, so I can't answer that question here.";
+
 export const SHR_WEAPON_GROUPS = [
   "firearm", "knife or cutting instrument", "blunt object", "personal weapons (hands, fists, feet)",
   "strangulation", "asphyxiation", "fire", "narcotics or drugs", "poison", "other",
@@ -77,7 +80,7 @@ const PERSONAL = String.raw`(?:personal\s+weapons?|hands|fists?|feet|beat(?:en|i
 const STRANGLE = String.raw`(?:strangulation|strangl(?:ed|ing)|choked|choking)`;
 const ASPHYX = String.raw`(?:asphyxiation|asphyxiated|suffocat(?:ion|ed)|drown(?:ing|ed))`;
 const FIRE = String.raw`(?:arson|fire|burn(?:ed|ing)?)`;
-const DRUGS = String.raw`(?:narcotics?|drugs?|overdoses?)`;
+const DRUGS = String.raw`(?:narcotics?|drugs?)`;
 const POISON = String.raw`(?:poison(?:ing|ed)?)`;
 const EXPLOSIVE = String.raw`(?:explosives?|bombs?)`;
 const WEAPON_WORD = String.raw`(?:(?:${UNKNOWN})?(?:${FIREARM}|${KNIFE}|${BLUNT}|${PERSONAL}|${STRANGLE}|${ASPHYX}|${FIRE}|${DRUGS}|${POISON}|${EXPLOSIVE}|weapons?))`;
@@ -122,6 +125,12 @@ const EARLY_RULES: Rule[] = [
   {
     concept: "immigration-status", state: "not-recorded", explanation: SHR_IMMIGRATION_NOT_RECORDED,
     pattern: R(String.raw`\b(?:(?:limited\s+to|restricted\s+to|only(?:\s+for)?|just|among|of|for|who\s+(?:were|are|was|is)|that\s+(?:were|are|was|is)|where\s+(?:the\s+)?(?:victims?|offenders?)\s+(?:were|was|are|is)|by|involving|against)\s+)?(?:(?:the|an?)\s+)?(?:(?:legal|illegal|undocumented|documented|unauthorized|lawful(?:ly)?(?:\s+present)?|recent|new|foreign[-\s]born)\s+)*(?:immigrants?|migrants?|immigration[-\s]status|citizenship(?:[-\s]status)?|residency\s+status|legal\s+status|non[-\s]?citizens?|noncitizens?|(?:illegal\s+)?aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?|(?:u\.?s\.?\s+)?citizens?)(?:\s+(?:status|victims?|offenders?|suspects?|killers?))?\b`),
+  },
+  // Overdose deaths (GC-106): not a weapon. Recognized before the drug/weapon rules so it is never answered as
+  // Narcotics/Drugs homicides.
+  {
+    concept: "overdose-deaths", state: "not-recorded", explanation: SHR_OVERDOSE_NOT_RECORDED,
+    pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`),
   },
   // A named non-SHR agency as the source of the count: it cannot be identified as an SHR reporter.
   {
