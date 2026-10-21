@@ -65,8 +65,8 @@ const SITES: Site[] = [
     file: "app/api/nibrs-query/route.ts",
     question: "Can you provide one bar per city with the race of defendants reflected in each bar?",
     mode: "current",
-    find: 'const noSqlRefusal = selectNoSqlRefusal(question, "nibrs")',
-    replace: 'const noSqlRefusal = { explanation: buildNoSqlFallbackMessage("nibrs"), reason: "no-sql-server-template" }',
+    find: 'selectNoSqlRefusal(question, "nibrs")',
+    replace: '{ explanation: buildNoSqlFallbackMessage("nibrs"), reason: "no-sql-server-template" }',
   },
 ];
 

@@ -436,10 +436,7 @@ async function main() {
 
     console.log(`\n${route.label} -- warm cache`);
     {
-      // Ordinary wording (Option 2 stopgap, 2026-10-21): the old token "warm-case" is a word request accounting cannot
-      // read, so the request was refused before any cache read, and now falls through to the model path, which by design
-      // never reads or writes the cache. Either way it never exercised the cache this suite is about.
-      const question = `${route.question} thanks`;
+      const question = `${route.question} warm-case`;
       __resetResponseCacheForTests();
       const cold = await underMode(undefined, question);
       // Reported as a check rather than thrown: a bare assert here aborted the whole
@@ -477,7 +474,7 @@ async function main() {
       await check(`${route.label}: warming under shadow is readable from off`, async () => {
         // The other direction of interoperability: an entry written while observing must
         // still serve once observation stops, or turning shadow OFF would change behavior.
-        const shadowFirst = `${route.question} thank you`; // ordinary wording, as for the warm question above
+        const shadowFirst = `${route.question} shadow-warmed`;
         const warmed = await underMode("shadow", shadowFirst);
         assert.strictEqual(warmed.status, 200, `body: ${warmed.body.slice(0, 400)}`);
         const readInOff = await underMode(undefined, shadowFirst);

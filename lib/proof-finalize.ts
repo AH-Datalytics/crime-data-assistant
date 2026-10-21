@@ -59,7 +59,6 @@ import { attributeOmissions, type OmittedCandidate } from "./omission-attributio
 import { buildQueryContract, type QueryContract, type QueryContractSource } from "./query-contract";
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { narrativeDisclosesOmissions } from "./omission-wording";
-import { unreadAttemptedWords, withUnreadNote } from "./unread-fallthrough";
 import { recordFinalization, recordEmission } from "./why-scope";
 import {
   omittedCandidatesFor,
@@ -389,10 +388,6 @@ function hypotheticalFor(intended: DeliveryAction, blocker: string | null): Deli
  * Outside an inner run this records nothing.
  */
 export function finalizeProof(input: ProofFinalizationInput): ProofFinalization {
-  // Option 2 stopgap: the proof narrative carries the same note the user is shown (lib/unread-fallthrough.ts).
-  if (unreadAttemptedWords() && typeof input.narrative === "string") {
-    input = { ...input, narrative: withUnreadNote(input.narrative, Array.isArray(input.rows) && input.rows.length > 0) ?? input.narrative };
-  }
   const finalization = finalizeProofPaths(input);
   recordFinalization(finalization, input);
   return finalization;

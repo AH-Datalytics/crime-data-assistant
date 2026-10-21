@@ -538,8 +538,6 @@ function harness(request: string, userTurn: string) {
       shootingMonths: shootingMonthWindow(request),
       shootingMeasured: shootingMeasure(request),
       shootingFormSupported: shootingMonthWindow(request).kind !== "unsupported" && shootingMeasure(request).kind !== "unsupported",
-      // Option 2 stopgap: these requests carry no unread words, so they are not fallback-eligible (the route reads unreadEligible()).
-      unreadFall: false,
       MONTH_NAMES, SHR_DATA_CUTOFF,
       shootingYearIntent, sourceYearOverlap, shootingCityIntents, displayPlace, stateMention,
       explicitStateIntent, resolveShrAgency, buildShrCanonicalLabelCase,

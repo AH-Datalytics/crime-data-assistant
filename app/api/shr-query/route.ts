@@ -34,7 +34,6 @@ import { normalizeHistoryAllSources, normalizeHistoryForTab } from "@/lib/chat-h
 import { containsInternalLeak, INTERNAL_LEAK_SAFE_MESSAGE, sanitizeUserFacingNarrative, sanitizeChartConfigTitle} from "@/lib/scaffold-helpers";
 import { buildNoSqlFallbackMessage, limitationReply, selectNoSqlRefusal } from "@/lib/refusal-safety";
 import { observeAccountingInput } from "@/lib/accounting-input-probe";
-import { markUnreadAttempted, markUnreadEligible, noteAnsweredRows, runWithUnreadContext, unreadEligible, unreadOnlyWords, withUnreadNote } from "@/lib/unread-fallthrough";
 import { detectFollowupTransform } from "@/lib/followup-transform";
 import { applyGeoCorrection, geoCorrectionHint } from "@/lib/geo-correction";
 import { applyChartCustomizations } from "@/lib/chart-customization";
@@ -125,10 +124,6 @@ function jsonResp(data: SealedPayload<Record<string, any>> | QueryError, status 
     payload.title = safe.title ? consolidatedDisplayText(safe.title) : safe.title;
   }
   if (Array.isArray(payload.rows)) payload.rows = normalizeShrDisplayRows(payload.rows);
-  // Option 2 stopgap: every exit after a request entered the general query path carries the note (lib/unread-fallthrough.ts).
-  noteAnsweredRows(payload.rows);
-  if (typeof payload.explanation === "string" || payload.success !== false) payload.explanation = withUnreadNote(payload.explanation, Array.isArray(payload.rows) && payload.rows.length > 0) ?? payload.explanation;
-  if (typeof payload.error === "string") payload.error = withUnreadNote(payload.error, false) ?? payload.error;
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.
@@ -185,12 +180,7 @@ function ambiguousKansasCityIntent(question: string): boolean {
 /** Request accounting (plan r2.1): no model-written statement is executed on SHR. A constant, not a toggle. */
 const SHR_MODEL_SQL_NEVER_RUNS: boolean = true;
 
-/** Option 2 stopgap: each request runs in its own unread-fallthrough context (lib/unread-fallthrough.ts). */
 export async function POST(req: NextRequest) {
-  return runWithUnreadContext(() => handleShrPost(req));
-}
-
-async function handleShrPost(req: NextRequest) {
   // Measured before the outer try so the operational row in its catch can record an
   // elapsed time; everything declared inside the try is out of scope there.
   const outerStart = Date.now();
@@ -544,19 +534,13 @@ async function handleShrPost(req: NextRequest) {
       const onlyUnread = accountingRefusal.parts.every((p) => p.state === "not-interpreted");
       const established = onlyUnread ? selectNoSqlRefusal(question, "shr") : null;
       if (established?.reason === "demographic-rate-denominator") return accountingExit({ parts: accountingRefusal.parts, explanation: established.explanation }, "recognition");
-      // Option 2 stopgap (HOTFIX-UNREAD-PLAN.md): a refusal made ONLY of unread parts, with no established limitation for
-      // the request, is not ended here; it continues to the general query path with this request's model-SQL permission
-      // and the note. Any other established limitation (court process, nonfatal shootings) keeps today's refusal.
-      const unreadWords = unreadOnlyWords(accountingRefusal);
-      if (!unreadWords || (established && established.reason !== "no-sql-server-template")) return accountingExit(accountingRefusal, "recognition");
-      markUnreadEligible(unreadWords);
+      return accountingExit(accountingRefusal, "recognition");
     }
-    const unreadFall = unreadEligible();
     // Parts every owning path may carry: context is already terminal; these never restrict.
     const carried = anyOf(shrPart.countStatistic, shrPart.victimRole, shrPart.victimUnit, shrPart.concept("presentation"));
 
     const completenessIntent = detectCompletenessQuestion(question);
-    if (completenessIntent && !unreadFall) {
+    if (completenessIntent) {
       const completenessUnbound = bindShrPath(requestLedger, "data-completeness answer", anyOf(carried, shrPart.concept("metadata", "measure", "entity"), shrPart.anyPeriod));
       if (completenessUnbound) return accountingExit(completenessUnbound, "completeness-deterministic");
       const completenessAnswer = buildCompletenessAnswer("shr", loadCompletenessRows("shr", getShrDb()), new Date().getFullYear(), completenessIntent.year);
@@ -628,7 +612,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     }
 
     const metadata = planSaysQueryBearing ? null : answerMetadataQuestion("shr", question, getShrDb());
-    if (metadata && !unreadFall) {
+    if (metadata) {
       const metadataUnbound = bindShrPath(requestLedger, "coverage answer", anyOf(carried, shrPart.concept("metadata", "measure", "entity", "agency-type", "national"), shrPart.resolvedPlace, shrPart.anyPeriod, shrPart.connector(/^(?:and|all|any|every)$/i)));
       if (metadataUnbound) return accountingExit(metadataUnbound, "metadata-coverage-answer");
       const executionMs = Date.now() - start;
@@ -674,7 +658,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     }
     const murderPeriodProved = murderPlan?.kind === "query" ? periodsApplied(requestLedger.parts, murderPlan.sql) : false;
     const murderApplies = anyOf(carried, shrPart.measure(/murder/i), shrPart.resolvedPlace, (p) => p.concept === "period" && murderPeriodProved, shrPart.connector(/^and$/i));
-    if (!unreadFall && murderPlan?.kind === "query" && murderDb && ledgerSatisfies(requestLedger, murderApplies)) {
+    if (murderPlan?.kind === "query" && murderDb && ledgerSatisfies(requestLedger, murderApplies)) {
       const murderUnbound = bindShrPath(requestLedger, "murder count", murderApplies);
       if (murderUnbound) return accountingExit(murderUnbound, "deterministic-murder");
       const contract = runDeterministicPlanValidation(murderPlan.sql);
@@ -810,7 +794,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       const why = shootingMonths.kind === "unsupported" ? shootingMonths.reason : shootingMeasured.kind === "unsupported" ? shootingMeasured.reason : "";
       console.log(`[shr][deterministic-shooting] declining: ${why} — routing to model`);
     }
-    if (asksShooting && !wantsNonfatal && shootingQualifier.kind !== "unsupported" && shootingFormSupported && !unreadFall && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
+    if (asksShooting && !wantsNonfatal && shootingQualifier.kind !== "unsupported" && shootingFormSupported && !(plannerMode === "authoritative" && followupPlan?.kind === "query_bearing")) {
       const stateMatch = shootingRequest.match(/\b([A-Z]{2})\b/) || shootingRequest.match(/\bin\s+(\w+)\b/i);
       const yearIntent = shootingYearIntent(shootingRequest);
       const wantsMonthly = /\b(?:monthly|per\s+month|by\s+month)\b/i.test(shootingRequest);
@@ -1184,7 +1168,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     const shrTypeDb = getShrDb();
     const shrTypeDecision = (): ShrQuestionDecision | null => {
       if (shrTypeDecisionMemo !== undefined) return shrTypeDecisionMemo;
-      shrTypeDecisionMemo = !unreadFall && shrNumericIntent(requestLedger) && shrTypeDb ? planShrQuestion(requestLedger, shrTypeDb, accountedQuestion, observeShrCutoff(shrTypeDb)) : null;
+      shrTypeDecisionMemo = shrNumericIntent(requestLedger) && shrTypeDb ? planShrQuestion(requestLedger, shrTypeDb, accountedQuestion, observeShrCutoff(shrTypeDb)) : null;
       return shrTypeDecisionMemo;
     };
     const shrTypeAnswers = () => shrTypeDecision()?.kind === "spec";
@@ -1232,11 +1216,11 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     const shrRanking = planShrCityRanking(guardrailQuestion, {
       year: SHR_DATA_CUTOFF.year, month: SHR_DATA_CUTOFF.month, observed: SHR_DATA_CUTOFF.observed,
     });
-    if (!unreadFall && shrRanking?.kind === "unavailable") {
+    if (shrRanking?.kind === "unavailable") {
       if (shrTypeAnswers()) return answerShrType(shrTypeDecision()!);
       return countyScopeExit({ status: "unavailable", reason: "city-ranking-unavailable", explanation: shrRanking.explanation }, SHR_CITY_RANKING_GUARDRAIL);
     }
-    if (!unreadFall && shrRanking?.kind === "deterministic") {
+    if (shrRanking?.kind === "deterministic") {
       const rankingDb = getShrDb();
       if (!rankingDb) {
         return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
@@ -1298,7 +1282,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     // any model call. The model never authors SQL for this family, and there is no murder fallback:
     // what the plan cannot express gets an owned limitation or clarification. The conflict question
     // above and the deterministic shooting section run first, deliberately.
-    if (shrOwnedCountFamily(guardrailQuestion) && !shrHasRowRestriction(requestLedger) && !unreadFall) {
+    if (shrOwnedCountFamily(guardrailQuestion) && !shrHasRowRestriction(requestLedger)) {
       const countDb = getShrDb();
       if (!countDb) {
         return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
@@ -1367,16 +1351,14 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
 
     // ── Supported question types: everything else that asks for a number (plan r3.1) ───────────────
     // No model-written statement produces an SHR number; a request that fits no type is declined by name.
-    if (!unreadFall && shrNumericIntent(requestLedger)) {
+    if (shrNumericIntent(requestLedger)) {
       const decision = shrTypeDecision();
       if (!shrTypeDb || !decision) return jsonResp({ success: false, error: "SHR database not available." } as QueryError, 500);
       return answerShrType(decision);
     }
 
-    // Option 2 stopgap: an eligible request enters the general query path here; from now on every exit carries the note.
-    if (unreadFall) markUnreadAttempted();
     // Check response cache (only for standalone questions, not follow-ups)
-    const cached = promptHistory.length === 0 && !unreadFall ? getCached(question, "shr", cacheValidity) : null;
+    const cached = promptHistory.length === 0 ? getCached(question, "shr", cacheValidity) : null;
 
     let claude: {
       sql: string | null;
@@ -1776,7 +1758,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
       // AST evidence from the rowset it returns. Otherwise it does not run (no retry).
       // Request accounting (plan r2.1): no model-written statement produces an SHR number. A request that reaches
       // here asked for no number the request plan recognizes, so the model's statement is not run.
-      if (SHR_MODEL_SQL_NEVER_RUNS && !unreadFall) return accountingExit({ parts: [], explanation: "I can answer Homicide Reports questions with counts, shares, rankings or victim ages for a place and period. I couldn't find a number like that in this question, so I haven't run one." }, "model-sql");
+      if (SHR_MODEL_SQL_NEVER_RUNS) return accountingExit({ parts: [], explanation: "I can answer Homicide Reports questions with counts, shares, rankings or victim ages for a place and period. I couldn't find a number like that in this question, so I haven't run one." }, "model-sql");
       rows = db.prepare(sql).all() as Record<string, unknown>[];
       rows = normalizeShrDisplayRows(rows);
     } catch (dbErr) {
@@ -2085,7 +2067,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
     writeLog(question, sql, rows.length, null, totalMs, explanation, "shr", finalizeGuardrailTags([...guardrailResult.fired, ...routeGuardrailsFired], queryContractGuardrails(runModelAuthoredValidation(sql))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }), finalization);
 
     // Cache successful responses (only standalone questions)
-    if (!cached && promptHistory.length === 0 && !unreadFall) {
+    if (!cached && promptHistory.length === 0) {
       setCache(question, "shr", { sql, explanation: claude.explanation || "", title: claude.title, chartType: claude.chartType, xAxis: claude.xAxis, yAxis: claude.yAxis, yAxisLabel: claude.yAxisLabel }, cacheValidity);
     }
 
