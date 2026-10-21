@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getDb, logQuery } from "@/lib/rtci-db";
+import { markUnreadAttempted, markUnreadEligible, noteAnsweredRows, runWithUnreadContext, unreadEligible, unreadOnlyWords, withUnreadNote } from "@/lib/unread-fallthrough";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
@@ -174,6 +175,13 @@ function sseEvent(event: NonFactualStreamEvent | SealedPayload<FactualStreamEven
     const safeText = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
     payload.text = safeText ? consolidatedDisplayText(safeText) : safeText;
   }
+  // Option 2 stopgap: every delivered answer, replacement text and error of a fallback request carries the note (lib/unread-fallthrough.ts).
+  if (payload.type === "result") {
+    noteAnsweredRows(payload.rows);
+    payload.explanation = withUnreadNote(payload.explanation as string | undefined, Array.isArray(payload.rows) && payload.rows.length > 0) ?? payload.explanation;
+  }
+  if (payload.type === "explanation" && typeof payload.text === "string") payload.text = withUnreadNote(payload.text) ?? payload.text;
+  if (payload.type === "error" && typeof payload.text === "string") payload.text = withUnreadNote(payload.text, false) ?? payload.text;
   const chartAuditSource = payload.chartAuditSource;
   delete payload.chartAuditSource;
   const finalized = payload.requestId && (chartAuditSource === "current" || chartAuditSource === "historical")
@@ -434,6 +442,10 @@ const HISTORICAL_MODEL_SQL_NEVER_RUNS: boolean = true;
  * applies the whole request (and the owner policy) or from a supported question type (lib/current-question-types.ts).
  */
 const CURRENT_MODEL_SQL_NEVER_RUNS: boolean = true;
+/** Option 2 stopgap (HOTFIX-UNREAD-PLAN.md): each prohibition holds for every request except one found eligible at its
+ *  recognition gate (unread-only refusal, no established limitation); read at call time from the request context. */
+function historicalModelSqlBlocked(): boolean { return HISTORICAL_MODEL_SQL_NEVER_RUNS && !unreadEligible(); }
+function currentModelSqlBlocked(): boolean { return CURRENT_MODEL_SQL_NEVER_RUNS && !unreadEligible(); }
 
 function shouldSkipHistoricalPlaceLookup(question: string, rawHistory?: unknown): boolean {
   const hasHistory = Array.isArray(rawHistory) && rawHistory.length > 0;
@@ -500,7 +512,12 @@ function answerHistoricalPlaceLookup(
   }
 }
 
+// Option 2 stopgap: each request runs in its own fallback context (lib/unread-fallthrough.ts).
 export async function POST(req: NextRequest) {
+  return runWithUnreadContext(() => handleQueryPost(req));
+}
+
+async function handleQueryPost(req: NextRequest) {
   const encoder = new TextEncoder();
   const totalStart = Date.now();
   const MAX_REQUEST_MS = 60000; // 60s total budget — no retries after this
@@ -849,7 +866,15 @@ export async function POST(req: NextRequest) {
       if (carried) return historicalAccountingExit({ parts: [], explanation: carried.explanation }, "followup");
     }
     const recognitionRefusal = historicalRecognitionRefusal(historicalLedger);
-    if (recognitionRefusal) return historicalAccountingExit(recognitionRefusal, "recognition");
+    if (recognitionRefusal) {
+      // Option 2 stopgap (HOTFIX-UNREAD-PLAN.md): a refusal made ONLY of unread parts, with no established limitation,
+      // continues to the general query path with this request's model-SQL permission and the note. Fixed paths do not own
+      // it (their binding cannot account for unread parts); the supported types are skipped below.
+      const unreadWords = unreadOnlyWords(recognitionRefusal);
+      const established = unreadWords ? selectNoSqlRefusal(question, "historical") : null;
+      if (!unreadWords || (established && established.reason !== "no-sql-server-template")) return historicalAccountingExit(recognitionRefusal, "recognition");
+      markUnreadEligible(unreadWords);
+    }
   }
 
   // ── Request accounting, stage 3a (Current Trends; plan 2026-10-10-request-accounting-stage3a-current.md r1.2) ─────────
@@ -2187,7 +2212,8 @@ export async function POST(req: NextRequest) {
   // question types (H1-H6) with application-built statements, or declined/clarified by name. It never reaches model SQL.
   if (historicalNumeric && historicalLedger) {
     const typeDb = getDb();
-    const decision = matchHistoricalType(historicalLedger, { bounds: (source) => historicalSourceBounds(typeDb, source) });
+    // Option 2 stopgap: an eligible request skips the supported types; `none` continues to the general query path.
+    const decision: ReturnType<typeof matchHistoricalType> = unreadEligible() ? ({ kind: "none" } as ReturnType<typeof matchHistoricalType>) : matchHistoricalType(historicalLedger, { bounds: (source) => historicalSourceBounds(typeDb, source) });
     if (decision.kind === "decline") return historicalAccountingExit({ parts: decision.parts, explanation: decision.explanation }, "question-type");
     if (decision.kind === "clarify") return historicalAccountingExit({ parts: [], explanation: decision.explanation }, "question-type", true);
     if (decision.kind === "spec") {
@@ -2255,8 +2281,15 @@ export async function POST(req: NextRequest) {
   // SQL never runs. Recognition refusals (what Current Trends doesn't track, words it couldn't interpret) come first.
   if (currentNumeric && currentLedger) {
     const recognition = currentRecognitionRefusal(currentLedger);
-    if (recognition) return currentAccountingExit(recognition, "recognition");
-    const decision = matchCurrentType(currentLedger);
+    if (recognition) {
+      // Option 2 stopgap (HOTFIX-UNREAD-PLAN.md): unread-only, with no established limitation -> the general query path.
+      const unreadWords = unreadOnlyWords(recognition);
+      const established = unreadWords ? selectNoSqlRefusal(question, "current") : null;
+      if (!unreadWords || (established && established.reason !== "no-sql-server-template")) return currentAccountingExit(recognition, "recognition");
+      markUnreadEligible(unreadWords);
+    }
+    // An eligible request skips the supported types (they cannot honor a word they could not read): `none` continues.
+    const decision: ReturnType<typeof matchCurrentType> = unreadEligible() ? ({ kind: "none" } as ReturnType<typeof matchCurrentType>) : matchCurrentType(currentLedger);
     if (decision.kind === "decline") return currentAccountingExit({ parts: decision.parts, explanation: decision.explanation }, "question-type");
     if (decision.kind === "clarify") return currentAccountingExit({ parts: [], explanation: decision.explanation }, "question-type", true);
     if (decision.kind === "spec") {
@@ -2504,7 +2537,9 @@ export async function POST(req: NextRequest) {
 
         // Check response cache (only standalone questions)
         if (isHistorical) cacheValidity = historicalCacheValidity(baseCacheValidity, readCorrectionState(getDb()));
-        const cached = promptHistory.length === 0 ? getCached(question, tab === "historical" ? HISTORICAL_CACHE_TAB : CURRENT_CACHE_TAB, cacheValidity) : null;
+        // Option 2 stopgap: an eligible request enters the general query path here; from now on every exit carries the note.
+        if (unreadEligible()) markUnreadAttempted();
+        const cached = promptHistory.length === 0 && !unreadEligible() ? getCached(question, tab === "historical" ? HISTORICAL_CACHE_TAB : CURRENT_CACHE_TAB, cacheValidity) : null;
         let fromCache = false;
 
         let claude: Awaited<ReturnType<typeof translateToSql>>;
@@ -2522,7 +2557,7 @@ export async function POST(req: NextRequest) {
           );
 
           // Stage 3a (§6): on Current the model is never asked again for a statement.
-          if (!claude.sql && !isOverBudget() && !(tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS)) {
+          if (!claude.sql && !isOverBudget() && !(tab === "current" && currentModelSqlBlocked())) {
             // Cause A: a court-process request is settled by the REQUEST policy, not by whatever the
             // model wrote. No second call can turn a police record into a court record, so this
             // request goes straight to the terminal exit and its policy explanation.
@@ -2560,7 +2595,7 @@ export async function POST(req: NextRequest) {
         // Request accounting, stage 3a (§6): no model-written or cached statement produces a Current number. This is the FIRST
         // point a statement exists (the cache read or the first model reply), before any retry, validation, prepare or
         // execution; a reply with no statement continues to the text-only exit below.
-        if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS && claude.sql) {
+        if (tab === "current" && currentModelSqlBlocked() && claude.sql) {
           const gateMs = Date.now() - totalStart;
           const gateTags = ["request-accounting", "request-accounting-owner:model-sql", ...(fromCache ? ["request-accounting:cached-statement"] : [])];
           const gateProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: gateTags });
@@ -2573,7 +2608,7 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        if (!fromCache && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title)) && !isOverBudget() && !(tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS)) {
+        if (!fromCache && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title)) && !isOverBudget() && !(tab === "current" && currentModelSqlBlocked())) {
           console.log(`[query][internal-scaffold] Retrying response that leaked internal scaffold text`);
           try {
             const retryResult = await translate(
@@ -2620,7 +2655,7 @@ export async function POST(req: NextRequest) {
         // does not make a conviction rate available, so this second call is skipped for the same
         // established family rather than pressing the model to produce a statement it should not.
         // Stage 3a (§6): this retry asks the model for a statement, so it does not run on Current.
-        if (!claude.sql && tab === "current" && !CURRENT_MODEL_SQL_NEVER_RUNS && !isOverBudget() && !courtProcessNoSqlIsTerminal(guardrailQuestion)) {
+        if (!claude.sql && tab === "current" && !currentModelSqlBlocked() && !isOverBudget() && !courtProcessNoSqlIsTerminal(guardrailQuestion)) {
 
           const verifiedAgency = findVerifiedCurrentAgency(question, getDb());
           if (verifiedAgency) {
@@ -2693,8 +2728,8 @@ export async function POST(req: NextRequest) {
         // point a statement exists (from the model or from the response cache), before any validation, schema check,
         // prepare or retry, so neither a schema failure nor a cached entry can reach an execution.
         // Request accounting stage 3a (defensive): unreachable while the Current gate above stands.
-        if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS && claude.sql) throw new Error("request accounting: a Current model statement may not reach validation (3a §6)");
-        if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) {
+        if (tab === "current" && currentModelSqlBlocked() && claude.sql) throw new Error("request accounting: a Current model statement may not reach validation (3a §6)");
+        if (isHistorical && historicalModelSqlBlocked()) {
           const gateMs = Date.now() - totalStart;
           const gateTags = ["request-accounting", "request-accounting-owner:model-sql", ...(fromCache ? ["request-accounting:cached-statement"] : [])];
           const gateProof = finalizeExit({ outcome: OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: gateTags });
@@ -2916,8 +2951,8 @@ export async function POST(req: NextRequest) {
               ];
               // Request accounting stage 2a (K7, defensive): unreachable while the gate above stands; if it were removed, a Historical
               // model statement still fails closed here instead of being retried into an execution.
-              if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
-              if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Current model statement may not be retried (3a §6)");
+              if (isHistorical && historicalModelSqlBlocked()) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
+              if (tab === "current" && currentModelSqlBlocked()) throw new Error("request accounting: a Current model statement may not be retried (3a §6)");
               const retry = await translate(tableCheck.message, retryHistory, systemPrompt);
               if (retry.sql) {
                 const retryValidation = validateAndSanitize(retry.sql, { maxLimit });
@@ -3020,8 +3055,8 @@ export async function POST(req: NextRequest) {
           ];
           // Request accounting stage 2a (K7, defensive): unreachable while the gate above stands; if it were removed, a Historical
           // model statement still fails closed here instead of being retried into an execution.
-          if (isHistorical && HISTORICAL_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
-              if (tab === "current" && CURRENT_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a Current model statement may not be retried (3a §6)");
+          if (isHistorical && historicalModelSqlBlocked()) throw new Error("request accounting: a Historical model statement may not be retried (K7)");
+              if (tab === "current" && currentModelSqlBlocked()) throw new Error("request accounting: a Current model statement may not be retried (3a §6)");
           const retry = await translate(
             retryInstruction,
             retryHistory,
@@ -3751,7 +3786,7 @@ export async function POST(req: NextRequest) {
           // result finalization when the narrative was not replaced.
           writeLog(question, sql, rows.length, null, totalMs2, postExplanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), deliveredFinalization);
           // Cache successful responses (only standalone questions)
-          if (!fromCache && promptHistory.length === 0 && sql) {
+          if (!fromCache && promptHistory.length === 0 && sql && !unreadEligible()) {
             setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : CURRENT_CACHE_TAB, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         } catch {
@@ -3829,7 +3864,7 @@ export async function POST(req: NextRequest) {
             const totalMs2 = Date.now() - totalStart;
             writeLog(question, sql, rows.length, null, totalMs2, claude.explanation, tab, finalizeGuardrailTags(firedGuardrails, queryContractGuardrails(runContractValidation(sql || ""))), "haiku-4.5", sessionId, serializeChartConfigForLog(chartConfig, columns, chartMeta), finalization);
           }
-          if (!fromCache && promptHistory.length === 0 && sql) {
+          if (!fromCache && promptHistory.length === 0 && sql && !unreadEligible()) {
             setCache(question, tab === "historical" ? HISTORICAL_CACHE_TAB : CURRENT_CACHE_TAB, { sql, explanation: claude.explanation, title: claude.title, chartType: claude.chartHint, xAxis: claude.xAxis, yAxis: claude.yAxis ? claude.yAxis.split(",").map(s => s.trim()) : undefined, yAxisLabel: claude.yAxisLabel, xAxisLabel: claude.xAxisLabel, colors: claude.colors, annotations: claude.annotations }, cacheValidity);
           }
         }

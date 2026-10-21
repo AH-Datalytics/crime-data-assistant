@@ -4,6 +4,7 @@ import { finalizeNibrsStatement } from "@/lib/nibrs-execution-binding";
 import { isZeroResult } from "@/lib/shr-agency-probe";
 import { appendNibrsAgencyProbeCaveat, runNibrsAgencyProbe } from "@/lib/nibrs-agency-probe";
 import { buildNoSqlFallbackMessage, courtProcessNoSqlIsTerminal, neutralizeUnverifiedAvailabilityClaim, selectNoSqlRefusal } from "@/lib/refusal-safety";
+import { markUnreadAttempted, markUnreadEligible, noteAnsweredRows, runWithUnreadContext, unreadEligible, unreadOnlyWords, withUnreadNote } from "@/lib/unread-fallthrough";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql } from "@/lib/nibrs-claude";
 import { validateAndSanitize } from "@/lib/sql-safety";
@@ -155,6 +156,10 @@ function jsonResp(data: SealedPayload<object> | QueryError, status = 200) {
     payload.title = safe.title ? consolidatedDisplayText(safe.title) : safe.title;
   }
   if (Array.isArray(payload.rows)) payload.rows = normalizeNibrsDisplayRows(payload.rows);
+  // Option 2 stopgap: every exit after a request entered the general query path carries the note (lib/unread-fallthrough.ts).
+  noteAnsweredRows(payload.rows);
+  if (typeof payload.explanation === "string" || payload.success !== false) payload.explanation = withUnreadNote(payload.explanation, Array.isArray(payload.rows) && payload.rows.length > 0) ?? payload.explanation;
+  if (typeof payload.error === "string") payload.error = withUnreadNote(payload.error, false) ?? payload.error;
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.
@@ -272,7 +277,12 @@ function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): strin
   return defaultModel;
 }
 
+/** Option 2 stopgap: each request runs in its own unread-fallthrough context (lib/unread-fallthrough.ts). */
 export async function POST(req: NextRequest) {
+  return runWithUnreadContext(() => handleNibrsPost(req));
+}
+
+async function handleNibrsPost(req: NextRequest) {
   // Measured before the outer try so the operational row in its catch can record an
   // elapsed time; everything declared inside the try is out of scope there.
   const outerStart = Date.now();
@@ -547,8 +557,19 @@ export async function POST(req: NextRequest) {
         if (carried) return nibrsAccountingExit({ parts: [], explanation: carried.explanation }, "followup");
       }
       const recognitionRefusal = nibrsRecognitionRefusal(nibrsLedger);
-      if (recognitionRefusal) return nibrsAccountingExit(recognitionRefusal, "recognition");
+      if (recognitionRefusal) {
+        // Option 2 stopgap (HOTFIX-UNREAD-PLAN.md): a refusal made ONLY of unread parts, with no established limitation,
+        // continues to the general query path with this request's model-SQL permission and the note. Fixed paths do not
+        // own it (their binding cannot account for unread parts); the supported types are skipped below.
+        const unreadWords = unreadOnlyWords(recognitionRefusal);
+        const established = unreadWords ? selectNoSqlRefusal(question, "nibrs") : null;
+        if (!unreadWords || (established && established.reason !== "no-sql-server-template")) return nibrsAccountingExit(recognitionRefusal, "recognition");
+        markUnreadEligible(unreadWords);
+      }
     }
+    const unreadFall = unreadEligible();
+    /** Option 2 stopgap: the model-SQL prohibition, lifted ONLY for a request found eligible at the recognition gate. */
+    const nibrsModelSqlBlocked = NIBRS_MODEL_SQL_NEVER_RUNS && !unreadFall;
     /**
      * A fixed path keeps a NIBRS request only when its applied values account for every part (plan §5, L1-L3), for EVERY
      * request whatever its kind. "Why" in the turn as typed is applied only by the ranking-explanation path (r1.1 R1).
@@ -1303,7 +1324,7 @@ export async function POST(req: NextRequest) {
     // ── Request accounting, stage 2b: a NUMERIC NIBRS request no fixed path owned is answered by one of the supported
     // question types (N1-N7) with application-built statements, or declined/clarified by name. It never reaches model SQL.
     // `none` (no measure to answer with): as on Historical, the model may reply in text below, and its SQL never runs (§6).
-    const nibrsTypeDecision = nibrsNumeric ? matchNibrsType(nibrsLedger) : null;
+    const nibrsTypeDecision = nibrsNumeric && !unreadFall ? matchNibrsType(nibrsLedger) : null;
     if (nibrsNumeric && nibrsTypeDecision) {
       const decision = nibrsTypeDecision;
       if (decision.kind === "decline") return nibrsAccountingExit({ parts: decision.parts, explanation: decision.explanation }, "question-type");
@@ -1395,7 +1416,9 @@ export async function POST(req: NextRequest) {
 
     // Check response cache (only standalone questions). Continuous-reporter
     // requests are contract-sensitive and must not reuse stale broad-summary SQL.
-    const cacheableStandalone = basePromptHistory.length === 0 && !asksContinuousReportingFilter(question);
+    const cacheableStandalone = basePromptHistory.length === 0 && !asksContinuousReportingFilter(question) && !unreadFall;
+    // Option 2 stopgap: an eligible request enters the general query path here; from now on every exit carries the note.
+    if (unreadFall) markUnreadAttempted();
     // Stage 2b (plan §6): the cache namespace changed, so no statement cached before request accounting can be served.
     const cached = cacheableStandalone ? getCached(question, NIBRS_CACHE_TAB, cacheValidity) : null;
     /** Stage 2b gate (L11): the first point a model or cached statement exists. It never runs; the request is declined. */
@@ -1420,7 +1443,7 @@ export async function POST(req: NextRequest) {
     if (cached) {
       claude = { sql: cached.sql, explanation: cached.explanation, title: cached.title || "", chartHint: (cached.chartType as "bar" | "line" | "pie" | "stacked_bar" | "scatter" | "none") || "none", xAxis: cached.xAxis || "", yAxis: cached.yAxis?.[0] || "", colors: cached.colors as string[] | undefined, yAxisLabel: cached.yAxisLabel, xAxisLabel: cached.xAxisLabel, annotations: cached.annotations as typeof claude.annotations };
       // Gate G1 (plan §6): a cached statement is a model statement; it never runs, before any validation.
-      if (NIBRS_MODEL_SQL_NEVER_RUNS && claude.sql) return nibrsModelSqlGate(true);
+      if (nibrsModelSqlBlocked && claude.sql) return nibrsModelSqlGate(true);
     } else {
       console.log(`[nibrs][model=${activeModelLabel}] Processing: ${question.slice(0, 100)}`);
       const correctionHint = geoCorrectionHint(question);
@@ -1429,11 +1452,11 @@ export async function POST(req: NextRequest) {
       const claudeMs = Date.now() - claudeStart;
       console.log(`[nibrs][timing] Claude API: ${claudeMs}ms`);
       // Gate G2 (plan §6): the first model statement never runs -- before any validation, schema check, prepare or retry.
-      if (NIBRS_MODEL_SQL_NEVER_RUNS && claude.sql) return nibrsModelSqlGate(false);
+      if (nibrsModelSqlBlocked && claude.sql) return nibrsModelSqlGate(false);
 
       // Stage 2b (plan §6): no retry asks the model for SQL on NIBRS -- a text reply is the first answer.
       if (!claude.sql) rawFirstNoSql = claude.explanation || null;
-      if (!claude.sql && !NIBRS_MODEL_SQL_NEVER_RUNS) {
+      if (!claude.sql && !nibrsModelSqlBlocked) {
         rawFirstNoSql = claude.explanation || null;
         // Cause A: a court-process request is settled by the REQUEST policy, not by whatever the
         // model wrote. No second call can turn a police record into a court record, and on GC-009
@@ -1484,7 +1507,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Stage 2b: this retry may return SQL, so it does not run on NIBRS; the scaffold text is stripped just below instead.
-      if (!NIBRS_MODEL_SQL_NEVER_RUNS && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title))) {
+      if (!nibrsModelSqlBlocked && (containsInternalScaffold(claude.explanation) || containsInternalScaffold(claude.title))) {
         scaffoldStripped = true;
         retryCount++;
         console.log(`[nibrs][internal-scaffold] Retrying response that leaked internal scaffold text`);
@@ -1701,7 +1724,7 @@ export async function POST(req: NextRequest) {
       console.log(`[nibrs][guardrail-retry] Retrying with ${combinedGuardrailIssues.length} issue(s)`);
       retryCount++;
       // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
-      if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
+      if (nibrsModelSqlBlocked) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
       const retryResult = await translateToSql(
         question + "\n\n" + combinedIssues,
         promptHistory,
@@ -1821,7 +1844,7 @@ export async function POST(req: NextRequest) {
           { role: "user" as const, content: `[SYSTEM: ${tableCheck.message}]` },
         ];
         // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
-        if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
+        if (nibrsModelSqlBlocked) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
         const retry = await translateToSql(tableCheck.message, retryHistory, activeModel);
         if (retry.sql) {
           const retryValidation = validateAndSanitize(retry.sql);
@@ -1923,7 +1946,7 @@ export async function POST(req: NextRequest) {
       }
       sql = finalCheck.authority.sql;
       // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
-      if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
+      if (nibrsModelSqlBlocked) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
       const result = await executeBoundNibrsStatement(finalCheck.authority);
       rows = result.rows;
       columns = result.columns;
@@ -1951,7 +1974,7 @@ export async function POST(req: NextRequest) {
         ];
         retryCount++;
         // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
-        if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
+        if (nibrsModelSqlBlocked) throw new Error("request accounting: a NIBRS model statement may not be retried (2b L11)");
         const retry = await translateToSql(
           isTimeout ? `Rewrite using summary tables: ${question}` : `Fix this SQL error: ${msg}`,
           retryHistory,
@@ -1999,7 +2022,7 @@ export async function POST(req: NextRequest) {
                 throw new Error("NIBRS rollup is unavailable");
               }
               // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
-              if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
+              if (nibrsModelSqlBlocked) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
               const retryResult = await executeBoundNibrsStatement(retryFinalCheck.authority);
               rows = retryResult.rows;
               columns = retryResult.columns;
@@ -2044,7 +2067,7 @@ export async function POST(req: NextRequest) {
           const fallbackContractFailure = contractFailureResponse(fallbackContract, `contract_campus_rescue_failure:${fallbackContract.enforced.join(",")}`);
           if (fallbackContractFailure) return fallbackContractFailure;
           // Stage 2b (L11, defensive): unreachable while the gate stands; fails closed if the gate is ever removed.
-          if (NIBRS_MODEL_SQL_NEVER_RUNS) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
+          if (nibrsModelSqlBlocked) throw new Error("request accounting: a NIBRS model statement may not be executed (2b L11)");
           const fallbackResult = await executeWithTimeout(fallbackSql);
           if (fallbackResult.rows.length > 0) {
             sql = fallbackSql;

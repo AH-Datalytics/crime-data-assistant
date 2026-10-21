@@ -13,6 +13,7 @@ import {
   resolverWarningFingerprint,
   warningWhitelistMatch,
 } from "./resolver-warning-classification";
+import { withUnreadNote, withUnreadTag } from "./unread-fallthrough";
 import { buildQueryLogInsert, queryLogHasColumn } from "./query-log-columns";
 import {
   EMPTY_PROOF_LOG_FIELDS,
@@ -287,6 +288,10 @@ export function logQuery(
 ): number | null {
   // Stage 3b (r1.4 R4.2): an inner run of a "why" turn writes no log row; the outer turn logs once.
   if (isInnerRun()) return null;
+  // Option 2 stopgap: a request that fell through to the general query path logs the delivered note and its tag, on
+  // every terminal row (answers, refusals and errors alike), so its usage is measurable (lib/unread-fallthrough.ts).
+  response = withUnreadNote(response, rowCount > 0) ?? response;
+  guardrails = withUnreadTag(guardrails) ?? guardrails;
   const db = getWriteDb();
   if (db) {
     try {
