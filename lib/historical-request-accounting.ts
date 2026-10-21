@@ -48,6 +48,8 @@ const PEOPLE = notRecorded("victims, offenders or their age, sex or race", "Homi
 const ARRESTS = notRecorded("arrests", "the NIBRS tab does");
 const COURT = notRecorded("convictions, sentences, prosecutions or prison outcomes; it records crimes reported to police, clearances and staffing");
 const TOPIC = notRecorded("hate crimes, domestic, gang or drug-related offenses as separate categories");
+const OVERDOSE = notRecorded("overdose deaths; drug offenses are not an overdose-death count");
+const IMMIGRATION = notRecorded("immigration or citizenship status");
 const SUBCITY = notRecorded("anything below the level of a city or county agency (ZIP codes, neighborhoods, districts)");
 const SUBYEAR = notRecorded("months, quarters or seasons; its figures are yearly");
 const declined = (reason: string) => (text: string) => `I can't apply "${text.trim()}": ${reason} I haven't answered with a number that leaves it out.`;
@@ -69,6 +71,10 @@ const RULES: Rule[] = [
     when: (_m, q) => detectCompletenessQuestion(q) !== null },
   { concept: "explain", value: () => "explain", pattern: R(String.raw`\bwhy\b|\bhow\s+come\b|\bwhat\s+explains?\b|\breasons?\s+(?:for|why|behind)\b|\btheor(?:y|ies)\b|\bcauses?\s+(?:of|for|behind)\b|\bexplain(?:s|ed)?\b`) },
   // ---- not recorded in Historical (sexual assault is a measure, claimed before the people words) ----
+  // Option 2 stopgap (2026-10-21): overdose deaths and immigration status are not recorded, rather than unread words, so
+  // they are refused instead of falling through to the model path. Claimed early, before the drug and place words.
+  { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
+  { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecut(?:ions?|ed|ors?|e)\b|\bcourts?\b|\bjail(?:s|ed)?\b|\bprobation\b|\bparole\b|\bcorruption(?:[-\s]related)?\b`), state: "not-recorded", explanation: COURT },
   { concept: "arrests", pattern: R(String.raw`\barrest(?:s|ed|ees?)?\b`), state: "not-recorded", explanation: ARRESTS },
   { concept: "weapon", pattern: R(String.raw`\bgun\s+(?:crimes?|violence)\b|\b(?:guns?|firearms?|handguns?|rifles?|shotguns?|knives|knife|weapons?|shootings?|shot)\b`), state: "not-recorded", explanation: WEAPONS },
@@ -312,7 +318,7 @@ export function accountHistoricalRequest(question: string): RequestLedger {
   // Typed agency codes first, then places (a place name is the most specific claim: "White Plains" is a place before
   // "white" is a demographic word), then every other rule in its written order.
   // Year-like period words that resemble places ("early 2020's" is not Early, TX) and sub-year words go before places.
-  const early = RULES.filter((r) => r.concept === "ori" || r.concept === "period-unsupported" || r.concept === "sub-year");
+  const early = RULES.filter((r) => r.concept === "ori" || r.concept === "period-unsupported" || r.concept === "sub-year" || r.concept === "overdose-deaths" || r.concept === "immigration-status");
   for (const rule of early) recordAll(ledger, rule);
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm, q) => ledger.parts.some((p) => p.concept === "place" && p.span[1] === pm.index) || /[A-Za-z]$/.test(q.slice(0, pm.index)) && ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });

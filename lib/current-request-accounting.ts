@@ -47,6 +47,8 @@ const COURT = notTracked("court outcomes (prosecutions, convictions or sentences
 const SUBCITY = notTracked("anything below a city or county agency (ZIP codes, neighborhoods, districts, wards or beats)");
 const OTHER_OFFENSE = notTracked("that offense; it counts only murder, rape, robbery, aggravated assault, burglary, theft and motor vehicle theft", "the NIBRS tab covers more offenses");
 const DAILY = notTracked("daily figures; it has monthly counts");
+const OVERDOSE = notTracked("overdose deaths; drug offenses are not an overdose-death count");
+const IMMIGRATION = notTracked("immigration or citizenship status");
 
 /* ------------------------------------------------------------------ rules --------------------------------------- */
 
@@ -57,7 +59,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
 
-const EARLY_CONCEPTS = new Set(["source-name", "index", "ori", "phase-unsupported", "rolling", "daily", "court", "sub-city", "peer", "sort", "overview", "other-offense"]);
+const EARLY_CONCEPTS = new Set(["source-name", "index", "ori", "phase-unsupported", "rolling", "daily", "court", "sub-city", "peer", "sort", "overview", "other-offense", "overdose-deaths", "immigration-status"]);
 
 const RULES: Rule[] = [
   // The tab's own name is context, claimed first ("Current Trends" is not a "trends" grain).
@@ -77,6 +79,10 @@ const RULES: Rule[] = [
   { concept: "sort", value: () => "most-common", pattern: R(String.raw`\b(?:the\s+)?(?:most\s+(?:common|prevalent|frequent|reported)|top)\s+(?:crimes?|offen[cs]es?|type\s+of\s+crime)\b|\bwhich\s+(?:crime|offen[cs]e)\s+(?:is|was)\s+(?:the\s+)?(?:highest|most\s+common)\b`) },
   { concept: "overview", value: () => "all7", pattern: R(String.raw`\b(?:an?\s+)?overview(?:\s+(?:of|for)\s+(?:crime|crimes|trends?|crime\s+trends?))?\b`) },
   // ---- not tracked ----
+  // Option 2 stopgap (2026-10-21): overdose deaths and immigration status are not recorded, rather than unread words, so
+  // they are refused instead of falling through to the model path. Claimed early, before the drug and place words.
+  { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
+  { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecut(?:ions?|ed|ors?|e)\b|\bcourts?\b|\bjail(?:s|ed)?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\s+\d+\b|\bbeats?\b|\bcensus\s+tracts?\b|\bareas?\s+in\b`), state: "not-recorded", explanation: SUBCITY },
   { concept: "daily", pattern: R(String.raw`\bby\s+(?:the\s+)?day\b|\bper\s+day\b|\beach\s+day\b|\bdaily\b`), state: "not-recorded", explanation: DAILY },
