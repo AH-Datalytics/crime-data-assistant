@@ -16,7 +16,6 @@ import {
   type OutcomeLogFields,
 } from "./proof-finalize";
 import { nibrsExecutionAuthorityIssue, nibrsSqlSha256, type NibrsExecutionAuthority } from "./nibrs-execution-binding";
-import { withUnreadNote, withUnreadTag } from "./unread-fallthrough";
 
 const state = {
   db: null as Database.Database | null,
@@ -188,9 +187,6 @@ export function logNibrsQuery(
 ): number | null {
   // Stage 3b (r1.4 R4.2): an inner run of a "why" turn writes no log row; the outer turn logs once.
   if (isInnerRun()) return null;
-  // Option 2 stopgap: the delivered note and its tag on every terminal row of a fallback request (lib/unread-fallthrough.ts).
-  response = withUnreadNote(response, rowCount > 0) ?? response;
-  guardrails = withUnreadTag(guardrails) ?? guardrails;
   // Write to shared query_log.db via rtci-db's getWriteDb
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { getWriteDb } = require("@/lib/rtci-db");

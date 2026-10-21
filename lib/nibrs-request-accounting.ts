@@ -37,8 +37,6 @@ const declined = (reason: string) => (text: string) => `I can't apply "${text.tr
 const COURT = notRecorded("court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances");
 const SUBCITY = notRecorded("anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats)");
 const DAILY = notRecorded("daily figures in its summary tables; monthly and yearly figures are available");
-const OVERDOSE = notRecorded("overdose deaths; drug offenses are not an overdose-death count");
-const IMMIGRATION = notRecorded("immigration or citizenship status");
 const FENTANYL = notRecorded("fentanyl as its own drug type (it falls under broader narcotic categories)");
 
 /* ------------------------------------------------------------------ rules --------------------------------------- */
@@ -48,7 +46,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\bfrom\s+(${MONTH})\s+(${YEAR})\s+(?:to|through|until|-)\s+(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
-const EARLY_CONCEPTS = new Set(["ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status"]);
+const EARLY_CONCEPTS = new Set(["ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort"]);
 
 /** Filter values: `dimension:value`. Specific weapons before the generic gun words; values are NIBRS codes. */
 const FILTERS: Rule[] = [
@@ -170,10 +168,6 @@ const RULES: Rule[] = [
   // ---- a clearance reason that contains a court word: claimed before the court words ----
   { concept: "clearance-reason", value: () => "clearance:B", pattern: R(String.raw`\b(?:the\s+)?prosecution\s+(?:was\s+|were\s+|being\s+)?declined\b|\bprosecution[-\s]declined\b`) },
   // ---- not recorded in NIBRS ----
-  // Option 2 stopgap (2026-10-21): overdose deaths and immigration status are not recorded, rather than unread words, so
-  // they are refused instead of falling through to the model path. Claimed early, before the drug and place words.
-  { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
-  { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecutions?\b|\bprosecutors?\b|\bprosecuted\b|\bdefendants?\b|\bcourts?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\b|\bbeats?\b|\bcensus\s+tracts?\b`), state: "not-recorded", explanation: SUBCITY },
   { concept: "daily", pattern: R(String.raw`\bby\s+(?:the\s+)?day\b|\bper\s+day\b|\beach\s+day\b|\bdaily\b|\bday[-\s]by[-\s]day\b`), state: "not-recorded", explanation: DAILY },

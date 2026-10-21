@@ -649,21 +649,21 @@ function terminalEgress(file, src, ts) {
 const REVIEWED_DELIVERY_BODIES = [
   {
     fp: "app/api/query/route.ts::sseEvent",
-    sha256: "efc5eb639fed2b4551569f449f997a36b790eead2d6603eee596f0ee0ce578fc",
-    bytes: 2443,
-    reason: "SSE delivery helper: formats one event from a sealed payload. Identity covers the full declaration, so widening a parameter type invalidates it. Option 2 stopgap (2026-10-21) re-registration: the body now appends the unread-words note (lib/unread-fallthrough.ts) to the delivered text when the request fell through; the parameter type is unchanged.",
+    sha256: "d598e413b07e2b287d7276c881beb657b50903e31bb6b780c7d8c618229e88b4",
+    bytes: 1791,
+    reason: "SSE delivery helper: formats one event from a sealed payload. Identity covers the full declaration, so widening a parameter type invalidates it.",
   },
   {
     fp: "app/api/nibrs-query/route.ts::jsonResp",
-    sha256: "8ce59efb5c531e78d9a714909a9fa32ea25a4e3763fe2730177765462d5fbc4c",
-    bytes: 1785,
-    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it. Option 2 stopgap (2026-10-21) re-registration: the body now appends the unread-words note (lib/unread-fallthrough.ts) to the delivered text when the request fell through; the parameter type is unchanged.",
+    sha256: "4e200ce33ffd7c420ea7a6cc2f8f5bb0892191181ba021699a84b4965209c8a0",
+    bytes: 1298,
+    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it.",
   },
   {
     fp: "app/api/shr-query/route.ts::jsonResp",
-    sha256: "722588023671805706efbd009217cba4650054106a1a3c08d9214b305ec81230",
-    bytes: 1763,
-    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it. Option 2 stopgap (2026-10-21) re-registration: the body now appends the unread-words note (lib/unread-fallthrough.ts) to the delivered text when the request fell through; the parameter type is unchanged.",
+    sha256: "988d384f1f22e8b32cd0fd86548d08a69219ff25b2d69c6f62e289b905428726",
+    bytes: 1276,
+    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it.",
   },
   {
     fp: "app/api/hc-query/route.ts::jsonResp",
