@@ -44,7 +44,10 @@ function valueLabel(measure: string, unit: string | null, statistic: string | nu
 
 export function tableDisplay(columns: string[], rows: Record<string, unknown>[], title = ""): TableDisplay {
   const unchanged = { shown: columns, constants: [], labels: {} };
-  if (rows.length < 2 || columns.length <= 2) return unchanged;
+  if (rows.length === 0 || columns.length <= 2) return unchanged;
+  // One row: only the known descriptive columns are folded (owner, 2026-10-22: a one-value answer showed all eight
+  // columns); any other text column of a one-row table stays in the grid.
+  const ONE_ROW_DESCRIPTIVE = /^(?:place|measure|unit|statistic)$/i;
   const shown: string[] = [];
   const constants: { column: string; value: string }[] = [];
   columns.forEach((col, i) => {
@@ -53,7 +56,7 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
     if (OPTIONAL_METADATA.test(col) && values.every(isEmpty)) return;
     const numeric = values.some((v) => typeof v === "number");
     const first = values[0];
-    const constant = !numeric && !isEmpty(first) && values.every((v) => !isEmpty(v) && String(v) === String(first));
+    const constant = !numeric && !isEmpty(first) && values.every((v) => !isEmpty(v) && String(v) === String(first)) && (rows.length > 1 || ONE_ROW_DESCRIPTIVE.test(col));
     if (constant) { constants.push({ column: col, value: String(first) }); return; }
     shown.push(col);
   });
