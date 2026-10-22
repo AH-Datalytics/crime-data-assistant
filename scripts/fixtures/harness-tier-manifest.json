@@ -2331,6 +2331,15 @@
       "note": "Option 3 batch 1: the real Current/Historical, NIBRS and SHR POST handlers on their own temporary fixture databases (operation-taxonomy DDL plus small known seeds), model stubbed and its SQL asserted never run, network refused"
     },
     {
+      "id": "test-nibrs-typed-chart",
+      "tier": "F",
+      "script": "scripts/test-nibrs-typed-chart.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS typed-chart hotfix: the real NIBRS POST handler on its own temporary fixture database (operation-taxonomy DDL plus a carjacking monthly seed and reporting evidence), model stubbed, network refused; plus the chart-layout pivot safeguards"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { formatNumber, formatDate } from "@/lib/utils";
+import { tableDisplay } from "@/lib/table-display";
 
 /** Convert column name like "kidnapping_count" → "Kidnapping Count" */
 function formatHeader(col: string): string {
@@ -26,13 +27,19 @@ function isYearColumn(col: string, rows: Record<string, unknown>[]): boolean {
 
 
 interface DataTableProps {
+  /** The answer's title: a constant it already states (e.g. the place) is not restated above the table. */
+  title?: string;
   columns: string[];
   rows: Record<string, unknown>[];
   truncated?: boolean;
   fillHeight?: boolean;
 }
 
-export default function DataTable({ columns, rows, truncated, fillHeight }: DataTableProps) {
+export default function DataTable({ columns: allColumns, rows, truncated, fillHeight, title }: DataTableProps) {
+  // Table display hotfix (2026-10-22): empty columns are not shown, and a text column that is the same on every row is
+  // stated once above the table instead of repeated on every row. The CSV export keeps every column.
+  const display = useMemo(() => tableDisplay(allColumns, rows, title ?? ""), [allColumns, rows, title]);
+  const columns = display.shown;
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [expanded, setExpanded] = useState(false);
@@ -99,6 +106,11 @@ export default function DataTable({ columns, rows, truncated, fillHeight }: Data
 
   return (
     <div className={fillHeight ? "flex flex-col flex-1 min-h-0" : ""}>
+      {display.constants.length > 0 && (
+        <p className="mb-2 text-sm text-[var(--muted)]" data-table-constants="1">
+          {display.constants.map((c) => `${formatHeader(c.column)}: ${/^(state|state_abbr)$/i.test(c.column) && /^[a-zA-Z]{2}$/.test(c.value) ? c.value.toUpperCase() : c.value}`).join(" · ")}
+        </p>
+      )}
       <div className={`overflow-x-auto overflow-y-auto ${fillHeight ? "flex-1" : "max-h-96"}`}>
         <table className="stat-table">
           <thead className="sticky top-0 z-10">
@@ -108,7 +120,7 @@ export default function DataTable({ columns, rows, truncated, fillHeight }: Data
                   key={col}
                   onClick={() => handleSort(col)}
                 >
-                  <span>{formatHeader(col)}</span>
+                  <span>{display.labels[col] ?? formatHeader(col)}</span>
                 </th>
               ))}
             </tr>

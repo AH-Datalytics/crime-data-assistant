@@ -1,0 +1,86 @@
+/**
+ * Table display hotfix (owner report 2026-10-22: a 106-row monthly NIBRS table repeated "Memphis, TN / carjacking /
+ * offenses / count" on every row, with empty Filter and Note columns; Codex r3 corrections; owner: "in the memphis
+ * example the table should only show month and carjackings"): which columns the on-screen table shows, and their names.
+ *
+ * - Only known optional metadata columns (filter, note) are hidden when empty on every row. A result column that is
+ *   empty everywhere stays visible: its emptiness is information (e.g. a change that could not be calculated).
+ * - A text column with the same value on every row (two rows or more) is not repeated in the grid.
+ *   - Only for an explicitly supported combination is the value column named for its measure, unit and statistic
+ *     ("Carjackings", "Murder victims", "Robbery rate per 100k"), and only then are those not restated: one measure;
+ *     a unit of offenses or victims (or no unit column); a statistic of count or rate_per_100k (or no statistic column).
+ *     A unit or statistic that varies, or any other unit (e.g. arrests), keeps the plain header and the labeled line.
+ *   - Only the place may be left out because the title shows it: the whole place label must appear in the title, and the
+ *     caller passes a title only where it is displayed with the table (the embed page shows none, so passes none).
+ *   - Any other constant is stated once above the table WITH its column name ("Victim Race: White").
+ * - A period column is named "Month" for monthly values and "Year" for yearly ones.
+ * - The first column (the row's label) and every numeric column are always shown, even when constant.
+ * - If fewer than two columns would remain, the table is shown unchanged.
+ * - The CSV export is not affected: it keeps every column and its original names.
+ */
+export type TableDisplay = { shown: string[]; constants: { column: string; value: string }[]; labels: Record<string, string> };
+
+const isEmpty = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+const OPTIONAL_METADATA = /^(?:filter|note|notes)$/i;
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const MEASURE_PLURAL: Record<string, string> = {
+  carjacking: "carjackings", murder: "murders", robbery: "robberies", burglary: "burglaries", rape: "rapes",
+  aggravated_assault: "aggravated assaults", motor_vehicle_theft: "motor vehicle thefts", theft: "thefts",
+  larceny: "larcenies", arson: "arsons", shoplifting: "shoplifting offenses",
+};
+
+/**
+ * The value column's name, only for a supported combination: unit "offenses" or "victims" (or no unit column), statistic
+ * "count" or "rate_per_100k" (or no statistic column). `null` (keep the plain header and the labeled line) otherwise.
+ */
+function valueLabel(measure: string, unit: string | null, statistic: string | null): string | null {
+  if (unit !== null && unit !== "offenses" && unit !== "victims") return null;
+  if (statistic !== null && statistic !== "count" && statistic !== "rate_per_100k") return null;
+  const m = measure.toLowerCase();
+  const words = m.replace(/_/g, " ");
+  if (statistic === "rate_per_100k") return cap(`${unit === "victims" ? `${words} victim` : words} rate per 100k`);
+  return cap(unit === "victims" ? `${words} victims` : MEASURE_PLURAL[m] ?? `${words} offenses`);
+}
+
+export function tableDisplay(columns: string[], rows: Record<string, unknown>[], title = ""): TableDisplay {
+  const unchanged = { shown: columns, constants: [], labels: {} };
+  if (rows.length < 2 || columns.length <= 2) return unchanged;
+  const shown: string[] = [];
+  const constants: { column: string; value: string }[] = [];
+  columns.forEach((col, i) => {
+    const values = rows.map((r) => r[col]);
+    if (i === 0) { shown.push(col); return; }
+    if (OPTIONAL_METADATA.test(col) && values.every(isEmpty)) return;
+    const numeric = values.some((v) => typeof v === "number");
+    const first = values[0];
+    const constant = !numeric && !isEmpty(first) && values.every((v) => !isEmpty(v) && String(v) === String(first));
+    if (constant) { constants.push({ column: col, value: String(first) }); return; }
+    shown.push(col);
+  });
+  if (shown.length < 2) return unchanged;
+
+  const labels: Record<string, string> = {};
+  const constantOf = (c: string) => constants.find((k) => k.column === c)?.value;
+  // A period column named for its grain.
+  const periodCol = shown.find((c) => /^(?:period|month)$/i.test(c));
+  if (periodCol) {
+    const vals = rows.map((r) => String(r[periodCol] ?? "")).filter(Boolean);
+    if (vals.length && vals.every((v) => /^\d{4}-\d{2}$/.test(v))) labels[periodCol] = "Month";
+    else if (vals.length && vals.every((v) => /^\d{4}$/.test(v))) labels[periodCol] = "Year";
+  }
+  // The value column named for its measure, unit and statistic, only for a supported combination; an absent column is
+  // not the same as a varying one (a varying unit or statistic is in `shown`, so no name is given).
+  const absorbed = new Set<string>();
+  const measure = constantOf("measure");
+  const fieldOf = (c: string): string | null | false => (!columns.includes(c) ? null : constantOf(c) ?? false);
+  const unit = fieldOf("unit");
+  const statistic = fieldOf("statistic");
+  if (measure && shown.includes("value") && unit !== false && statistic !== false) {
+    const name = valueLabel(measure, unit, statistic);
+    if (name) { labels.value = name; for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c); }
+  }
+  // Only the place is left out for a displayed title that contains its whole label.
+  const placeShown = (c: { column: string; value: string }) => c.column === "place" && title !== "" && title.includes(c.value);
+  const stated = constants.filter((c) => !absorbed.has(c.column) && !placeShown(c));
+  return { shown, constants: stated, labels };
+}
