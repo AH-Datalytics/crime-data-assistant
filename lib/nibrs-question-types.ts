@@ -57,7 +57,7 @@ export function filterLabel(dimValue: string): string {
     bias: { 21: "anti-Jewish", 12: "anti-Black", 11: "anti-White", 32: "anti-Hispanic", 14: "anti-Asian", 24: "anti-Islamic", 41: "anti-gay" },
     loss: { 7: "stolen", 5: "recovered", 4: "damaged", 6: "seized" },
     clearance: { A: "death of offender", B: "prosecution declined", C: "in custody elsewhere", D: "victim refused to cooperate", E: "juvenile, no custody", arrest: "by arrest", exceptional: "by exceptional means" },
-    location: { 20: "residence/home", 13: "highway/road/alley/street", 22: "school/college", 18: "parking lot/garage", commercial: `commercial location types (${commercialList()})` },
+    location: { 20: "residence/home", 13: "highway/road/alley/street", 22: "school/college", 18: "parking lot/garage", "07": "convenience store", 14: "hotel/motel", commercial: `commercial location types (${commercialList()})` },
     relationship: { ST: "stranger" },
   };
   const DIM: Record<string, string> = { drug: "drug type", dv: "category" };

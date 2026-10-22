@@ -196,6 +196,8 @@ const WHY = {
   crossOr: "I can't tell which values \"or\" joins here; \"or\" works only between values of one condition (for example, \"firearm or knife\").",
   twoMeasures: "I can answer for one homicide type at a time (murder, all homicides, or negligent manslaughter).",
   justifiable: "Justifiable homicides aren't a supported Homicide Reports question type yet.",
+  // Option 3 batch 1 (P170): the SHR codes killings by police and by private citizens as justifiable homicides, not murders.
+  policeKillings: "Killings by police or by private citizens are recorded in the Homicide Reports as justifiable homicides, not murders, and justifiable homicides aren't a supported Homicide Reports question type yet.",
   shooting: "Fatal-shooting questions are answered only in the forms the fatal-shooting answer supports; this combination isn't one of them.",
   breakdown: "I can break a count down by only one of: state, county, city, weapon, relationship, circumstance, victim sex, race or age group (plus year or month).",
   shareGrouping: "Shares and victim ages can be broken down by year only.",
@@ -548,6 +550,9 @@ function readSlots(ledger: RequestLedger, question: string): Slots {
       }
       case "circumstance": {
         if (BREAKDOWN_WORD.test(t) && /circumstances?$|motives?$/.test(t)) { addDim("circumstance", part); break; }
+        // Option 3 batch 1 (P170): never a murder count filtered to killings by police or private citizens (those are justifiable
+        // homicides; the filtered murder count is ~0 and mislabeled). Declined by name.
+        if (/killed\s+by\s+(?:police|(?:a\s+|an\s+)?officers?|law\s+enforcement|(?:a\s+)?private\s+citizens?)|police\s+(?:killings?|shootings?)|private\s+citizen/.test(t)) { decline(part, WHY.policeKillings); break; }
         if (/domestic|justifiable|self[-\s]defen|negligen|accidental/.test(t)) { decline(part, /negligen|accidental/.test(t) ? WHY.generic(part.text.trim(), part.inherited) + " For negligent manslaughter, ask for it as the homicide type." : WHY.generic(part.text.trim(), part.inherited)); break; }
         const rule = CIRCUMSTANCE_RULES.find((r) => r.ask.test(t));
         if (!rule) { decline(part, WHY.generic(part.text.trim(), part.inherited)); break; }

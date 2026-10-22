@@ -56,7 +56,7 @@ function versusBetween(ledger: RequestLedger, v: Part): "places" | "years" | "ot
 function applies(part: Part, a: LegacyApplied, now: Date, ledger: RequestLedger): boolean {
   const v = part.value ?? "";
   switch (part.concept) {
-    case "scorecard": case "completeness": case "coverage-lookup": case "peer": case "prison-population":
+    case "scorecard": case "completeness": case "coverage-lookup": case "peer": case "prison-population": case "meta-source":
       return Boolean(a.operations?.includes(part.concept));
     case "place": return Boolean(a.places?.(v));
     case "measure": case "staffing": return Boolean(a.measures?.includes(v));

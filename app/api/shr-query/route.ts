@@ -116,6 +116,7 @@ import { handleWhyTurn, innerRequest } from "@/lib/why-turn";
  * a compile error rather than a review finding -- see app/api/query/route.ts for why
  * requiring emitFactualPayload() to be *called* was not sufficient on its own.
  */
+import { applySpellingCorrections, runWithSpellingContext, withSpellingNote } from "@/lib/spelling-corrections";
 function jsonResp(data: SealedPayload<Record<string, any>> | QueryError, status = 200) {
   const payload: Record<string, any> = { ...(data as Record<string, any>) };
   if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
@@ -123,6 +124,9 @@ function jsonResp(data: SealedPayload<Record<string, any>> | QueryError, status 
     payload.explanation = safe.explanation ? consolidatedDisplayText(safe.explanation) : safe.explanation;
     payload.title = safe.title ? consolidatedDisplayText(safe.title) : safe.title;
   }
+  // Option 3 batch 1: the stated reading of a corrected misspelling, on every delivered text (lib/spelling-corrections.ts).
+  if (typeof payload.explanation === "string") payload.explanation = withSpellingNote(payload.explanation) ?? payload.explanation;
+  if (typeof payload.error === "string") payload.error = withSpellingNote(payload.error) ?? payload.error;
   if (Array.isArray(payload.rows)) payload.rows = normalizeShrDisplayRows(payload.rows);
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
@@ -180,7 +184,12 @@ function ambiguousKansasCityIntent(question: string): boolean {
 /** Request accounting (plan r2.1): no model-written statement is executed on SHR. A constant, not a toggle. */
 const SHR_MODEL_SQL_NEVER_RUNS: boolean = true;
 
+// Option 3 batch 1: each request runs in its own spelling context (lib/spelling-corrections.ts).
 export async function POST(req: NextRequest) {
+  return runWithSpellingContext(() => handleShrPost(req));
+}
+
+async function handleShrPost(req: NextRequest) {
   // Measured before the outer try so the operational row in its catch can record an
   // elapsed time; everything declared inside the try is out of scope there.
   const outerStart = Date.now();
@@ -200,7 +209,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const question = body?.question?.trim();
+    // Option 3 batch 1: the closed misspelling list, corrected before anything reads the question.
+    const question = typeof body?.question === "string" && body.question.trim() ? applySpellingCorrections(body.question.trim()) : body?.question?.trim();
     const chartAuditRequestId = createChartAuditRequestId();
     let chartAuditQueryLogId: number | null = null;
     const sessionId: string | null = ((body?.sessionId as string) || "").slice(0, 64) || null;

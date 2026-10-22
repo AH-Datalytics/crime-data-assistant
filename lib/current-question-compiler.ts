@@ -208,6 +208,12 @@ function bounds(ctx: CompileContext): Bounds | null {
   return { lo: [Math.floor(lo / 100), lo % 100], hi: [Math.floor(hi / 100), hi % 100] };
 }
 type Agency = { ori: string; label: string; type: string };
+/**
+ * Option 3 batch 1 (codex build ruling item 4): a county name resolves to the county agency's own record (the adopted
+ * single-agency default, lib/county-clarifier.ts), so the answer says so: the rate is that agency's, not countywide.
+ */
+const countyAgencyNote = (a: Agency): string | null =>
+  a.type === "County" ? `${a.label} here is the county agency's own Current Trends record and its reported population, not a total for every agency in the county.` : null;
 function resolveAgency(ctx: CompileContext, p: Extract<CPlace, { kind: "agency" }>): Agency | { decline: string } {
   const name = p.agencyKind === "county" && !/county$/i.test(p.name) ? `${p.name} County` : p.name;
   const stateCond = p.state ? ` AND state = ${q(p.state)}` : "";
@@ -513,7 +519,8 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const what = spec.measures.length > 2 ? "reported offenses" : spec.measures.map((m) => MEASURE_LABEL[m]).join(" and ");
   const statText = statistic === "rate" ? "rate per 100,000 residents" : spec.grain === "rolling" ? "12-month rolling total" : "reported count";
   const title = `${what[0].toUpperCase()}${what.slice(1)} ${statistic === "rate" ? "Rate" : "Count"}${spec.grain === "rolling" ? " (Rolling 12 Months)" : ""}, ${placeNames.join(", ")}, ${describeSpan(months)}`;
-  const explanation = [`Current Trends ${what} ${statText}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${placeNames.join(", ")}, ${describeSpan(months)}.`, ...notesOut].join(" ");
+  const countyNotes = [...agencies.values()].map(countyAgencyNote).filter((n): n is string => Boolean(n));
+  const explanation = [`Current Trends ${what} ${statText}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${placeNames.join(", ")}, ${describeSpan(months)}.`, ...countyNotes, ...notesOut].join(" ");
   const multiPeriod = new Set(rows.map((r) => r.period)).size > 1;
   return {
     kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation,
@@ -549,6 +556,7 @@ function compileChange(spec: ChangeSpec, ctx: CompileContext, b: Bounds): Compil
       const f = fetchAgency(ctx, ops, sqls, place, agency, offs, all, "value", spec.statistic === "rate");
       if (spec.statistic === "rate") { const bad = rateCheck(f, all); if (bad) return { kind: "decline", explanation: operandFailure(bad) }; }
       label = agency.label; identity = agency.ori;
+      { const cn = countyAgencyNote(agency); if (cn) notes.push(cn); }
       endpointOf = (months) => {
         const n: string[] = [];
         const value = agencyBucket(f, { label: periodLabel(months), months }, offs, spec.statistic, n);

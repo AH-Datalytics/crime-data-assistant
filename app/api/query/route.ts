@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { applySpellingCorrections, runWithSpellingContext, withSpellingNote } from "@/lib/spelling-corrections";
 import { getDb, logQuery } from "@/lib/rtci-db";
 import { validatePageToken } from "@/lib/page-token";
 import { translateToSql, getHistoricalSystemPrompt } from "@/lib/claude";
@@ -174,6 +175,9 @@ function sseEvent(event: NonFactualStreamEvent | SealedPayload<FactualStreamEven
     const safeText = sanitizeUserFacingNarrative(payload.text, undefined).explanation;
     payload.text = safeText ? consolidatedDisplayText(safeText) : safeText;
   }
+  // Option 3 batch 1: the stated reading of a corrected misspelling, on every delivered text (lib/spelling-corrections.ts).
+  if (payload.type === "result" && typeof payload.explanation === "string") payload.explanation = withSpellingNote(payload.explanation) ?? payload.explanation;
+  if ((payload.type === "explanation" || payload.type === "error") && typeof payload.text === "string") payload.text = withSpellingNote(payload.text) ?? payload.text;
   const chartAuditSource = payload.chartAuditSource;
   delete payload.chartAuditSource;
   const finalized = payload.requestId && (chartAuditSource === "current" || chartAuditSource === "historical")
@@ -500,7 +504,12 @@ function answerHistoricalPlaceLookup(
   }
 }
 
+// Option 3 batch 1: each request runs in its own spelling context (lib/spelling-corrections.ts).
 export async function POST(req: NextRequest) {
+  return runWithSpellingContext(() => handleQueryPost(req));
+}
+
+async function handleQueryPost(req: NextRequest) {
   const encoder = new TextEncoder();
   const totalStart = Date.now();
   const MAX_REQUEST_MS = 60000; // 60s total budget — no retries after this
@@ -539,6 +548,8 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
     question = (body?.question as string)?.trim() || "";
+    // Option 3 batch 1: the closed misspelling list, corrected before anything reads the question.
+    if (question) question = applySpellingCorrections(question);
     sessionId = ((body?.sessionId as string) || "").slice(0, 64) || null;
     // Page token validation — block bots that hit the API directly
     const pageToken = body?.pageToken as string | undefined;
@@ -825,7 +836,14 @@ export async function POST(req: NextRequest) {
     && Boolean(buildHistoricalNationalViolentCountPlan(question) ?? buildHistoricalNationalViolentRatePlan(question));
   const historicalNumeric = Boolean(historicalLedger && historicalRequestKind(historicalLedger) === "numeric" && !historicalWholeTurn);
   /** The one sealed exit for every Historical accounting decline or clarification (recognition, follow-up, types). */
-  const historicalAccountingExit = (refusal: { parts: AccountingPart[]; explanation: string }, owner: string, clarify = false) => {
+  // Option 3 batch 1 (codex build ruling item 3): a question about causes, effects or correlation gets the causal limitation
+  // beside whatever else declines it (a lookup, a combination, a policy topic), never instead of it.
+  const HISTORICAL_CAUSAL_LIMIT = "I also can't say what causes crime or what it is correlated with: Historical records reported crimes, not their causes.";
+  const historicalAsksCause = Boolean(historicalLedger?.parts.some((p) => p.concept === "explain"));
+  const historicalAccountingExit = (refusalIn: { parts: AccountingPart[]; explanation: string }, owner: string, clarify = false) => {
+    const refusal = historicalAsksCause && !refusalIn.explanation.includes(HISTORICAL_CAUSAL_LIMIT)
+      ? { ...refusalIn, explanation: `${refusalIn.explanation} ${HISTORICAL_CAUSAL_LIMIT}` }
+      : refusalIn;
     const ms = Date.now() - totalStart;
     const tags = ["request-accounting", `request-accounting-owner:${owner}`, ...refusal.parts.map((p) => `request-accounting:${p.state}:${p.concept}`)];
     const accountingProof = finalizeExit({ outcome: clarify ? OUTCOMES.measure_ambiguous : OUTCOMES.capability_path_unavailable, planFamily: "request-accounting", guardrails: tags });
@@ -1151,7 +1169,10 @@ export async function POST(req: NextRequest) {
     ? null
     : shouldAskCrimeType(crimeTypeQuestion, normalizeHistoryAllSources(body?.history));
   // Stage 3a (owner list, C3): an "overview" names all seven offenses, so it doesn't ask violent, property or both.
-  if (crimeTypeAsk?.needsClarification && !currentLedger?.parts.some((p) => p.concept === "overview")) {
+  // Option 3 batch 1 (P175): a causal question, or one naming something Historical doesn't record, is not a measure choice;
+  // its refusal (with the causal limitation) answers it rather than "violent, property, or both?".
+  const historicalNotAMeasureChoice = Boolean(historicalLedger?.parts.some((p) => p.concept === "explain" || p.state === "not-recorded"));
+  if (crimeTypeAsk?.needsClarification && !currentLedger?.parts.some((p) => p.concept === "overview") && !historicalNotAMeasureChoice) {
     const ms = Date.now() - totalStart;
     const proof = finalizeExit({ outcome: OUTCOMES.measure_ambiguous, planFamily: "crime-type:violent-property-both" });
     writeLog(question, null, 0, null, ms, crimeTypeAsk.clarificationQuestion, tab, ["crime-type:violent-property-both"], "deterministic", sessionId, null, proof);
@@ -2124,8 +2145,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const metadata = currentOwns(historicalOwns(planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb()), () => ({ operations: ["coverage-lookup", "completeness"] })), (m) => ({
-    operations: ["coverage-lookup", "completeness"],
+  const metadata = currentOwns(historicalOwns(planSaysQueryBearing ? null : answerMetadataQuestion(tab, question, getDb()), () => ({ operations: ["coverage-lookup", "completeness", "meta-source"] })), (m) => ({
+    operations: ["coverage-lookup", "completeness", "meta-source"],
     // Stage 3a: a count of agencies, cities or states is what these columns hold ("how many agencies are covered?").
     ...(m.columns.some((c) => /_count$/.test(c)) ? { statistic: "count" as const } : {}),
     entities: m.columns.some((c) => /^agency/.test(c)) ? ["agency"] : m.columns.some((c) => /^city/.test(c)) ? ["city"] : m.columns.some((c) => /^state/.test(c)) ? ["state"] : [],
