@@ -802,7 +802,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                   )}
                   {!response.scorecard && response.rows.length > 0 && showTable && (
                     <div className={`bg-white overflow-hidden workspace-table flex flex-col ${showChart && response.chartConfig ? "md:flex-[0.85] md:min-w-0" : "w-full flex-1"}`}>
-                      <DataTable columns={response.columns} rows={response.rows} truncated={response.truncated} fillHeight />
+                      <DataTable columns={response.columns} rows={response.rows} truncated={response.truncated} fillHeight title={showChart && response.chartConfig && response.chartConfig.type !== "none" ? response.chartConfig.title : undefined} />
                     </div>
                   )}
                 </div>

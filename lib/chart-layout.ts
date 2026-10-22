@@ -13,6 +13,8 @@ export type PivotedChartData = {
   seriesOverflow: boolean;
 };
 
+const CHART_METADATA_KEY = /^(?:note|notes|data_type|shr_status|shr_records|shr_coverage_caveat|coverage_status|coverage_caveat)$|_note$|_caveat$/i;
+
 export function detectAndPivotChartData(
   data: Record<string, unknown>[],
   xKey: string,
@@ -22,8 +24,10 @@ export function detectAndPivotChartData(
     return { data, effectiveYKeys: yKeys, seriesOverflow: false };
   }
   const valueKey = yKeys[0];
+  // NIBRS typed-chart hotfix: presentation metadata (row notes, coverage caveats and statuses) is never a series
+  // dimension, so a varying row note cannot split one series in two.
   const otherKeys = Object.keys(data[0]).filter(
-    (key) => key !== "_ym" && key !== xKey && key !== valueKey,
+    (key) => key !== "_ym" && key !== xKey && key !== valueKey && !CHART_METADATA_KEY.test(key),
   );
   let categoryKey: string | null = null;
   let categories: string[] = [];

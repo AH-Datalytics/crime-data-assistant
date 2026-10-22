@@ -108,7 +108,7 @@ import { runOwnedAnnualClearance } from "@/lib/nibrs-owned-family";
 import { NIBRS_CATEGORY_CHANGE_GUARDRAIL, planCategoryChange, recognizeCategoryChange, runOwnedCategoryChange } from "@/lib/nibrs-category-change";
 import { accountNibrsRequest, nibrsRecognitionRefusal, nibrsRequestKind, nibrsFollowupCheck, NIBRS_CACHE_TAB, NIBRS_MODEL_SQL_DECLINE, nibrsStandaloneTurn, resolveNibrsPeriodReplacement } from "@/lib/nibrs-request-accounting";
 import { matchNibrsType, MEASURE_CODES } from "@/lib/nibrs-question-types";
-import { compileNibrsSpec } from "@/lib/nibrs-question-compiler";
+import { compileNibrsSpec, typedChartConfig } from "@/lib/nibrs-question-compiler";
 import { nibrsLegacyBound, nibrsUnboundParts, typedExplainLimitation, placesFromGeographies, type NibrsApplied } from "@/lib/nibrs-legacy-binding";
 import { recognizeAgencyPeriodRanking } from "@/lib/nibrs-agency-period-ranking";
 import { isFollowUp } from "@/lib/tab-suggest";
@@ -1350,18 +1350,19 @@ async function handleNibrsPost(req: NextRequest) {
       const typedMs = Date.now() - typedStart;
       const typedSql = compiled.statements.join(";\n");
       const typedRows = compiled.rows as Record<string, unknown>[];
+      const typedChart = typedChartConfig(compiled.columns, typedRows, compiled.title);
       const hasValue = typedRows.some((row) => ["value", "count", "share", "numerator", "change", "earlier_value", "later_value"].some((c) => row[c] !== null && row[c] !== undefined));
       const typedProof = finalizeExit({
         outcome: hasValue ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: typedSql, rows: typedRows, columns: compiled.columns, truncated: false,
         derivation: sealPlanDerivation(typeFamily, typedSql),
         planFamily: typeFamily, guardrails: ["request-accounting", typeFamily],
-        returnedEntities: returnedEntityKeys(typedRows), narrative: typedExplanation, hasChart: false,
+        returnedEntities: returnedEntityKeys(typedRows), narrative: typedExplanation, hasChart: typedChart !== null,
       });
       writeNibrsLog(question, typedSql, typedRows.length, null, typedMs, typedExplanation, ["request-accounting", typeFamily], "deterministic", sessionId, null, null, typedProof);
       return jsonResp(emitFactualPayload(typedProof, {
         success: true, question, sql: typedSql, explanation: typedExplanation, title: compiled.title,
-        columns: compiled.columns, rows: typedRows, rowCount: typedRows.length, truncated: false, chartConfig: null,
+        columns: compiled.columns, rows: typedRows, rowCount: typedRows.length, truncated: false, chartConfig: typedChart,
         chartMeta: { source: "FBI NIBRS", agencyCount: 0, population: null }, executionTimeMs: typedMs,
       } as QueryResponse));
     }

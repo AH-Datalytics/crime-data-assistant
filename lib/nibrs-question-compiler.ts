@@ -18,6 +18,7 @@
  * runs (2a D1).
  */
 import type Database from "better-sqlite3";
+import type { ChartConfig } from "./types";
 import { resolveNibrsPlaces } from "./nibrs-place-resolver";
 import { decideNibrsCompleteness, NIBRS_COMPLETENESS_PROXY_DISCLOSURE, NIBRS_RECENT_MATURATION_DISCLOSURE } from "./nibrs-completeness";
 import { LOCATION_TYPES, WEAPON_TYPES, RACE_CODES, COMMERCIAL_LOCATION_CODES, COMMERCIAL_LOCATION_NAMES } from "./nibrs-codes";
@@ -41,6 +42,61 @@ export const BREAKDOWN = ["period", "place", "measure", "unit", "filter", "dimen
 export const SHARE = ["period", "place", "measure", "unit", "population", "subset", "numerator", "denominator", "share", "note"];
 export const RANK = ["rank", "place", "year", "measure", "unit", "statistic", "value", "population"];
 export const CHANGE = ["place", "measure", "unit", "statistic", "earlier_year", "earlier_value", "later_year", "later_value", "change", "percent_change", "note"];
+
+/**
+ * NIBRS typed-chart hotfix (owner report 2026-10-22: a monthly NIBRS answer came back as a table with no graph; Codex
+ * build ruling REVISE): the chart for a typed answer, ONLY for shapes the chart draws faithfully. Anything else keeps
+ * its table (chartConfig null), as before the hotfix:
+ * - one unit, one statistic and one filter only (victims never share an axis with offenses);
+ * - no partial-period rows (a partial year would look comparable to full years until partial markers ship);
+ * - a series over periods: one dimension of series only (places OR measures, never both), a complete period grid, and
+ *   no value without a valued neighbor (a lone value draws nothing visible: the panels draw no dots);
+ * - one period across places or measures: bars;
+ * - a breakdown: bars by category for one period and place; lines by category over periods only on a complete grid;
+ * - a ranking: bars. A share or a two-endpoint change has no chart.
+ */
+export function typedChartConfig(columns: string[], rows: Record<string, unknown>[], title: string): ChartConfig | null {
+  if (rows.length < 2) return null;
+  const distinct = (k: string) => new Set(rows.map((r) => String(r[k] ?? ""))).size;
+  const isNum = (v: unknown) => typeof v === "number" && Number.isFinite(v);
+  const valued = (k: string) => rows.filter((r) => isNum(r[k])).length;
+  if (rows.some((r) => /partial/i.test(String(r.note ?? "")))) return null;
+  for (const k of ["unit", "statistic", "filter"]) if (columns.includes(k) && distinct(k) > 1) return null;
+  /** Every series (rows sharing seriesKey) covers every period and has no valued point without a valued neighbor. */
+  const drawable = (valueKey: string, seriesKey: string) => {
+    const periods = [...new Set(rows.map((r) => String(r.period)))].sort();
+    const bySeries = new Map<string, Map<string, unknown>>();
+    for (const r of rows) {
+      const s = String(r[seriesKey] ?? "");
+      if (!bySeries.has(s)) bySeries.set(s, new Map());
+      if (bySeries.get(s)!.has(String(r.period))) return false;
+      bySeries.get(s)!.set(String(r.period), r[valueKey]);
+    }
+    for (const cells of bySeries.values()) {
+      if (cells.size !== periods.length) return false;
+      const v = periods.map((p) => isNum(cells.get(p)));
+      if (v.some((ok, i) => ok && !v[i - 1] && !v[i + 1])) return false;
+    }
+    return true;
+  };
+  if (columns.join() === SERIES.join() && valued("value") > 0) {
+    const places = distinct("place");
+    const measures = distinct("measure");
+    if (places > 1 && measures > 1) return null;
+    const seriesKey = measures > 1 ? "measure" : "place";
+    if (distinct("period") > 1) return drawable("value", seriesKey) ? { type: "line", xAxis: "period", yAxis: ["value"], title } : null;
+    if (places > 1) return { type: "bar", xAxis: "place", yAxis: ["value"], title };
+    if (measures > 1) return { type: "bar", xAxis: "measure", yAxis: ["value"], title };
+    return null;
+  }
+  if (columns.join() === BREAKDOWN.join() && valued("count") > 0) {
+    if (distinct("place") > 1 || distinct("measure") > 1 || distinct("dimension") > 1) return null;
+    if (distinct("period") > 1) return distinct("category") <= 16 && drawable("count", "category") ? { type: "line", xAxis: "period", yAxis: ["count"], title } : null;
+    return { type: "bar", xAxis: "category", yAxis: ["count"], title };
+  }
+  if (columns.join() === RANK.join() && valued("value") > 0) return { type: "bar", xAxis: "place", yAxis: ["value"], title };
+  return null;
+}
 const OVERLAP_NOTE = "categories can overlap; shares can sum past 100%";
 const r1 = (v: number | null) => (v === null || !Number.isFinite(v) ? null : Math.round(v * 10) / 10);
 const q = (v: string) => `'${v.replace(/'/g, "''")}'`;

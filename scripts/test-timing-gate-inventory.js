@@ -90,6 +90,8 @@ const INVENTORY = [
     note: "a page token stamped 5 s in the past (the token must be at least 1 s old and under an hour old, a window the test's own duration cannot leave), and the fixture-directory sweep's `mtimeMs > cutoff` filter, as in test-analytics-handler-boundary" },
   { file: "scripts/test-over-refusal-batch1-route.ts", clockReads: 1, elapsedComparisons: 0, class: 4,
     note: "a page token stamped 5 s in the past, as in test-shr-guidance-isolation-route; no duration is measured or compared" },
+  { file: "scripts/test-nibrs-typed-chart.ts", clockReads: 1, elapsedComparisons: 0, class: 4,
+    note: "a page token stamped 5 s in the past, as in test-over-refusal-batch1-route; no duration is measured or compared" },
   { file: "scripts/test-shr-guidance-isolation-route.ts", clockReads: 2, elapsedComparisons: 0, class: 4,
     note: "a page token stamped 5 s in the past, as in test-historical-clearance-route, and a session id stamped with the time; no duration is measured or compared" },
   { file: "scripts/test-nibrs-deterministic-queries.ts", clockReads: 3, elapsedComparisons: 0, class: 2,
