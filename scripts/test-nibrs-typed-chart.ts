@@ -79,14 +79,18 @@ async function main() {
     assert.equal(body.rows.length, 12, show(body));
     assert.deepEqual(body.chartConfig && { type: body.chartConfig.type, xAxis: body.chartConfig.xAxis, yAxis: body.chartConfig.yAxis }, { type: "line", xAxis: "period", yAxis: ["value"] }, show(body));
     assert.deepEqual(body.rows.map((r) => Number(r.value)), Array.from({ length: 12 }, (_, i) => 21 + i), "January-December 2025 values");
+    assert.equal((body as { title?: string }).title, "Memphis, TN Carjackings Per Month, 2025", "owner title format");
+    assert.equal(body.chartConfig?.title, "Memphis, TN Carjackings Per Month, 2025");
   });
-  await check("one value (a single year total) has no chart", async () => {
+  await check("one value (a single year total) has no chart; its title is 'Memphis, TN Carjackings, 2025'", async () => {
     const { body } = await ask("carjackings in Memphis in 2025");
     assert.equal(body.rows.length, 1, show(body));
     assert.equal(body.chartConfig, null, show(body));
+    assert.equal((body as { title?: string }).title, "Memphis, TN Carjackings, 2025");
   });
-  await check("two places in one year: exactly two rows, bars by place", async () => {
+  await check("two places in one year: exactly two rows, bars by place; both places in the title", async () => {
     const { body } = await ask("carjackings in Memphis and Knoxville in 2025");
+    assert.equal((body as { title?: string }).title, "Memphis, TN and Knoxville, TN Carjackings, 2025");
     assert.deepEqual(body.rows.map((r) => [r.place, Number(r.value)]), [["Memphis, TN", 318], ["Knoxville, TN", 138]], show(body));
     assert.deepEqual(body.chartConfig && { type: body.chartConfig.type, xAxis: body.chartConfig.xAxis, yAxis: body.chartConfig.yAxis }, { type: "bar", xAxis: "place", yAxis: ["value"] }, show(body));
   });
@@ -186,8 +190,13 @@ async function main() {
     const rows = [{ period: 2024, place: "Memphis, TN", value: 5, population: 600000 }, { period: 2024, place: "Knoxville, TN", value: 3, population: 600000 }];
     assert.deepEqual(tableDisplay(["period", "place", "value", "population"], rows).shown, ["period", "place", "value", "population"]);
   });
-  await check("one row, or a two-column table, is shown unchanged", () => {
-    assert.deepEqual(tableDisplay(SERIES, [{ period: 2025, place: "Memphis, TN", measure: "carjacking", unit: "offenses", filter: null, statistic: "count", value: 318, note: null }]).shown, SERIES);
+  await check("a one-row answer folds only the known descriptive columns (owner: a single value showed all eight columns); a two-column table is unchanged", () => {
+    const one = tableDisplay(SERIES, [{ period: 2025, place: "Memphis, TN", measure: "carjacking", unit: "offenses", filter: null, statistic: "count", value: 190, note: null }], "Memphis, TN Carjackings, 2025");
+    assert.deepEqual(one.shown, ["period", "value"]);
+    assert.deepEqual(one.labels, { period: "Year", value: "Carjackings" });
+    assert.deepEqual(one.constants, []);
+    const other = tableDisplay(["period", "category", "count"], [{ period: 2025, category: "street", count: 3 }]);
+    assert.deepEqual(other.shown, ["period", "category", "count"], "a one-row non-descriptive text column stays");
     assert.deepEqual(tableDisplay(["year", "value"], [{ year: 2024, value: 1 }, { year: 2025, value: 1 }]).shown, ["year", "value"]);
   });
   await check("a table that would be reduced to its label column alone is shown unchanged (three-column fallback)", () => {
@@ -224,6 +233,59 @@ async function main() {
     const out = renderToStaticMarkup(React.createElement(DataTable, { columns: SERIES, rows: rob({}) }));
     assert.match(out, /Place: Memphis, TN/, out.slice(0, 300));
     assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Year", "Robberies"]);
+  });
+  console.log("\nseries titles (owner 2026-10-22)");
+  const { seriesTitle } = await import("../lib/nibrs-question-compiler");
+  const r = (period: string | number, extra: Record<string, unknown> = {}) => ({ period, place: "Memphis, TN", measure: "carjacking", unit: "offenses", statistic: "count", value: 1, note: null, ...extra });
+  const FB = "previous title";
+  await check("titles from the requested grain: per month, per year (also with one result), a total year or month", () => {
+    assert.equal(seriesTitle(["2025-01", "2025-02"].map((p) => r(p)), ["carjacking"], "month", FB), "Memphis, TN Carjackings Per Month, 2025");
+    assert.equal(seriesTitle(["2024-12", "2025-01"].map((p) => r(p)), ["carjacking"], "month", FB), "Memphis, TN Carjackings Per Month, 2024 to 2025");
+    assert.equal(seriesTitle([2018, 2019, 2025].map((p) => r(p)), ["carjacking"], "year", FB), "Memphis, TN Carjackings Per Year, 2018 to 2025");
+    assert.equal(seriesTitle([r(2025)], ["carjacking"], "year", FB), "Memphis, TN Carjackings Per Year, 2025", "an annual request with one result keeps Per Year");
+    assert.equal(seriesTitle([r(2025)], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2025");
+    assert.equal(seriesTitle([r("2025-03")], ["carjacking"], "total", FB), "Memphis, TN Carjackings, March 2025", "single-month coverage");
+    assert.equal(seriesTitle([r("2025-03")], ["carjacking"], "month", FB), "Memphis, TN Carjackings Per Month, March 2025");
+  });
+  await check("titles name each measure from its own rows: victims, victim rates, offense rates, mixed units", () => {
+    assert.equal(seriesTitle([2024, 2025].map((p) => r(p, { measure: "murder", unit: "victims" })), ["murder"], "year", FB), "Memphis, TN Murder Victims Per Year, 2024 to 2025");
+    assert.equal(seriesTitle([2024, 2025].map((p) => r(p, { measure: "murder", unit: "victims", statistic: "rate_per_100k" })), ["murder"], "year", FB), "Memphis, TN Murder Victim Rate Per 100k Per Year, 2024 to 2025");
+    assert.equal(seriesTitle([2024, 2025].map((p) => r(p, { measure: "robbery", statistic: "rate_per_100k" })), ["robbery"], "year", FB), "Memphis, TN Robbery Rate Per 100k Per Year, 2024 to 2025");
+    const mixed = [...[2024, 2025].map((p) => r(p)), ...[2024, 2025].map((p) => r(p, { measure: "murder", unit: "victims" }))];
+    assert.equal(seriesTitle(mixed, ["carjacking", "murder"], "year", FB), "Memphis, TN Carjackings and Murder Victims Per Year, 2024 to 2025", "the second measure is not named from the first measure's unit");
+  });
+  await check("pooled totals read 'YYYY to YYYY' with no Per; compiler partial-year notes add their coverage", () => {
+    assert.equal(seriesTitle([r("2018-2025")], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2018 to 2025");
+    assert.equal(seriesTitle([r("2018-2026", { note: "partial year 2026 (January-June)" })], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2018 to 2026 (2026 Through June)");
+    assert.equal(seriesTitle([r(2025), r(2026, { note: "partial year (January-June)" })], ["carjacking"], "year", FB), "Memphis, TN Carjackings Per Year, 2025 to 2026 (2026 Through June)");
+    assert.equal(seriesTitle([r(2026, { note: "partial year (January-September)" })], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2026 (2026 Through September)");
+  });
+  await check("anything uncertain keeps the previous title: clearance, rolling, dollars, filters, unreadable partial notes, odd pooled spans, mixed statistics, grain mismatch", () => {
+    const cases: [string, Record<string, unknown>[], string[], string][] = [
+      ["clearance percentage", [2024, 2025].map((p) => r(p, { unit: "offenses", statistic: "clearance_rate" })), ["carjacking"], "year"],
+      ["rolling grain", ["2025-01", "2025-02"].map((p) => r(p)), ["carjacking"], "rolling"],
+      ["rolling statistic", ["2025-01", "2025-02"].map((p) => r(p, { statistic: "rolling_12_month_count" })), ["carjacking"], "month"],
+      ["rolling rate", ["2025-01", "2025-02"].map((p) => r(p, { statistic: "rolling_12_month_rate_per_100k" })), ["carjacking"], "month"],
+      ["total property value", [r(2025, { measure: "theft", unit: "dollars", statistic: "total" })], ["theft"], "total"],
+      ["average property value", [r(2025, { measure: "theft", unit: "dollars", statistic: "average" })], ["theft"], "total"],
+      ["dollars as a count", [r(2025, { measure: "theft", unit: "dollars" })], ["theft"], "total"],
+      ["a filtered series (female victims)", [2024, 2025].map((p) => r(p, { measure: "murder", unit: "victims", filter: "victim sex: female" })), ["murder"], "year"],
+      ["an unreadable partial note", [r(2025), r(2026, { note: "partial year: January-June" })], ["carjacking"], "year"],
+      ["a backward pooled span", [r("2025-2018")], ["carjacking"], "total"],
+      ["a pooled span under a year grain", [r("2018-2025")], ["carjacking"], "year"],
+      ["mixed statistics", [r(2025), r(2025, { measure: "robbery", statistic: "rate_per_100k" })], ["carjacking", "robbery"], "year"],
+      ["a total over several periods", [r(2024), r(2025)], ["carjacking"], "total"],
+      ["month grain over years", [r(2024), r(2025)], ["carjacking"], "month"],
+      ["a measure with no rows", [r(2025)], ["carjacking", "murder"], "year"],
+    ];
+    for (const [name, rows, measures, grain] of cases) assert.equal(seriesTitle(rows, measures, grain, FB), FB, name);
+  });
+  await check("H2 rendered: a one-row answer with no displayed title shows 'Place: Memphis, TN' above 'Year | Carjackings'", () => {
+    const one = [{ period: 2025, place: "Memphis, TN", measure: "carjacking", unit: "offenses", filter: null, statistic: "count", value: 318, note: null }];
+    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: SERIES, rows: one }));
+    assert.match(out, /Place: Memphis, TN/, out.slice(0, 400));
+    assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Year", "Carjackings"]);
+    assert.ok(out.indexOf("Place: Memphis, TN") < out.indexOf("<th"), "the place line is above the table");
   });
   await check("no model call was made", () => assert.equal(modelCalls, 0));
   await check("offline: no network call of any kind, model included", () => assert.deepEqual(network, []));

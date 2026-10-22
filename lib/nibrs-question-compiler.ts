@@ -97,6 +97,80 @@ export function typedChartConfig(columns: string[], rows: Record<string, unknown
   if (columns.join() === RANK.join() && valued("value") > 0) return { type: "bar", xAxis: "place", yAxis: ["value"], title };
   return null;
 }
+/**
+ * The title of a typed series answer (owner, 2026-10-22): "<places> <what was counted>[ Per Month| Per Year], <period>",
+ * e.g. "Memphis, TN Carjackings Per Month, 2025" or "Memphis, TN Carjackings Per Year, 2018 to 2025". Built ONLY when
+ * every part is certain (Codex follow-up ruling); otherwise the previous title is kept (`fallback`):
+ * - each measure is named from its OWN rows; its unit must be offenses or victims and its statistic count or
+ *   rate_per_100k, constant within the measure, and every measure must share one statistic;
+ * - "Per Month"/"Per Year" come from the requested grain (month or year), so an annual request with one result still
+ *   says "Per Year"; a total has none and must cover one period; any other grain (rolling) keeps the previous title;
+ * - periods must all be months (YYYY-MM) or all years (YYYY), or one pooled total "2018-2025" (read "2018 to 2025");
+ *   any other period keeps the previous title;
+ * - a filtered series (e.g. female victims) keeps the previous title, so a subset is never titled as the whole;
+ * - a compiler partial-year note adds its coverage, e.g. "(2026 Through June)"; an unreadable partial note keeps the
+ *   previous title;
+ * - years read "2025" or "2018 to 2025"; a single month reads "January 2025".
+ */
+const TITLE_PLURAL: Record<string, string> = {
+  carjacking: "Carjackings", murder: "Murders", homicide: "Homicides", robbery: "Robberies", burglary: "Burglaries", rape: "Rapes",
+  aggravated_assault: "Aggravated Assaults", simple_assault: "Simple Assaults", motor_vehicle_theft: "Motor Vehicle Thefts", theft: "Thefts",
+  arson: "Arsons", sex_offense: "Sex Offenses", shoplifting: "Shoplifting Offenses", violent_crime: "Violent Crimes", property_crime: "Property Crimes",
+};
+const TITLE_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const titleWords = (s: string) => s.replace(/_/g, " ").replace(/\b[a-z]/g, (c) => c.toUpperCase());
+export function seriesTitle(rows: Record<string, unknown>[], measures: string[], grain: string, fallback: string): string {
+  if (!rows.length || !measures.length) return fallback;
+  if (rows.some((r) => r.filter !== null && r.filter !== undefined && String(r.filter) !== "")) return fallback;
+  const partials: string[] = [];
+  for (const r of rows) {
+    const note = String(r.note ?? "");
+    if (!/partial/i.test(note)) continue;
+    const found = [...note.matchAll(/partial year(?: (\d{4}))? \(January-([A-Z][a-z]+)\)/g)];
+    if (!found.length || !TITLE_MONTHS.includes(found[0][2])) return fallback;
+    for (const m of found) {
+      const y = m[1] ?? String(r.period ?? "");
+      if (!/^\d{4}$/.test(y) || !TITLE_MONTHS.includes(m[2])) return fallback;
+      partials.push(`${y} Through ${m[2]}`);
+    }
+  }
+  const statistics = new Set(rows.map((r) => String(r.statistic ?? "")));
+  if (statistics.size !== 1) return fallback;
+  const statistic = [...statistics][0];
+  if (statistic !== "count" && statistic !== "rate_per_100k") return fallback;
+  const names: string[] = [];
+  for (const m of measures) {
+    const own = rows.filter((r) => r.measure === m);
+    const units = new Set(own.map((r) => String(r.unit ?? "")));
+    if (own.length === 0 || units.size !== 1) return fallback;
+    const unit = [...units][0];
+    if (unit !== "offenses" && unit !== "victims") return fallback;
+    const label = titleWords(MEASURE_LABEL[m] ?? m);
+    names.push(statistic === "rate_per_100k"
+      ? `${label}${unit === "victims" ? " Victim" : ""} Rate Per 100k`
+      : unit === "victims" ? `${label} Victims` : TITLE_PLURAL[m] ?? `${label} Offenses`);
+  }
+  const periods = [...new Set(rows.map((r) => String(r.period ?? "")))].sort();
+  const monthly = periods.every((p) => /^\d{4}-(0[1-9]|1[0-2])$/.test(p));
+  const annual = periods.every((p) => /^\d{4}$/.test(p));
+  const pooled = periods.length === 1 && /^(\d{4})-(\d{4})$/.exec(periods[0]);
+  let per: string;
+  let span: string;
+  const years = [...new Set(periods.map((p) => p.slice(0, 4)))];
+  const yearSpan = years.length === 1 ? years[0] : `${years[0]} to ${years[years.length - 1]}`;
+  if (grain === "month" && monthly) per = " Per Month";
+  else if (grain === "year" && annual) per = " Per Year";
+  else if (grain === "total" && (monthly || annual) && periods.length === 1) per = "";
+  else if (grain === "total" && pooled && pooled[1] < pooled[2]) per = "";
+  else return fallback;
+  if (pooled) span = `${pooled[1]} to ${pooled[2]}`;
+  else if (monthly && periods.length === 1) span = `${TITLE_MONTHS[Number(periods[0].slice(5, 7)) - 1]} ${periods[0].slice(0, 4)}`;
+  else span = yearSpan;
+  const places = [...new Set(rows.map((r) => String(r.place ?? "")).filter(Boolean))];
+  if (!places.length) return fallback;
+  const partial = partials.length ? ` (${[...new Set(partials)].sort().join(", ")})` : "";
+  return `${places.join(" and ")} ${names.join(" and ")}${per}, ${span}${partial}`;
+}
 const OVERLAP_NOTE = "categories can overlap; shares can sum past 100%";
 const r1 = (v: number | null) => (v === null || !Number.isFinite(v) ? null : Math.round(v * 10) / 10);
 const q = (v: string) => `'${v.replace(/'/g, "''")}'`;
@@ -841,7 +915,7 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
   post(applied).set("statistic", statKeyApplied); // applied-site: statistic-computed
   for (const f of postOps) f(applied);
   if (spec.places.length > 1) post(applied).set("versus", "places"); // applied-site: places-side-by-side
-  const title = `${spec.measures.map((m) => MEASURE_LABEL[m] ?? m).join(", ")} — ${[...new Set(rows.map((r) => r.place))].join(", ")}`;
+  const title = seriesTitle(rows, spec.measures, spec.grain, `${spec.measures.map((m) => MEASURE_LABEL[m] ?? m).join(", ")} — ${[...new Set(rows.map((r) => r.place))].join(", ")}`);
   return { kind: "answer", columns: SERIES, rows, title, explanation: [`Figures from the NIBRS summary tables, built from the question as asked.`, ...new Set(notes), NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
 }
 
