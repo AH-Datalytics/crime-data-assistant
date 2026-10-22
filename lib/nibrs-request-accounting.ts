@@ -37,6 +37,17 @@ const declined = (reason: string) => (text: string) => `I can't apply "${text.tr
 const COURT = notRecorded("court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances");
 const SUBCITY = notRecorded("anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats)");
 const DAILY = notRecorded("daily figures in its summary tables; monthly and yearly figures are available");
+// Option 3 batch 1 (P159): the established NIBRS shooting limitation and its proxy offer (lib/guardrails.ts nibrs-shooting-override);
+// the proxy is offered, never substituted.
+const SHOOTING = (text: string) =>
+  `NIBRS does not track shootings as a category, so I can't apply "${text.trim()}". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a firearm, which also includes brandishing, pistol-whipping and threats, not only people who were shot; ask for "firearm aggravated assault victims" if that is what you want. I haven't answered with a number that leaves it out.`;
+// Option 3 batch 1: the established demographic-rate limitation (P078) and unrecorded statements (P341).
+const DEMOGRAPHIC_RATE = (text: string) =>
+  `I can't apply "${text.trim()}": a per-capita rate for a demographic group needs population denominators by race, sex or age that the FBI data does not include. I can show raw counts, or the group's share of reported victims, offenders or arrestees. I haven't answered with a number that leaves it out.`;
+const DRUG_ACTIVITY = notRecorded("drug distribution or sales as its own measure (drug possession and drug offenses are counted)");
+const STATEMENTS = notRecorded("what people said in interviews, or how they got a weapon");
+const OVERDOSE = notRecorded("overdose deaths; drug offenses are not an overdose-death count");
+const IMMIGRATION = notRecorded("immigration or citizenship status");
 const FENTANYL = notRecorded("fentanyl as its own drug type (it falls under broader narcotic categories)");
 
 /* ------------------------------------------------------------------ rules --------------------------------------- */
@@ -46,7 +57,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\bfrom\s+(${MONTH})\s+(${YEAR})\s+(?:to|through|until|-)\s+(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
-const EARLY_CONCEPTS = new Set(["ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort"]);
+const EARLY_CONCEPTS = new Set(["ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
 
 /** Filter values: `dimension:value`. Specific weapons before the generic gun words; values are NIBRS codes. */
 const FILTERS: Rule[] = [
@@ -61,7 +72,7 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "weapon:13", pattern: R(String.raw`\b(?:with\s+(?:a\s+)?)?rifles?\b`) },
   { concept: "filter", value: () => "weapon:14", pattern: R(String.raw`\b(?:with\s+(?:a\s+)?)?shotguns?\b`) },
   { concept: "filter", value: () => "weapon:20", pattern: R(String.raw`\b(?:with\s+(?:a\s+)?)?(?:knives|knife)\b`) },
-  { concept: "filter", value: () => "weapon:firearm", pattern: R(String.raw`\b(?:involving\s+(?:the\s+)?use\s+of\s+a\s+)?(?:guns?|firearms?)\b`) },
+  { concept: "filter", value: () => "weapon:firearm", pattern: R(String.raw`\b(?:(?:that|which)\s+)?(?:involv(?:e|es|ing)\s+(?:the\s+)?use\s+of\s+a\s+)?(?:guns?|firearms?)\b`) },
   // drugs
   { concept: "filter", value: () => "drug:E", pattern: R(String.raw`\bmarijuana\b|\bcannabis\b`) },
   { concept: "filter", value: () => "drug:L", pattern: R(String.raw`\bmeth(?:amphetamines?)?\b|\bamphetamines?\b`) },
@@ -98,6 +109,9 @@ const FILTERS: Rule[] = [
   { concept: "filter", value: () => "location:13", pattern: R(String.raw`\bon\s+(?:the\s+)?streets?\b`) },
   { concept: "filter", value: () => "location:22", pattern: R(String.raw`\bat\s+schools?\b`) },
   { concept: "filter", value: () => "location:18", pattern: R(String.raw`\bin\s+parking\s+lots?\b`) },
+  // Option 3 batch 1 (OVER-REFUSAL-PLAN-r3.md): location codes 07 (convenience store) and 14 (hotel/motel), lib/nibrs-codes.ts.
+  { concept: "filter", value: () => "location:07", pattern: R(String.raw`\b(?:at|in)\s+(?:a\s+|the\s+)?convenience\s+stores?\b`) },
+  { concept: "filter", value: () => "location:14", pattern: R(String.raw`\b(?:at|in)\s+(?:a\s+|the\s+)?(?:hotels?|motels?)(?:\s*(?:\/|or|and)\s*motels?)?\b`) },
   // Stage 3b owner decision (plan r1.3): "commercial" = the business location types (lib/nibrs-codes.ts).
   { concept: "filter", value: () => "location:commercial", pattern: R(String.raw`\bcommercial\b`) },
   { concept: "filter", value: () => "relationship:ST", pattern: R(String.raw`\bby\s+strangers\b|\bstrangers\b`) },
@@ -106,12 +120,14 @@ const FILTERS: Rule[] = [
 /** Breakdown dimensions ("by X"). Two-dimension forms the source holds as one declared dimension come first. */
 const BREAKDOWNS: Rule[] = [
   { concept: "breakdown", value: () => "victim-offender-race", pattern: R(String.raw`\bby\s+(?:the\s+)?race\s+of\s+(?:the\s+)?victims?\s+and\s+(?:the\s+)?race\s+of\s+(?:the\s+)?offenders?\b|\bby\s+victim[-\s]offender\s+race\b`) },
-  { concept: "breakdown", value: () => "clearance-method", pattern: R(String.raw`\bby\s+arrest\s+and\s+exceptional\s+means\b|\b(?:by\s+)?arrest\s+vs\.?\s+exceptional\b`) },
-  { concept: "breakdown", value: () => "clearance-type", pattern: R(String.raw`\bby\s+(?:clearance\s+)?(?:type|status|category)\b|\band\s+clearance\s+status\b`) },
+  { concept: "breakdown", value: () => "clearance-method", pattern: R(String.raw`\bby\s+arrest\s+and\s+exceptional\s+means\b|\b(?:by\s+)?arrest\s+vs\.?\s+exceptional\b|\b(?:by\s+)?arrest\s+(?:vs\.?|versus|or)\s+(?:by\s+)?exception(?:al(?:ly)?)?(?:\s+means)?\b`) },
+  { concept: "breakdown", value: () => "clearance-type", pattern: R(String.raw`\bby\s+(?:the\s+)?type\s+of\s+exceptional\b|\bby\s+(?:clearance\s+)?(?:type|status|category)\b|\band\s+clearance\s+status\b`) },
   // r2: whose age is kept ("by offender age" on a victims request is not a victim-age breakdown, Codex review-13).
   { concept: "breakdown", value: (m) => (m[1] ? `${m[1].toLowerCase()}-age` : "age"), pattern: R(String.raw`\bby\s+(?:(offender|victim)\s+)?age(?:\s+groups?)?\b`) },
   // "<dimension> breakdown" ("offender age breakdown for robberies"): the unit word before it stays its own part.
   { concept: "breakdown", value: (m) => ({ gender: "sex", "age group": "age" } as Record<string, string>)[m[1].toLowerCase()] ?? m[1].toLowerCase(), pattern: R(String.raw`\b(age group|age|sex|gender|race|ethnicity)\s+breakdown\b`) },
+  // Option 3 batch 1 (P139): "into different categories" asks for the offenses within the family.
+  { concept: "breakdown", value: () => "offense", pattern: R(String.raw`\b(?:in\s*to|into)\s+(?:(?:its|the|different|separate)\s+)?(?:categories|types|offenses|offense\s+types|crimes)\b|\bby\s+(?:offense|crime)(?:\s+type)?\b`) },
   { concept: "breakdown", value: () => "sex", pattern: R(String.raw`\bby\s+(?:sex|gender)\b`) },
   { concept: "breakdown", value: () => "race", pattern: R(String.raw`\bby\s+race\b`) },
   { concept: "breakdown", value: () => "ethnicity", pattern: R(String.raw`\bby\s+ethnicity\b`) },
@@ -167,7 +183,22 @@ const RULES: Rule[] = [
   { concept: "explain", value: () => "explain", pattern: R(String.raw`\bwhy\b|\bhow\s+come\b|\bwhat\s+explains?\b|\breasons?\s+(?:for|why|behind)\b|\bcauses?\s+(?:of|for|behind)\b|\bexplain(?:s|ed)?\b`) },
   // ---- a clearance reason that contains a court word: claimed before the court words ----
   { concept: "clearance-reason", value: () => "clearance:B", pattern: R(String.raw`\b(?:the\s+)?prosecution\s+(?:was\s+|were\s+|being\s+)?declined\b|\bprosecution[-\s]declined\b`) },
+  // Option 3 batch 1 (P202): "offense codes", "list of … codes": a question about the codes themselves.
+  { concept: "meta-codes", pattern: R(String.raw`\blist\s+of\s+(?:[a-z]+\s+){0,3}codes\b|(?<=\blist\s)of\s+(?:[a-z]+\s+){0,3}codes\b|\b(?:offen[cs]e|ucr|nibrs|crime)\s+codes?\b|\bcodes?\s+(?:list|definitions?)\b`) },
   // ---- not recorded in NIBRS ----
+  // Option 3 batch 1 (P078): a per-group crime rate needs population denominators the source does not hold (the established
+  // demographic-rate limitation, lib/capability-overrides.ts).
+  { concept: "demographic-rate", pattern: R(String.raw`\b(?:people\s+)?commit\s+more\s+crimes?\b|\bproportion(?:al(?:ly)?)?[-\s]?wise\b|\bproportionally\b|\bdisproportionate(?:ly)?\b`), state: "not-recorded", explanation: DEMOGRAPHIC_RATE },
+  // Option 3 batch 1 (P367): "or distribution of", "sales of drugs": not a separate NIBRS measure.
+  { concept: "drug-activity", pattern: R(String.raw`\b(?:or|and)\s+(?:distribution|distributing|dealing|sales?|selling|trafficking)(?:\s+of)?\b|\b(?:distribution|dealing|sales?|selling|trafficking)\s+of\s+(?:drugs?|narcotics?)\b`), state: "not-recorded", explanation: DRUG_ACTIVITY },
+  // Option 3 batch 1 (P341): what people said, or how they got a weapon, is not recorded.
+  { concept: "statements", pattern: R(String.raw`\bclaim(?:s|ed)?\s+(?:in\s+(?:an\s+)?interviews?\s+)?(?:to\s+have|that\s+they\s+had)\s+(?:unrestricted\s+)?access\s+to\s+(?:the\s+|a\s+)?(?:guns?|firearms?|weapons?)\b`), state: "not-recorded", explanation: STATEMENTS },
+  // Option 3 batch 1 (P159): shootings, longest phrase first so "shooting victimizations" is one part.
+  { concept: "shooting", pattern: R(String.raw`\b(?:shooting\s+(?:victims?|victimizations?|incidents?)|people\s+(?:who\s+(?:were|got)\s+)?shot|gunshot\s+(?:victims?|wounds?)|shootings?)\b`), state: "not-recorded", explanation: SHOOTING },
+  // Option 3 batch 1 (2026-10-21, carried from the reverted #36): overdose deaths and immigration/citizenship status
+  // are not recorded, so they are refused by name rather than as unread words. Claimed early, before the drug and place words.
+  { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
+  { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecutions?\b|\bprosecutors?\b|\bprosecuted\b|\bdefendants?\b|\bcourts?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\b|\bbeats?\b|\bcensus\s+tracts?\b`), state: "not-recorded", explanation: SUBCITY },
   { concept: "daily", pattern: R(String.raw`\bby\s+(?:the\s+)?day\b|\bper\s+day\b|\beach\s+day\b|\bdaily\b|\bday[-\s]by[-\s]day\b`), state: "not-recorded", explanation: DAILY },
@@ -219,7 +250,7 @@ const RULES: Rule[] = [
   { concept: "rank", value: (m) => `${/lowest|fewest|least|smallest/i.test(m[0]) ? "bottom" : "top"}:`, pattern: R(String.raw`\b(?<!\bat\s)(?:the\s+)?(?:highest|lowest|most|fewest|least|largest|smallest|greatest|biggest)\b`) },
   { concept: "rank", value: () => "rank:", pattern: R(String.raw`\b(?:rank(?:ed|ing|ings)?|top)\b`) },
   // ---- change and comparison ----
-  { concept: "change", value: (m) => `change:${changeDirection(m[0])}`, pattern: R(String.raw`\b(?:percent(?:age)?\s+change|%\s*change|change[sd]?|changing|increase[sd]?|increasing|decrease[sd]?|decreasing|rise|rose|risen|rising|fall(?:en)?|fell|falling|drop(?:ped|s)?|declin(?:e|ed|es|ing)|grew|grow(?:n|th)?|went\s+(?:up|down))\b`) },
+  { concept: "change", value: (m) => `change:${changeDirection(m[0])}`, pattern: R(String.raw`\b(?:percent(?:age)?\s+change|%\s*change|difference(?=\s+between\b)|change[sd]?|changing|increase[sd]?|increasing|decrease[sd]?|decreasing|rise|rose|risen|rising|fall(?:en)?|fell|falling|drop(?:ped|s)?|declin(?:e|ed|es|ing)|grew|grow(?:n|th)?|went\s+(?:up|down))\b`) },
   { concept: "versus", value: () => "versus", pattern: R(String.raw`\b(?:vs\.?|versus|compared\s+(?:to|with)|against)(?=\s|$)`) },
   { concept: "compare", state: "context", pattern: R(String.raw`\bcompar(?:e[ds]?|ing|ison)\b|\bside\s+by\s+side\b`) },
   // ---- lists and grain ----
@@ -379,8 +410,9 @@ export function hasExplicitNumericAsk(parts: Part[]): boolean {
 }
 
 const NUMERIC_CONCEPTS = new Set(["measure", "statistic", "rank", "threshold", "share", "clearance", "change", "combine", "list", "grain", "period", "versus", "unit", "filter", "breakdown", "rolling"]);
-const REFUSED_CONCEPTS = new Set(["ori", "court", "sub-city", "daily", "two-way-rank", "phase-unsupported", "fentanyl"]);
-const OPERATIONS = ["peer", "coverage-lookup", "completeness", "cohort"];
+// Option 3 batch 1: the not-recorded topics added on 10-21 (shooting, overdose deaths, immigration status) make a request numeric, like the others.
+const REFUSED_CONCEPTS = new Set(["ori", "court", "sub-city", "daily", "two-way-rank", "phase-unsupported", "fentanyl", "shooting", "overdose-deaths", "immigration-status", "demographic-rate", "statements", "drug-activity"]);
+const OPERATIONS = ["peer", "coverage-lookup", "completeness", "cohort", "meta-codes"];
 
 /**
  * How the request is handled, decided from the turn AS TYPED (r1.1 R1), before any resolver replaces it:

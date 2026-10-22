@@ -2322,6 +2322,15 @@
       "note": "carjacking hotfix: carjacking has no NIBRS code (64A/64B are human trafficking); code-only builders decline code-less families; no database, no route, no network"
     },
     {
+      "id": "test-over-refusal-batch1-route",
+      "tier": "F",
+      "script": "scripts/test-over-refusal-batch1-route.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Option 3 batch 1: the real Current/Historical, NIBRS and SHR POST handlers on their own temporary fixture databases (operation-taxonomy DDL plus small known seeds), model stubbed and its SQL asserted never run, network refused"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",

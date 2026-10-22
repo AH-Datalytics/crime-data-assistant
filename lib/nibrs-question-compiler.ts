@@ -65,6 +65,16 @@ const ETH: Dim = { col: "ethnicity", overlap: false, label: (v) => ({ H: "Hispan
 const WEAPON_CATEGORY: Dim = { col: "weapon_category", overlap: true, values: (v) => (v === "firearm" ? ["Firearm"] : null) };
 const FIREARMS = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
 const WEAPON_TYPE: Dim = { col: "weapon_type", overlap: true, label: (v) => WEAPON_TYPES[v] ?? v, values: (v) => (v === "firearm" ? FIREARMS : [v, `${v}A`]) };
+/**
+ * Owner decision A (2026-10-21; codex build ruling item 1): summary_victim_weapon holds one row per victim per DISTINCT weapon
+ * type, so summing the firearm types counts a victim with two firearm types twice. A firearm VICTIM count is therefore not
+ * taken from it: the "firearm" category falls through to summary_victim_demographics (one row per victim, from the first-listed
+ * weapon), and the answer says so (FIRST_WEAPON_NOTE). One specific weapon type ("handgun") still uses this table: no overlap.
+ */
+const VICTIM_WEAPON_TYPE: Dim = { ...WEAPON_TYPE, values: (v) => (v === "firearm" ? null : [v, `${v}A`]) };
+export const FIRST_WEAPON_NOTE = "Firearm here means the victim's first-listed weapon was a firearm: each victim is counted once, and a victim whose firearm was listed only second or third isn't counted.";
+/** The basis note for any answer that applies the firearm category to the count-once victim table (series, breakdown, share). */
+const firstWeaponNote = (filters: readonly string[], t: { key: string } | null | undefined): string | null => (filters.includes("weapon:firearm") && t?.key === "victim_demo" ? FIRST_WEAPON_NOTE : null);
 const DEMO = { sex: SEX, race: RACE, age: AGE, ethnicity: ETH, weapon: WEAPON_CATEGORY };
 const DEMO_CODES = new Set(["09A", "09B", "11A", "11B", "11C", "13A", "13B", "120"]);
 // Relationship and bias names: the FBI CDE codebook (NIBRS_RELATIONSHIP, NIBRS_BIAS_LIST; CDE codebook fix 2026-10-13).
@@ -86,7 +96,7 @@ const TABLES: Table[] = [
   { key: "victim_monthly", table: "summary_victim_city_monthly", stateTable: "summary_victim_state_monthly", agency: true, state: true, monthly: true, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: PERSON_CODES, unit: "victims", count: "SUM(victim_count)", dims: {} },
   { key: "offense_monthly", table: "summary_city_monthly", stateTable: "summary_state_monthly", agency: true, state: true, monthly: true, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: null, unit: "offenses", unitLabel: (c) => (c.every((x) => x === "35A" || x === "35B") ? "incidents" : "offenses"), count: "SUM(offense_count)", dims: {} },
   // specific weapon types (before the demographic tables, whose weapon column is coarse)
-  { key: "victim_weapon", table: "summary_victim_weapon", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: new Set(["09A", "09B", "09C", "11A", "11B", "11C", "13A", "13B", "120"]), unit: "victims", count: "SUM(victim_count)", dims: { weapon: WEAPON_TYPE } },
+  { key: "victim_weapon", table: "summary_victim_weapon", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: new Set(["09A", "09B", "09C", "11A", "11B", "11C", "13A", "13B", "120"]), unit: "victims", count: "SUM(victim_count)", dims: { weapon: VICTIM_WEAPON_TYPE } },
   { key: "offense_weapon", table: "summary_offense_weapon", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: null, unit: "offenses", count: "SUM(offense_count)", dims: { weapon: WEAPON_TYPE } },
   // people
   { key: "victim_demo", table: "summary_victim_demographics", agency: true, state: true, monthly: false, yearCol: "year", oriCol: "ori", stateCol: "state", codeCol: "ucr_offense_code", codes: DEMO_CODES, unit: "victims", count: "SUM(victim_count)", dims: DEMO },
@@ -583,6 +593,8 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
           : declineNoTable(measure, missing.g.unit, spec.filters, place), statements };
       }
       const tables = picked.map((p) => p.t!);
+      // Owner decision A: a firearm victim count from the demographics table states its first-listed-weapon basis.
+      { const fw = tables.map((t) => firstWeaponNote(spec.filters ?? [], t)).find(Boolean); if (fw) notes.push(fw); }
       const bounds = measuredBounds(ctx.db, tables[0]);
       if (!bounds) return { kind: "decline", explanation: "The latest year in this data can't be confirmed, so I haven't answered.", statements };
       const yr = yearsOf(spec.period, bounds, ctx.now);
@@ -864,6 +876,7 @@ async function compileBreakdown(spec: BreakdownSpec, ctx: CompileContext, run: R
   const form = periodFormValue(spec.period); if (form) post(applied).push("periodValues", form); // applied-site: relative-period-resolved-by-years-of
   const notes: string[] = [];
   if (spec.dim === "hour") notes.push("Shares are of offenses with a recorded hour; offenses with no recorded hour aren't in NIBRS's time-of-day summary.");
+  { const fw = firstWeaponNote(spec.filters, t); if (fw) notes.push(fw); } // owner decision A
   if (place.kind !== "agency") notes.push(cohortSentence(place, yr.years, ctx.db));
   if (yr.note) notes.push(yr.note);
   return { kind: "answer", columns: BREAKDOWN, rows, title: `${MEASURE_LABEL[spec.measure]} ${unitLabel} by ${dimName} — ${label}`, explanation: ["Counts from the NIBRS summary tables; unknown values stay visible as their own category.", ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
@@ -1041,6 +1054,7 @@ async function compileShare(spec: ShareSpec, ctx: CompileContext, run: RunFn, st
   const form = periodFormValue(spec.period); if (form) post(applied).push("periodValues", form); // applied-site: relative-period-resolved-by-years-of
   const notes: string[] = [];
   if (place.kind !== "agency") notes.push(cohortSentence(place, yr.years, ctx.db));
+  { const fw = firstWeaponNote([...spec.population, ...spec.subset], t); if (fw) notes.push(fw); } // owner decision A
   return { kind: "answer", columns: SHARE, rows: [{ period, place: label, measure: spec.measure, unit: unitLabel, population, subset: subsetText, numerator, denominator, share: denominator ? r1((numerator / denominator) * 100) : null, note: denominator ? null : `no ${population} in this period` }],
     title: `${label}: ${subsetText} as a share of ${population}`, explanation: [`The share is of all ${population}${spec.population.length ? ` (${spec.population.map(filterLabel).join("; ")})` : ""}; the denominator is NIBRS's unique total for that population.`, ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
 }

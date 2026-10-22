@@ -649,21 +649,21 @@ function terminalEgress(file, src, ts) {
 const REVIEWED_DELIVERY_BODIES = [
   {
     fp: "app/api/query/route.ts::sseEvent",
-    sha256: "d598e413b07e2b287d7276c881beb657b50903e31bb6b780c7d8c618229e88b4",
-    bytes: 1791,
-    reason: "SSE delivery helper: formats one event from a sealed payload. Identity covers the full declaration, so widening a parameter type invalidates it.",
+    sha256: "ed40437af977e97554c618f4e97f3dfcfc0aa0f173f1982449091245beac4cfb",
+    bytes: 2243,
+    reason: "SSE delivery helper: formats one event from a sealed payload. Identity covers the full declaration, so widening a parameter type invalidates it. Option 3 batch 1 (2026-10-21) re-registration: the body now prefixes the stated reading of a corrected misspelling (lib/spelling-corrections.ts withSpellingNote) to the delivered text; the parameter type is unchanged.",
   },
   {
     fp: "app/api/nibrs-query/route.ts::jsonResp",
-    sha256: "4e200ce33ffd7c420ea7a6cc2f8f5bb0892191181ba021699a84b4965209c8a0",
-    bytes: 1298,
-    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it.",
+    sha256: "5b1c9df7b443d4b566ee284dba831725598ede1c50844d559855cb6487c82eb8",
+    bytes: 1661,
+    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it. Option 3 batch 1 (2026-10-21) re-registration: the body now prefixes the stated reading of a corrected misspelling (lib/spelling-corrections.ts withSpellingNote) to the delivered text; the parameter type is unchanged.",
   },
   {
     fp: "app/api/shr-query/route.ts::jsonResp",
-    sha256: "988d384f1f22e8b32cd0fd86548d08a69219ff25b2d69c6f62e289b905428726",
-    bytes: 1276,
-    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it.",
+    sha256: "03e124c42b778fbbf13edf652d246c0898713b6dacdf5ed45938976762bc26de",
+    bytes: 1639,
+    reason: "JSON delivery chokepoint: accepts a branded SealedPayload or the typed error and returns it. Identity covers the full declaration, so widening the parameter type to `| object` or `| any` invalidates it. Option 3 batch 1 (2026-10-21) re-registration: the body now prefixes the stated reading of a corrected misspelling (lib/spelling-corrections.ts withSpellingNote) to the delivered text; the parameter type is unchanged.",
   },
   {
     fp: "app/api/hc-query/route.ts::jsonResp",

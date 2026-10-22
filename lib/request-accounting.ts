@@ -251,11 +251,18 @@ const OPENERS: { rule: string; pattern: RegExp }[] = [
   // Follow-up openers. The inherited conditions themselves come from the route's reconstruction;
   // these words only open the turn ("what about Ohio?", "same for 2024").
   { rule: "followup-opener", pattern: /^\s*(?:(?:ok(?:ay)?|great|thanks|cool|got\s+it)[,!.]?\s+)?(?:(?:and\s+)?(?:what|how)\s+about|and\s+(?:for|in)|(?:the\s+)?same\s+(?:thing\s+)?(?:for|in)|(?:and\s+)?now(?:\s+(?:do|show|give\s+me|try))?|also|then|ok(?:ay)?|now\s+give\s+me)\s+(?:the\s+)?/i },
-  { rule: "request-opener", pattern: /^\s*(?:(?:hi|hello|hey)[,!.]?\s+)?(?:please\s+)?(?:(?:can|could|would|will)\s+you\s+(?:please\s+)?)?(?:show|list|give|tell|display|find|get|pull|provide)\s+(?:me\s+|us\s+)?(?:the\s+)?/i },
+  { rule: "request-opener", pattern: /^\s*(?:(?:hi|hello|hey)[,!.]?\s+)?(?:please\s+)?(?:(?:can|could|would|will)\s+you\s+(?:please\s+)?)?(?:show|list|give|tell|display|find|get|pull|provide|break\s+down)\s+(?:me\s+|us\s+)?(?:about\s+(?:how\s+)?)?(?:the\s+)?/i },
   { rule: "how-opener", pattern: /^\s*(?:please\s+)?how\s+(?:did|has|have|does|do|is|are|was|were)\s+(?:the\s+)?/i },
-  { rule: "question-opener", pattern: /^\s*(?:(?:hi|hello|hey)[,!.]?\s+)?(?:please\s+)?(?:what|how\s+many|how\s+much)\s+(?:are\s+|is\s+|were\s+|was\s+)?(?:the\s+)?(?:number\s+of\s+|total\s+(?:number\s+of\s+)?|count\s+of\s+)?/i },
+  { rule: "question-opener", pattern: /^\s*(?:(?:hi|hello|hey)[,!.]?\s+)?(?:please\s+)?(?:what(?:['’]s(?=\s))?|how\s+many|how\s+much)\s+(?:are\s+|is\s+|were\s+|was\s+)?(?:the\s+)?(?:number\s+of\s+|total\s+(?:number\s+of\s+)?|count\s+of\s+)?/i },
   { rule: "see-opener", pattern: /^\s*(?:please\s+)?(?:can|could|may)\s+i\s+(?:please\s+)?(?:see|get|have|view|look\s+at)\s+(?:the\s+)?/i },
   { rule: "need-opener", pattern: /^\s*(?:please\s+)?i\s+(?:want|need)\s+(?:to\s+(?:see|know)\s+)?(?:the\s+)?/i },
+  // Option 3 batch 1 (OVER-REFUSAL-PLAN-r3.md, table A): "let's look at", "let's see" and "calculate the" open a request and
+  // restrict nothing. The calculation itself ("percent change", "rate") is recognized by the source's own rules.
+  // Option 3 batch 1 (P041): a leading "yes"/"sure" opens the turn and restricts nothing (an inherited choice comes from the
+  // route's own follow-up reconstruction, never from this word).
+  { rule: "yes-opener", pattern: /^\s*(?:yes|yeah|yep|sure)[,.!]?\s+/i },
+  { rule: "lets-opener", pattern: /^\s*(?:(?:ok(?:ay)?|so|now)[,!.]?\s+)?let(?:['’]s|\s+us|\s+me)\s+(?:look\s+at|see|check(?:\s+out)?|take\s+a\s+look\s+at)\s+(?:the\s+)?/i },
+  { rule: "calculate-opener", pattern: /^\s*(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?)?(?:calculate|compute|work\s+out)\s+(?:me\s+)?(?:the\s+)?/i },
   { rule: "yesno-opener", pattern: /^\s*(?:is|are|was|were|does|do|did|has|have|had)\s+(?:there\s+)?/i },
   { rule: "want-opener", pattern: /^\s*(?:please\s+)?i(?:'d|\s+would)\s+like\s+(?:to\s+(?:see|know)\s+)?(?:the\s+)?/i },
 ];
@@ -276,7 +283,7 @@ const RESTRICTION_INSIDE = /\b(?:limited|limit|only|just|who|whom|whose|which|wh
  * In-between filler: linking words standing between two recorded parts. They link; they never
  * restrict. Negations, numbers, periods and `and`/`or` are absent and must stay absent.
  */
-const BETWEEN_FILLER = /^(?:the|a|an|in|for|at|to|from|of|on|as|with|by|that|there|which|who|whose|is|are|was|were|be|been|being|had|have|has|did|do|does|happened|happen|happens|occurred|occur|occurs|took|take|place|saw|see|get|got|recorded|reported|it|its|their|they|them|those|these|this)$/i;
+const BETWEEN_FILLER = /^(?:the|a|an|in|for|at|to|from|of|on|as|with|by|that|there|which|who|whose|is|are|was|were|be|been|being|had|have|has|did|do|does|happened|happen|happens|occurred|occur|occurs|committed|took|take|place|saw|see|get|got|recorded|reported|it|its|their|they|them|those|these|this)$/i;
 
 /** Record leading openers, a trailing politeness word, a whole trailing purpose clause and trailing punctuation as `context`. */
 export function recordContext(ledger: RequestLedger): void {

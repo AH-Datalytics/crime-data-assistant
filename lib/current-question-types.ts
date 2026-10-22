@@ -213,6 +213,12 @@ export function matchCurrentType(ledger: RequestLedger): CurrentTypeDecision {
   }
 
   // ---- C1 / C2 / C3 series ----
+  // Option 3 batch 1 (P041): rates or yearly figures were asked for, but no offense: ask which, keeping what was asked.
+  if (!measures.length && (statParts.length || grainParts.length)) {
+    const asked = [grains.includes("year") ? "annual" : grains.includes("month") ? "monthly" : "", statistic === "rate" ? "rates" : "counts"].filter(Boolean).join(" ");
+    const when = periodParts.map((p) => p.text.trim()).join(" ");
+    return { kind: "clarify", explanation: `Which offense do you want ${asked}${when ? ` ${when}` : ""} for (for example murder, violent crime or property crime), and for which place?` };
+  }
   if (!measures.length) return { kind: "none" };
   const seriesPlaces = places.length ? (places as CPlace[]) : [{ kind: "national" as const }];
   if (!places.length) uiNotes.push("No place was named, so this covers the national sample of agencies.");

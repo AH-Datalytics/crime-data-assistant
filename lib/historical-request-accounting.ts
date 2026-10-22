@@ -48,6 +48,10 @@ const PEOPLE = notRecorded("victims, offenders or their age, sex or race", "Homi
 const ARRESTS = notRecorded("arrests", "the NIBRS tab does");
 const COURT = notRecorded("convictions, sentences, prosecutions or prison outcomes; it records crimes reported to police, clearances and staffing");
 const TOPIC = notRecorded("hate crimes, domestic, gang or drug-related offenses as separate categories");
+const OVERDOSE = notRecorded("overdose deaths; drug offenses are not an overdose-death count");
+const IMMIGRATION = notRecorded("immigration or citizenship status");
+const POLICY = notRecorded("policies, laws or legalization, or their effects; it records reported crimes");
+const DOCUMENTS = notRecorded("documents, diagrams or policy material; it holds crime statistics");
 const SUBCITY = notRecorded("anything below the level of a city or county agency (ZIP codes, neighborhoods, districts)");
 const SUBYEAR = notRecorded("months, quarters or seasons; its figures are yearly");
 const declined = (reason: string) => (text: string) => `I can't apply "${text.trim()}": ${reason} I haven't answered with a number that leaves it out.`;
@@ -63,15 +67,24 @@ const RULES: Rule[] = [
   // ---- preserved operations ----
   { concept: "prison-population", value: () => "prison", pattern: R(String.raw`\b(?:(?:the\s+)?(?:u\.?s\.?\s+)?prison\s+populations?|incarceration(?:\s+rates?)?|(?:people\s+)?incarcerated)\b`) },
   { concept: "scorecard", value: () => "scorecard", pattern: R(String.raw`\b(?:crime\s+)?score[ \t-]*cards?\b|\breport\s+cards?\b`) },
-  { concept: "peer", value: () => "peer", pattern: R(String.raw`\b(?:the\s+)?(?:national\s+average|peer\s+city\s+average|peer\s+cities|peer\s+city|peers?|(?:other\s+)?(?:similar(?:ly)?[-\s]?(?:sized?)?|comparable)\s+(?:cities|agencies|departments))\b`) },
+  { concept: "peer", value: () => "peer", pattern: R(String.raw`\b(?:the\s+)?(?:national\s+average|peer\s+city\s+average|peer\s+cities|peer\s+city|peers?|(?:other\s+)?(?:similar(?:ly)?[-\s]?(?:sized?)?|comparable)\s+(?:cities|agencies|departments)(?:\s+(?:in|by)\s+size)?)\b`) },
   { concept: "coverage-lookup", value: () => "coverage", pattern: R(String.raw`\bwhat\s+(?:years\s+of\s+)?data\s+(?:do\s+you\s+have|is\s+available|are\s+available|exists?)\b|\bwhat\s+years(?:\s+of\s+data)?(?:\s+do\s+you\s+have)?\b|\b(?:years\s+of\s+)?data\s+do\s+you\s+have\b|\bavailable\s+(?:data|years)\b|\bdata\s+coverage\b|\bcoverage\b`) },
   { concept: "completeness", value: () => "completeness", pattern: R(String.raw`\b(?:completeness|complete|up\s+to\s+date|finali[sz]ed|final)\b`),
     when: (_m, q) => detectCompletenessQuestion(q) !== null },
-  { concept: "explain", value: () => "explain", pattern: R(String.raw`\bwhy\b|\bhow\s+come\b|\bwhat\s+explains?\b|\breasons?\s+(?:for|why|behind)\b|\btheor(?:y|ies)\b|\bcauses?\s+(?:of|for|behind)\b|\bexplain(?:s|ed)?\b`) },
+  { concept: "explain", value: () => "explain", pattern: R(String.raw`\bwhy\b|\bhow\s+come\b|\bwhat\s+explains?\b|\breasons?\s+(?:for|why|behind)\b|\btheor(?:y|ies)\b|\bcauses?\s+(?:of|for|behind)\b|\bexplain(?:s|ed)?\b|\bcorrelat(?:e[sd]?|ions?)(?:\s+(?:between|with))?\b|\bfactors?\s+(?:that\s+)?(?:correlate|drive|cause|contribute|explain)(?:s|d)?(?:\s+(?:with|to))?(?:\s+(?:higher|lower|more|fewer))?\b|\b(?:has|have|had)\s+affected\b|\b(?:effects?|impacts?)\s+of\b`) },
   // ---- not recorded in Historical (sexual assault is a measure, claimed before the people words) ----
+  // Option 3 batch 1 (2026-10-21, carried from the reverted #36): overdose deaths and immigration/citizenship status
+  // are not recorded, so they are refused by name rather than as unread words. Claimed early, before the drug and place words.
+  { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
+  { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecut(?:ions?|ed|ors?|e)\b|\bcourts?\b|\bjail(?:s|ed)?\b|\bprobation\b|\bparole\b|\bcorruption(?:[-\s]related)?\b`), state: "not-recorded", explanation: COURT },
   { concept: "arrests", pattern: R(String.raw`\barrest(?:s|ed|ees?)?\b`), state: "not-recorded", explanation: ARRESTS },
   { concept: "weapon", pattern: R(String.raw`\bgun\s+(?:crimes?|violence)\b|\b(?:guns?|firearms?|handguns?|rifles?|shotguns?|knives|knife|weapons?|shootings?|shot)\b`), state: "not-recorded", explanation: WEAPONS },
+  // Option 3 batch 1 (P175, P240): policies and laws, and documents or diagrams, are not what Historical holds.
+  // Option 3 batch 1 (P203): "where can I find (more) data on …" asks about sources; the text path answers it.
+  { concept: "meta-source", pattern: R(String.raw`^\s*where\s+(?:can|could|do|should)\s+i\s+(?:find|get|see|look\s+for)\s+(?:more\s+)?(?:data|information|info|statistics|numbers)(?:\s+(?:on|about|for)\b[^?.!,;]*?(?=\s*(?:[?.!,;]|\band\b|$)))?`) },
+  { concept: "policy", pattern: R(String.raw`\b(?:(?:marijuana|cannabis)\s+)?legali[sz](?:ation|ed|ing)\b|\b(?:new\s+)?(?:laws?|policies|policy)\b(?!\s+(?:staffing|officers?|departments?|force|employees?))`), state: "not-recorded", explanation: POLICY },
+  { concept: "documents", pattern: R(String.raw`\b(?:flowcharts?|(?:strategy\s+)?diagrams?|fact\s*sheets?|roadmaps?)\b[^?.!]*`), state: "not-recorded", explanation: DOCUMENTS },
   { concept: "topic", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias(?:[-\s]motivated)?\b|\bdomestic(?:\s+violence)?\b|\bgangs?(?:[-\s]related)?\b|\bdrugs?(?:[-\s]related)?\b|\bnarcotics?\b`), state: "not-recorded", explanation: TOPIC },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bbeats?\b|\bcensus\s+tracts?\b|\bblocks?\b`), state: "not-recorded", explanation: SUBCITY },
   { concept: "sub-year", pattern: R(String.raw`\b(?:in|during|for|of|from|through|to|until)\s+(?:${MONTH})\b(?:\s+${YEAR})?|\b(?:${MONTH}|${MONTH_ABBR})\s+${YEAR}\b|\bq[1-4]\b|\bquarter(?:ly|s)?\b|\bmonth(?:ly|s)?\b|\bweek(?:ly|s)?\b|\bdaily\b|\bseasons?\b|\b(?:summer|winter|spring|autumn)s?\b|\b(?:first|second)\s+half\b|\bfiscal\s+years?\b`), state: "not-recorded", explanation: SUBYEAR },
@@ -82,6 +95,12 @@ const RULES: Rule[] = [
     explanation: declined("there's no agreed definition of safest or most dangerous; ask for a specific offense and a count or rate.") },
   { concept: "size", pattern: R(String.raw`\b(?:big|bigger|biggest\s+cities|large|larger|major|small|smaller|mid[-\s]?sized?|medium[-\s]sized?|rural|urban|suburban)\b(?=\s+(?:cities|city|towns?|counties|agencies|departments|places|metros?|areas?))`), state: "not-interpreted",
     explanation: declined("no size is defined for that word; give a minimum population instead (for example \"with at least 250,000 people\").") },
+  // Option 3 batch 1 (P039): an all-time ranking has two meanings; ask which, and for the years (the all-time shape is deferred).
+  { concept: "period-unsupported", pattern: R(String.raw`\b(?:ever\s+recorded|of\s+all\s+time|all[-\s]time)\b`), state: "not-interpreted",
+    explanation: (t: string) => `I can't rank "${t.trim()}" yet: say whether you mean the highest single years for any place or each place's highest year, and name the years to rank (one year, or a range). I haven't answered with a number that leaves it out.` },
+  // Option 3 batch 1 (P305): a five-digit "year" is never corrected; ask which year was meant.
+  { concept: "period-unsupported", pattern: R(String.raw`\b(?:since|from|in|after|before|through|until)\s+\d{5,}\b`), state: "not-interpreted",
+    explanation: (t: string) => `"${t.trim()}" doesn't name a year I can use. Which year did you mean? I haven't answered with a number that leaves it out.` },
   { concept: "period-unsupported", pattern: R(String.raw`\b(?:early|mid|late)[-\s]?(?:(?:19|20)\d0'?s|${YEAR}s?)\b|\b(?:the\s+)?(?:19|20)\d0'?s\b`), state: "not-interpreted",
     explanation: declined("I can't turn that into specific years; please give the years (for example \"from 2020 to 2023\").") },
   // ---- periods (years only; raw values kept). Before ranking words: "the most recent year" is a period. ----
@@ -116,6 +135,8 @@ const RULES: Rule[] = [
   { concept: "statistic", value: () => "count", pattern: R(String.raw`\bhow\s+many\b|\b(?:total\s+)?(?:annual\s+)?(?:numbers?|counts?)(?:\s+of)?\b`) },
   // ---- ranking ----
   { concept: "rank", value: (m) => `${/bottom/i.test(m[1]) ? "bottom" : "top"}:${numberToken(m[2])}`, pattern: R(String.raw`\b(top|bottom)\s+(${NUMBER})\b`) },
+  // Option 3 batch 1 (P039): "the highest 20" binds the count like "top 20".
+  { concept: "rank", value: (m) => `${/lowest|fewest|least|smallest/i.test(m[1]) ? "bottom" : "top"}:${numberToken(m[2])}`, pattern: R(String.raw`\b(?:the\s+)?(highest|lowest|most|fewest|largest|smallest)\s+(${NUMBER})\b`) },
   { concept: "rank", value: (m) => `${/lowest|fewest|least|smallest/i.test(m[0]) ? "bottom" : "top"}:`, pattern: R(String.raw`\b(?<!\bat\s)(?:the\s+)?(?:highest|lowest|most|fewest|least|largest|smallest)\b`) },
   { concept: "rank", value: () => "rank:", pattern: R(String.raw`\b(?:rank(?:ed|ing|ings)?|top)\b`) },
   // ---- change and comparison ----
@@ -146,6 +167,8 @@ const RULES: Rule[] = [
   { concept: "combine", value: () => "combine", pattern: R(String.raw`\b(?:combined|altogether|all\s+together|in\s+total|in\s+all|summed|sum\s+of|together)\b`) },
   { concept: "combine", value: () => "combine", pattern: R(String.raw`\btotal\b`) },
   // ---- national and entity words ----
+  // Option 3 batch 1 (OVER-REFUSAL-PLAN-r3.md): "the entire / whole US" names the nation; claimed before the bare "US".
+  { concept: "place", value: () => "national", pattern: R(String.raw`\b(?:the\s+)?(?:entire|whole)\s+(?:(?:U\.S\.A?\.?|USA|US)(?![A-Za-z])|united\s+states\b|country\b|nation\b)`) },
   { concept: "place", value: () => "national", pattern: R(String.raw`(?<![A-Za-z.])(?:U\.S\.A?\.?|USA|US)(?![A-Za-z])`, "g") },
   { concept: "place", value: () => "national", pattern: R(String.raw`\b(?:(?:in\s+)?the\s+)?(?:national(?:ly)?|nationwide|countrywide|united\s+states|america|(?:the\s+)?(?:nation|country))\b`) },
   { concept: "entity", value: (m) => entityKey(m[0]), pattern: R(String.raw`\b(?:county\s+(?:agenc(?:y|ies)|sheriffs?(?:['’]\s*offices)?)|sheriffs?(?:['’]\s*offices)?|police\s+departments?|cities|city|towns?|counties|agencies|agency|departments|states|state)\b`) },
@@ -312,7 +335,7 @@ export function accountHistoricalRequest(question: string): RequestLedger {
   // Typed agency codes first, then places (a place name is the most specific claim: "White Plains" is a place before
   // "white" is a demographic word), then every other rule in its written order.
   // Year-like period words that resemble places ("early 2020's" is not Early, TX) and sub-year words go before places.
-  const early = RULES.filter((r) => r.concept === "ori" || r.concept === "period-unsupported" || r.concept === "sub-year");
+  const early = RULES.filter((r) => r.concept === "ori" || r.concept === "period-unsupported" || r.concept === "sub-year" || r.concept === "overdose-deaths" || r.concept === "immigration-status" || r.concept === "meta-source");
   for (const rule of early) recordAll(ledger, rule);
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm, q) => ledger.parts.some((p) => p.concept === "place" && p.span[1] === pm.index) || /[A-Za-z]$/.test(q.slice(0, pm.index)) && ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });
@@ -413,7 +436,8 @@ export function hasExplicitNumericAsk(parts: Part[]): boolean {
 }
 
 const NUMERIC_CONCEPTS = new Set(["measure", "statistic", "rank", "threshold", "staffing", "clearance", "change", "combine", "list", "grain", "period", "versus"]);
-const REFUSED_CONCEPTS = new Set(["ori", "court", "arrests", "weapon", "topic", "sub-city", "sub-year", "people", "safest", "size", "period-unsupported"]);
+// Option 3 batch 1: the not-recorded topics added on 10-21 make a request numeric, like the others.
+const REFUSED_CONCEPTS = new Set(["ori", "court", "arrests", "weapon", "topic", "sub-city", "sub-year", "people", "safest", "size", "period-unsupported", "overdose-deaths", "immigration-status", "policy", "documents"]);
 
 /**
  * How the request is handled before any planner:
@@ -422,11 +446,14 @@ const REFUSED_CONCEPTS = new Set(["ori", "court", "arrests", "weapon", "topic", 
  *   - `numeric`: everything else. Recognition refusals apply, and only a fixed path or a supported type may answer.
  */
 export function historicalRequestKind(ledger: RequestLedger): "text" | "numeric" {
+  // Option 3 batch 1 (P175): a request naming something Historical does not record is refused by name (with the causal
+  // limitation when it also asks why), never handed to the text path.
+  if (ledger.parts.some((p) => p.state === "not-recorded")) return "numeric";
   const explain = ledger.parts.some((p) => p.concept === "explain");
   // r2 §5: text ONLY when there is an explanation request and no explicit numeric ask, wherever the "why" sits.
   if (explain && !hasExplicitNumericAsk(ledger.parts)) return "text";
   const anyNumeric = ledger.parts.some((p) => NUMERIC_CONCEPTS.has(p.concept) || REFUSED_CONCEPTS.has(p.concept));
-  const operation = ledger.parts.some((p) => ["scorecard", "peer", "coverage-lookup", "completeness", "prison-population"].includes(p.concept));
+  const operation = ledger.parts.some((p) => ["scorecard", "peer", "coverage-lookup", "completeness", "prison-population", "meta-source"].includes(p.concept));
   if (!anyNumeric && !operation && !explain) {
     // No numeric wording: a bare place ("Fort Worth, Texas") is a coverage lookup's request, anything else is text.
     return ledger.parts.some((p) => p.concept === "place") ? "numeric" : "text";

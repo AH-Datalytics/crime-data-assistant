@@ -40,6 +40,13 @@ import {
 export const SHR_IMMIGRATION_NOT_RECORDED =
   "Homicide Reports (SHR) don't record immigration or citizenship status, so I can't count victims or offenders by it -- and I won't give an unrestricted count in its place.";
 
+// Option 3 batch 1 (P160, P182).
+export const SHR_OTHER_OFFENSE =
+  "Homicide Reports cover homicides only, so I can't count thefts here; the NIBRS and Current Trends tabs count thefts.";
+export const SHR_ROLLING =
+  "Rolling 12-month totals aren't a Homicide Reports answer; ask for monthly or yearly counts instead.";
+export const SHR_CHART_ONLY =
+  "That's a chart style. Tell me what to count (which homicides, the place and the years) and I'll show it that way.";
 export const SHR_OVERDOSE_NOT_RECORDED =
   "Homicide Reports do not provide a count of all overdose deaths. Drug-weapon homicide counts are not an overdose-death count, so I can't answer that question here.";
 
@@ -90,7 +97,7 @@ const STOPWORD = String.raw`(?:in|for|during|from|since|of|at|on|and|or|to|by|wi
 
 const RELATIONSHIP = String.raw`(?:wi(?:fe|ves)|husbands?|spouses?|ex[-\s]?(?:wi(?:fe|ves)|husbands?|spouses?|partners?)|common[-\s]law\s+(?:wi(?:fe|ves)|husbands?)|girlfriends?|boyfriends?|(?:intimate\s+|romantic\s+|dating\s+|same[-\s]sex\s+)?partners?|mothers?|fathers?|parents?|sons?|daughters?|brothers?|sisters?|siblings?|in[-\s]laws?|step(?:father|mother|son|daughter|parent|child)s?|family(?:\s+members?)?|relatives?|neighbou?rs?|acquaintances?|friends?|employees?|employers?|co[-\s]?workers?|bosse?s?|strangers?|someone\s+(?:they|he|she)\s+knew|people\s+(?:they|he|she)\s+knew|known\s+(?:to\s+(?:the\s+)?victims?|persons?|people)|homosexual\s+relationships?|lovers?)`;
 const RELATIONSHIP_PREFIX = String.raw`(?:(?:killed|murdered|slain|committed|perpetrated)\s+by\s+(?:an?\s+|the\s+|their\s+|his\s+|her\s+)?|by\s+(?:an?\s+|their\s+|his\s+|her\s+)|(?:of|involving|among|between)\s+(?:their\s+|his\s+|her\s+)?|victim[-\s]offender\s+|(?:with\s+)?(?:an?\s+)?${UNKNOWN})`;
-const CIRCUMSTANCE = String.raw`(?:gang(?:[-\s]related|land)?(?:\s+killings?)?|juvenile\s+gang|robber(?:y|ies)|burglar(?:y|ies)|larceny|motor\s+vehicle\s+theft|rapes?|sex(?:ual)?\s+offenses?|drug[-\s]related|drug\s+deals?|narcotics?\s+(?:law|deals?)|arguments?|brawls?|fights?|lovers?['’]?\s+triangle|felon(?:y|ies)(?:[-\s]type)?|felons?|justifiable|self[-\s]defen[cs]e|killed\s+by\s+(?:police|(?:a\s+|an\s+)?officers?|law\s+enforcement|(?:a\s+)?private\s+citizens?)|police\s+(?:killings?|shootings?)|(?:a\s+)?private\s+citizens?|domestic(?:\s+violence)?|negligen(?:t|ce)|accidental|sniper|institutional|prostitution|gambling|child\s+killed\s+by\s+babysitter|circumstances?|motives?)`;
+const CIRCUMSTANCE = String.raw`(?:gang(?:[-\s]related|land)?(?:\s+killings?)?|juvenile\s+gang|robber(?:y|ies)|burglar(?:y|ies)|larceny|motor\s+vehicle\s+theft|rapes?|sex(?:ual)?\s+offenses?|drug[-\s]related|drug\s+deals?|narcotics?\s+(?:law|deals?)|arguments?|brawls?|fights?|lovers?['’]?\s+triangle|felon(?:y|ies)(?:[-\s]type)?|felons?|justifiable|self[-\s]defen[cs]e|killed\s+by\s+(?:police(?:\s+officers?)?|(?:a\s+|an\s+)?officers?|law\s+enforcement(?:\s+officers?)?|(?:a\s+)?private\s+citizens?)|police\s+(?:killings?|shootings?)|(?:a\s+)?private\s+citizens?|domestic(?:\s+violence)?|negligen(?:t|ce)|accidental|sniper|institutional|prostitution|gambling|child\s+killed\s+by\s+babysitter|circumstances?|motives?)`;
 const SEX = String.raw`(?:males?[-\s]to[-\s]females?|females?[-\s]to[-\s]males?|males?|females?|men|women|man|woman|boys?|girls?|sex|gender)`;
 const RACE = String.raw`(?:black|african[-\s]american|white|asian(?:[-\s](?:american|pacific\s+islander))?|pacific\s+islanders?|american\s+indians?|native\s+americans?|alaska(?:n)?\s+natives?|hispanics?|latin[oa]s?|latinx|non[-\s]hispanic|race|racial|ethnicit(?:y|ies)|races)`;
 const DEMOGRAPHIC_PREFIX = String.raw`(?:(?:of|among|for|against|involving|where)\s+(?:the\s+)?|(?:who|that)\s+(?:were|are|was|is)\s+|were\s+|(?:with\s+)?(?:an?\s+)?${UNKNOWN})`;
@@ -148,6 +155,13 @@ const COURT_POLICY_RULE: Rule = {
 };
 
 const RULES: Rule[] = [
+  // Option 3 batch 1 (P160): a theft count is outside Homicide Reports (never a murder "during a theft", which is a circumstance).
+  { concept: "other-offense", pattern: R(String.raw`(?<!\b(?:during|in\s+the\s+course\s+of|while\s+committing)\s+(?:a\s+|an\s+)?)(?<!\bmotor\s+vehicle\s+)\b(?:thefts?|shoplifting)\b(?![-\s]+(?:related|murders?|homicides?|killings?))`), state: "not-recorded", explanation: SHR_OTHER_OFFENSE },
+  // Option 3 batch 1 (P160): rolling 12-month totals are not an SHR answer (yearly and monthly counts are).
+  { concept: "rolling", pattern: R(String.raw`\brolling(?:\s+(?:over\s+)?(?:12|twelve)[-\s]months?)?\b|\b(?:12|twelve)[-\s]month\s+rolling\b`), state: "not-recorded", explanation: SHR_ROLLING },
+  // Option 3 batch 1 (P182): a chart style alone asks what to chart; beside a data request it is a visual choice only.
+  { concept: "chart-only", pattern: R(String.raw`(?<=^\s*(?:(?:please\s+)?(?:show|make|use|give\s+me|display)\s+(?:it\s+|that\s+|them\s+)?(?:as\s+)?(?:a\s+)?)?)(?:stacked\s+(?:columns?|bars?)|(?:bar|line|pie)\s+charts?)(?=\s*[.!?]?\s*$)`), state: "not-recorded", explanation: SHR_CHART_ONLY },
+  { concept: "presentation", pattern: R(String.raw`\b(?:as\s+)?(?:a\s+)?stacked\s+(?:columns?|bars?)\b`), state: "context" },
   // The source itself: SHR is the FBI's dataset. Naming it is context, never a restriction.
   { concept: "source", state: "context", pattern: R(String.raw`\b(?:(?:according\s+to|from|per|in|using)\s+)?(?:the\s+)?(?:FBI(?:['’]s)?(?:\s+(?:data|SHR|UCR))?|supplementary\s+homicide\s+reports?|SHR(?:\s+data)?|homicide\s+reports?(?:\s+(?:data|tab))?|UCR)\b`) },
   // Questions about the data itself (completeness, coverage, availability): the metadata paths own them.

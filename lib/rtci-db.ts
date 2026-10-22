@@ -1,4 +1,5 @@
 import { isInnerRun } from "./why-scope";
+import { originalQuestion, withSpellingNote, withSpellingTag } from "./spelling-corrections";
 import Database from "better-sqlite3";
 import path from "path";
 import os from "os";
@@ -287,6 +288,10 @@ export function logQuery(
 ): number | null {
   // Stage 3b (r1.4 R4.2): an inner run of a "why" turn writes no log row; the outer turn logs once.
   if (isInnerRun()) return null;
+  // Option 3 batch 1: the user's own words, the stated reading and the tag on every row (lib/spelling-corrections.ts).
+  question = originalQuestion(question);
+  response = withSpellingNote(response) ?? response;
+  guardrails = withSpellingTag(guardrails) ?? guardrails;
   const db = getWriteDb();
   if (db) {
     try {

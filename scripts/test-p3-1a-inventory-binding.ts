@@ -323,7 +323,9 @@ console.log("\nW — widening fails the existing T7b guard, inside an independen
     // DISTINCT fingerprints: Node prints the actual array twice (once in the diff, once in the
     // `actual:` dump), so counting occurrences reads 8 for four sites.
     const fingerprints = [...new Set(
-      (widened.out.match(/'[a-z-]+::POST[^']*::parallel'/g) || []).map((f) => f.slice(1, -1)))];
+      // Option 3 batch 1 (2026-10-21): the Current/Historical, NIBRS and SHR handlers now run inside a per-request spelling
+      // context, so their sites are named under `handle<Route>Post` (the exported POST only wraps it).
+      (widened.out.match(/'[a-z-]+::(?:POST|handle[A-Za-z]+Post)[^']*::parallel'/g) || []).map((f) => f.slice(1, -1)))];
     checkTrue("W5b failing at T7b, naming all four contract-failure sites as parallel",
       /whole OUTCOMES constants/.test(widened.out) && fingerprints.length === 4 &&
       fingerprints.some((f) => f.includes("emitContractFailure")) &&

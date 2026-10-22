@@ -114,7 +114,7 @@ function versusBetween(ledger: RequestLedger, v: Part): "places" | "years" | "ot
 function applies(part: Part, a: NibrsApplied, now: Date, ledger: RequestLedger): boolean {
   const v = part.value ?? "";
   switch (part.concept) {
-    case "completeness": case "coverage-lookup": case "cohort":
+    case "completeness": case "coverage-lookup": case "cohort": case "meta-codes":
       return Boolean(a.operations?.includes(part.concept));
     case "peer": {
       if (!a.operations?.includes("peer")) return false;

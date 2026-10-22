@@ -47,6 +47,10 @@ const COURT = notTracked("court outcomes (prosecutions, convictions or sentences
 const SUBCITY = notTracked("anything below a city or county agency (ZIP codes, neighborhoods, districts, wards or beats)");
 const OTHER_OFFENSE = notTracked("that offense; it counts only murder, rape, robbery, aggravated assault, burglary, theft and motor vehicle theft", "the NIBRS tab covers more offenses");
 const DAILY = notTracked("daily figures; it has monthly counts");
+// Option 3 batch 1 (P339): where an offense happened is not tracked here; NIBRS records location types.
+const LOCATION = notTracked("where offenses happened (location types)", "the NIBRS tab records location types");
+const OVERDOSE = notTracked("overdose deaths; drug offenses are not an overdose-death count");
+const IMMIGRATION = notTracked("immigration or citizenship status");
 
 /* ------------------------------------------------------------------ rules --------------------------------------- */
 
@@ -57,7 +61,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
 
-const EARLY_CONCEPTS = new Set(["source-name", "index", "ori", "phase-unsupported", "rolling", "daily", "court", "sub-city", "peer", "sort", "overview", "other-offense"]);
+const EARLY_CONCEPTS = new Set(["source-name", "index", "ori", "phase-unsupported", "rolling", "daily", "court", "sub-city", "peer", "sort", "overview", "other-offense", "overdose-deaths", "immigration-status", "location"]);
 
 const RULES: Rule[] = [
   // The tab's own name is context, claimed first ("Current Trends" is not a "trends" grain).
@@ -76,7 +80,15 @@ const RULES: Rule[] = [
   // ---- "most common crime" (C3 sorted) and "overview" (all seven), before the rank and measure words ----
   { concept: "sort", value: () => "most-common", pattern: R(String.raw`\b(?:the\s+)?(?:most\s+(?:common|prevalent|frequent|reported)|top)\s+(?:crimes?|offen[cs]es?|type\s+of\s+crime)\b|\bwhich\s+(?:crime|offen[cs]e)\s+(?:is|was)\s+(?:the\s+)?(?:highest|most\s+common)\b`) },
   { concept: "overview", value: () => "all7", pattern: R(String.raw`\b(?:an?\s+)?overview(?:\s+(?:of|for)\s+(?:crime|crimes|trends?|crime\s+trends?))?\b`) },
+  // Option 3 batch 1 (P019): "I want columns of …" names a table layout; the measures it lists are read by their own rules.
+  { concept: "layout", pattern: R(String.raw`\bI\s+(?:want|need|would\s+like)\s+(?:the\s+)?columns?\s+(?:of|for)\b(?:\s*,?\s*(?:years?|populations?)\b)*,?`), state: "context" },
   // ---- not tracked ----
+  // Option 3 batch 1 (P339): explicit location types only (the NIBRS location values), never a bare "at" or "in".
+  { concept: "location", pattern: R(String.raw`\b(?:happened\s+)?(?:at|in)\s+(?:a\s+|the\s+)?(?:hotels?|motels?|convenience\s+stores?|gas\s+stations?|parking\s+lots?)\b`), state: "not-recorded", explanation: LOCATION },
+  // Option 3 batch 1 (2026-10-21, carried from the reverted #36): overdose deaths and immigration/citizenship status
+  // are not recorded, so they are refused by name rather than as unread words. Claimed early, before the drug and place words.
+  { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
+  { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecut(?:ions?|ed|ors?|e)\b|\bcourts?\b|\bjail(?:s|ed)?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\s+\d+\b|\bbeats?\b|\bcensus\s+tracts?\b|\bareas?\s+in\b`), state: "not-recorded", explanation: SUBCITY },
   { concept: "daily", pattern: R(String.raw`\bby\s+(?:the\s+)?day\b|\bper\s+day\b|\beach\s+day\b|\bdaily\b`), state: "not-recorded", explanation: DAILY },
@@ -112,6 +124,8 @@ const RULES: Rule[] = [
     pattern: R(String.raw`\b(?:with\s+)?(at\s+least|over|more\s+than)\s+(\d[\d,]*)(?=\s+(?:murders?|homicides?|killings?|rapes?|robber(?:y|ies)|aggravated\s+assaults?|assaults?|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|motor\s+vehicle\s+thefts?|car\s+thefts?|offen[cs]es|crimes)\b)`) },
   // ---- "which 2 cities": the number of places a ranking shows ----
   { concept: "rank", value: (m) => `top:${numberToken(m[1])}`, pattern: R(String.raw`(?<=\bwhich\s+)(${NUMBER})(?=\s+(?:cities|agencies|jurisdictions|places|counties)\b)`) },
+  // Option 3 batch 1 (P064): a leading count ("10 cities with …", "show me the 5 agencies …").
+  { concept: "rank", value: (m) => `top:${numberToken(m[1])}`, pattern: R(String.raw`(?<=^\s*|\b(?:the|show(?:\s+me)?|list|give\s+me)\s+)(${NUMBER})(?=\s+(?:cities|agencies|jurisdictions|places|counties)\b)`) },
   // ---- population thresholds (rankings) ----
   { concept: "threshold", value: (m) => thresholdValue(m[0]), pattern: R(String.raw`\(?\b(?:(?:with|having)\s+)?(?:an?\s+)?(?:(?:populations?|pop\.?)\s+(?:of\s+)?)?(?:at\s+least|over|above|more\s+than|greater\s+than|exceeding|under|below|less\s+than|fewer\s+than|at\s+most|min(?:imum)?(?:\s+of)?|max(?:imum)?(?:\s+of)?)\s+\d[\d,]*(?:\.\d+)?(?:\s*(?:k\b|thousand\b|m\b|million\b))?(?:\s*\+)?(?:\s+${POP_WORD})?(?:\s+or\s+(?:more|larger|greater))?\)?`),
     when: (m) => /(?:population|pop\b|pop\.|people|residents|persons|inhabitants|\d\s*k\b|thousand|million|\bmin\b|\bmin(?:imum)?\b)/i.test(m[0]) },
@@ -149,6 +163,10 @@ const RULES: Rule[] = [
   { concept: "measure", value: () => "motor_vehicle_theft", pattern: R(String.raw`\b(?:motor[-\s]vehicle|auto(?:mobile)?|car|vehicle)\s+thefts?\b|\bmvt\b`) },
   { concept: "measure", value: () => "violent_crime", pattern: R(String.raw`\b(?:total\s+)?violent(?:\s+(?:crimes?|offen[cs]es?))?\b`) },
   { concept: "measure", value: () => "property_crime", pattern: R(String.raw`\b(?:total\s+)?property(?:\s+(?:crimes?|offen[cs]es?))?\b`) },
+  // Option 3 batch 1 (P301): "overall violent crime" means total violent crime (a qualifier); "overall crime" or a bare
+  // "overall" beside another measure is the violent + property total, the all-seven measure.
+  { concept: "qualifier", pattern: R(String.raw`\boverall(?=\s+(?:violent|property)\b)`), state: "context" },
+  { concept: "measure", value: () => "all7", pattern: R(String.raw`\boverall(?:\s+(?:crimes?|offen[cs]es?))?\b`) },
   { concept: "measure", value: () => "all7", pattern: R(String.raw`\b(?:all\s+(?:seven|7)\s+(?:offen[cs]es|crimes)|part\s+(?:i|1|one)\s+(?:crimes?|offen[cs]es?))\b`) },
   { concept: "measure", value: () => "murder", pattern: R(String.raw`\bmurders?\b|\bhomicides?\b|\bkillings?\b`) },
   { concept: "measure", value: () => "rape", pattern: R(String.raw`\brapes?\b`) },
@@ -268,7 +286,8 @@ export function hasExplicitNumericAsk(parts: Part[]): boolean {
 }
 
 const NUMERIC_CONCEPTS = new Set(["measure", "statistic", "rank", "threshold", "change", "combine", "list", "grain", "period", "versus", "rolling", "peer", "sort", "overview"]);
-const REFUSED_CONCEPTS = new Set(["ori", "court", "sub-city", "daily", "other-offense", "phase-unsupported", "clearance", "arrests", "weapon", "people", "safest"]);
+// Option 3 batch 1: the not-recorded topics added on 10-21 make a request numeric, like the others.
+const REFUSED_CONCEPTS = new Set(["ori", "court", "sub-city", "daily", "other-offense", "phase-unsupported", "clearance", "arrests", "weapon", "people", "safest", "overdose-deaths", "immigration-status", "location"]);
 const OPERATIONS = ["coverage-lookup", "completeness"];
 
 /**

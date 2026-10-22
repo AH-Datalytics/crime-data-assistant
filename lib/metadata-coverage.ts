@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import type { ChartMeta } from "./types";
 import { STATE_NAME_TO_ABBR } from "./state-population";
+import { NIBRS_UCR_PROPERTY_CODES, NIBRS_UCR_VIOLENT_CODES, UCR_CODES } from "./nibrs-codes";
 
 export type MetadataSource = "current" | "historical" | "nibrs" | "shr" | "hate_crime";
 
@@ -47,7 +48,10 @@ type Intent =
   | "available_agencies"
   | "city_count"
   | "available_cities"
-  | "county_membership_unavailable";
+  | "county_membership_unavailable"
+  // Option 3 batch 1 (P202, P203): whole-request informational questions, answered from the application's own facts.
+  | "offense_codes"
+  | "data_sources";
 
 interface CountyScope {
   key: string;
@@ -76,6 +80,10 @@ function asksAnalyticResult(q: string): boolean {
 
 function detectMetadataIntent(question: string): Intent | null {
   const q = norm(question);
+  // Option 3 batch 1: only a WHOLE informational request (no place, period or count words): a numeric clause keeps its own path.
+  const informationalOnly = !/\b(?:19|20)\d{2}\b|\b(?:how\s+many|count|number\s+of|rate|rates?\s+in|trend)\b|\b(?:in|for)\s+[a-z]+\s+(?:county|city)\b/.test(q) && !Object.keys(STATE_NAME_TO_ABBR).some((name) => new RegExp(`\\b${name.toLowerCase()}\\b`).test(q));
+  if (informationalOnly && /\b(?:list\s+of\s+(?:[a-z]+\s+){0,3}codes|(?:offen[cs]e|ucr|nibrs|crime)\s+codes?|codes?\s+(?:list|definitions?))\b/.test(q)) return "offense_codes";
+  if (informationalOnly && /^where\s+(?:can|could|do|should)\s+i\s+(?:find|get|see|look\s+for)\s+(?:more\s+)?(?:data|information|info|statistics|numbers)\b/.test(q)) return "data_sources";
   if (/\b(download|export|csv)\b/.test(q) && /\b(this|these|result|results|table|data|chart|it)\b/.test(q)) {
     return "download_help";
   }
@@ -242,6 +250,32 @@ function downloadResult(source: MetadataSource): MetadataCoverageResult {
     [{ answer: explanation }],
     explanation,
   );
+}
+
+/**
+ * Option 3 batch 1 (P202): the NIBRS offense codes this application counts as property or violent crime, from the code
+ * lists the answers themselves use (lib/nibrs-codes.ts), so the delivered list can be checked against that source.
+ */
+function offenseCodesResult(source: MetadataSource, question: string): MetadataCoverageResult {
+  const q = question.toLowerCase();
+  const groups: [string, readonly string[]][] = /\bproperty\b/.test(q) && !/\bviolent\b/.test(q)
+    ? [["property crime", NIBRS_UCR_PROPERTY_CODES]]
+    : /\bviolent\b/.test(q) && !/\bproperty\b/.test(q)
+      ? [["violent crime", NIBRS_UCR_VIOLENT_CODES]]
+      : [["violent crime", NIBRS_UCR_VIOLENT_CODES], ["property crime", NIBRS_UCR_PROPERTY_CODES]];
+  const rows = groups.flatMap(([group, codes]) => codes.map((code) => ({ group, code, offense: UCR_CODES[code] ?? code })));
+  const named = groups.map(([g]) => g).join(" and ");
+  const explanation = `These are the NIBRS offense codes this tool counts as ${named} (the FBI's traditional ${named} group). NIBRS also records other offenses, such as fraud, vandalism and stolen property, which are counted under their own names.`;
+  return result(source, "offense_codes", "SELECT 'NIBRS offense codes from the application code lists' AS answer", rows, explanation);
+}
+
+/** Option 3 batch 1 (P203): where the data is, stated from this application's own sources. */
+function dataSourcesResult(source: MetadataSource, question: string): MetadataCoverageResult {
+  const clearance = /\bclearance|cleared|solved\b/i.test(question);
+  const explanation = clearance
+    ? "In this tool, the Historical tab has clearance percentages by year for the U.S., each state and city or county agencies, and the NIBRS tab has clearances by method (arrest or exceptional means) and by exceptional-clearance reason. The underlying FBI data is published on the FBI's Crime Data Explorer (cde.ucr.cjis.gov)."
+    : "In this tool: Current Trends has recent monthly counts for a sample of agencies; the Historical tab has yearly FBI counts and rates back to 1960; the NIBRS tab has incident-level detail (victims, offenders, weapons, locations, clearances); Homicide Reports has homicide detail since 1976. The underlying FBI data is published on the FBI's Crime Data Explorer (cde.ucr.cjis.gov).";
+  return result(source, "data_sources", "SELECT 'Data sources described from the application' AS answer", [{ answer: explanation }], explanation);
 }
 
 function countyMembershipUnavailableResult(source: MetadataSource): MetadataCoverageResult {
@@ -618,6 +652,8 @@ export function answerMetadataQuestion(
   if (!intent) return null;
   if (isDeicticEntityMetadataFollowup(question, intent)) return null;
   if (intent === "download_help") return downloadResult(source);
+  if (intent === "offense_codes") return source === "nibrs" ? offenseCodesResult(source, question) : null;
+  if (intent === "data_sources") return dataSourcesResult(source, question);
   if (intent === "county_membership_unavailable") return countyMembershipUnavailableResult(source);
   if (!db) return null;
 

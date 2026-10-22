@@ -147,6 +147,7 @@ export async function OPTIONS() {
 // QueryResponse, and an interface has no index signature. The brand is what matters
 // here -- widening the shape does not weaken the gate, since only
 // emitFactualPayload() can produce a SealedPayload of any shape.
+import { applySpellingCorrections, runWithSpellingContext, withSpellingNote } from "@/lib/spelling-corrections";
 function jsonResp(data: SealedPayload<object> | QueryError, status = 200) {
   const payload: Record<string, any> = { ...((data as Record<string, any>) || {}) };
   if (typeof payload.explanation === 'string' || typeof payload.title === 'string') {
@@ -154,6 +155,9 @@ function jsonResp(data: SealedPayload<object> | QueryError, status = 200) {
     payload.explanation = safe.explanation ? consolidatedDisplayText(safe.explanation) : safe.explanation;
     payload.title = safe.title ? consolidatedDisplayText(safe.title) : safe.title;
   }
+  // Option 3 batch 1: the stated reading of a corrected misspelling, on every delivered text (lib/spelling-corrections.ts).
+  if (typeof payload.explanation === "string") payload.explanation = withSpellingNote(payload.explanation) ?? payload.explanation;
+  if (typeof payload.error === "string") payload.error = withSpellingNote(payload.error) ?? payload.error;
   if (Array.isArray(payload.rows)) payload.rows = normalizeNibrsDisplayRows(payload.rows);
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
@@ -272,7 +276,12 @@ function resolveNibrsModel(sessionId: string | null, canaryFlag: boolean): strin
   return defaultModel;
 }
 
+// Option 3 batch 1: each request runs in its own spelling context (lib/spelling-corrections.ts).
 export async function POST(req: NextRequest) {
+  return runWithSpellingContext(() => handleNibrsPost(req));
+}
+
+async function handleNibrsPost(req: NextRequest) {
   // Measured before the outer try so the operational row in its catch can record an
   // elapsed time; everything declared inside the try is out of scope there.
   const outerStart = Date.now();
@@ -294,7 +303,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const question = body?.question?.trim();
+    // Option 3 batch 1: the closed misspelling list, corrected before anything reads the question.
+    const question = typeof body?.question === "string" && body.question.trim() ? applySpellingCorrections(body.question.trim()) : body?.question?.trim();
     const chartAuditRequestId = createChartAuditRequestId();
     let chartAuditQueryLogId: number | null = null;
     const sessionId: string | null = ((body?.sessionId as string) || "").slice(0, 64) || null;
@@ -1255,7 +1265,7 @@ export async function POST(req: NextRequest) {
     const metadataStart = Date.now();
     const metadataCandidate = planSaysQueryBearing ? null : answerMetadataQuestion("nibrs", question, getNibrsDb());
     // Stage 2b (plan §5): bound like 2a's metadata (the coverage or completeness operation it answers).
-    const metadata = metadataCandidate && nibrsOwns({ operations: ["coverage-lookup", "completeness"] }) ? metadataCandidate : null;
+    const metadata = metadataCandidate && nibrsOwns({ operations: ["coverage-lookup", "completeness", "meta-codes"] }) ? metadataCandidate : null;
     if (metadata) {
       const executionMs = Date.now() - metadataStart;
       const metadataProof = finalizeExit({ outcome: OUTCOMES.deterministic_plan, sql: metadata.sql, rows: metadata.rows ?? [], columns: metadata.columns ?? [], truncated: Boolean(metadata.truncated), derivation: metadata.sql ? sealPlanDerivation("metadata-coverage-answer", metadata.sql) : null, planFamily: "metadata-coverage-answer", guardrails: ["deterministic-metadata", "metadata-coverage-answer"], hasChart: Boolean(metadata.chartConfig), narrative: metadata.explanation });
