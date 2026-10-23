@@ -214,6 +214,17 @@ async function main() {
     assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Month", "Carjackings"], "rendered: no Note header");
     assert.ok(!/partial year/.test(out), "rendered: no note text in the grid");
   });
+  await check("SHR share table (owner 2026-10-23): plain headers from the answer, no 'Shr Records: recorded', place in the title", () => {
+    const cols = ["place", "year", "numerator_victims", "denominator_victims", "share_pct", "unknown_value_victims", "shr_records"];
+    const rows = [1976, 1977].map((year, i) => ({ place: "United States", year, numerator_victims: 2079 + i, denominator_victims: 4080 + i, share_pct: 51 + i, unknown_value_victims: 12, shr_records: "recorded" }));
+    const columnLabels = { numerator_victims: "Killed With A Firearm", denominator_victims: "All Female Homicide Victims", share_pct: "Share (%)", unknown_value_victims: "Weapon Unknown" };
+    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: cols, rows, title: "Share Of Female Homicide Victims Killed With A Firearm, United States, 1976 to 2026 (2026 Through October)", columnLabels }));
+    assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Year", "Killed With A Firearm", "All Female Homicide Victims", "Share (%)", "Weapon Unknown"]);
+    assert.ok(!/data-table-constants/.test(out), "nothing stated above the table");
+    const odd = tableDisplay(cols, rows.map((r, i) => ({ ...r, shr_records: i ? "no SHR records (unknown)" : "recorded" })), "", columnLabels);
+    assert.ok(odd.shown.includes("shr_records"), "a status that is not 'recorded' everywhere stays");
+    assert.equal(tableDisplay(cols, rows, "", { year: "Weapon Unknown", Month: "x", period: "y" }).labels.year, undefined, "a supplied label never renames a time column");
+  });
   await check("monthly periods read 'MMM YY' in the grid (owner 2026-10-23); years and the raw values are unchanged", () => {
     assert.equal(monthLabel("2019-01"), "Jan 19");
     assert.equal(monthLabel("2025-12"), "Dec 25");

@@ -29,16 +29,18 @@ function isYearColumn(col: string, rows: Record<string, unknown>[]): boolean {
 interface DataTableProps {
   /** The answer's title: a constant it already states (e.g. the place) is not restated above the table. */
   title?: string;
+  /** Plain headers for technical column names, from the answer (display only). */
+  columnLabels?: Record<string, string>;
   columns: string[];
   rows: Record<string, unknown>[];
   truncated?: boolean;
   fillHeight?: boolean;
 }
 
-export default function DataTable({ columns: allColumns, rows, truncated, fillHeight, title }: DataTableProps) {
+export default function DataTable({ columns: allColumns, rows, truncated, fillHeight, title, columnLabels }: DataTableProps) {
   // Table display hotfix (2026-10-22): empty columns are not shown, and a text column that is the same on every row is
   // stated once above the table instead of repeated on every row. The CSV export keeps every column.
-  const display = useMemo(() => tableDisplay(allColumns, rows, title ?? ""), [allColumns, rows, title]);
+  const display = useMemo(() => tableDisplay(allColumns, rows, title ?? "", columnLabels ?? {}), [allColumns, rows, title, columnLabels]);
   const columns = display.shown;
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");

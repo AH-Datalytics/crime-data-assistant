@@ -480,5 +480,21 @@ check(exactCount("9007199254740993").ok === false && exactCount("900719925474099
   } else check(false, "issuance base question answered");
 }
 
+// Owner 2026-10-23 (presentation): a share title listed every year and the table read numerator/denominator/share/unknown.
+{
+  const r = run("What share of female murder victims were killed with a firearm in Texas since 2022?");
+  if (answered(r)) {
+    check(r.compiled.title === "Share Of Female Murder Victims Killed With A Firearm, Texas, 2022 to 2025", `share title is compact (${r.compiled.title})`);
+    check(JSON.stringify(r.compiled.columnLabels) === JSON.stringify({ numerator_victims: "Killed With A Firearm", denominator_victims: "All Female Murder Victims", share_pct: "Share (%)", unknown_value_victims: "Weapon Unknown" }), `share column labels (${JSON.stringify(r.compiled.columnLabels)})`);
+    check(/2022, 2023, 2024, 2025|2022-2025/.test(r.compiled.explanation), "the explanation keeps the full period words");
+  } else check(false, `share question answered (${r.decline})`);
+  const p = run("What share of female murder victims were killed with a firearm in Texas since 2022?", { ...CUTOFF, month: 10 });
+  if (answered(p)) check(p.compiled.title === "Share Of Female Murder Victims Killed With A Firearm, Texas, 2022 to 2025 (2025 Through October)", `a partial last year is named (${p.compiled.title})`);
+  else check(false, `partial-year share answered (${p.decline})`);
+  const c = run("How many murder victims were there in Texas in 2024 and 2025?");
+  if (answered(c)) check(/, 2024 to 2025$/.test(c.compiled.title), `a count title uses the compact span (${c.compiled.title})`);
+  else check(false, `count answered (${c.decline})`);
+}
+
 console.log(`\n${checks - failures}/${checks} passed (T1 grid ${gridRuns} questions)`);
 if (failures > 0) process.exit(1);

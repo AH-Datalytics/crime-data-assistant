@@ -30,6 +30,8 @@ export interface QueryResponse {
   explanation: string;
   title: string;
   columns: string[];
+  /** Optional plain table headers for technical column names (display only; the CSV keeps the names). */
+  columnLabels?: Record<string, string>;
   rows: Record<string, unknown>[];
   rowCount: number;
   truncated: boolean;
