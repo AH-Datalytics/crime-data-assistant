@@ -278,6 +278,9 @@ const OPENERS: { rule: string; pattern: RegExp }[] = [
   { rule: "calculate-opener", pattern: /^\s*(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?)?(?:calculate|compute|work\s+out)\s+(?:me\s+)?(?:the\s+)?/i },
   { rule: "yesno-opener", pattern: /^\s*(?:is|are|was|were|does|do|did|has|have|had)\s+(?:there\s+)?/i },
   { rule: "want-opener", pattern: /^\s*(?:please\s+)?i(?:'d|\s+would)\s+like\s+(?:to\s+(?:see|know)\s+)?(?:the\s+)?/i },
+  // Bounded fix (2026-10-23; SHR L8971 "can you rank order cities ..."): a leading "can/could/would/will you" before a verb
+  // no opener above lists. LAST, so every longer opener is recorded first; the verb after it goes to ordinary recognition.
+  { rule: "can-you-opener", pattern: /^\s*(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?/i },
 ];
 
 const TRAILING_POLITE = /[\s,]*(?:please|thanks|thank\s+you)[\s?.!]*$/i;
@@ -341,23 +344,29 @@ export function recordBrokenDown(ledger: RequestLedger): void {
   ledger.record({ concept: "filler", span, rule: "broken-down", state: "context" });
 }
 
-export function recordBetweenFiller(ledger: RequestLedger): void {
+/**
+ * `linkWords`: a source's own extra linking words (SHR: "where", "when", "seen"). A run holding one of them needs a recorded
+ * part on BOTH sides -- never the start of the question, where "Where"/"When" ask a question rather than link two parts.
+ */
+export function recordBetweenFiller(ledger: RequestLedger, linkWords?: RegExp): void {
   const q = ledger.question;
   for (const piece of ledger.residue()) {
     if (PUNCTUATION_ONLY.test(piece.text)) ledger.record({ concept: "punctuation", span: piece.span, rule: "punctuation", state: "context" });
   }
   const recorded = [...ledger.parts].sort((a, b) => a.span[0] - b.span[0]);
   const residue = ledger.residue();
+  const isFiller = (t: string) => BETWEEN_FILLER.test(t) || Boolean(linkWords?.test(t));
   // Runs of consecutive filler words (only whitespace between them), each run bounded on both sides
   // by a recorded part. A run touching residue or an edge is not filler.
   let i = 0;
   while (i < residue.length) {
-    if (!BETWEEN_FILLER.test(residue[i].text)) { i += 1; continue; }
+    if (!isFiller(residue[i].text)) { i += 1; continue; }
     let j = i;
-    while (j + 1 < residue.length && BETWEEN_FILLER.test(residue[j + 1].text) && /^\s*$/.test(q.slice(residue[j].span[1], residue[j + 1].span[0]))) j += 1;
+    while (j + 1 < residue.length && isFiller(residue[j + 1].text) && /^\s*$/.test(q.slice(residue[j].span[1], residue[j + 1].span[0]))) j += 1;
     const start = residue[i].span[0];
     const end = residue[j].span[1];
-    const before = /^\s*$/.test(q.slice(0, start)) || recorded.some((p) => p.span[1] <= start && /^\s*$/.test(q.slice(p.span[1], start)));
+    const hasLinkWord = Boolean(linkWords) && residue.slice(i, j + 1).some((r) => !BETWEEN_FILLER.test(r.text));
+    const before = (!hasLinkWord && /^\s*$/.test(q.slice(0, start))) || recorded.some((p) => p.span[1] <= start && /^\s*$/.test(q.slice(p.span[1], start)));
     const after = recorded.some((p) => p.span[0] >= end && /^\s*$/.test(q.slice(end, p.span[0])));
     if (before && after) {
       for (let k = i; k <= j; k += 1) ledger.record({ concept: "filler", span: residue[k].span, rule: "between-filler", state: "context" });

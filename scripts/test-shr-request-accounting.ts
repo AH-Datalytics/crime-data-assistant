@@ -143,6 +143,27 @@ check(conceptOf("Number of overdose deaths in NJ since 1990", "NJ")?.concept ===
   check(shrRecognitionRefusal(accountShrRequest("Trends in crime in Mesa, Arizona, since 2017", { earlierTurns: [] })) === null, "GC-078 with no earlier turns: nothing is refused");
 }
 
+// Bounded fix (2026-10-23): filler-only refusals from logged traffic now read; substantive words still refuse by name.
+for (const q of [
+  "can you rank order cities by the number of homicides in 2025?", // L8971
+  "number of male homicides by race over time", // L9287
+  "What states have seen an increase in murder rates over the past 7 years?", // L2953
+  "show the share of homicide incidents when the offender is a juvenile by victim-offender relationship", // L6308
+  "show me annual counts of offenders by age from 1986 through 2025", // L3401
+]) check(refusal(q) === null, `filler only, now read: "${q}"`);
+for (const [q, word] of [
+  ["share of 2025 murders with an identified suspect by race of the victim", "identified"], // L9237
+  ["What is the murder rate of non-firearms per year since 2010?", "non-"], // L5490
+  ["Show the count of offenders instead of victims", "instead"], // L3124
+  ["show the same chart for only men", "same"], // L9286
+  ["What share of homicides in South Carolina have been deemed justifiable since 2015?", "deemed"], // L4072
+] as const) check(refusal(q)?.parts.some((p) => p.text.includes(word)) === true, `substantive word still refuses: "${word}" in "${q}"`);
+{
+  // "where" is a link only: a negation after it is the same recognized exclusion as after "who were", never filler.
+  const neg = (q: string) => accountShrRequest(q).parts.filter((p) => p.text === "not").map((p) => `${p.concept}/${p.state}`).join();
+  check(neg("share of murders where the victim was not black") === neg("share of murders of victims who were not black") && !neg("share of murders where the victim was not black").includes("context"), "a negation after \"where\" is the recognized exclusion, not filler");
+}
+
 // Every character is accounted for, and nothing is undischarged.
 for (const q of ["murder via banana in Texas in 2025", "How many murders were reported by sheriffs in Missouri in 2026?", "Homicide Victims (All Homicides), Baldwin County Sheriff's Office, AL, 2025"]) {
   const l = accountShrRequest(q);

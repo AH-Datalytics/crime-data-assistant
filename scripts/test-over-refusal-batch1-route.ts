@@ -141,12 +141,12 @@ async function main() {
     nibrs: (await import("../app/api/nibrs-query/route")) as unknown as { POST: (r: unknown) => Promise<Response> },
     shr: (await import("../app/api/shr-query/route")) as unknown as { POST: (r: unknown) => Promise<Response> },
   };
-  const ask = async (tab: Tab, question: string): Promise<Answer> => {
+  const ask = async (tab: Tab, question: string, history: unknown[] = []): Promise<Answer> => {
     modelCalls = 0; preparedSql.length = 0; ip += 1;
     const logDb = new Database(process.env.QUERY_LOG_DB_PATH!, { readonly: true });
     const before = (logDb.prepare("SELECT COALESCE(MAX(id),0) AS m FROM query_log").get() as { m: number }).m; logDb.close();
     const url = tab === "nibrs" ? "/api/nibrs-query" : tab === "shr" ? "/api/shr-query" : "/api/query";
-    const body = { question, history: [], sessionId: `b1-${ip}`, pageToken: token(), ...(tab === "historical" ? { mode: "historical" } : {}) };
+    const body = { question, history, sessionId: `b1-${ip}`, pageToken: token(), ...(tab === "historical" ? { mode: "historical" } : {}) };
     const route = tab === "nibrs" ? R.nibrs : tab === "shr" ? R.shr : R.query;
     const res = await route.POST(new NextRequest(`http://localhost${url}`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `10.6.${ip % 250}.1` }, body: JSON.stringify(body) }));
     const raw = await res.text();
@@ -476,6 +476,23 @@ async function main() {
     assert.throws(() => noModelSql({ status: 200, sql: null, rows: [], text: "", title: "", guardrails: "", loggedQuestion: "" }));
     preparedSql.length = 0;
     assert.throws(() => noModelSql({ status: 200, sql: null, rows: [{ year: 2020, model_sql_probe: 1 }], text: "", title: "", guardrails: "", loggedQuestion: "" }));
+  });
+  // Complete-turn fix (2026-10-23, COMPLETE-TURN-FINDING.md): the owner's case after an earlier question and a follow-up.
+  await check("complete turn: LAPD after a follow-up is its own question; an unknown acronym is named, not called a follow-up", async () => {
+    const h = (q: string) => [{ role: "user", content: q, source: "historical" }, { role: "assistant", content: "Figures.\n[SQL: SELECT year, murder FROM historical_agency WHERE agency = 'Chicago']", source: "historical" }];
+    const history = [...h("Chicago murder clearance rate since 1990"), ...h("what about robbery")];
+    const lapd = await ask("historical", "LAPD murder clearance rate since 1960", history);
+    if (DEBUG) console.log("        " + show(lapd));
+    assert.doesNotMatch(lapd.text, /builds on an earlier follow-up|couldn't interpret "LAPD"/, lapd.text);
+    const xyz = await ask("historical", "XYZPD murder clearance rate since 1960", history);
+    if (DEBUG) console.log("        " + show(xyz));
+    refused(xyz);
+    assert.match(xyz.text, /couldn't interpret "XYZPD"/, xyz.text);
+    assert.doesNotMatch(xyz.text, /builds on an earlier follow-up/, xyz.text);
+    // K2 control: a real fragment after a follow-up still gets the follow-up refusal.
+    const frag = await ask("historical", "and since 1960?", history);
+    refused(frag);
+    assert.match(frag.text, /builds on an earlier follow-up|complete question/, frag.text);
   });
   await check("offline: no network call", () => assert.deepEqual(network, []));
 }
