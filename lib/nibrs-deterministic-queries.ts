@@ -792,7 +792,10 @@ export function buildNibrsLocalCityOffenseCountQuery(
   const tableIndex = usesPersonTable ? "idx_svcm_ori" : "idx_scm_ori_year";
   const valueColumn = usesPersonTable ? "victim_count" : "offense_count";
   const alias = SIMPLE_LOCAL_COUNT_ALIASES[contract.metric.topic] ?? "offenses";
-  const label = alias.replace(/_/g, " ");
+  // Round 1 Q7 (owner report: "Denver vehicle burglaries per month since 2018" was titled "NIBRS offenses in Denver, CO"):
+  // a topic with no short alias is named by its resolved offense ("thefts from vehicles"), never the bare word "offenses".
+  const resolvedOffense = contract.metric.offenses.length === 1 ? contract.metric.offenses[0].label.toLowerCase() : null;
+  const label = SIMPLE_LOCAL_COUNT_ALIASES[contract.metric.topic] ? alias.replace(/_/g, " ") : resolvedOffense ?? "offenses";
   const sourceState = contract.geography.sourceCodes?.nibrs ?? contract.geography.state;
   const factStateFilter = compactStatePredicate("s.state", sourceState);
   const years = yearScope("year", question);
@@ -869,9 +872,13 @@ LIMIT 1000`.trim()
     ].join("\n");
 
   const place = contract.geography.canonicalName ?? `${contract.geography.name}, ${contract.geography.state}`;
+  // Round 1 Q7: the title names the place, the measure, the grain and the requested years, like the typed answers'
+  // titles ("Memphis, TN Carjackings Per Month, 2020 to 2025").
+  const titleWords = (s: string) => s.replace(/(^|\s)([a-z])/g, (_m, a: string, b: string) => a + b.toUpperCase());
+  const titleSpan = years.startYear === null ? "" : years.startYear === years.endYear ? `, ${years.startYear}` : `, ${years.startYear} to ${years.endYear}`;
   return {
     sql,
-    title: `NIBRS ${label} in ${place}`,
+    title: `${place} ${titleWords(label)}${monthly ? " Per Month" : " Per Year"}${titleSpan}`,
     explanation:
       `This returns reported ${label} for ${place}${years.periodText}. ` +
       (monthly

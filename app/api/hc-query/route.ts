@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withPartialPeriodFallback } from "@/lib/partial-periods";
 import { getHateCrimeDb } from "@/lib/hc-db";
 import { neutralizeUnverifiedAvailabilityClaim } from "@/lib/refusal-safety";
 import { validatePageToken } from "@/lib/page-token";
@@ -90,6 +91,8 @@ function jsonResp(data: SealedPayload<Record<string, any>> | QueryError, status 
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.
   if (payload.chartConfig) payload.chartConfig = sanitizeChartConfigTitle(payload.chartConfig);
+  // Round 1 D3: partial-period markers for annual charts whose producer did not name them (lib/partial-periods.ts).
+  if (payload.chartConfig) withPartialPeriodFallback(payload);
   const finalized = payload.requestId
     ? attachChartAuditToPayload(payload, { source: "hate_crime", requestId: payload.requestId })
     : payload;

@@ -27,7 +27,9 @@
 export type TableDisplay = { shown: string[]; constants: { column: string; value: string }[]; labels: Record<string, string>; months: string[] };
 
 const isEmpty = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
-const OPTIONAL_METADATA = /^(?:filter|note|notes)$/i;
+// Round 1 Q8: the SHR status column of a pooled answer is hidden only when every cell is empty (no period is missing records);
+// a substantive status stays, and the CSV keeps the column either way.
+const OPTIONAL_METADATA = /^(?:filter|note|notes|periods_without_records)$/i;
 const NEVER_SHOWN = /^(?:note|notes)$/i;
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "2019-01" -> "Jan 19"; anything else unchanged. */
@@ -58,7 +60,9 @@ function valueLabel(measure: string, unit: string | null, statistic: string | nu
 const RECORD_STATUS = /^(?:shr_records|population_status|coverage_status)$/i;
 
 export function tableDisplay(columns: string[], rows: Record<string, unknown>[], title = "", columnLabels: Record<string, string> = {}): TableDisplay {
-  const visible = columns.filter((c) => !NEVER_SHOWN.test(c));
+  // A column whose supplied label is empty is not shown in the grid (round 1 Q3: an unrequested unknown count); the CSV
+  // export keeps it.
+  const visible = columns.filter((c) => !NEVER_SHOWN.test(c) && columnLabels[c] !== "");
   const monthsOf = (cols: string[]) => cols.filter((c) => /^(?:period|month)$/i.test(c)).filter((c) => {
     const vals = rows.map((r) => String(r[c] ?? "")).filter(Boolean);
     return vals.length > 0 && vals.every((v) => /^\d{4}-(0[1-9]|1[0-2])$/.test(v));

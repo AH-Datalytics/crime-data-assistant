@@ -217,13 +217,31 @@ const countyAgencyNote = (a: Agency): string | null =>
 function resolveAgency(ctx: CompileContext, p: Extract<CPlace, { kind: "agency" }>): Agency | { decline: string } {
   const name = p.agencyKind === "county" && !/county$/i.test(p.name) ? `${p.name} County` : p.name;
   const stateCond = p.state ? ` AND state = ${q(p.state)}` : "";
-  const rows = ctx.run(`SELECT DISTINCT ori, agency, state, type FROM agency_monthly WHERE UPPER(agency) = UPPER(${q(name)})${stateCond}`); // lookup: agency-resolution
+  // Round 1 Q1 ("Montgomery County, MD" was "not one of the agencies"): Current Trends stores a county agency under the bare
+  // county name with type County ("Montgomery"), so a county question also matches that bare name, for County rows only.
+  const bare = p.agencyKind === "county" ? name.replace(/\s+county$/i, "") : null;
+  const countyBare = bare && bare.toUpperCase() !== name.toUpperCase() ? ` OR (UPPER(agency) = UPPER(${q(bare)}) AND type = 'County')` : "";
+  const rows = ctx.run(`SELECT DISTINCT ori, agency, state, type FROM agency_monthly WHERE (UPPER(agency) = UPPER(${q(name)})${countyBare})${stateCond}`); // lookup: agency-resolution
   const want = p.agencyKind === "county" ? "County" : "City";
   const typed = rows.filter((r) => String(r.type) === want);
   const pick = typed.length ? typed : rows;
-  if (pick.length === 0) return { decline: `"${p.text.trim()}" isn't one of the agencies in Current Trends, so I can't answer for it. I haven't answered with a number that leaves it out.` };
+  if (pick.length === 0) {
+    const base = `"${p.text.trim()}" isn't one of the agencies in Current Trends, so I can't answer for it.`;
+    // Round 1 Q1 (owner decision B, 2026-10-23): a county with no county agency of its own names the one or two most
+    // populous Current Trends agencies inside it (county crosswalk + latest population on file), so the reader can ask
+    // about those. Never a county total.
+    if (p.agencyKind === "county" && p.state && bare) {
+      const inCounty = ctx.run(`SELECT am.agency AS agency, am.state AS state, am.type AS type, (SELECT population FROM agency_population ap WHERE ap.ori = am.ori ORDER BY year DESC LIMIT 1) AS pop FROM (SELECT DISTINCT ori, agency, state, type FROM agency_monthly WHERE state = ${q(p.state)}) am JOIN agency_county_crosswalk x ON x.ori9 = am.ori WHERE x.state = ${q(p.state)} AND x.county_key = UPPER(${q(bare)}) ORDER BY pop DESC LIMIT 2`); // lookup: county-agencies
+      const names = inCounty.map((r) => `${String(r.type) === "County" && !/county$/i.test(String(r.agency)) ? `${r.agency} County` : r.agency}, ${r.state}`);
+      if (names.length) return { decline: `${base} Current Trends does have ${names.length === 1 ? names[0] : `${names[0]} and ${names[1]}`} in ${bare} County; you can ask about ${names.length === 1 ? "it" : "either"}.` };
+      return { decline: `${base} Current Trends has no agencies in ${bare} County.` };
+    }
+    return { decline: `${base} I haven't answered with a number that leaves it out.` };
+  }
   if (pick.length > 1) return { decline: `"${p.text.trim()}" matches more than one Current Trends agency; please add the state.` };
-  return { ori: String(pick[0].ori), label: `${pick[0].agency}, ${pick[0].state}`, type: String(pick[0].type) };
+  // Round 1 Q1: a county agency stored under its bare name reads "Montgomery County, MD", never like the city.
+  const agencyName = String(pick[0].type) === "County" && !/county$/i.test(String(pick[0].agency)) ? `${pick[0].agency} County` : String(pick[0].agency);
+  return { ori: String(pick[0].ori), label: `${agencyName}, ${pick[0].state}`, type: String(pick[0].type) };
 }
 const between = (a: YM, b: YM): YM[] => { const out: YM[] = []; let [y, m] = a; while (y * 100 + m <= b[0] * 100 + b[1]) { out.push([y, m]); m += 1; if (m > 12) { m = 1; y += 1; } } return out; };
 const shift = ([y, m]: YM, d: number): YM => { const t = y * 12 + (m - 1) + d; return [Math.floor(t / 12), (t % 12) + 1]; };
@@ -278,15 +296,23 @@ function relativeValue(p: CPeriod, months: YM[], b: Bounds): string | null {
   return null;
 }
 
-/** Buckets for a grain: one total, one per month, or one per year (a partial year is labeled as its span). */
-type Bucket = { label: string | number; months: YM[] };
+/**
+ * Buckets for a grain: one total, one per month, or one per year. A total over a partial span is labeled as its span.
+ * A per-year bucket keeps its numeric year even when partial (round 1 D3: a string label in a numeric year column was
+ * dropped from the chart and broke year formatting, baseline P188/W02); `partial` names the months it covers.
+ */
+type Bucket = { label: string | number; months: YM[]; partial?: string };
+const partialSpan = (ms: YM[]) => `${MONTH_NAMES[ms[0][1] - 1]}–${MONTH_NAMES[ms[ms.length - 1][1] - 1]}`;
 function buckets(months: YM[], grain: "total" | "month" | "year"): Bucket[] {
   if (grain === "month") return months.map((x) => ({ label: ymKey(...x), months: [x] }));
   if (grain === "total") return [{ label: periodLabel(months), months }];
   const byYear = new Map<number, YM[]>();
   for (const x of months) { if (!byYear.has(x[0])) byYear.set(x[0], []); byYear.get(x[0])!.push(x); }
-  return [...byYear.values()].map((ms) => ({ label: periodLabel(ms), months: ms }));
+  return [...byYear.values()].map((ms) => (fullYear(ms) ? { label: ms[0][0], months: ms } : { label: ms[0][0], months: ms, partial: ms.length === 1 ? MONTH_NAMES[ms[0][1] - 1] : partialSpan(ms) }));
 }
+/** The row note for a partial per-year bucket, and the chart's partial-period markers (round 1 D3). */
+const partialNoteOf = (bk: Bucket) => (bk.partial ? `${bk.partial} only` : null);
+const partialPeriodsOf = (bks: Bucket[]) => bks.filter((bk) => bk.partial).map((bk) => ({ x: bk.label, label: bk.partial!.split("–").map((m) => m.slice(0, 3)).join("–") }));
 
 /* ================================================================== agency cells ================================ */
 
@@ -360,10 +386,15 @@ function agencyBucket(f: AgencyFetch, bk: Bucket, offs: string[], statistic: "co
   return (sum * 100000) / pop; // the bucket's own year population (a month is not annualized)
 }
 
-function rollingValue(f: AgencyFetch, end: YM, offs: string[], statistic: "count" | "rate", notes: string[]): number | null {
+function rollingValue(f: AgencyFetch, end: YM, offs: string[], statistic: "count" | "rate", notes: string[], sourceStart?: YM): number | null {
   const window = windowOf(end);
   const sum = sumCells(f.cells, window, offs);
-  if (sum === null) { notes.push(`no report for ${f.cells.missing(window, offs).join("; ")} in the 12 months ending ${monthName(end)}`); return null; }
+  if (sum === null) {
+    // Codex build review (Q5): months before the source begins are not "missing reports".
+    const before = sourceStart ? window.filter((x) => cmp(x, sourceStart) < 0) : [];
+    if (before.length) { notes.push(`the 12 months ending ${monthName(end)} start before the data begins (${monthName(sourceStart!)})`); return null; }
+    notes.push(`no report for ${f.cells.missing(window, offs).join("; ")} in the 12 months ending ${monthName(end)}`); return null;
+  }
   if (statistic === "count") return sum;
   const pops = window.map(([y]) => f.pop.get(y));
   const missingYear = window.find(([y]) => f.pop.get(y) === undefined);
@@ -409,8 +440,20 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
     : null;
   const resolved = monthsOf(spec.period, b, first);
   if ("decline" in resolved) return { kind: "decline", explanation: resolved.decline };
-  notesOut.push(...resolved.notes);
-  const months = resolved.months;
+  // Round 1 Q5 (owner: "NOLA murders rolling over 12 months starts at 2017"): with no period named, a rolling series starts
+  // at the first month that can close a full 12-month window (data from January 2017 -> first total December 2017), and
+  // says why. A named period is never moved; its endpoints without 12 months of data keep an empty value and a note.
+  let months = resolved.months;
+  if (spec.grain === "rolling" && spec.period.form === "none") {
+    const start = first ?? b.lo;
+    const firstEnd = shift(start, 11);
+    months = months.filter((x) => cmp(x, firstEnd) >= 0);
+    if (!months.length) return { kind: "decline", explanation: `A 12-month total needs 12 months of data; this source has fewer than that (${monthName(start)} through ${monthName(b.hi)}). I haven't answered with a partial total.` };
+    // Codex build review (Q5): the endpoint is the earliest POSSIBLE window; whether it has a total depends on its months.
+    notesOut.push(`No period was named. A 12-month total needs 12 months of data, and the data begins in ${monthName(start)}, so the series starts with the 12 months ending ${monthName(firstEnd)}, the earliest possible window.`);
+  } else {
+    notesOut.push(...resolved.notes);
+  }
   const a = appliedFrom([], cutoffOf(b));
   const valueRecs: OperandRecord[] = [];
   for (const place of spec.places) {
@@ -428,7 +471,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
           valueRecs.push(f.valueRec);
           for (const end of months) {
             const n: string[] = [];
-            const v = rollingValue(f, end, offs, statistic, n);
+            const v = rollingValue(f, end, offs, statistic, n, b.lo);
             if (n.length) missingNamed.push(...n);
             placeRows.push({ period: ymKey(...end), place: agency.label, measure: mid, statistic: statistic === "rate" ? "rolling_12_month_rate_per_100k" : "rolling_12_month_count", value: r1(v), note: n.join("; ") || null });
           }
@@ -442,7 +485,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
             const n: string[] = [];
             const v = agencyBucket(f, bk, offs, statistic, n);
             if (n.length) missingNamed.push(...n.map((t) => `${agency.label}: ${t}`));
-            placeRows.push({ period: bk.label, place: agency.label, measure: mid, statistic: statistic === "rate" ? "rate_per_100k" : "count", value: r1(v), note: n.join("; ") || null });
+            placeRows.push({ period: bk.label, place: agency.label, measure: mid, statistic: statistic === "rate" ? "rate_per_100k" : "count", value: r1(v), note: [partialNoteOf(bk), ...n].filter(Boolean).join("; ") || null });
           }
         }
       } else {
@@ -484,7 +527,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
             const value = none.length ? null : cells.reduce((s, c) => s + c!.value, 0);
             const counts = [...new Set(cells.map((c) => c?.contributors.size ?? 0))];
             const note = none.length ? `no agencies in the ${sampleLabel} sample reported in ${none.map(monthName).join(", ")}` : `${counts.map(fmt).join("-")} of ${fmt(size)} sample agencies reported`;
-            placeRows.push({ period: bk.label, place: samplePlaceLabel(place), measure: mid, statistic: "count", value, note });
+            placeRows.push({ period: bk.label, place: samplePlaceLabel(place), measure: mid, statistic: "count", value, note: [partialNoteOf(bk), note].filter(Boolean).join("; ") });
           }
         }
         notesOut.push(place.kind === "state" ? stateSentence(place, size) : `National figures are sums over the sample agencies in the Current Trends national sample (${fmt(size)} agencies) that reported every requested offense that month, and each row says how many of them reported; they are not national estimates.`);
@@ -524,7 +567,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const multiPeriod = new Set(rows.map((r) => r.period)).size > 1;
   return {
     kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation,
-    chartConfig: rows.length > 1 ? { type: multiPeriod ? "line" : "bar", xAxis: multiPeriod ? "period" : spec.measures.length > 1 ? "measure" : "place", yAxis: ["value"], title } as ChartConfig : null,
+    chartConfig: rows.length > 1 ? { type: multiPeriod ? "line" : "bar", xAxis: multiPeriod ? "period" : spec.measures.length > 1 ? "measure" : "place", yAxis: ["value"], title, ...(spec.grain === "year" && partialPeriodsOf(buckets(months, "year")).length ? { partialPeriods: partialPeriodsOf(buckets(months, "year")) } : {}) } as ChartConfig : null,
     applied: a, requestedEntities: placeNames, returnedEntities: [...new Set(rows.map((r) => String(r.place)))],
   };
 }
@@ -703,7 +746,7 @@ function compilePeers(spec: PeerSpec, ctx: CompileContext, b: Bounds): CompiledA
     for (const bk of bks) {
       const nn: string[] = [];
       const v = agencyBucket(f, bk, offs, spec.statistic, nn);
-      rows.push({ period: bk.label, place: c.label, measure: spec.measure, statistic: st, value: r1(v), note: [i === 0 ? `the city asked about; population ${fmt(c.pop)} (${popYear})` : `population ${fmt(c.pop)} (${popYear})`, ...nn].join("; ") });
+      rows.push({ period: bk.label, place: c.label, measure: spec.measure, statistic: st, value: r1(v), note: [partialNoteOf(bk), i === 0 ? `the city asked about; population ${fmt(c.pop)} (${popYear})` : `population ${fmt(c.pop)} (${popYear})`, ...nn].filter(Boolean).join("; ") });
     }
   }
   const badPeers = checkPeerOperands({ membership: tp.rec, candidates: cand.rec, coverage: cov.rec, values: valueRecs, popYear, months, offenses: offs, target: target.ori, selected: chosen.map((c) => c.ori) });
@@ -727,7 +770,7 @@ function compilePeers(spec: PeerSpec, ctx: CompileContext, b: Bounds): CompiledA
   const title = `${what[0].toUpperCase()}${what.slice(1)} ${spec.statistic === "rate" ? "Rate" : "Count"}: ${target.label} and Similar-Sized Cities, ${describeSpan(months)}`;
   const explanation = [`Current Trends ${what} ${spec.statistic === "rate" ? "rate per 100,000 residents" : "reported count"}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${target.label} and similar-sized cities, ${describeSpan(months)}.`, ...spec.uiNotes, ...notes].join(" ");
   const multi = bks.length > 1;
-  return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, chartConfig: { type: multi ? "line" : "bar", xAxis: multi ? "period" : "place", yAxis: ["value"], title } as ChartConfig, applied: a, requestedEntities: [target.label], returnedEntities: [...new Set(rows.map((r) => String(r.place)))] };
+  return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, chartConfig: { type: multi ? "line" : "bar", xAxis: multi ? "period" : "place", yAxis: ["value"], title, ...(partialPeriodsOf(bks).length ? { partialPeriods: partialPeriodsOf(bks) } : {}) } as ChartConfig, applied: a, requestedEntities: [target.label], returnedEntities: [...new Set(rows.map((r) => String(r.place)))] };
 }
 
 export { STATE_NAME_BY_CODE };

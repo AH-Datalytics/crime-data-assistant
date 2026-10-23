@@ -114,7 +114,18 @@ function refersToGranularityChange(q: string): boolean {
     /\b(?:monthly|annual(?:ly)?|yearly|quarterly|weekly|by\s+month|by\s+year|per\s+month|per\s+year|rolling\s+(?:12[\s-]*month\s+)?(?:average|window|sum|total)|12[\s-]*month\s+rolling)\b/i.test(q);
   if (!mentionsGrain) return false;
   return /\bmake\s+(?:it|this|that)\b|\binstead\b|\bswitch\b|\bchange\b|\bshow\s+(?:it|this|that)\b|\buse\b/i.test(q) ||
-    /^\s*(?:monthly|annual(?:ly)?|yearly|quarterly|weekly)\b/i.test(q.trim());
+    (/^\s*(?:monthly|annual(?:ly)?|yearly|quarterly|weekly)\b/i.test(q.trim()) && !namesOwnOffenseAndPlace(q));
+}
+
+/**
+ * Round 1 Q4 (owner report 2026-10-23): a leading grain word opens a COMPLETE question as often as it modifies the last
+ * one. "Monthly murders in Chicago, IL in 2026" names its own offense and place, so it means the same fresh and after a
+ * prior answer; a bare "monthly", "monthly instead" or "make that monthly" still changes the prior answer. An anaphor
+ * ("monthly for it") points back and keeps the follow-up reading.
+ */
+function namesOwnOffenseAndPlace(q: string): boolean {
+  if (/\b(?:it|this|that|them|these|those|same)\b/i.test(q)) return false;
+  return OFFENSE_NOUN_RE.test(q) && resolveGeoPlaces(q).mentions.length >= 1;
 }
 
 function refersToBreakdownChange(q: string): boolean {

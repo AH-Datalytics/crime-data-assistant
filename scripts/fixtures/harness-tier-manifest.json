@@ -490,6 +490,15 @@
       "note": "measured: prepared no SQLite statement at all in a clean clone"
     },
     {
+      "id": "test-round1-presentation",
+      "tier": "F",
+      "script": "scripts/test-round1-presentation.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "round 1 presentation fixes (D3-D8); pure functions over in-memory rows, no database"
+    },
+    {
       "id": "test-geo-resolver",
       "tier": "F",
       "script": "scripts/test-geo-resolver.ts",

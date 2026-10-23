@@ -19,6 +19,7 @@ import {
   ScatterChart,
   Scatter,
   ZAxis,
+  LabelList,
 } from "recharts";
 import type { ChartConfig, ChartMeta } from "@/lib/types";
 import { formatAxisValue, fmtVal, decadeTicksForYears, scatterEntityLabel } from "@/lib/utils";
@@ -28,6 +29,7 @@ import {
   detectAndPivotChartData,
   niceYTicks,
   shouldUsePieLegend,
+  uniqueCategoryLabels,
 } from "@/lib/chart-layout";
 import { useChartRenderReceipt } from "./useChartRenderReceipt";
 
@@ -233,9 +235,15 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
     const daily = !ym && isDate(data, config.xAxis);
 
     // Auto-pivot long-format data (e.g. year × category → grouped series)
-    const { data: chartData, effectiveYKeys, seriesOverflow } = config.type === "scatter"
+    const pivoted = config.type === "scatter"
       ? { data, effectiveYKeys: config.yAxis, seriesOverflow: false }
       : detectAndPivotChartData(data, xKey, config.yAxis);
+    const { effectiveYKeys, seriesOverflow } = pivoted;
+    // Round 1 D7: a category axis whose labels collide (two agencies both "St. Louis") gets distinct display labels.
+    const collidingLabels = !ym && !daily && pivoted.data === data && config.type !== "scatter" && config.type !== "pie"
+      ? uniqueCategoryLabels(data, config.xAxis)
+      : null;
+    const chartData: Record<string, unknown>[] = collidingLabels ? data.map((d, i) => ({ ...d, _xlabel: collidingLabels[i] })) : pivoted.data;
 
     const dataYears = new Set(
       chartData.map((d) => String(d[daily ? config.xAxis : xKey] ?? "").slice(0, 4))
@@ -253,9 +261,21 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
       .filter(Boolean);
     const hasEmployeesDisclaimer = employeesYears.length > 0;
 
-    const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
+    const xAxisDataKey = daily ? config.xAxis : ym ? xKey : collidingLabels ? "_xlabel" : config.xAxis;
     const receiptRef = useChartRenderReceipt({ requestId, component: "ChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
-    if (seriesOverflow) return null;
+    // Round 1 D4: never a blank chart area. Too many series to draw is said plainly; every row stays in the table.
+    if (seriesOverflow) {
+      return (
+        <div ref={receiptRef} className="h-full flex items-center justify-center p-6" style={{ background: "#F5F0E8" }} data-chart-disposition="series-overflow">
+          <p style={{ color: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", fontSize: 14, textAlign: "center" }}>
+            Too many series to chart; every row is in the table.
+          </p>
+        </div>
+      );
+    }
+    // Round 1 D3: partial periods (e.g. 2026 with January-June only) are drawn as distinct labeled marks.
+    const partialLabel = new Map((config.partialPeriods ?? []).map((p) => [String(p.x), p.label] as const));
+    const isPartialX = (x: unknown) => partialLabel.has(String(x));
 
     // Detect plain-year x-axis (historical queries)
     const plainYears = !ym && !daily && isPlainYears(chartData, xAxisDataKey);
@@ -283,11 +303,16 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
 
     // Compute clean Y-axis ticks (round intervals starting at 0)
     const yTickInfo = niceYTicks(chartData, effectiveYKeys, config.type === "stacked_bar");
+    // Round 1 D6: bars of non-negative values start at zero unless the user explicitly set a minimum; a max-only request
+    // keeps the zero baseline (it no longer falls back to the data minimum). Signed values keep their own range.
+    const isBarType = config.type === "bar" || config.type === "stacked_bar";
+    const nonNegative = chartData.every((d) => effectiveYKeys.every((y) => d[y] == null || Number(d[y]) >= 0));
     const yAxisScaleProps = config.yAxisMin !== undefined || config.yAxisMax !== undefined
-      ? { domain: [config.yAxisMin ?? "dataMin", config.yAxisMax ?? "dataMax"] as [number | string, number | string] }
+      ? { domain: [config.yAxisMin ?? (isBarType && nonNegative ? 0 : "dataMin"), config.yAxisMax ?? "dataMax"] as [number | string, number | string] }
       : yTickInfo
         ? { ticks: yTickInfo.ticks, domain: yTickInfo.domain }
         : {};
+    const requestedBarFloor = isBarType && config.yAxisMin !== undefined && config.yAxisMin > 0 ? config.yAxisMin : null;
 
     // Use custom colors from Claude if provided, otherwise default palette
     const colors = config.colors && config.colors.length > 0 ? config.colors : DEFAULT_CHART_COLORS;
@@ -304,12 +329,14 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
       padding: "8px 12px",
       lineHeight: "1.5",
     };
-    const tooltipLabelFormatter = (label: unknown) =>
-      daily
+    const tooltipLabelFormatter = (label: unknown) => {
+      const base = daily
         ? formatDateFull(String(label ?? ""))
         : ym
           ? formatYearMonth(String(label ?? ""))
           : String(label ?? "");
+      return isPartialX(label) ? `${base} (${partialLabel.get(String(label))})` : base;
+    };
 
     return (
       <div ref={receiptRef} className="h-full flex flex-col" style={{ background: "#F5F0E8" }}>
@@ -457,15 +484,37 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               )}
               {effectiveYKeys.map((y, i) => {
                 const color = colors[i % colors.length];
+                const present = (k: number) => k >= 0 && k < chartData.length && chartData[k][y] != null && chartData[k][y] !== "";
+                const renderDot = (props: { cx?: number; cy?: number; index?: number; payload?: Record<string, unknown> }) => {
+                  const { cx, cy, index = -1, payload } = props;
+                  const key = `dot-${y}-${index}`;
+                  if (cx == null || cy == null || !present(index)) return <g key={key} />;
+                  const x = payload?.[xAxisDataKey];
+                  if (isPartialX(x)) {
+                    return (
+                      <g key={key} data-partial-period={String(x)}>
+                        <circle cx={cx} cy={cy} r={5} fill="#F5F0E8" stroke={color} strokeWidth={2} />
+                        {i === 0 && (
+                          <text x={cx} y={cy - 10} textAnchor="end" fontSize={11} fill="#1e2a35" fontFamily="'DM Sans', 'Segoe UI', Arial, sans-serif">
+                            {partialLabel.get(String(x))}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  }
+                  const isolated = !present(index - 1) && !present(index + 1);
+                  return isolated ? <circle key={key} cx={cx} cy={cy} r={3.5} fill={color} data-isolated-observation="1" /> : <g key={key} />;
+                };
                 return (
                   <Line
                     key={y}
-                    type="monotone"
+                    type="linear"
                     dataKey={y}
                     name={properCase(y)}
                     stroke={color}
                     strokeWidth={2.5}
-                    dot={false}
+                    connectNulls={false}
+                    dot={renderDot}
                     activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff", fill: color }}
                   />
                 );
@@ -556,7 +605,19 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                   fill={colors[i % colors.length]}
                   radius={[3, 3, 0, 0]}
                   stackId={config.type === "stacked_bar" ? "a" : undefined}
-                />
+                >
+                  {chartData.map((d, k) => (
+                    <Cell key={`bar-${y}-${k}`} fillOpacity={isPartialX(d[xAxisDataKey]) ? 0.4 : 1} />
+                  ))}
+                  {i === effectiveYKeys.length - 1 && partialLabel.size > 0 && (
+                    <LabelList
+                      dataKey={xAxisDataKey}
+                      position="top"
+                      formatter={(v: unknown) => (isPartialX(v) ? partialLabel.get(String(v)) : "")}
+                      style={{ fontSize: 11, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" }}
+                    />
+                  )}
+                </Bar>
               ))}
               {config.annotations?.map((a, i) => (
                 <ReferenceLine
@@ -608,6 +669,11 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
             </PieChart>
           ) : null}
         </ResponsiveContainer>
+        {requestedBarFloor !== null && (
+          <div style={{ color: "#5a6a7a", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", fontSize: "11px", padding: "2px 0 0" }} data-requested-axis-floor={requestedBarFloor}>
+            Y-axis starts at {requestedBarFloor}, as requested; bar heights are not proportional to the values.
+          </div>
+        )}
         {hasEmployeesDisclaimer && (
           <div
             style={{

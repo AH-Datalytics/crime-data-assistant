@@ -92,7 +92,9 @@ const POISON = String.raw`(?:poison(?:ing|ed)?)`;
 const EXPLOSIVE = String.raw`(?:explosives?|bombs?)`;
 const WEAPON_WORD = String.raw`(?:(?:${UNKNOWN})?(?:${FIREARM}|${KNIFE}|${BLUNT}|${PERSONAL}|${STRANGLE}|${ASPHYX}|${FIRE}|${DRUGS}|${POISON}|${EXPLOSIVE}|weapons?))`;
 const SHOOT = String.raw`(?:(?:fatal\s+|non[-\s]?fatal\s+|nonfatal\s+)?shootings?|(?:people\s+)?shot(?:\s+(?:dead|and\s+killed|to\s+death))?|gun\s+violence)`;
-const WEAPON_CONNECTOR = String.raw`(?:via|using|by\s+means\s+of|with|by|from|involving|involved|committed\s+with|killed\s+with|killed\s+by|caused\s+by)`;
+// Round 1 Q2: "killed via" / "killed using" read like "killed with" / "killed by": the verb belongs to the weapon phrase, so
+// it is not left over as a second homicide measure beside "murder".
+const WEAPON_CONNECTOR = String.raw`(?:killed\s+via|killed\s+using|via|using|by\s+means\s+of|with|by|from|involving|involved|committed\s+with|killed\s+with|killed\s+by|caused\s+by)`;
 const STOPWORD = String.raw`(?:in|for|during|from|since|of|at|on|and|or|to|by|with|the|a|an)`;
 
 const RELATIONSHIP = String.raw`(?:wi(?:fe|ves)|husbands?|spouses?|ex[-\s]?(?:wi(?:fe|ves)|husbands?|spouses?|partners?)|common[-\s]law\s+(?:wi(?:fe|ves)|husbands?)|girlfriends?|boyfriends?|(?:intimate\s+|romantic\s+|dating\s+|same[-\s]sex\s+)?partners?|mothers?|fathers?|parents?|sons?|daughters?|brothers?|sisters?|siblings?|in[-\s]laws?|step(?:father|mother|son|daughter|parent|child)s?|family(?:\s+members?)?|relatives?|neighbou?rs?|acquaintances?|friends?|employees?|employers?|co[-\s]?workers?|bosse?s?|strangers?|someone\s+(?:they|he|she)\s+knew|people\s+(?:they|he|she)\s+knew|known\s+(?:to\s+(?:the\s+)?victims?|persons?|people)|homosexual\s+relationships?|lovers?)`;
@@ -173,7 +175,7 @@ const RULES: Rule[] = [
   { concept: "weapon", value: (m) => m[1] ?? null, pattern: R(String.raw`\b${WEAPON_CONNECTOR}\s+(?:(?:an?|the|their|his|her)\s+)?(${WEAPON_WORD}(?:\s+${WEAPON_WORD})?)\b`) },
   {
     concept: "weapon", notInterpreted: shrWeaponNotInterpreted,
-    pattern: R(String.raw`\b(?:via|using|by\s+means\s+of|committed\s+with|killed\s+with)\s+(?:(?:an?|the|their|his|her)\s+)?(?!${STOPWORD}\b)[A-Za-z][\w'-]*(?:\s+(?!${STOPWORD}\b)[A-Za-z][\w'-]*)?`),
+    pattern: R(String.raw`\b(?:killed\s+via|killed\s+using|via|using|by\s+means\s+of|committed\s+with|killed\s+with)\s+(?:(?:an?|the|their|his|her)\s+)?(?!${STOPWORD}\b)[A-Za-z][\w'-]*(?:\s+(?!${STOPWORD}\b)[A-Za-z][\w'-]*)?`),
   },
   { concept: "weapon", value: lower, pattern: R(String.raw`\b${SHOOT}\b`) },
   { concept: "weapon", value: lower, pattern: R(String.raw`\b${WEAPON_WORD}(?:[-\s](?:related|involved|caused))?(?:\s+(?:types?|categor(?:y|ies)))?\b`) },

@@ -20,6 +20,13 @@ export interface ChartConfig {
   yAxisMin?: number;
   yAxisMax?: number;
   annotations?: ChartAnnotation[];
+  /**
+   * Round 1 D3: x values whose period is partial (e.g. 2026 with January-June only), each drawn as a distinct labeled
+   * point or bar. `label` is short ("Jan–Jun", or "partial year" when the months are not established).
+   */
+  partialPeriods?: { x: string | number; label: string }[];
+  /** Round 1 D3: when the delivery fallback (lib/partial-periods.ts) set `partialPeriods`, the date and rule it used. */
+  partialBasis?: { asOf: string; rule: "current-calendar-year" };
 }
 
 export interface QueryResponse {

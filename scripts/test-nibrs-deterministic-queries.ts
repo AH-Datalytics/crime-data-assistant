@@ -384,6 +384,15 @@ import { normalizeConsolidatedDisplayRows } from "../lib/agency-consolidations.j
   assert.ok(query, "monthly local Omaha burglary trend should be deterministic");
   assert.match(query.sql, /SELECT s\.year, s\.month,/i);
   assert.match(query.sql, /GROUP BY s\.year, s\.month/i);
+  assert.equal(query.title, "Omaha, NE Burglaries Per Month, 2023 to 2026", "round 1 Q7: place, measure, grain and years");
+}
+{
+  // Round 1 Q7 (owner report): a topic with no short alias is named by its resolved offense, never "NIBRS offenses in ...".
+  const query = buildNibrsLocalCityOffenseCountQuery("Omaha NE vehicle burglaries per month from 2023 to 2026");
+  assert.ok(query, "local vehicle burglary trend should be deterministic");
+  assert.match(query.sql, /\bucr_offense_code = '23F'/i);
+  assert.equal(query.title, "Omaha, NE Thefts From Vehicles Per Month, 2023 to 2026");
+  assert.ok(!/NIBRS offenses/i.test(query.title) && !/\boffenses\b/i.test(query.title), "never the generic 'offenses' title");
 }
 
 {

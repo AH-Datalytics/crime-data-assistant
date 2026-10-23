@@ -248,6 +248,19 @@ export class RequestLedger {
  * Negations, numbers, units, periods and `and`/`or` never appear in any context rule.
  */
 const OPENERS: { rule: string; pattern: RegExp }[] = [
+  // Round 1 step B (STEP-B-LEFTOVER-RULE-r2.md; Codex ACCEPT-WITH-CHANGES): two closed leading openers seen in real
+  // traffic. Listed FIRST because only the first matching opener is recorded, and the generic question/yes-no openers
+  // would otherwise take only their first words. The words after them go through ordinary recognition.
+  // dataset-opener: L9015, L9060, L9062, L9063, L9066 ("dataset of" without "create" is not an opener: L9067).
+  { rule: "dataset-opener", pattern: /^\s*(?:is\s+it\s+possible\s+to\s+|(?:can|could)\s+you\s+|please\s+)?create\s+(?:a\s+|me\s+a\s+)?dataset\s+(?:of|for)\s+/i },
+  // tell-me-opener: L9552, L9554, L2577.
+  { rule: "tell-me-opener", pattern: /^\s*what\s+(?:data\s+)?can\s+you\s+tell\s+me\s+about\s+/i },
+  // Round 1 W22 ("make that monthly" after a complete question): a leading "make it/that" points back at the earlier answer
+  // and restricts nothing; the route's follow-up reconstruction decides what is carried, and the K2 check still requires
+  // every earlier restriction. Leading only, like every opener.
+  // Codex build review (W22): only the singular forms, which the follow-up detector also reads as a change to the earlier
+  // answer ("make it|this|that"), so the turn always reaches reconstruction and K2; "make them/those" stays residue.
+  { rule: "make-it-opener", pattern: /^\s*(?:(?:ok(?:ay)?|now|please)[,!.]?\s+)?(?:(?:can|could)\s+you\s+)?make\s+(?:it|that|this)\s+/i },
   // Follow-up openers. The inherited conditions themselves come from the route's reconstruction;
   // these words only open the turn ("what about Ohio?", "same for 2024").
   { rule: "followup-opener", pattern: /^\s*(?:(?:ok(?:ay)?|great|thanks|cool|got\s+it)[,!.]?\s+)?(?:(?:and\s+)?(?:what|how)\s+about|and\s+(?:for|in)|(?:the\s+)?same\s+(?:thing\s+)?(?:for|in)|(?:and\s+)?now(?:\s+(?:do|show|give\s+me|try))?|also|then|ok(?:ay)?|now\s+give\s+me)\s+(?:the\s+)?/i },
