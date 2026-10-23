@@ -134,4 +134,11 @@ check("confirmed chips stay (controls)", () => {
   assert.deepEqual(out.map((c) => c.value), ["Texas", "Murder Count", "Count"]);
 });
 
+console.log("\nD3 partial mark removed (owner 2026-10-23)");
+check("the chart draws no partial-period mark, label or tooltip suffix (the title states the partial period)", () => {
+  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "components", "ChartPanel.tsx"), "utf8") as string;
+  assert.ok(!/config\.partialPeriods/.test(src), "ChartPanel must not read config.partialPeriods for drawing");
+  assert.ok(/const partialLabel = new Map<string, string>\(\);/.test(src), "partialLabel is always empty");
+});
+
 console.log(`\nround 1 presentation: ${passed} passed, ${failed} failed`);

@@ -273,8 +273,10 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
         </div>
       );
     }
-    // Round 1 D3: partial periods (e.g. 2026 with January-June only) are drawn as distinct labeled marks.
-    const partialLabel = new Map((config.partialPeriods ?? []).map((p) => [String(p.x), p.label] as const));
+    // Round 1 D3 marked partial periods (e.g. 2026 with January-October only) with a hollow point and a "Jan–Oct" label.
+    // Owner 2026-10-23: "remove it completely" -- the title already states the partial period ("2026 Through October"),
+    // so the chart draws no partial mark, label or tooltip suffix. The payload's partialPeriods field is unchanged.
+    const partialLabel = new Map<string, string>();
     const isPartialX = (x: unknown) => partialLabel.has(String(x));
 
     // Detect plain-year x-axis (historical queries)
