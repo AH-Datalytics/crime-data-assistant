@@ -147,7 +147,7 @@ async function main() {
     assert.deepEqual(detectAndPivotChartData(rows, "year", ["v"]).effectiveYKeys, ["A", "B"]);
   });
   console.log("\ntable display (owner screenshot 2026-10-22: six of eight columns repeated or empty on 106 rows; Codex r3 corrections)");
-  const { tableDisplay } = await import("../lib/table-display");
+  const { tableDisplay, monthLabel } = await import("../lib/table-display");
   const React = (await import("react")).default;
   const { renderToStaticMarkup } = await import("react-dom/server");
   const DataTable = (await import("../components/DataTable")).default;
@@ -201,12 +201,30 @@ async function main() {
   });
   await check("a table that would be reduced to its label column alone is shown unchanged (three-column fallback)", () => {
     const rows = [{ period: "2025-01", place: "Memphis, TN", measure: "carjacking" }, { period: "2025-02", place: "Memphis, TN", measure: "carjacking" }];
-    assert.deepEqual(tableDisplay(["period", "place", "measure"], rows), { shown: ["period", "place", "measure"], constants: [], labels: {} });
+    assert.deepEqual(tableDisplay(["period", "place", "measure"], rows), { shown: ["period", "place", "measure"], constants: [], labels: {}, months: ["period"] });
   });
-  await check("a note on some rows stays; an always-empty note is hidden", () => {
+  await check("a Note column is never shown (owner 2026-10-23: 'shouldn't be a Note column EVER'), filled or empty, in any fallback", () => {
     const base = (note: string | null) => ({ period: 2024, place: "Memphis, TN", value: 1, note });
-    assert.ok(tableDisplay(["period", "place", "value", "note"], [base(null), { ...base("partial year"), period: 2025 }]).shown.includes("note"));
+    assert.ok(!tableDisplay(["period", "place", "value", "note"], [base(null), { ...base("partial year"), period: 2025 }]).shown.includes("note"));
     assert.ok(!tableDisplay(["period", "place", "value", "note"], [base(null), { ...base(null), period: 2025 }]).shown.includes("note"));
+    assert.deepEqual(tableDisplay(["period", "value", "note"], [{ period: 2024, value: 1, note: "partial year" }]).shown, ["period", "value"], "the short-table fallback drops it too");
+    assert.deepEqual(tableDisplay(["year", "notes"], [{ year: 2024, notes: "x" }, { year: 2025, notes: "y" }]).shown, ["year"]);
+    const houston = Array.from({ length: 4 }, (_, i) => ({ period: `2019-0${i + 1}`, place: "Houston, TX", measure: "carjacking", unit: "offenses", filter: null, statistic: "count", value: 60 + i, note: i === 3 ? "partial year (January-June)" : null }));
+    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: SERIES, rows: houston, title: "Houston, TX Carjackings Per Month, 2019" }));
+    assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Month", "Carjackings"], "rendered: no Note header");
+    assert.ok(!/partial year/.test(out), "rendered: no note text in the grid");
+  });
+  await check("monthly periods read 'MMM YY' in the grid (owner 2026-10-23); years and the raw values are unchanged", () => {
+    assert.equal(monthLabel("2019-01"), "Jan 19");
+    assert.equal(monthLabel("2025-12"), "Dec 25");
+    assert.equal(monthLabel("2025"), "2025");
+    assert.equal(monthLabel("2025-13"), "2025-13");
+    const rows = ["2019-01", "2019-02"].map((p, i) => ({ period: p, place: "Houston, TX", measure: "carjacking", unit: "offenses", filter: null, statistic: "count", value: 108 - i * 49, note: null }));
+    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: SERIES, rows }));
+    assert.deepEqual([...out.matchAll(/<td[^>]*>([^<]*)<\/td>/g)].map((m) => m[1]), ["Jan 19", "108", "Feb 19", "59"]);
+    const years = renderToStaticMarkup(React.createElement(DataTable, { columns: ["period", "value"], rows: [{ period: 2024, value: 1 }, { period: 2025, value: 2 }] }));
+    assert.match(years, /<td[^>]*>2024<\/td>/);
+    assert.deepEqual(tableDisplay(SERIES, rows).months, ["period"]);
   });
   console.log("\ntable display safeguards (Codex r5)");
   const rob = (extra: Record<string, unknown>) => [2024, 2025].map((y, i) => ({ period: y, place: "Memphis, TN", measure: "robbery", unit: "offenses", filter: null, statistic: "count", value: 10 + i, note: null, ...extra }));

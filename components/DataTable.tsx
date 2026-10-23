@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { formatNumber, formatDate } from "@/lib/utils";
-import { tableDisplay } from "@/lib/table-display";
+import { monthLabel, tableDisplay } from "@/lib/table-display";
 
 /** Convert column name like "kidnapping_count" → "Kidnapping Count" */
 function formatHeader(col: string): string {
@@ -83,6 +83,7 @@ export default function DataTable({ columns: allColumns, rows, truncated, fillHe
 
   const formatCell = (val: unknown, col: string) => {
     if (val == null) return "";
+    if (display.months.includes(col)) return monthLabel(val);
     if (typeof val === "number") {
       if (yearCols.has(col)) return String(val);
       return formatNumber(val);

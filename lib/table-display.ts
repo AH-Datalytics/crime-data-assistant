@@ -13,15 +13,24 @@
  *   - Only the place may be left out because the title shows it: the whole place label must appear in the title, and the
  *     caller passes a title only where it is displayed with the table (the embed page shows none, so passes none).
  *   - Any other constant is stated once above the table WITH its column name ("Victim Race: White").
- * - A period column is named "Month" for monthly values and "Year" for yearly ones.
+ * - A period column is named "Month" for monthly values and "Year" for yearly ones. Monthly values are shown as
+ *   "MMM YY" ("Jan 19"; owner, 2026-10-23); sorting and the CSV keep the raw "2019-01".
+ * - A note column is never shown in the grid (owner, 2026-10-23: "shouldn't be a Note column EVER"); the CSV keeps it.
  * - The first column (the row's label) and every numeric column are always shown, even when constant.
  * - If fewer than two columns would remain, the table is shown unchanged.
  * - The CSV export is not affected: it keeps every column and its original names.
  */
-export type TableDisplay = { shown: string[]; constants: { column: string; value: string }[]; labels: Record<string, string> };
+export type TableDisplay = { shown: string[]; constants: { column: string; value: string }[]; labels: Record<string, string>; months: string[] };
 
 const isEmpty = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
 const OPTIONAL_METADATA = /^(?:filter|note|notes)$/i;
+const NEVER_SHOWN = /^(?:note|notes)$/i;
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "2019-01" -> "Jan 19"; anything else unchanged. */
+export function monthLabel(v: unknown): string {
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(String(v ?? ""));
+  return m ? `${MONTH_ABBR[Number(m[2]) - 1]} ${m[1].slice(2)}` : String(v ?? "");
+}
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const MEASURE_PLURAL: Record<string, string> = {
   carjacking: "carjackings", murder: "murders", robbery: "robberies", burglary: "burglaries", rape: "rapes",
@@ -43,8 +52,14 @@ function valueLabel(measure: string, unit: string | null, statistic: string | nu
 }
 
 export function tableDisplay(columns: string[], rows: Record<string, unknown>[], title = ""): TableDisplay {
-  const unchanged = { shown: columns, constants: [], labels: {} };
-  if (rows.length === 0 || columns.length <= 2) return unchanged;
+  const visible = columns.filter((c) => !NEVER_SHOWN.test(c));
+  const monthsOf = (cols: string[]) => cols.filter((c) => /^(?:period|month)$/i.test(c)).filter((c) => {
+    const vals = rows.map((r) => String(r[c] ?? "")).filter(Boolean);
+    return vals.length > 0 && vals.every((v) => /^\d{4}-(0[1-9]|1[0-2])$/.test(v));
+  });
+  const unchanged = { shown: visible, constants: [], labels: {}, months: monthsOf(visible) };
+  if (rows.length === 0 || visible.length <= 2) return unchanged;
+  columns = visible;
   // One row: only the known descriptive columns are folded (owner, 2026-10-22: a one-value answer showed all eight
   // columns); any other text column of a one-row table stays in the grid.
   const ONE_ROW_DESCRIPTIVE = /^(?:place|measure|unit|statistic)$/i;
@@ -85,5 +100,5 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
   // Only the place is left out for a displayed title that contains its whole label.
   const placeShown = (c: { column: string; value: string }) => c.column === "place" && title !== "" && title.includes(c.value);
   const stated = constants.filter((c) => !absorbed.has(c.column) && !placeShown(c));
-  return { shown, constants: stated, labels };
+  return { shown, constants: stated, labels, months: monthsOf(shown) };
 }
