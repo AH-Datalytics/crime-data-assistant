@@ -141,6 +141,46 @@ function isSelfContainedQuestion(q: string): boolean {
   return resolveGeoPlaces(q).mentions.length >= 2;
 }
 
+/**
+ * Owner report 2026-10-23: "Denver vehicle burglaries per month since 2018", asked after an earlier answer, was refused
+ * as a follow-up because its bare "since 2018" reads as a date change. A one-place question is complete, and so NOT a
+ * follow-up, only when ALL of these hold (Codex r1: keep every explicit change and every possible dropped restriction):
+ * - the ONLY change signal is a bare range ("since/through/until/up to YYYY", "from YYYY to YYYY"): no change verb, no
+ *   other change kind;
+ * - it names its own offense and exactly one place, with no back-reference or continuation word;
+ * - the previous user question, when it is about the same place, has no word this question drops (so "robberies in
+ *   Dallas since 2010" after "armed robberies by month in Dallas" stays a follow-up: "armed", "month" are dropped).
+ */
+const BARE_RANGE_RE = /\b(?:since|through|until|up\s+to)\s+(?:17|18|19|20)\d{2}\b|\bfrom\s+(?:17|18|19|20)\d{2}\s+(?:to|through|-|–)\s*(?:17|18|19|20)\d{2}\b/i;
+const CHANGE_CUE_RE = /\b(?:it|this|that|them|these|those|same|instead|rather\s+than|also|too|again|now|change|set|update|move|shift|adjust|extend|expand|shorten|limit|restrict|switch|use|make|start|begin|end|go\s+back)\b|\b(?:what|how)\s+about\b/i;
+const FILLER = new Set(["the", "and", "for", "per", "in", "of", "on", "at", "to", "by", "a", "an", "show", "me", "what", "how", "many", "is", "are", "was", "were", "since", "from", "through", "until", "up", "can", "you", "please", "give", "number", "numbers", "count", "counts", "total", "totals", "data", "i", "see"]);
+const contentWords = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w && !FILLER.has(w) && !/^(?:17|18|19|20)\d{2}$/.test(w));
+const stem = (w: string) => w.replace(/(?:ies|es|s)$/, "");
+function lastUserQuestion(rawHistory: unknown): string | null {
+  if (!Array.isArray(rawHistory)) return null;
+  for (let i = rawHistory.length - 1; i >= 0; i -= 1) {
+    const e = rawHistory[i] as { role?: unknown; content?: unknown } | null;
+    if (e && e.role === "user" && typeof e.content === "string") return e.content;
+  }
+  return null;
+}
+function completeOnePlaceRange(q: string, rawHistory: unknown): boolean {
+  if (!BARE_RANGE_RE.test(q) || CHANGE_CUE_RE.test(q) || !OFFENSE_NOUN_RE.test(q)) return false;
+  const mine = resolveGeoPlaces(q).mentions;
+  if (mine.length !== 1) return false;
+  const prev = lastUserQuestion(rawHistory);
+  if (!prev) return true;
+  const ids = new Set(mine[0].candidates.map((c) => c.id));
+  const samePlace = resolveGeoPlaces(prev).mentions.some((p) => p.text.toLowerCase() === mine[0].text.toLowerCase() || p.candidates.some((c) => ids.has(c.id)));
+  if (!samePlace) return true;
+  // The earlier offense and place words are replaced by this question's own, so they are not "dropped"; any other
+  // earlier word (a filter such as "armed", a grain such as "month") must still be present.
+  const have = new Set(contentWords(q).map(stem));
+  const placeWords = new Set(resolveGeoPlaces(prev).mentions.flatMap((p) => contentWords(p.text)));
+  const offenseWords = new Set(contentWords(prev).filter((w) => OFFENSE_NOUN_RE.test(w) || /^(?:vehicles?|motor|aggravated|simple|violent|property|crimes?|offenses?)$/.test(w)));
+  return contentWords(prev).filter((w) => !placeWords.has(w) && !offenseWords.has(w)).every((w) => have.has(stem(w)));
+}
+
 export function detectQueryBearingFollowup(
   question: string,
   rawHistory: unknown
@@ -158,5 +198,6 @@ export function detectQueryBearingFollowup(
   if (refersToBreakdownChange(question)) kinds.push("breakdown");
   if (refersToChartChange(question)) kinds.push("chart");
 
+  if (kinds.length === 1 && kinds[0] === "time_range" && completeOnePlaceRange(question, rawHistory)) return null;
   return kinds.length > 0 ? { kinds } : null;
 }
