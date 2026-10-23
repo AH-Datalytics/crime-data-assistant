@@ -685,6 +685,30 @@ function readSlots(ledger: RequestLedger, question: string): Slots {
     const lf = fieldOf(left); const rf = fieldOf(right);
     if (!lf || lf !== rf) s.declined.push({ part: or, why: WHY.crossOr });
   }
+
+  // Round 1 Q11 (ROUND1-PLAN-r4 section 5): "male vs female" / "male and female" compare the two sexes, so they read as the
+  // by-sex breakdown (Male, Female and Unknown each its own category), not one "male or female" total and not a change
+  // between periods. Scope: the two victim-sex values only, joined directly by "and" / "vs" / "versus"; "or", an explicit
+  // combined total ("combined", "together", "total") and share questions keep their current reading.
+  const sexF = s.filters.filter((f) => f.filter.field === "sex");
+  const sexValues = new Set(sexF.flatMap((f) => f.filter.predicates.flatMap((p) => p.values)));
+  // Codex build review (Q11): an aggregate word anywhere ("total", "combined", "all" ...) keeps the combined reading,
+  // whatever concept recognized it; the comparison applies only when no such word is present.
+  const aggregateWord = parts.some((p) => /\b(?:total|totals|combined|overall|altogether|together|sum|all)\b/i.test(p.text));
+  if (sexF.length === 2 && sexValues.has("Male") && sexValues.has("Female") && s.combineWord !== "union" && !s.share && !aggregateWord) {
+    const [a, b] = [...sexF].sort((x, y) => x.parts[0].span[0] - y.parts[0].span[0]);
+    const gapStart = Math.max(...a.parts.map((p) => p.span[1]));
+    const gapEnd = Math.min(...b.parts.map((p) => p.span[0]));
+    // "vs"/"versus" is recognized as a comparison statistic, "and" as a connector.
+    const join = parts.find((p) => (p.concept === "connector" || p.concept === "statistic") && /^(?:and|vs\.?|versus)$/i.test(p.text.trim()) && p.span[0] >= gapStart && p.span[1] <= gapEnd);
+    const onlyJoinBetween = join && !parts.some((p) => p !== join && !["filler", "punctuation"].includes(p.concept) && p.span[0] >= gapStart && p.span[1] <= gapEnd);
+    if (join && onlyJoinBetween) {
+      s.filters = s.filters.filter((f) => f !== a && f !== b);
+      s.declined = s.declined.filter((d) => d.part !== join);
+      s.dims.push({ d: "sex", part: a.parts[0] });
+      for (const p of [...a.parts, ...b.parts, join]) s.slot.set(p, "dim:sex");
+    }
+  }
   return s;
 }
 
@@ -1322,6 +1346,13 @@ function periodWords(spec: ShrQuestionSpec): string {
   const allFull = [...byYear.values()].every((ms) => ms.length === 12);
   const contiguousYears = years.every((y, i) => i === 0 || y === years[i - 1] + 1);
   if (allFull && years.length > 2 && contiguousYears) return `${years[0]}-${years[years.length - 1]}`;
+  // Round 1 W1 (owner threshold 1): only the last year partial, from January on, is written as a range with its end.
+  const lastMonths = [...(byYear.get(years[years.length - 1]) ?? [])].sort((a, b) => a - b);
+  const leadingFull = years.slice(0, -1).every((y) => (byYear.get(y) ?? []).length === 12);
+  if (!allFull && years.length > 2 && contiguousYears && leadingFull && lastMonths[0] === 1 && lastMonths.every((m, i) => m === i + 1)) {
+    const lastYear = years[years.length - 1];
+    return `${years[0]}-${lastYear} (${lastYear} ${lastMonths.length === 1 ? "January only" : `through ${monthWords([lastMonths[lastMonths.length - 1]])}`})`;
+  }
   const monthSets = [...byYear.values()].map((ms) => [...ms].sort((a, b) => a - b).join(","));
   if (!allFull && years.length > 2 && contiguousYears && new Set(monthSets).size === 1) return `${monthWords([...byYear.values()][0].sort((a, b) => a - b))} of each year, ${years[0]}-${years[years.length - 1]}`;
   return [...byYear.entries()].map(([y, ms]) => (ms.length === 12 ? String(y) : `${monthWords([...ms].sort((a, b) => a - b))} ${y}`)).join(", ");
@@ -1384,14 +1415,17 @@ function describe(spec: ShrQuestionSpec, labels: string[]): { title: string; exp
     case "share": {
       const n = spec.numerator!;
       const how = n.field === "weapon" ? `were killed with a ${n.label}` : n.field === "relationship" || n.field === "circumstance" ? `were in the category: ${n.label}` : `were ${n.label}`;
-      statistic = `The share of these ${unit} that ${how}${per}: the number that ${how} divided by all of them. ${cap(unit.slice(0, 1))}${unit.slice(1)} whose value is unknown stay in the total and are counted separately.`;
+      statistic = `The share of these ${unit} that ${how}${per}: the number that ${how} divided by all of them. ${cap(unit.slice(0, 1))}${unit.slice(1)} whose value is unknown stay in the total.`;
       // Owner 2026-10-23: "Share Of Female Homicide Victims Killed With A Firearm, United States, 1976 to 2026 (...)".
       const what = n.field === "weapon" ? `Killed With A ${cap(n.label)}` : `That ${cap(how)}`;
       title = `Share Of ${cap(subject)} ${what}, ${where}, ${tWhen}`; yAxisLabel = "share (%)";
       columnLabels[`numerator_${unit}`] = n.field === "weapon" ? `Killed With A ${cap(n.label)}` : cap(how.replace(/^were /, ""));
       columnLabels[`denominator_${unit}`] = `All ${cap(subject)}`;
       columnLabels.share_pct = "Share (%)";
-      columnLabels[`unknown_value_${unit}`] = `${cap(n.field)} Unknown`;
+      // Round 1 Q3 (owner: "a weapon unknown column on the table that I didn't ask for"): the unknown count is not shown in
+      // the grid unless the question is about unknowns; it stays in the denominator and in the CSV export. An empty label
+      // means "not shown in the grid" (lib/table-display.ts).
+      columnLabels[`unknown_value_${unit}`] = /unknown/i.test(n.label) ? `${cap(n.field)} Unknown` : "";
       break;
     }
     case "age":
@@ -1415,8 +1449,11 @@ export function compileShrQuestion(input: ShrQuestionSpec): CompiledShrQuestion 
   const labels = placeOf(spec).labels;
   const { title, explanation, yAxisLabel, columnLabels } = describe(spec, labels);
   const dim = dimensionOf(spec);
-  const chartType = spec.type === "top" || dim ? "bar" : spec.time ? "line" : "none";
-  const xAxis = spec.type === "top" ? dim!.column : dim ? dim.column : spec.time === "month" ? "month" : spec.time === "year" ? "year" : null;
+  // Round 1 D4: a breakdown over time (a dimension AND months or years) charts time across with one series per category;
+  // the chart pivots the category into series (baseline P376: age group by month, previously a blank chart).
+  const timeAxis = spec.time === "month" ? "month" : spec.time === "year" ? "year" : null;
+  const chartType = spec.type === "top" ? "bar" : dim && timeAxis ? "line" : dim ? "bar" : spec.time ? "line" : "none";
+  const xAxis = spec.type === "top" ? dim!.column : dim && timeAxis ? timeAxis : dim ? dim.column : timeAxis;
   const compiled = deepFreeze({ spec, sql, coverageSql, columns, valueColumn, title, explanation, chartType, xAxis, yAxisLabel, columnLabels }) as CompiledShrQuestion;
   ISSUED.add(compiled);
   return compiled;

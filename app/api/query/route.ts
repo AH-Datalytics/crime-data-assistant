@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { withPartialPeriodFallback } from "@/lib/partial-periods";
 import { applySpellingCorrections, runWithSpellingContext, withSpellingNote } from "@/lib/spelling-corrections";
 import { getDb, logQuery } from "@/lib/rtci-db";
 import { validatePageToken } from "@/lib/page-token";
@@ -177,6 +178,8 @@ function sseEvent(event: NonFactualStreamEvent | SealedPayload<FactualStreamEven
   }
   // Option 3 batch 1: the stated reading of a corrected misspelling, on every delivered text (lib/spelling-corrections.ts).
   if (payload.type === "result" && typeof payload.explanation === "string") payload.explanation = withSpellingNote(payload.explanation) ?? payload.explanation;
+  // Round 1 D3: partial-period markers for annual charts whose producer did not name them (lib/partial-periods.ts).
+  if (payload.type === "result" && payload.chartConfig) withPartialPeriodFallback(payload as Parameters<typeof withPartialPeriodFallback>[0]);
   if ((payload.type === "explanation" || payload.type === "error") && typeof payload.text === "string") payload.text = withSpellingNote(payload.text) ?? payload.text;
   const chartAuditSource = payload.chartAuditSource;
   delete payload.chartAuditSource;

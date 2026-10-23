@@ -30,7 +30,8 @@ const ALLOWED_SITES = new Set([
   "per-year-rows", "period-total", "places-side-by-side", "relative-period-resolved", "rolling-endpoint-months", "rolling-window-sum",
   "series-over-time", "sort-most-common", "statistic-computed", "unstable-total-split",
 ]);
-const ALLOWED_LOOKUPS = new Set(["source-bounds", "agency-resolution", "sample-size", "first-reported-month"]);
+// Round 1 Q1 adds "county-agencies": names in-county Current Trends agencies inside a refusal; it never produces a number.
+const ALLOWED_LOOKUPS = new Set(["source-bounds", "agency-resolution", "sample-size", "first-reported-month", "county-agencies"]);
 const src = fs.readFileSync(path.join(__dirname, "..", "lib", "current-question-compiler.ts"), "utf8").split("\n");
 const start = src.findIndex((l) => /^class CurrentTypedQuery \{/.test(l));
 const end = src.findIndex((l) => /^\} \/\/ end CurrentTypedQuery/.test(l));
@@ -108,6 +109,37 @@ check(Boolean(rateMonth && rateMonth.rows[0].value === 5 && /in that month/.test
 const rolling = answer(compileCurrentSpec(series({ statistic: "rate", grain: "rolling", period: { form: "month", year: 2025, month: 3 } }), ctx));
 // window Apr 2024-Mar 2025: 120 robberies; population (9 x 100,000 + 3 x 200,000) / 12 = 125,000 -> 96
 check(Boolean(rolling && rolling.rows[0].value === 96), `the rolling rate uses the months-weighted population of the same twelve months (${rolling?.rows[0].value}, want 96)`);
+// Round 1 Q5: with no period named, a rolling series starts at the first full 12-month window (data from January 2024 ->
+// first total December 2024) and says so; a named period keeps its own start, with its partial windows empty, never summed.
+{
+  const unnamed = answer(compileCurrentSpec(series({ grain: "rolling", period: { form: "none" } }), ctx));
+  check(Boolean(unnamed && String(unnamed.rows[0].period) === "2024-12" && unnamed.rows.length === 13 && unnamed.rows.every((r) => r.value === 120)), `Q5 unnamed rolling starts at the first full window (${unnamed?.rows[0]?.period}, ${unnamed?.rows.length} rows)`);
+  check(Boolean(unnamed && /starts with the 12 months ending December 2024, the earliest possible window/.test(unnamed.explanation)), "Q5 the start is described as the earliest possible window");
+  const named = answer(compileCurrentSpec(series({ grain: "rolling", period: { form: "since", from: 2024 } }), ctx));
+  check(Boolean(named && String(named.rows[0].period) === "2024-01" && named.rows[0].value === null && named.rows.find((r) => String(r.period) === "2024-12")?.value === 120), "Q5 a named start is kept; its partial windows are empty, never summed");
+  check(Boolean(named && /start before the data begins \(January 2024\)/.test(String(named.rows[0].note)) && !/no report/.test(String(named.rows[0].note))), `Codex Q5: a window reaching before the source says so, not "no report" (${named?.rows[0]?.note})`);
+  // Codex Q5: with a missing month inside coverage (Beta has no 2025-03), the earliest window stays empty and is not called a total.
+  const beta = answer(compileCurrentSpec(series({ places: [agencyPlace("Beta", "AA")], grain: "rolling", period: { form: "none" } }), ctx));
+  check(Boolean(beta && beta.rows.find((r) => String(r.period) === "2025-03")?.value === null && /no report for/.test(String(beta.rows.find((r) => String(r.period) === "2025-03")?.note)) && !/first total/.test(beta.explanation)), "Codex Q5: a missing report inside coverage stays empty, named as missing, and nothing claims it holds a total");
+}
+// Round 1 Q1: a county agency stored under its bare name ("Zeta", type County; not in the sample) resolves for "Zeta County"
+// and reads "Zeta County, AA"; a city of the same bare name is not taken for it.
+{
+  for (let m = 1; m <= 12; m += 1) for (const o of OFF) ins("agency_monthly", { ori: "C1", agency: "Zeta", state: "AA", type: "County", year: 2025, month: m, offense: o, count: 4 });
+  const county = { kind: "agency" as const, agencyKind: "county" as const, name: "Zeta", state: "AA", text: "Zeta County, AA" };
+  const z = answer(compileCurrentSpec(series({ places: [county] }), ctx));
+  check(Boolean(z && z.rows[0].value === 48 && String(z.rows[0].place) === "Zeta County, AA"), `Q1 county agency under its bare name resolves and is labeled as a county (${z?.rows[0]?.place}, ${z?.rows[0]?.value})`);
+  check(Boolean(z && /county agency's own Current Trends record/.test(z.explanation)), "Q1 the county-agency caveat is stated");
+  db.exec("CREATE TABLE IF NOT EXISTS agency_county_crosswalk (ori TEXT, ori9 TEXT, agency_name TEXT, state TEXT, county_key TEXT)");
+  for (const ori of ["A1", "A2", "B1"]) ins("agency_county_crosswalk", { ori, ori9: ori, agency_name: ori, state: ori === "B1" ? "BB" : "AA", county_key: "OMEGA" });
+  const absent = compileCurrentSpec(series({ places: [{ ...county, name: "Omega", text: "Omega County, AA" }] }), ctx);
+  check(absent.kind === "decline" && /isn't one of the agencies in Current Trends/.test(absent.explanation) && /does have Alpha, AA and Beta, AA in Omega County/.test(absent.explanation),
+    `Q1 (owner decision B) a county with no agency record names its most populous Current Trends agencies, same state only (${absent.kind === "decline" ? absent.explanation : ""})`);
+  const none = compileCurrentSpec(series({ places: [{ ...county, name: "Psi", text: "Psi County, AA" }] }), ctx);
+  check(none.kind === "decline" && /has no agencies in Psi County/.test(none.explanation), "Q1 a county with no Current Trends agencies says so");
+  const cityNotCounty = compileCurrentSpec(series({ places: [{ ...county, name: "Alpha", text: "Alpha County, AA" }] }), ctx);
+  check(cityNotCounty.kind === "decline", "Q1 a city of the same bare name is not taken for the county");
+}
 const noPop = answer(compileCurrentSpec(series({ places: [agencyPlace("Beta", "AA")], statistic: "rate", period: { form: "month", year: 2025, month: 1 } }), ctx));
 check(Boolean(noPop && noPop.rows[0].value === null && /no population on file for Beta, AA in 2025/.test(String(noPop.rows[0].note))), "no population on file: no rate, named");
 // C6: population year = the last month's year; membership, then coverage, then size

@@ -225,6 +225,21 @@ async function main() {
     assert.ok(odd.shown.includes("shr_records"), "a status that is not 'recorded' everywhere stays");
     assert.equal(tableDisplay(cols, rows, "", { year: "Weapon Unknown", Month: "x", period: "y" }).labels.year, undefined, "a supplied label never renames a time column");
   });
+  await check("round 1 Q3: an unrequested unknown count is not shown in the grid; the denominator stays", () => {
+    const cols = ["place", "year", "numerator_victims", "denominator_victims", "share_pct", "unknown_value_victims", "shr_records"];
+    const rows = [1976, 1977].map((year, i) => ({ place: "United States", year, numerator_victims: 2079 + i, denominator_victims: 4080 + i, share_pct: 51 + i, unknown_value_victims: 12, shr_records: "recorded" }));
+    const columnLabels = { numerator_victims: "Killed With A Firearm", denominator_victims: "All Female Homicide Victims", share_pct: "Share (%)", unknown_value_victims: "" };
+    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: cols, rows, title: "Share Of Female Homicide Victims Killed With A Firearm, United States, 1976 to 2026", columnLabels }));
+    assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Year", "Killed With A Firearm", "All Female Homicide Victims", "Share (%)"]);
+    assert.ok(!tableDisplay(cols, rows, "", columnLabels).shown.includes("unknown_value_victims"));
+  });
+  await check("round 1 Q8: the pooled SHR status column is hidden only when every cell is empty", () => {
+    const cols = ["place", "victims", "periods_without_records"];
+    const empty = [{ place: "Texas", victims: 1200, periods_without_records: null }, { place: "Ohio", victims: 700, periods_without_records: null }];
+    assert.ok(!tableDisplay(cols, empty).shown.includes("periods_without_records"), "all empty: hidden");
+    const some = [{ place: "Texas", victims: 1200, periods_without_records: null }, { place: "Ohio", victims: 700, periods_without_records: "2021" }];
+    assert.ok(tableDisplay(cols, some).shown.includes("periods_without_records"), "a substantive status stays");
+  });
   await check("monthly periods read 'MMM YY' in the grid (owner 2026-10-23); years and the raw values are unchanged", () => {
     assert.equal(monthLabel("2019-01"), "Jan 19");
     assert.equal(monthLabel("2025-12"), "Dec 25");

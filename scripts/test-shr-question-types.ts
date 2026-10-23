@@ -190,6 +190,10 @@ declines("How many multiple-victim incidents were there in Texas in 2025?", /sin
 // #5 the share denominator follows the subject, both phrasings (3/4 = 75%).
 check(first("What share of female murder victims were killed with a firearm in Texas in 2025?", "share_pct") === 75, "#5 share of female murder victims killed with a firearm = 75%");
 check(first("What share of murder victims who were female were killed with a firearm in Texas in 2025?", "share_pct") === 75, "#5 relative-clause phrasing = 75% (not 3/7)");
+// Round 1 Q2: "killed via" and "killed by" read like "killed with" (the verb is part of the weapon phrase, not a second measure).
+check(first("What share of female murder victims were killed via firearm in Texas in 2025?", "share_pct") === 75, "Q2 killed via firearm = killed with a firearm");
+check(first("What share of female murder victims were killed by firearm in Texas in 2025?", "share_pct") === 75, "Q2 killed by firearm = killed with a firearm");
+check(first("What share of female murder victims were killed using a firearm in Texas in 2025?", "share_pct") === 75, "Q2 killed using a firearm = killed with a firearm");
 check(first("What share of Texas murder victims were female in 2025?", "share_pct") === 57.1, "#5 share of Texas murder victims who were female = 4/7 = 57.1%");
 check(first("what share of murders in Houston involved a firearm since 2024", "share_pct") === 83.3, "#5 Houston firearm share since 2024 = 5/6 = 83.3%");
 // #6 coverage: an age over 2023-2025 discloses 2023; a measure-specific absence is a recorded 0.
@@ -339,6 +343,45 @@ declines("Share of murder victims with an unknown relationship by sex and year",
 declines("homicides in baldwin county al in 2025 excluding Bay Minette", /Excluding or negating/, "excluding a place declines");
 declines("homicides excluding murders in 2025", /Excluding or negating/, "excluding murders declines");
 declines("murder via banana in Texas in 2025", /./, "banana still declines (recognition gate covers it at the route)");
+declines("murders and manslaughters in Texas in 2020", /one homicide type at a time/, "Q2 control: a genuine two-measure request keeps its decline");
+
+/* ---------------- Round 1 Q6: period wording compacts contiguous years only ---------------- */
+{
+  const text = (q: string) => { const r = run(q); return answered(r) ? r.compiled.explanation : `DECLINE ${r.decline}`; };
+  const full = text("murder victims per year in Texas from 2020 to 2023");
+  check(/\b2020-2023\b/.test(full) && !/2020, 2021/.test(full), `Q6 contiguous full years read as a range (${full.slice(0, 120)})`);
+  const gap = text("murder victims in Texas in 2019, 2021 and 2023");
+  check(/DECLINE/.test(gap) || (!/2019-2023/.test(gap) && /2019/.test(gap) && /2023/.test(gap)), `Q6 a selection with gaps never becomes a range (${gap.slice(0, 120)})`);
+}
+
+/* ---------------- Round 1 Q11: "male vs female" / "male and female" = by sex ---------------- */
+{
+  const same = (a: string, b: string, label: string) => {
+    const ra = run(a); const rb = run(b);
+    check(answered(ra) && answered(rb) && ra.compiled.sql === rb.compiled.sql && JSON.stringify(ra.rows) === JSON.stringify(rb.rows) && ra.rows.length > 0,
+      `${label} -> ${answered(ra) ? `${ra.rows.length} rows` : ra.decline.slice(0, 100)} / ${answered(rb) ? `${rb.rows.length} rows` : rb.decline.slice(0, 100)}`);
+    return ra;
+  };
+  same("Male vs female murder victims in Texas in 2025", "murder victims by sex in Texas in 2025", "Q11 single period: male vs female = by sex");
+  same("Male and female murder victims in Texas in 2025", "murder victims by sex in Texas in 2025", "Q11 single period: male and female = by sex");
+  const multi = same("Male vs female murder victims per year in Texas since 2022", "murder victims by sex per year in Texas since 2022", "Q11 multi-year: male vs female = by sex per year");
+  if (answered(multi)) {
+    const sexes = new Set(multi.rows.map((r) => String(r.victim_sex)));
+    check(sexes.has("Male") && sexes.has("Female"), `Q11 multi-year rows keep Male and Female as separate categories (${[...sexes].join(", ")})`);
+    check(!multi.rows.some((r) => /male or female/i.test(String(r.victim_sex))), "Q11 never folds the sexes into one value");
+  }
+  same("Male versus female firearm murder victims per year in Texas since 2022", "firearm murder victims by sex per year in Texas since 2022", "Q11 versus with a weapon filter = by sex");
+  // Controls keep their current readings.
+  const c1 = specOf("combined total of male and female murder victims in Texas in 2025");
+  check(typeof c1 !== "string" && !JSON.stringify(c1).includes("\"sex\",\"part\"") && JSON.stringify(c1).includes("Male") && JSON.stringify(c1).includes("Female"), "Q11 control: an explicit combined total stays one male-or-female total");
+  for (const q of ["total male and female murder victims in Texas in 2025", "all male and female murder victims in Texas in 2025", "male and female murder victims combined in Texas in 2025"]) {
+    const r = run(q);
+    check(answered(r) && !r.rows.some((row) => "victim_sex" in row), `Codex Q11: an aggregate word keeps one total (${q}) -> ${answered(r) ? JSON.stringify(r.rows[0]).slice(0, 80) : r.decline.slice(0, 80)}`);
+  }
+  const c2 = specOf("male or female murder victims in Texas in 2025");
+  check(typeof c2 !== "string" && JSON.stringify(c2).includes("Male") && JSON.stringify(c2).includes("Female"), "Q11 control: 'or' stays a filter list");
+  declines("how did male vs female murder victims change from 2019 to 2020", /counts by year instead/, "Q11 control: a period-change request keeps its decline");
+}
 
 /* ---------------- Codex r2 probe wordings not covered above ---------------- */
 declines("How many murder victims under 5 or over 65 were there in Texas in 2025?", /one age range at a time|"or" works only/, "probe-7: age ranges joined by or decline");
@@ -485,7 +528,10 @@ check(exactCount("9007199254740993").ok === false && exactCount("900719925474099
   const r = run("What share of female murder victims were killed with a firearm in Texas since 2022?");
   if (answered(r)) {
     check(r.compiled.title === "Share Of Female Murder Victims Killed With A Firearm, Texas, 2022 to 2025", `share title is compact (${r.compiled.title})`);
-    check(JSON.stringify(r.compiled.columnLabels) === JSON.stringify({ numerator_victims: "Killed With A Firearm", denominator_victims: "All Female Murder Victims", share_pct: "Share (%)", unknown_value_victims: "Weapon Unknown" }), `share column labels (${JSON.stringify(r.compiled.columnLabels)})`);
+    // Round 1 Q3: the unrequested unknown count has an empty label (not shown in the grid; kept in the CSV and the total).
+    check(JSON.stringify(r.compiled.columnLabels) === JSON.stringify({ numerator_victims: "Killed With A Firearm", denominator_victims: "All Female Murder Victims", share_pct: "Share (%)", unknown_value_victims: "" }), `share column labels (${JSON.stringify(r.compiled.columnLabels)})`);
+    check(r.compiled.columns.includes("unknown_value_victims") && r.compiled.columns.includes("denominator_victims"), "Q3: the unknown count and the denominator stay in the answer's columns (CSV)");
+    check(/unknown stay in the total/.test(r.compiled.explanation), "Q3: the text still says unknowns stay in the total");
     check(/2022, 2023, 2024, 2025|2022-2025/.test(r.compiled.explanation), "the explanation keeps the full period words");
   } else check(false, `share question answered (${r.decline})`);
   const p = run("What share of female murder victims were killed with a firearm in Texas since 2022?", { ...CUTOFF, month: 10 });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withPartialPeriodFallback } from "@/lib/partial-periods";
 import { getNibrsDb, executeWithTimeout, executeBoundNibrsStatement, logNibrsQuery } from "@/lib/nibrs-db";
 import { finalizeNibrsStatement } from "@/lib/nibrs-execution-binding";
 import { isZeroResult } from "@/lib/shr-agency-probe";
@@ -159,6 +160,8 @@ function jsonResp(data: SealedPayload<object> | QueryError, status = 200) {
   if (typeof payload.explanation === "string") payload.explanation = withSpellingNote(payload.explanation) ?? payload.explanation;
   if (typeof payload.error === "string") payload.error = withSpellingNote(payload.error) ?? payload.error;
   if (Array.isArray(payload.rows)) payload.rows = normalizeNibrsDisplayRows(payload.rows);
+  // Round 1 D3: partial-period markers for annual charts whose producer did not name them (lib/partial-periods.ts).
+  if (payload.chartConfig) withPartialPeriodFallback(payload);
   // ChartPanel renders chartConfig.title, which the sanitization above never
   // touched -- a leaking title was blanked in the header while the chart still
   // showed it. Applied here so every response path is covered.

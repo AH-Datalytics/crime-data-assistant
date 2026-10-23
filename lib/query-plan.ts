@@ -8,7 +8,70 @@ export type QueryPlanChip = {
   label: string;
   value: string;
   status: "ok" | "advisory" | "blocking" | "empty";
+  /** Full text for the tooltip when `value` is shortened (e.g. "3 places"). */
+  detail?: string;
 };
+
+/** The delivered answer a result chip is checked against (round 1 D8). */
+export type DeliveredAnswer = { title?: string; explanation?: string; columns?: string[]; rows?: Record<string, unknown>[] };
+
+const GENERIC_METRIC_WORDS = new Set(["rate", "rates", "count", "counts", "share", "ranking", "comparison", "trend", "trends", "total", "totals", "number", "per", "of", "the", "and", "by", "in", "change"]);
+const stem = (w: string) => w.toLowerCase().replace(/ies$/, "y").replace(/s$/, "");
+
+/**
+ * Round 1 D8: the "understood as" chips of an answered question are checked against the delivered answer, never only
+ * the question text. A place chip lists the places the answer actually covers; a metric, time or unit chip the answer
+ * does not confirm is hidden rather than shown as understood (baseline W05, W06, P032, P050, P402).
+ */
+export function confirmResultChips(chips: QueryPlanChip[], answer: DeliveredAnswer | null | undefined): QueryPlanChip[] {
+  if (!answer) return chips;
+  const rows = Array.isArray(answer.rows) ? answer.rows : [];
+  const columnValues = (key: string) => [...new Set(rows.map((r) => r[key]).filter((v) => v !== null && v !== undefined && v !== "").map(String))];
+  const measures = columnValues("measure").map((m) => m.replace(/_/g, " "));
+  const periods = [...columnValues("period"), ...columnValues("year")];
+  const text = [answer.title ?? "", answer.explanation ?? "", ...(answer.columns ?? []), ...measures, ...periods].join(" ").toLowerCase().replace(/_/g, " ");
+  const words = new Set(text.split(/[^a-z0-9]+/).filter(Boolean).map(stem));
+  const places = columnValues("place");
+  const statistics = columnValues("statistic");
+  const out: QueryPlanChip[] = [];
+  for (const chip of chips) {
+    if (chip.key === "place") {
+      if (places.length) { out.push({ ...chip, value: places.length <= 2 ? places.join(" and ") : `${places.length} places`, detail: places.join("; ") }); continue; }
+      // Without a place column (wide answers: one column per place), a single-place chip is kept only when the answer
+      // does not name further places ("New York City, NY and Chicago, IL"; baseline P032).
+      const tokens = chip.value.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2).map(stem);
+      const namesMore = /[A-Z][A-Za-z.]+(?:,\s*[A-Z]{2})?\s+(?:and|vs\.?|versus)\s+[A-Z]/.test(answer.title ?? "");
+      if (tokens.length && tokens.every((t) => words.has(t)) && !namesMore) out.push(chip);
+      continue;
+    }
+    if (chip.key === "metric") {
+      const tokens = chip.value.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t && !GENERIC_METRIC_WORDS.has(t)).map(stem);
+      if (tokens.length && tokens.every((t) => words.has(t))) out.push(chip);
+      continue;
+    }
+    if (chip.key === "time") {
+      const years = chip.value.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+      const openEnded = /present|now|latest|current/i.test(chip.value);
+      // An open-ended chip ("2025-present") needs an answer that spans more than one year (baseline P329, P402, P051).
+      const answerYears = new Set([...(text.match(/\b(?:19|20)\d{2}\b/g) ?? []), ...periods.map((p) => p.slice(0, 4))]);
+      const answerOpen = answerYears.size > 1;
+      if (years.every((y) => words.has(y)) && (!openEnded || answerOpen)) out.push(chip);
+      continue;
+    }
+    if (chip.key === "unit") {
+      const v = chip.value.toLowerCase();
+      const rateShown = /per 100(?:,000|k)|rate per|rate_per_100k|rate per 100k/.test(text) || statistics.some((s) => /rate/.test(s));
+      const pctShown = /%|percent|share|pct/.test(text) || statistics.some((s) => /share|percent/.test(s));
+      if (/100k|100,000|per/.test(v)) { if (rateShown) out.push(chip); continue; }
+      if (/percent|%|share/.test(v)) { if (pctShown) out.push(chip); continue; }
+      if (/count/.test(v) && statistics.length && !statistics.some((s) => /count/.test(s))) continue;
+      out.push(chip);
+      continue;
+    }
+    out.push(chip);
+  }
+  return out;
+}
 
 export type QueryPlan = {
   chips: QueryPlanChip[];

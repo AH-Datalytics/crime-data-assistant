@@ -398,7 +398,7 @@ function compileRank(spec: RankSpec, deps: CompileDeps): CompileResult {
   // r2 §4: every place in scope is read (LEFT JOIN from the agency list), so each exclusion is counted under one reason
   // and stated -- nothing is left out silently. States are counted against the 50 states and DC.
   type Reason = "no report" | "not reported" | "no population";
-  type Entry = { place: string; value: number | null; population: number | null; reason: Reason | null };
+  type Entry = { place: string; value: number | null; population: number | null; reason: Reason | null; ori?: string; agencyType?: string };
   let sql: string;
   let entries: Entry[];
   let statesMissing = 0;
@@ -415,9 +415,9 @@ function compileRank(spec: RankSpec, deps: CompileDeps): CompileResult {
     const countExpr = spec.family === "crime" ? agencyCountExpr(spec.measure) : spec.family === "clearance" ? `hac.${CLR_COL[spec.measure]}` : `hac.${STAFF_COL[spec.measure]}`;
     const cols = [`${countExpr} AS c`, ...(rate ? [`${countExpr} * ${per} / NULLIF(hap.population, 0) AS r`] : []), ...(spec.family === "staffing" ? ["hac.all_total AS all_total"] : [])];
     const table = spec.family === "crime" ? "historical_agency_crime" : spec.family === "clearance" ? "historical_agency_clearance" : "historical_staffing";
-    sql = `SELECT ha.ori, ha.agency, ha.state, hac.ori AS reported_ori, ${cols.join(", ")}, hap.population AS hap_population FROM historical_agency ha LEFT JOIN ${table} hac ON hac.ori = ha.ori AND hac.year = ${year} LEFT JOIN historical_agency_population hap ON hap.ori = ha.ori AND hap.year = ${year} WHERE LOWER(ha.type) IN (${types})${scope} ORDER BY ha.agency`;
+    sql = `SELECT ha.ori, ha.agency, ha.state, ha.type AS agency_type, hac.ori AS reported_ori, ${cols.join(", ")}, hap.population AS hap_population FROM historical_agency ha LEFT JOIN ${table} hac ON hac.ori = ha.ori AND hac.year = ${year} LEFT JOIN historical_agency_population hap ON hap.ori = ha.ori AND hap.year = ${year} WHERE LOWER(ha.type) IN (${types})${scope} ORDER BY ha.agency`;
     const rows = deps.execute(sql);
-    entries = rows.map((r) => {
+    entries = rows.map((r) => ({ ori: String(r.ori), agencyType: String(r.agency_type ?? ""), ...((): Entry => {
       const pop = num(r.hap_population);
       const c = num(r.c);
       const place = `${String(r.agency)}, ${displayState(String(r.state))}`;
@@ -429,7 +429,7 @@ function compileRank(spec: RankSpec, deps: CompileDeps): CompileResult {
       } else if (c === null) return { place, value: null, population: pop, reason: "not reported" as Reason };
       if (!rate) return { place, value: c, population: pop, reason: null };
       return pop && pop > 0 ? { place, value: num(r.r), population: pop, reason: null } : { place, value: null, population: pop, reason: "no population" as Reason };
-    });
+    })() }));
   }
   const countOf = (reason: Reason) => entries.filter((e) => e.reason === reason).length;
   let pool = entries.filter((e) => e.value !== null);
@@ -449,7 +449,16 @@ function compileRank(spec: RankSpec, deps: CompileDeps): CompileResult {
   if (alphabetical) pool.sort((a, b) => a.place.localeCompare(b.place));
   else pool.sort((a, b) => (dir === "top" ? (b.value as number) - (a.value as number) : (a.value as number) - (b.value as number)) || a.place.localeCompare(b.place));
   const chosen = spec.rank ? pool.slice(0, spec.rank.n) : pool;
-  const rows = chosen.map((e, i) => ({ rank: alphabetical ? null : i + 1, place: e.place, year, measure: spec.measure, statistic: spec.statistic, value: spec.statistic === "count" ? e.value : r1(e.value), population: perResident ? e.population : null }));
+  // Round 1 D7: two chosen agencies with the same label are told apart by their recorded type, then by ORI.
+  const TYPE_WORD: Record<string, string> = { city: "city agency", county: "county agency", university: "university", tribal: "tribal agency", state_police: "state police", state_agency: "state agency", federal: "federal agency", other: "other agency" };
+  const labelOf = (e: Entry) => {
+    const same = chosen.filter((x) => x.place === e.place);
+    if (same.length < 2) return e.place;
+    const typed = e.agencyType && TYPE_WORD[e.agencyType] ? `${e.place} (${TYPE_WORD[e.agencyType]})` : e.place;
+    const sameTyped = same.filter((x) => x.agencyType === e.agencyType);
+    return sameTyped.length > 1 && e.ori ? `${e.place} (${e.ori})` : typed;
+  };
+  const rows = chosen.map((e, i) => ({ rank: alphabetical ? null : i + 1, place: labelOf(e), year, measure: spec.measure, statistic: spec.statistic, value: spec.statistic === "count" ? e.value : r1(e.value), population: perResident ? e.population : null }));
   const entityWord = spec.entity === "state" ? "states" : spec.entity === "city" ? "cities" : spec.entity === "county" ? "county agencies" : "agencies";
   const oneWord = spec.entity === "state" ? "state" : spec.entity === "city" ? "city agency" : spec.entity === "county" ? "county agency" : "agency";
   const manyWord = spec.entity === "state" ? "states" : spec.entity === "city" ? "city agencies" : spec.entity === "county" ? "county agencies" : "agencies";

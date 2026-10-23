@@ -141,6 +141,31 @@ const at = (q: string, word: string, from = 0): Span => { const i = q.indexOf(wo
   check(ctx("murders in Texas please").includes("trailing-polite:please"), "trailing please is context");
   check(ctx("not murders in Texas").length === 0, "a leading negation is never context");
   check(ctx("murders in Texas or Ohio").length === 0, "and/or are never context");
+  // Round 1 step B (STEP-B-LEFTOVER-RULE-r2.md): the two closed openers take their WHOLE prefix, ahead of the generic
+  // question / yes-no openers, only at the start, and never swallow what follows.
+  check(ctx("What can you tell me about DC violent crime trends?").includes("tell-me-opener:What can you tell me about"), "tell-me opener takes its whole prefix (L9552)");
+  check(ctx("What data can you tell me about crime at apartment complexes").includes("tell-me-opener:What data can you tell me about"), "tell-me opener with 'data' (L2577)");
+  check(!ctx("What can you tell me about DC violent crime trends?").some((s) => s.startsWith("question-opener")), "the generic question opener does not take the tell-me prefix");
+  check(ctx("create a dataset of monthly homicides by state").includes("dataset-opener:create a dataset of"), "dataset opener (L9062)");
+  check(ctx("create dataset of monthly homicides by state").includes("dataset-opener:create dataset of"), "dataset opener without 'a' (L9060)");
+  check(ctx("Is it possible to create a dataset of violent offenses").includes("dataset-opener:Is it possible to create a dataset of"), "dataset opener ahead of the yes-no opener (L9015)");
+  check(!ctx("dataset of robberies by state").some((s) => s.startsWith("dataset-opener")), "'dataset of' without 'create' is not an opener (L9067)");
+  check(ctx("make that monthly").includes("make-it-opener:make that"), "W22: a leading 'make that' opens a follow-up");
+  check(ctx("Now make it a rate").includes("make-it-opener:Now make it"), "W22: 'now make it'");
+  check(!ctx("murders in Texas, make that monthly").some((s) => s.startsWith("make-it-opener")), "'make that' mid-request is not context");
+  check(!ctx("make them monthly").some((s) => s.startsWith("make-it-opener")) && !ctx("make those a rate").some((s) => s.startsWith("make-it-opener")), "Codex W22: plural 'make them/those' is not an opener (it would escape follow-up detection)");
+  check(!ctx("robberies in Texas, then create a dataset of murders").some((s) => s.startsWith("dataset-opener")), "the dataset opener mid-request is not context");
+  check(!ctx("murders in Texas: what can you tell me about them").some((s) => s.startsWith("tell-me-opener")), "the tell-me opener mid-request is not context");
+  {
+    const q = "create a dataset of murders via banana in Texas";
+    const l = new RequestLedger(q);
+    recordContext(l);
+    l.record({ concept: "measure", span: at(q, "murders"), rule: "m" });
+    l.record({ concept: "place", span: at(q, "Texas"), rule: "p" });
+    recordBetweenFiller(l);
+    l.finalize();
+    check(l.refusedAtRecognition().some((p) => p.text.includes("banana")), "after the dataset opener an unknown restriction still refuses");
+  }
 }
 {
   const q = "murders in the state of Texas";

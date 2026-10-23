@@ -460,13 +460,22 @@ export function nibrsStandaloneTurn(turn: string, priorUserTurns: string[]): boo
  * the rebuilt question exactly as for every resolver.
  */
 export function resolveNibrsPeriodReplacement(question: string, priorUserTurns: string[]): { refinedQuestion: string } | null {
-  const m = question.trim().match(/^(?:ok(?:ay)?[,\s]+)?(?:just\s+)?(?:do|run|show)\s+(?:it|this|that|the\s+same)\s+for\s+((?:19|20)\d{2})[\s,.?!]*$/i);
-  if (!m) return null;
+  // Round 1 W21: also a year range ("show it from 2020 to 2024") and "since <year>". The earlier question's own single
+  // period is replaced; an earlier question with any other year wording is left alone (null), and K2 still checks the rest.
+  const lead = String.raw`^(?:ok(?:ay)?[,\s]+)?(?:(?:now|then)\s+)?(?:just\s+)?(?:do|run|show|make)\s+(?:it|this|that|them|the\s+same)\s+`;
+  const Y = String.raw`((?:19|20)\d{2})`;
+  const one = new RegExp(`${lead}for\\s+${Y}[\\s,.?!]*$`, "i").exec(question.trim());
+  const range = new RegExp(`${lead}(?:from|for)\\s+${Y}\\s*(?:-|–|to|through|thru)\\s*${Y}[\\s,.?!]*$`, "i").exec(question.trim());
+  const since = new RegExp(`${lead}(?:since|starting\\s+in|from)\\s+${Y}[\\s,.?!]*$`, "i").exec(question.trim());
+  const period = one ? `in ${one[1]}` : range ? `from ${range[1]} to ${range[2]}` : since ? `since ${since[1]}` : null;
+  if (!period) return null;
   const prev = priorUserTurns[priorUserTurns.length - 1];
   if (!prev) return null;
-  const stripped = prev.replace(/\s+(?:in|for|during)\s+(?:19|20)\d{2}\b/gi, "");
+  const stripped = prev
+    .replace(/\s+(?:from|between)\s+(?:19|20)\d{2}\s*(?:-|–|to|through|thru|and)\s*(?:19|20)\d{2}\b/gi, "")
+    .replace(/\s+(?:in|for|during|since)\s+(?:19|20)\d{2}\b/gi, "");
   if (/\b(?:19|20)\d{2}\b/.test(stripped)) return null;
-  return { refinedQuestion: `${stripped.replace(/[\s?.!]+$/, "")} in ${m[1]}` };
+  return { refinedQuestion: `${stripped.replace(/[\s?.!]+$/, "")} ${period}` };
 }
 
 export function nibrsFollowupCheck(opts: {

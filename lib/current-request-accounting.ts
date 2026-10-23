@@ -58,6 +58,14 @@ const IMMIGRATION = notTracked("immigration or citizenship status");
 const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\b(?:from\s+)?(${MONTH})\s+(${YEAR})\s*(?:-|–|to|through|thru|until)\s*(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `monthrange:${m[3]}-${monthNo(m[1])}:${m[3]}-${monthNo(m[2])}`, pattern: R(String.raw`\b(?:(?:from|in|for|during)\s+)?(${MONTH})\s*(?:-|–|to|through|thru|until)\s*(${MONTH}),?\s+(${YEAR})\b`) },
+  // Round 1 Q9 ("National murders in July and August 2026"): two named months of one year. Consecutive months are exactly
+  // that month range; any other pair would need a month list, so its value is left unreadable (declined by name) rather
+  // than widened into a range that adds months nobody asked for.
+  {
+    concept: "period",
+    value: (m) => (Number(monthNo(m[2])) === Number(monthNo(m[1])) + 1 ? `monthrange:${m[3]}-${monthNo(m[1])}:${m[3]}-${monthNo(m[2])}` : `monthlist:${m[3]}-${monthNo(m[1])},${m[3]}-${monthNo(m[2])}`),
+    pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+and\s+(${MONTH}),?\s+(${YEAR})\b`),
+  },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
 

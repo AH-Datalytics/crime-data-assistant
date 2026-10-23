@@ -647,6 +647,13 @@ export async function compileNibrsSpec(spec: NibrsSpec, ctx: CompileContext): Pr
 
 async function compileNibrsSpecTypes(spec: NibrsSpec, ctx: CompileContext): Promise<CompiledAnswer> {
   const statements: string[] = [];
+  // Round 1 step B (step A crash L9590/L9591): a measure with no offense codes and no family table ("all crime") picked no
+  // table and threw. NIBRS counts person crimes by victim and the rest by offense, so it asks which crimes, as Current
+  // Trends does, instead of adding them into one total.
+  const specMeasures = "measures" in spec && Array.isArray(spec.measures) ? spec.measures : "measure" in spec && typeof spec.measure === "string" ? [spec.measure] : [];
+  if (specMeasures.some((m) => !(MEASURE_CODES[m]?.length) && !FAMILY_OF[m])) {
+    return { kind: "clarify", explanation: "Which crimes do you want: violent crime, property crime, or a specific offense such as robbery or burglary? NIBRS counts crimes against people by victim and other crimes by offense, so I won't add them into one total.", statements };
+  }
   const run = async (sql: string) => { statements.push(sql); return ctx.run(sql); };
   try {
     switch (spec.type) {

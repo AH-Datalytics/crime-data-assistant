@@ -5,7 +5,7 @@
  * No database, no route.
  */
 import "./offline-evidence-guard";
-import { accountNibrsRequest, nibrsRecognitionRefusal, nibrsRequestKind, nibrsFollowupCheck, followupKey } from "../lib/nibrs-request-accounting";
+import { accountNibrsRequest, nibrsRecognitionRefusal, nibrsRequestKind, nibrsFollowupCheck, followupKey, resolveNibrsPeriodReplacement } from "../lib/nibrs-request-accounting";
 import { nibrsLegacyBound, nibrsUnboundParts, placeIs, expandCodes, periodRange } from "../lib/nibrs-legacy-binding";
 import { isFollowUp } from "../lib/tab-suggest";
 import { demographicMissingYearsNote } from "../lib/nibrs-deterministic-queries";
@@ -112,5 +112,16 @@ check(demographicMissingYearsNote({ ...demoQ, guardrail: "deterministic-nibrs-lo
 check(/either/.test(demographicMissingYearsNote(demoQ, [{ year: 2025 }]) ?? "") && !/because/i.test(demographicMissingYearsNote(demoQ, [{ year: 2025 }]) ?? ""), "r2.2: the note gives both possible reasons, not one");
 check(has("robbery victims in Texas in 2025 by offender age", "breakdown", "offender-age"), "r2: by offender age keeps whose age");
 
+// Round 1 W21: a period-only follow-up replaces the earlier question's single period (year, range or since); anything else is left alone.
+{
+  const r = (q: string, prev: string) => resolveNibrsPeriodReplacement(q, [prev])?.refinedQuestion ?? null;
+  check(r("show it from 2020 to 2024", "Memphis carjackings per month") === "Memphis carjackings per month from 2020 to 2024", "W21 range after a question with no period");
+  check(r("do it for 2023", "Memphis carjackings per month in 2025") === "Memphis carjackings per month in 2023", "single year still replaced");
+  check(r("show that from 2018 to 2020", "Memphis carjackings per year from 2021 to 2025") === "Memphis carjackings per year from 2018 to 2020", "a range replaces a range");
+  check(r("show it since 2019", "Memphis carjackings per month") === "Memphis carjackings per month since 2019", "since");
+  check(r("show it from 2020 to 2024", "Memphis carjackings in 2019 and 2021") === null, "an earlier question with other year wording is left alone");
+  check(r("show robberies from 2020 to 2024", "Memphis carjackings per month") === null, "a new measure is not a period-only follow-up");
+  check(nibrsFollowupCheck({ question: "show it from 2020 to 2024", effective: "Memphis carjackings per month from 2020 to 2024", previousUserTurns: ["Memphis carjackings per month"], isFollowUp }) === null, "K2 accepts the rebuilt question (place, measure, grain carried)");
+}
 console.log(`\n${checks - failures}/${checks} passed`);
 if (failures > 0) process.exit(1);

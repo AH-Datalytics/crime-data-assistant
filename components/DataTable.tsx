@@ -4,8 +4,33 @@ import { useState, useMemo } from "react";
 import { formatNumber, formatDate } from "@/lib/utils";
 import { monthLabel, tableDisplay } from "@/lib/table-display";
 
+/**
+ * Round 1 W2 (owner threshold 2): plain-word headers for internal column names. "Rate per 100k" is the owner's choice.
+ * The CSV export keeps the original column names.
+ */
+const PLAIN_HEADERS: Record<string, string> = {
+  rate_per_100k: "Rate per 100k",
+  firearm_share_pct: "Firearm share (%)",
+  share_pct: "Share (%)",
+  offense_change_pct: "Change from prior year (%)",
+  shr_records: "Homicide records",
+  shr_recorded_months: "Months with homicide records",
+  shr_status: "Coverage status",
+  shr_coverage_caveat: "Coverage note",
+  numerator_victims: "Victims in group",
+  denominator_victims: "All victims",
+  unknown_value_victims: "Victims with unknown value",
+  first_month: "First month with records",
+  last_month: "Last month with records",
+  agency_type: "Agency type",
+  jurisdiction_label: "Jurisdiction",
+  agency_label: "Agency",
+  ori: "Agency ID",
+  agency_ori: "Agency ID",
+};
 /** Convert column name like "kidnapping_count" → "Kidnapping Count" */
 function formatHeader(col: string): string {
+  if (PLAIN_HEADERS[col.toLowerCase()]) return PLAIN_HEADERS[col.toLowerCase()];
   return col
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
@@ -16,12 +41,17 @@ function formatHeader(col: string): string {
 
 /** Detect if a column holds year-like values (4-digit integers ~1900-2100) */
 function isYearColumn(col: string, rows: Record<string, unknown>[]): boolean {
-  if (/year/i.test(col)) return true;
-  const sample = rows.slice(0, 10);
-  return sample.every((r) => {
-    const v = r[col];
-    return typeof v === "number" && v >= 1900 && v <= 2100 && Number.isInteger(v);
-  });
+  if (/year|^period$/i.test(col)) return true;
+  const nums = rows.slice(0, 20).map((r) => r[col]).filter((v): v is number => typeof v === "number");
+  return nums.length > 0 && nums.every((v) => v >= 1900 && v <= 2100 && Number.isInteger(v));
+}
+
+/** Round 1 W2: the agency ID column is shown only when two rows would otherwise look the same. */
+function idColumnNeeded(col: string, columns: string[], rows: Record<string, unknown>[]): boolean {
+  const labelCol = columns.find((c) => /^(?:place|city|agency|agency_name|jurisdiction|jurisdiction_label|agency_label)$/i.test(c) && c !== col);
+  if (!labelCol) return true;
+  const labels = rows.map((r) => `${String(r[labelCol] ?? "")}|${String(r.state ?? "")}`);
+  return new Set(labels).size !== labels.length;
 }
 
 
@@ -35,13 +65,22 @@ interface DataTableProps {
   rows: Record<string, unknown>[];
   truncated?: boolean;
   fillHeight?: boolean;
+  /** Round 1 D3: the chart's partial periods, shown in the period column as "2026 (Jan–Jun)". */
+  partialPeriods?: { x: string | number; label: string }[];
+  periodColumn?: string;
 }
 
-export default function DataTable({ columns: allColumns, rows, truncated, fillHeight, title, columnLabels }: DataTableProps) {
+export default function DataTable({ columns: rawColumns, rows, truncated, fillHeight, title, columnLabels, partialPeriods, periodColumn }: DataTableProps) {
+  // Round 1 W2: an ori column is hidden unless it is needed to tell rows apart.
+  const allColumns = useMemo(
+    () => rawColumns.filter((c) => !/^(?:ori|agency_ori)$/i.test(c) || idColumnNeeded(c, rawColumns, rows)),
+    [rawColumns, rows]
+  );
   // Table display hotfix (2026-10-22): empty columns are not shown, and a text column that is the same on every row is
   // stated once above the table instead of repeated on every row. The CSV export keeps every column.
   const display = useMemo(() => tableDisplay(allColumns, rows, title ?? "", columnLabels ?? {}), [allColumns, rows, title, columnLabels]);
   const columns = display.shown;
+  const partialLabel = useMemo(() => new Map((partialPeriods ?? []).map((p) => [String(p.x), p.label] as const)), [partialPeriods]);
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [expanded, setExpanded] = useState(false);
@@ -85,6 +124,7 @@ export default function DataTable({ columns: allColumns, rows, truncated, fillHe
 
   const formatCell = (val: unknown, col: string) => {
     if (val == null) return "";
+    if (col === (periodColumn ?? "period") && partialLabel.has(String(val))) return `${display.months.includes(col) ? monthLabel(val) : String(val)} (${partialLabel.get(String(val))})`;
     if (display.months.includes(col)) return monthLabel(val);
     if (typeof val === "number") {
       if (yearCols.has(col)) return String(val);

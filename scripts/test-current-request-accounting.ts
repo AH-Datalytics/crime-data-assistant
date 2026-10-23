@@ -23,6 +23,19 @@ const declines = (q: string, re: RegExp) => { const d = decision(q); return d.ki
 // ---- the ledger
 check(has("robberies in Seattle, WA in May 2026", "period=month:2026-05") && has("robberies in Seattle, WA in May 2026", "place=city:Seattle:WA"), "a month and year is a month period, and the place is the city");
 check(has("robberies in Seattle, WA January to May 2025 vs January to May 2026", "period=monthrange:2025-01:2025-05"), "a month span inside one year is a month range");
+// Codex build review (W22): "make that monthly" after a RATE question must carry the rate; a rebuilt question that drops it refuses.
+{
+  const isFollowUp = (q: string) => /^\s*(?:make\s+(?:it|that|this)|now|and)\b/i.test(q);
+  const prev = ["Murder rates in Chicago, IL in 2025"];
+  check(currentFollowupCheck({ question: "make that monthly", effective: "Murders in Chicago, IL in 2025 by month", previousUserTurns: prev, isFollowUp }) !== null, "W22: a rebuilt question that drops the earlier rate refuses");
+  check(currentFollowupCheck({ question: "make that monthly", effective: "Murder rates in Chicago, IL in 2025 by month", previousUserTurns: prev, isFollowUp }) === null, "W22: the rebuilt question carrying the rate passes");
+}
+// Round 1 Q9: two named months of one year.
+check(has("National murders in July and August 2026", "period=monthrange:2026-07:2026-08"), "Q9 July and August 2026 = exactly July-August");
+check(!parts("National murders in July and August 2026").some((p) => p.includes("!not-interpreted")), "Q9 nothing left over in 'July and August 2026'");
+check(has("murders in Chicago, IL in Jan and Feb 2026", "period=monthrange:2026-01:2026-02"), "Q9 abbreviated consecutive months");
+check(declines("National murders in January and March 2026", /couldn't read that as a period/), "Q9 non-consecutive months are declined, never widened into a range");
+check(has("murders in Chicago, IL in May 2026", "period=month:2026-05"), "Q9 control: a single month is unchanged");
 check(has("rolling 12-month robberies in Seattle, WA for 2025", "rolling=rolling12"), "rolling 12-month is its own part");
 check(has("compare robberies in Fresno, CA to similar-sized cities in 2025", "peer=peer::city") && has("compare robberies in Austin, TX to 3 similar-sized cities in 2025", "peer=peer:3:city"), "similar-sized cities is a peer part, with its number");
 check(has("compare robberies in Harris County, TX to similar-sized counties in 2025", "peer=peer::county"), "similar-sized counties is a county peer part");

@@ -33,7 +33,11 @@ export function extractYAxisMin(question: string): number | null {
     /\by[-\s]?axis\s+(?:start|starts|starting|minimum|min)\s+(?:at|to|from)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
     /\by[-\s]?axis\s+(?:range\s+)?(?:from|between)\s+(-?\d+(?:\.\d+)?)\s*%?\s+(?:to|and|-)\s+-?\d+(?:\.\d+)?\s*%?/i,
     /\by[-\s]?min(?:imum)?\s*(?:=|at|to|from)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
-    /\b(?:floor|bottom|lower\s+bound|minimum|min)\s*(?:of|for|on|at|to|=)?\s*(?:the\s+)?(?:y[-\s]?axis\s*)?(?:at|to|=)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
+    // "floor" and "lower bound" name an axis limit on their own ("set the floor to 60"); a population floor does not.
+    /\b(?<!population\s)(?:floor|lower\s+bound)\s*(?:of|for|on|at|to|=)?\s*(?:the\s+)?(?:y[-\s]?axis\s*)?(?:at|to|=)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
+    // "bottom", "minimum" and "min" set a bound only when tied to the axis: "(min 30 murders)" and "minimum population
+    // 100000" are request filters (round 1 D1; P118).
+    /\b(?:bottom|minimum|min)\s*(?:of|for|on)?\s*(?:the\s+)?(?:y[-\s]?)?axis\s*(?:at|to|=|of)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
   ];
   for (const pattern of patterns) {
     const match = question.match(pattern);
@@ -50,7 +54,11 @@ export function extractYAxisMax(question: string): number | null {
     /\by[-\s]?axis\s+(?:range\s+)?(?:from|between)\s+-?\d+(?:\.\d+)?\s*%?\s+(?:to|and|-)\s+(-?\d+(?:\.\d+)?)\s*%?/i,
     /\by[-\s]?axis\s+(?:end|ends|ending|maximum|max|ceiling|top)\s+(?:at|to|from)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
     /\by[-\s]?max(?:imum)?\s*(?:=|at|to|from)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
-    /\b(?:ceiling|top|upper\s+bound|maximum|max)\s*(?:of|for|on|at|to|=)?\s*(?:the\s+)?(?:y[-\s]?axis\s*)?(?:at|to|=)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
+    // "ceiling" and "upper bound" name an axis limit on their own ("set the ceiling to 80").
+    /\b(?:ceiling|upper\s+bound)\s*(?:of|for|on|at|to|=)?\s*(?:the\s+)?(?:y[-\s]?axis\s*)?(?:at|to|=)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
+    // "top", "maximum" and "max" set a bound only when tied to the axis: "top 10 cities" is a ranking count
+    // (round 1 D1; P056, P327, P395).
+    /\b(?:top|maximum|max)\s*(?:of|for|on)?\s*(?:the\s+)?(?:y[-\s]?)?axis\s*(?:at|to|=|of)?\s*(-?\d+(?:\.\d+)?)\s*%?/i,
   ];
   for (const pattern of patterns) {
     const match = question.match(pattern);

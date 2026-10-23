@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { buildQueryPlan } from "@/lib/query-plan";
+import { buildQueryPlan, confirmResultChips, type DeliveredAnswer } from "@/lib/query-plan";
 import type { PickerSourceId, SourceId } from "@/lib/sources";
 
 type QueryPlanChipsProps = {
@@ -9,6 +9,8 @@ type QueryPlanChipsProps = {
   selectedSource: PickerSourceId;
   activeSource: SourceId | null;
   variant?: "input" | "result";
+  /** Round 1 D8: the delivered answer the result chips are checked against. */
+  answer?: DeliveredAnswer | null;
 };
 
 const RESULT_STALE_VALUES = new Set(["Unclear", "Needs choice", "Needs metric", "Unspecified", "Auto"]);
@@ -20,14 +22,14 @@ const STATUS_CLASS = {
   empty: "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]",
 };
 
-export default function QueryPlanChips({ input, selectedSource, activeSource, variant = "input" }: QueryPlanChipsProps) {
+export default function QueryPlanChips({ input, selectedSource, activeSource, variant = "input", answer = null }: QueryPlanChipsProps) {
   const plan = useMemo(() => buildQueryPlan(input, selectedSource, activeSource), [input, selectedSource, activeSource]);
   if (!plan) return null;
 
   // Result variant: provenance for a query that already ran. The source badge
   // covers the source chip, and picker statuses are stale once resolved.
   const chips = variant === "result"
-    ? plan.chips
+    ? confirmResultChips(plan.chips, answer)
         .filter((chip) => chip.key !== "source" && chip.status !== "empty" && !RESULT_STALE_VALUES.has(chip.value))
         .map((chip) => ({ ...chip, status: "ok" as const }))
     : plan.chips;
@@ -42,7 +44,7 @@ export default function QueryPlanChips({ input, selectedSource, activeSource, va
         <span
           key={chip.key}
           className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-[10px] leading-none shadow-[0_1px_0_rgba(0,0,0,0.02)] ${STATUS_CLASS[chip.status]}`}
-          title={`${chip.label}: ${chip.value}`}
+          title={`${chip.label}: ${chip.detail ?? chip.value}`}
         >
           <span className="font-semibold uppercase tracking-wide text-[var(--muted)]">{chip.label}</span>
           <span className="max-w-[170px] truncate font-medium">{chip.value}</span>

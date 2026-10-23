@@ -93,6 +93,16 @@ assert.equal(kinds("Sheriff's office only", priorSqlHistory), null);
 // Malformed history entries are ignored safely
 assert.equal(kinds("Make it monthly.", [{ role: "assistant" }, null, 42, "x"]), null);
 
+// Round 1 Q4: a complete question that OPENS with a grain word is not a follow-up; a bare or back-referring one still is.
+assert.equal(kinds("Monthly murders in Chicago, IL in 2026", priorSqlHistory), null);
+assert.equal(kinds("Yearly robberies in Dallas since 2015", priorSqlHistory), null);
+assert.equal(kinds("Monthly murders in Chicago, IL in 2026", noSqlHistory), null, "fresh and after a prior answer mean the same");
+assert.deepEqual(kinds("monthly", priorSqlHistory), ["granularity"]);
+assert.deepEqual(kinds("monthly instead", priorSqlHistory), ["granularity"]);
+assert.deepEqual(kinds("make that monthly", priorSqlHistory), ["granularity"]);
+assert.deepEqual(kinds("Monthly murders for that same place", priorSqlHistory), ["granularity"], "a back-reference keeps the follow-up");
+assert.deepEqual(kinds("Monthly murders", priorSqlHistory), ["granularity"], "no place: still a follow-up");
+
 // --- Production 8378: a complete question that opens with "compare" is standalone ---
 // It named both places and the offense; the prior SQL was 8377, on another tab.
 assert.equal(kinds("compare tulsa and oklahoma city homicides over time", priorSqlHistory), null);

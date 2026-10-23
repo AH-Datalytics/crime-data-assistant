@@ -22,6 +22,26 @@ assert("extracts y-axis ceiling", extractYAxisMax("Set the ceiling to 80") === 8
 assert("extracts y-axis max", extractYAxisMax("Set y-axis max to 85%") === 85);
 assert("extracts min from range phrasing", extractYAxisMin("set the Y-axis from 60 to 80") === 60);
 assert("extracts max from range phrasing", extractYAxisMax("set the Y-axis from 60 to 80") === 80);
+// Round 1 D1 (audit/presentation-2026-10-20/ROUND1-PLAN.md + r2 finding 3): a number sets an axis bound only when the
+// wording ties it to the axis. Ranking counts and request filters never do (baseline P056, P118, P327, P395).
+for (const q of [
+  "Top 10 cities of 250,000 people or more by shoplifting rate in 2025",
+  "Which 10 cities (min 30 murders) had the highest share via firearm in 2025?",
+  "Murder rate for the top 100 cities in 2026",
+  "Murders for top 10 police agencies from 2010 to present",
+  "chart the top 10 cities",
+  "chart cities with minimum population 100000",
+  "cities with a population floor of 100000 by murder rate",
+  "show the max 5 states",
+]) {
+  assert(`no axis bound from a ranking count or filter: ${q}`, extractYAxisMin(q) === null && extractYAxisMax(q) === null, `${extractYAxisMin(q)} / ${extractYAxisMax(q)}`);
+  assert(`no chart customization from: ${q}`, !isYAxisDomainOnlyRequest(q));
+}
+assert("explicit y-axis max with 'to'", extractYAxisMax("set the y-axis max to 100") === 100);
+assert("explicit y axis start at 0", extractYAxisMin("start the y axis at 0") === 0);
+assert("axis-tied minimum", extractYAxisMin("set the minimum of the y-axis to 20") === 20);
+assert("axis-tied top", extractYAxisMax("top of the axis at 500") === 500);
+assert("bound-only follow-up still recognized", isYAxisDomainOnlyRequest("set the y-axis max to 100"));
 assert("extracts line chart type", extractChartType("show this as a line chart") === "line");
 assert("extracts bar chart type", extractChartType("make it a bar graph") === "bar");
 assert("extracts scatter chart type", extractChartType("show this as a scatter plot") === "scatter");
