@@ -16,6 +16,10 @@
  * - A period column is named "Month" for monthly values and "Year" for yearly ones. Monthly values are shown as
  *   "MMM YY" ("Jan 19"; owner, 2026-10-23); sorting and the CSV keep the raw "2019-01".
  * - A note column is never shown in the grid (owner, 2026-10-23: "shouldn't be a Note column EVER"); the CSV keeps it.
+ * - A record-status column (shr_records, population_status, coverage_status) that reads "recorded" on every row is
+ *   not stated (owner, 2026-10-23: "Shr Records: recorded"); any other status value keeps the column.
+ * - `columnLabels` from the answer name technical columns plainly ("Share (%)" for share_pct); they apply to shown
+ *   columns only and never override the period name.
  * - The first column (the row's label) and every numeric column are always shown, even when constant.
  * - If fewer than two columns would remain, the table is shown unchanged.
  * - The CSV export is not affected: it keeps every column and its original names.
@@ -51,7 +55,9 @@ function valueLabel(measure: string, unit: string | null, statistic: string | nu
   return cap(unit === "victims" ? `${words} victims` : MEASURE_PLURAL[m] ?? `${words} offenses`);
 }
 
-export function tableDisplay(columns: string[], rows: Record<string, unknown>[], title = ""): TableDisplay {
+const RECORD_STATUS = /^(?:shr_records|population_status|coverage_status)$/i;
+
+export function tableDisplay(columns: string[], rows: Record<string, unknown>[], title = "", columnLabels: Record<string, string> = {}): TableDisplay {
   const visible = columns.filter((c) => !NEVER_SHOWN.test(c));
   const monthsOf = (cols: string[]) => cols.filter((c) => /^(?:period|month)$/i.test(c)).filter((c) => {
     const vals = rows.map((r) => String(r[c] ?? "")).filter(Boolean);
@@ -67,7 +73,13 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
   const constants: { column: string; value: string }[] = [];
   columns.forEach((col, i) => {
     const values = rows.map((r) => r[col]);
-    if (i === 0) { shown.push(col); return; }
+    // The first column labels the rows, except a place that is the same on every row and stated in the displayed title
+    // while a year/month column labels the rows (owner 2026-10-23: "United States" repeated on 51 rows).
+    const firstIsTitledPlace = col === "place" && rows.length > 1 && title !== "" && !isEmpty(values[0])
+      && values.every((v) => String(v) === String(values[0])) && title.includes(String(values[0]))
+      && columns.some((c) => /^(?:year|month|period)$/i.test(c));
+    if (i === 0 && !firstIsTitledPlace) { shown.push(col); return; }
+    if (i === 0) return;
     if (OPTIONAL_METADATA.test(col) && values.every(isEmpty)) return;
     const numeric = values.some((v) => typeof v === "number");
     const first = values[0];
@@ -100,5 +112,7 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
   // Only the place is left out for a displayed title that contains its whole label.
   const placeShown = (c: { column: string; value: string }) => c.column === "place" && title !== "" && title.includes(c.value);
   const stated = constants.filter((c) => !absorbed.has(c.column) && !placeShown(c));
-  return { shown, constants: stated, labels, months: monthsOf(shown) };
+  // Codex r1: answer-supplied labels never rename a time column (year, month, period).
+  for (const c of shown) if (columnLabels[c] && !labels[c] && !/^(?:year|month|period)$/i.test(c)) labels[c] = columnLabels[c];
+  return { shown, constants: stated.filter((c) => !(RECORD_STATUS.test(c.column) && c.value === "recorded")), labels, months: monthsOf(shown) };
 }

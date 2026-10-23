@@ -1205,7 +1205,7 @@ const geoClarification = (plannerMode === "authoritative" && followupPlan?.kind 
         writeLog(question, compiledType.sql, rows.length, null, executionMs, explanation, "shr", planTags, "deterministic", sessionId, chartConfig ? serializeChartConfigForLog(chartConfig, columns, { source: "FBI SHR", agencyCount: 0, population: null }) : null, planProof);
         return jsonResp(emitFactualPayload(planProof, attachChartAuditToPayload({
           success: true, question, sql: compiledType.sql, explanation,
-          title: compiledType.title, columns, rows,
+          title: compiledType.title, columns, rows, columnLabels: compiledType.columnLabels,
           rowCount: rows.length, truncated: false,
           chartConfig,
           chartMeta: { source: "FBI SHR", agencyCount: 0, population: null },

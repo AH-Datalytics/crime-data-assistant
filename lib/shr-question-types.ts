@@ -1062,6 +1062,9 @@ export type CompiledShrQuestion = Readonly<{
   chartType: "bar" | "line" | "none";
   xAxis: string | null;
   yAxisLabel: string;
+  /** Plain table headers for result columns whose names are technical (owner 2026-10-23: a share table read
+   *  "numerator", "denominator", "share", "unknown"). Display only; the CSV keeps the column names. */
+  columnLabels: Readonly<Record<string, string>>;
 }>;
 
 const ISSUED = new WeakSet<object>();
@@ -1324,6 +1327,26 @@ function periodWords(spec: ShrQuestionSpec): string {
   return [...byYear.entries()].map(([y, ms]) => (ms.length === 12 ? String(y) : `${monthWords([...ms].sort((a, b) => a - b))} ${y}`)).join(", ");
 }
 
+/**
+ * The period for a TITLE (owner 2026-10-23: a title listed 51 years one by one). Contiguous full years read
+ * "1976 to 2025"; when only the last year is partial and runs from January, "1976 to 2026 (2026 Through October)".
+ * Anything else keeps periodWords (the explanation always keeps periodWords).
+ */
+const TITLE_MONTH = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function titlePeriodWords(spec: ShrQuestionSpec): string {
+  const byYear = new Map<number, number[]>();
+  for (const p of spec.periods) byYear.set(p.year, [...(byYear.get(p.year) ?? []), p.month]);
+  const years = [...byYear.keys()].sort((a, b) => a - b);
+  if (years.length < 2 || !years.every((y, i) => i === 0 || y === years[i - 1] + 1)) return periodWords(spec);
+  const full = (ms: number[]) => new Set(ms).size === 12;
+  if (!years.slice(0, -1).every((y) => full(byYear.get(y)!))) return periodWords(spec);
+  const last = years[years.length - 1];
+  const lastMonths = [...new Set(byYear.get(last)!)].sort((a, b) => a - b);
+  if (lastMonths.length === 12) return `${years[0]} to ${last}`;
+  if (!lastMonths.every((m, i) => m === i + 1)) return periodWords(spec);
+  return `${years[0]} to ${last} (${last} Through ${TITLE_MONTH[lastMonths[lastMonths.length - 1] - 1]})`;
+}
+
 function filterWords(f: QFilter): string { return f.label; }
 
 function subjectWords(spec: ShrQuestionSpec): string {
@@ -1336,10 +1359,12 @@ function subjectWords(spec: ShrQuestionSpec): string {
   return [...victim, ...weapon, measure, unit, ...(age.length ? [age.join(", ")] : []), ...(other.length ? [`(${other.join("; ")})`] : [])].join(" ");
 }
 
-function describe(spec: ShrQuestionSpec, labels: string[]): { title: string; explanation: string; yAxisLabel: string } {
+function describe(spec: ShrQuestionSpec, labels: string[]): { title: string; explanation: string; yAxisLabel: string; columnLabels: Record<string, string> } {
   const subject = subjectWords(spec);
   const where = labels.join(", ");
   const when = periodWords(spec);
+  const tWhen = titlePeriodWords(spec);
+  const columnLabels: Record<string, string> = {};
   const agency = spec.agencyType === "City" ? " reported by city agencies" : spec.agencyType === "County" ? " reported by sheriffs and county agencies" : "";
   const unit = spec.unit === "incidents" ? "incidents" : "victims";
   const per = spec.time === "month" ? ", month by month" : spec.time === "year" ? ", year by year" : "";
@@ -1352,28 +1377,35 @@ function describe(spec: ShrQuestionSpec, labels: string[]): { title: string; exp
   let statistic: string; let title: string; let yAxisLabel: string;
   switch (spec.type) {
     case "count":
-      statistic = `The count of ${unit}.`; title = `${cap(subject)}${agency ? cap(agency) : ""}, ${where}, ${when}`; yAxisLabel = unit; break;
+      statistic = `The count of ${unit}.`; title = `${cap(subject)}${agency ? cap(agency) : ""}, ${where}, ${tWhen}`; yAxisLabel = unit; break;
     case "count-by":
       statistic = dim ? `The count of ${unit} by ${dim.label}${per}. Only ${dim.label} values present in these records are shown.` : `The count of ${unit}${per}.`;
-      title = `${cap(subject)}${agency ? cap(agency) : ""}${dim ? ` By ${cap(dim.label)}` : ""}${spec.time ? ` By ${cap(spec.time)}` : ""}, ${where}, ${when}`; yAxisLabel = unit; break;
+      title = `${cap(subject)}${agency ? cap(agency) : ""}${dim ? ` By ${cap(dim.label)}` : ""}${spec.time ? ` By ${cap(spec.time)}` : ""}, ${where}, ${tWhen}`; yAxisLabel = unit; break;
     case "share": {
       const n = spec.numerator!;
       const how = n.field === "weapon" ? `were killed with a ${n.label}` : n.field === "relationship" || n.field === "circumstance" ? `were in the category: ${n.label}` : `were ${n.label}`;
       statistic = `The share of these ${unit} that ${how}${per}: the number that ${how} divided by all of them. ${cap(unit.slice(0, 1))}${unit.slice(1)} whose value is unknown stay in the total and are counted separately.`;
-      title = `Share Of ${cap(subject)} That ${cap(how)}, ${where}, ${when}`; yAxisLabel = "share (%)"; break;
+      // Owner 2026-10-23: "Share Of Female Homicide Victims Killed With A Firearm, United States, 1976 to 2026 (...)".
+      const what = n.field === "weapon" ? `Killed With A ${cap(n.label)}` : `That ${cap(how)}`;
+      title = `Share Of ${cap(subject)} ${what}, ${where}, ${tWhen}`; yAxisLabel = "share (%)";
+      columnLabels[`numerator_${unit}`] = n.field === "weapon" ? `Killed With A ${cap(n.label)}` : cap(how.replace(/^were /, ""));
+      columnLabels[`denominator_${unit}`] = `All ${cap(subject)}`;
+      columnLabels.share_pct = "Share (%)";
+      columnLabels[`unknown_value_${unit}`] = `${cap(n.field)} Unknown`;
+      break;
     }
     case "age":
       statistic = `The ${spec.age} age of these victims${per}, over victims with a recorded age; victims with no recorded age are counted separately.`;
-      title = `${cap(spec.age!)} Age Of ${cap(subject)}, ${where}, ${when}`; yAxisLabel = `${spec.age} victim age`; break;
+      title = `${cap(spec.age!)} Age Of ${cap(subject)}, ${where}, ${tWhen}`; yAxisLabel = `${spec.age} victim age`; break;
     case "top":
       statistic = `The ${spec.rank!.n === 1 ? "" : `${spec.rank!.n} `}${dim!.label === "city agency" ? "city agencies" : dim!.label === "county" ? "counties" : "states"} with the ${spec.rank!.direction === "desc" ? "most" : "fewest"} ${subject}, ranked by the count of ${unit}. Ties at the cutoff are all shown.` +
         (spec.dimension === "county" ? " Agencies that can't be placed in exactly one county are not ranked." : "");
-      title = `${spec.rank!.direction === "desc" ? "Most" : "Fewest"} ${cap(subject)} By ${cap(dim!.label)}, ${where}, ${when}`; yAxisLabel = unit; break;
+      title = `${spec.rank!.direction === "desc" ? "Most" : "Fewest"} ${cap(subject)} By ${cap(dim!.label)}, ${where}, ${tWhen}`; yAxisLabel = unit; break;
     case "agency-rate":
       statistic = `${cap(subject)} per 100,000 residents, year by year, using the population the agency recorded on its own homicide reports that year. A year has a rate only when its reports carry exactly one positive population; otherwise it says why there is no rate.`;
-      title = `${cap(subject)} Per 100,000 Residents, ${where}, ${when}`; yAxisLabel = "per 100,000 residents"; break;
+      title = `${cap(subject)} Per 100,000 Residents, ${where}, ${tWhen}`; yAxisLabel = "per 100,000 residents"; break;
   }
-  return { title, explanation: `${scope}. ${statistic}${union}${th} ${unitNote}`, yAxisLabel };
+  return { title, explanation: `${scope}. ${statistic}${union}${th} ${unitNote}`, yAxisLabel, columnLabels };
 }
 
 /** Compile and ISSUE a spec. Only an issued, unaltered compilation may run. */
@@ -1381,11 +1413,11 @@ export function compileShrQuestion(input: ShrQuestionSpec): CompiledShrQuestion 
   const spec = deepFreeze(JSON.parse(JSON.stringify(input)) as ShrQuestionSpec);
   const { sql, coverageSql, columns, valueColumn } = compileStatements(spec);
   const labels = placeOf(spec).labels;
-  const { title, explanation, yAxisLabel } = describe(spec, labels);
+  const { title, explanation, yAxisLabel, columnLabels } = describe(spec, labels);
   const dim = dimensionOf(spec);
   const chartType = spec.type === "top" || dim ? "bar" : spec.time ? "line" : "none";
   const xAxis = spec.type === "top" ? dim!.column : dim ? dim.column : spec.time === "month" ? "month" : spec.time === "year" ? "year" : null;
-  const compiled = deepFreeze({ spec, sql, coverageSql, columns, valueColumn, title, explanation, chartType, xAxis, yAxisLabel }) as CompiledShrQuestion;
+  const compiled = deepFreeze({ spec, sql, coverageSql, columns, valueColumn, title, explanation, chartType, xAxis, yAxisLabel, columnLabels }) as CompiledShrQuestion;
   ISSUED.add(compiled);
   return compiled;
 }
