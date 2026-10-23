@@ -28,6 +28,29 @@ assert.deepEqual(kinds("Make it monthly.", priorSqlHistory), ["granularity"]);
 assert.deepEqual(kinds("Show the rate instead.", priorSqlHistory), ["metric"]);
 assert.deepEqual(kinds("Compare it to Dallas.", priorSqlHistory), ["geography"]);
 
+// Owner report 2026-10-23: a complete one-place question with its own offense and a "since"/"from ... to" range is not
+// a follow-up (it was refused as "couldn't rebuild this follow-up"); a back-reference word still makes it one.
+assert.equal(kinds("Denver vehicle burglaries per month since 2018", priorSqlHistory), null);
+assert.equal(kinds("Houston carjackings per month since 2019", priorSqlHistory), null);
+assert.equal(kinds("carjackings per year in Memphis from 2020 to 2025", priorSqlHistory), null);
+assert.equal(kinds("murders in Dallas through 2020", priorSqlHistory), null);
+assert.deepEqual(kinds("show robberies in Dallas instead", priorSqlHistory), ["offense"]);
+assert.deepEqual(kinds("murders since 1995", priorSqlHistory), ["time_range"], "no place: still a follow-up");
+assert.deepEqual(kinds("Dallas since 1995", priorSqlHistory), ["time_range"], "no offense: still a follow-up");
+assert.deepEqual(kinds("extend that through 2020", priorSqlHistory), ["time_range"]);
+// Codex r1: explicit changes stay follow-ups; a same-place question that drops an earlier restriction stays one.
+const withPrev = (prev: string) => [{ role: "user", content: prev, source: "nibrs" }, { role: "assistant", content: "Figures.\n[SQL: SELECT year, month, SUM(offense_count) FROM summary_city_monthly WHERE ori='X']", source: "nibrs" }];
+assert.notEqual(kinds("switch to robberies in Dallas", priorSqlHistory), null);
+assert.notEqual(kinds("extend the date range for robberies in Dallas through 2020", priorSqlHistory), null);
+assert.notEqual(kinds("use annual totals for robberies in Dallas", priorSqlHistory), null);
+assert.notEqual(kinds("what about firearm murders in Dallas since 2010?", priorSqlHistory), null);
+assert.deepEqual(kinds("robberies in Dallas since 2010", withPrev("armed robberies by month in Dallas")), ["time_range"], "drops 'armed' and 'by month'");
+assert.equal(kinds("Houston carjackings per month since 2019", withPrev("Houston carjackings per month")), null, "the owner's sequence: nothing dropped");
+assert.equal(kinds("Denver vehicle burglaries per month since 2018", withPrev("Houston carjackings per month since 2019")), null, "another place");
+assert.deepEqual(kinds("Houston carjackings since 2019", withPrev("Houston carjackings per month")), ["time_range"], "drops 'per month' (month)");
+assert.equal(kinds("Houston vehicle burglaries per month since 2018", withPrev("Houston carjackings per month since 2019")), null, "same place, its own offense: complete");
+assert.deepEqual(kinds("Dallas burglaries since 2010", withPrev("armed robberies by month in Dallas")), ["time_range"], "its own offense but drops 'armed' and 'month'");
+
 // More change phrasings
 assert.deepEqual(kinds("extend it through 2020", priorSqlHistory), ["time_range"]);
 assert.deepEqual(kinds("show it from 1990 to 2010", priorSqlHistory), ["time_range"]);
