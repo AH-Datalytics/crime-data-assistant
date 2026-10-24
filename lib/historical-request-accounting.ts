@@ -273,12 +273,19 @@ export function recordPlaces(ledger: RequestLedger): void {
     if (before) start = before.index;
     const after = AGENCY_NOUN.exec(q.slice(end));
     if (after) end += after[0].length;
-    const kind = top?.kind ?? "unknown";
-    const value = mention.requiresClarification || !top
+    // Complete-turn fix (2026-10-23): a city-or-county name followed by the agency's own noun names that agency: "San
+    // Diego Police Department" is the city's, "Sacramento Sheriff" the county's. Only when exactly one candidate has that
+    // kind; anything else stays ambiguous and is clarified.
+    const agencyKind = after ? (/sheriff/i.test(after[0]) ? "county" : "city") : null;
+    const byAgency = mention.requiresClarification && agencyKind ? mention.candidates.filter((c) => c.kind === agencyKind) : [];
+    const chosen = byAgency.length === 1 ? byAgency[0] : null;
+    const resolved = chosen ?? (mention.requiresClarification ? null : top);
+    const kind = resolved?.kind ?? "unknown";
+    const value = !resolved
       ? `ambiguous:${mention.text}`
-      : kind === "state" ? `state:${top.name}`
-        : `${kind}:${top.name}:${top.state ?? ""}`;
-    ledger.record({ concept: "place", value, span: [start, end], explains: [[start, end]], rule: mention.requiresClarification ? "place:ambiguous" : `place:${kind}` });
+      : kind === "state" ? `state:${resolved.name}`
+        : `${kind}:${resolved.name}:${resolved.state ?? ""}`;
+    ledger.record({ concept: "place", value, span: [start, end], explains: [[start, end]], rule: !resolved ? "place:ambiguous" : chosen ? `place:${kind}:agency-noun` : `place:${kind}` });
   }
   // Bare state codes in a place position ("in TX").
   const CODES = Object.values(STATE_NAME_TO_ABBR as Record<string, string>).filter((c) => c !== "US");

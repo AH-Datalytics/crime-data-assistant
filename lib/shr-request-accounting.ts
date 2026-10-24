@@ -198,6 +198,9 @@ const RULES: Rule[] = [
   { concept: "national", value: () => "US", pattern: R(String.raw`\b(?:national(?:ly)?|nationwide|countrywide|united\s+states|america|american|all\s+(?:50\s+)?states|the\s+(?:nation|country))\b`) },
   { concept: "entity", value: lower, pattern: R(String.raw`\b(?:(?:which|what)\s+(?:\d+\s+)?|across\s+(?:all\s+)?(?:the\s+)?|all\s+)?${ENTITY}\b`) },
   { concept: "unit", value: lower, pattern: R(String.raw`\b(?:the\s+)?(?:total\s+)?${UNIT}(?:\s+of)?\b`) },
+  // Bounded fix (2026-10-23): "number of male homicides", "counts of offenders": the "of" already belongs to the sex or role
+  // part after it, so the rule above (which takes "of") can't record; the count word alone is the same neutral unit.
+  { concept: "unit", value: lower, pattern: R(String.raw`\b(?:the\s+)?(?:total\s+)?${UNIT}(?=\s+of\b)`) },
   { concept: "presentation", state: "context", pattern: R(String.raw`\b(?:(?:in|as)\s+(?:a\s+)?)?${PRESENTATION}(?:\s+(?:on|for|about))?\b`) },
   { concept: "connector", value: lower, pattern: R(String.raw`\b(?:limited\s+to|restricted\s+to|confined\s+to|only\s+for|just\s+for|among|and|or|versus|vs\.?|plus|but|not|excluding|except(?:\s+for)?|other\s+than|without|apart\s+from|aside\s+from|including|only|just|exclusively|both|either|neither|nor|all|any|every|total|overall|combined|together|altogether|separately|respectively)\b`) },
 ];
@@ -395,6 +398,13 @@ function recordUnresolvedPlaces(ledger: RequestLedger, opts: ShrAccountingOption
   }
 }
 
+/**
+ * Bounded fix (2026-10-23; L2953 "states have seen an increase", L3700 "murders where victim was black", L6308 "incidents
+ * when the offender is a juvenile"): SHR's own linking words, between two recorded parts only. SHR only: on NIBRS "auto
+ * thefts where a firearm was stolen" would then read "firearm" as the weapon used (the stolen item is not a weapon).
+ */
+const SHR_LINK_WORDS = /^(?:where|when|seen)$/i;
+
 export function accountShrRequest(question: string, opts: ShrAccountingOptions = {}): RequestLedger {
   const ledger = new RequestLedger(question);
   recordBrokenDown(ledger); // Stage 3b r2 (R2.7)
@@ -432,7 +442,7 @@ export function accountShrRequest(question: string, opts: ShrAccountingOptions =
       LEFT.lastIndex = m.index + text.length;
     }
   }
-  recordBetweenFiller(ledger);
+  recordBetweenFiller(ledger, SHR_LINK_WORDS);
   ledger.finalize();
   if (opts.earlierTurns && opts.earlierTurns.length > 0 && isFollowupFragment(ledger)) {
     const earlier = opts.earlierTurns.slice(-3);

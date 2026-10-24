@@ -2,6 +2,8 @@ import { buildQueryContract, hasCodelessFamily, type QueryContract } from "./que
 import { pastCompleteCalendarYearsRange } from "./time-conventions";
 import type { DeterministicNibrsQuery } from "./nibrs-deterministic-queries";
 import { appliedFromContract, placeIs } from "./nibrs-legacy-binding";
+import { accountNibrsRequest } from "./nibrs-request-accounting";
+import { FIRST_WEAPON_NOTE } from "./nibrs-question-compiler";
 
 const UNIT_OF_ALIAS: Record<string, string> = { victims: "victims", offenders: "offenders", arrests: "arrests" };
 const BREAKDOWN_OF_DEMO: Record<DemoDimension, string> = { age_group: "age", race: "race", sex: "sex", ethnicity: "ethnicity" };
@@ -107,7 +109,10 @@ export function buildNibrsContinuousReporterQuery(question: string): Determinist
   const contract = buildQueryContract(question, "nibrs");
   if (contract && hasCodelessFamily(contract)) return null; // Carjacking hotfix (2026-10-10): a requested offense with no NIBRS code (carjacking, domestic violence) is not built from codes here.
   if (!contract || contract.metric.unit !== "count" || !contract.comparability.continuousReporters) return null;
-  if (contract.geographies.some((geo) => ["city", "county", "campus"].includes(geo.kind) || Boolean(geo.name))) return null;
+  // The nation and one state are the scopes this statement filters (the state predicate below); a named city, county,
+  // campus or agency is not. "nationwide" and "in Pennsylvania" carry a name, so the test is on the kind, not the name.
+  if (contract.geographies.some((geo) => ["city", "county", "campus"].includes(geo.kind) || (Boolean(geo.name) && !["national", "state"].includes(geo.kind)))) return null;
+  if (contract.geographies.filter((geo) => geo.kind === "state").length > 1) return null;
   if (/\b(?:rate|per\s*(?:capita|100k|100,?000)|share|percent(?:age)?|monthly|by\s+month)\b/i.test(question)) return null;
 
   const codes = offenseCodes(question, contract);
@@ -123,17 +128,27 @@ export function buildNibrsContinuousReporterQuery(question: string): Determinist
     `d.ori IN (SELECT ori FROM nibrs_consistent_reporters WHERE start_year = ${range.start} AND end_year = ${reporterEnd})`,
   ];
   const state = stateCode(contract);
+  // A named state whose code isn't read would otherwise run as the nation under the state's name.
+  if (!state && contract.geographies.some((geo) => geo.kind === "state")) return null;
   if (state) predicates.push(`d.state = ${sqlString(state)}`);
+  // "involving a gun/firearm": the demographic tables' weapon_category, as the typed answers read it (WEAPON_CATEGORY in
+  // nibrs-question-compiler.ts). The plain count table has no weapon column, so there the filter is not applied and the
+  // binding check declines the request by name.
+  const firearm = config.table.endsWith("_demographics")
+    && accountNibrsRequest(question).parts.some((p) => p.state !== "context" && p.concept === "filter" && p.value === "weapon:firearm");
+  if (firearm) predicates.push(`d.weapon_category = 'Firearm'`);
   const sql = buildScopedSql(config, codes, range, demo, predicates);
   const scope = state ? ` in ${contract.geographies.find((geo) => geo.kind === "state")?.canonicalName ?? state}` : "";
   const breakdown = demo ? ` by ${demo.replace("_", " ")}` : "";
+  const weapon = firearm ? " involving a firearm" : "";
+  const weaponNote = firearm && config.countAlias === "victims" ? ` ${FIRST_WEAPON_NOTE}` : "";
   const partial = range.end > reporterEnd
     ? ` The ${range.end} rows are partial; reporter eligibility is based on complete reporting through ${reporterEnd}.`
     : "";
   return {
     sql,
     title: `Continuous-reporting NIBRS ${config.countAlias}${breakdown}`,
-    explanation: `This shows ${config.countAlias}${breakdown}${scope} from ${range.start} through ${range.end}, restricted to agencies that reported all 12 months in every complete year from ${range.start} through ${reporterEnd}.${partial} NIBRS participation still limits comparability outside this fixed agency set.`,
+    explanation: `This shows ${config.countAlias}${weapon}${breakdown}${scope} from ${range.start} through ${range.end}, restricted to agencies that reported all 12 months in every complete year from ${range.start} through ${reporterEnd}.${partial}${weaponNote} NIBRS participation still limits comparability outside this fixed agency set.`,
     chartHint: "line",
     xAxis: "year",
     yAxis: config.countAlias,
@@ -143,6 +158,7 @@ export function buildNibrsContinuousReporterQuery(question: string): Determinist
     applied: appliedFromContract(contract, { startYear: range.start, endYear: range.end, defaulted: contract.time.startYear === null }, {
       operations: ["cohort"], codeGroups: [codes], units: [UNIT_OF_ALIAS[config.countAlias]], statistic: "count", grains: ["year"],
       breakdowns: demo ? [BREAKDOWN_OF_DEMO[demo]] : [],
+      filters: firearm ? ["weapon:firearm"] : [],
     }),
   };
 }

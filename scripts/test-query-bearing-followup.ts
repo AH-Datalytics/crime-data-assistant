@@ -120,4 +120,15 @@ assert.equal(kinds("show murders in Tulsa and Oklahoma City by year instead", pr
 // ...but the same verb with only one place is still a follow-up
 assert.deepEqual(kinds("show rates instead", priorSqlHistory), ["metric"]);
 
+// Complete-turn fix (2026-10-23): the owner's "LAPD murder clearance rate since 1960". The department's abbreviation and
+// name resolve to the city, so the one-place bare-range rule (unchanged) reads the turn as complete. An unknown acronym
+// names no place and stays a follow-up here (the route then refuses naming the word, not as a follow-up).
+assert.equal(kinds("LAPD murder clearance rate since 1960", priorSqlHistory), null, "LAPD is a place");
+assert.equal(kinds("Los Angeles Police Department murder clearance rate since 1960", priorSqlHistory), null, "the department name is a place");
+assert.deepEqual(kinds("XYZPD murder clearance rate since 1960", priorSqlHistory), ["time_range"], "an unknown acronym is no place");
+// K2: a seemingly complete one-place turn that drops a restriction of the previous question on the same place stays a follow-up.
+assert.deepEqual(kinds("LAPD murders since 2010", withPrev("armed robberies by month in Los Angeles")), ["time_range"], "same place, dropped restriction");
+// The consolidated exemptions keep their order and effect: Q4 removes only the leading-grain kind, so another change
+// in the same turn still counts.
+assert.deepEqual(kinds("Monthly murders in Chicago, IL instead of robberies", priorSqlHistory), ["offense", "granularity"], "a change verb keeps granularity");
 console.log("query-bearing-followup tests passed");

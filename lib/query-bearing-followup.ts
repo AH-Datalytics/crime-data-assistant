@@ -113,9 +113,10 @@ function refersToGranularityChange(q: string): boolean {
   const mentionsGrain =
     /\b(?:monthly|annual(?:ly)?|yearly|quarterly|weekly|by\s+month|by\s+year|per\s+month|per\s+year|rolling\s+(?:12[\s-]*month\s+)?(?:average|window|sum|total)|12[\s-]*month\s+rolling)\b/i.test(q);
   if (!mentionsGrain) return false;
-  return /\bmake\s+(?:it|this|that)\b|\binstead\b|\bswitch\b|\bchange\b|\bshow\s+(?:it|this|that)\b|\buse\b/i.test(q) ||
-    (/^\s*(?:monthly|annual(?:ly)?|yearly|quarterly|weekly)\b/i.test(q.trim()) && !namesOwnOffenseAndPlace(q));
+  return granularityChangeVerb(q) || leadingGrainWord(q);
 }
+const granularityChangeVerb = (q: string) => /\bmake\s+(?:it|this|that)\b|\binstead\b|\bswitch\b|\bchange\b|\bshow\s+(?:it|this|that)\b|\buse\b/i.test(q);
+const leadingGrainWord = (q: string) => /^\s*(?:monthly|annual(?:ly)?|yearly|quarterly|weekly)\b/i.test(q.trim());
 
 /**
  * Round 1 Q4 (owner report 2026-10-23): a leading grain word opens a COMPLETE question as often as it modifies the last
@@ -192,23 +193,42 @@ function completeOnePlaceRange(q: string, rawHistory: unknown): boolean {
   return contentWords(prev).filter((w) => !placeWords.has(w) && !offenseWords.has(w)).every((w) => have.has(stem(w)));
 }
 
+/**
+ * Complete-turn fix (2026-10-23; Codex placement ruling in audit/presentation-2026-10-20/codex-readings-table-ruling.md):
+ * the ONE place where a turn that carries change words is judged a complete question of its own. It holds the three
+ * earlier exemptions unchanged, in their order, and returns the change kinds that still make the turn a follow-up:
+ * - two or more places plus an offense, with no back-reference (production 8378): no kinds;
+ * - Round 1 Q4: a LEADING grain word with no change verb, in a turn naming its own offense and place, is not a change;
+ * - the one-place bare range (owner's Denver report): a time range that is the only change, with every restriction of
+ *   the previous question on the same place still present, is not a change.
+ * Every other turn keeps every kind it carries, so a dependent or ambiguous turn still goes to reconstruction and K2.
+ */
+export function followupKindsAfterCompleteTurn(question: string, rawHistory: unknown, kinds: FollowupChangeKind[]): FollowupChangeKind[] {
+  if (isSelfContainedQuestion(question)) return [];
+  let left = kinds;
+  if (left.includes("granularity") && !granularityChangeVerb(question) && leadingGrainWord(question) && namesOwnOffenseAndPlace(question)) {
+    left = left.filter((k) => k !== "granularity");
+  }
+  if (left.length === 1 && left[0] === "time_range" && completeOnePlaceRange(question, rawHistory)) return [];
+  return left;
+}
+
 export function detectQueryBearingFollowup(
   question: string,
   rawHistory: unknown
 ): QueryBearingFollowup | null {
   if (!hasPriorSqlResult(rawHistory)) return null;
   if (asksCoverageNotChange(question)) return null;
-  if (isSelfContainedQuestion(question)) return null;
 
-  const kinds: FollowupChangeKind[] = [];
-  if (refersToTimeRangeChange(question)) kinds.push("time_range");
-  if (refersToGeographyChange(question)) kinds.push("geography");
-  if (refersToOffenseChange(question)) kinds.push("offense");
-  if (refersToMetricChange(question)) kinds.push("metric");
-  if (refersToGranularityChange(question)) kinds.push("granularity");
-  if (refersToBreakdownChange(question)) kinds.push("breakdown");
-  if (refersToChartChange(question)) kinds.push("chart");
+  const detected: FollowupChangeKind[] = [];
+  if (refersToTimeRangeChange(question)) detected.push("time_range");
+  if (refersToGeographyChange(question)) detected.push("geography");
+  if (refersToOffenseChange(question)) detected.push("offense");
+  if (refersToMetricChange(question)) detected.push("metric");
+  if (refersToGranularityChange(question)) detected.push("granularity");
+  if (refersToBreakdownChange(question)) detected.push("breakdown");
+  if (refersToChartChange(question)) detected.push("chart");
 
-  if (kinds.length === 1 && kinds[0] === "time_range" && completeOnePlaceRange(question, rawHistory)) return null;
+  const kinds = followupKindsAfterCompleteTurn(question, rawHistory, detected);
   return kinds.length > 0 ? { kinds } : null;
 }

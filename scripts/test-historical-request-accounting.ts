@@ -102,5 +102,18 @@ check(/complete question/.test(historicalFollowupCheck({ question: "and 2023?", 
 check(/complete question/.test(historicalFollowupCheck({ question: "what about Dallas?", reconstructed: null, previousUserTurns: ["murders in Houston since 2010"], isFollowUp })?.explanation ?? ""), "K2: no reconstruction is declined");
 check(/since 2021/.test(historicalFollowupCheck({ question: "what about Fort Worth, Texas?", reconstructed: "murders in Fort Worth, Texas", previousUserTurns: ["murders in Columbus, Ohio since 2021"], isFollowUp })?.explanation ?? ""), "K2: a dropped period is declined by name");
 
+// Complete-turn fix (2026-10-23): agency names and the agency noun after a city-or-county name.
+{
+  const placeOf = (q: string) => accountHistoricalRequest(q).parts.filter((p) => p.concept === "place").map((p) => p.value).join();
+  check(placeOf("LAPD murder clearance rate since 1960") === "city:Los Angeles:CA", "LAPD is the Los Angeles city agency");
+  check(placeOf("Los Angeles Police Department murder clearance rate since 1960") === "city:Los Angeles:CA", "the department name is the city agency, not ambiguous");
+  check(placeOf("Los Angeles murder clearance rate since 1960") === "ambiguous:Los Angeles", "bare Los Angeles stays ambiguous");
+  check(placeOf("Sacramento Sheriff murders since 2000").startsWith("county:Sacramento"), "a sheriff after a city-or-county name is the county");
+  check(placeOf("Sacramento Police Department murders since 2000").startsWith("city:Sacramento"), "a police department after a city-or-county name is the city");
+  check(placeOf("Portland Police Department murders since 2000") === "ambiguous:Portland", "two cities of that name stay ambiguous");
+  const xyz = historicalRecognitionRefusal(accountHistoricalRequest("XYZPD murder clearance rate since 1960"));
+  check(xyz?.parts.map((p) => p.text).join() === "XYZPD", "an unknown acronym is named, never guessed");
+}
+
 console.log(`\n${checks - failures}/${checks} passed`);
 if (failures > 0) process.exit(1);

@@ -138,6 +138,10 @@ const at = (q: string, word: string, from = 0): Span => { const i = q.indexOf(wo
   check(ctx("Can you show me murders in Texas?").includes("request-opener:Can you show me") , "a leading request opener is context");
   check(ctx("How many murders in Texas").includes("question-opener:How many"), "a leading how-many opener is context");
   check(!ctx("murders in Texas, can you show me").some((s) => s.startsWith("request-opener")), "an opener mid-request is not context");
+  // Bounded fix (2026-10-23): a leading "can you" before an unlisted verb; the longer openers still win.
+  check(ctx("can you rank order cities by murders").includes("can-you-opener:can you"), "a leading 'can you' is context (SHR L8971)");
+  check(ctx("Can you show me murders in Texas?").includes("request-opener:Can you show me"), "the longer request opener still takes 'can you show me'");
+  check(!ctx("murders in Texas, can you rank them").some((s) => s.startsWith("can-you-opener")), "'can you' mid-request is not context");
   check(ctx("murders in Texas please").includes("trailing-polite:please"), "trailing please is context");
   check(ctx("not murders in Texas").length === 0, "a leading negation is never context");
   check(ctx("murders in Texas or Ohio").length === 0, "and/or are never context");
@@ -196,6 +200,29 @@ const at = (q: string, word: string, from = 0): Span => { const i = q.indexOf(wo
   l5.record({ concept: "measure", span: at(q5, "murders"), rule: "m" });
   recordBetweenFiller(l5);
   check(!l5.parts.some((p) => p.rule === "between-filler"), "a linking word next to residue is never context");
+  // Bounded fix (2026-10-23): a source's own linking words ("where", "when", "seen" on SHR) link two recorded parts only:
+  // never next to residue (a negation), never at the start of the question, and never for a source that doesn't pass them.
+  {
+    const LINK = /^(?:where|when|seen)$/i;
+    const ledgerOf = (q: string, parts: [string, string][], link?: RegExp) => {
+      const l = new RequestLedger(q);
+      for (const [concept, text] of parts) l.record({ concept, span: at(q, text), rule: concept });
+      recordBetweenFiller(l, link); l.finalize();
+      return l;
+    };
+    const lw = ledgerOf("murders where victims were black", [["measure", "murders"], ["role", "victims"], ["race", "black"]], LINK);
+    check(lw.parts.some((p) => p.rule === "between-filler" && p.text === "where") && lw.refusedAtRecognition().length === 0, "a passed linking word between two parts is context; the condition parts remain");
+    const lx = ledgerOf("murders where victims were black", [["measure", "murders"], ["role", "victims"], ["race", "black"]]);
+    check(lx.refusedAtRecognition().some((p) => p.text === "where"), "without the source's linking words \"where\" still refuses");
+    const ln = ledgerOf("murders where victims were not black", [["measure", "murders"], ["role", "victims"], ["race", "black"]], LINK);
+    check(ln.refusedAtRecognition().some((p) => p.text.includes("not")), "a negation after \"where\" still refuses");
+    const le = ledgerOf("states have seen an increase", [["entity", "states"], ["change", "increase"]], LINK);
+    check(le.parts.filter((p) => p.rule === "between-filler").map((p) => p.text).join() === "have,seen,an", "\"have seen an\" between two parts is context");
+    const lh = ledgerOf("murders when banana", [["measure", "murders"]], LINK);
+    check(!lh.parts.some((p) => p.rule === "between-filler"), "\"when\" next to residue is never context");
+    const ll = ledgerOf("Where does Chicago rank", [["place", "Chicago"], ["rank", "rank"]], LINK);
+    check(ll.refusedAtRecognition().some((p) => /Where/.test(p.text)), "a leading \"Where\" asks a question; it is never a link");
+  }
   const q6 = "murders in Texas not in 2025";
   const l6 = new RequestLedger(q6);
   l6.record({ concept: "measure", span: at(q6, "murders"), rule: "m" });

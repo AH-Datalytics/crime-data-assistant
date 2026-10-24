@@ -865,7 +865,14 @@ async function handleQueryPost(req: NextRequest) {
   if (historicalNumeric && historicalLedger) {
     const priorHistoricalTurns = normalizeHistoryForTab(body?.history, "historical", 50).filter((m) => m.role === "user").map((m) => m.content);
     const isHistoricalFollowup = priorHistoricalTurns.length > 0 && (isFollowUp(question) || Boolean(queryBearingFollowup) || followupPlan?.kind === "query_bearing");
+    // Complete-turn fix (2026-10-23, COMPLETE-TURN-FINDING.md part 2): a turn that states its own measure and period but
+    // reads no place, because a word where the place would be is unread ("XYZPD murder clearance rate since 1960"), is
+    // refused naming that word -- not as a follow-up it never asked to be. Only ever a refusal.
     if (isHistoricalFollowup) {
+      const turnLedger = accountHistoricalRequest(question);
+      const turnRefusal = historicalRecognitionRefusal(turnLedger);
+      const own = (concept: string) => turnLedger.parts.some((p) => p.concept === concept && p.state !== "context");
+      if (turnRefusal && (own("measure") || own("clearance") || own("staffing")) && own("period") && !own("place")) return historicalAccountingExit(turnRefusal, "recognition");
       const carried = historicalFollowupCheck({ question, reconstructed: followupPlan?.kind === "query_bearing" ? followupPlan.reconstructedQuestion : null, previousUserTurns: priorHistoricalTurns, isFollowUp });
       if (carried) return historicalAccountingExit({ parts: [], explanation: carried.explanation }, "followup");
     }

@@ -122,7 +122,9 @@ const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
   county("Boise", "ID", ["Boise", "Boise County", "Boise County, Idaho", "Boise County ID"]),
   city("Fairfax", "VA", ["Fairfax", "Fairfax, Virginia", "Fairfax VA"]),
   county("Fairfax", "VA", ["Fairfax", "Fairfax County", "Fairfax County, Virginia", "Fairfax County VA"]),
-  city("Los Angeles", "CA", ["Los Angeles", "Los Angeles, California", "Los Angeles CA", "LA", "L.A.", "LA city", "L.A. city"]),
+  // Complete-turn fix (2026-10-23, owner report "LAPD murder clearance rate since 1960"): the department's own names are
+  // the city agency, never the county.
+  city("Los Angeles", "CA", ["Los Angeles", "Los Angeles, California", "Los Angeles CA", "LA", "L.A.", "LA city", "L.A. city", "LAPD", "Los Angeles Police Department"]),
   county("Los Angeles", "CA", ["Los Angeles", "Los Angeles County", "Los Angeles County, California", "Los Angeles County CA", "LA", "LA County", "L.A. County"]),
   city("Sacramento", "CA", ["Sacramento", "Sacramento, California", "Sacramento CA"]),
   county("Sacramento", "CA", ["Sacramento", "Sacramento County", "Sacramento County, California", "Sacramento County CA"]),
