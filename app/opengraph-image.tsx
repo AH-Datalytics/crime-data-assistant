@@ -1,4 +1,15 @@
 import { ImageResponse } from "next/og";
+import { isSourceEnabled } from "@/lib/sources";
+
+// Hate Crime is named only while that source is enabled.
+const HATE_CRIME = isSourceEnabled("hate_crime");
+const CHIPS = [
+  { label: "Current", bg: "#eef1fb", fg: "#475EC7", line: "#c5cdf0" },
+  { label: "Historical", bg: "#f5f0eb", fg: "#8B5E3C", line: "#ddd0c2" },
+  { label: "NIBRS", bg: "#ecf5f0", fg: "#2d8659", line: "#b8dcc8" },
+  { label: "SHR", bg: "#fdf8e8", fg: "#8B6914", line: "#e8d48b" },
+  ...(HATE_CRIME ? [{ label: "Hate Crime", bg: "#efefef", fg: "#4A4A4A", line: "#d0d0d0" }] : []),
+];
 
 export const runtime = "edge";
 export const alt = "Crime Data Assistant by The Crime Index";
@@ -53,20 +64,22 @@ export default function Image() {
             Crime Data Assistant
           </div>
           <div style={{ maxWidth: 940, fontSize: 34, lineHeight: 1.25, color: "#3f4758" }}>
-            Ask plain-English questions across current, historical, NIBRS, SHR, and hate crime data.
+            {HATE_CRIME
+              ? "Ask plain-English questions across current, historical, NIBRS, SHR, and hate crime data."
+              : "Ask plain-English questions across current, historical, NIBRS, and SHR data."}
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 14, fontSize: 22, fontWeight: 700 }}>
-          {["Current", "Historical", "NIBRS", "SHR", "Hate Crime"].map((label, index) => (
+          {CHIPS.map(({ label, bg, fg, line }) => (
             <div
               key={label}
               style={{
                 padding: "10px 16px",
                 borderRadius: 8,
-                background: ["#eef1fb", "#f5f0eb", "#ecf5f0", "#fdf8e8", "#efefef"][index],
-                color: ["#475EC7", "#8B5E3C", "#2d8659", "#8B6914", "#4A4A4A"][index],
-                border: `1px solid ${["#c5cdf0", "#ddd0c2", "#b8dcc8", "#e8d48b", "#d0d0d0"][index]}`,
+                background: bg,
+                color: fg,
+                border: `1px solid ${line}`,
               }}
             >
               {label}
