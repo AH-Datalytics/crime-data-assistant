@@ -65,7 +65,7 @@ interface DataTableProps {
   rows: Record<string, unknown>[];
   truncated?: boolean;
   fillHeight?: boolean;
-  /** Round 1 D3: the chart's partial periods, shown in the period column as "2026 (Jan–Jun)". */
+  /** Round 1 D3: the chart's partial periods, shown in the period column as "2026 (Partial)" (owner 2026-10-24). */
   partialPeriods?: { x: string | number; label: string }[];
   periodColumn?: string;
 }
@@ -124,7 +124,8 @@ export default function DataTable({ columns: rawColumns, rows, truncated, fillHe
 
   const formatCell = (val: unknown, col: string) => {
     if (val == null) return "";
-    if (col === (periodColumn ?? "period") && partialLabel.has(String(val))) return `${display.months.includes(col) ? monthLabel(val) : String(val)} (${partialLabel.get(String(val))})`;
+    // Owner 2026-10-24: a partial period reads "2026 (Partial)"; the months it covers are not named in the table.
+    if (col === (periodColumn ?? "period") && partialLabel.has(String(val))) return `${display.months.includes(col) ? monthLabel(val) : String(val)} (Partial)`;
     if (display.months.includes(col)) return monthLabel(val);
     if (typeof val === "number") {
       if (yearCols.has(col)) return String(val);
