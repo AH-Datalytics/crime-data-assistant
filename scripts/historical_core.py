@@ -16,6 +16,12 @@ Nothing downstream can tell a reported zero from a missing value while that rewr
 so it is gone. Blank arrives as NULL, zero arrives as zero, and reporting status is read from
 the field that carries it rather than inferred from the totals.
 
+SUPERSEDED IN PART (owner rule, 2026-10-24): the sources also write 0 where an agency filed nothing
+(LAPD 1960-1968 lists its offences with 0 cleared in every category; Chicago 1995-2020 the same), and
+the 1930-2024 files carry no months-reported field. So an agency-year whose every stated crime count,
+or every stated cleared count, is zero is written as NULL again (`all_zero`). A zero beside a non-zero
+value is still a zero. The accepted cost: an agency that genuinely reported zero everything reads blank.
+
 DETERMINISM
 -----------
 The annual importer this replaces chose among ORIs with an unordered
@@ -218,8 +224,8 @@ _MISSING_TOKENS = {"", "na", "n/a", "null", "none", "nan"}
 def parse_measure(raw):
     """Blank stays missing. A number stays a number, including zero.
 
-    This is the whole correction in one function: nothing here inspects the other measures
-    on the row, so an agency-year of zeroes cannot be reinterpreted as an absence.
+    Nothing here inspects the other measures on the row; the owner's all-zero rule is applied
+    afterwards, by the loaders, through `all_zero`.
     """
     if raw is None:
         return None
@@ -624,6 +630,8 @@ def load_base_crime(conn, rows, policy=None):
         read += 1
         year = int(float(year_raw))
         measures = tuple(parse_measure(row.get(column)) for column in BASE_MEASURE_COLUMNS)
+        if all_zero(measures):
+            measures = (None,) * len(measures)
         record = (ori, year, parse_measure(row.get("population"))) + measures
         key = (ori, year)
         if key in staged and staged[key] != record:
@@ -703,10 +711,12 @@ def clearance_rate(offences, cleared):
 def load_base_clearance(conn, rows, policy=None):
     """Load the 1960-2024 clearance series, computing each rate from its own pair."""
     def record(row):
+        pairs = [CLEARANCE_SOURCE_PAIRS[measure] for measure in CLEARANCE_MEASURES]
+        if all_zero([parse_measure(row.get(cleared)) for _, cleared in pairs]):
+            return (None,) * len(CLEARANCE_MEASURES)
         return tuple(
             clearance_rate(parse_measure(row.get(offences)), parse_measure(row.get(cleared)))
-            for offences, cleared in
-            (CLEARANCE_SOURCE_PAIRS[measure] for measure in CLEARANCE_MEASURES)
+            for offences, cleared in pairs
         )
     return _load_keyed_table(
         conn, rows, "historical_agency_clearance", CLEARANCE_COLUMNS,
@@ -881,8 +891,8 @@ def load_annual(conn, rows, exact_map, year, agency_type_for_new=None):
     """Load one annual RETA year into crime, population and clearance together.
 
     Reporting status comes from `Months_Reported` and from nothing else. Zero months means the
-    measures are missing; one or more months means every supplied value is kept, including a
-    year of zeroes. The row is written either way, so an agency-year with nothing to report
+    measures are missing; one or more months means every supplied value is kept, except that a
+    year of nothing but zeroes is NULL (owner rule 2026-10-24, `all_zero`). The row is written either way, so an agency-year with nothing to report
     looks the same here as it does in the base era.
 
     All three tables are written from one pass over one set of resolved identities, rather
@@ -1081,6 +1091,8 @@ def _annual_record(ori, year, row):
         values[measure] = parse_measure(row.get(column))
     values["violent"] = _sum_or_none(values, _VIOLENT_PARTS)
     values["property"] = _sum_or_none(values, _PROPERTY_PARTS)
+    if all_zero(values.values()):
+        return (ori, year, population) + (None,) * len(CRIME_MEASURES)
     return (ori, year, population) + tuple(values[measure] for measure in CRIME_MEASURES)
 
 
@@ -1103,9 +1115,25 @@ def _annual_clearance_record(ori, year, row):
     for total, parts in (("violent", _VIOLENT_PARTS), ("property", _PROPERTY_PARTS)):
         offences[total] = _sum_or_none(offences, parts)
         cleared[total] = _sum_or_none(cleared, parts)
+    if all_zero(cleared.values()):
+        return (ori, year) + (None,) * len(CLEARANCE_COLUMNS)
     return (ori, year) + tuple(
         clearance_rate(offences[measure], cleared[measure]) for measure in CLEARANCE_MEASURES
     )
+
+
+def all_zero(values):
+    """Owner rule (2026-10-24): an agency-year whose every stated value is zero is unreported.
+
+    The historical sources write zero where an agency filed nothing (LAPD 1960-1968 lists its
+    offences with 0 cleared in every category; Chicago 1995-2020 the same), and the 1930-2024
+    files carry no months-reported field to tell that apart from a true zero. So a row of
+    nothing but zeroes -- every crime count, or every cleared count -- is blank, as the
+    importer did before 2026-08-16. The cost, accepted by the owner: an agency that genuinely
+    reported zero everything also reads as blank.
+    """
+    stated = [v for v in values if v is not None]
+    return bool(stated) and all(v == 0 for v in stated)
 
 
 def _sum_or_none(values, parts):

@@ -6,6 +6,10 @@ crime measure for an agency-year was zero, all of them were overwritten with NUL
 row was called "non-reporting". A reported zero and a missing value became the same thing.
 Most of what follows is about keeping those two apart, at every stage, in both eras.
 
+Owner rule 2026-10-24 brings back one part of that rewrite on purpose: an agency-year whose every
+stated count (or every cleared count) is zero is blank, because the sources write 0 where nothing
+was filed. A zero beside a non-zero value is still a zero, and the tests below pin both sides.
+
 The rest is about determinism. The old annual importer chose among ORIs with an unordered
 `SUBSTR(ori,1,7) ... LIMIT 1`, so which agency a year of crime attached to could depend on
 SQLite's row order. Nothing here may depend on the order rows arrive in.
@@ -84,13 +88,21 @@ class CoreBuildTestCase(unittest.TestCase):
 
 
 class BaseEraSemantics(CoreBuildTestCase):
-    """1930-2024. The upstream R builder already blanked zero-month rows, so a zero that
-    survives into the CSV is a value and must arrive as a value."""
+    """1930-2024. The upstream R builder blanked zero-month rows, but the CSV still writes 0 where
+    nothing was filed, so a row of nothing but zeroes is blank (owner rule 2026-10-24); a zero
+    beside a non-zero value is a value and arrives as a value."""
 
-    def test_all_zero_row_stays_zero(self):
+    def test_all_zero_row_is_blank(self):
+        # Owner rule 2026-10-24: a row of nothing but zeroes is unreported (the sources write 0
+        # where an agency filed nothing). Accepted cost: Metlakatla's genuine 2024 zeroes read blank.
         core.load_agencies(self.conn, [agency_row("AK0012500", "Metlakatla Tribal", "ak")])
         core.load_base_crime(self.conn, [base_row("AK0012500", 2024, **{m: "0" for m in core.BASE_MEASURE_COLUMNS})])
-        self.assertEqual(self.crime("AK0012500", 2024), {m: 0 for m in core.CRIME_MEASURES})
+        self.assertEqual(self.crime("AK0012500", 2024), {m: None for m in core.CRIME_MEASURES})
+
+    def test_zeroes_beside_blanks_only_are_blank(self):
+        core.load_agencies(self.conn, [agency_row("X00000100", "Somewhere", "tx")])
+        core.load_base_crime(self.conn, [base_row("X00000100", 2020, murder_total="0", robbery_total="0")])
+        self.assertEqual(self.crime("X00000100", 2020), {m: None for m in core.CRIME_MEASURES})
 
     def test_blank_row_stays_null(self):
         core.load_agencies(self.conn, [agency_row("AK0011900", "Seldovia", "ak")])
@@ -121,12 +133,16 @@ class AnnualEraSemantics(CoreBuildTestCase):
         super().setUp()
         core.load_agencies(self.conn, [agency_row("AL0012000", "Lipscomb", "al")])
 
-    def test_twelve_months_of_zero_stays_zero(self):
+    def test_twelve_months_of_zero_is_blank(self):
+        # Owner rule 2026-10-24 applies to every year, 2025 included: all zeroes read blank.
         core.load_annual(self.conn, [annual_row("AL00120", 12)], exact_map=[], year=2025)
+        self.assertEqual(self.crime("AL0012000", 2025), {m: None for m in core.CRIME_MEASURES})
+
+    def test_a_zero_beside_a_count_stays_zero_in_2025(self):
+        core.load_annual(self.conn, [annual_row("AL00120", 12, Actual_Burglary_Total="3")], exact_map=[], year=2025)
         got = self.crime("AL0012000", 2025)
         self.assertEqual(got["murder"], 0)
-        self.assertEqual(got["violent"], 0)
-        self.assertEqual(got["property"], 0)
+        self.assertEqual(got["burglary"], 3)
 
     def test_zero_months_is_missing_even_when_totals_are_present(self):
         # The totals say 7 murders; Months_Reported says the agency filed nothing. The
@@ -512,11 +528,23 @@ class ClearanceSemantics(CoreBuildTestCase):
         ).fetchone()
         return None if row is None else dict(zip(core.CLEARANCE_COLUMNS, row))
 
-    def test_offences_with_no_clearances_is_zero_percent(self):
+    def test_offences_with_no_clearances_is_zero_percent_beside_a_clearance(self):
         core.load_base_clearance(self.conn, [
-            clearance_row("X00000100", 1975, murder_all_total="8", murder_cleared_total="0"),
+            clearance_row("X00000100", 1975, murder_all_total="8", murder_cleared_total="0",
+                          robbery_all_total="10", robbery_cleared_total="4"),
         ])
-        self.assertEqual(self.clearance("X00000100", 1975)["murder_clr"], 0.0)
+        got = self.clearance("X00000100", 1975)
+        self.assertEqual(got["murder_clr"], 0.0)
+        self.assertEqual(got["robbery_clr"], 40.0)
+
+    def test_lapd_1960_offences_with_no_clearance_at_all_is_blank(self):
+        # LAPD 1960 in the source: 154 murders, 6,068 robberies ... and 0 cleared in every
+        # category. Owner rule 2026-10-24: every cleared count zero means clearances unreported.
+        core.load_base_clearance(self.conn, [
+            clearance_row("X00000100", 1960, murder_all_total="154", murder_cleared_total="0",
+                          robbery_all_total="6068", robbery_cleared_total="0"),
+        ])
+        self.assertEqual(set(self.clearance("X00000100", 1960).values()), {None})
 
     def test_no_offences_leaves_the_rate_undefined(self):
         core.load_base_clearance(self.conn, [
@@ -536,17 +564,15 @@ class ClearanceSemantics(CoreBuildTestCase):
         ])
         self.assertIsNone(self.clearance("X00000100", 1975)["murder_clr"])
 
-    def test_a_row_of_zero_percent_survives_intact(self):
-        # The whole row reads zero. The importer this replaces would have blanked all nine
-        # columns here, and the agency would have become indistinguishable from one that
-        # filed nothing.
+    def test_a_row_of_zero_percent_is_blank(self):
+        # Owner rule 2026-10-24 (as before 2026-08-16): every cleared count zero is unreported.
         totals = {}
         for offences, cleared in core.CLEARANCE_SOURCE_PAIRS.values():
             totals[offences] = "5"
             totals[cleared] = "0"
         core.load_base_clearance(self.conn, [clearance_row("X00000100", 1975, **totals)])
         rates = self.clearance("X00000100", 1975)
-        self.assertEqual(set(rates.values()), {0.0})
+        self.assertEqual(set(rates.values()), {None})
 
     def test_a_rate_is_computed_per_measure_not_per_row(self):
         core.load_base_clearance(self.conn, [

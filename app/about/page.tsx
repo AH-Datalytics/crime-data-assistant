@@ -1,5 +1,9 @@
 import Link from "next/link";
 import HomeIcon from "@/components/HomeIcon";
+import { isSourceEnabled } from "@/lib/sources";
+
+// Hate Crime appears on this page only while that source is enabled (Codex HC-SURFACE-01).
+const HATE_CRIME = isSourceEnabled("hate_crime");
 
 export const metadata = {
   title: "Explainer — Crime Data Assistant | The Crime Index",
@@ -82,7 +86,7 @@ export default function AboutPage() {
         <h2 className="text-2xl font-bold mb-6">Crime Data Assistant — Explainer</h2>
 
         <p className="mb-4">
-          The Crime Data Assistant is an AI-powered research tool that provides natural language access to five major crime data sources spanning nearly a century of American crime statistics. Ask questions in plain English and get interactive charts, sortable tables, and contextual analysis &mdash; all generated in real time by AI.
+          The Crime Data Assistant is an AI-powered research tool that provides natural language access to {HATE_CRIME ? "five" : "four"} major crime data sources spanning nearly a century of American crime statistics. Ask questions in plain English and get interactive charts, sortable tables, and contextual analysis &mdash; all generated in real time by AI.
         </p>
 
         <p className="mb-4">
@@ -175,6 +179,7 @@ export default function AboutPage() {
         </ul>
 
         {/* Hate Crime */}
+        {HATE_CRIME && <>
         <h3 className="text-lg font-semibold mb-3">Hate Crime Statistics</h3>
         <p className="mb-3">
           FBI hate crime records, <strong>1991&ndash;present</strong>, covering reported incidents with one or more identified bias motivations. This source includes bias category, offense type, location type, victim counts, offender demographics, and agency participation details.
@@ -190,6 +195,7 @@ export default function AboutPage() {
             Low or missing counts can reflect non-reporting or classification differences, not necessarily the absence of hate crimes.
           </li>
         </ul>
+        </>}
 
         <hr className="my-6 border-[var(--border)]" />
 
@@ -211,9 +217,9 @@ export default function AboutPage() {
           <li>
             <strong>Supplementary Homicide data</strong> lives in a dedicated SHR database optimized for homicide-specific victim, offender, weapon, relationship, and circumstance queries.
           </li>
-          <li>
+          {HATE_CRIME && <li>
             <strong>Hate Crime data</strong> lives in a dedicated database with incident, offense, victim, offender, bias, and agency participation summaries.
-          </li>
+          </li>}
           <li>
             The NIBRS database is indexed on all major query patterns (agency ORI + year, offense codes, incident dates, state + year) to ensure responsive query times even on billion-row tables.
           </li>

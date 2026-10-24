@@ -1,6 +1,29 @@
+import { isSourceEnabled } from "@/lib/sources";
+
 interface ExplainerContentProps {
   visible: boolean;
 }
+
+// Hate Crime appears in the Tutorial only while that source is enabled (Codex HC-SURFACE-01).
+const HATE_CRIME = isSourceEnabled("hate_crime");
+const SOURCE_COUNT_WORD = HATE_CRIME ? "Five" : "Four";
+const SOURCE_COLUMNS = [
+  { label: "Current Trends", color: "#475EC7" },
+  { label: "Historical Library", color: "#8B5E3C" },
+  { label: "NIBRS", color: "#2d8659" },
+  { label: "Supplementary Homicide", color: "#8B6914" },
+  ...(HATE_CRIME ? [{ label: "Hate Crime", color: "#4A4A4A" }] : []),
+];
+const SOURCE_ROWS: string[][] = [
+  ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files", "FBI Supplementary Homicide Reports", "FBI Hate Crime Statistics"],
+  ["Time Range", "2017–present", "1930–2025", "1991–present", "1976–present", "1991–present"],
+  ["Granularity", "Monthly Aggregated", "Annual Aggregated", "Incident-level", "Incident-level", "Incident-level"],
+  ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year", "Varies by year", "Voluntary agency reporting"],
+  ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes", "Homicides only", "Bias-motivated crimes"],
+  ["Detail Level", "Crime counts + clearance rates", "Crime counts + clearance rates + staffing", "Demographics, weapons, drugs, property", "Victim/offender demographics, weapon, circumstance, relationship", "Bias motivation, offense, location, offender demographics"],
+  ["Best For", "Recent trends, what’s happening now", "Long-term trends, historical context", "Deep analysis, demographics, specific offenses", "Homicide-specific analysis since 1976", "Hate crime and bias trend analysis"],
+].map((row) => (HATE_CRIME ? row : row.slice(0, 5)));
+const HATE_CRIME_PITFALL = "Hate crime counts reflect voluntary reporting and local classification practices, so missing or low counts do not necessarily mean hate crimes did not occur.";
 
 export default function ExplainerContent({ visible }: ExplainerContentProps) {
   return (
@@ -58,7 +81,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
 
           {/* Data sources comparison */}
           <section className="bg-white rounded-2xl border border-[var(--border)] p-6 md:p-8 shadow-sm">
-            <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">The Five Data Sources</h2>
+            <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">The {SOURCE_COUNT_WORD} Data Sources</h2>
             <p className="text-sm text-[var(--muted)] mb-6">
               Each database covers different time periods, detail levels, and collection methods. Choosing the right one depends on your question.
             </p>
@@ -67,23 +90,13 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                 <thead>
                   <tr>
                     <th className="text-left py-2.5 px-3 font-semibold text-[var(--muted)] text-[11px] uppercase tracking-wider border-b-2 border-[var(--border)]"></th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#475EC7", borderColor: "#475EC7" }}>Current Trends</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#8B5E3C", borderColor: "#8B5E3C" }}>Historical Library</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#2d8659", borderColor: "#2d8659" }}>NIBRS</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#8B6914", borderColor: "#8B6914" }}>Supplementary Homicide</th>
-                    <th className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color: "#4A4A4A", borderColor: "#4A4A4A" }}>Hate Crime</th>
+                    {SOURCE_COLUMNS.map(({ label, color }) => (
+                      <th key={label} className="text-left py-2.5 px-3 font-bold text-[11px] uppercase tracking-wider border-b-2" style={{ color, borderColor: color }}>{label}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="text-[var(--muted)]">
-                  {[
-                    ["Source", "Agency Data Collected by AH Datalytics", "FBI Uniform Crime Reports", "FBI NIBRS Master Files", "FBI Supplementary Homicide Reports", "FBI Hate Crime Statistics"],
-                    ["Time Range", "2017\u2013present", "1930\u20132025", "1991\u2013present", "1976\u2013present", "1991\u2013present"],
-                    ["Granularity", "Monthly Aggregated", "Annual Aggregated", "Incident-level", "Incident-level", "Incident-level"],
-                    ["Coverage", "Hundreds of agencies (curated sample)", "10,000+ agencies", "Varies by year", "Varies by year", "Voluntary agency reporting"],
-                    ["Crime Types", "Part I UCR (7 offenses)", "Part I UCR + staffing", "52+ NIBRS offense codes", "Homicides only", "Bias-motivated crimes"],
-                    ["Detail Level", "Crime counts + clearance rates", "Crime counts + clearance rates + staffing", "Demographics, weapons, drugs, property", "Victim/offender demographics, weapon, circumstance, relationship", "Bias motivation, offense, location, offender demographics"],
-                    ["Best For", "Recent trends, what\u2019s happening now", "Long-term trends, historical context", "Deep analysis, demographics, specific offenses", "Homicide-specific analysis since 1976", "Hate crime and bias trend analysis"],
-                  ].map(([label, ...cells], i) => (
+                  {SOURCE_ROWS.map(([label, ...cells], i) => (
                     <tr key={i} className="border-b border-[var(--border)]">
                       <td className="py-2.5 px-3 font-semibold text-[var(--foreground)] whitespace-nowrap">{label}</td>
                       {cells.map((cell, j) => (
@@ -178,7 +191,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
               </div>
             </div>
 
-            <div>
+            {HATE_CRIME && <div>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1 h-5 rounded-full" style={{ backgroundColor: "#4A4A4A" }} />
                 <h3 className="text-base font-bold text-[var(--foreground)]">Hate Crime Statistics</h3>
@@ -194,7 +207,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                   <strong className="text-[var(--foreground)]">Key caveat:</strong> Hate crime reporting is voluntary and depends on local identification and reporting practices. Counts reflect reported hate crime incidents, not all bias-motivated victimization.
                 </p>
               </div>
-            </div>
+            </div>}
           </section>
 
           {/* Common Pitfalls */}
@@ -216,7 +229,7 @@ export default function ExplainerContent({ visible }: ExplainerContentProps) {
                 "NIBRS participation varied wildly by state and year, especially before 2021. An increase in crime counts may reflect more agencies reporting, not more crime.",
                 "The database has total jurisdiction population only \u2014 not population by race, gender, or age. Per-capita rates by demographic group cannot be calculated.",
                 "Queries on raw tables (100M+ rows) can be slow. The assistant uses pre-built summary tables when possible, but very specific queries may take longer or time out completely.",
-                "Hate crime counts reflect voluntary reporting and local classification practices, so missing or low counts do not necessarily mean hate crimes did not occur.",
+                ...(HATE_CRIME ? [HATE_CRIME_PITFALL] : []),
                 "Your questions are logged to help improve query accuracy. No personally identifying information is collected or stored.",
               ].map((p, i) => (
                 <li key={i} className="flex items-start gap-2 text-[13px] text-[var(--muted)] leading-relaxed">

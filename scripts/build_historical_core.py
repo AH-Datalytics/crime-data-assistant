@@ -130,7 +130,7 @@ def build(args):
             "pseudo_identifier": base["pseudo_rows_excluded"],
             "unplaceable_identifier": base["unplaceable_rows_excluded"],
         },
-        "note": "blank stays NULL and zero stays zero; no all-zero rewrite is applied",
+        "note": "blank stays NULL; a zero beside a non-zero value stays zero; an agency-year whose every stated count is zero is NULL (owner rule 2026-10-24: the sources write 0 where nothing was filed)",
     }
 
     for role, path, loader, step, note in (

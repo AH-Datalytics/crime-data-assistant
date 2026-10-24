@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
+import { isSourceEnabled } from "@/lib/sources";
+
+// The social description names Hate Crime only while that source is enabled (deploy preflight: with
+// NEXT_PUBLIC_ENABLE_HATE_CRIME=false, /test must carry no Hate Crime text).
+const SHARE_DESCRIPTION = isSourceEnabled("hate_crime")
+  ? "Ask plain-English questions across current, historical, NIBRS, SHR, and hate crime data."
+  : "Ask plain-English questions across current, historical, NIBRS, and SHR data.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nibrsai.com"),
@@ -8,7 +15,7 @@ export const metadata: Metadata = {
   description: "Ask questions about crime data from 700+ agencies across the U.S. Powered by AI.",
   openGraph: {
     title: "Crime Data Assistant",
-    description: "Ask plain-English questions across current, historical, NIBRS, SHR, and hate crime data.",
+    description: SHARE_DESCRIPTION,
     url: "https://nibrsai.com",
     siteName: "The Crime Index",
     images: [
@@ -25,7 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Crime Data Assistant",
-    description: "Ask plain-English questions across current, historical, NIBRS, SHR, and hate crime data.",
+    description: SHARE_DESCRIPTION,
     images: ["/opengraph-image"],
   },
 };
