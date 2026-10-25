@@ -57,6 +57,8 @@ export type ShrQuestionSpec = {
   combine: "single" | "union" | "each";
   periods: YearMonth[];
   periodNote: string | null;
+  /** The observed last month of the source (owner 2026-10-25: a title says "(Partial)" only where the SOURCE ends). */
+  sourceEnd?: { year: number; month: number } | null;
   time: "year" | "month" | null;
   measure: "murder" | "homicide" | "manslaughter";
   unit: "victims" | "incidents";
@@ -935,7 +937,7 @@ export function planShrQuestion(ledger: RequestLedger, db: Database.Database, qu
   }
   const spec: ShrQuestionSpec = {
     // r3.1 shared slots: murder is the default homicide type.
-    type: finalType, geo, combine, periods, periodNote, time, measure: s.measure ?? "murder", unit,
+    type: finalType, geo, combine, periods, periodNote, sourceEnd: cutoff.observed ? { year: cutoff.year, month: cutoff.month } : null, time, measure: s.measure ?? "murder", unit,
     filters: base, agencyType, dimension, numerator, age: s.age?.stat ?? null, rank,
     threshold: thresholdApplied ? { op: s.threshold!.op, value: s.threshold!.value, words: s.threshold!.wordPart ? `${s.threshold!.words} ${s.threshold!.wordPart.text.trim()}` : s.threshold!.words } : null, countyMap, noRateYears,
   };
@@ -1360,22 +1362,39 @@ function periodWords(spec: ShrQuestionSpec): string {
 
 /**
  * The period for a TITLE (owner 2026-10-23: a title listed 51 years one by one). Contiguous full years read
- * "1976 to 2025"; when only the last year is partial and runs from January, "1976 to 2026 (2026 Through October)".
+ * "1976 to 2025"; when only the last year is partial and runs from January, "1976 to 2026 (2026 Partial)" (owner
+ * 2026-10-25: no months in titles).
  * Anything else keeps periodWords (the explanation always keeps periodWords).
  */
-const TITLE_MONTH = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/**
+ * Owner 2026-10-25: a requested year that runs past the source's last month (a whole-year question for the current
+ * year) is partial. Returns the source end when that applies, so the title says "(Partial)" and the explanation names
+ * the months actually covered; null otherwise.
+ */
+function sourceCutsPeriod(spec: ShrQuestionSpec): { year: number; month: number } | null {
+  const end = spec.sourceEnd;
+  if (!end || end.month >= 12) return null;
+  return spec.periods.some((p) => p.year === end.year && p.month > end.month) ? end : null;
+}
+
 function titlePeriodWords(spec: ShrQuestionSpec): string {
   const byYear = new Map<number, number[]>();
-  for (const p of spec.periods) byYear.set(p.year, [...(byYear.get(p.year) ?? []), p.month]);
+  const cut = sourceCutsPeriod(spec);
+  for (const p of spec.periods) if (!(cut && p.year === cut.year && p.month > cut.month)) byYear.set(p.year, [...(byYear.get(p.year) ?? []), p.month]);
   const years = [...byYear.keys()].sort((a, b) => a - b);
-  if (years.length < 2 || !years.every((y, i) => i === 0 || y === years[i - 1] + 1)) return periodWords(spec);
+  if (!years.length || !years.every((y, i) => i === 0 || y === years[i - 1] + 1)) return periodWords(spec);
   const full = (ms: number[]) => new Set(ms).size === 12;
   if (!years.slice(0, -1).every((y) => full(byYear.get(y)!))) return periodWords(spec);
   const last = years[years.length - 1];
   const lastMonths = [...new Set(byYear.get(last)!)].sort((a, b) => a - b);
-  if (lastMonths.length === 12) return `${years[0]} to ${last}`;
-  if (!lastMonths.every((m, i) => m === i + 1)) return periodWords(spec);
-  return `${years[0]} to ${last} (${last} Through ${TITLE_MONTH[lastMonths[lastMonths.length - 1] - 1]})`;
+  const span = years.length === 1 ? `${last}` : `${years[0]} to ${last}`;
+  if (lastMonths.length === 12) return span;
+  // Owner 2026-10-25: "(Partial)" never the months, but ONLY where the source itself ends (Codex PY-01/PY-02): the
+  // last year runs January to the source's last month. A window the reader asked for keeps its months.
+  const end = spec.sourceEnd;
+  const sourceCut = !!end && last === end.year && lastMonths.length === end.month && lastMonths.every((m, i) => m === i + 1);
+  if (!sourceCut) return periodWords(spec);
+  return years.length === 1 ? `${last} (Partial)` : `${span} (${last} Partial)`;
 }
 
 function filterWords(f: QFilter): string { return f.label; }
@@ -1402,7 +1421,14 @@ function describe(spec: ShrQuestionSpec, labels: string[]): { title: string; exp
   const dim = dimensionOf(spec);
   const cap = (x: string) => x.replace(/\b[a-z]/g, (c) => c.toUpperCase());
   const scope = `${subject[0].toUpperCase()}${subject.slice(1)}${agency} recorded in SHR for ${where}, ${when}${spec.periodNote ? ` (${spec.periodNote})` : ""}`;
-  const unitNote = spec.unit === "victims" ? "One incident can have multiple victims, so this counts victim records rather than incidents." : "Each incident is counted once, however many victims it had.";
+  const cut = sourceCutsPeriod(spec);
+  // Codex PY-04: the covered months are the REQUESTED months of that year up to the source's last month.
+  const asked = cut ? spec.periods.filter((p) => p.year === cut.year).map((p) => p.month).sort((a, c) => a - c) : [];
+  const covered = asked.filter((m) => cut && m <= cut.month);
+  const cutNote = !cut ? ""
+    : !covered.length ? ` ${cut.year} runs through ${MONTH_NAMES[cut.month - 1]} in this source, so none of the requested ${cut.year} months are in it yet.`
+      : ` ${cut.year} runs through ${MONTH_NAMES[cut.month - 1]} in this source, so ${cut.year} covers ${covered.length === 1 ? MONTH_NAMES[covered[0] - 1] : `${MONTH_NAMES[covered[0] - 1]} through ${MONTH_NAMES[covered[covered.length - 1] - 1]}`} only.`;
+  const unitNote = `${spec.unit === "victims" ? "One incident can have multiple victims, so this counts victim records rather than incidents." : "Each incident is counted once, however many victims it had."}${cutNote}`;
   const union = spec.combine === "union" ? ` The places are combined into one total, as asked.` : "";
   const th = spec.threshold ? ` Only places with ${spec.threshold.words} ${spec.measure === "murder" ? "murder" : spec.measure === "manslaughter" ? "negligent manslaughter" : "homicide"} ${unit} over the whole period (${when}) are shown.` : "";
   let statistic: string; let title: string; let yAxisLabel: string;

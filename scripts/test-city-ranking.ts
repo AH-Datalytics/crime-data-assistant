@@ -744,7 +744,7 @@ check("GC-039 resolves its period from an OBSERVED cutoff and says the year is p
   const built = buildCityRanking(plan, OBSERVED_PARTIAL);
   assert.ok(built);
   assert.equal(built!.period.provenance, "observed-cutoff");
-  assert.match(built!.title, /2025 through July/);
+  assert.ok(built!.title.endsWith("2025 (Partial)") && !/July/.test(built!.title), `owner 2026-10-25: no month in the title (${built!.title})`);
   assert.match(built!.sql, /am\.month <= 7/, "the statement covers exactly the period it claims");
   assert.deepEqual(cityNames(current, built!.sql), expected.currentCities);
   assert.ok(!cityNames(current, built!.sql).includes("OMAHA"), "a city with no offense record is not invented");
@@ -872,7 +872,8 @@ check("an EXPLICIT year that the source only partly holds is said to be partial"
   const { built, rows } = run(nibrs, "Top 10 cities in Texas by murder counts in 2025", "nibrs", OBSERVED_PARTIAL);
   assert.equal(built.period.throughMonth, 7);
   assert.equal(built.period.provenance, "requested");
-  assert.match(built.title, /2025 through July/);
+  // The year was asked for; the source cuts it at July, so the title says partial without naming months (owner 2026-10-25).
+  assert.ok(built.title.endsWith("2025 (Partial)") && !/July/.test(built.title), `owner 2026-10-25: no month in the title (${built.title})`);
   assert.match(built.sql, /s\.month <= 7/);
   assert.equal(rows.find((r) => r.city === "HOUSTON")!.offenses, expected.nibrsMurderHoustonThroughJuly);
 });

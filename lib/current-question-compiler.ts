@@ -41,7 +41,7 @@ const ymKey = (y: number, m: number) => `${y}-${pad(m)}`;
 const monthName = ([y, m]: [number, number]) => `${MONTH_NAMES[m - 1]} ${y}`;
 const r1 = (v: number | null) => (v === null || !Number.isFinite(v) ? null : Math.round(v * 10) / 10);
 const fmt = (n: number) => n.toLocaleString("en-US");
-type YM = [number, number];
+export type YM = [number, number];
 
 /* ================================================================== the typed query builder ===================== */
 
@@ -200,7 +200,7 @@ export function checkEndpointPair(a: Endpoint, b: Endpoint, periodA: YM[], perio
 
 /* ================================================================== source facts ================================ */
 
-type Bounds = { lo: YM; hi: YM };
+export type Bounds = { lo: YM; hi: YM };
 function bounds(ctx: CompileContext): Bounds | null {
   const row = ctx.run("SELECT MIN(year * 100 + month) AS lo, MAX(year * 100 + month) AS hi FROM agency_monthly")[0]; // lookup: source-bounds
   const lo = Number(row?.lo); const hi = Number(row?.hi);
@@ -262,9 +262,33 @@ export const describeYearSpan = (ms: [number, number][]) => {
   if (first === last) return `${span} (Partial)`;
   return `${span} (${partial.join(" and ")} Partial)`;
 };
-const titleSpan = (ms: YM[], grain: string) => (grain === "year" ? describeYearSpan(ms) : describeSpan(ms));
+/**
+ * Owner 2026-10-25 ("everywhere") + Codex PY-01/PY-02: by-year and total titles name years, and "(Partial)" marks only
+ * a year the SOURCE cuts (the last year ending at the latest month, or the first starting at the earliest). Any other
+ * incomplete year is a window the reader asked for, so the title keeps its months; monthly and rolling titles too.
+ */
+/** The year words for a period every year of which is full or cut only by the SOURCE ("2024 to 2025 (2025 Partial)"); null otherwise. */
+const sourceYearSpan = (ms: YM[], b?: Bounds): string | null => {
+  if (!b || !ms.length) return null;
+  const first = ms[0];
+  const last = ms[ms.length - 1];
+  const count = (y: number) => ms.filter(([yy]) => yy === y).length;
+  // A cut is the SOURCE's only when the source itself ends (or starts) mid-year at exactly that month, and the rest of
+  // that year is as full as the source allows (Codex PY-02-S/W: a January-starting source never "cuts" a January window).
+  const startsJanOrAtLo = (y: number) => ms.some(([yy, m]) => yy === y && (m === 1 || (yy === b.lo[0] && m === b.lo[1] && b.lo[1] > 1 && cmp([yy, m], first) === 0)));
+  const endsDecOrAtHi = (y: number) => ms.some(([yy, m]) => yy === y && (m === 12 || (yy === b.hi[0] && m === b.hi[1] && b.hi[1] < 12 && cmp([yy, m], last) === 0)));
+  const cutAtEnd = (y: number) => y === last[0] && b.hi[1] < 12 && cmp(last, b.hi) === 0 && startsJanOrAtLo(y);
+  const cutAtStart = (y: number) => y === first[0] && b.lo[1] > 1 && cmp(first, b.lo) === 0 && endsDecOrAtHi(y);
+  const years = [...new Set(ms.map(([y]) => y))];
+  return years.every((y) => count(y) === 12 || cutAtEnd(y) || cutAtStart(y)) ? describeYearSpan(ms) : null;
+};
+export const titleSpan = (ms: [number, number][], grain: string, b: { lo: [number, number]; hi: [number, number] }) =>
+  grain === "year" || grain === "total" ? sourceYearSpan(ms, b) ?? describeSpan(ms) : describeSpan(ms);
 const fullYear = (ms: YM[]) => ms.length === 12 && ms[0][1] === 1 && ms.every(([y]) => y === ms[0][0]);
-const periodLabel = (ms: YM[]): string | number => (fullYear(ms) ? ms[0][0] : spanLabel(ms));
+// Owner 2026-10-25 + Codex PY-01/PY-01-M: table and comparison labels use the SAME source-aware rule as titles: a full
+// year is the year; years full or cut only by the source read "2024 to 2025 (2025 Partial)"; a window the reader asked
+// for keeps its month span.
+export const periodLabel = (ms: YM[], b?: Bounds): string | number => (fullYear(ms) ? ms[0][0] : sourceYearSpan(ms, b) ?? spanLabel(ms));
 const windowOf = (end: YM): YM[] => between(shift(end, -11), end);
 const unionWindows = (ends: YM[]): YM[] => [...new Map(ends.flatMap(windowOf).map((x) => [ymKey(...x), x] as const)).values()].sort(cmp);
 
@@ -317,9 +341,9 @@ function relativeValue(p: CPeriod, months: YM[], b: Bounds): string | null {
  */
 type Bucket = { label: string | number; months: YM[]; partial?: string };
 const partialSpan = (ms: YM[]) => `${MONTH_NAMES[ms[0][1] - 1]}–${MONTH_NAMES[ms[ms.length - 1][1] - 1]}`;
-function buckets(months: YM[], grain: "total" | "month" | "year"): Bucket[] {
+function buckets(months: YM[], grain: "total" | "month" | "year", b?: Bounds): Bucket[] {
   if (grain === "month") return months.map((x) => ({ label: ymKey(...x), months: [x] }));
-  if (grain === "total") return [{ label: periodLabel(months), months }];
+  if (grain === "total") return [{ label: periodLabel(months, b), months }];
   const byYear = new Map<number, YM[]>();
   for (const x of months) { if (!byYear.has(x[0])) byYear.set(x[0], []); byYear.get(x[0])!.push(x); }
   return [...byYear.values()].map((ms) => (fullYear(ms) ? { label: ms[0][0], months: ms } : { label: ms[0][0], months: ms, partial: ms.length === 1 ? MONTH_NAMES[ms[0][1] - 1] : partialSpan(ms) }));
@@ -495,7 +519,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
           const f = fetchAgency(ctx, ops, sqls, place, agency, offs, months, "value", statistic === "rate");
           if (statistic === "rate") { const bad = rateCheck(f, months); if (bad) return { kind: "decline", explanation: operandFailure(bad) }; }
           valueRecs.push(f.valueRec);
-          for (const bk of buckets(months, spec.grain)) {
+          for (const bk of buckets(months, spec.grain, b)) {
             const n: string[] = [];
             const v = agencyBucket(f, bk, offs, statistic, n);
             if (n.length) missingNamed.push(...n.map((t) => `${agency.label}: ${t}`));
@@ -527,7 +551,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
         } else {
           const { byMonth, rec } = fetchSample(ctx, ops, sqls, place, offs, months, "value");
           valueRecs.push(rec);
-          let bks = buckets(months, spec.grain);
+          let bks = buckets(months, spec.grain, b);
           // A period total only for the same agencies in every month of it; otherwise the monthly values (r1.1 F2).
           const unstable = (bk: Bucket) => bk.months.length > 1 && new Set(bk.months.map((x) => contributorKey(byMonth, x))).size > 1;
           if (bks.some(unstable)) {
@@ -575,7 +599,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const placeNames = spec.places.map((p) => (p.kind === "agency" ? agencies.get(p)!.label : samplePlaceLabel(p)));
   const what = spec.measures.length > 2 ? "reported offenses" : spec.measures.map((m) => MEASURE_LABEL[m]).join(" and ");
   const statText = statistic === "rate" ? "rate per 100,000 residents" : spec.grain === "rolling" ? "12-month rolling total" : "reported count";
-  const title = `${what[0].toUpperCase()}${what.slice(1)} ${statistic === "rate" ? "Rate" : "Count"}${spec.grain === "rolling" ? " (Rolling 12 Months)" : ""}, ${placeNames.join(", ")}, ${titleSpan(months, spec.grain)}`;
+  const title = `${what[0].toUpperCase()}${what.slice(1)} ${statistic === "rate" ? "Rate" : "Count"}${spec.grain === "rolling" ? " (Rolling 12 Months)" : ""}, ${placeNames.join(", ")}, ${titleSpan(months, spec.grain, b)}`;
   const countyNotes = [...agencies.values()].map(countyAgencyNote).filter((n): n is string => Boolean(n));
   const explanation = [`Current Trends ${what} ${statText}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${placeNames.join(", ")}, ${describeSpan(months)}.`, ...countyNotes, ...notesOut].join(" ");
   const multiPeriod = new Set(rows.map((r) => r.period)).size > 1;
@@ -592,7 +616,7 @@ function compileChange(spec: ChangeSpec, ctx: CompileContext, b: Bounds): Compil
   const offs = OFFENSES_OF[spec.measure];
   const periods: YM[][] = [];
   for (const p of spec.periods) { const r = monthsOf(p, b, null); if ("decline" in r) return { kind: "decline", explanation: r.decline }; periods.push(r.months); }
-  const labels = periods.map(periodLabel);
+  const labels = periods.map((ms) => periodLabel(ms, b));
   const all = periods.flat();
   const ops: OperandRecord[] = []; const sqls: string[] = [];
   const notes: string[] = [];
@@ -616,7 +640,7 @@ function compileChange(spec: ChangeSpec, ctx: CompileContext, b: Bounds): Compil
       { const cn = countyAgencyNote(agency); if (cn) notes.push(cn); }
       endpointOf = (months) => {
         const n: string[] = [];
-        const value = agencyBucket(f, { label: periodLabel(months), months }, offs, spec.statistic, n);
+        const value = agencyBucket(f, { label: periodLabel(months, b), months }, offs, spec.statistic, n);
         const years = [...new Set(months.map(([y]) => y))];
         return { value, identity: f.valueRec.oris[0], offenses: [...f.valueRec.offenses], statistic: spec.statistic, months: [...months], denominatorYear: spec.statistic === "rate" && years.length === 1 && f.pop.has(years[0]) ? years[0] : null, notes: n.map((t) => `${agency.label}: ${t}.`) };
       };
@@ -750,7 +774,7 @@ function compilePeers(spec: PeerSpec, ctx: CompileContext, b: Bounds): CompiledA
   const rows: Row[] = [];
   const notes: string[] = [];
   const st = spec.statistic === "rate" ? "rate_per_100k" : "count";
-  const bks = buckets(months, spec.grain);
+  const bks = buckets(months, spec.grain, b);
   const valueRecs: OperandRecord[] = [];
   for (const [i, c] of [{ ori: target.ori, label: target.label, pop: tpop }, ...chosen].entries()) {
     const place = { kind: "agency" as const, agencyKind: "city" as const, name: c.label.split(", ")[0], state: c.label.split(", ")[1], text: c.label };
@@ -781,7 +805,7 @@ function compilePeers(spec: PeerSpec, ctx: CompileContext, b: Bounds): CompiledA
   if (popYear === b.hi[0]) notes.push(`${popYear} populations repeat the latest estimate on file where no newer one exists.`);
   const partial = partialNote(b, months); if (partial) notes.push(partial);
   const what = MEASURE_LABEL[spec.measure];
-  const title = `${what[0].toUpperCase()}${what.slice(1)} ${spec.statistic === "rate" ? "Rate" : "Count"}: ${target.label} and Similar-Sized Cities, ${titleSpan(months, spec.grain)}`;
+  const title = `${what[0].toUpperCase()}${what.slice(1)} ${spec.statistic === "rate" ? "Rate" : "Count"}: ${target.label} and Similar-Sized Cities, ${titleSpan(months, spec.grain, b)}`;
   const explanation = [`Current Trends ${what} ${spec.statistic === "rate" ? "rate per 100,000 residents" : "reported count"}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${target.label} and similar-sized cities, ${describeSpan(months)}.`, ...spec.uiNotes, ...notes].join(" ");
   const multi = bks.length > 1;
   return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, chartConfig: { type: multi ? "line" : "bar", xAxis: multi ? "period" : "place", yAxis: ["value"], title, ...(partialPeriodsOf(bks).length ? { partialPeriods: partialPeriodsOf(bks) } : {}) } as ChartConfig, applied: a, requestedEntities: [target.label], returnedEntities: [...new Set(rows.map((r) => String(r.place)))] };

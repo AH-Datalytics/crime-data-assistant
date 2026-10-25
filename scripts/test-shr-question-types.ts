@@ -535,8 +535,28 @@ check(exactCount("9007199254740993").ok === false && exactCount("900719925474099
     check(/2022, 2023, 2024, 2025|2022-2025/.test(r.compiled.explanation), "the explanation keeps the full period words");
   } else check(false, `share question answered (${r.decline})`);
   const p = run("What share of female murder victims were killed with a firearm in Texas since 2022?", { ...CUTOFF, month: 10 });
-  if (answered(p)) check(p.compiled.title === "Share Of Female Murder Victims Killed With A Firearm, Texas, 2022 to 2025 (2025 Through October)", `a partial last year is named (${p.compiled.title})`);
+  if (answered(p)) check(p.compiled.title === "Share Of Female Murder Victims Killed With A Firearm, Texas, 2022 to 2025 (2025 Partial)", `a partial last year is named (${p.compiled.title})`);
   else check(false, `partial-year share answered (${p.decline})`);
+  // Owner 2026-10-25 + Codex PY-01/PY-02: "(Partial)" only where the SOURCE ends; a window the reader asked for keeps
+  // its months, and the explanation always keeps them.
+  {
+    const one = run("How many murder victims were there in Texas since 2025?", { ...CUTOFF, month: 10 });
+    if (answered(one)) {
+      check(/, 2025 \(Partial\)$/.test(one.compiled.title) && !/October|January/.test(one.compiled.title), `PY-01: a source-cut single year titles "2025 (Partial)" (${one.compiled.title})`);
+      check(/October/.test(one.compiled.explanation), "PY-01: the explanation still names the months");
+    } else check(false, `PY-01 single year answered (${one.decline})`);
+    const win = run("How many murder victims were there in Texas from January 2024 through June 2025?");
+    if (answered(win)) check(!/Partial/.test(win.compiled.title) && /June/.test(win.compiled.title), `PY-02: a requested window keeps its months, never "(Partial)" (${win.compiled.title})`);
+    else check(/full calendar years|month/i.test(win.decline), `PY-02: a requested window is declined, not relabeled (${win.decline})`);
+    const whole = run("How many murder victims were there in Texas in 2025?", { ...CUTOFF, month: 10 });
+    if (answered(whole)) check(/, 2025 \(Partial\)$/.test(whole.compiled.title) && /2025 covers January through October only/.test(whole.compiled.explanation), `a whole-year question past the source's last month says so in the title and the text (${whole.compiled.title})`);
+    else check(false, `whole-year question answered (${whole.decline})`);
+    const lateYear = run("How many murder victims were there in Texas July through December 2025?", { ...CUTOFF, month: 10 });
+    if (answered(lateYear)) check(/2025 covers July through October only/.test(lateYear.compiled.explanation) && !/January through October/.test(lateYear.compiled.explanation), `PY-04: the note states the requested months the source holds (${lateYear.compiled.explanation.slice(-120)})`);
+    else check(/month|full calendar/i.test(lateYear.decline), `PY-04: a July-December request is answered or plainly declined (${lateYear.decline})`);
+    const firstHalf = run("homicides in Texas in the first six months of each year since 2023");
+    if (answered(firstHalf)) check(!/Partial/.test(firstHalf.compiled.title), `PY-03: a requested month window is never labeled partial (${firstHalf.compiled.title})`);
+  }
   const c = run("How many murder victims were there in Texas in 2024 and 2025?");
   if (answered(c)) check(/, 2024 to 2025$/.test(c.compiled.title), `a count title uses the compact span (${c.compiled.title})`);
   else check(false, `count answered (${c.decline})`);
