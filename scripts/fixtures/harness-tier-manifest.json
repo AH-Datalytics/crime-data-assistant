@@ -2421,6 +2421,15 @@
       "note": "request accounting stage 2b: unit checks of the ledger, question types or binding; no database, no route, no network"
     },
     {
+      "id": "test-nibrs-exceptional-by-type",
+      "tier": "F",
+      "script": "scripts/test-nibrs-exceptional-by-type.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "owner 2026-10-25: exceptional clearances by type; in-memory database only, no route, no network"
+    },
+    {
       "id": "test-nibrs-typed-applied-sites",
       "tier": "F",
       "script": "scripts/test-nibrs-typed-applied-sites.ts",

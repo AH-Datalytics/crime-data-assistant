@@ -337,7 +337,11 @@ export function matchNibrsType(ledger: RequestLedger): NibrsTypeDecision {
       bUnit = wanted; dim = "age";
     }
     if (dim === "clearance-type" || dim === "clearance-method") {
-      const notInClearance = [...of("filter"), ...of("clearance-reason"), ...unitParts.filter((p) => p.value !== "offenses")];
+      // Owner 2026-10-25 ("virginia murder clearances by exception by type in 2025"): "by exception" with the
+      // clearance-TYPE breakdown is not a conflicting restriction; it asks for the exceptional types only (death of
+      // offender, prosecution declined, ...). It is consumed as that narrowing; every other restriction still declines.
+      const exceptionalOnly = (p: Part) => dim === "clearance-type" && p.concept === "filter" && p.value === "clearance:exceptional";
+      const notInClearance = [...of("filter").filter((p) => !exceptionalOnly(p)), ...of("clearance-reason"), ...unitParts.filter((p) => p.value !== "offenses")];
       if (notInClearance.length) return declineParts(notInClearance, (p) => cannot(p, p.concept === "unit"
         ? "clearance figures count offense records, not other units."
         : "NIBRS's clearance tables don't record it, so a clearance breakdown can't be restricted by it."));
