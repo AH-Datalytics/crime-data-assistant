@@ -53,7 +53,8 @@ const IMMIGRATION = notRecorded("immigration or citizenship status");
 const POLICY = notRecorded("policies, laws or legalization, or their effects; it records reported crimes");
 const DOCUMENTS = notRecorded("documents, diagrams or policy material; it holds crime statistics");
 const SUBCITY = notRecorded("anything below the level of a city or county agency (ZIP codes, neighborhoods, districts)");
-const SUBYEAR = notRecorded("months, quarters or seasons; its figures are yearly");
+// Historical vocabulary pass (2026-10-24, Codex ACCEPT): the pointer says what the other tab has, not that it answers.
+const SUBYEAR = notRecorded("months, quarters or seasons; its figures are yearly", "Current Trends has monthly figures for its sample agencies");
 const declined = (reason: string) => (text: string) => `I can't apply "${text.trim()}": ${reason} I haven't answered with a number that leaves it out.`;
 
 /* ------------------------------------------------------------------ rules --------------------------------------- */
@@ -83,6 +84,10 @@ const RULES: Rule[] = [
   // Option 3 batch 1 (P175, P240): policies and laws, and documents or diagrams, are not what Historical holds.
   // Option 3 batch 1 (P203): "where can I find (more) data on …" asks about sources; the text path answers it.
   { concept: "meta-source", pattern: R(String.raw`^\s*where\s+(?:can|could|do|should)\s+i\s+(?:find|get|see|look\s+for)\s+(?:more\s+)?(?:data|information|info|statistics|numbers)(?:\s+(?:on|about|for)\b[^?.!,;]*?(?=\s*(?:[?.!,;]|\band\b|$)))?`) },
+  // Historical vocabulary pass (2026-10-24, Codex): the whole staffing phrase is claimed before the policy detector reads
+  // "law" (L9533 "sworn law enforcement officers"). "law enforcement agencies" is not staffing and is left alone.
+  { concept: "staffing", value: () => "officers", pattern: R(String.raw`\b(?:total\s+)?(?:sworn\s+)?law[-\s]enforcement\s+officers?\b`) },
+  { concept: "staffing", value: () => "employees", pattern: R(String.raw`\b(?:total\s+)?law[-\s]enforcement\s+(?:employees|personnel|staff)\b`) },
   { concept: "policy", pattern: R(String.raw`\b(?:(?:marijuana|cannabis)\s+)?legali[sz](?:ation|ed|ing)\b|\b(?:new\s+)?(?:laws?|policies|policy)\b(?!\s+(?:staffing|officers?|departments?|force|employees?))`), state: "not-recorded", explanation: POLICY },
   { concept: "documents", pattern: R(String.raw`\b(?:flowcharts?|(?:strategy\s+)?diagrams?|fact\s*sheets?|roadmaps?)\b[^?.!]*`), state: "not-recorded", explanation: DOCUMENTS },
   { concept: "topic", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias(?:[-\s]motivated)?\b|\bdomestic(?:\s+violence)?\b|\bgangs?(?:[-\s]related)?\b|\bdrugs?(?:[-\s]related)?\b|\bnarcotics?\b`), state: "not-recorded", explanation: TOPIC },
@@ -101,19 +106,36 @@ const RULES: Rule[] = [
   // Option 3 batch 1 (P305): a five-digit "year" is never corrected; ask which year was meant.
   { concept: "period-unsupported", pattern: R(String.raw`\b(?:since|from|in|after|before|through|until)\s+\d{5,}\b`), state: "not-interpreted",
     explanation: (t: string) => `"${t.trim()}" doesn't name a year I can use. Which year did you mean? I haven't answered with a number that leaves it out.` },
-  { concept: "period-unsupported", pattern: R(String.raw`\b(?:early|mid|late)[-\s]?(?:(?:19|20)\d0'?s|${YEAR}s?)\b|\b(?:the\s+)?(?:19|20)\d0'?s\b`), state: "not-interpreted",
+  { concept: "period-unsupported", pattern: R(String.raw`\b(?:early|mid|late)[-\s]?(?:(?:19|20)\d0'?s|${YEAR}s?)\b`), state: "not-interpreted",
+    explanation: declined("I can't turn that into specific years; please give the years (for example \"from 2020 to 2023\").") },
+  // Historical vocabulary pass (2026-10-24, Codex): an exact calendar decade is read below as its ten years; a decade
+  // not yet over ("the 2020s") is still declined here, so a range is never silently cut short.
+  { concept: "period-unsupported", pattern: R(String.raw`\b(?:(?:since|from|in|during)\s+)?(?:the\s+)?((?:19|20)\d0)'?s\b`), state: "not-interpreted",
+    when: (m) => Number(m[1]) + 9 >= new Date().getFullYear(),
     explanation: declined("I can't turn that into specific years; please give the years (for example \"from 2020 to 2023\").") },
   // ---- periods (years only; raw values kept). Before ranking words: "the most recent year" is a period. ----
+  // Historical vocabulary pass (2026-10-24, Codex): exact decades ("since the 2000s" = from 2000; "in the 1940s" =
+  // 1940-1949). Early/mid/late and unfinished decades are declined above.
+  { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:since|from|starting\s+in)\s+(?:the\s+)?((?:19|20)\d0)'?s\b`) },
+  // Codex consolidated review: only interval words ("through the 1990s" is an endpoint, not the decade; it stays unread).
+  { concept: "period", value: (m) => `range:${m[1]}:${Number(m[1]) + 9}`, pattern: R(String.raw`\b(?:(?:in|during|for|throughout)\s+)?(?:the\s+)?((?:19|20)\d0)'?s\b`),
+    when: (m, q) => !/\b(?:through|thru|until|till|to)\s+(?:the\s+)?$/i.test(q.slice(0, m.index)) },
+  // Explicit requests for the full history (= every available year; any other bound in the question still applies).
+  { concept: "period", value: () => "all", pattern: R(String.raw`\b(?:for\s+)?as\s+many\s+years\s+as\s+(?:possible|available|you\s+have)\b|\bas\s+far\s+back\s+as\s+(?:available|(?:the\s+)?data\s+goes)\b|\b(?:from|since)\s+(?:the\s+)?(?:beginning|start)\s+of\s+(?:the\s+)?(?:data|records)(?:\s+(?:until|to|through)\s+(?:the\s+)?(?:present|now|today))?\b|\b(?:the\s+)?(?:full|entire|whole|complete)\s+history\b`) },
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `lastinc:${numberToken(m[1])}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past)\s+(${NUMBER})\s+years\s*,?\s*including\s+(?:this|the\s+current)\s+year\b`) },
   { concept: "period", value: (m) => `between:${m[1]}:${m[2]}`, pattern: R(String.raw`\bbetween\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
-  { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+(${YEAR})(?:\s*(?:-|–|to|through|until)\s*(?:the\s+)?(?:present|now|today|current(?:\s+year)?)|\s+on(?:wards?)?)?\b`) },
+  { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+(${YEAR})(?:\s*(?:-|–|to|through|until)\s*(?:the\s+)?(?:present|now|today|current(?:\s+year)?|most\s+(?:current|recent)(?:\s+(?:year|data))?)|\s+on(?:wards?)?)?\b`) },
   { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:(?:going\s+)?back\s+to|as\s+far\s+back\s+as)\s+(${YEAR})\b`) },
-  { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(${YEAR})\s*(?:-|–|to|through|until)\s*(?:the\s+)?(?:present|now|today)\b`) },
+  // General fix 1 (step A Historical gaps, Codex r1 item 3: direct recognition): "2000-current", "2015 to date".
+  { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(${YEAR})\s*(?:-|–|to|through|until)\s*(?:the\s+)?(?:present|now|today|current(?:\s+year)?|date|most\s+(?:current|recent)(?:\s+(?:year|data))?)\b`) },
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(${YEAR})\s*(?:-|–|—|to|through|thru)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `after:${m[1]}`, pattern: R(String.raw`\bafter\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `before:${m[1]}`, pattern: R(String.raw`\bbefore\s+(${YEAR})\b`) },
-  { concept: "period", value: (m) => `last:${numberToken(m[1])}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past|previous|prior)\s+(${NUMBER})\s+(?:(?:full|complete|calendar)\s+)?years\b`) },
+  // Historical vocabulary pass (2026-10-24, Codex): "the last three (3) years" only when the word and the digits agree.
+  { concept: "period", value: (m) => `last:${m[2]}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past|previous|prior)\s+(${NUMBER})\s*\((\d+)\)\s+(?:years|yrs?)\b\.?`),
+    when: (m) => numberToken(m[1]) === m[2] },
+  { concept: "period", value: (m) => `last:${numberToken(m[1])}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past|previous|prior)\s+(${NUMBER})\s+(?:(?:full|complete|calendar)\s+)?(?:years|yrs?)\b\.?`) },
   { concept: "period", value: () => "last:10", pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past)\s+decade\b`) },
   { concept: "period", value: () => "lastyear", pattern: R(String.raw`\b(?:in\s+)?last\s+year\b`) },
   { concept: "period", value: () => "latest", pattern: R(String.raw`\b(?:in\s+|for\s+)?(?:the\s+)?(?:latest|most\s+recent)\s+(?:year|data)(?:\s+available)?\b`) },
@@ -133,6 +155,13 @@ const RULES: Rule[] = [
   { concept: "statistic", value: () => "percapita", pattern: R(String.raw`\bper[-\s]capita\b`) },
   { concept: "statistic", value: () => "rate", pattern: R(String.raw`\brates?\b`) },
   { concept: "statistic", value: () => "count", pattern: R(String.raw`\bhow\s+many\b|\b(?:total\s+)?(?:annual\s+)?(?:numbers?|counts?)(?:\s+of)?\b`) },
+  // Historical vocabulary pass (2026-10-24, Codex): "murder totals" is the count of that measure (attached to the measure
+  // word, never a combine); "cases of" only directly before an offense, with nothing between them.
+  { concept: "statistic", value: () => "count", pattern: R(String.raw`(?<=\b(?:murders?|homicides?|rapes?|robber(?:y|ies)|assaults?|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|violent\s+crimes?|property\s+crimes?)['’]?\s+)totals?\b`) },
+  { concept: "statistic", value: () => "count", pattern: R(String.raw`\bcases\s+of(?=\s+(?:murders?|homicides?|rapes?|robber(?:y|ies)|aggravated\s+assaults?|assaults?|burglar(?:y|ies)|larcen(?:y|ies)|thefts?|motor\s+vehicle\s+thefts?|violent\s+crimes?|property\s+crimes?)\b)`) },
+  // A complete request opener naming a data set ("can I see a data set of …", L8744); never a bare "set of".
+  { concept: "request", state: "context", pattern: R(String.raw`\ba\s+data\s*set\s+(?:of|for|on)\b`),
+    when: (m, q) => /^\s*(?:can|could|may)\s+i\s+(?:see|get|have)\s+$/i.test(q.slice(0, m.index)) },
   // ---- ranking ----
   { concept: "rank", value: (m) => `${/bottom/i.test(m[1]) ? "bottom" : "top"}:${numberToken(m[2])}`, pattern: R(String.raw`\b(top|bottom)\s+(${NUMBER})\b`) },
   // Option 3 batch 1 (P039): "the highest 20" binds the count like "top 20".
@@ -249,6 +278,90 @@ const CITY_OF = /(?:\bthe\s+)?\bcity\s+of\s+$/i;
 
 const DC = /\bWashington,?\s+D\.?\s?C\b|\bD\.C\b|\bDistrict\s+of\s+Columbia\b/gi;
 const US_BEFORE_ENTITY = /\b(?:the\s+)?us\b(?=\s+(?:cities|states|counties|agencies|police|towns))/gi;
+// Historical vocabulary pass (2026-10-24, Codex): "the us violent crime rate" -- only with the article and directly before
+// a measure word, so the pronoun ("tell us the rate") never reads as the nation.
+const US_BEFORE_MEASURE = /(?<=\bthe\s+)us\b(?=\s+(?:total\s+)?(?:violent|property|murders?|homicides?|crimes?|rapes?|robber(?:y|ies)|aggravated|assaults?|burglar(?:y|ies)|larcen(?:y|ies)|thefts?|motor\s+vehicle|clearance|police)\b)/gi;
+// State postal codes in a list of two or more codes joined by vs/versus/and/&/commas ("CA vs. TX vs. NY state").
+// Uppercase only; codes that are also everyday words or other places (IN, OR, ME, OK, HI, LA) are never read this way,
+// and a code attached to a city ("Austin, TX") is not in such a list, so the resolver keeps it.
+const LIST_CODE_EXCLUDED = new Set(["IN", "OR", "ME", "OK", "HI", "LA", "US", "DC"]);
+
+function recordStateCodeLists(ledger: RequestLedger): void {
+  const codes = Object.values(STATE_NAME_TO_ABBR as Record<string, string>).filter((c) => !LIST_CODE_EXCLUDED.has(c));
+  const item = String.raw`(?:${codes.join("|")})\.?(?:\s+state)?`;
+  const sep = String.raw`\s*(?:,|&|\band\b|\bvs\.?|\bversus\b)\s*`;
+  // Not right after a comma or a capitalized word ("Austin, TX", "Austin TX"): that code belongs to a city. Missing a
+  // list there leaves it unread (refused), never misread.
+  const run = new RegExp(String.raw`(?<!(?:,|\b[A-Z][a-z]+)\s?)\b${item}(?:${sep}${item})+\b`, "g");
+  // Codex consolidated review: respect the resolver's city/county attachment whatever the case or spacing -- a code
+  // inside a city or county mention, or right after one, leaves the whole list unread.
+  const q = ledger.question;
+  const lead = q.length - q.replace(/^\s+/, "").length;
+  const local = resolveGeoPlaces(q).mentions
+    .filter((mn) => mn.candidates.some((c) => c.kind === "city" || c.kind === "county"))
+    .map((mn) => [mn.start + lead, mn.end + lead] as const);
+  const attached = (s: number, e: number) => local.some(([ms, me]) => (s >= ms && e <= me && !(s === ms && e === me)) || (me <= s && /^[\s,]*$/.test(q.slice(me, s))));
+  let m: RegExpExecArray | null;
+  while ((m = run.exec(ledger.question))) {
+    const codeSpans = [...m[0].matchAll(new RegExp(String.raw`\b(${codes.join("|")})\b`, "g"))].map((c) => [m!.index + c.index!, m!.index + c.index! + c[1].length] as const);
+    if (codeSpans.some(([s, e]) => attached(s, e))) continue;
+    const each = new RegExp(String.raw`\b(${codes.join("|")})\b`, "g");
+    let c: RegExpExecArray | null;
+    while ((c = each.exec(m[0]))) {
+      const name = STATE_NAMES.find((n) => (STATE_NAME_TO_ABBR as Record<string, string>)[n] === c![1]);
+      if (!name) continue;
+      const s = m.index + c.index;
+      ledger.record({ concept: "place", value: `state:${name}`, span: [s, s + c[1].length], rule: "place:state-code-list" });
+    }
+  }
+}
+
+/**
+ * A list introduction before named places ("in the following states: California, …"), Codex consolidated review: its
+ * kind word is a restriction, so the phrase is context only when every place named after it resolved to that kind
+ * (states -> state, cities -> city, counties -> county, agencies -> a city or county agency). Otherwise it stays unread.
+ */
+const LIST_INTRO = /\bin\s+the\s+following(?:\s+(states|cities|counties|agencies))?\s*:?/gi;
+const LIST_KIND: Record<string, RegExp> = { states: /^state:/, cities: /^city:/, counties: /^county:/, agencies: /^(?:city|county):/ };
+
+function recordListIntro(ledger: RequestLedger): void {
+  const q = ledger.question;
+  LIST_INTRO.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = LIST_INTRO.exec(q))) {
+    const end = m.index + m[0].length;
+    if (!/^\s*[A-Z]/.test(q.slice(end))) continue;
+    const listed = ledger.parts.filter((p) => p.concept === "place" && p.span[0] >= end);
+    if (listed.length < 2) continue;
+    const kind = m[1] ? LIST_KIND[m[1].toLowerCase()] : null;
+    if (kind && !listed.every((p) => kind.test(String(p.value)))) continue;
+    ledger.record({ concept: "request", span: [m.index, end], rule: "list-intro", state: "context" });
+  }
+}
+
+/**
+ * "statewide" (Codex 2026-10-24): context only when the question's whole place scope is ONE named state and nothing
+ * narrower (no city, county, agency or list words), and the word sits beside that state or directly before what is
+ * counted. Otherwise it stays unread.
+ */
+function recordStatewide(ledger: RequestLedger): void {
+  const q = ledger.question;
+  const places = ledger.parts.filter((p) => p.concept === "place");
+  const states = new Set(places.map((p) => p.value));
+  if (places.length === 0 || states.size !== 1 || !String([...states][0]).startsWith("state:")) return;
+  if (ledger.parts.some((p) => p.concept === "entity" || p.concept === "list" || p.rule === "list-intro")) return;
+  const re = /\bstate[-\s]?wide\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(q))) {
+    const start = m.index;
+    const end = start + m[0].length;
+    // Codex consolidated review: test the gap only for correctly ordered spans (a reversed slice is "" and would pass).
+    const gap = (a: number, b: number, re: RegExp) => a <= b && re.test(q.slice(a, b));
+    const beside = places.some((p) => gap(p.span[1], start, /^[\s,]*$/) || gap(end, p.span[0], /^[\s,]*$/));
+    const beforeMeasure = ledger.parts.some((p) => (p.concept === "measure" || p.concept === "staffing" || p.concept === "clearance") && gap(end, p.span[0], /^\s*$/));
+    if (beside || beforeMeasure) ledger.record({ concept: "scope", span: [m.index, end], rule: "statewide", state: "context" });
+  }
+}
 
 export function recordPlaces(ledger: RequestLedger): void {
   const q0 = ledger.question;
@@ -261,6 +374,9 @@ export function recordPlaces(ledger: RequestLedger): void {
   }
   US_BEFORE_ENTITY.lastIndex = 0;
   while ((m = US_BEFORE_ENTITY.exec(q0))) ledger.record({ concept: "place", value: "national", span: [m.index, m.index + m[0].length], rule: "place:us-lowercase" });
+  US_BEFORE_MEASURE.lastIndex = 0;
+  while ((m = US_BEFORE_MEASURE.exec(q0))) ledger.record({ concept: "place", value: "national", span: [m.index, m.index + m[0].length], rule: "place:us-before-measure" });
+  recordStateCodeLists(ledger);
   // Possessives ("seattle's", "Philadelphia'homicide") are blanked to spaces of the same length so the resolver sees the
   // name and every span still points into the original question.
   const q = q0.replace(/['’]s\b/g, "  ").replace(/(?<=[A-Za-z])['’](?=[A-Za-z])/g, " ");
@@ -345,9 +461,11 @@ export function accountHistoricalRequest(question: string): RequestLedger {
   const early = RULES.filter((r) => r.concept === "ori" || r.concept === "period-unsupported" || r.concept === "sub-year" || r.concept === "overdose-deaths" || r.concept === "immigration-status" || r.concept === "meta-source");
   for (const rule of early) recordAll(ledger, rule);
   recordPlaces(ledger);
+  recordListIntro(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm, q) => ledger.parts.some((p) => p.concept === "place" && p.span[1] === pm.index) || /[A-Za-z]$/.test(q.slice(0, pm.index)) && ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });
   for (const rule of RULES.filter((r) => !early.includes(r))) recordAll(ledger, rule);
   recordWhich(ledger);
+  recordStatewide(ledger);
   // Repeat filler passes: a filler run can sit between parts only once its neighbours are recorded.
   recordHistoricalFiller(ledger);
   recordHistoricalFiller(ledger);
