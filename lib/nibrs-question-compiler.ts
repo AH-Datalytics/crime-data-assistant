@@ -1022,7 +1022,7 @@ async function compileBreakdown(spec: BreakdownSpec, ctx: CompileContext, run: R
   return { kind: "answer", columns: BREAKDOWN, rows, title: `${MEASURE_LABEL[spec.measure]} ${unitLabel} by ${dimName} — ${label}`, explanation: ["Counts from the NIBRS summary tables; unknown values stay visible as their own category.", ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
 }
 
-const CLEARANCE_TYPES: [string, string][] = [["Cleared by arrest", "cleared_by_arrest"], ["Death of offender", "cleared_A"], ["Prosecution declined", "cleared_B"], ["In custody elsewhere", "cleared_C"], ["Victim refused to cooperate", "cleared_D"], ["Juvenile, no custody", "cleared_E"]];
+const CLEARANCE_TYPES: [string, string][] = [["Cleared by arrest", "cleared_by_arrest"], ["Death of offender", "cleared_A"], ["Prosecution declined", "cleared_B"], ["In custody of another jurisdiction (includes extradition denied)", "cleared_C"], ["Victim refused to cooperate", "cleared_D"], ["Juvenile, no custody", "cleared_E"]];
 const clearanceCols = (v: string) => (v === "arrest" ? ["cleared_by_arrest"] : v === "exceptional" ? ["cleared_A", "cleared_B", "cleared_C", "cleared_D", "cleared_E"] : [`cleared_${v}`]);
 
 /** The place and years of a clearance answer, as a builder, with the agency completeness of each year (r2 §4). */
@@ -1067,19 +1067,28 @@ async function compileClearanceBreakdown(spec: BreakdownSpec, ctx: CompileContex
   cq.x.value("COUNT(*)", "n").clearance(cols).value("SUM(total_offenses)", "total").groupBy(spec.dim, `'${spec.dim}'`);
   const r = (await run(cq.x.sql()))[0] ?? {};
   if (!Number(r.n ?? 0)) return { kind: "decline", explanation: `No clearance records were reported for ${label} in this period, so I haven't broken clearances down.`, statements };
-  const total = Number(r.total ?? 0);
+  // Owner 2026-10-25: "clearances by exception by type" = the exceptional types only, each a share of all exceptional
+  // clearances (no arrest or uncleared rows, which that question excludes).
+  const exceptionalOnly = !method && spec.filters.includes("clearance:exceptional");
   const cats: [string, number][] = method
     ? [["Cleared by arrest", Number(r.cleared_by_arrest ?? 0)], ["Cleared by exceptional means", Number(r.cleared_exceptional ?? 0)]]
-    : CLEARANCE_TYPES.map(([l, c]) => [l, Number(r[c] ?? 0)]);
-  cats.push(["Not cleared", total - cats.reduce((a, [, v]) => a + v, 0)]);
+    : CLEARANCE_TYPES.filter(([, c]) => !exceptionalOnly || c !== "cleared_by_arrest").map(([l, c]) => [l, Number(r[c] ?? 0)]);
+  const total = exceptionalOnly ? cats.reduce((a, [, v]) => a + v, 0) : Number(r.total ?? 0);
+  if (exceptionalOnly && !total) return { kind: "decline", explanation: `No exceptional clearances were reported for ${label} in this period, so there are no types to show.`, statements };
+  if (!exceptionalOnly) cats.push(["Not cleared", total - cats.reduce((a, [, v]) => a + v, 0)]);
   const period: string | number = cq.years.length === 1 ? cq.years[0] : `${cq.years[0]}-${cq.years[cq.years.length - 1]}`;
   const rows: Row[] = cats.map(([category, count]) => ({ period, place: label, measure: spec.measure, unit: "offenses", filter: null, dimension: method ? "clearance method" : "clearance type", category, count, share: total ? r1((count / total) * 100) : null, note: null }))
     .sort((a, b) => (b.count as number) - (a.count as number) || (String(a.category) < String(b.category) ? -1 : 1));
   const applied = appliedFrom([{ measure: spec.measure, ops: [cq.x.rec] }]);
   post(applied).set("share", true); // applied-site: breakdown-shares-computed
+  // Codex EX-01: the exceptional-only narrowing is recorded from the operand's own columns (exactly A-E summed and shown).
+  if (exceptionalOnly && clearanceCols("exceptional").every((c) => cq.x.rec.clearanceCols.includes(c))) for (const f of ["clearance:exceptional"]) post(applied).push("filters", f); // applied-site: clearance-conditions-from-operand-columns
   const form = periodFormValue(spec.period); if (form) post(applied).push("periodValues", form); // applied-site: relative-period-resolved-by-years-of
   const cohortNote = spec.place.kind !== "agency" ? ` ${cohortSentence(spec.place, cq.years, ctx.db)}` : "";
-  return { kind: "answer", columns: BREAKDOWN, rows, title: `${label} ${MEASURE_LABEL[spec.measure]} clearances by ${method ? "method" : "type"}`, explanation: "Every clearance category, with uncleared offenses as their own category so the parts sum to the reported total. FBI clearance means cleared by arrest or by exceptional means; it is not a conviction. Clearances count offense records, not victims." + cohortNote + " " + NIBRS_RECENT_MATURATION_DISCLOSURE, statements, applied };
+  const what = exceptionalOnly
+    ? "Exceptional clearances only, by type; each share is of all exceptional clearances. An exceptional clearance means the police identified the offender but could not make an arrest for a reason outside their control (such as the offender's death or prosecution being declined)."
+    : "Every clearance category, with uncleared offenses as their own category so the parts sum to the reported total.";
+  return { kind: "answer", columns: BREAKDOWN, rows, title: `${label} ${MEASURE_LABEL[spec.measure]} ${exceptionalOnly ? "exceptional clearances" : "clearances"} by ${method ? "method" : "type"}`, explanation: `${what} FBI clearance means cleared by arrest or by exceptional means; it is not a conviction. Clearances count offense records, not victims.` + cohortNote + " " + NIBRS_RECENT_MATURATION_DISCLOSURE, statements, applied };
 }
 
 async function compileShare(spec: ShareSpec, ctx: CompileContext, run: RunFn, statements: string[]): Promise<CompiledAnswer> {

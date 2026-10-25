@@ -38,6 +38,17 @@ check(decide("robbery offenders in Fort Worth, Texas in 2025 by age group and se
 check(decide("murder victims in Fort Worth, Texas by weapon type by month in 2025").kind === "decline", "a monthly breakdown is declined (yearly tables)");
 const b2 = spec("Fort Worth, Texas rape clearances by type in 2025");
 check(b2?.type === "breakdown" && b2.dim === "clearance-type", "N5: clearances by type");
+// Owner 2026-10-25: "by exception" with the type breakdown narrows it to the exceptional types; it is not a conflict.
+{
+  const ex = spec("virginia murder clearances by exception by type in 2025");
+  check(ex?.type === "breakdown" && ex.dim === "clearance-type" && ex.filters.includes("clearance:exceptional"), `exceptional clearances by type is answered, narrowed to the exceptional types (${JSON.stringify(ex)})`);
+  const ex2 = spec("Fort Worth, Texas rape clearances by type of exceptional clearance in 2025");
+  check(ex2?.type === "breakdown" && ex2.dim === "clearance-type", "control: 'by type of exceptional' is the type breakdown");
+  const conflict = decide("Fort Worth, Texas rape clearances by type for victims refused to cooperate in 2025");
+  check(conflict.kind !== "spec", "control: a real restriction on the type breakdown still declines");
+  const method = decide("Fort Worth, Texas rape clearances by arrest vs exception by exception in 2025");
+  check(method.kind !== "spec" || (method.spec.type === "breakdown" && !method.spec.filters.includes("clearance:exceptional")) || method.spec.type !== "breakdown", "control: the method breakdown never silently keeps an exceptional-only restriction");
+}
 const b3 = spec("homicides nationally in 2025 by race of victim and race of offender");
 check(b3?.type === "breakdown" && b3.dim === "victim-offender-race", "the victim-by-offender race cross-tab is one declared dimension");
 
