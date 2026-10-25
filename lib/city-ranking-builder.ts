@@ -206,9 +206,11 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Owner 2026-10-25: a partial year in a title reads "2026 (Partial)", never its months (the explanation keeps them).
+// throughMonth is always the SOURCE's cutoff (resolvePeriod): a ranking has no reader-chosen month window.
 function periodPhrase(period: ResolvedPeriod): string {
   if (period.throughMonth === null) return String(period.year);
-  return `${period.year} through ${MONTHS[period.throughMonth - 1]}`;
+  return `${period.year} (Partial)`;
 }
 
 /* ------------------------------------------------------------------ *

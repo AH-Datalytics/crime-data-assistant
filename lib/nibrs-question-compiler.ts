@@ -131,7 +131,7 @@ export function seriesTitle(rows: Record<string, unknown>[], measures: string[],
     for (const m of found) {
       const y = m[1] ?? String(r.period ?? "");
       if (!/^\d{4}$/.test(y) || !TITLE_MONTHS.includes(m[2])) return fallback;
-      partials.push(`${y} Through ${m[2]}`);
+      partials.push(y);
     }
   }
   const statistics = new Set(rows.map((r) => String(r.statistic ?? "")));
@@ -168,7 +168,10 @@ export function seriesTitle(rows: Record<string, unknown>[], measures: string[],
   else span = yearSpan;
   const places = [...new Set(rows.map((r) => String(r.place ?? "")).filter(Boolean))];
   if (!places.length) return fallback;
-  const partial = partials.length ? ` (${[...new Set(partials)].sort().join(", ")})` : "";
+  // Owner 2026-10-25: a partial year reads "(2026 Partial)" ("(Partial)" after a single year), never its months; the
+  // explanation and row notes still state the months covered.
+  const partialYears = [...new Set(partials)].sort();
+  const partial = !partialYears.length ? "" : span === partialYears[0] && partialYears.length === 1 ? " (Partial)" : ` (${partialYears.join(" and ")} Partial)`;
   return `${places.join(" and ")} ${names.join(" and ")}${per}, ${span}${partial}`;
 }
 const OVERLAP_NOTE = "categories can overlap; shares can sum past 100%";

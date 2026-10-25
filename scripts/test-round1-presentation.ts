@@ -12,7 +12,7 @@ import { withPartialPeriodFallback, statedMonthSpan } from "../lib/partial-perio
 import { chartBoxMinHeight, detectAndPivotChartData, uniqueCategoryLabels } from "../lib/chart-layout";
 import { confirmResultChips, type QueryPlanChip } from "../lib/query-plan";
 import type { ChartConfig } from "../lib/types";
-import { describeYearSpan } from "../lib/current-question-compiler";
+import { describeYearSpan, titleSpan, periodLabel } from "../lib/current-question-compiler";
 
 let passed = 0;
 let failed = 0;
@@ -151,6 +151,26 @@ console.log("\nOwner 2026-10-24: partial year in by-year titles and tables");
   check("full years get no mark", () => assert.equal(describeYearSpan([...months(2023, 1, 12), ...months(2024, 1, 12)]), "2023 to 2024"));
   check("one partial year alone", () => assert.equal(describeYearSpan(months(2026, 1, 6)), "2026 (Partial)"));
   check("a partial first and last year are both named", () => assert.equal(describeYearSpan([...months(2017, 7, 12), ...months(2018, 1, 12), ...months(2019, 1, 3)]), "2017 to 2019 (2017 and 2019 Partial)"));
+  // Codex PY-01/PY-02 (2026-10-25): totals too, and only where the SOURCE cuts the year; asked-for windows keep months.
+  const b = { lo: [2017, 1] as [number, number], hi: [2026, 8] as [number, number] };
+  check("PY-01: a total over a source-cut year reads \"2026 (Partial)\"", () => assert.equal(titleSpan(months(2026, 1, 8), "total", b), "2026 (Partial)"));
+  check("PY-01: a by-year range ending at the source's last month", () => assert.equal(titleSpan([...months(2025, 1, 12), ...months(2026, 1, 8)], "year", b), "2025 to 2026 (2026 Partial)"));
+  check("PY-02: a requested window inside the data keeps its months", () => assert.equal(titleSpan(months(2026, 1, 6), "total", b), "January 2026 through June 2026"));
+  check("PY-02: a by-year range starting mid-year by request keeps its months", () => assert.equal(titleSpan([...months(2023, 3, 12), ...months(2024, 1, 12)], "year", b), "March 2023 through December 2024"));
+  check("monthly answers keep their months", () => assert.equal(titleSpan(months(2026, 1, 8), "month", b), "January 2026 through August 2026"));
+  // Codex PY-01 (re-review): table rows and comparison titles ("2024 vs 2025-01 to 2025-10") use the same rule.
+  check("PY-01: a source-cut one-year period label reads \"2026 (Partial)\"", () => assert.equal(periodLabel(months(2026, 1, 8), b), "2026 (Partial)"));
+  check("PY-02: a requested window keeps its month span", () => assert.equal(periodLabel(months(2026, 1, 6), b), "2026-01 to 2026-06"));
+  check("a full year is just the year", () => assert.equal(periodLabel(months(2025, 1, 12), b), 2025));
+  check("PY-01-M: a multi-year total label matches the title", () => assert.equal(periodLabel([...months(2025, 1, 12), ...months(2026, 1, 8)], b), "2025 to 2026 (2026 Partial)"));
+  check("PY-01-M: full multi-year totals read the year range", () => assert.equal(periodLabel([...months(2024, 1, 12), ...months(2025, 1, 12)], b), "2024 to 2025"));
+  check("PY-02: a requested multi-year window keeps its month span", () => assert.equal(periodLabel([...months(2024, 3, 12), ...months(2025, 1, 6)], b), "2024-03 to 2025-06"));
+  // Codex PY-02-S/W: a source that STARTS in January never cuts a requested January window.
+  const bJan = { lo: [2024, 1] as [number, number], hi: [2025, 10] as [number, number] };
+  check("PY-02-S: requested January 2024 keeps its month", () => { assert.equal(periodLabel(months(2024, 1, 1), bJan), "2024-01"); assert.equal(titleSpan(months(2024, 1, 1), "total", bJan), "January 2024"); });
+  check("PY-02-W: requested January-June 2024 keeps its months", () => { assert.equal(periodLabel(months(2024, 1, 6), bJan), "2024-01 to 2024-06"); assert.equal(titleSpan(months(2024, 1, 6), "total", bJan), "January 2024 through June 2024"); });
+  check("a source starting mid-year cuts its first year", () => assert.equal(titleSpan([...months(2017, 3, 12), ...months(2018, 1, 12)], "year", { lo: [2017, 3], hi: [2026, 8] }), "2017 to 2018 (2017 Partial)"));
+  check("source cut at both ends in one year", () => assert.equal(titleSpan(months(2026, 3, 8), "total", { lo: [2026, 3], hi: [2026, 8] }), "2026 (Partial)"));
   check("the table cell reads \"(Partial)\", never the months", () => {
     const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "components", "DataTable.tsx"), "utf8") as string;
     assert.ok(/\(Partial\)`;/.test(src) && !/\(\$\{partialLabel\.get/.test(src));

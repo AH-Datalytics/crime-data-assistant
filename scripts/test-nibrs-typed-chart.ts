@@ -218,7 +218,7 @@ async function main() {
     const cols = ["place", "year", "numerator_victims", "denominator_victims", "share_pct", "unknown_value_victims", "shr_records"];
     const rows = [1976, 1977].map((year, i) => ({ place: "United States", year, numerator_victims: 2079 + i, denominator_victims: 4080 + i, share_pct: 51 + i, unknown_value_victims: 12, shr_records: "recorded" }));
     const columnLabels = { numerator_victims: "Killed With A Firearm", denominator_victims: "All Female Homicide Victims", share_pct: "Share (%)", unknown_value_victims: "Weapon Unknown" };
-    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: cols, rows, title: "Share Of Female Homicide Victims Killed With A Firearm, United States, 1976 to 2026 (2026 Through October)", columnLabels }));
+    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: cols, rows, title: "Share Of Female Homicide Victims Killed With A Firearm, United States, 1976 to 2026 (2026 Partial)", columnLabels }));
     assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Year", "Killed With A Firearm", "All Female Homicide Victims", "Share (%)", "Weapon Unknown"]);
     assert.ok(!/data-table-constants/.test(out), "nothing stated above the table");
     const odd = tableDisplay(cols, rows.map((r, i) => ({ ...r, shr_records: i ? "no SHR records (unknown)" : "recorded" })), "", columnLabels);
@@ -300,9 +300,9 @@ async function main() {
   });
   await check("pooled totals read 'YYYY to YYYY' with no Per; compiler partial-year notes add their coverage", () => {
     assert.equal(seriesTitle([r("2018-2025")], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2018 to 2025");
-    assert.equal(seriesTitle([r("2018-2026", { note: "partial year 2026 (January-June)" })], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2018 to 2026 (2026 Through June)");
-    assert.equal(seriesTitle([r(2025), r(2026, { note: "partial year (January-June)" })], ["carjacking"], "year", FB), "Memphis, TN Carjackings Per Year, 2025 to 2026 (2026 Through June)");
-    assert.equal(seriesTitle([r(2026, { note: "partial year (January-September)" })], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2026 (2026 Through September)");
+    assert.equal(seriesTitle([r("2018-2026", { note: "partial year 2026 (January-June)" })], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2018 to 2026 (2026 Partial)");
+    assert.equal(seriesTitle([r(2025), r(2026, { note: "partial year (January-June)" })], ["carjacking"], "year", FB), "Memphis, TN Carjackings Per Year, 2025 to 2026 (2026 Partial)");
+    assert.equal(seriesTitle([r(2026, { note: "partial year (January-September)" })], ["carjacking"], "total", FB), "Memphis, TN Carjackings, 2026 (Partial)");
   });
   await check("anything uncertain keeps the previous title: clearance, rolling, dollars, filters, unreadable partial notes, odd pooled spans, mixed statistics, grain mismatch", () => {
     const cases: [string, Record<string, unknown>[], string[], string][] = [
