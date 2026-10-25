@@ -12,6 +12,7 @@ import { withPartialPeriodFallback, statedMonthSpan } from "../lib/partial-perio
 import { chartBoxMinHeight, detectAndPivotChartData, uniqueCategoryLabels } from "../lib/chart-layout";
 import { confirmResultChips, type QueryPlanChip } from "../lib/query-plan";
 import type { ChartConfig } from "../lib/types";
+import { describeYearSpan } from "../lib/current-question-compiler";
 
 let passed = 0;
 let failed = 0;
@@ -140,5 +141,20 @@ check("the chart draws no partial-period mark, label or tooltip suffix (the titl
   assert.ok(!/config\.partialPeriods/.test(src), "ChartPanel must not read config.partialPeriods for drawing");
   assert.ok(/const partialLabel = new Map<string, string>\(\);/.test(src), "partialLabel is always empty");
 });
+
+console.log("\nOwner 2026-10-24: partial year in by-year titles and tables");
+{
+  const months = (y: number, from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => [y, from + i] as [number, number]);
+  check("a by-year title names years and marks the partial one", () => {
+    assert.equal(describeYearSpan([...months(2023, 1, 12), ...months(2024, 1, 12), ...months(2025, 1, 12), ...months(2026, 1, 6)]), "2023 to 2026 (2026 Partial)");
+  });
+  check("full years get no mark", () => assert.equal(describeYearSpan([...months(2023, 1, 12), ...months(2024, 1, 12)]), "2023 to 2024"));
+  check("one partial year alone", () => assert.equal(describeYearSpan(months(2026, 1, 6)), "2026 (Partial)"));
+  check("a partial first and last year are both named", () => assert.equal(describeYearSpan([...months(2017, 7, 12), ...months(2018, 1, 12), ...months(2019, 1, 3)]), "2017 to 2019 (2017 and 2019 Partial)"));
+  check("the table cell reads \"(Partial)\", never the months", () => {
+    const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "components", "DataTable.tsx"), "utf8") as string;
+    assert.ok(/\(Partial\)`;/.test(src) && !/\(\$\{partialLabel\.get/.test(src));
+  });
+}
 
 console.log(`\nround 1 presentation: ${passed} passed, ${failed} failed`);

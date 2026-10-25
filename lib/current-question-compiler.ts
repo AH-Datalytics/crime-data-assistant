@@ -249,6 +249,20 @@ const cmp = (a: YM, b: YM) => a[0] * 100 + a[1] - (b[0] * 100 + b[1]);
 const inBounds = (b: Bounds, x: YM) => cmp(x, b.lo) >= 0 && cmp(x, b.hi) <= 0;
 const spanLabel = (ms: YM[]) => (ms.length === 1 ? ymKey(...ms[0]) : `${ymKey(...ms[0])} to ${ymKey(...ms[ms.length - 1])}`);
 const describeSpan = (ms: YM[]) => (ms.length === 1 ? monthName(ms[0]) : `${monthName(ms[0])} through ${monthName(ms[ms.length - 1])}`);
+/**
+ * Owner 2026-10-24: a by-year chart title names years, and marks a year with fewer than its twelve months as partial
+ * ("2023 to 2026 (2026 Partial)") instead of naming months. The explanation still states the exact months covered.
+ */
+export const describeYearSpan = (ms: [number, number][]) => {
+  const first = ms[0][0];
+  const last = ms[ms.length - 1][0];
+  const partial = [...new Set(ms.map(([y]) => y))].filter((y) => ms.filter(([yy]) => yy === y).length < 12);
+  const span = first === last ? String(first) : `${first} to ${last}`;
+  if (!partial.length) return span;
+  if (first === last) return `${span} (Partial)`;
+  return `${span} (${partial.join(" and ")} Partial)`;
+};
+const titleSpan = (ms: YM[], grain: string) => (grain === "year" ? describeYearSpan(ms) : describeSpan(ms));
 const fullYear = (ms: YM[]) => ms.length === 12 && ms[0][1] === 1 && ms.every(([y]) => y === ms[0][0]);
 const periodLabel = (ms: YM[]): string | number => (fullYear(ms) ? ms[0][0] : spanLabel(ms));
 const windowOf = (end: YM): YM[] => between(shift(end, -11), end);
@@ -561,7 +575,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const placeNames = spec.places.map((p) => (p.kind === "agency" ? agencies.get(p)!.label : samplePlaceLabel(p)));
   const what = spec.measures.length > 2 ? "reported offenses" : spec.measures.map((m) => MEASURE_LABEL[m]).join(" and ");
   const statText = statistic === "rate" ? "rate per 100,000 residents" : spec.grain === "rolling" ? "12-month rolling total" : "reported count";
-  const title = `${what[0].toUpperCase()}${what.slice(1)} ${statistic === "rate" ? "Rate" : "Count"}${spec.grain === "rolling" ? " (Rolling 12 Months)" : ""}, ${placeNames.join(", ")}, ${describeSpan(months)}`;
+  const title = `${what[0].toUpperCase()}${what.slice(1)} ${statistic === "rate" ? "Rate" : "Count"}${spec.grain === "rolling" ? " (Rolling 12 Months)" : ""}, ${placeNames.join(", ")}, ${titleSpan(months, spec.grain)}`;
   const countyNotes = [...agencies.values()].map(countyAgencyNote).filter((n): n is string => Boolean(n));
   const explanation = [`Current Trends ${what} ${statText}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${placeNames.join(", ")}, ${describeSpan(months)}.`, ...countyNotes, ...notesOut].join(" ");
   const multiPeriod = new Set(rows.map((r) => r.period)).size > 1;
@@ -767,7 +781,7 @@ function compilePeers(spec: PeerSpec, ctx: CompileContext, b: Bounds): CompiledA
   if (popYear === b.hi[0]) notes.push(`${popYear} populations repeat the latest estimate on file where no newer one exists.`);
   const partial = partialNote(b, months); if (partial) notes.push(partial);
   const what = MEASURE_LABEL[spec.measure];
-  const title = `${what[0].toUpperCase()}${what.slice(1)} ${spec.statistic === "rate" ? "Rate" : "Count"}: ${target.label} and Similar-Sized Cities, ${describeSpan(months)}`;
+  const title = `${what[0].toUpperCase()}${what.slice(1)} ${spec.statistic === "rate" ? "Rate" : "Count"}: ${target.label} and Similar-Sized Cities, ${titleSpan(months, spec.grain)}`;
   const explanation = [`Current Trends ${what} ${spec.statistic === "rate" ? "rate per 100,000 residents" : "reported count"}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${target.label} and similar-sized cities, ${describeSpan(months)}.`, ...spec.uiNotes, ...notes].join(" ");
   const multi = bks.length > 1;
   return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, chartConfig: { type: multi ? "line" : "bar", xAxis: multi ? "period" : "place", yAxis: ["value"], title, ...(partialPeriodsOf(bks).length ? { partialPeriods: partialPeriodsOf(bks) } : {}) } as ChartConfig, applied: a, requestedEntities: [target.label], returnedEntities: [...new Set(rows.map((r) => String(r.place)))] };
