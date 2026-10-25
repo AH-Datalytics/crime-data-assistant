@@ -30,6 +30,10 @@ const RULES: { cases: string; pattern: RegExp; to: (m: RegExpExecArray) => strin
   { cases: "P217", pattern: /\bwit(?=\s+the\b)/gi, to: () => "with" },
   // "ow many" only at the start of the question (P170 "ow many people were killed …")
   { cases: "P170", pattern: /^(\s*)ow(?=\s+many\b)/gi, to: (m) => `${m[1]}how` },
+  // Historical vocabulary pass (2026-10-24, Codex ACCEPT-WITH-CHANGES): "moter" only inside "moter vehicle theft(s)"
+  // (L8918, L9473); "taffing" only as the word staffing (L9029). Nothing else in those questions is touched.
+  { cases: "L8918, L9473", pattern: /\bmoter(?=[-\s]vehicle\s+thefts?\b)/gi, to: () => "motor" },
+  { cases: "L9029", pattern: /\btaffing\b/gi, to: () => "staffing" },
 ];
 
 /**

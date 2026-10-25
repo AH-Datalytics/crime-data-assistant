@@ -17,6 +17,13 @@ const parts = (q: string) => accountHistoricalRequest(q).parts.filter((p) => p.s
 const has = (q: string, concept: string, value?: string) => parts(q).some((p) => p.concept === concept && (value === undefined || p.value === value));
 const refused = (q: string) => historicalRecognitionRefusal(accountHistoricalRequest(q));
 
+// ---- general fix 1: period forms found in step A, read directly (Codex r1 item 3) ----
+check(has("murders in Ohio over the past 20 yrs", "period", "last:20") && !refused("murders in Ohio over the past 20 yrs"), '"past 20 yrs" = last 20 years');
+check(has("murders in Ohio 2000-current", "period", "since:2000") && !refused("murders in Ohio 2000-current"), '"2000-current" = since 2000');
+check(has("murders in Ohio 2015 to date", "period", "since:2015") && !refused("murders in Ohio 2015 to date"), '"2015 to date" = since 2015');
+check(has("murders in Ohio from 2015 to 2020", "period", "range:2015:2020"), "control: a year range is unchanged");
+check(Boolean(refused("murders in Ohio to date")), 'control: "to date" with no year stays refused');
+
 // ---- every character is accounted for, and a supported question has no refusal ----
 for (const q of [
   "murders in Fort Worth, Texas from 2018 to 2023",
@@ -113,6 +120,70 @@ check(/since 2021/.test(historicalFollowupCheck({ question: "what about Fort Wor
   check(placeOf("Portland Police Department murders since 2000") === "ambiguous:Portland", "two cities of that name stay ambiguous");
   const xyz = historicalRecognitionRefusal(accountHistoricalRequest("XYZPD murder clearance rate since 1960"));
   check(xyz?.parts.map((p) => p.text).join() === "XYZPD", "an unknown acronym is named, never guessed");
+}
+
+// Historical vocabulary pass (2026-10-24, Codex ruling codex-historical-vocab-pass-ruling.md): each family with its
+// neighbor that must NOT read the same way. Synthetic questions shaped like the cited cases.
+{
+  const placesOf = (q: string) => accountHistoricalRequest(q).parts.filter((p) => p.concept === "place").map((p) => p.value).join();
+  const read = (q: string) => !refused(q);
+  // state-code lists
+  check(placesOf("CA vs. TX vs. GA vs NY vs IL murder rate per year") === "state:California,state:Texas,state:Georgia,state:New York,state:Illinois", "a list of state codes reads as states (L4475)");
+  check(placesOf("CA vs. TX vs. GA. vs NY state vs IL murder rate per year").includes("state:New York"), '"NY state" inside a code list is the state (L4476)');
+  check(placesOf("murder rate in Austin, TX vs Dallas, TX in 2020") === "city:Austin:TX,city:Dallas:TX", "control: a code after a city stays with the city");
+  check(!placesOf("murder rate WA vs OR vs ID in 2020").includes("Oregon") && Boolean(refused("murder rate WA vs OR vs ID in 2020")), "control: OR is never read from a code list (the list stays refused)");
+  check(!read("murders in CA in vs out of state 2020") || !placesOf("murders in CA in vs out of state 2020").includes("Indiana"), "control: lowercase in is a word");
+  // statewide
+  check(read("what was the statewide violent crime rate in Colorado in 2024?"), '"statewide" before the measure, one named state (L5528)');
+  check(read("Colorado statewide homicides in 2020"), '"statewide" beside the state');
+  check(Boolean(refused("statewide murders in Denver in 2020")), "control: statewide with a city stays unread");
+  check(Boolean(refused("statewide murders by county in Ohio in 2020")), "control: statewide with a county list stays unread");
+  // lowercase "us"
+  check(placesOf("what's the us violent crime rate") === "national", '"the us <measure>" is the nation (L9117)');
+  check(placesOf("can you tell us the murder rate in Ohio in 2020") === "state:Ohio", "control: the pronoun us is never the nation");
+  // full history and endpoints
+  check(has("show me the national homicide rate for as many years as possible", "period", "all"), '"for as many years as possible" = every available year (L7157)');
+  check(has("murder rate for Mecklenburg County, NC as far back as available", "period", "all"), '"as far back as available" = every available year (L2838)');
+  check(has("Murder rates South Bend, IN, from 1970 to most current", "period", "since:1970"), '"from 1970 to most current" keeps its start year (L2556)');
+  check(!has("Murder rates South Bend, IN, from 1970 to most current", "rank"), 'control: "most" in "most current" is not a ranking');
+  // decades
+  check(has("Atlanta violent crime since the 2000s", "period", "since:2000") && read("Atlanta violent crime since the 2000s"), '"since the 2000s" = from 2000 (L4097)');
+  check(has("How many police officers did Houston have in the 1940s?", "period", "range:1940:1949"), '"the 1940s" = 1940-1949 (L3319)');
+  check(Boolean(refused("murders in Ohio in the 2020s")), "control: an unfinished decade is still declined, never cut short");
+  check(Boolean(refused("murders in Ohio in the early 2000s")), "control: early/mid/late decades are still declined");
+  // parenthesized numeral
+  check(has("crime trends for Baltimore, Maryland over the last three (3) years", "period", "last:3"), '"three (3) years" when the amounts agree (L2571)');
+  check(Boolean(refused("crime trends for Baltimore, Maryland over the last three (4) years")), "control: disagreeing amounts stay unread");
+  // totals and cases of
+  check(has("can i see Dallas' murder totals for each year 2019-2025", "statistic", "count") && !has("can i see Dallas' murder totals for each year 2019-2025", "combine"), '"murder totals" is a count, not a combine (L9137)');
+  check(has("number of cases of robbery in Ohio in 2020", "statistic", "count") && read("number of cases of robbery in Ohio in 2020"), '"cases of <offense>" is a count');
+  check(Boolean(refused("court cases of robbery in Ohio in 2020")), "control: court cases stay refused");
+  check(Boolean(refused("cases of female victims of robbery in Ohio in 2020")), "control: cases of people stay refused");
+  // request wording and list introduction
+  check(read("Can i see a data set of murders in Ohio from 2020 to 2024"), '"can I see a data set of" is request wording (L8744 form)');
+  check(Boolean(refused("murders by set of states in 2020")), 'control: a bare "set of" stays unread');
+  check(read("show me homicide trends in the following states California, Colorado, Nevada"), '"in the following states" before a list (L9007 form)');
+  // staffing wording and policy controls
+  check(has("sworn law enforcement officers in Ohio over time", "staffing", "officers") && read("sworn law enforcement officers in Ohio over time"), '"sworn law enforcement officers" is staffing (L9533)');
+  check(Boolean(refused("new laws and murders in Ohio")), "control: a law/policy word is still refused");
+  // NOPD alias
+  check(placesOf("NOPD murder rate since 2000") === "city:New Orleans:LA", "NOPD is the New Orleans city agency (L2811)");
+  check(placesOf("Orleans Parish murder rate since 2000").startsWith("county:"), "control: Orleans Parish stays the parish");
+  // Codex consolidated review (REVISE items 1-4)
+  check(Boolean(refused("show me homicide trends in the following cities California, Colorado, Nevada")), "list intro: a kind word the places don't match keeps the question refused (HV01 shape)");
+  check(Boolean(refused("statewide murders in the following counties Ohio, Texas in 2020")), "list intro + statewide: a county list is never dropped (HV08 shape)");
+  check(Boolean(refused("murders in Ohio through the 1990s")) && !has("murders in Ohio through the 1990s", "period", "range:1990:1999"), '"through the 1990s" is an endpoint, never read as the decade (HV02 shape)');
+  check(Boolean(refused("murders in Ohio from 1980 to the 1990s")), '"to the 1990s" stays unread');
+  check(has("murders in Ohio throughout the 1990s", "period", "range:1990:1999"), '"throughout the 1990s" is the decade');
+  check(Boolean(refused("murders in Denver in 2020 statewide Colorado")), "statewide: a city anywhere keeps it unread (ordered-span check)");
+  check(Boolean(refused("Ohio murders statewide in 2020")), "statewide: not beside the state and not before the measure stays unread");
+  check(placesOf("AUSTIN TX vs DALLAS TX murder rate in 2020") === "city:Austin:TX,city:Dallas:TX", "codes after uppercase city names stay with the cities (HV13 shape)");
+  check(Boolean(refused("murder rate in Austin,  TX vs CA in 2020")) && !placesOf("murder rate in Austin,  TX vs CA in 2020").includes("state:Texas"), "a code after a city with extra spaces is never a list state (HV14 shape)");
+  check(Boolean(refused("murder rate Austin TX vs CA in 2020")) && !placesOf("murder rate Austin TX vs CA in 2020").includes("state:Texas"), "a code right after a city name is never a list state (HV15 shape)");
+  check(has("the full history of violent crime in Allentown, PA", "period", "all"), '"the full history" = every available year (HV05 shape)');
+  check(has("Charlotte murder rate from the beginning of the data", "period", "all") && has("Charlotte murder rate since the beginning of records", "period", "all"), "beginning-of-data forms = every available year (HV06 shape)");
+  // sub-year pointer
+  check(/Current Trends has monthly figures/.test(refused("monthly murders in Ohio in 2020")?.explanation ?? ""), "the sub-year refusal points to Current Trends' monthly figures");
 }
 
 console.log(`\n${checks - failures}/${checks} passed`);

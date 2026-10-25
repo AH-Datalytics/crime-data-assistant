@@ -137,6 +137,8 @@ const REVIEWED_CITY_COUNTY: GeoPlaceCatalogEntry[] = [
 
 const MANUAL_ALIASES: GeoPlaceCatalogEntry[] = [
   city("New York City", "NY", ["New York", "NY", "NYC", "New York City", "NYPD"]),
+  // Historical vocabulary pass (2026-10-24, Codex ACCEPT): the department's own initials name the city agency, as NYPD/LAPD.
+  city("New Orleans", "LA", ["NOPD", "New Orleans Police Department"]),
   state("New York", "NY", ["New York", "New York State", "State of New York", "NY State"]),
   county("New York", "NY", ["New York County", "New York County, NY", "New York County NY", "New York County, New York", "New York County New York"], "manual-alias"),
   city("Washington", "DC", ["Washington", "Washington, DC", "Washington DC", "D.C.", "DC", "District of Columbia"]),
