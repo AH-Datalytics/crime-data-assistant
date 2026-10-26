@@ -457,6 +457,35 @@ for (const tc of trueFollowUpControls) test({ ...tc, note: "Short continuation w
 
 console.log("═══ Ambiguous geography ═══");
 
+// Owner 2026-10-26 ("why isn't US recognized as United States?"); Codex US-08..US-21: US/USA (capitals), U.S./U.S.A.
+// and lowercase "the us" read as national; pronouns, names and codes do not; an explicit place wins; follow-up detection
+// is unchanged by the rule.
+for (const [q, type] of [
+  ["US murder rate by year", "national"], ["murders in the US", "national"], ["murder rate in the U.S.", "national"],
+  ["USA murders", "national"], ["U.S.A. robbery rate", "national"], ["violent crime in US since 2000", "national"],
+  ["murders in the us", "national"], ["violent crime across the us", "national"], ["u.s. burglary rate", "national"],
+  ["US Murder Rate", "national"], ["rates for the whole US", "national"], ["entire US violent crime", "ambiguous"],
+  ["show us murders in Houston", "city"], ["tell us the murder rate in Chicago", "city"], ["give us the burglary rate in Texas", "state"],
+  ["SHOW US THE MURDER RATE", "ambiguous"], ["Show Us The Murder Rate", "ambiguous"], ["Tell US the murder rate", "ambiguous"],
+  ["Show US the trend", "ambiguous"], ["can you make it for US?", "ambiguous"], ["us murder rate", "ambiguous"],
+  ["US Marshals arrests by year", "ambiguous"], ["US Open crime stats", "ambiguous"], ["US Women's team shootings", "ambiguous"],
+  ["crashes on US-41", "ambiguous"], ["robberies on US 41", "ambiguous"], ["USA Today crime survey", "ambiguous"],
+  ["Houston vs US murder rate", "city"], ["murders in Texas and the US", "state"],
+  ["shootings at the US Open", "ambiguous"], ["crime stats for the US Women's team", "ambiguous"], ["Team US shootings", "ambiguous"],
+  ["Give US murder data", "ambiguous"], ["Tell US crime totals", "ambiguous"], ["robberies in the US Virgin Islands", "ambiguous"],
+  ["murders in the US since 2000", "national"], ["robbery rate in the US, 2010 to 2020", "national"],
+  ["The US murder rate by year", "national"], ["the U.S. violent crime rate", "national"],
+  ["shootings in the us Open", "ambiguous"], ["robberies in the us Virgin Islands", "ambiguous"],
+] as const) {
+  const got = parseIntent(q).geography.type;
+  if (got === type) pass++;
+  else { fail++; failures.push({ question: q, issue: `geography: got ${got}, expected ${type}` }); }
+}
+for (const [a, b] of [["what about US?", "what about us?"], ["and the US?", "and the us?"], ["US?", "us?"], ["can you make it for US?", "can you make it for us?"], ["Show US the trend", "show us the trend"]]) {
+  if (isFollowUp(a) === isFollowUp(b)) pass++;
+  else { fail++; failures.push({ question: a, issue: `follow-up parity: ${isFollowUp(a)} vs ${isFollowUp(b)} for "${b}"` }); }
+}
+
 // Washington DC vs Washington state
 test({ question: "murder rate in Washington DC", expectedPrimary: ["current", "historical"], note: "DC is a city" });
 test({ question: "murder rate in Washington state", expectedPrimary: "historical", note: "Washington state → state-level" });
