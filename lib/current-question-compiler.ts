@@ -390,6 +390,32 @@ const partialNote = (b: Bounds, months: YM[]) => (months.some(([y]) => y === b.h
 const sampleSize = (ctx: CompileContext, place: Extract<CPlace, { kind: "national" | "state" }>) =>
   Number(ctx.run(`SELECT COUNT(*) AS n FROM sample_agencies${place.kind === "state" ? ` WHERE state = ${q(place.code)}` : ""}`)[0]?.n ?? 0); // lookup: sample-size
 const samplePlaceLabel = (p: Extract<CPlace, { kind: "national" | "state" }>) => (p.kind === "national" ? "United States (sample)" : `${p.name} (sample)`);
+
+const ROLLING_TITLE_WORDS: Record<string, string> = {
+  murder: "Murders", rape: "Rapes", robbery: "Robberies", aggravated_assault: "Aggravated Assaults", burglary: "Burglaries",
+  theft: "Thefts", motor_vehicle_theft: "Motor Vehicle Thefts", violent_crime: "Violent Crime", property_crime: "Property Crime",
+};
+/**
+ * Owner 2026-10-26 ("Murders Rolling Over 12 Months (National Sample)", with the range): a rolling 12-month count title
+ * names the sample in parentheses ("Murders Rolling Over 12 Months (National Sample), January 2018 - August 2026"); a
+ * named agency comes first, as in the other titles ("New Orleans, LA Murders Rolling Over 12 Months, ..."). Null (the
+ * general title) for a rate, more than two measures, or agencies mixed with samples. Exported for tests.
+ */
+export function rollingTitle(
+  spec: { grain: string; measures: string[]; places: CPlace[] },
+  statistic: string,
+  months: YM[],
+  agencyLabel: (p: Extract<CPlace, { kind: "agency" }>) => string,
+): string | null {
+  if (spec.grain !== "rolling" || statistic === "rate" || spec.measures.length > 2 || !months.length) return null;
+  const words = spec.measures.map((m) => ROLLING_TITLE_WORDS[m] ?? MEASURE_LABEL[m]).join(" and ");
+  const span = describeSpan(months).replace(" through ", " - ");
+  const agencies = spec.places.filter((p): p is Extract<CPlace, { kind: "agency" }> => p.kind === "agency");
+  if (agencies.length && agencies.length !== spec.places.length) return null;
+  if (agencies.length) return `${agencies.map(agencyLabel).join(" and ")} ${words} Rolling Over 12 Months, ${span}`;
+  const samples = spec.places.map((p) => (p.kind === "national" ? "National Sample" : p.kind === "state" ? `${p.name} Sample` : ""));
+  return `${words} Rolling Over 12 Months (${samples.join(" and ")}), ${span}`;
+}
 const stateSentence = (p: Extract<CPlace, { kind: "state" }>, n: number) => `These figures represent only the ${fmt(n)} sample agencies in ${p.name} with complete monthly reporting, not the whole state; the Historical tab has FBI figures for the whole state.`;
 const NO_SAMPLE_RATE = "Current Trends uses a sample of agencies, so it has no national or state rate; the Historical tab has FBI rates for the U.S. and every state. I haven't answered with a number that leaves it out.";
 
@@ -599,7 +625,8 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const placeNames = spec.places.map((p) => (p.kind === "agency" ? agencies.get(p)!.label : samplePlaceLabel(p)));
   const what = spec.measures.length > 2 ? "reported offenses" : spec.measures.map((m) => MEASURE_LABEL[m]).join(" and ");
   const statText = statistic === "rate" ? "rate per 100,000 residents" : spec.grain === "rolling" ? "12-month rolling total" : "reported count";
-  const title = `${what[0].toUpperCase()}${what.slice(1)} ${statistic === "rate" ? "Rate" : "Count"}${spec.grain === "rolling" ? " (Rolling 12 Months)" : ""}, ${placeNames.join(", ")}, ${titleSpan(months, spec.grain, b)}`;
+  const title = rollingTitle(spec, statistic, months, (p) => agencies.get(p)!.label)
+    ?? `${what[0].toUpperCase()}${what.slice(1)} ${statistic === "rate" ? "Rate" : "Count"}${spec.grain === "rolling" ? " (Rolling 12 Months)" : ""}, ${placeNames.join(", ")}, ${titleSpan(months, spec.grain, b)}`;
   const countyNotes = [...agencies.values()].map(countyAgencyNote).filter((n): n is string => Boolean(n));
   const explanation = [`Current Trends ${what} ${statText}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${placeNames.join(", ")}, ${describeSpan(months)}.`, ...countyNotes, ...notesOut].join(" ");
   const multiPeriod = new Set(rows.map((r) => r.period)).size > 1;

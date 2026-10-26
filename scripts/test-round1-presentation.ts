@@ -12,7 +12,7 @@ import { withPartialPeriodFallback, statedMonthSpan } from "../lib/partial-perio
 import { chartBoxMinHeight, detectAndPivotChartData, uniqueCategoryLabels } from "../lib/chart-layout";
 import { confirmResultChips, type QueryPlanChip } from "../lib/query-plan";
 import type { ChartConfig } from "../lib/types";
-import { describeYearSpan, titleSpan, periodLabel } from "../lib/current-question-compiler";
+import { describeYearSpan, titleSpan, periodLabel, rollingTitle } from "../lib/current-question-compiler";
 
 let passed = 0;
 let failed = 0;
@@ -158,6 +158,16 @@ console.log("\nOwner 2026-10-24: partial year in by-year titles and tables");
   check("PY-02: a requested window inside the data keeps its months", () => assert.equal(titleSpan(months(2026, 1, 6), "total", b), "January 2026 through June 2026"));
   check("PY-02: a by-year range starting mid-year by request keeps its months", () => assert.equal(titleSpan([...months(2023, 3, 12), ...months(2024, 1, 12)], "year", b), "March 2023 through December 2024"));
   check("monthly answers keep their months", () => assert.equal(titleSpan(months(2026, 1, 8), "month", b), "January 2026 through August 2026"));
+  // Owner 2026-10-26: "Murders Rolling Over 12 Months (National Sample)", with the range.
+  check("rolling title: national sample, state sample, agency, and the general title otherwise", () => {
+    const ms = [...months(2018, 1, 12), ...months(2026, 1, 8)];
+    const label = () => "New Orleans, LA";
+    assert.equal(rollingTitle({ grain: "rolling", measures: ["murder"], places: [{ kind: "national" }] }, "count", ms, label), "Murders Rolling Over 12 Months (National Sample), January 2018 - August 2026");
+    assert.equal(rollingTitle({ grain: "rolling", measures: ["robbery"], places: [{ kind: "state", name: "Texas", code: "TX" }] }, "count", ms, label), "Robberies Rolling Over 12 Months (Texas Sample), January 2018 - August 2026");
+    assert.equal(rollingTitle({ grain: "rolling", measures: ["murder"], places: [{ kind: "agency", agencyKind: "city", name: "New Orleans", state: "LA", text: "New Orleans" }] }, "count", ms, label), "New Orleans, LA Murders Rolling Over 12 Months, January 2018 - August 2026");
+    assert.equal(rollingTitle({ grain: "month", measures: ["murder"], places: [{ kind: "national" }] }, "count", ms, label), null);
+    assert.equal(rollingTitle({ grain: "rolling", measures: ["murder"], places: [{ kind: "national" }] }, "rate", ms, label), null);
+  });
   // Codex PY-01 (re-review): table rows and comparison titles ("2024 vs 2025-01 to 2025-10") use the same rule.
   check("PY-01: a source-cut one-year period label reads \"2026 (Partial)\"", () => assert.equal(periodLabel(months(2026, 1, 8), b), "2026 (Partial)"));
   check("PY-02: a requested window keeps its month span", () => assert.equal(periodLabel(months(2026, 1, 6), b), "2026-01 to 2026-06"));
