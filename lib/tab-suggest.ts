@@ -305,20 +305,31 @@ function detectMeasure(q: string): string {
 }
 
 /**
- * Owner 2026-10-26 ("why isn't US recognized as United States?"), Codex US-08..US-21: the country written as US, USA,
- * U.S. or U.S.A., checked only after every explicit place (a named state, city or agency wins).
- * - "US"/"USA" only in capitals, and not at all in a question typed entirely in capitals (where "US" may be the pronoun);
- *   the dotted forms in any case.
- * - Only as a word on its own: followed by the end, punctuation or a lowercase word ("US murder rate", "in the US since
- *   2000"), so names and codes ("US Marshals", "US-41", "US 41") are not the country.
- * - Lowercase "us" only after "the", "entire", "whole" or "across" ("murders in the us").
+ * Owner 2026-10-26 ("why isn't US recognized as United States?"), Codex US-08..US-47: the country written as US, USA,
+ * U.S. or U.S.A., checked only after every explicit place (a named state, city or agency wins), and only in country
+ * context, so pronouns ("tell US the rate"), names ("US Open", "US Marshals") and codes ("US-41") are not the country:
+ * - after "in", "across" or "throughout" (with or without "the"), "for the", or "the entire" / "the whole";
+ * - or directly before a crime or data word ("US murder rate", "U.S. violent crime", "USA homicides").
+ * "US"/"USA" only in capitals (not at all when the question is typed entirely in capitals); the dotted forms in any case;
+ * lowercase "us" only after "in the", "across the", "for the", "throughout the", "the entire" or "the whole".
  */
+const US_FORM = /(^|[\s(])(US|USA|[Uu]\.[Ss]\.(?:[Aa]\.)?)(?![A-Za-z0-9-])/g;
+const US_LEAD = /\b(?:(?:in|across|throughout)(?:\s+the)?|for\s+the|the\s+(?:entire|whole))\s+$/i;
+const US_CRIME_WORD = /^\s+(?:murders?|homicides?|crimes?|violent|property|robber(?:y|ies)|rapes?|assaults?|aggravated|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|motor\s+vehicle|auto\s+thefts?|arsons?|shootings?|carjackings?|clearances?|national|rates?|totals?|trends?|data|statistics|numbers)\b/i;
+const US_LOWER = /\b(?:(?:in|across|for|throughout)\s+the|the\s+(?:entire|whole))\s+us(?![A-Za-z0-9-])/;
 function mentionsUsAbbreviation(q: string): boolean {
-  const after = String.raw`(?=$|[?!.,;:)]|\s+[a-z])`;
-  if (/[a-z]/.test(q) && new RegExp(String.raw`(?:^|[\s(])(?:US|USA)` + after).test(q)) return true;
-  if (new RegExp(String.raw`(?:^|[\s(])U\.S\.(?:A\.)?` + after, "i").test(q)) return true;
-  return new RegExp(String.raw`\b(?:the|entire|whole|across)\s+us` + after).test(q);
+  const hasLower = /[a-z]/.test(q);
+  for (const m of q.matchAll(US_FORM)) {
+    const token = m[2];
+    if (!token.includes(".") && !hasLower) continue; // all capitals: "US" may be the pronoun
+    const at = (m.index ?? 0) + m[1].length;
+    if (US_LEAD.test(q.slice(0, at)) || US_CRIME_WORD.test(q.slice(at + token.length))) return true;
+  }
+  return US_LOWER.test(q);
 }
+
+/** Follow-up detection is unchanged by the US abbreviation rule: a place read only from US/USA/U.S. counts as none. */
+const noPlaceForFollowUp = (g: QueryIntent["geography"]) => g.type === "ambiguous" || g.via === "us-abbreviation";
 
 function detectGeography(q: string): QueryIntent["geography"] {
   // County detection
@@ -711,7 +722,7 @@ function isAnaphoricFollowUp(q: string): boolean {
     /\bthe\s+(rate|rates|count|counts|total|totals|trend|chart|table|breakdown|same)\b/i.test(q);
   if (shortDefiniteMetric) {
     const intent = parseIntent(q);
-    return intent.geography.type === "ambiguous" && !intent.offense;
+    return noPlaceForFollowUp(intent.geography) && !intent.offense;
   }
 
   return false;
@@ -722,9 +733,6 @@ function isAnaphoricFollowUp(q: string): boolean {
  * Follow-ups are things like "normalize that", "make it yellow", "what about 2024?"
  * These should keep the user on their current tab rather than re-routing.
  */
-/** Follow-up detection is unchanged by the US abbreviation rule: a place read only from US/USA/U.S. counts as none. */
-const noPlaceForFollowUp = (g: QueryIntent["geography"]) => g.type === "ambiguous" || g.via === "us-abbreviation";
-
 export function isFollowUp(question: string): boolean {
   const q = question.trim();
 
