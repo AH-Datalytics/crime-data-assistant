@@ -310,7 +310,8 @@ function detectMeasure(q: string): string {
  * context, so pronouns ("tell US the rate"), names ("US Open", "US Marshals") and codes ("US-41") are not the country:
  * - after "in", "across" or "throughout" (with or without "the"), "for the", or "the entire" / "the whole", and not
  *   followed by a capitalized word ("in the US since 2000", not "in the US Open");
- * - or opening the question directly before a crime or data word ("US murder rate", "U.S. violent crime").
+ * - or opening the question (optionally after "the") directly before a crime or data word ("US murder rate",
+ *   "The U.S. violent crime rate").
  * "US"/"USA" only in capitals (not at all when the question is typed entirely in capitals); the dotted forms in any case;
  * lowercase "us" only after "in the", "across the", "for the", "throughout the", "the entire" or "the whole".
  */
@@ -318,7 +319,7 @@ const US_FORM = /(^|[\s(])(US|USA|[Uu]\.[Ss]\.(?:[Aa]\.)?)(?![A-Za-z0-9-])/g;
 const US_LEAD = /\b(?:(?:in|across|throughout)(?:\s+the)?|for\s+the|the\s+(?:entire|whole))\s+$/i;
 const US_CRIME_WORD = /^\s+(?:murders?|homicides?|crimes?|violent|property|robber(?:y|ies)|rapes?|assaults?|aggravated|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|motor\s+vehicle|auto\s+thefts?|arsons?|shootings?|carjackings?|clearances?|national|rates?|totals?|trends?|data|statistics|numbers)\b/i;
 const US_NOT_NAME = /^(?:$|[?!.,;:)]|\s+[a-z0-9])/;
-const US_LOWER = /\b(?:(?:in|across|for|throughout)\s+the|the\s+(?:entire|whole))\s+us(?![A-Za-z0-9-])/;
+const US_LOWER = /\b(?:(?:in|across|for|throughout)\s+the|the\s+(?:entire|whole))\s+us(?![A-Za-z0-9-])/g;
 function mentionsUsAbbreviation(q: string): boolean {
   const hasLower = /[a-z]/.test(q);
   for (const m of q.matchAll(US_FORM)) {
@@ -330,9 +331,13 @@ function mentionsUsAbbreviation(q: string): boolean {
     // Codex US-14/61/63-66: after a place word, not followed by a capitalized word ("in the US Open"); before a crime
     // word, only opening the question ("US murder rate ..."), never mid-sentence ("Tell US the ...", "Team US shootings").
     if (US_LEAD.test(before) && US_NOT_NAME.test(after)) return true;
-    if (/^\s*$/.test(before) && US_CRIME_WORD.test(after)) return true;
+    if (/^\s*(?:the\s+)?$/i.test(before) && US_CRIME_WORD.test(after)) return true; // Codex US-69: "The US murder rate"
   }
-  return US_LOWER.test(q);
+  // Codex US-71/74: the lowercase form takes the same name-continuation safeguard ("in the us Open" is not the country).
+  for (const m of q.matchAll(US_LOWER)) {
+    if (US_NOT_NAME.test(q.slice((m.index ?? 0) + m[0].length))) return true;
+  }
+  return false;
 }
 
 /** Follow-up detection is unchanged by the US abbreviation rule: a place read only from US/USA/U.S. counts as none. */

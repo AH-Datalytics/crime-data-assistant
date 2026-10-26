@@ -474,6 +474,8 @@ for (const [q, type] of [
   ["shootings at the US Open", "ambiguous"], ["crime stats for the US Women's team", "ambiguous"], ["Team US shootings", "ambiguous"],
   ["Give US murder data", "ambiguous"], ["Tell US crime totals", "ambiguous"], ["robberies in the US Virgin Islands", "ambiguous"],
   ["murders in the US since 2000", "national"], ["robbery rate in the US, 2010 to 2020", "national"],
+  ["The US murder rate by year", "national"], ["the U.S. violent crime rate", "national"],
+  ["shootings in the us Open", "ambiguous"], ["robberies in the us Virgin Islands", "ambiguous"],
 ] as const) {
   const got = parseIntent(q).geography.type;
   if (got === type) pass++;
