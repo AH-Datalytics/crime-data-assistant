@@ -464,13 +464,16 @@ for (const [q, type] of [
   ["US murder rate by year", "national"], ["murders in the US", "national"], ["murder rate in the U.S.", "national"],
   ["USA murders", "national"], ["U.S.A. robbery rate", "national"], ["violent crime in US since 2000", "national"],
   ["murders in the us", "national"], ["violent crime across the us", "national"], ["u.s. burglary rate", "national"],
-  ["US Murder Rate", "national"], ["rates for the whole US", "national"], ["entire US violent crime", "national"],
+  ["US Murder Rate", "national"], ["rates for the whole US", "national"], ["entire US violent crime", "ambiguous"],
   ["show us murders in Houston", "city"], ["tell us the murder rate in Chicago", "city"], ["give us the burglary rate in Texas", "state"],
   ["SHOW US THE MURDER RATE", "ambiguous"], ["Show Us The Murder Rate", "ambiguous"], ["Tell US the murder rate", "ambiguous"],
   ["Show US the trend", "ambiguous"], ["can you make it for US?", "ambiguous"], ["us murder rate", "ambiguous"],
   ["US Marshals arrests by year", "ambiguous"], ["US Open crime stats", "ambiguous"], ["US Women's team shootings", "ambiguous"],
   ["crashes on US-41", "ambiguous"], ["robberies on US 41", "ambiguous"], ["USA Today crime survey", "ambiguous"],
   ["Houston vs US murder rate", "city"], ["murders in Texas and the US", "state"],
+  ["shootings at the US Open", "ambiguous"], ["crime stats for the US Women's team", "ambiguous"], ["Team US shootings", "ambiguous"],
+  ["Give US murder data", "ambiguous"], ["Tell US crime totals", "ambiguous"], ["robberies in the US Virgin Islands", "ambiguous"],
+  ["murders in the US since 2000", "national"], ["robbery rate in the US, 2010 to 2020", "national"],
 ] as const) {
   const got = parseIntent(q).geography.type;
   if (got === type) pass++;

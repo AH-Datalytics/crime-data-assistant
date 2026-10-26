@@ -308,14 +308,16 @@ function detectMeasure(q: string): string {
  * Owner 2026-10-26 ("why isn't US recognized as United States?"), Codex US-08..US-47: the country written as US, USA,
  * U.S. or U.S.A., checked only after every explicit place (a named state, city or agency wins), and only in country
  * context, so pronouns ("tell US the rate"), names ("US Open", "US Marshals") and codes ("US-41") are not the country:
- * - after "in", "across" or "throughout" (with or without "the"), "for the", or "the entire" / "the whole";
- * - or directly before a crime or data word ("US murder rate", "U.S. violent crime", "USA homicides").
+ * - after "in", "across" or "throughout" (with or without "the"), "for the", or "the entire" / "the whole", and not
+ *   followed by a capitalized word ("in the US since 2000", not "in the US Open");
+ * - or opening the question directly before a crime or data word ("US murder rate", "U.S. violent crime").
  * "US"/"USA" only in capitals (not at all when the question is typed entirely in capitals); the dotted forms in any case;
  * lowercase "us" only after "in the", "across the", "for the", "throughout the", "the entire" or "the whole".
  */
 const US_FORM = /(^|[\s(])(US|USA|[Uu]\.[Ss]\.(?:[Aa]\.)?)(?![A-Za-z0-9-])/g;
 const US_LEAD = /\b(?:(?:in|across|throughout)(?:\s+the)?|for\s+the|the\s+(?:entire|whole))\s+$/i;
 const US_CRIME_WORD = /^\s+(?:murders?|homicides?|crimes?|violent|property|robber(?:y|ies)|rapes?|assaults?|aggravated|burglar(?:y|ies)|thefts?|larcen(?:y|ies)|motor\s+vehicle|auto\s+thefts?|arsons?|shootings?|carjackings?|clearances?|national|rates?|totals?|trends?|data|statistics|numbers)\b/i;
+const US_NOT_NAME = /^(?:$|[?!.,;:)]|\s+[a-z0-9])/;
 const US_LOWER = /\b(?:(?:in|across|for|throughout)\s+the|the\s+(?:entire|whole))\s+us(?![A-Za-z0-9-])/;
 function mentionsUsAbbreviation(q: string): boolean {
   const hasLower = /[a-z]/.test(q);
@@ -323,7 +325,12 @@ function mentionsUsAbbreviation(q: string): boolean {
     const token = m[2];
     if (!token.includes(".") && !hasLower) continue; // all capitals: "US" may be the pronoun
     const at = (m.index ?? 0) + m[1].length;
-    if (US_LEAD.test(q.slice(0, at)) || US_CRIME_WORD.test(q.slice(at + token.length))) return true;
+    const before = q.slice(0, at);
+    const after = q.slice(at + token.length);
+    // Codex US-14/61/63-66: after a place word, not followed by a capitalized word ("in the US Open"); before a crime
+    // word, only opening the question ("US murder rate ..."), never mid-sentence ("Tell US the ...", "Team US shootings").
+    if (US_LEAD.test(before) && US_NOT_NAME.test(after)) return true;
+    if (/^\s*$/.test(before) && US_CRIME_WORD.test(after)) return true;
   }
   return US_LOWER.test(q);
 }
