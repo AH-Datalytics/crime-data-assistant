@@ -366,7 +366,7 @@ export function buildNibrsClearanceTypeBreakdownQuery(
     ["Cleared by arrest", "t.cleared_by_arrest"],
     ["Death of offender", "t.cleared_a"],
     ["Prosecution declined", "t.cleared_b"],
-    ["In custody of another jurisdiction (includes extradition denied)", "t.cleared_c"],
+    ["In custody of another jurisdiction", "t.cleared_c"],
     ["Victim refused to cooperate", "t.cleared_d"],
     ["Juvenile, no custody", "t.cleared_e"],
     ["Not cleared", "t.total_offenses - (t.cleared_by_arrest + t.cleared_a + t.cleared_b + t.cleared_c + t.cleared_d + t.cleared_e)"],

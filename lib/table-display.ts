@@ -109,13 +109,31 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
   const fieldOf = (c: string): string | null | false => (!columns.includes(c) ? null : constantOf(c) ?? false);
   const unit = fieldOf("unit");
   const statistic = fieldOf("statistic");
-  if (measure && shown.includes("value") && unit !== false && statistic !== false) {
+  // The value column, or a breakdown's count column when there is no value column ("Measure: rape; Unit: offenses"
+  // above a count column, owner 2026-10-25).
+  const valueCol = shown.includes("value") ? "value" : shown.includes("count") ? "count" : null;
+  if (measure && valueCol && unit !== false && statistic !== false) {
     const name = valueLabel(measure, unit, statistic);
-    if (name) { labels.value = name; for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c); }
+    if (name) { labels[valueCol] = name; for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c); }
+    // Owner 2026-10-25: an unusual constant unit (arrests) is named in the value header in plain words ("Robbery
+    // arrests") instead of a "Unit:" line.
+    else if (typeof unit === "string" && (statistic === null || statistic === "count")) {
+      labels[valueCol] = `${measure.replace(/_/g, " ").replace(/^\w/, (ch) => ch.toUpperCase())} ${unit.replace(/_/g, " ")}`;
+      for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c);
+    }
   }
   // Only the place is left out for a displayed title that contains its whole label.
   const placeShown = (c: { column: string; value: string }) => c.column === "place" && title !== "" && title.includes(c.value);
-  const stated = constants.filter((c) => !absorbed.has(c.column) && !placeShown(c));
+  // Owner 2026-10-25 ("Measure: rape · Unit: offenses · Dimension: clearance type"; "no extra line above the table or
+  // graph"): internal fields are never stated above the table. The value or count column is named for what is counted
+  // ("Rapes") where it can be, and a restriction is stated in the answer's text (Codex PF-02;
+  // nibrs-question-compiler restrictionSentence).
+  const INTERNAL = /^(?:measure|unit|statistic|dimension|filter)$/i;
+  const stated = constants.filter((c) => !absorbed.has(c.column) && !placeShown(c) && !INTERNAL.test(c.column));
+  // Codex PF-02-E: a table shown without its answer (the embed page passes no title) has no text to state a restriction
+  // in, so the restriction goes in the value column's own name ("Rapes (female)"), not in a line above the table.
+  const restriction = constantOf("filter");
+  if (title === "" && restriction && valueCol) labels[valueCol] = `${labels[valueCol] ?? cap(valueCol)} (${restriction})`;
   // Codex r1: answer-supplied labels never rename a time column (year, month, period).
   for (const c of shown) if (columnLabels[c] && !labels[c] && !/^(?:year|month|period)$/i.test(c)) labels[c] = columnLabels[c];
   return { shown, constants: stated.filter((c) => !(RECORD_STATUS.test(c.column) && c.value === "recorded")), labels, months: monthsOf(shown) };

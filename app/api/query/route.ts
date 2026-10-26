@@ -68,7 +68,7 @@ import { buildHistoricalCityChangeRankingPlan, buildHistoricalLocalRecentChangeP
 import { buildHistoricalPeerComparisonPlan } from "@/lib/historical-peer-comparison";
 import { verifyPeerMembership } from "@/lib/peer-comparison";
 import { fetchHistoricalPeerCandidates, resolveHistoricalSubjectPopulation } from "@/lib/peer-adapters";
-import { buildMultiCityTrendPlan, relativePeriodShortfallNote } from "@/lib/multi-city-deterministic";
+import { buildMultiCityTrendPlan, multiCityChartTitle, relativePeriodShortfallNote } from "@/lib/multi-city-deterministic";
 import { historicalBaltimoreComparisonDefault, withBaltimoreDisclosure, withoutBaltimoreDisclosure } from "@/lib/historical-baltimore-comparison";
 import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
 import { recognizeCityRanking, rankingValidationContract } from "@/lib/city-ranking";
@@ -1792,6 +1792,7 @@ async function handleQueryPost(req: NextRequest) {
       const db = getDb();
       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(multiCityTrend.sql), 30000);
       const columns = rows.length > 0 ? Object.keys(rows[0]) : multiCityTrend.columns;
+      multiCityTrend.chartConfig.title = multiCityChartTitle(multiCityTrend.chartConfig.title, rows, multiCityTrend.chartConfig.xAxis);
       /*
        * This deterministic exit emits its own payload and never reaches applyResultDisclosures, so
        * the presentation result has to be built here too — otherwise an unverified change would be

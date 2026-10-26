@@ -61,7 +61,7 @@ const token = () => { const ts = String(Date.now() - 5000); const sec = process.
 async function main() {
   const { NextRequest } = await import("next/server");
   const route = (await import("../app/api/nibrs-query/route")) as unknown as { POST: (r: unknown) => Promise<Response> };
-  const { typedChartConfig, SERIES, CHANGE, BREAKDOWN, RANK, SHARE } = await import("../lib/nibrs-question-compiler");
+  const { typedChartConfig, SERIES, CHANGE, BREAKDOWN, RANK, SHARE, restrictionSentence } = await import("../lib/nibrs-question-compiler");
   const { detectAndPivotChartData } = await import("../lib/chart-layout");
   let ip = 0;
   const ask = async (question: string) => {
@@ -174,7 +174,8 @@ async function main() {
   await check("rendered constants keep their column names, so two constant dimensions stay distinguishable (Codex r3 case)", () => {
     const rows = [{ year: 2024, victim_race: "White", offender_race: "Black", count: 3 }, { year: 2025, victim_race: "White", offender_race: "Black", count: 5 }];
     const out = html(["year", "victim_race", "offender_race", "count"], rows);
-    assert.match(out, /Victim Race: White · Offender Race: Black/, out.slice(0, 400));
+    // Owner 2026-10-25: no middle dots; real data restrictions stay stated, separated by "; ".
+    assert.match(out, /Victim Race: White; Offender Race: Black/, out.slice(0, 400));
   });
   await check("a result column empty on every row stays visible (a change that could not be calculated, Codex r3 case)", () => {
     const cols = ["place", "measure", "unit", "statistic", "earlier_year", "earlier_value", "later_year", "later_value", "change", "percent_change", "note"];
@@ -260,11 +261,32 @@ async function main() {
     const unit = rob({}).map((r, i) => ({ ...r, unit: i ? "victims" : "offenses" }));
     assert.equal(tableDisplay(SERIES, unit, "robbery — Memphis, TN").labels.value, undefined);
   });
-  await check("an unsupported constant unit (arrests): no value name, and the unit stays stated", () => {
+  await check("an unsupported constant unit (arrests): named in the value header, never as an internal line (owner 2026-10-25)", () => {
     const d = tableDisplay(SERIES, rob({ unit: "arrests" }), "robbery — Memphis, TN");
-    assert.equal(d.labels.value, undefined);
-    assert.ok(d.constants.some((c) => c.column === "unit" && c.value === "arrests"), JSON.stringify(d.constants));
-    assert.ok(d.constants.some((c) => c.column === "measure"), "the measure stays stated when the value column is not named for it");
+    assert.equal(d.labels.value, "Robbery arrests");
+    assert.ok(!d.constants.some((c) => /^(?:measure|unit|statistic|dimension|filter)$/.test(c.column)), `no internal field above the table: ${JSON.stringify(d.constants)}`);
+  });
+  await check("owner 2026-10-25: a breakdown names its count column and states nothing above the table", () => {
+    const BD = ["period", "place", "measure", "unit", "filter", "dimension", "category", "count", "share", "note"];
+    const rows = ["Death of offender", "Prosecution declined"].map((category, i) => ({ period: 2025, place: "Virginia", measure: "rape", unit: "offenses", filter: "female", dimension: "clearance type", category, count: 10 + i, share: 50, note: null }));
+    const d = tableDisplay(BD, rows, "Virginia Rape Exceptional Clearances By Type, 2025");
+    assert.equal(d.labels.count, "Rapes");
+    assert.deepEqual(d.constants, [], JSON.stringify(d.constants));
+    const embed = tableDisplay(BD, rows, "");
+    assert.equal(embed.labels.count, "Rapes (female)", "Codex PF-02-E: the titleless embed keeps the restriction in the column name");
+    assert.deepEqual(embed.constants.filter((c) => c.column !== "place"), [], "and no back-end line above the table");
+    assert.equal(tableDisplay(BD, rows.map((r) => ({ ...r, filter: null })), "").labels.count, "Rapes");
+  });
+  await check("Codex PF-02: a restriction is stated in the answer's text instead", () => {
+    assert.equal(restrictionSentence(["sex:F"], "victims"), "Only female victims are counted.");
+    assert.equal(restrictionSentence([], "victims"), "");
+    assert.equal(restrictionSentence(["sex:F", "weapon:12"], "victims"), "Only female victims with weapon: handgun are counted.");
+    // Codex PF-02-W: the domestic-violence path counts incidents but filters victim sex.
+    const dv = [{ dims: { sex: { col: "victim_sex", overlap: false } } }] as never;
+    assert.equal(restrictionSentence(["sex:F"], "incidents", dv), "Only incidents with a female victim are counted.");
+    assert.equal(restrictionSentence(["sex:F"], "victims", dv), "Only female victims are counted.");
+    const off = [{ dims: { race: { col: "offender_race", overlap: false } } }] as never;
+    assert.equal(restrictionSentence(["race:B"], "offenses", off), "Only offenses with a Black offender are counted.");
   });
   await check("only the place is dropped for a title, and only on its whole label: 'IN' and race roles stay", () => {
     const st = [{ city: "A", state: "IN", value: 1, n: 1 }, { city: "B", state: "IN", value: 2, n: 2 }];

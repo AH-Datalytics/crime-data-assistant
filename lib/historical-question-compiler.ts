@@ -370,7 +370,14 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
   const staffNote = spec.family === "staffing" ? " Years marked as having only total employees are shown without an officer or civilian figure; nothing is substituted." : "";
   const anchorNote = anchor !== undefined ? ` ${anchor} is the latest year all of these sources have, so every series stops there.` : "";
   const explanation = [lead + anchorNote + rapeNote + countyNote + staffNote, ...notes, "Agency reporting to the FBI can be incomplete in some years."].join(" ").replace(/\s+/g, " ").trim();
-  const title = spec.total ? `Total ${capital(MEASURE_LABEL[spec.measures[0]])}, ${placeWords}` : `${capital(measureWords)}: ${spec.type === "H5" ? "By State" : placeWords}`;
+  // Owner 2026-10-25: "Kansas City, MO Murder, 1936 - 2025" -- place, measure, then the years shown, in title case.
+  const titleWords = (s: string) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  const shownYears = rows.map((r) => Number(r.year)).filter(Number.isFinite);
+  const yearSpan = !shownYears.length ? "" : Math.min(...shownYears) === Math.max(...shownYears) ? `, ${shownYears[0]}` : `, ${Math.min(...shownYears)} - ${Math.max(...shownYears)}`;
+  const titleMeasures = titleWords(spec.measures.map((m) => (spec.statistic === "count" ? SINGULAR[m] : measureText(m, spec.statistic))).join(" and "));
+  const title = spec.total ? `Total ${capital(MEASURE_LABEL[spec.measures[0]])}, ${placeWords}`
+    : spec.type === "H5" ? `${titleMeasures} By State${yearSpan}`
+    : `${targets.map((t) => t.label).join(" and ")} ${titleMeasures}${yearSpan}`;
   const chartConfig: ChartConfig | null = spec.total || rows.length <= 1 ? null : {
     type: "line", xAxis: "year", yAxis: ["value"], title,
     yAxisLabel: spec.statistic === "count" ? "Count" : STAT_WORD[spec.statistic],

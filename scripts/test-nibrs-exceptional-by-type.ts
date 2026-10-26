@@ -41,8 +41,10 @@ const rowsOf = (a: CompiledAnswer) => (a.kind === "answer" ? a.rows.map((r) => `
   check(ex.kind === "answer", `exceptional by type answers (${exRows.join("; ")})`);
   if (ex.kind === "answer") {
     check(ex.rows.length === 5 && !exRows.some((r) => /arrest|Not cleared/i.test(r)), "only the five exceptional types are shown");
-    check(exRows.includes("Death of offender=4/40") && exRows.includes("Prosecution declined=3/30") && exRows.includes("In custody of another jurisdiction (includes extradition denied)=2/20"), "each share is of all exceptional clearances (4 of 10 = 40%)");
+    check(exRows.includes("Death of offender=4/40") && exRows.includes("Prosecution declined=3/30") && exRows.includes("In custody of another jurisdiction=2/20"), "each share is of all exceptional clearances (4 of 10 = 40%)");
     check(/exceptional clearances by type/i.test(ex.title) && /Exceptional clearances only/.test(ex.explanation), `title and explanation say exceptional only (${ex.title})`);
+    // Owner 2026-10-25: "Virginia Rape Exceptional Clearances By Type, 2025" (place, measure, title case, year).
+    check(ex.title === "Virginia Murder Exceptional Clearances By Type, 2025", `title format (${ex.title})`);
   }
   // Codex EX-01: the owner's question end to end -- request accounting, type match, compile, delivery binding.
   const q = "virginia murder clearances by exception by type in 2025";
@@ -58,8 +60,8 @@ const rowsOf = (a: CompiledAnswer) => (a.kind === "answer" ? a.rows.map((r) => `
       check(unbound.length === 0, `delivery binding accepts it: no unbound part (${unbound.map((p) => p.text).join(", ") || "none"})`);
     }
   }
-  // Codex EX-02: all five category labels (C = FBI "In Custody of Other Jurisdiction", which includes extradition denied).
-  if (ex.kind === "answer") check(JSON.stringify(ex.rows.map((r) => r.category).sort()) === JSON.stringify(["Death of offender", "In custody of another jurisdiction (includes extradition denied)", "Juvenile, no custody", "Prosecution declined", "Victim refused to cooperate"]), `the five exceptional labels (${ex.rows.map((r) => r.category).join(" | ")})`);
+  // Codex EX-02: all five category labels. Owner 2026-10-25: C is the FBI's "In Custody of Other Jurisdiction", in plain words, with no added note.
+  if (ex.kind === "answer") check(JSON.stringify(ex.rows.map((r) => r.category).sort()) === JSON.stringify(["Death of offender", "In custody of another jurisdiction", "Juvenile, no custody", "Prosecution declined", "Victim refused to cooperate"]), `the five exceptional labels (${ex.rows.map((r) => r.category).join(" | ")})`);
   const all = await compileNibrsSpec(spec([]), ctx);
   const allRows = rowsOf(all);
   check(all.kind === "answer" && all.rows.length === 7 && allRows.includes("Cleared by arrest=60/60") && allRows.includes("Not cleared=30/30"), `control: the unnarrowed breakdown is unchanged (${allRows.join("; ")})`);

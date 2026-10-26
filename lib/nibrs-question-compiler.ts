@@ -174,7 +174,32 @@ export function seriesTitle(rows: Record<string, unknown>[], measures: string[],
   const partial = !partialYears.length ? "" : span === partialYears[0] && partialYears.length === 1 ? " (Partial)" : ` (${partialYears.join(" and ")} Partial)`;
   return `${places.join(" and ")} ${names.join(" and ")}${per}, ${span}${partial}`;
 }
-const OVERLAP_NOTE = "categories can overlap; shares can sum past 100%";
+/**
+ * Owner 2026-10-25 ("no extra line above the table or graph") with Codex PF-02 (a restriction must not disappear): a
+ * restriction is stated once in the answer's text, e.g. "Only female victims are counted."
+ */
+export function restrictionSentence(filters: string[], unit: string | null | undefined, tables: Pick<Table, "dims">[] = []): string {
+  if (!filters.length) return "";
+  const counted = unit || "records";
+  const person = /^(?:sex|race|ethnicity|age): /;
+  const before: string[] = [];
+  const after: string[] = [];
+  for (const f of filters) {
+    const label = filterLabel(f);
+    if (!person.test(label)) { after.push(label); continue; }
+    // Codex PF-02-W: whose sex/race/age, from the table column the filter is applied to (victim_sex -> victim). A
+    // person attribute goes before the counted unit only when that unit is that person ("female victims"); otherwise
+    // the person is named ("incidents with a female victim").
+    const dim = f.split(":")[0];
+    const col = tables.map((t) => t.dims[dim]?.col).find(Boolean) ?? "";
+    const role = /^(victim|offender|arrestee)_/.exec(col)?.[1];
+    const word = label.replace(person, "");
+    if (!role || counted === `${role}s`) before.push(word);
+    else after.push(`a ${word} ${role}`);
+  }
+  return `Only ${[...before, counted].join(" ")}${after.length ? ` with ${after.join("; ")}` : ""} are counted.`;
+}
+const OVERLAP_NOTE ="categories can overlap; shares can sum past 100%";
 const r1 = (v: number | null) => (v === null || !Number.isFinite(v) ? null : Math.round(v * 10) / 10);
 const q = (v: string) => `'${v.replace(/'/g, "''")}'`;
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -692,6 +717,7 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
   const postOps: ((a: NibrsApplied) => void)[] = [];
   const filterText = spec.filters.length ? spec.filters.map(filterLabel).join("; ") : null;
   const filterDims = spec.filters.map((f) => f.split(":")[0]);
+  const usedTables: Table[] = [];
   const isValue = spec.statistic === "total_value" || spec.statistic === "average_value";
   if (isValue && !spec.filters.some((f) => f.startsWith("loss:"))) {
     return { kind: "clarify", explanation: "Which property loss should I total: stolen, recovered, damaged or seized? NIBRS records property value by loss type, so I won't combine them.", statements };
@@ -733,6 +759,7 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
           : declineNoTable(measure, missing.g.unit, spec.filters, place), statements };
       }
       const tables = picked.map((p) => p.t!);
+      usedTables.push(...tables);
       // Owner decision A: a firearm victim count from the demographics table states its first-listed-weapon basis.
       { const fw = tables.map((t) => firstWeaponNote(spec.filters ?? [], t)).find(Boolean); if (fw) notes.push(fw); }
       const bounds = measuredBounds(ctx.db, tables[0]);
@@ -926,7 +953,8 @@ async function compileSeries(spec: SeriesSpec, ctx: CompileContext, run: RunFn, 
   for (const f of postOps) f(applied);
   if (spec.places.length > 1) post(applied).set("versus", "places"); // applied-site: places-side-by-side
   const title = seriesTitle(rows, spec.measures, spec.grain, `${spec.measures.map((m) => MEASURE_LABEL[m] ?? m).join(", ")} — ${[...new Set(rows.map((r) => r.place))].join(", ")}`);
-  return { kind: "answer", columns: SERIES, rows, title, explanation: [`Figures from the NIBRS summary tables, built from the question as asked.`, ...new Set(notes), NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
+  const restriction = restrictionSentence(spec.filters, rows.length && new Set(rows.map((r) => r.unit)).size === 1 ? String(rows[0].unit ?? "") : null, usedTables);
+  return { kind: "answer", columns: SERIES, rows, title, explanation: [`Figures from the NIBRS summary tables, built from the question as asked.`, restriction, ...new Set(notes), NIBRS_RECENT_MATURATION_DISCLOSURE].filter(Boolean).join(" "), statements, applied };
 }
 
 function row(period: string | number, place: string, measure: string, unit: string, filter: string | null, statistic: string, value: number | null, note: string | null): Row {
@@ -1019,10 +1047,10 @@ async function compileBreakdown(spec: BreakdownSpec, ctx: CompileContext, run: R
   { const fw = firstWeaponNote(spec.filters, t); if (fw) notes.push(fw); } // owner decision A
   if (place.kind !== "agency") notes.push(cohortSentence(place, yr.years, ctx.db));
   if (yr.note) notes.push(yr.note);
-  return { kind: "answer", columns: BREAKDOWN, rows, title: `${MEASURE_LABEL[spec.measure]} ${unitLabel} by ${dimName} — ${label}`, explanation: ["Counts from the NIBRS summary tables; unknown values stay visible as their own category.", ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
+  return { kind: "answer", columns: BREAKDOWN, rows, title: `${MEASURE_LABEL[spec.measure]} ${unitLabel} by ${dimName} — ${label}`, explanation: ["Counts from the NIBRS summary tables; unknown values stay visible as their own category.", restrictionSentence(spec.filters, unitLabel, [t]), ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].filter(Boolean).join(" "), statements, applied };
 }
 
-const CLEARANCE_TYPES: [string, string][] = [["Cleared by arrest", "cleared_by_arrest"], ["Death of offender", "cleared_A"], ["Prosecution declined", "cleared_B"], ["In custody of another jurisdiction (includes extradition denied)", "cleared_C"], ["Victim refused to cooperate", "cleared_D"], ["Juvenile, no custody", "cleared_E"]];
+const CLEARANCE_TYPES: [string, string][] = [["Cleared by arrest", "cleared_by_arrest"], ["Death of offender", "cleared_A"], ["Prosecution declined", "cleared_B"], ["In custody of another jurisdiction", "cleared_C"], ["Victim refused to cooperate", "cleared_D"], ["Juvenile, no custody", "cleared_E"]];
 const clearanceCols = (v: string) => (v === "arrest" ? ["cleared_by_arrest"] : v === "exceptional" ? ["cleared_A", "cleared_B", "cleared_C", "cleared_D", "cleared_E"] : [`cleared_${v}`]);
 
 /** The place and years of a clearance answer, as a builder, with the agency completeness of each year (r2 §4). */
@@ -1088,7 +1116,7 @@ async function compileClearanceBreakdown(spec: BreakdownSpec, ctx: CompileContex
   const what = exceptionalOnly
     ? "Exceptional clearances only, by type; each share is of all exceptional clearances. An exceptional clearance means the police identified the offender but could not make an arrest for a reason outside their control (such as the offender's death or prosecution being declined)."
     : "Every clearance category, with uncleared offenses as their own category so the parts sum to the reported total.";
-  return { kind: "answer", columns: BREAKDOWN, rows, title: `${label} ${MEASURE_LABEL[spec.measure]} ${exceptionalOnly ? "exceptional clearances" : "clearances"} by ${method ? "method" : "type"}`, explanation: `${what} FBI clearance means cleared by arrest or by exceptional means; it is not a conviction. Clearances count offense records, not victims.` + cohortNote + " " + NIBRS_RECENT_MATURATION_DISCLOSURE, statements, applied };
+  return { kind: "answer", columns: BREAKDOWN, rows, title: titleWords(`${label} ${MEASURE_LABEL[spec.measure]} ${exceptionalOnly ? "exceptional clearances" : "clearances"} by ${method ? "method" : "type"}, ${String(period).replace("-", " - ")}`), explanation: `${what} FBI clearance means cleared by arrest or by exceptional means; it is not a conviction. Clearances count offense records, not victims.` + cohortNote + " " + NIBRS_RECENT_MATURATION_DISCLOSURE, statements, applied };
 }
 
 async function compileShare(spec: ShareSpec, ctx: CompileContext, run: RunFn, statements: string[]): Promise<CompiledAnswer> {

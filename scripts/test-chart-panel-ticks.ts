@@ -4,7 +4,7 @@
 // 6-digit check to Recharts' default ticks — overlapping labels every ~33 months.
 // Run: npx tsx scripts/test-chart-panel-ticks.ts
 import assert from "node:assert/strict";
-import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth } from "../components/ChartPanel";
+import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth, wrapCategoryLabel } from "../components/ChartPanel";
 import {
   formatNibrsMonthOnly,
   isNibrsYearMonth,
@@ -122,6 +122,26 @@ assert.deepEqual(
   niceYTicks([{ first: -30, second: -45 }], ["first", "second"], true)?.domain,
   [-80, 0],
 );
+// Owner 2026-10-25 ("half numbers"): counts get whole-number ticks (12 and 9 used to give 0, 2.5, ... 12.5).
+{
+  const t = niceYTicks([{ count: 12 }, { count: 9 }, { count: 0 }], ["count"]);
+  assert.ok(t && t.ticks.every((v) => Number.isInteger(v)), `whole-number ticks for counts (${t?.ticks.join(", ")})`);
+  assert.ok(t && t.domain[1] >= 12 && t.domain[1] <= 14, `the top stays close to the data (${t?.domain.join("-")})`);
+  const r = niceYTicks([{ rate: 1.2 }, { rate: 3.7 }], ["rate"]);
+  assert.ok(r && r.ticks.some((v) => !Number.isInteger(v)) || (r && r.domain[1] <= 4), "rates may still use fractional steps");
+}
+
+// Owner 2026-10-25 ("the labels don't fit"): few-bar category labels wrap onto up to three whole-word lines.
+{
+  const c = "In custody of another jurisdiction (includes extradition denied)";
+  const lines = wrapCategoryLabel(c, 22);
+  assert.ok(lines.length <= 3 && lines.every((l) => l.length <= 22), lines.join(" | "));
+  assert.equal(lines.join(" "), c, "a label that fits in three lines is never cut");
+  assert.deepEqual(wrapCategoryLabel("Death of offender", 22), ["Death of offender"]);
+  const cut = wrapCategoryLabel("one two three four five six seven eight nine ten", 8);
+  assert.equal(cut.length, 3);
+  assert.ok(cut[2].endsWith("…"));
+}
 
 // Dense or long-label pies use an internal legend instead of clipped labels.
 assert.equal(shouldUsePieLegend(Array.from({ length: 7 }, (_, i) => ({ name: `Item ${i}` })), "name"), true);
