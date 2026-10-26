@@ -313,6 +313,14 @@ function detectGeography(q: string): QueryIntent["geography"] {
   if (/\b(national|nationwide|united\s*states|country\s*wide|U\.?S\.?\s*total)\b/i.test(q)) {
     return { type: "national" };
   }
+  // Owner 2026-10-26 ("why isn't US recognized as United States?"): US, U.S., USA, U.S.A. and America read as national.
+  // "US"/"USA" only in capitals, so the pronoun "us" ("show us ...") is not read as a place.
+  // Lowercase "us" counts where it can only be the country: after "the", "entire", "whole" or "across", or opening the
+  // question ("us murder rate").
+  if (/(?:^|[^A-Za-z.])(?:US|USA|U\.S\.(?:A\.)?)(?![A-Za-z])|\bamerica\b/i.test(q.replace(/\bus\b/g, " "))
+    || /\b(?:the|entire|whole|across)\s+us\b|^\s*us\s+\w/.test(q)) {
+    return { type: "national" };
+  }
 
   // State detection
   const statePattern = /\b(in\s+)?(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\s+Hampshire|New\s+Jersey|New\s+Mexico|New\s+York(?:\s+state)?|North\s+Carolina|North\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\s+Island|South\s+Carolina|South\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington\s+state|West\s+Virginia|Wisconsin|Wyoming|District\s+of\s+Columbia|DC)\b/i;

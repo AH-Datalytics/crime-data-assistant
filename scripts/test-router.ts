@@ -457,6 +457,19 @@ for (const tc of trueFollowUpControls) test({ ...tc, note: "Short continuation w
 
 console.log("═══ Ambiguous geography ═══");
 
+// Owner 2026-10-26 ("why isn't US recognized as United States?"): US/U.S./USA/America read as national; the pronoun
+// "us" does not.
+for (const [q, type] of [
+  ["US murder rate by year", "national"], ["murders in the US", "national"], ["murder rate in the U.S.", "national"],
+  ["USA murders", "national"], ["U.S.A. robbery rate", "national"], ["murder rate in America", "national"],
+  ["us murder rate", "national"], ["murders in the us", "national"], ["violent crime across the us", "national"],
+  ["show us murders in Houston", "city"], ["tell us the murder rate in Chicago", "city"], ["give us the burglary rate in Texas", "state"],
+] as const) {
+  const got = parseIntent(q).geography.type;
+  if (got === type) pass++;
+  else { fail++; failures.push({ question: q, issue: `geography: got ${got}, expected ${type}` }); }
+}
+
 // Washington DC vs Washington state
 test({ question: "murder rate in Washington DC", expectedPrimary: ["current", "historical"], note: "DC is a city" });
 test({ question: "murder rate in Washington state", expectedPrimary: "historical", note: "Washington state → state-level" });
