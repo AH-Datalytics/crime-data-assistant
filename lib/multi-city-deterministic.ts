@@ -58,6 +58,14 @@ export function relativePeriodShortfallNote(plan: Pick<MultiCityTrendPlan, "rela
 type City = { name: string; state: string; alias: string; label: string; historicalOri?: string; currentName: string };
 type Offense = { label: string; current: string[]; historical: string };
 
+/** The chart title with the years the rows cover ("…, 1932 - 2025"); monthly periods count by their year. */
+export function multiCityChartTitle(title: string, rows: Record<string, unknown>[], periodColumn: string): string {
+  const years = rows.map((r) => Number(String(r[periodColumn] ?? "").slice(0, 4))).filter((y) => Number.isInteger(y) && y > 0);
+  if (!years.length) return title;
+  const lo = Math.min(...years), hi = Math.max(...years);
+  return `${title}, ${lo === hi ? lo : `${lo} - ${hi}`}`;
+}
+
 function sqlString(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
@@ -131,6 +139,16 @@ function cityCondition(alias: string, city: City, source: "current" | "historica
   const state = source === "current" ? `${alias}.state` : `UPPER(${alias}.state)`;
   const type = source === "current" ? `LOWER(${alias}.type) = 'city'` : `LOWER(${alias}.type) = 'city'`;
   const sourceName = source === "current" ? city.currentName : city.name;
+  // Owner 2026-10-25 ("new york city vs chicago robbery rate per year only gives chicago"): Historical stores some cities
+  // without "City" (NYPD is "New York"). As resolveHistoricalAgency does, the name without a trailing "City" is used,
+  // but only when no city agency has the full name and exactly one has the shorter name (Codex PF-01: two agencies
+  // under one name are never summed; the column is left empty instead).
+  const stripped = city.name.replace(/\s+city$/i, "");
+  if (source === "historical" && stripped !== city.name) {
+    const st = sqlString(city.state.toUpperCase());
+    const named = (n: string) => `(SELECT COUNT(*) FROM historical_agency x WHERE x.agency = ${sqlString(n)} AND UPPER(x.state) = ${st} AND LOWER(x.type) = 'city')`;
+    return `${name} = CASE WHEN ${named(city.name)} > 0 THEN ${sqlString(city.name)} WHEN ${named(stripped)} = 1 THEN ${sqlString(stripped)} END AND ${state} = ${sqlString(city.state)} AND ${type}`;
+  }
   return `${name} = ${sqlString(sourceName)} AND ${state} = ${sqlString(city.state)} AND ${type}`;
 }
 
@@ -233,7 +251,8 @@ ORDER BY hac.year`;
       type: "line",
       xAxis: periodColumn,
       yAxis: places.map((city) => city.alias),
-      title: `${selectedOffense.label} ${rate ? "rate" : "count"} by city`,
+      // Owner 2026-10-25: "Place Measure, 1936 - 2025" in title case; the years are added from the rows returned.
+      title: `${places.map((city) => city.label).join(" and ")} ${selectedOffense.label.replace(/\b[a-z]/g, (c) => c.toUpperCase())} ${rate ? "Rate" : "Count"}`,
       yAxisLabel: rate ? "Rate per 100,000" : "Reported offenses",
     },
     chartMeta: {

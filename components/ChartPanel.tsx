@@ -44,6 +44,57 @@ const TICK_STYLE = {
   fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
 };
 
+/**
+ * Owner 2026-10-25 ("the labels don't fit"): category labels on a bar chart with few bars are written flat and wrapped
+ * onto up to three lines under their bar, instead of slanted and cut off. Exported for tests.
+ */
+export function wrapCategoryLabel(label: string, maxChars: number, maxLines = 3): string[] {
+  const words = String(label).split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    if (!cur) cur = w;
+    else if ((cur + " " + w).length <= maxChars) cur += " " + w;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length <= maxLines) return lines;
+  const kept = lines.slice(0, maxLines);
+  kept[maxLines - 1] = kept[maxLines - 1].replace(/\s*\S*$/, "") + "…";
+  return kept;
+}
+
+export function WrappedCategoryTick(props: { x?: number; y?: number; payload?: { value: unknown }; width?: number; visibleTicksCount?: number }) {
+  const { x = 0, y = 0, payload, width = 600, visibleTicksCount = 1 } = props;
+  const perBar = width / Math.max(1, visibleTicksCount);
+  const lines = wrapCategoryLabel(String(payload?.value ?? ""), Math.max(8, Math.floor(perBar / 7.2)));
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor="middle" fontSize={TICK_STYLE.fontSize} fill={TICK_STYLE.fill} fontFamily={TICK_STYLE.fontFamily}>
+        {lines.map((line, i) => <tspan key={i} x={0} dy={i === 0 ? 14 : 15}>{line}</tspan>)}
+      </text>
+    </g>
+  );
+}
+
+/**
+ * Owner 2026-10-25 ("that second chart looks bad"): on a narrow screen, few category bars are drawn sideways, each
+ * label written in full to the left of its bar, wrapped onto up to four lines.
+ */
+export const SIDEWAYS_MIN_BAR = 90;
+export function SideCategoryTick(props: { x?: number; y?: number; payload?: { value: unknown }; labelWidth: number }) {
+  const { x = 0, y = 0, payload, labelWidth } = props;
+  const lines = wrapCategoryLabel(String(payload?.value ?? ""), Math.max(8, Math.floor((labelWidth - 8) / 7)), 4);
+  const top = -((lines.length - 1) * 14) / 2;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor="end" fontSize={TICK_STYLE.fontSize} fill={TICK_STYLE.fill} fontFamily={TICK_STYLE.fontFamily}>
+        {lines.map((line, i) => <tspan key={i} x={-6} dy={i === 0 ? top + 4 : 14}>{line}</tspan>)}
+      </text>
+    </g>
+  );
+}
+
 const GRID_COLOR = "#ddd8ce";
 const X_AXIS_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
 const X_AXIS_TICK_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
@@ -263,6 +314,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
 
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : collidingLabels ? "_xlabel" : config.xAxis;
     const receiptRef = useChartRenderReceipt({ requestId, component: "ChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
+    const [boxWidth, setBoxWidth] = React.useState(0);
     // Round 1 D4: never a blank chart area. Too many series to draw is said plainly; every row stays in the table.
     if (seriesOverflow) {
       return (
@@ -282,6 +334,14 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
     // Detect plain-year x-axis (historical queries)
     const plainYears = !ym && !daily && isPlainYears(chartData, xAxisDataKey);
     const yearTicks = plainYears ? decadeTicksForYears(chartData, xAxisDataKey) : [];
+    // Owner 2026-10-25: category bars (not time) with 8 bars or fewer get flat labels wrapped under each bar.
+    const wrapCategories = !ym && !daily && !plainYears && dataLen <= 8;
+    // Slanted labels are no longer cut off: the axis is tall enough for the longest one (about 5.5px per character at 45°).
+    const longestLabel = Math.max(0, ...chartData.map((d) => String(d[xAxisDataKey] ?? "").length));
+    const slantedLabelHeight = Math.min(240, Math.max(60, Math.round(longestLabel * 5.5) + 16));
+    // Too narrow for wrapped labels under each bar (a phone): the bars are drawn sideways instead.
+    const sideways = wrapCategories && boxWidth > 0 && (boxWidth - 80) / Math.max(1, dataLen) < SIDEWAYS_MIN_BAR;
+    const sideLabelWidth = Math.min(170, Math.round(boxWidth * 0.42));
 
     // Compute explicit tick positions for even spacing
     const fewYearsMonthly = false;
@@ -358,7 +418,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
             {config.title}
           </div>
         )}
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" onResize={(w) => setBoxWidth(w)}>
           {config.type === "scatter" ? (
             <ScatterChart
               data={chartData}
@@ -535,13 +595,18 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
           ) : config.type === "bar" || config.type === "stacked_bar" ? (
             <BarChart
               data={chartData}
+              layout={sideways ? "vertical" : "horizontal"}
               margin={{ top: 20, right: 24, bottom: (ym || daily || plainYears) ? 8 : 4, left: 8 }}
             >
-              <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
+              <CartesianGrid horizontal={!sideways} vertical={sideways} stroke={GRID_COLOR} strokeWidth={1} />
+              {sideways ? (
+                <XAxis type="number" tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} {...yAxisScaleProps}
+                {...(config.yAxisLabel ? { height: 42, label: { value: config.yAxisLabel, position: "insideBottom", offset: 0, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})} />
+              ) : (
               <XAxis
                 dataKey={xAxisDataKey}
                 {...plainYearXAxisProps(plainYears, "bar")}
-                tick={TICK_STYLE}
+                tick={wrapCategories ? (p: object) => <WrappedCategoryTick {...p} /> : TICK_STYLE}
                 tickLine={X_AXIS_TICK_LINE_STYLE}
                 axisLine={X_AXIS_LINE_STYLE}
                 tickFormatter={
@@ -550,10 +615,10 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                   : fewYearsMonthly ? (v: string) => formatYearMonth(v)
                   : ym ? (v: string) => String(v).slice(0, 4)
                   : plainYears ? (v: number) => String(v)
-                  : (v: string) => String(v).length > 30 ? String(v).slice(0, 28) + "…" : String(v)
+                  : (v: string) => String(v)
                 }
-                angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
-                textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
+                angle={fewYearsMonthly ? -40 : (ym || daily || plainYears || wrapCategories) ? 0 : -45}
+                textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears || wrapCategories) ? "middle" : "end"}
                 {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
                 {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
                 {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
@@ -562,8 +627,13 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                   : daily ? dailyTickInterval(dataLen)
                   : 0
                 }
-                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 120}
+                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : wrapCategories ? 60 : slantedLabelHeight}
               />
+              )}
+              {sideways ? (
+                <YAxis type="category" dataKey={xAxisDataKey} width={sideLabelWidth} interval={0} tickLine={false} axisLine={X_AXIS_LINE_STYLE}
+                  tick={(p: object) => <SideCategoryTick {...p} labelWidth={sideLabelWidth} />} />
+              ) : (
               <YAxis
                 tickFormatter={yTickFormatter}
                 tick={TICK_STYLE}
@@ -573,6 +643,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                 {...yAxisScaleProps}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
+              )}
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
                 formatter={(v, name, props) => {
@@ -605,7 +676,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                   dataKey={y}
                   name={properCase(y)}
                   fill={colors[i % colors.length]}
-                  radius={[3, 3, 0, 0]}
+                  radius={sideways ? [0, 3, 3, 0] : [3, 3, 0, 0]}
                   stackId={config.type === "stacked_bar" ? "a" : undefined}
                 >
                   {chartData.map((d, k) => (
@@ -624,11 +695,11 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               {config.annotations?.map((a, i) => (
                 <ReferenceLine
                   key={`ann-${i}`}
-                  {...(a.axis === "x" ? { x: a.value } : { y: a.value })}
+                  {...((a.axis === "x") !== sideways ? { x: a.value } : { y: a.value })}
                   stroke={a.color || "#999"}
                   strokeDasharray="4 4"
                   strokeWidth={1.5}
-                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
+                  label={a.label ? { value: a.label, position: (a.axis === "x") !== sideways ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
                 />
               ))}
             </BarChart>

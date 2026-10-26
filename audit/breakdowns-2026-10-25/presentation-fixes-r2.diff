@@ -1,0 +1,657 @@
+diff --git a/app/api/query/route.ts b/app/api/query/route.ts
+index 56cda68..4c15183 100644
+--- a/app/api/query/route.ts
++++ b/app/api/query/route.ts
+@@ -68,7 +68,7 @@ import { buildHistoricalCityChangeRankingPlan, buildHistoricalLocalRecentChangeP
+ import { buildHistoricalPeerComparisonPlan } from "@/lib/historical-peer-comparison";
+ import { verifyPeerMembership } from "@/lib/peer-comparison";
+ import { fetchHistoricalPeerCandidates, resolveHistoricalSubjectPopulation } from "@/lib/peer-adapters";
+-import { buildMultiCityTrendPlan, relativePeriodShortfallNote } from "@/lib/multi-city-deterministic";
++import { buildMultiCityTrendPlan, multiCityChartTitle, relativePeriodShortfallNote } from "@/lib/multi-city-deterministic";
+ import { historicalBaltimoreComparisonDefault, withBaltimoreDisclosure, withoutBaltimoreDisclosure } from "@/lib/historical-baltimore-comparison";
+ import { buildCurrentIndexedStatePlan } from "@/lib/current-indexed-state-deterministic";
+ import { recognizeCityRanking, rankingValidationContract } from "@/lib/city-ranking";
+@@ -1792,6 +1792,7 @@ async function handleQueryPost(req: NextRequest) {
+       const db = getDb();
+       const rows = executeWithTimeoutSync<Record<string, unknown>>(db, db.prepare(multiCityTrend.sql), 30000);
+       const columns = rows.length > 0 ? Object.keys(rows[0]) : multiCityTrend.columns;
++      multiCityTrend.chartConfig.title = multiCityChartTitle(multiCityTrend.chartConfig.title, rows, multiCityTrend.chartConfig.xAxis);
+       /*
+        * This deterministic exit emits its own payload and never reaches applyResultDisclosures, so
+        * the presentation result has to be built here too — otherwise an unverified change would be
+diff --git a/components/ChartPanel.tsx b/components/ChartPanel.tsx
+index e31f25d..d07d687 100644
+--- a/components/ChartPanel.tsx
++++ b/components/ChartPanel.tsx
+@@ -44,6 +44,57 @@ const TICK_STYLE = {
+   fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif",
+ };
+ 
++/**
++ * Owner 2026-10-25 ("the labels don't fit"): category labels on a bar chart with few bars are written flat and wrapped
++ * onto up to three lines under their bar, instead of slanted and cut off. Exported for tests.
++ */
++export function wrapCategoryLabel(label: string, maxChars: number, maxLines = 3): string[] {
++  const words = String(label).split(/\s+/).filter(Boolean);
++  const lines: string[] = [];
++  let cur = "";
++  for (const w of words) {
++    if (!cur) cur = w;
++    else if ((cur + " " + w).length <= maxChars) cur += " " + w;
++    else { lines.push(cur); cur = w; }
++  }
++  if (cur) lines.push(cur);
++  if (lines.length <= maxLines) return lines;
++  const kept = lines.slice(0, maxLines);
++  kept[maxLines - 1] = kept[maxLines - 1].replace(/\s*\S*$/, "") + "…";
++  return kept;
++}
++
++export function WrappedCategoryTick(props: { x?: number; y?: number; payload?: { value: unknown }; width?: number; visibleTicksCount?: number }) {
++  const { x = 0, y = 0, payload, width = 600, visibleTicksCount = 1 } = props;
++  const perBar = width / Math.max(1, visibleTicksCount);
++  const lines = wrapCategoryLabel(String(payload?.value ?? ""), Math.max(8, Math.floor(perBar / 7.2)));
++  return (
++    <g transform={`translate(${x},${y})`}>
++      <text textAnchor="middle" fontSize={TICK_STYLE.fontSize} fill={TICK_STYLE.fill} fontFamily={TICK_STYLE.fontFamily}>
++        {lines.map((line, i) => <tspan key={i} x={0} dy={i === 0 ? 14 : 15}>{line}</tspan>)}
++      </text>
++    </g>
++  );
++}
++
++/**
++ * Owner 2026-10-25 ("that second chart looks bad"): on a narrow screen, few category bars are drawn sideways, each
++ * label written in full to the left of its bar, wrapped onto up to four lines.
++ */
++export const SIDEWAYS_MIN_BAR = 90;
++export function SideCategoryTick(props: { x?: number; y?: number; payload?: { value: unknown }; labelWidth: number }) {
++  const { x = 0, y = 0, payload, labelWidth } = props;
++  const lines = wrapCategoryLabel(String(payload?.value ?? ""), Math.max(8, Math.floor((labelWidth - 8) / 7)), 4);
++  const top = -((lines.length - 1) * 14) / 2;
++  return (
++    <g transform={`translate(${x},${y})`}>
++      <text textAnchor="end" fontSize={TICK_STYLE.fontSize} fill={TICK_STYLE.fill} fontFamily={TICK_STYLE.fontFamily}>
++        {lines.map((line, i) => <tspan key={i} x={-6} dy={i === 0 ? top + 4 : 14}>{line}</tspan>)}
++      </text>
++    </g>
++  );
++}
++
+ const GRID_COLOR = "#ddd8ce";
+ const X_AXIS_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
+ const X_AXIS_TICK_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
+@@ -263,6 +314,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+ 
+     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : collidingLabels ? "_xlabel" : config.xAxis;
+     const receiptRef = useChartRenderReceipt({ requestId, component: "ChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
++    const [boxWidth, setBoxWidth] = React.useState(0);
+     // Round 1 D4: never a blank chart area. Too many series to draw is said plainly; every row stays in the table.
+     if (seriesOverflow) {
+       return (
+@@ -282,6 +334,14 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+     // Detect plain-year x-axis (historical queries)
+     const plainYears = !ym && !daily && isPlainYears(chartData, xAxisDataKey);
+     const yearTicks = plainYears ? decadeTicksForYears(chartData, xAxisDataKey) : [];
++    // Owner 2026-10-25: category bars (not time) with 8 bars or fewer get flat labels wrapped under each bar.
++    const wrapCategories = !ym && !daily && !plainYears && dataLen <= 8;
++    // Slanted labels are no longer cut off: the axis is tall enough for the longest one (about 5.5px per character at 45°).
++    const longestLabel = Math.max(0, ...chartData.map((d) => String(d[xAxisDataKey] ?? "").length));
++    const slantedLabelHeight = Math.min(240, Math.max(60, Math.round(longestLabel * 5.5) + 16));
++    // Too narrow for wrapped labels under each bar (a phone): the bars are drawn sideways instead.
++    const sideways = wrapCategories && boxWidth > 0 && (boxWidth - 80) / Math.max(1, dataLen) < SIDEWAYS_MIN_BAR;
++    const sideLabelWidth = Math.min(170, Math.round(boxWidth * 0.42));
+ 
+     // Compute explicit tick positions for even spacing
+     const fewYearsMonthly = false;
+@@ -358,7 +418,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+             {config.title}
+           </div>
+         )}
+-        <ResponsiveContainer width="100%" height="100%">
++        <ResponsiveContainer width="100%" height="100%" onResize={(w) => setBoxWidth(w)}>
+           {config.type === "scatter" ? (
+             <ScatterChart
+               data={chartData}
+@@ -535,13 +595,18 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+           ) : config.type === "bar" || config.type === "stacked_bar" ? (
+             <BarChart
+               data={chartData}
++              layout={sideways ? "vertical" : "horizontal"}
+               margin={{ top: 20, right: 24, bottom: (ym || daily || plainYears) ? 8 : 4, left: 8 }}
+             >
+-              <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
++              <CartesianGrid horizontal={!sideways} vertical={sideways} stroke={GRID_COLOR} strokeWidth={1} />
++              {sideways ? (
++                <XAxis type="number" tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} {...yAxisScaleProps}
++                {...(config.yAxisLabel ? { height: 42, label: { value: config.yAxisLabel, position: "insideBottom", offset: 0, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})} />
++              ) : (
+               <XAxis
+                 dataKey={xAxisDataKey}
+                 {...plainYearXAxisProps(plainYears, "bar")}
+-                tick={TICK_STYLE}
++                tick={wrapCategories ? (p: object) => <WrappedCategoryTick {...p} /> : TICK_STYLE}
+                 tickLine={X_AXIS_TICK_LINE_STYLE}
+                 axisLine={X_AXIS_LINE_STYLE}
+                 tickFormatter={
+@@ -550,10 +615,10 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+                   : fewYearsMonthly ? (v: string) => formatYearMonth(v)
+                   : ym ? (v: string) => String(v).slice(0, 4)
+                   : plainYears ? (v: number) => String(v)
+-                  : (v: string) => String(v).length > 30 ? String(v).slice(0, 28) + "…" : String(v)
++                  : (v: string) => String(v)
+                 }
+-                angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
+-                textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
++                angle={fewYearsMonthly ? -40 : (ym || daily || plainYears || wrapCategories) ? 0 : -45}
++                textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears || wrapCategories) ? "middle" : "end"}
+                 {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
+                 {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
+                 {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
+@@ -562,8 +627,13 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+                   : daily ? dailyTickInterval(dataLen)
+                   : 0
+                 }
+-                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 120}
++                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : wrapCategories ? 60 : slantedLabelHeight}
+               />
++              )}
++              {sideways ? (
++                <YAxis type="category" dataKey={xAxisDataKey} width={sideLabelWidth} interval={0} tickLine={false} axisLine={X_AXIS_LINE_STYLE}
++                  tick={(p: object) => <SideCategoryTick {...p} labelWidth={sideLabelWidth} />} />
++              ) : (
+               <YAxis
+                 tickFormatter={yTickFormatter}
+                 tick={TICK_STYLE}
+@@ -573,6 +643,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+                 {...yAxisScaleProps}
+                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
+               />
++              )}
+               <Tooltip
+                 labelFormatter={tooltipLabelFormatter}
+                 formatter={(v, name, props) => {
+@@ -605,7 +676,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+                   dataKey={y}
+                   name={properCase(y)}
+                   fill={colors[i % colors.length]}
+-                  radius={[3, 3, 0, 0]}
++                  radius={sideways ? [0, 3, 3, 0] : [3, 3, 0, 0]}
+                   stackId={config.type === "stacked_bar" ? "a" : undefined}
+                 >
+                   {chartData.map((d, k) => (
+@@ -624,11 +695,11 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps)
+               {config.annotations?.map((a, i) => (
+                 <ReferenceLine
+                   key={`ann-${i}`}
+-                  {...(a.axis === "x" ? { x: a.value } : { y: a.value })}
++                  {...((a.axis === "x") !== sideways ? { x: a.value } : { y: a.value })}
+                   stroke={a.color || "#999"}
+                   strokeDasharray="4 4"
+                   strokeWidth={1.5}
+-                  label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
++                  label={a.label ? { value: a.label, position: (a.axis === "x") !== sideways ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
+                 />
+               ))}
+             </BarChart>
+diff --git a/components/DataTable.tsx b/components/DataTable.tsx
+index fd3919b..1fbe117 100644
+--- a/components/DataTable.tsx
++++ b/components/DataTable.tsx
+@@ -27,6 +27,9 @@ const PLAIN_HEADERS: Record<string, string> = {
+   agency_label: "Agency",
+   ori: "Agency ID",
+   agency_ori: "Agency ID",
++  // Owner 2026-10-25 / Codex PF-02: a stated restriction or unit reads in plain words.
++  filter: "Restricted to",
++  unit: "Counted as",
+ };
+ /** Convert column name like "kidnapping_count" → "Kidnapping Count" */
+ function formatHeader(col: string): string {
+@@ -152,7 +155,7 @@ export default function DataTable({ columns: rawColumns, rows, truncated, fillHe
+     <div className={fillHeight ? "flex flex-col flex-1 min-h-0" : ""}>
+       {display.constants.length > 0 && (
+         <p className="mb-2 text-sm text-[var(--muted)]" data-table-constants="1">
+-          {display.constants.map((c) => `${formatHeader(c.column)}: ${/^(state|state_abbr)$/i.test(c.column) && /^[a-zA-Z]{2}$/.test(c.value) ? c.value.toUpperCase() : c.value}`).join(" · ")}
++          {display.constants.map((c) => `${formatHeader(c.column)}: ${/^(state|state_abbr)$/i.test(c.column) && /^[a-zA-Z]{2}$/.test(c.value) ? c.value.toUpperCase() : c.value}`).join("; ")}
+         </p>
+       )}
+       <div className={`overflow-x-auto overflow-y-auto ${fillHeight ? "flex-1" : "max-h-96"}`}>
+diff --git a/components/NibrsChartPanel.tsx b/components/NibrsChartPanel.tsx
+index b1ae7f4..fa3a2d1 100644
+--- a/components/NibrsChartPanel.tsx
++++ b/components/NibrsChartPanel.tsx
+@@ -1,5 +1,6 @@
+ "use client";
+ 
++import { useState } from "react";
+ import {
+   ResponsiveContainer,
+   LineChart,
+@@ -29,6 +30,7 @@ import {
+   shouldUsePieLegend,
+ } from "@/lib/chart-layout";
+ import { useChartRenderReceipt } from "./useChartRenderReceipt";
++import { SIDEWAYS_MIN_BAR, SideCategoryTick, WrappedCategoryTick } from "./ChartPanel";
+ 
+ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+ 
+@@ -195,11 +197,20 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
+   const dataLen = chartData.length;
+   const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
+   const receiptRef = useChartRenderReceipt({ requestId, component: "NibrsChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
++  const [boxWidth, setBoxWidth] = useState(0);
+   if (seriesOverflow) return null;
+ 
+   // Detect plain-year x-axis (multi-year queries)
+   const plainYears = !ym && !daily && isPlainYears(data, xAxisDataKey);
+   const yearTicks = plainYears ? decadeTicksForYears(data, xAxisDataKey) : [];
++  // Owner 2026-10-25 ("the labels don't fit"): as in ChartPanel, few category bars get flat wrapped labels, and slanted
++  // labels are never cut off.
++  const wrapCategories = !ym && !daily && !plainYears && dataLen <= 8;
++  const longestLabel = Math.max(0, ...chartData.map((d) => String(d[xAxisDataKey] ?? "").length));
++  const slantedLabelHeight = Math.min(240, Math.max(60, Math.round(longestLabel * 5.5) + 16));
++  // Too narrow for wrapped labels under each bar (a phone): the bars are drawn sideways instead.
++  const sideways = wrapCategories && boxWidth > 0 && (boxWidth - 80) / Math.max(1, dataLen) < SIDEWAYS_MIN_BAR;
++  const sideLabelWidth = Math.min(170, Math.round(boxWidth * 0.42));
+ 
+   // Compute explicit tick positions for even spacing
+   const ymTicks = ym && !singleYearMonthly ? nibrsYearTicksForYM(data, xKey) : [];
+@@ -265,7 +276,7 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
+           {config.title}
+         </div>
+       )}
+-      <ResponsiveContainer width="100%" height="100%">
++      <ResponsiveContainer width="100%" height="100%" onResize={(w) => setBoxWidth(w)}>
+         {config.type === "scatter" ? (
+           <ScatterChart data={chartData} margin={{ top: 20, right: 24, bottom: 24, left: 8 }}>
+             <CartesianGrid horizontal vertical stroke={GRID_COLOR} strokeWidth={1} />
+@@ -387,12 +398,16 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
+             ))}
+           </LineChart>
+         ) : config.type === "bar" || config.type === "stacked_bar" ? (
+-          <BarChart data={chartData} margin={{ top: 20, right: 24, bottom: ym || daily ? 8 : 4, left: 8 }}>
+-            <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
++          <BarChart data={chartData} layout={sideways ? "vertical" : "horizontal"} margin={{ top: 20, right: 24, bottom: ym || daily ? 8 : 4, left: 8 }}>
++            <CartesianGrid horizontal={!sideways} vertical={sideways} stroke={GRID_COLOR} strokeWidth={1} />
++            {sideways ? (
++              <XAxis type="number" tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} {...yAxisScaleProps}
++                {...(config.yAxisLabel ? { height: 42, label: { value: config.yAxisLabel, position: "insideBottom", offset: 0, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})} />
++            ) : (
+             <XAxis
+               dataKey={xAxisDataKey}
+               {...plainYearXAxisProps(plainYears, "bar")}
+-              tick={TICK_STYLE}
++              tick={wrapCategories ? (p: object) => <WrappedCategoryTick {...p} /> : TICK_STYLE}
+               tickLine={X_AXIS_TICK_LINE_STYLE}
+               axisLine={X_AXIS_LINE_STYLE}
+               tickFormatter={
+@@ -401,10 +416,10 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
+                 : fewYearsMonthly ? (v: string) => formatYearMonth(v)
+                 : ym ? (v: string) => String(v).slice(0, 4)
+                 : plainYears ? (v: number) => String(v)
+-                : (v: string) => String(v).length > 30 ? String(v).slice(0, 28) + "\u2026" : String(v)
++                : (v: string) => String(v)
+               }
+-              angle={fewYearsMonthly ? -40 : (ym || daily || plainYears) ? 0 : -45}
+-              textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears) ? "middle" : "end"}
++              angle={fewYearsMonthly ? -40 : (ym || daily || plainYears || wrapCategories) ? 0 : -45}
++              textAnchor={fewYearsMonthly ? "end" : (ym || daily || plainYears || wrapCategories) ? "middle" : "end"}
+               {...(yearTicks.length > 0 ? { ticks: yearTicks } : {})}
+               {...(ymTicks.length > 0 ? { ticks: ymTicks } : {})}
+               {...(dailyTicks.length > 0 ? { ticks: dailyTicks } : {})}
+@@ -413,12 +428,18 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
+                 : daily ? dailyTickInterval(dataLen)
+                 : 0
+               }
+-              height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : 120}
++              height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : wrapCategories ? 60 : slantedLabelHeight}
+             />
++            )}
++            {sideways ? (
++              <YAxis type="category" dataKey={xAxisDataKey} width={sideLabelWidth} interval={0} tickLine={false} axisLine={X_AXIS_LINE_STYLE}
++                tick={(p: object) => <SideCategoryTick {...p} labelWidth={sideLabelWidth} />} />
++            ) : (
+             <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
+               {...yAxisScaleProps}
+               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
+             />
++            )}
+             <Tooltip
+               labelFormatter={tooltipLabelFormatter}
+               formatter={(v) => fmtVal(v as number, isPercent)}
+@@ -434,18 +455,18 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
+             {effectiveYKeys.map((y, i) => (
+               <Bar key={y} dataKey={y} name={properCase(y)}
+                 fill={chartColors[i % chartColors.length]}
+-                radius={[3, 3, 0, 0]}
++                radius={sideways ? [0, 3, 3, 0] : [3, 3, 0, 0]}
+                 stackId={config.type === "stacked_bar" ? "a" : undefined}
+               />
+             ))}
+             {config.annotations?.map((a, i) => (
+               <ReferenceLine
+                 key={`ann-${i}`}
+-                {...(a.axis === "x" ? { x: a.value } : { y: a.value })}
++                {...((a.axis === "x") !== sideways ? { x: a.value } : { y: a.value })}
+                 stroke={a.color || "#999"}
+                 strokeDasharray="4 4"
+                 strokeWidth={1.5}
+-                label={a.label ? { value: a.label, position: a.axis === "x" ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
++                label={a.label ? { value: a.label, position: (a.axis === "x") !== sideways ? "insideTopRight" : "insideRight", fill: a.color || "#999", fontSize: 11, fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif" } : undefined}
+               />
+             ))}
+           </BarChart>
+diff --git a/lib/chart-layout.ts b/lib/chart-layout.ts
+index f5bbcce..ce04c4a 100644
+--- a/lib/chart-layout.ts
++++ b/lib/chart-layout.ts
+@@ -139,7 +139,13 @@ export function niceYTicks(
+   if (rawMin === 0 && rawMax === 0) return null;
+   const min = Math.min(0, rawMin);
+   const max = Math.max(0, rawMax);
+-  const step = niceStep(max - min);
++  let step = niceStep(max - min);
++  // Owner 2026-10-25 ("half numbers"): whole-number data (counts) never gets a fractional step. Round a step like 2.5
++  // down to 2 when that keeps at most 8 intervals, otherwise up; never below 1.
++  if (values.every((v) => Number.isInteger(v)) && !Number.isInteger(step)) {
++    const down = Math.floor(step);
++    step = down >= 1 && (max - min) / down <= 8 ? down : Math.max(1, Math.ceil(step));
++  }
+   const bottom = Math.floor(min / step) * step;
+   const top = Math.ceil(max / step) * step;
+   const ticks: number[] = [];
+diff --git a/lib/historical-question-compiler.ts b/lib/historical-question-compiler.ts
+index c116d25..154c5f6 100644
+--- a/lib/historical-question-compiler.ts
++++ b/lib/historical-question-compiler.ts
+@@ -370,7 +370,14 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
+   const staffNote = spec.family === "staffing" ? " Years marked as having only total employees are shown without an officer or civilian figure; nothing is substituted." : "";
+   const anchorNote = anchor !== undefined ? ` ${anchor} is the latest year all of these sources have, so every series stops there.` : "";
+   const explanation = [lead + anchorNote + rapeNote + countyNote + staffNote, ...notes, "Agency reporting to the FBI can be incomplete in some years."].join(" ").replace(/\s+/g, " ").trim();
+-  const title = spec.total ? `Total ${capital(MEASURE_LABEL[spec.measures[0]])}, ${placeWords}` : `${capital(measureWords)}: ${spec.type === "H5" ? "By State" : placeWords}`;
++  // Owner 2026-10-25: "Kansas City, MO Murder, 1936 - 2025" -- place, measure, then the years shown, in title case.
++  const titleWords = (s: string) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
++  const shownYears = rows.map((r) => Number(r.year)).filter(Number.isFinite);
++  const yearSpan = !shownYears.length ? "" : Math.min(...shownYears) === Math.max(...shownYears) ? `, ${shownYears[0]}` : `, ${Math.min(...shownYears)} - ${Math.max(...shownYears)}`;
++  const titleMeasures = titleWords(spec.measures.map((m) => (spec.statistic === "count" ? SINGULAR[m] : measureText(m, spec.statistic))).join(" and "));
++  const title = spec.total ? `Total ${capital(MEASURE_LABEL[spec.measures[0]])}, ${placeWords}`
++    : spec.type === "H5" ? `${titleMeasures} By State${yearSpan}`
++    : `${targets.map((t) => t.label).join(" and ")} ${titleMeasures}${yearSpan}`;
+   const chartConfig: ChartConfig | null = spec.total || rows.length <= 1 ? null : {
+     type: "line", xAxis: "year", yAxis: ["value"], title,
+     yAxisLabel: spec.statistic === "count" ? "Count" : STAT_WORD[spec.statistic],
+diff --git a/lib/multi-city-deterministic.ts b/lib/multi-city-deterministic.ts
+index 05a781b..f4e5c23 100644
+--- a/lib/multi-city-deterministic.ts
++++ b/lib/multi-city-deterministic.ts
+@@ -58,6 +58,14 @@ export function relativePeriodShortfallNote(plan: Pick<MultiCityTrendPlan, "rela
+ type City = { name: string; state: string; alias: string; label: string; historicalOri?: string; currentName: string };
+ type Offense = { label: string; current: string[]; historical: string };
+ 
++/** The chart title with the years the rows cover ("…, 1932 - 2025"); monthly periods count by their year. */
++export function multiCityChartTitle(title: string, rows: Record<string, unknown>[], periodColumn: string): string {
++  const years = rows.map((r) => Number(String(r[periodColumn] ?? "").slice(0, 4))).filter((y) => Number.isInteger(y) && y > 0);
++  if (!years.length) return title;
++  const lo = Math.min(...years), hi = Math.max(...years);
++  return `${title}, ${lo === hi ? lo : `${lo} - ${hi}`}`;
++}
++
+ function sqlString(value: string): string {
+   return `'${value.replace(/'/g, "''")}'`;
+ }
+@@ -131,6 +139,16 @@ function cityCondition(alias: string, city: City, source: "current" | "historica
+   const state = source === "current" ? `${alias}.state` : `UPPER(${alias}.state)`;
+   const type = source === "current" ? `LOWER(${alias}.type) = 'city'` : `LOWER(${alias}.type) = 'city'`;
+   const sourceName = source === "current" ? city.currentName : city.name;
++  // Owner 2026-10-25 ("new york city vs chicago robbery rate per year only gives chicago"): Historical stores some cities
++  // without "City" (NYPD is "New York"). As resolveHistoricalAgency does, the name without a trailing "City" is used,
++  // but only when no city agency has the full name and exactly one has the shorter name (Codex PF-01: two agencies
++  // under one name are never summed; the column is left empty instead).
++  const stripped = city.name.replace(/\s+city$/i, "");
++  if (source === "historical" && stripped !== city.name) {
++    const st = sqlString(city.state.toUpperCase());
++    const named = (n: string) => `(SELECT COUNT(*) FROM historical_agency x WHERE x.agency = ${sqlString(n)} AND UPPER(x.state) = ${st} AND LOWER(x.type) = 'city')`;
++    return `${name} = CASE WHEN ${named(city.name)} > 0 THEN ${sqlString(city.name)} WHEN ${named(stripped)} = 1 THEN ${sqlString(stripped)} END AND ${state} = ${sqlString(city.state)} AND ${type}`;
++  }
+   return `${name} = ${sqlString(sourceName)} AND ${state} = ${sqlString(city.state)} AND ${type}`;
+ }
+ 
+@@ -233,7 +251,8 @@ ORDER BY hac.year`;
+       type: "line",
+       xAxis: periodColumn,
+       yAxis: places.map((city) => city.alias),
+-      title: `${selectedOffense.label} ${rate ? "rate" : "count"} by city`,
++      // Owner 2026-10-25: "Place Measure, 1936 - 2025" in title case; the years are added from the rows returned.
++      title: `${places.map((city) => city.label).join(" and ")} ${selectedOffense.label.replace(/\b[a-z]/g, (c) => c.toUpperCase())} ${rate ? "Rate" : "Count"}`,
+       yAxisLabel: rate ? "Rate per 100,000" : "Reported offenses",
+     },
+     chartMeta: {
+diff --git a/lib/nibrs-deterministic-queries.ts b/lib/nibrs-deterministic-queries.ts
+index 5cac160..2a15b47 100644
+--- a/lib/nibrs-deterministic-queries.ts
++++ b/lib/nibrs-deterministic-queries.ts
+@@ -366,7 +366,7 @@ export function buildNibrsClearanceTypeBreakdownQuery(
+     ["Cleared by arrest", "t.cleared_by_arrest"],
+     ["Death of offender", "t.cleared_a"],
+     ["Prosecution declined", "t.cleared_b"],
+-    ["In custody of another jurisdiction (includes extradition denied)", "t.cleared_c"],
++    ["In custody of another jurisdiction", "t.cleared_c"],
+     ["Victim refused to cooperate", "t.cleared_d"],
+     ["Juvenile, no custody", "t.cleared_e"],
+     ["Not cleared", "t.total_offenses - (t.cleared_by_arrest + t.cleared_a + t.cleared_b + t.cleared_c + t.cleared_d + t.cleared_e)"],
+diff --git a/lib/nibrs-question-compiler.ts b/lib/nibrs-question-compiler.ts
+index 7c77ec8..d45b7ea 100644
+--- a/lib/nibrs-question-compiler.ts
++++ b/lib/nibrs-question-compiler.ts
+@@ -1022,7 +1022,7 @@ async function compileBreakdown(spec: BreakdownSpec, ctx: CompileContext, run: R
+   return { kind: "answer", columns: BREAKDOWN, rows, title: `${MEASURE_LABEL[spec.measure]} ${unitLabel} by ${dimName} — ${label}`, explanation: ["Counts from the NIBRS summary tables; unknown values stay visible as their own category.", ...notes, NIBRS_RECENT_MATURATION_DISCLOSURE].join(" "), statements, applied };
+ }
+ 
+-const CLEARANCE_TYPES: [string, string][] = [["Cleared by arrest", "cleared_by_arrest"], ["Death of offender", "cleared_A"], ["Prosecution declined", "cleared_B"], ["In custody of another jurisdiction (includes extradition denied)", "cleared_C"], ["Victim refused to cooperate", "cleared_D"], ["Juvenile, no custody", "cleared_E"]];
++const CLEARANCE_TYPES: [string, string][] = [["Cleared by arrest", "cleared_by_arrest"], ["Death of offender", "cleared_A"], ["Prosecution declined", "cleared_B"], ["In custody of another jurisdiction", "cleared_C"], ["Victim refused to cooperate", "cleared_D"], ["Juvenile, no custody", "cleared_E"]];
+ const clearanceCols = (v: string) => (v === "arrest" ? ["cleared_by_arrest"] : v === "exceptional" ? ["cleared_A", "cleared_B", "cleared_C", "cleared_D", "cleared_E"] : [`cleared_${v}`]);
+ 
+ /** The place and years of a clearance answer, as a builder, with the agency completeness of each year (r2 §4). */
+@@ -1088,7 +1088,7 @@ async function compileClearanceBreakdown(spec: BreakdownSpec, ctx: CompileContex
+   const what = exceptionalOnly
+     ? "Exceptional clearances only, by type; each share is of all exceptional clearances. An exceptional clearance means the police identified the offender but could not make an arrest for a reason outside their control (such as the offender's death or prosecution being declined)."
+     : "Every clearance category, with uncleared offenses as their own category so the parts sum to the reported total.";
+-  return { kind: "answer", columns: BREAKDOWN, rows, title: `${label} ${MEASURE_LABEL[spec.measure]} ${exceptionalOnly ? "exceptional clearances" : "clearances"} by ${method ? "method" : "type"}`, explanation: `${what} FBI clearance means cleared by arrest or by exceptional means; it is not a conviction. Clearances count offense records, not victims.` + cohortNote + " " + NIBRS_RECENT_MATURATION_DISCLOSURE, statements, applied };
++  return { kind: "answer", columns: BREAKDOWN, rows, title: titleWords(`${label} ${MEASURE_LABEL[spec.measure]} ${exceptionalOnly ? "exceptional clearances" : "clearances"} by ${method ? "method" : "type"}, ${String(period).replace("-", " - ")}`), explanation: `${what} FBI clearance means cleared by arrest or by exceptional means; it is not a conviction. Clearances count offense records, not victims.` + cohortNote + " " + NIBRS_RECENT_MATURATION_DISCLOSURE, statements, applied };
+ }
+ 
+ async function compileShare(spec: ShareSpec, ctx: CompileContext, run: RunFn, statements: string[]): Promise<CompiledAnswer> {
+diff --git a/lib/table-display.ts b/lib/table-display.ts
+index 1a43e12..939a640 100644
+--- a/lib/table-display.ts
++++ b/lib/table-display.ts
+@@ -109,13 +109,27 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
+   const fieldOf = (c: string): string | null | false => (!columns.includes(c) ? null : constantOf(c) ?? false);
+   const unit = fieldOf("unit");
+   const statistic = fieldOf("statistic");
+-  if (measure && shown.includes("value") && unit !== false && statistic !== false) {
++  // The value column, or a breakdown's count column when there is no value column ("Measure: rape; Unit: offenses"
++  // above a count column, owner 2026-10-25).
++  const valueCol = shown.includes("value") ? "value" : shown.includes("count") ? "count" : null;
++  if (measure && valueCol && unit !== false && statistic !== false) {
+     const name = valueLabel(measure, unit, statistic);
+-    if (name) { labels.value = name; for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c); }
++    if (name) { labels[valueCol] = name; for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c); }
++    // Owner 2026-10-25: an unusual constant unit (arrests) is named in the value header in plain words ("Robbery
++    // arrests") instead of a "Unit:" line.
++    else if (typeof unit === "string" && (statistic === null || statistic === "count")) {
++      labels[valueCol] = `${measure.replace(/_/g, " ").replace(/^\w/, (ch) => ch.toUpperCase())} ${unit.replace(/_/g, " ")}`;
++      for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c);
++    }
+   }
+   // Only the place is left out for a displayed title that contains its whole label.
+   const placeShown = (c: { column: string; value: string }) => c.column === "place" && title !== "" && title.includes(c.value);
+-  const stated = constants.filter((c) => !absorbed.has(c.column) && !placeShown(c));
++  // Owner 2026-10-25 ("Measure: rape · Unit: offenses · Dimension: clearance type"): the dimension is never stated
++  // (the category column shows it), and the measure is not restated under a displayed title, which names it. Codex
++  // PF-02: a restriction (filter) and a unit or statistic not named in the header are still stated, in plain words
++  // (DataTable: "Restricted to", "Counted as"); the titleless embed keeps the measure.
++  const hidden = (c: { column: string }) => /^dimension$/i.test(c.column) || (/^measure$/i.test(c.column) && title !== "");
++  const stated = constants.filter((c) => !absorbed.has(c.column) && !placeShown(c) && !hidden(c));
+   // Codex r1: answer-supplied labels never rename a time column (year, month, period).
+   for (const c of shown) if (columnLabels[c] && !labels[c] && !/^(?:year|month|period)$/i.test(c)) labels[c] = columnLabels[c];
+   return { shown, constants: stated.filter((c) => !(RECORD_STATUS.test(c.column) && c.value === "recorded")), labels, months: monthsOf(shown) };
+diff --git a/scripts/test-chart-panel-ticks.ts b/scripts/test-chart-panel-ticks.ts
+index cee5eed..11e6542 100644
+--- a/scripts/test-chart-panel-ticks.ts
++++ b/scripts/test-chart-panel-ticks.ts
+@@ -4,7 +4,7 @@
+ // 6-digit check to Recharts' default ticks — overlapping labels every ~33 months.
+ // Run: npx tsx scripts/test-chart-panel-ticks.ts
+ import assert from "node:assert/strict";
+-import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth } from "../components/ChartPanel";
++import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth, wrapCategoryLabel } from "../components/ChartPanel";
+ import {
+   formatNibrsMonthOnly,
+   isNibrsYearMonth,
+@@ -122,6 +122,26 @@ assert.deepEqual(
+   niceYTicks([{ first: -30, second: -45 }], ["first", "second"], true)?.domain,
+   [-80, 0],
+ );
++// Owner 2026-10-25 ("half numbers"): counts get whole-number ticks (12 and 9 used to give 0, 2.5, ... 12.5).
++{
++  const t = niceYTicks([{ count: 12 }, { count: 9 }, { count: 0 }], ["count"]);
++  assert.ok(t && t.ticks.every((v) => Number.isInteger(v)), `whole-number ticks for counts (${t?.ticks.join(", ")})`);
++  assert.ok(t && t.domain[1] >= 12 && t.domain[1] <= 14, `the top stays close to the data (${t?.domain.join("-")})`);
++  const r = niceYTicks([{ rate: 1.2 }, { rate: 3.7 }], ["rate"]);
++  assert.ok(r && r.ticks.some((v) => !Number.isInteger(v)) || (r && r.domain[1] <= 4), "rates may still use fractional steps");
++}
++
++// Owner 2026-10-25 ("the labels don't fit"): few-bar category labels wrap onto up to three whole-word lines.
++{
++  const c = "In custody of another jurisdiction (includes extradition denied)";
++  const lines = wrapCategoryLabel(c, 22);
++  assert.ok(lines.length <= 3 && lines.every((l) => l.length <= 22), lines.join(" | "));
++  assert.equal(lines.join(" "), c, "a label that fits in three lines is never cut");
++  assert.deepEqual(wrapCategoryLabel("Death of offender", 22), ["Death of offender"]);
++  const cut = wrapCategoryLabel("one two three four five six seven eight nine ten", 8);
++  assert.equal(cut.length, 3);
++  assert.ok(cut[2].endsWith("…"));
++}
+ 
+ // Dense or long-label pies use an internal legend instead of clipped labels.
+ assert.equal(shouldUsePieLegend(Array.from({ length: 7 }, (_, i) => ({ name: `Item ${i}` })), "name"), true);
+diff --git a/scripts/test-multi-city-deterministic.ts b/scripts/test-multi-city-deterministic.ts
+index cb90b44..f7ad42b 100644
+--- a/scripts/test-multi-city-deterministic.ts
++++ b/scripts/test-multi-city-deterministic.ts
+@@ -1,5 +1,6 @@
+ import assert from "node:assert/strict";
+-import { buildMultiCityTrendPlan } from "../lib/multi-city-deterministic";
++import Database from "better-sqlite3";
++import { buildMultiCityTrendPlan, multiCityChartTitle } from "../lib/multi-city-deterministic";
+ 
+ const current = buildMultiCityTrendPlan(
+   "Compare annual homicide rates in Austin TX, Boston MA, and Denver CO from 2022 to 2025",
+@@ -74,4 +75,34 @@ assert.match(eightThreeSevenEight.sql, /WHERE 1 = 1/);
+ assert.doesNotMatch(eightThreeSevenEight.sql, /ELSE 0/);
+ assert.doesNotMatch(historical.sql, /ELSE 0/);
+ 
++// Owner 2026-10-25 ("new york city vs chicago robbery rate per year only gives chicago"): Historical stores NYPD as
++// "New York"; the name without "City" is used only when no city agency has the full name (Oklahoma City keeps its own).
++{
++  const db = new Database(":memory:");
++  db.exec(`CREATE TABLE historical_agency (ori TEXT, agency TEXT, state TEXT, type TEXT);
++    CREATE TABLE historical_agency_crime (ori TEXT, year INTEGER, robbery INTEGER, murder INTEGER);
++    CREATE TABLE historical_agency_population (ori TEXT, year INTEGER, population INTEGER);
++    INSERT INTO historical_agency VALUES ('NY0303000','New York','ny','city'), ('ILCPD0000','Chicago','il','city'),
++      ('OK0550000','Oklahoma City','ok','city'), ('OKFAKE000','Oklahoma','ok','city'), ('OK0720000','Tulsa','ok','city');
++    INSERT INTO historical_agency_crime VALUES ('NY0303000',2024,1000,10), ('ILCPD0000',2024,500,5),
++      ('OK0550000',2024,0,70), ('OKFAKE000',2024,0,9999), ('OK0720000',2024,0,60);
++    INSERT INTO historical_agency_population VALUES ('NY0303000',2024,1000000), ('ILCPD0000',2024,500000),
++      ('OK0550000',2024,700000), ('OKFAKE000',2024,1), ('OK0720000',2024,400000);`);
++  const nyc = buildMultiCityTrendPlan("new york city vs chicago robbery rate per year", "historical");
++  assert.ok(nyc, "the owner's question gets a deterministic plan");
++  const row = db.prepare(nyc.sql).all()[0] as Record<string, unknown>;
++  assert.equal(row.new_york_city, 100, `New York City is read from the "New York" agency (${JSON.stringify(row)})`);
++  assert.equal(row.chicago, 100);
++  assert.equal(multiCityChartTitle(nyc.chartConfig.title, [{ year: 1932 }, { year: 2025 }], "year"), "New York City, NY and Chicago, IL Robbery Rate, 1932 - 2025");
++  const okc = db.prepare(eightThreeSevenEight.sql).all()[0] as Record<string, unknown>;
++  assert.equal(okc.oklahoma_city, 70, "a full-name city agency is used, never the shortened name");
++  // Codex PF-01: two city agencies under the shorter name are never summed; the column is left empty.
++  db.exec(`INSERT INTO historical_agency VALUES ('NYDUP0000','New York','ny','city');
++    INSERT INTO historical_agency_crime VALUES ('NYDUP0000',2024,7,1);
++    INSERT INTO historical_agency_population VALUES ('NYDUP0000',2024,5);`);
++  const dup = db.prepare(nyc.sql).all()[0] as Record<string, unknown>;
++  assert.equal(dup.new_york_city, null, `an ambiguous shorter name gives no value (${JSON.stringify(dup)})`);
++  assert.equal(dup.chicago, 100);
++}
++
+ console.log("multi-city deterministic tests passed");
+diff --git a/scripts/test-nibrs-exceptional-by-type.ts b/scripts/test-nibrs-exceptional-by-type.ts
+index 38c1156..7f7614e 100644
+--- a/scripts/test-nibrs-exceptional-by-type.ts
++++ b/scripts/test-nibrs-exceptional-by-type.ts
+@@ -41,8 +41,10 @@ const rowsOf = (a: CompiledAnswer) => (a.kind === "answer" ? a.rows.map((r) => `
+   check(ex.kind === "answer", `exceptional by type answers (${exRows.join("; ")})`);
+   if (ex.kind === "answer") {
+     check(ex.rows.length === 5 && !exRows.some((r) => /arrest|Not cleared/i.test(r)), "only the five exceptional types are shown");
+-    check(exRows.includes("Death of offender=4/40") && exRows.includes("Prosecution declined=3/30") && exRows.includes("In custody of another jurisdiction (includes extradition denied)=2/20"), "each share is of all exceptional clearances (4 of 10 = 40%)");
++    check(exRows.includes("Death of offender=4/40") && exRows.includes("Prosecution declined=3/30") && exRows.includes("In custody of another jurisdiction=2/20"), "each share is of all exceptional clearances (4 of 10 = 40%)");
+     check(/exceptional clearances by type/i.test(ex.title) && /Exceptional clearances only/.test(ex.explanation), `title and explanation say exceptional only (${ex.title})`);
++    // Owner 2026-10-25: "Virginia Rape Exceptional Clearances By Type, 2025" (place, measure, title case, year).
++    check(ex.title === "Virginia Murder Exceptional Clearances By Type, 2025", `title format (${ex.title})`);
+   }
+   // Codex EX-01: the owner's question end to end -- request accounting, type match, compile, delivery binding.
+   const q = "virginia murder clearances by exception by type in 2025";
+@@ -58,8 +60,8 @@ const rowsOf = (a: CompiledAnswer) => (a.kind === "answer" ? a.rows.map((r) => `
+       check(unbound.length === 0, `delivery binding accepts it: no unbound part (${unbound.map((p) => p.text).join(", ") || "none"})`);
+     }
+   }
+-  // Codex EX-02: all five category labels (C = FBI "In Custody of Other Jurisdiction", which includes extradition denied).
+-  if (ex.kind === "answer") check(JSON.stringify(ex.rows.map((r) => r.category).sort()) === JSON.stringify(["Death of offender", "In custody of another jurisdiction (includes extradition denied)", "Juvenile, no custody", "Prosecution declined", "Victim refused to cooperate"]), `the five exceptional labels (${ex.rows.map((r) => r.category).join(" | ")})`);
++  // Codex EX-02: all five category labels. Owner 2026-10-25: C is the FBI's "In Custody of Other Jurisdiction", in plain words, with no added note.
++  if (ex.kind === "answer") check(JSON.stringify(ex.rows.map((r) => r.category).sort()) === JSON.stringify(["Death of offender", "In custody of another jurisdiction", "Juvenile, no custody", "Prosecution declined", "Victim refused to cooperate"]), `the five exceptional labels (${ex.rows.map((r) => r.category).join(" | ")})`);
+   const all = await compileNibrsSpec(spec([]), ctx);
+   const allRows = rowsOf(all);
+   check(all.kind === "answer" && all.rows.length === 7 && allRows.includes("Cleared by arrest=60/60") && allRows.includes("Not cleared=30/30"), `control: the unnarrowed breakdown is unchanged (${allRows.join("; ")})`);
+diff --git a/scripts/test-nibrs-typed-chart.ts b/scripts/test-nibrs-typed-chart.ts
+index d4da48d..f89b6f3 100644
+--- a/scripts/test-nibrs-typed-chart.ts
++++ b/scripts/test-nibrs-typed-chart.ts
+@@ -174,7 +174,8 @@ async function main() {
+   await check("rendered constants keep their column names, so two constant dimensions stay distinguishable (Codex r3 case)", () => {
+     const rows = [{ year: 2024, victim_race: "White", offender_race: "Black", count: 3 }, { year: 2025, victim_race: "White", offender_race: "Black", count: 5 }];
+     const out = html(["year", "victim_race", "offender_race", "count"], rows);
+-    assert.match(out, /Victim Race: White · Offender Race: Black/, out.slice(0, 400));
++    // Owner 2026-10-25: no middle dots; real data restrictions stay stated, separated by "; ".
++    assert.match(out, /Victim Race: White; Offender Race: Black/, out.slice(0, 400));
+   });
+   await check("a result column empty on every row stays visible (a change that could not be calculated, Codex r3 case)", () => {
+     const cols = ["place", "measure", "unit", "statistic", "earlier_year", "earlier_value", "later_year", "later_value", "change", "percent_change", "note"];
+@@ -260,11 +261,25 @@ async function main() {
+     const unit = rob({}).map((r, i) => ({ ...r, unit: i ? "victims" : "offenses" }));
+     assert.equal(tableDisplay(SERIES, unit, "robbery — Memphis, TN").labels.value, undefined);
+   });
+-  await check("an unsupported constant unit (arrests): no value name, and the unit stays stated", () => {
++  await check("an unsupported constant unit (arrests): named in the value header, never as an internal line (owner 2026-10-25)", () => {
+     const d = tableDisplay(SERIES, rob({ unit: "arrests" }), "robbery — Memphis, TN");
+-    assert.equal(d.labels.value, undefined);
+-    assert.ok(d.constants.some((c) => c.column === "unit" && c.value === "arrests"), JSON.stringify(d.constants));
+-    assert.ok(d.constants.some((c) => c.column === "measure"), "the measure stays stated when the value column is not named for it");
++    assert.equal(d.labels.value, "Robbery arrests");
++    assert.ok(!d.constants.some((c) => /^(?:measure|unit|statistic|dimension|filter)$/.test(c.column)), `no internal field above the table: ${JSON.stringify(d.constants)}`);
++  });
++  await check("Codex PF-02: a clearance breakdown names its count column and keeps a restriction, not the dimension", () => {
++    const BD = ["period", "place", "measure", "unit", "filter", "dimension", "category", "count", "share", "note"];
++    const rows = ["Death of offender", "Prosecution declined"].map((category, i) => ({ period: 2025, place: "Virginia", measure: "rape", unit: "offenses", filter: "female", dimension: "clearance type", category, count: 10 + i, share: 50, note: null }));
++    const d = tableDisplay(BD, rows, "Virginia Rape Exceptional Clearances By Type, 2025");
++    assert.equal(d.labels.count, "Rapes");
++    assert.deepEqual(d.constants, [{ column: "filter", value: "female" }], JSON.stringify(d.constants));
++    const embed = tableDisplay(BD, rows.map((r) => ({ ...r, filter: null })), "");
++    assert.ok(!embed.constants.some((c) => c.column === "dimension"), JSON.stringify(embed.constants));
++    assert.equal(embed.labels.count, "Rapes", "the titleless embed still names what is counted");
++  });
++  await check("Codex PF-02: a unit the header can't name is still stated; the measure stays when there is no title", () => {
++    const share = rob({}).map((r) => ({ ...r, statistic: "share" }));
++    const d = tableDisplay(SERIES, share, "");
++    assert.ok(d.constants.some((c) => c.column === "measure") && d.constants.some((c) => c.column === "unit"), JSON.stringify(d.constants));
+   });
+   await check("only the place is dropped for a title, and only on its whole label: 'IN' and race roles stay", () => {
+     const st = [{ city: "A", state: "IN", value: 1, n: 1 }, { city: "B", state: "IN", value: 2, n: 2 }];

@@ -152,7 +152,7 @@ export default function DataTable({ columns: rawColumns, rows, truncated, fillHe
     <div className={fillHeight ? "flex flex-col flex-1 min-h-0" : ""}>
       {display.constants.length > 0 && (
         <p className="mb-2 text-sm text-[var(--muted)]" data-table-constants="1">
-          {display.constants.map((c) => `${formatHeader(c.column)}: ${/^(state|state_abbr)$/i.test(c.column) && /^[a-zA-Z]{2}$/.test(c.value) ? c.value.toUpperCase() : c.value}`).join(" · ")}
+          {display.constants.map((c) => `${formatHeader(c.column)}: ${/^(state|state_abbr)$/i.test(c.column) && /^[a-zA-Z]{2}$/.test(c.value) ? c.value.toUpperCase() : c.value}`).join("; ")}
         </p>
       )}
       <div className={`overflow-x-auto overflow-y-auto ${fillHeight ? "flex-1" : "max-h-96"}`}>

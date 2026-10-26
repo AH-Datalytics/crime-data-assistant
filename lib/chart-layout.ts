@@ -139,7 +139,13 @@ export function niceYTicks(
   if (rawMin === 0 && rawMax === 0) return null;
   const min = Math.min(0, rawMin);
   const max = Math.max(0, rawMax);
-  const step = niceStep(max - min);
+  let step = niceStep(max - min);
+  // Owner 2026-10-25 ("half numbers"): whole-number data (counts) never gets a fractional step. Round a step like 2.5
+  // down to 2 when that keeps at most 8 intervals, otherwise up; never below 1.
+  if (values.every((v) => Number.isInteger(v)) && !Number.isInteger(step)) {
+    const down = Math.floor(step);
+    step = down >= 1 && (max - min) / down <= 8 ? down : Math.max(1, Math.ceil(step));
+  }
   const bottom = Math.floor(min / step) * step;
   const top = Math.ceil(max / step) * step;
   const ticks: number[] = [];
