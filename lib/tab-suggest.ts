@@ -79,6 +79,8 @@ export interface QueryIntent {
     type: "city" | "county" | "state" | "national" | "ambiguous";
     name?: string;
     state?: string;
+    /** "us-abbreviation": national only from US/USA/U.S.; follow-up detection treats it as no place (Codex US-20/21). */
+    via?: "us-abbreviation";
   };
   timeRange: { start: number | null; end: number | null };
   granularity: "monthly" | "annual" | "unspecified";
@@ -302,6 +304,22 @@ function detectMeasure(q: string): string {
   return "count";
 }
 
+/**
+ * Owner 2026-10-26 ("why isn't US recognized as United States?"), Codex US-08..US-21: the country written as US, USA,
+ * U.S. or U.S.A., checked only after every explicit place (a named state, city or agency wins).
+ * - "US"/"USA" only in capitals, and not at all in a question typed entirely in capitals (where "US" may be the pronoun);
+ *   the dotted forms in any case.
+ * - Only as a word on its own: followed by the end, punctuation or a lowercase word ("US murder rate", "in the US since
+ *   2000"), so names and codes ("US Marshals", "US-41", "US 41") are not the country.
+ * - Lowercase "us" only after "the", "entire", "whole" or "across" ("murders in the us").
+ */
+function mentionsUsAbbreviation(q: string): boolean {
+  const after = String.raw`(?=$|[?!.,;:)]|\s+[a-z])`;
+  if (/[a-z]/.test(q) && new RegExp(String.raw`(?:^|[\s(])(?:US|USA)` + after).test(q)) return true;
+  if (new RegExp(String.raw`(?:^|[\s(])U\.S\.(?:A\.)?` + after, "i").test(q)) return true;
+  return new RegExp(String.raw`\b(?:the|entire|whole|across)\s+us` + after).test(q);
+}
+
 function detectGeography(q: string): QueryIntent["geography"] {
   // County detection
   const countyMatch = q.match(/\b(\w+(?:\s+\w+)?)\s+county\b/i);
@@ -311,14 +329,6 @@ function detectGeography(q: string): QueryIntent["geography"] {
 
   // National patterns
   if (/\b(national|nationwide|united\s*states|country\s*wide|U\.?S\.?\s*total)\b/i.test(q)) {
-    return { type: "national" };
-  }
-  // Owner 2026-10-26 ("why isn't US recognized as United States?"): US, U.S., USA, U.S.A. and America read as national.
-  // "US"/"USA" only in capitals, so the pronoun "us" ("show us ...") is not read as a place.
-  // Lowercase "us" counts where it can only be the country: after "the", "entire", "whole" or "across", or opening the
-  // question ("us murder rate").
-  if (/(?:^|[^A-Za-z.])(?:US|USA|U\.S\.(?:A\.)?)(?![A-Za-z])|\bamerica\b/i.test(q.replace(/\bus\b/g, " "))
-    || /\b(?:the|entire|whole|across)\s+us\b|^\s*us\s+\w/.test(q)) {
     return { type: "national" };
   }
 
@@ -365,6 +375,8 @@ function detectGeography(q: string): QueryIntent["geography"] {
   for (const [pat, city] of abbrevs) {
     if (pat.test(q)) return { type: "city", name: city };
   }
+
+  if (mentionsUsAbbreviation(q)) return { type: "national", via: "us-abbreviation" };
 
   return { type: "ambiguous" };
 }
@@ -710,13 +722,16 @@ function isAnaphoricFollowUp(q: string): boolean {
  * Follow-ups are things like "normalize that", "make it yellow", "what about 2024?"
  * These should keep the user on their current tab rather than re-routing.
  */
+/** Follow-up detection is unchanged by the US abbreviation rule: a place read only from US/USA/U.S. counts as none. */
+const noPlaceForFollowUp = (g: QueryIntent["geography"]) => g.type === "ambiguous" || g.via === "us-abbreviation";
+
 export function isFollowUp(question: string): boolean {
   const q = question.trim();
 
   // Very short + no offense/geography/attributes = likely follow-up
   if (q.length < 20) {
     const intent = parseIntent(q);
-    if (!intent.offense && intent.geography.type === "ambiguous" && intent.requiredAttributes.length === 0) {
+    if (!intent.offense && noPlaceForFollowUp(intent.geography) && intent.requiredAttributes.length === 0) {
       return true;
     }
   }
@@ -724,7 +739,7 @@ export function isFollowUp(question: string): boolean {
   // Imperative meta-instructions without offense or place inherit the active tab.
   if (/^(?:use|using|instead\s+use|try\s+(?:using|with|a|another)|switch\s+to|base\s+(?:it|that|this)\s+on|calculate\s+(?:it|that|this)\s+(?:using|with))\b/i.test(q)) {
     const intent = parseIntent(q);
-    if (!intent.offense && intent.geography.type === "ambiguous") return true;
+    if (!intent.offense && noPlaceForFollowUp(intent.geography)) return true;
   }
 
   for (const pat of FOLLOWUP_PATTERNS) {

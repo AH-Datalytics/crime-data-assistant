@@ -457,17 +457,26 @@ for (const tc of trueFollowUpControls) test({ ...tc, note: "Short continuation w
 
 console.log("═══ Ambiguous geography ═══");
 
-// Owner 2026-10-26 ("why isn't US recognized as United States?"): US/U.S./USA/America read as national; the pronoun
-// "us" does not.
+// Owner 2026-10-26 ("why isn't US recognized as United States?"); Codex US-08..US-21: US/USA (capitals), U.S./U.S.A.
+// and lowercase "the us" read as national; pronouns, names and codes do not; an explicit place wins; follow-up detection
+// is unchanged by the rule.
 for (const [q, type] of [
   ["US murder rate by year", "national"], ["murders in the US", "national"], ["murder rate in the U.S.", "national"],
-  ["USA murders", "national"], ["U.S.A. robbery rate", "national"], ["murder rate in America", "national"],
-  ["us murder rate", "national"], ["murders in the us", "national"], ["violent crime across the us", "national"],
+  ["USA murders", "national"], ["U.S.A. robbery rate", "national"], ["violent crime in the US since 2000", "national"],
+  ["murders in the us", "national"], ["violent crime across the us", "national"], ["u.s. burglary rate", "national"],
   ["show us murders in Houston", "city"], ["tell us the murder rate in Chicago", "city"], ["give us the burglary rate in Texas", "state"],
+  ["SHOW US THE MURDER RATE", "ambiguous"], ["Show Us The Murder Rate", "ambiguous"], ["us murder rate", "ambiguous"],
+  ["US Marshals arrests by year", "ambiguous"], ["crashes on US-41", "ambiguous"], ["robberies on US 41", "ambiguous"],
+  ["USA Today crime survey", "ambiguous"],
+  ["Houston vs US murder rate", "city"], ["murders in Texas and the US", "state"],
 ] as const) {
   const got = parseIntent(q).geography.type;
   if (got === type) pass++;
   else { fail++; failures.push({ question: q, issue: `geography: got ${got}, expected ${type}` }); }
+}
+for (const [a, b] of [["what about US?", "what about us?"], ["and the US?", "and the us?"], ["US?", "us?"]]) {
+  if (isFollowUp(a) === isFollowUp(b)) pass++;
+  else { fail++; failures.push({ question: a, issue: `follow-up parity: ${isFollowUp(a)} vs ${isFollowUp(b)} for "${b}"` }); }
 }
 
 // Washington DC vs Washington state
