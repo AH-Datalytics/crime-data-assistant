@@ -12,6 +12,7 @@ import DataTable from "./DataTable";
 import { singleValueHeading } from "@/lib/table-display";
 import ChartPanel from "./ChartPanel";
 import { chartBoxMinHeight } from "@/lib/chart-layout";
+import { chartNotes } from "@/lib/embed-notes";
 import ScorecardPanel from "./ScorecardPanel";
 import { detectAgencyScorecardQuestion } from "@/lib/scorecard-format";
 import ExportButtons from "./ExportButtons";
@@ -780,7 +781,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                       regardless of showChart's stale state from a prior chart/table toggle. */}
                   {(response.chartConfig || response.scorecard) && (showChart || response.scorecard) && (
                     <div ref={chartRef} className={`bg-white flex flex-col ${showTable && response.rows.length > 0 ? "md:flex-[1.15] md:min-w-0" : "w-full flex-1"}`}>
-                      <div className="flex-1 min-h-0" style={{ minHeight: response.chartConfig && !response.scorecard ? chartBoxMinHeight(response.chartConfig, response.rows) : 280 }}>
+                      <div className="flex-1 min-h-0" style={{ minHeight: response.chartConfig && !response.scorecard ? chartBoxMinHeight(response.chartConfig, response.rows, chartNotes(response.chartMeta)) : 280 }}>
                         {response.scorecard ? (
                           <ScorecardPanel
                             agencyLabel={response.agencyLabel ?? ""}

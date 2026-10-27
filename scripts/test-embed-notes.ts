@@ -57,6 +57,17 @@ check("the notes are drawn inside the chart panel (so a copied or saved image ke
   assert.doesNotMatch(plain, /data-chart-note/);
 });
 
+check("Codex PR #55: the chart box reserves the notes' height, so the plot keeps its 150 px minimum", async () => {
+  const { chartBoxMinHeight } = await import("../lib/chart-layout");
+  const rows = Array.from({ length: 24 }, (_, k) => ({ period: `2025-${String((k % 12) + 1).padStart(2, "0")}`, value: k }));
+  const config = { type: "line", xAxis: "period", yAxis: ["value"], title: "Murders Rolling Over 12 Months (National Sample), January 2018 - August 2026" };
+  const notes = embedNotes({ ...base, sampleAgencies: 547, samplePopulation: 116958827, partialYear: { year: 2026, from: 1, to: 8 } });
+  const without = chartBoxMinHeight(config, rows);
+  assert.equal(chartBoxMinHeight(config, rows, []), without, "no notes: unchanged");
+  assert.equal(chartBoxMinHeight(config, rows, notes), without + 2 * 16, "two short notes: two 16 px lines");
+  assert.equal(chartBoxMinHeight(config, rows, ["x".repeat(65)]), without + 2 * 16, "a note that wraps reserves both lines");
+});
+
 void Promise.all(pending).then(() => {
   console.log(`\nembed notes: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
