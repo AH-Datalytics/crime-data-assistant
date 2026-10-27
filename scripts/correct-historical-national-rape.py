@@ -97,18 +97,46 @@ def check_columns(before, after, table1):
     return bad
 
 
+def _release_lock():
+    """The server's release lock (scripts/release.sh, deploy and rollback hold it), so this write never lands while a
+    release is comparing answers (release design 2026-10-27, Codex review r1 finding 6). Returns an open, locked
+    descriptor; None where there is no such lock (a developer machine); False when a release holds it."""
+    path = os.environ.get("CDA_RELEASE_LOCK", "/opt/nibrs/release.lock")
+    if not os.path.isdir(os.path.dirname(path)):
+        return None
+    try:
+        import fcntl
+    except ImportError:
+        return None
+    fd = os.open(path, os.O_CREAT | os.O_WRONLY, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(fd)
+        return False
+    return fd
+
+
 def run(db_path, backup_path, dry_run=False, lock_path=None, after_updates=None, correct=None):
     lock_path = lock_path or os.path.join(os.path.dirname(os.path.abspath(db_path)), "historical-national-rape.lock")
-    try:
-        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    except FileExistsError:
-        print(f"busy: {lock_path} exists; nothing was changed")
+    release_fd = _release_lock()
+    if release_fd is False:
+        print("busy: a release holds /opt/nibrs/release.lock; nothing was changed")
         return EXIT_BUSY
     try:
-        return _run_locked(db_path, backup_path, dry_run, after_updates, correct or historical_core.correct_national_rape)
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            print(f"busy: {lock_path} exists; nothing was changed")
+            return EXIT_BUSY
+        try:
+            return _run_locked(db_path, backup_path, dry_run, after_updates, correct or historical_core.correct_national_rape)
+        finally:
+            os.close(fd)
+            os.remove(lock_path)
     finally:
-        os.close(fd)
-        os.remove(lock_path)
+        if release_fd:
+            os.close(release_fd)
 
 
 def _run_locked(db_path, backup_path, dry_run, after_updates, correct):

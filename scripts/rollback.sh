@@ -42,6 +42,14 @@ if [[ "${1:-}" == "--list" || "${1:-}" == "-l" ]]; then
   exit 0
 fi
 
+# One lock for every way of changing production: scripts/release.sh takes it and passes CDA_RELEASE_LOCK_HELD=1 to
+# the deploy and rollback it runs; a deploy or rollback run by hand takes it here (design 2026-10-27, Codex change 2).
+if [[ "${CDA_RELEASE_LOCK_HELD:-}" != 1 ]]; then
+  exec 9> "${RELEASE_LOCK:-$BASE_DIR/release.lock}" || { log "ERROR: cannot open the release lock"; exit 1; }
+  flock -n 9 || { log "ERROR: another release, deploy or rollback is running (release.lock is held)"; exit 1; }
+  export CDA_RELEASE_LOCK_HELD=1
+fi
+
 # ── Determine target release ──────────────────────────────────────────
 CURRENT_TARGET=$(readlink -f "$CURRENT_LINK" 2>/dev/null || echo "")
 CURRENT_NAME=$(basename "$CURRENT_TARGET" 2>/dev/null || echo "")

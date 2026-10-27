@@ -207,6 +207,17 @@ jobs:
             test_build_nibrs_rollups_maintenance test_nibrs_server_rollup_refresh test_nibrs_auto_update_ib1 2>&1 | tee -a "$L"
           { echo "## server-maintenance tests"; echo; echo '```'; grep -E '^(Ran|OK|FAILED)' "$L"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
+      # scripts/release.sh (server-side release: deploy, check, roll back by itself). Offline: fake deploy, rollback,
+      # pm2, /proc, Studio control, query log and site on 127.0.0.1. Needs Linux (flock, GNU timeout process groups).
+      - name: Release script tests — offline
+        if: always()
+        working-directory: repo
+        run: |
+          set -euo pipefail
+          L="$GITHUB_WORKSPACE/evidence/release-script-tests.log"
+          bash scripts/test-release.sh 2>&1 | tee "$L"
+          { echo "## release script tests"; echo; echo '```'; tail -1 "$L"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Classify and summarise — exactly one verdict
         if: always()
         run: |

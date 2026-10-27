@@ -23,6 +23,7 @@ import csv
 import io
 import json
 import os
+import time
 import re
 import shutil
 import sqlite3
@@ -39,6 +40,7 @@ VPS_HOST = "root@178.156.243.51"
 # /opt/nibrs/app/ location is no longer read by the release-based deploys.
 VPS_DB = "/opt/nibrs/shared/crime_data.db"
 VPS_REPO = "/opt/nibrs/repo"
+VPS_RELEASE_LOCK = "/opt/nibrs/release.lock"  # shared with scripts/release.sh, deploy and rollback
 DEPLOY_BRANCH = "dev"
 
 # Derived-table sources: agency_county_crosswalk must be rebuilt after any
@@ -643,15 +645,30 @@ def deploy_to_vps(db_path, year, month, full_rebuild):
     """SCP updated DB to the canonical shared path, then zero-downtime rebuild."""
     print(f"\nDeploying to VPS ({VPS_HOST})...")
 
-    print("  Copying DB to VPS (shared path)...")
+    # Upload beside the live file, then publish with one rename under the release lock, so the database never
+    # changes while scripts/release.sh is comparing answers before and after a deploy (release design
+    # 2026-10-27, Codex review r1 finding 6). A held lock means a release is running: nothing is published.
+    # One staging file per invocation, so two uploads can never mix; only this run's completed upload is published.
+    incoming = f"{VPS_DB}.incoming.{os.getpid()}.{int(time.time())}"
+    print("  Copying DB to VPS (beside the shared path)...")
     result = subprocess.run(
-        ["scp", db_path, f"{VPS_HOST}:{VPS_DB}"],
+        ["scp", db_path, f"{VPS_HOST}:{incoming}"],
         capture_output=True, text=True
     )
     if result.returncode != 0:
         print(f"  ERROR: scp failed: {result.stderr.strip()}")
         sys.exit(1)
-    print("  DB copied.")
+    result = subprocess.run(
+        ["ssh", VPS_HOST, f"flock -n -E 75 {VPS_RELEASE_LOCK} mv -f {incoming} {VPS_DB}"],
+        capture_output=True, text=True
+    )
+    if result.returncode == 75:
+        print(f"  ERROR: a release is running ({VPS_RELEASE_LOCK} is held); the new DB is staged at {incoming}. Retry when it finishes.")
+        sys.exit(1)
+    if result.returncode != 0:
+        print(f"  ERROR: publishing the DB failed: {result.stderr.strip()}")
+        sys.exit(1)
+    print("  DB published.")
 
     print("  Zero-downtime rebuild (regenerates static pages; ~2-4 min)...")
     result = subprocess.run(

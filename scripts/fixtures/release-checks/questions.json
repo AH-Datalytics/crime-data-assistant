@@ -1,0 +1,10 @@
+{
+  "_comment": "Release check questions (scripts/release.sh). Each is asked of the live release before the switch and of the new release after it, through the public site, and must give the same answer apart from the masked fields. Every question must take a model-free path (query_log.model = deterministic). These are the release window's frozen questions (O352, H1-H3).",
+  "masked": ["requestId", "executionTimeMs"],
+  "questions": [
+    { "name": "O352", "endpoint": "/api/query", "mode": "historical", "question": "Can i see annual murder rates for the entire US" },
+    { "name": "H1", "endpoint": "/api/nibrs-query", "question": "carjacking per month in Memphis" },
+    { "name": "H2", "endpoint": "/api/nibrs-query", "question": "carjackings in Memphis in 2025" },
+    { "name": "H3", "endpoint": "/api/nibrs-query", "question": "carjackings per year in Memphis from 2020 to 2025" }
+  ]
+}
