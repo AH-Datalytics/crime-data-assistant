@@ -58,7 +58,7 @@ env:
 jobs:
   linux-release-build:
     name: linux release build (x64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Write the classification library
