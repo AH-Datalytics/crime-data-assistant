@@ -135,11 +135,18 @@ NIBRS questions over the last 60 days (query_log, tab nibrs, test sessions exclu
 - Missing versus zero versus unknown months, from the reporting-status table; an unknown month is never counted as zero.
 - Partial years.
 - Rates use matched denominators. A demographic-filtered count over total residents is labeled as such, not called a group risk rate.
-- Small cells: numerator, denominator and restrained precision are shown, and larger periods offered. No silent suppression, no shares recomputed over only the displayed cells, no sampling confidence intervals.
+- Small cells: no added notes, offers or special rounding (owner 2026-10-27). Still: no silent suppression, and no shares recomputed over only the displayed cells.
 - The phantom-town geography guard, "US" means national, title formats, refusal wording.
 - Old workarounds are not frozen as rules: the first-weapon limit and the summary-table restrictions in the prompt are retired.
 
-## Open decisions for the owner
+## Owner decisions (2026-10-27)
+
+- **Savant's public site moves to the shared canonical build** once it exists: agreed.
+- **Small cells:** "No on #3, I want to minimize the editorializing of the app." Answers present the computed numbers without added notes, offers of larger periods, or special rounding rules. This overrides the small-cell rule under "Rules carried into the semantic layer".
+- **Next source after NIBRS:** Homicide Reports ("SHR makes sense as the next most complex"), then Current Trends, then Historical (Claude's proposed order for the last two).
+- **Backfill order:** under discussion. The owner asked whether NIBRSAI should be taken down for public use until the rebuild is done.
+
+## Open decisions for the owner (as first listed)
 
 1. The order of the pre-2017 backfill relative to the first switch. The design requires it before retiring the old paths.
 2. Whether Savant's public product moves to the national release and the canonical model.
