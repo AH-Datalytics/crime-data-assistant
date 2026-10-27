@@ -100,6 +100,14 @@ SKIP_GIT="${SKIP_GIT:-0}"
 log()  { echo "[deploy] $(date +%H:%M:%S) $*"; }
 die()  { log "FATAL: $*"; exit 1; }
 
+# One lock for every way of changing production: scripts/release.sh takes it and passes CDA_RELEASE_LOCK_HELD=1 to
+# the deploy and rollback it runs; a deploy or rollback run by hand takes it here (design 2026-10-27, Codex change 2).
+if [[ "${CDA_RELEASE_LOCK_HELD:-}" != 1 ]]; then
+  exec 9> "${RELEASE_LOCK:-$BASE_DIR/release.lock}" || die "cannot open the release lock"
+  flock -n 9 || die "another release, deploy or rollback is running (release.lock is held)"
+  export CDA_RELEASE_LOCK_HELD=1
+fi
+
 check_http_status() {
   local path="$1"
   curl -s -o /dev/null -w '%{http_code}' --max-time "$HEALTH_TIMEOUT" "${HEALTH_URL}${path}" 2>/dev/null || echo "000"
