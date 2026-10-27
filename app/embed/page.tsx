@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import ChartPanel from "@/components/ChartPanel";
 import NibrsChartPanel from "@/components/NibrsChartPanel";
 import DataTable from "@/components/DataTable";
+import { embedNotes } from "@/lib/embed-notes";
 import type { ChartConfig, ChartMeta } from "@/lib/types";
 
 interface EmbedData {
@@ -72,6 +73,7 @@ function EmbedContent() {
   const showChart = view !== "table" && data.chartConfig;
   const showTable = view === "table" || (!data.chartConfig && data.rows.length > 0);
   const isNibrs = data.tab === "nibrs" || data.tab === "shr";
+  const notes = embedNotes(data.chartMeta);
 
   return (
     <div
@@ -91,6 +93,11 @@ function EmbedContent() {
       {showTable && (
         <div className="px-4 pb-4" style={{ background: "#F5F0E8" }}>
           <DataTable columns={data.columns} rows={data.rows} />
+        </div>
+      )}
+      {notes.length > 0 && (
+        <div className="px-4 pb-2" data-embed-notes="1" style={{ color: "#5a6a7a", fontSize: "12px", lineHeight: 1.4 }}>
+          {notes.map((n) => <div key={n}>{n}</div>)}
         </div>
       )}
     </div>

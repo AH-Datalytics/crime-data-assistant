@@ -28,7 +28,7 @@ import type { ChartConfig } from "./types";
 
 export type Row = Record<string, string | number | null>;
 export type CompiledAnswer =
-  | { kind: "answer"; sql: string; columns: string[]; rows: Row[]; title: string; explanation: string; chartConfig: ChartConfig | null; applied: CurrentApplied; requestedEntities: string[]; returnedEntities: string[]; /** Stage 3b (r1.3 producer addition): the answer-level notes as data, for "why" facts. */ notes?: string[] }
+  | { kind: "answer"; sql: string; columns: string[]; rows: Row[]; title: string; explanation: string; chartConfig: ChartConfig | null; applied: CurrentApplied; requestedEntities: string[]; returnedEntities: string[]; /** Stage 3b (r1.3 producer addition): the answer-level notes as data, for "why" facts. */ notes?: string[]; /** Owner 2026-10-26 (embed notes): the one sample an answer covers, and the partial last year. */ sample?: { agencies: number; population: number | null }; partialYear?: { year: number; from: number; to: number } }
   | { kind: "decline"; explanation: string };
 /** `runMany` runs its statements in ONE read transaction (the route wires it to executeManyWithTimeoutSync). */
 export type CompileContext = { run: (sql: string) => Record<string, unknown>[]; runMany: (sqls: string[]) => Record<string, unknown>[][] };
@@ -389,6 +389,14 @@ const cutoffOf = (b: Bounds) => ({ year: b.hi[0], month: b.hi[1] });
 const partialNote = (b: Bounds, months: YM[]) => (months.some(([y]) => y === b.hi[0]) && b.hi[1] < 12 ? `${b.hi[0]} runs through ${MONTH_NAMES[b.hi[1] - 1]} in this source, so ${b.hi[0]} figures cover January through ${MONTH_NAMES[b.hi[1] - 1]} only.` : null);
 const sampleSize = (ctx: CompileContext, place: Extract<CPlace, { kind: "national" | "state" }>) =>
   Number(ctx.run(`SELECT COUNT(*) AS n FROM sample_agencies${place.kind === "state" ? ` WHERE state = ${q(place.code)}` : ""}`)[0]?.n ?? 0); // lookup: sample-size
+/**
+ * Owner 2026-10-26 ("Sample of N agencies covering N population" under an embedded chart): the sample's agencies'
+ * population in one year, only when every sample agency has a population on file for that year (otherwise null).
+ */
+const samplePopulation = (ctx: CompileContext, place: Extract<CPlace, { kind: "national" | "state" }>, year: number, size: number): number | null => {
+  const r = ctx.run(`SELECT COUNT(*) AS n, SUM(population) AS p FROM agency_population WHERE year = ${year} AND ori IN (SELECT ori FROM sample_agencies${place.kind === "state" ? ` WHERE state = ${q(place.code)}` : ""})`)[0]; // lookup: sample-population
+  return r && Number(r.n) === size && size > 0 && Number.isFinite(Number(r.p)) ? Number(r.p) : null;
+};
 const samplePlaceLabel = (p: Extract<CPlace, { kind: "national" | "state" }>) => (p.kind === "national" ? "United States (sample)" : `${p.name} (sample)`);
 
 const ROLLING_TITLE_WORDS: Record<string, string> = {
@@ -492,6 +500,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const missingNamed: string[] = [];
   const statistic = spec.statistic;
   const agencies = new Map<CPlace, Agency>();
+  const samples: { place: Extract<CPlace, { kind: "national" | "state" }>; size: number }[] = [];
   for (const p of spec.places) {
     if (p.kind !== "agency") continue;
     const a = resolveAgency(ctx, p);
@@ -555,6 +564,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
       } else {
         if (statistic === "rate") return { kind: "decline", explanation: NO_SAMPLE_RATE };
         const size = sampleSize(ctx, place);
+        samples.push({ place, size });
         const sampleLabel = place.kind === "state" ? place.name : "national";
         if (spec.grain === "rolling") {
           // r2 F3a: a window's total only when the SAME agencies reported every requested offense in all twelve months.
@@ -630,8 +640,15 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const countyNotes = [...agencies.values()].map(countyAgencyNote).filter((n): n is string => Boolean(n));
   const explanation = [`Current Trends ${what} ${statText}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${placeNames.join(", ")}, ${describeSpan(months)}.`, ...countyNotes, ...notesOut].join(" ");
   const multiPeriod = new Set(rows.map((r) => r.period)).size > 1;
+  // Owner 2026-10-26: what an embedded chart states under it (it has no answer text): the sample, when the answer is
+  // one sample alone, with its population in the answer's last year; and the last year's months when it is partial.
+  const lastYear = months.length ? months[months.length - 1][0] : null;
+  const sample = samples.length === 1 && spec.places.length === 1 && lastYear !== null
+    ? { agencies: samples[0].size, population: samplePopulation(ctx, samples[0].place, lastYear, samples[0].size) } : undefined;
+  const lastYearMonths = months.filter(([y]) => y === b.hi[0]).map(([, m]) => m);
+  const partialYear = partial && lastYearMonths.length ? { year: b.hi[0], from: Math.min(...lastYearMonths), to: Math.max(...lastYearMonths) } : undefined;
   return {
-    kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation,
+    kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, ...(sample ? { sample } : {}), ...(partialYear ? { partialYear } : {}),
     chartConfig: rows.length > 1 ? { type: multiPeriod ? "line" : "bar", xAxis: multiPeriod ? "period" : spec.measures.length > 1 ? "measure" : "place", yAxis: ["value"], title, ...(spec.grain === "year" && partialPeriodsOf(buckets(months, "year")).length ? { partialPeriods: partialPeriodsOf(buckets(months, "year")) } : {}) } as ChartConfig : null,
     applied: a, requestedEntities: placeNames, returnedEntities: [...new Set(rows.map((r) => String(r.place)))],
   };

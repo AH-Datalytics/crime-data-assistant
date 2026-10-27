@@ -9,6 +9,7 @@ import { applyChartOnlyCustomization } from "@/lib/chart-customization";
 import { combineCountyStateClarification, getBlockingGeoClarification } from "@/lib/geo-resolver";
 import { hasBlockingQueryGuidanceWarnings } from "@/lib/query-guidance";
 import DataTable from "./DataTable";
+import { singleValueHeading } from "@/lib/table-display";
 import ChartPanel from "./ChartPanel";
 import { chartBoxMinHeight } from "@/lib/chart-layout";
 import ScorecardPanel from "./ScorecardPanel";
@@ -803,7 +804,7 @@ export default function WorkspaceChat({ sourceYearRanges }: WorkspaceChatProps) 
                   )}
                   {!response.scorecard && response.rows.length > 0 && showTable && (
                     <div className={`bg-white overflow-hidden workspace-table flex flex-col ${showChart && response.chartConfig ? "md:flex-[0.85] md:min-w-0" : "w-full flex-1"}`}>
-                      <DataTable columns={response.columns} rows={response.rows} truncated={response.truncated} fillHeight columnLabels={response.columnLabels} title={showChart && response.chartConfig && response.chartConfig.type !== "none" ? response.chartConfig.title : undefined} partialPeriods={response.chartConfig?.partialPeriods} periodColumn={response.chartConfig?.xAxis} />
+                      <DataTable columns={response.columns} rows={response.rows} truncated={response.truncated} fillHeight columnLabels={response.columnLabels} title={showChart && response.chartConfig && response.chartConfig.type !== "none" ? response.chartConfig.title : undefined} heading={singleValueHeading(response.rows, Boolean(showChart && response.chartConfig && response.chartConfig.type !== "none"), response.title)} partialPeriods={response.chartConfig?.partialPeriods} periodColumn={response.chartConfig?.xAxis} />
                     </div>
                   )}
                 </div>

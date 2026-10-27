@@ -31,7 +31,7 @@ const ALLOWED_SITES = new Set([
   "series-over-time", "sort-most-common", "statistic-computed", "unstable-total-split",
 ]);
 // Round 1 Q1 adds "county-agencies": names in-county Current Trends agencies inside a refusal; it never produces a number.
-const ALLOWED_LOOKUPS = new Set(["source-bounds", "agency-resolution", "sample-size", "first-reported-month", "county-agencies"]);
+const ALLOWED_LOOKUPS = new Set(["source-bounds", "agency-resolution", "sample-size", "sample-population", "first-reported-month", "county-agencies"]);
 const src = fs.readFileSync(path.join(__dirname, "..", "lib", "current-question-compiler.ts"), "utf8").split("\n");
 const start = src.findIndex((l) => /^class CurrentTypedQuery \{/.test(l));
 const end = src.findIndex((l) => /^\} \/\/ end CurrentTypedQuery/.test(l));
@@ -198,6 +198,21 @@ const rateChange = answer(compileCurrentSpec({ type: "change", measure: "robbery
 check(Boolean(rateChange && rateChange.rows[0].value === 120 && rateChange.rows[1].value === 60), `endpoints through the compiler: each rate divides by its own year's population (${rateChange?.rows.slice(0, 2).map((r) => r.value).join(", ")}, want 120, 60)`);
 const middle = answer(compileCurrentSpec({ type: "change", measure: "robbery", statistic: "count", places: [agencyPlace("Beta", "AA")], periods: [{ form: "year", year: 2024 }, { form: "year", year: 2025 }], uiNotes: [] }, ctx));
 check(Boolean(middle && middle.rows.find((r) => r.period === 2025)!.value === null && !middle.rows.some((r) => r.statistic === "change")), "endpoints through the compiler: a period with a missing month withholds its change");
+
+// Owner 2026-10-26 (embed notes): a one-sample answer carries its sample size and the sample's population in the answer's
+// last year (null unless every sample agency has one); an agency answer carries none; a partial last year its months.
+{
+  const y24 = answer(compileCurrentSpec(series({ places: [aa], period: { form: "year", year: 2024 } }), ctx));
+  check(JSON.stringify(y24?.sample) === JSON.stringify({ agencies: 2, population: 150000 }), `embed: the state sample's size and 2024 population (${JSON.stringify(y24?.sample)})`);
+  const y25 = answer(compileCurrentSpec(series({ places: [aa] }), ctx));
+  check(JSON.stringify(y25?.sample) === JSON.stringify({ agencies: 2, population: null }), `embed: no population when a sample agency has none that year (${JSON.stringify(y25?.sample)})`);
+  check(y25?.partialYear === undefined, "embed: a full last year has no partial-year note");
+  const agency = answer(compileCurrentSpec(series({}), ctx));
+  check(Boolean(agency && agency.sample === undefined), "embed: an agency answer carries no sample");
+  for (let m = 1; m <= 3; m += 1) for (const o of OFF) for (const ori of ["A1", "A2"]) ins("agency_monthly", { ori, agency: ori === "A1" ? "Alpha" : "Beta", state: "AA", type: "City", year: 2026, month: m, offense: o, count: 1 });
+  const partial = answer(compileCurrentSpec(series({ places: [aa], grain: "month", period: { form: "since", from: 2025 } }), ctx));
+  check(JSON.stringify(partial?.partialYear) === JSON.stringify({ year: 2026, from: 1, to: 3 }), `embed: a partial last year's months (${JSON.stringify(partial?.partialYear)})`);
+}
 
 console.log(`\n${checks - failures}/${checks} passed`);
 if (failures > 0) process.exit(1);

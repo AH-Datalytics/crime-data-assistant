@@ -151,6 +151,7 @@ async function main() {
   const React = (await import("react")).default;
   const { renderToStaticMarkup } = await import("react-dom/server");
   const DataTable = (await import("../components/DataTable")).default;
+  const { singleValueHeading } = await import("../lib/table-display");
   const html = (columns: string[], rows: Record<string, unknown>[]) => renderToStaticMarkup(React.createElement(DataTable, { columns, rows }));
   await check("the owner's monthly carjacking table shows only Month and Carjackings (owner: 'only show month and carjackings')", () => {
     const rows = ["2018-12", "2019-01", "2019-02"].map((p, i) => ({ period: p, place: "Memphis, TN", measure: "carjacking", unit: "offenses", filter: null, statistic: "count", value: [42, 34, 22][i], note: null }));
@@ -352,6 +353,21 @@ async function main() {
     assert.match(out, /Place: Memphis, TN/, out.slice(0, 400));
     assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Year", "Carjackings"]);
     assert.ok(out.indexOf("Place: Memphis, TN") < out.indexOf("<th"), "the place line is above the table");
+  });
+  await check("owner 2026-10-26: a single-number table shown without a chart gets the chart-style title instead of the 'Place:' line", () => {
+    const one = [{ period: 2025, place: "Memphis, TN", measure: "carjacking", unit: "offenses", filter: null, statistic: "count", value: 190, note: null }];
+    const heading = singleValueHeading(one, false, "Memphis, TN Carjackings, 2025");
+    assert.equal(heading, "Memphis, TN Carjackings, 2025");
+    const out = renderToStaticMarkup(React.createElement(DataTable, { columns: SERIES, rows: one, heading }));
+    assert.doesNotMatch(out, /Place:/, out.slice(0, 400));
+    assert.match(out, /data-table-heading="1"[^>]*>Memphis, TN Carjackings, 2025</);
+    assert.ok(out.indexOf("Memphis, TN Carjackings, 2025") < out.indexOf("<th"), "the title is above the table");
+    assert.deepEqual([...out.matchAll(/<th[^>]*>\s*<span>([^<]*)<\/span>/g)].map((m) => m[1]), ["Year", "Carjackings"]);
+    // No heading: a chart is shown, more than one row, no title, or a title that does not name the place.
+    assert.equal(singleValueHeading(one, true, "Memphis, TN Carjackings, 2025"), undefined);
+    assert.equal(singleValueHeading([...one, { ...one[0], period: 2024 }], false, "Memphis, TN Carjackings, 2024 to 2025"), undefined);
+    assert.equal(singleValueHeading(one, false, undefined), undefined);
+    assert.equal(singleValueHeading(one, false, "Query results"), undefined);
   });
   await check("no model call was made", () => assert.equal(modelCalls, 0));
   await check("offline: no network call of any kind, model included", () => assert.deepEqual(network, []));
