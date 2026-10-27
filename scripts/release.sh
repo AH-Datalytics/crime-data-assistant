@@ -116,17 +116,28 @@ cleanup() {
   [[ -n "$STUDIO_TOKEN" ]] && $STUDIO_CTL unlock "$STUDIO_TOKEN" > /dev/null 2>&1 8>&- 9>&-
 }
 
-# Stop the deploy (TERM to its timeout, which signals the whole process group; KILL if it lingers) and reap it.
+# Stop the deploy and confirm it is gone. DEPLOY_PID is GNU timeout itself, which makes itself the leader of its own
+# process group, so the deploy and everything it started (npm, the build, pm2 calls) are signalled together: TERM,
+# then KILL, then the group must be empty. Non-zero if anything in it survives (then nothing may be called verified).
 stop_deploy() {
   [[ -n "$DEPLOY_PID" ]] || return 0
-  if kill -0 "$DEPLOY_PID" 2>/dev/null; then
-    log "stopping the deploy (pid $DEPLOY_PID)"
-    kill -TERM "$DEPLOY_PID" 2>/dev/null
-    for _ in $(seq 1 30); do kill -0 "$DEPLOY_PID" 2>/dev/null || break; sleep 1; done
-    kill -KILL "$DEPLOY_PID" 2>/dev/null
+  local pg="$DEPLOY_PID"
+  if kill -0 -- "-$pg" 2>/dev/null; then
+    log "stopping the deploy (process group $pg)"
+    kill -TERM -- "-$pg" 2>/dev/null
+    for _ in $(seq 1 30); do kill -0 -- "-$pg" 2>/dev/null || break; sleep 1; done
+    kill -KILL -- "-$pg" 2>/dev/null
+    for _ in $(seq 1 10); do kill -0 -- "-$pg" 2>/dev/null || break; sleep 1; done
   fi
   wait "$DEPLOY_PID" 2>/dev/null
+  if kill -0 -- "-$pg" 2>/dev/null; then log "the deploy's process group $pg is still alive"; return 1; fi
   DEPLOY_PID=""
+}
+
+# The rollback could not be verified: alert, then the result (shared by every path that ends this way).
+unconfirmed() {
+  notify "ROLLBACK NOT CONFIRMED for $SHA" "Attempt $ATTEMPT: $1. The previous release $TARGET could not be verified live. Log: $LOG"
+  finish "ROLLBACK NOT CONFIRMED" "$1 -- act at once" 3
 }
 
 rollback() {
@@ -134,7 +145,7 @@ rollback() {
   PHASE=rollback
   start=$(date +%s); rb_dl=$(( start + ROLLBACK_MAX )); cmd_dl=$(( start + ROLLBACK_MAX / 3 )); verify_dl=$(( start + 2 * ROLLBACK_MAX / 3 ))
   log "ROLLING BACK to $TARGET: $why"
-  stop_deploy
+  stop_deploy || { unconfirmed "$why; the deploy could not be stopped, so production may still change"; return; }
   bounded_run "$cmd_dl" 10 -- $RELEASE_ROLLBACK_CMD "$(basename "$TARGET")" > "$WORK/rollback.log" 2>&1 < /dev/null 8>&- 9>&-
   log "rollback script exited $? (not trusted; verifying)"
   now=$(readlink -f "$CURRENT_LINK" 2>/dev/null)
@@ -156,10 +167,7 @@ rollback() {
     ln -sfn "$UTIL_PRIOR" "$UTIL_LINK"
     [[ "$(readlink "$UTIL_LINK" 2>/dev/null)" == "$UTIL_PRIOR" ]] || { log "scheduler link not restored"; fail=1; }
   fi
-  if (( fail )); then
-    notify "ROLLBACK NOT CONFIRMED for $SHA" "Attempt $ATTEMPT: $why. The previous release $TARGET could not be verified live. Log: $LOG"
-    finish "ROLLBACK NOT CONFIRMED" "$why; the previous release could not be verified live -- act at once" 3
-  fi
+  (( fail )) && { unconfirmed "$why; the previous release could not be verified live"; return; }
   finish "ROLLED BACK" "$why" 1
 }
 
@@ -170,12 +178,12 @@ abort() {
   log "ABORT: $1 (phase $PHASE)"
   case "$PHASE" in
     deploy|checks)
-      stop_deploy
+      stop_deploy || { unconfirmed "$1; the deploy could not be stopped, so production may still change"; return; }
       local state
       state=$(deploy_target_state "$CURRENT_LINK" "$TARGET" "$(( $(date +%s) + 10 ))")
       if [[ "$state" == unchanged ]]; then finish "NOT DEPLOYED" "$1, before the switch" 2
       else rollback "$1 after the switch"; fi ;;
-    rollback) finish "ROLLBACK NOT CONFIRMED" "$1 during the rollback -- act at once" 3 ;;
+    rollback) unconfirmed "$1 during the rollback" ;;
     *) finish "NOT DEPLOYED" "$1, before the deploy" 2 ;;
   esac
 }
@@ -278,7 +286,9 @@ DEPLOY_DL=$(( $(date +%s) + DEPLOY_MAX ))
 export SWITCH_NOT_AFTER_EPOCH=$(( DEPLOY_DL - 60 ))
 log "deploying $SHA (deadline in ${DEPLOY_MAX}s)"
 PHASE=deploy
-bounded_run "$DEPLOY_DL" 30 -- $RELEASE_DEPLOY_CMD "$SHA" dev > "$WORK/deploy.log" 2>&1 < /dev/null 8>&- 9>&- &
+# timeout runs as the direct background child (not through a function), so $! is timeout itself, the leader of the
+# deploy's process group (stop_deploy).
+timeout --kill-after=30s "$DEPLOY_MAX"s $RELEASE_DEPLOY_CMD "$SHA" dev > "$WORK/deploy.log" 2>&1 < /dev/null 8>&- 9>&- &
 DEPLOY_PID=$!
 wait "$DEPLOY_PID"
 deploy_rc=$?

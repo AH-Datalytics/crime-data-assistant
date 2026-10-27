@@ -23,6 +23,7 @@ import csv
 import io
 import json
 import os
+import time
 import re
 import shutil
 import sqlite3
@@ -647,7 +648,8 @@ def deploy_to_vps(db_path, year, month, full_rebuild):
     # Upload beside the live file, then publish with one rename under the release lock, so the database never
     # changes while scripts/release.sh is comparing answers before and after a deploy (release design
     # 2026-10-27, Codex review r1 finding 6). A held lock means a release is running: nothing is published.
-    incoming = f"{VPS_DB}.incoming"
+    # One staging file per invocation, so two uploads can never mix; only this run's completed upload is published.
+    incoming = f"{VPS_DB}.incoming.{os.getpid()}.{int(time.time())}"
     print("  Copying DB to VPS (beside the shared path)...")
     result = subprocess.run(
         ["scp", db_path, f"{VPS_HOST}:{incoming}"],

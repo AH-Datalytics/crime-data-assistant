@@ -84,7 +84,7 @@ ln -sfn "$R/releases/R2" "$R/current.tmp" && mv -Tf "$R/current.tmp" "$R/current
 if [[ "\${FAKE_PRUNE:-}" == 1 ]]; then source "$T/bundle/scripts/lib/prune-releases.sh"; prune_releases "$R/releases" "\$(readlink -f "$R/current")" 1 "$R/releases/.pinned" > "$T/prune.out"; fi
 case "\${FAKE_DEPLOY:-ok}" in
   fail-after) exit 1 ;;
-  hang-after) sleep 300; ln -sfn "$R/releases/R2" "$R/late-switch-marker" ;;
+  hang-after) sleep 20; ln -sfn "$R/releases/R2" "$R/late-switch-marker" ;;
 esac
 exit 0
 EOF
@@ -172,8 +172,9 @@ echo "7. the deploy fails after the switch"
 setup same; run FAKE_DEPLOY=fail-after; ok "result" "$RES" "ROLLED BACK"; ok "exit" "$RC" 1; ok "live" "$LIVE" R1
 
 echo "8. the deploy hangs after the switch (stopped at the deadline, cannot switch later)"
-setup same; run FAKE_DEPLOY=hang-after DEPLOY_MAX=8; ok "result" "$RES" "ROLLED BACK"; ok "live" "$LIVE" R1
-sleep 2; ok "the deploy was reaped (no late action)" "$(ls "$R/late-switch-marker" 2>/dev/null | wc -l)" 0
+setup same; t0=$(date +%s); run FAKE_DEPLOY=hang-after DEPLOY_MAX=8; ok "result" "$RES" "ROLLED BACK"; ok "live" "$LIVE" R1
+while (( $(date +%s) < t0 + 26 )); do sleep 1; done
+ok "the whole deploy process group was stopped (no action 20 s after its switch)" "$(ls "$R/late-switch-marker" 2>/dev/null | wc -l)" 0
 
 echo "9. the new release is unhealthy"
 setup same; touch "$T/unhealthy-R2"; run; ok "result" "$RES" "ROLLED BACK"; ok "live" "$LIVE" R1
@@ -219,6 +220,11 @@ echo "16. the old release stays unhealthy after rollback and a corrective reload
 setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1"; run
 ok "result" "$RES" "ROLLBACK NOT CONFIRMED"; ok "exit" "$RC" 3; has "alert sent" "$T/notify" "ROLLBACK NOT CONFIRMED"
 has "corrective reload from the target's ecosystem file" "$T/reloads" "R1/ecosystem.config.js"
+setup same; touch "$T/unhealthy-R2"; run BG=1 FAKE_ROLLBACK=hang ROLLBACK_MAX=60
+for _ in $(seq 1 200); do grep -q "ROLLING BACK" "$T/logs/$SHA".*/release.log 2>/dev/null && break; sleep 0.2; done; sleep 1
+kill -TERM "$RELEASE_PID"; wait "$RELEASE_PID"; RC=$?; collect
+ok "SIGTERM during the rollback: result" "$RES" "ROLLBACK NOT CONFIRMED"; ok "SIGTERM during the rollback: exit" "$RC" 3
+has "SIGTERM during the rollback: alert sent" "$T/notify" "ROLLBACK NOT CONFIRMED"
 setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1" "$T/notify-fails"; run
 ok "alert fails: still exit 3" "$RC" 3; has "alert fails: logged" "$(lastlog)release.log" "ALERT DELIVERY FAILED"
 setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1" "$T/fixed-by-reload"; run
@@ -226,7 +232,7 @@ ok "a corrective reload that works: result" "$RES" "ROLLED BACK"
 
 echo "17. a retry of the same SHA never shows the earlier result; a running attempt says RUNNING"
 setup same; run FAKE_DEPLOY=fail-before; first="$RES"; sleep 1
-run BG=1 FAKE_DEPLOY=hang-after DEPLOY_MAX=60
+t0=$(date +%s); run BG=1 FAKE_DEPLOY=hang-after DEPLOY_MAX=60
 for _ in $(seq 1 100); do [[ "$(basename "$(readlink -f "$R/current")")" == R2 ]] && break; sleep 0.2; done
 collect; ok "first attempt" "$first" "NOT DEPLOYED"; ok "while the retry runs" "$RES" "RUNNING"
 kill -TERM "$RELEASE_PID"; wait "$RELEASE_PID"; RC=$?; collect
@@ -235,7 +241,8 @@ ok "one result file per attempt" "$(ls "$T/logs/$SHA".*.result | wc -l)" 2
 echo "18. SIGTERM after the switch: the deploy is stopped, then a verified rollback"
 ok "result" "$RES" "ROLLED BACK"; ok "exit" "$RC" 1; ok "live" "$LIVE" R1
 has "reason" "$T/logs/$SHA.latest" "terminated by SIGTERM after the switch"
-sleep 1; ok "no late deploy action" "$(ls "$R/late-switch-marker" 2>/dev/null | wc -l)" 0
+while (( $(date +%s) < t0 + 26 )); do sleep 1; done
+ok "the whole deploy process group was stopped (no action 20 s after its switch)" "$(ls "$R/late-switch-marker" 2>/dev/null | wc -l)" 0
 has "Studio unlocked" "$T/studio" "unlock tok1"
 
 echo "19. the rollback target stays pinned while the deploy prunes (the real pruning helper)"
