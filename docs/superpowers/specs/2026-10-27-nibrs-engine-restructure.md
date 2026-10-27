@@ -1,4 +1,6 @@
-# NIBRS answers on a lossless analytical model: restructure plan (r2, for Codex)
+# NIBRS answers on a lossless analytical model: restructure plan (r3)
+
+**Codex verdict on r2 (2026-10-27):** "IDEAL WITH CHANGES -- one necessary change": add an unknown/unverified reporting status, and require evidence for "reported zero" and "not reported". Applied in r3. "Otherwise, I accept r2 as the ideal architecture for the stated requirements and constraints." Performance benchmarks remain implementation acceptance work. The stray summary rows need no architecture change.
 
 **Owner, 2026-10-27:**
 - "I'm open to a complete restructuring if there's a smarter way to make it possible to answer more questions without summary tables."
@@ -50,7 +52,7 @@ NIBRS questions over the last 60 days (query_log, tab nibrs, test sessions exclu
      - victim → injury (all injuries);
      - incident → property.
    - **Attributes are denormalized only where genuinely one-to-one.**
-   - **Agency-month reporting status:** an explicit table (reported with crimes, reported zero, not reported), not inferred from crime rows.
+   - **Agency-month reporting status:** an explicit table with four states: reported with crimes, reported zero, not reported, and **unknown/unverified**. "Reported zero" and "not reported" each require submission evidence. Where that evidence is missing, the month stays unknown, because an absence of crime rows proves neither. The uncertainty carries through coverage notes, cohort selection and rates. (Codex r2 review: the one necessary change.)
    - **Population and coverage denominators:** maintained independently and matched to geography and year; overlapping jurisdictions are never summed.
    - **Storage:** canonical data as partitioned Parquet; optimized DuckDB serving artifacts built from it. Physical layout is chosen by measured workload.
    - **Years:** 2017-2026 for the first switch; 1991-2016 is required before the old paths are retired.
@@ -130,7 +132,7 @@ NIBRS questions over the last 60 days (query_log, tab nibrs, test sessions exclu
 - Person crimes counted by victim, with distinct victims versus victim-offense pairs named explicitly.
 - National is a sum of reported counts, never an agency; national answers say "reported NIBRS counts".
 - Participation change is distinguished from crime change, with a same-agencies cohort option.
-- Missing versus zero months, from the reporting-status table.
+- Missing versus zero versus unknown months, from the reporting-status table; an unknown month is never counted as zero.
 - Partial years.
 - Rates use matched denominators. A demographic-filtered count over total residents is labeled as such, not called a group risk rate.
 - Small cells: numerator, denominator and restrained precision are shown, and larger periods offered. No silent suppression, no shares recomputed over only the displayed cells, no sampling confidence intervals.
