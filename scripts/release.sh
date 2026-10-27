@@ -46,6 +46,9 @@ UTIL_LINK="$NIBRS_ROOT/scripts/nibrs-auto-update.py"
 : "${RELEASE_BASE_URL:=https://nibrsai.com}"
 : "${RELEASE_DEPLOY_CMD:=bash $BUNDLE/scripts/deploy-zero-downtime.sh}"
 : "${RELEASE_ROLLBACK_CMD:=bash $BUNDLE/scripts/rollback.sh}"
+# Studio's control CLI reads its database from STUDIO_DATA_DIR (as /opt/studio/deploy.sh sets it).
+: "${STUDIO_DATA_DIR:=/mnt/HC_Volume_106994678/studio}"
+export STUDIO_DATA_DIR
 : "${STUDIO_CTL:=/usr/bin/node /opt/studio/current/packages/db/dist/cli.js}"
 : "${RELEASE_NOTIFY_CMD:=node $BUNDLE/scripts/release-notify.cjs}"
 : "${SQLITE:=sqlite3}"
