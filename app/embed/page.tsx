@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import ChartPanel from "@/components/ChartPanel";
 import NibrsChartPanel from "@/components/NibrsChartPanel";
 import DataTable from "@/components/DataTable";
-import { embedNotes } from "@/lib/embed-notes";
+import { chartNotes } from "@/lib/embed-notes";
 import type { ChartConfig, ChartMeta } from "@/lib/types";
 
 interface EmbedData {
@@ -73,7 +73,8 @@ function EmbedContent() {
   const showChart = view !== "table" && data.chartConfig;
   const showTable = view === "table" || (!data.chartConfig && data.rows.length > 0);
   const isNibrs = data.tab === "nibrs" || data.tab === "shr";
-  const notes = embedNotes(data.chartMeta);
+  // The chart states its own notes (ChartPanel); a table shown alone states them here.
+  const notes = showChart ? [] : chartNotes(data.chartMeta);
 
   return (
     <div

@@ -8,11 +8,11 @@ function people(n: number): string {
 }
 
 /**
- * Owner 2026-10-26: an embedded chart has no answer text, so the limits it would state go under it: "Sample of N
- * agencies covering N population." and "<year> covers data from <month> to <month>." Only from the answer's own
- * chart metadata; nothing when it carries none.
+ * Owner 2026-10-26: a chart states under it "Sample of N agencies covering N population." and "<year> covers data
+ * from <month> to <month>.", so a copied or saved image (or an embedded chart), which carries no answer text, keeps
+ * them. Only from the answer's own chart metadata; nothing when it carries none.
  */
-export function embedNotes(meta: ChartMeta | null | undefined): string[] {
+export function chartNotes(meta: ChartMeta | null | undefined): string[] {
   if (!meta) return [];
   const notes: string[] = [];
   if (typeof meta.sampleAgencies === "number" && meta.sampleAgencies > 0) {

@@ -5,13 +5,16 @@
  *   npx tsx scripts/test-embed-notes.ts
  */
 import assert from "node:assert/strict";
-import { embedNotes } from "../lib/embed-notes";
+import { chartNotes as embedNotes } from "../lib/embed-notes";
 import { chartMetaDigestOf } from "../lib/chart-config-log";
 
 let passed = 0;
 let failed = 0;
-function check(name: string, fn: () => void) {
-  try { fn(); passed += 1; console.log(`  PASS  ${name}`); } catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message}`); }
+const pending: Promise<void>[] = [];
+function check(name: string, fn: () => void | Promise<void>) {
+  pending.push((async () => {
+    try { await fn(); passed += 1; console.log(`  PASS  ${name}`); } catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message}`); }
+  })());
 }
 
 const base = { source: "RTCI", agencyCount: 0, population: null };
@@ -39,5 +42,22 @@ check("an earlier chart's metadata digest is unchanged; the new facts change it"
   assert.notEqual(chartMetaDigestOf({ ...base, partialYear: { year: 2026, from: 1, to: 8 } }), chartMetaDigestOf({ ...base, partialYear: { year: 2026, from: 1, to: 7 } }));
 });
 
-console.log(`\nembed notes: ${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
+check("the notes are drawn inside the chart panel (so a copied or saved image keeps them), and only when the answer has them", async () => {
+  const React = (await import("react")).default;
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const ChartPanel = (await import("../components/ChartPanel")).default;
+  const rows = [{ period: "2026-07", value: 6253 }, { period: "2026-08", value: 6158 }];
+  const config = { type: "line", xAxis: "period", yAxis: ["value"], title: "Murders Rolling Over 12 Months (National Sample), January 2018 - August 2026" };
+  const meta = { ...base, sampleAgencies: 547, samplePopulation: 116958827, partialYear: { year: 2026, from: 1, to: 8 } };
+  const out = renderToStaticMarkup(React.createElement(ChartPanel, { config, rows, meta } as never));
+  const notes = [...out.matchAll(/data-chart-note="1"[^>]*>([^<]*)</g)].map((m) => m[1]);
+  assert.deepEqual(notes, ["Sample of 547 agencies covering 117.0 million population.", "2026 covers data from January to August."]);
+  assert.ok(out.indexOf("Source:") < out.indexOf("Sample of 547"), "the notes follow the source line");
+  const plain = renderToStaticMarkup(React.createElement(ChartPanel, { config, rows, meta: base } as never));
+  assert.doesNotMatch(plain, /data-chart-note/);
+});
+
+void Promise.all(pending).then(() => {
+  console.log(`\nembed notes: ${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+});
