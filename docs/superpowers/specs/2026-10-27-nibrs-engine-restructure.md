@@ -36,6 +36,38 @@ Savant (AH-Datalytics/nibrs-savant) answers any combination of whitelisted field
 - **Size.** 12 states for 2017-2026 take 2.8 GB, which is 36% of national offenses. National 2017-2026 is about 8 GB; 1991-2026 about 15 GB. Free space: 76 GB on the NIBRS volume.
 - **Data flow.** Savant's data is exported from NIBRSAI's own `nibrs.db` state by state, at night, and built off the web server. A national build is in progress.
 
+## Facts from the NIBRS Savant session (2026-10-27, code at e491850)
+
+- **Schedule.** Live now: 12 states, 2017 through October 2026. The remaining 39 states export from the night of October 28, then one laptop build (~2 h), comparison, speed test and Jeff's OK. Best case the national release is live around November 1-2, and it could slip. Years: 2017-2026 only; pre-2017 is not planned.
+- **Files.** One DuckDB 1.5.6 file per release: `/opt/nibrs-savant/releases/<id>/facts.duckdb`, with `gate.json`, `SHA256SUMS` and `BUILT_AT`. `live` and `previous` are symlinks, and only those two releases are kept.
+  - Tables: `crime_facts` (71 columns), `property_facts` (24 columns), `agencies` (ori, year, state, name, population group, population), `build_info` (built_at, partial year, row counts), and seven cubes plus `cube_info`.
+  - Estimated national size: 10-12 GB.
+- **Counting.**
+  - `crime_facts`: person crimes have one row per victim x connected person offense (`count_unit='VICTIM'`), with offender attributes from that victim's first relationship. Property and society crimes have one row per offense (`count_unit='OFFENSE'`).
+  - Incidents: `incident_first` marks one row per incident, valid only for incident-level fields; otherwise `count(DISTINCT incident_id)`.
+  - Clearance is incident-level.
+  - `property_facts`: one row per property segment, attached to the incident's most serious property offense. Recoveries are linked back to the stolen segment.
+  - Exports are deduplicated and recounted against `nibrs.db`.
+- **Gaps compared with `nibrs.db`:**
+  - first-value-only fields (offender suspected of using, criminal activity, injury type, relationship, aggravated-assault circumstance, suspected drug type); weapons 1-3 only;
+  - no Group B arrests and no 90x Group B offenses;
+  - a person-crime offense with no connected victim produces no row;
+  - nothing before 2017.
+- **Conditions for NIBRSAI reading the files:**
+  - pin a release by full path, which needs a hold list that Savant's `release_switch.sh` honors before deleting (a Savant change);
+  - cap NIBRSAI's own process memory and threads (Savant uses a 3 GB DuckDB limit, 2 threads, 4 GB MemoryMax);
+  - check a schema version per release (Savant can add one to `build_info`);
+  - each pinned release costs 10-12 GB of disk (54 GB free on root);
+  - Savant refreshes about the 19th-20th each month, after NIBRSAI's 16th-18th update.
+
+## Consequences for NIBRSAI (from those facts)
+
+1. **Years.** NIBRSAI answers NIBRS from 1991 today; the shared release starts in 2017. Either the build goes back to 1991, or pre-2017 NIBRS questions keep the current path until it does. Open decision 1.
+2. **Arrests and Group B.** NIBRSAI answers arrest questions today (the home page suggests "DUI arrests by age group nationally"). The shared release has no arrests table and no Group B. The build needs an `arrest_facts` table (one row per arrestee, Group A and B) before arrest questions can move.
+3. **Multi-value fields.** Questions that depend on a second or later value (a second weapon, a second injury type, a second relationship) can differ from NIBRSAI's answers. The shadow comparison must classify these, and the build can carry more values if needed.
+4. **Freshness.** After each monthly update NIBRSAI would answer from the previous month's release until the facts build finishes (about 2-4 days). Either NIBRSAI's update triggers the facts build, or answers carry the release's data-through date.
+5. **Savant-side changes needed first:** a hold list for pinned releases, a schema version in `build_info`, and the NIBRSAI tables the plan needs (`arrest_facts`; pre-2017 if decided).
+
 ## Proposal
 
 1. **Shared data, not a shared service.**
@@ -50,7 +82,8 @@ Savant (AH-Datalytics/nibrs-savant) answers any combination of whitelisted field
    - Every search is validated against the registry before it runs.
    - Request accounting stays: every part of the question must map to a field of the search, or the answer is refused or clarified.
 4. **Clarify instead of decline.** An unmapped word returns the nearest registry fields as chips to confirm or adjust: Savant's filter panel as the fallback.
-5. **Carry over every NIBRSAI rule as engine behavior**, with a test for each:
+5. **Keep and extend the question reader and request accounting.** The work that teaches the app what a question asks, and whether every part of it can be applied, is the front half of this design and is not rewritten. Its target changes: from "which summary table and compiler path serves this" to "does every part map to a registry field, and does the data cover this place and period". With an engine that can answer almost any combination, this step becomes the main safeguard against answering the wrong question confidently.
+6. **Carry over every NIBRSAI rule as engine behavior**, with a test for each:
    - person crimes counted by victim;
    - national is a sum, never an agency;
    - missing month versus zero;
