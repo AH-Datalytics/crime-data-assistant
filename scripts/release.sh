@@ -124,6 +124,11 @@ cleanup() {
 stop_deploy() {
   [[ -n "$DEPLOY_PGID" ]] || return 0
   local pg="$DEPLOY_PGID"
+  # timeout alive but its group not formed yet: it has started nothing, so it is killed directly.
+  if ! kill -0 -- "-$pg" 2>/dev/null && [[ -n "$DEPLOY_PID" ]] && kill -0 "$DEPLOY_PID" 2>/dev/null; then
+    log "the deploy has not formed its process group; killing timeout ($DEPLOY_PID) directly"
+    kill -KILL "$DEPLOY_PID" 2>/dev/null
+  fi
   if kill -0 -- "-$pg" 2>/dev/null; then
     log "stopping the deploy (process group $pg)"
     kill -TERM -- "-$pg" 2>/dev/null
@@ -298,6 +303,12 @@ trap 'PENDING_SIGNAL="terminated by SIGHUP"' HUP
 timeout --kill-after=30s "$DEPLOY_MAX"s $RELEASE_DEPLOY_CMD "$SHA" dev > "$WORK/deploy.log" 2>&1 < /dev/null 8>&- 9>&- &
 DEPLOY_PID=$!; DEPLOY_PGID=$DEPLOY_PID
 for _ in $(seq 1 50); do kill -0 -- "-$DEPLOY_PGID" 2>/dev/null && break; kill -0 "$DEPLOY_PID" 2>/dev/null || break; sleep 0.1; done
+if ! kill -0 -- "-$DEPLOY_PGID" 2>/dev/null && kill -0 "$DEPLOY_PID" 2>/dev/null; then
+  # Still alive after 5 s without its process group: never let it go on unobserved.
+  PHASE=deploy
+  stop_deploy || unconfirmed "the deploy did not form its process group and could not be stopped; production may still change"
+  finish "NOT DEPLOYED" "the deploy did not form its process group within 5 s; it was stopped before doing anything" 2
+fi
 trap 'abort "terminated by SIGTERM"' TERM
 trap 'abort "interrupted by SIGINT"' INT
 trap 'abort "terminated by SIGHUP"' HUP
