@@ -304,10 +304,9 @@ timeout --kill-after=30s "$DEPLOY_MAX"s $RELEASE_DEPLOY_CMD "$SHA" dev > "$WORK/
 DEPLOY_PID=$!; DEPLOY_PGID=$DEPLOY_PID
 for _ in $(seq 1 50); do kill -0 -- "-$DEPLOY_PGID" 2>/dev/null && break; kill -0 "$DEPLOY_PID" 2>/dev/null || break; sleep 0.1; done
 if ! kill -0 -- "-$DEPLOY_PGID" 2>/dev/null && kill -0 "$DEPLOY_PID" 2>/dev/null; then
-  # Still alive after 5 s without its process group: never let it go on unobserved.
-  PHASE=deploy
-  stop_deploy || unconfirmed "the deploy did not form its process group and could not be stopped; production may still change"
-  finish "NOT DEPLOYED" "the deploy did not form its process group within 5 s; it was stopped before doing anything" 2
+  # Still alive after 5 s without its process group: stop it through the normal recovery, which reads the switch
+  # state after stopping (it may have formed its group and run in the meantime) and rolls back if it switched.
+  abort "the deploy did not form its process group within 5 s"
 fi
 trap 'abort "terminated by SIGTERM"' TERM
 trap 'abort "interrupted by SIGINT"' INT
