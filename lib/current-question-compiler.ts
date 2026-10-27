@@ -387,6 +387,16 @@ export function compileCurrentSpec(spec: CurrentSpec, ctx: CompileContext): Comp
 
 const cutoffOf = (b: Bounds) => ({ year: b.hi[0], month: b.hi[1] });
 const partialNote = (b: Bounds, months: YM[]) => (months.some(([y]) => y === b.hi[0]) && b.hi[1] < 12 ? `${b.hi[0]} runs through ${MONTH_NAMES[b.hi[1] - 1]} in this source, so ${b.hi[0]} figures cover January through ${MONTH_NAMES[b.hi[1] - 1]} only.` : null);
+/**
+ * Owner 2026-10-26 (embed notes): the source's partial last year as the months the answer's figures use, or undefined
+ * when the answer does not reach it. A rolling window ending in that year also uses its earlier months (Codex PR #55
+ * finding 4), so it starts in January.
+ */
+const partialYearOf = (b: Bounds, months: YM[], rolling: boolean): { year: number; from: number; to: number } | undefined => {
+  if (!partialNote(b, months)) return undefined;
+  const inYear = months.filter(([y]) => y === b.hi[0]).map(([, m]) => m);
+  return inYear.length ? { year: b.hi[0], from: rolling ? 1 : Math.min(...inYear), to: Math.max(...inYear) } : undefined;
+};
 const sampleSize = (ctx: CompileContext, place: Extract<CPlace, { kind: "national" | "state" }>) =>
   Number(ctx.run(`SELECT COUNT(*) AS n FROM sample_agencies${place.kind === "state" ? ` WHERE state = ${q(place.code)}` : ""}`)[0]?.n ?? 0); // lookup: sample-size
 /**
@@ -564,7 +574,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
       } else {
         if (statistic === "rate") return { kind: "decline", explanation: NO_SAMPLE_RATE };
         const size = sampleSize(ctx, place);
-        samples.push({ place, size });
+        if (!samples.some((s) => s.place === place)) samples.push({ place, size });
         const sampleLabel = place.kind === "state" ? place.name : "national";
         if (spec.grain === "rolling") {
           // r2 F3a: a window's total only when the SAME agencies reported every requested offense in all twelve months.
@@ -645,8 +655,7 @@ function compileSeries(spec: SeriesSpec, ctx: CompileContext, b: Bounds): Compil
   const lastYear = months.length ? months[months.length - 1][0] : null;
   const sample = samples.length === 1 && spec.places.length === 1 && lastYear !== null
     ? { agencies: samples[0].size, population: samplePopulation(ctx, samples[0].place, lastYear, samples[0].size) } : undefined;
-  const lastYearMonths = months.filter(([y]) => y === b.hi[0]).map(([, m]) => m);
-  const partialYear = partial && lastYearMonths.length ? { year: b.hi[0], from: Math.min(...lastYearMonths), to: Math.max(...lastYearMonths) } : undefined;
+  const partialYear = partialYearOf(b, months, spec.grain === "rolling");
   return {
     kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, ...(sample ? { sample } : {}), ...(partialYear ? { partialYear } : {}),
     chartConfig: rows.length > 1 ? { type: multiPeriod ? "line" : "bar", xAxis: multiPeriod ? "period" : spec.measures.length > 1 ? "measure" : "place", yAxis: ["value"], title, ...(spec.grain === "year" && partialPeriodsOf(buckets(months, "year")).length ? { partialPeriods: partialPeriodsOf(buckets(months, "year")) } : {}) } as ChartConfig : null,
@@ -852,7 +861,7 @@ function compilePeers(spec: PeerSpec, ctx: CompileContext, b: Bounds): CompiledA
   const title = `${what[0].toUpperCase()}${what.slice(1)} ${spec.statistic === "rate" ? "Rate" : "Count"}: ${target.label} and Similar-Sized Cities, ${titleSpan(months, spec.grain, b)}`;
   const explanation = [`Current Trends ${what} ${spec.statistic === "rate" ? "rate per 100,000 residents" : "reported count"}${spec.grain === "month" ? " by month" : spec.grain === "year" ? " by year" : ""} for ${target.label} and similar-sized cities, ${describeSpan(months)}.`, ...spec.uiNotes, ...notes].join(" ");
   const multi = bks.length > 1;
-  return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, chartConfig: { type: multi ? "line" : "bar", xAxis: multi ? "period" : "place", yAxis: ["value"], title, ...(partialPeriodsOf(bks).length ? { partialPeriods: partialPeriodsOf(bks) } : {}) } as ChartConfig, applied: a, requestedEntities: [target.label], returnedEntities: [...new Set(rows.map((r) => String(r.place)))] };
+  return { kind: "answer", sql: sqls.join(";\n"), columns: COLUMNS, rows, title, explanation, ...(partialYearOf(b, months, false) ? { partialYear: partialYearOf(b, months, false) } : {}), chartConfig: { type: multi ? "line" : "bar", xAxis: multi ? "period" : "place", yAxis: ["value"], title, ...(partialPeriodsOf(bks).length ? { partialPeriods: partialPeriodsOf(bks) } : {}) } as ChartConfig, applied: a, requestedEntities: [target.label], returnedEntities: [...new Set(rows.map((r) => String(r.place)))] };
 }
 
 export { STATE_NAME_BY_CODE };

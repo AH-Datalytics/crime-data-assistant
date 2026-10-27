@@ -1508,6 +1508,15 @@
       "note": "measured: prepared no SQLite statement at all in a clean clone"
     },
     {
+      "id": "test-embed-notes",
+      "tier": "F",
+      "script": "scripts/test-embed-notes.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "pure: formats chart metadata and digests it; prepares no SQLite statement"
+    },
+    {
       "id": "test-embed-proof",
       "tier": "F",
       "script": "scripts/test-embed-proof.ts",

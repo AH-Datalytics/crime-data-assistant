@@ -212,6 +212,15 @@ check(Boolean(middle && middle.rows.find((r) => r.period === 2025)!.value === nu
   for (let m = 1; m <= 3; m += 1) for (const o of OFF) for (const ori of ["A1", "A2"]) ins("agency_monthly", { ori, agency: ori === "A1" ? "Alpha" : "Beta", state: "AA", type: "City", year: 2026, month: m, offense: o, count: 1 });
   const partial = answer(compileCurrentSpec(series({ places: [aa], grain: "month", period: { form: "since", from: 2025 } }), ctx));
   check(JSON.stringify(partial?.partialYear) === JSON.stringify({ year: 2026, from: 1, to: 3 }), `embed: a partial last year's months (${JSON.stringify(partial?.partialYear)})`);
+  // Codex PR #55 findings 3-4: two offenses of one sample still carry it; a rolling window's partial year starts in
+  // January (its windows use the earlier months); a peer chart carries its partial year.
+  const two = answer(compileCurrentSpec(series({ places: [aa], measures: ["robbery", "murder"], period: { form: "year", year: 2024 } }), ctx));
+  check(JSON.stringify(two?.sample) === JSON.stringify({ agencies: 2, population: 150000 }), `embed: two offenses of one sample keep the sample (${JSON.stringify(two?.sample)})`);
+  const roll = answer(compileCurrentSpec(series({ places: [aa], grain: "rolling", period: { form: "since", from: 2026 } }), ctx));
+  check(Boolean(roll) && JSON.stringify(roll?.partialYear) === JSON.stringify({ year: 2026, from: 1, to: 3 }), `embed: a rolling partial year starts in January (${JSON.stringify(roll?.partialYear)})`);
+  for (const [ori, p] of [["A1", 200000], ["A2", 210000]] as const) ins("agency_population", { ori, year: 2026, population: p });
+  const peer = answer(compileCurrentSpec({ type: "peers", target: agencyPlace("Alpha", "AA"), n: null, measure: "robbery", statistic: "count", period: { form: "year", year: 2026 }, grain: "total", uiNotes: [] }, ctx));
+  check(JSON.stringify(peer?.partialYear) === JSON.stringify({ year: 2026, from: 1, to: 3 }), `embed: a peer chart carries its partial year (${JSON.stringify(peer?.partialYear)})`);
 }
 
 console.log(`\n${checks - failures}/${checks} passed`);
