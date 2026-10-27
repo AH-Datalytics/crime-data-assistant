@@ -1,136 +1,145 @@
-# NIBRS answers on one facts table: restructure plan (draft for Codex)
+# NIBRS answers on a lossless analytical model: restructure plan (r2, for Codex)
 
-**Owner, 2026-10-27:** "I'm open to a complete restructuring if there's a smarter way to make it possible to answer more
-questions without summary tables." "Should you discuss with codex and come up with a plan for the proper way forward?"
-"Please ensure codex agrees this is a preferable approach too." Then: "Nay -- the ideal approach." The bar is the ideal design, not an improvement on the current one.
+**Owner, 2026-10-27:**
+- "I'm open to a complete restructuring if there's a smarter way to make it possible to answer more questions without summary tables."
+- "Should you discuss with codex and come up with a plan for the proper way forward?"
+- "Please ensure codex agrees this is a preferable approach too." Then: "Nay -- the ideal approach." The bar is the ideal design, not an improvement on the current one.
+- "I suppose all the work we did in getting the app to appreciate what a question is asking and whether it can answer it is still essential to this new design." Yes; see principle 4.
+
+**r1 → r2.** Codex rated r1 (one wide facts table per source plus a field registry) NOT IDEAL. A flattened representation keeps only first values (first victim for property offenses, first relationship, weapons 1-3), so it cannot answer arbitrary victim, offender, arrest or relationship questions correctly. r2 adopts Codex's design: lossless entities at explicit grains, preserved relationships, a versioned semantic and metrics layer, an expressive structured plan, deterministic compilation, selective accelerators, and pinned, resource-bounded serving.
 
 ## The problem, measured
 
-NIBRS questions, last 60 days (query_log, tab nibrs, test sessions excluded):
+NIBRS questions over the last 60 days (query_log, tab nibrs, test sessions excluded):
+- 352 answered: 179 from deterministic plans and 173 historical model-SQL answers;
+- about 240 declined or asked to clarify, roughly 4 in 10.
 
-| outcome | count |
-|---|---|
-| answered, deterministic plan | 179 |
-| answered, model-written SQL (validated) | 173 |
-| declined: no capability path | 146 |
-| declined: query contract failed / model produced no SQL / SQL shape rejected / guardrail | 52 |
-| declined: no rows, source health | 25 |
-| asked to clarify | 15 |
+**Baseline correction (Codex):** model-written SQL no longer runs (`NIBRS_MODEL_SQL_NEVER_RUNS = true` in `app/api/nibrs-query/route.ts`). The 173 are historical evidence, not today's capability.
 
-About 4 in 10 NIBRS questions are not answered. The causes found on 2026-10-27:
-- **Wording the reader does not map:** "where a", "large cities", "cities of 250,000 or more", a month range across years.
-- **Misreadings:** "firearm stolen" read as the weapon used, not the stolen property.
-- **No summary table for the combination:**
-  - stolen property by month;
-  - two breakdowns at once, e.g. "share of murder victims by race and sex per month in Houston since 2018";
-  - a top-N list per month.
+**Causes found on 2026-10-27:**
+- unmapped wording: "where a", "large cities", "cities of 250,000 or more", a month range across years;
+- misreading: "firearm stolen" taken as the weapon;
+- no summary table for the combination: stolen property by month; race × sex × month shares; top-N per month.
 
-**Why the third cause keeps recurring.** Each question type (series, breakdown, share, rank, change: `lib/nibrs-question-types.ts`) has its own compiler path, aimed at its own summary tables. `nibrs.db` holds 37 `summary_*` tables. A new combination therefore needs a new table plus new code, and the model-written-SQL fallback needs its own guardrails. The data itself is a 179 GB SQLite row store, normalized as the FBI ships it. Raw scans with joins are too heavy for the web server, which is why only summaries are allowed.
-
-## What NIBRS Savant shows
-
-Savant (AH-Datalytics/nibrs-savant) answers any combination of whitelisted fields, by month or year, in milliseconds:
-- **`etl/build.py` builds one wide table.** `crime_facts` has one row per countable offense, and one row per victim for person crimes, with every field attached. `property_facts` has one row per property segment. Both are columnar DuckDB.
-- **`nibrs_savant/query.py` is one general compiler** (filters, up to 3 group-by fields, whitelisted metrics). `nibrs_savant/cubes.py` adds pre-aggregated cubes, used automatically when they cover a search; tests prove the answers are identical.
-- **`nibrs_savant/registry.py` is the single list of fields, labels, definitions and metrics.**
-- **Size.** 12 states for 2017-2026 take 2.8 GB, which is 36% of national offenses. National 2017-2026 is about 8 GB; 1991-2026 about 15 GB. Free space: 76 GB on the NIBRS volume.
-- **Data flow.** Savant's data is exported from NIBRSAI's own `nibrs.db` state by state, at night, and built off the web server. A national build is in progress.
+**Why this keeps happening.** Five hand-written compiler paths (`lib/nibrs-question-types.ts`) are aimed at 37 `summary_*` tables in a 179 GB SQLite row store, so every new combination needs a table plus code.
 
 ## Facts from the NIBRS Savant session (2026-10-27, code at e491850)
 
-- **Schedule.** Live now: 12 states, 2017 through October 2026. The remaining 39 states export from the night of October 28, then one laptop build (~2 h), comparison, speed test and Jeff's OK. Best case the national release is live around November 1-2, and it could slip. Years: 2017-2026 only; pre-2017 is not planned.
-- **Files.** One DuckDB 1.5.6 file per release: `/opt/nibrs-savant/releases/<id>/facts.duckdb`, with `gate.json`, `SHA256SUMS` and `BUILT_AT`. `live` and `previous` are symlinks, and only those two releases are kept.
-  - Tables: `crime_facts` (71 columns), `property_facts` (24 columns), `agencies` (ori, year, state, name, population group, population), `build_info` (built_at, partial year, row counts), and seven cubes plus `cube_info`.
-  - Estimated national size: 10-12 GB.
-- **Counting.**
-  - `crime_facts`: person crimes have one row per victim x connected person offense (`count_unit='VICTIM'`), with offender attributes from that victim's first relationship. Property and society crimes have one row per offense (`count_unit='OFFENSE'`).
-  - Incidents: `incident_first` marks one row per incident, valid only for incident-level fields; otherwise `count(DISTINCT incident_id)`.
-  - Clearance is incident-level.
-  - `property_facts`: one row per property segment, attached to the incident's most serious property offense. Recoveries are linked back to the stolen segment.
-  - Exports are deduplicated and recounted against `nibrs.db`.
-- **Gaps compared with `nibrs.db`:**
-  - first-value-only fields (offender suspected of using, criminal activity, injury type, relationship, aggravated-assault circumstance, suspected drug type); weapons 1-3 only;
-  - no Group B arrests and no 90x Group B offenses;
-  - a person-crime offense with no connected victim produces no row;
-  - nothing before 2017.
-- **Conditions for NIBRSAI reading the files:**
-  - pin a release by full path, which needs a hold list that Savant's `release_switch.sh` honors before deleting (a Savant change);
-  - cap NIBRSAI's own process memory and threads (Savant uses a 3 GB DuckDB limit, 2 threads, 4 GB MemoryMax);
-  - check a schema version per release (Savant can add one to `build_info`);
-  - each pinned release costs 10-12 GB of disk (54 GB free on root);
-  - Savant refreshes about the 19th-20th each month, after NIBRSAI's 16th-18th update.
+- **Schedule.** Live now: 12 states, 2017 to October 2026. The other 39 export from the night of October 28; best case the national release is live around November 1-2. Years: 2017-2026 only.
+- **Release layout.** One DuckDB 1.5.6 file per release (`/opt/nibrs-savant/releases/<id>/facts.duckdb`), plus `gate.json`, `SHA256SUMS` and `BUILT_AT`. Only `live` and `previous` are kept. Estimated national size: 10-12 GB.
+- **Tables.**
+  - `crime_facts`: person crimes have one row per victim × connected person offense; property and society crimes one row per offense, with the lowest-numbered victim.
+  - `property_facts`: one row per property segment, attached to the incident's most serious property offense.
+  - `agencies`, `build_info`, and seven cubes.
+- **What the build leaves out:** only first values for several multi-value fields; weapons 1-3; no Group B arrests or Group B offenses; person offenses with no connected victim produce no row; nothing before 2017.
+- **Savant's conditions for NIBRSAI reading the files:**
+  - pin releases by full path, with a hold list that Savant honors (a Savant change);
+  - cap NIBRSAI's own memory and threads;
+  - add a schema version per release;
+  - budget 10-12 GB of disk per pinned release (54 GB free on root);
+  - refreshes land around the 19th-20th of each month.
 
-## Consequences for NIBRSAI (from those facts)
+## Design
 
-1. **Years.** NIBRSAI answers NIBRS from 1991 today; the shared release starts in 2017. Either the build goes back to 1991, or pre-2017 NIBRS questions keep the current path until it does. Open decision 1.
-2. **Arrests and Group B.** NIBRSAI answers arrest questions today (the home page suggests "DUI arrests by age group nationally"). The shared release has no arrests table and no Group B. The build needs an `arrest_facts` table (one row per arrestee, Group A and B) before arrest questions can move.
-3. **Multi-value fields.** Questions that depend on a second or later value (a second weapon, a second injury type, a second relationship) can differ from NIBRSAI's answers. The shadow comparison must classify these, and the build can carry more values if needed.
-4. **Freshness.** After each monthly update NIBRSAI would answer from the previous month's release until the facts build finishes (about 2-4 days). Either NIBRSAI's update triggers the facts build, or answers carry the release's data-through date.
-5. **Savant-side changes needed first:** a hold list for pinned releases, a schema version in `build_info`, and the NIBRSAI tables the plan needs (`arrest_facts`; pre-2017 if decided).
+1. **Canonical data layer (lossless, shared).**
+   - **Entities at explicit grains:** incident, offense, victim, offender, arrestee (Group A and Group B arrests), property segment.
+   - **Link tables carrying every relationship:**
+     - victim → offense (all connected offenses);
+     - victim → offender (all relationships);
+     - offense → weapon (all weapons);
+     - victim → injury (all injuries);
+     - incident → property.
+   - **Attributes are denormalized only where genuinely one-to-one.**
+   - **Agency-month reporting status:** an explicit table (reported with crimes, reported zero, not reported), not inferred from crime rows.
+   - **Population and coverage denominators:** maintained independently and matched to geography and year; overlapping jurisdictions are never summed.
+   - **Storage:** canonical data as partitioned Parquet; optimized DuckDB serving artifacts built from it. Physical layout is chosen by measured workload.
+   - **Years:** 2017-2026 for the first switch; 1991-2016 is required before the old paths are retired.
+2. **Semantic and metrics layer (shared, versioned).** This replaces a field list of labels with full definitions:
+   - entities, grains, relationships and their cardinality;
+   - measures with their counting unit (distinct victims, victim-offense pairs, offenders, offenses, incidents, arrests, clearances) and permitted aggregation;
+   - denominators and partition scopes;
+   - unknown and missing handling;
+   - coverage rules, definitions and labels.
 
-## Proposal
+   Principles from dbt and Cube are adopted; neither platform as a whole.
+3. **Structured plan language.** The reader produces a plan that supports:
+   - several measures;
+   - filters, including scoped existence filters ("incidents containing a stolen firearm");
+   - any number of groupings;
+   - denominator partitions ("share within each month and agency");
+   - period comparisons and rolling windows;
+   - top-N within each period;
+   - cohort and coverage options (a same-agencies cohort).
 
-1. **Shared data, not a shared service.**
-   - One build pipeline (Savant's) produces immutable, numbered national releases: `crime_facts`, `property_facts`, cubes, agencies.
-   - NIBRSAI and Savant read the same files read-only.
-   - Each product runs its own query process: NIBRSAI never calls Savant's public API.
-   - Each product pins which data release it reads, and moves to a new one only through its own release checks (`scripts/release.sh` with `expected-changes.json`).
-2. **One shared field registry**, as a versioned module both products use. It defines each field's meaning, labels and definitions, and drives NIBRSAI's reader vocabulary, the "Understood as" chips, validation, titles and table headers.
-3. **One NIBRSAI engine for NIBRS.**
-   - The reader (the existing typed parser, extended) produces a **structured search**: dataset, filters on registry fields, up to 3 group-by fields, a metric, period and grain, and the denominator for shares. This replaces per-type SQL.
-   - The model may fill in a structured search only; it never writes SQL.
-   - Every search is validated against the registry before it runs.
-   - Request accounting stays: every part of the question must map to a field of the search, or the answer is refused or clarified.
-4. **Clarify instead of decline.** An unmapped word returns the nearest registry fields as chips to confirm or adjust: Savant's filter panel as the fallback.
-5. **Keep and extend the question reader and request accounting.** The work that teaches the app what a question asks, and whether every part of it can be applied, is the front half of this design and is not rewritten. Its target changes: from "which summary table and compiler path serves this" to "does every part map to a registry field, and does the data cover this place and period". With an engine that can answer almost any combination, this step becomes the main safeguard against answering the wrong question confidently.
-6. **Carry over every NIBRSAI rule as engine behavior**, with a test for each:
-   - person crimes counted by victim;
-   - national is a sum, never an agency;
-   - missing month versus zero;
-   - partial years and coverage notes;
-   - agency population denominators;
-   - phantom-town geography guard;
-   - "US" means national;
-   - title formats;
-   - refusal wording.
+   Savant's three-grouping limit and whole-result percentages are implementation limits, not the contract.
+4. **The question reader and request accounting are kept and extended, not rewritten.** They break a question into parts and require every part to be applied. Their target changes: from "which summary table serves this" to "does every part map to the semantic layer, and does coverage allow it". With an engine that can answer most combinations, this step is the main safeguard against confidently answering the wrong question.
+5. **The model fills a plan only; compilation is deterministic.** Plans are validated against the semantic layer before running. Validated text-to-SQL is rejected as the public answer contract, because syntactically safe SQL can still count the wrong entity, multiply joins or use the wrong denominator.
+6. **Clarify consequential ambiguity; state real limits.**
+   - An ambiguity that changes the answer gets clarifying chips with the nearest semantic options.
+   - Data that is missing, or a concept that is genuinely unrecorded, gets an explicit limitation, not endless confirmation.
+7. **Accelerators.** Wide tables and cubes are selective and workload-driven, chosen automatically only when they cover a plan, with an exact fallback to the canonical data. Equality is proven by tests.
+8. **Serving.**
+   - NIBRSAI runs its own workers, never Savant's public service.
+   - Each worker is capped: memory, threads, concurrency, cancellation and spill quota.
+   - Releases activate atomically, with rollback.
+   - Each product pins a release through a manifest that records each state's source vintage and held status, the transformation version, the schema and semantic versions, and checksums.
+   - A separate analytics server, or ClickHouse, is adopted only if measured load cannot protect web latency within this server's budget.
+9. **Provenance.** Every answer records:
+   - the question and the resolved interpretation, including defaults;
+   - the semantic and data versions;
+   - the compiled query;
+   - the denominator and cohort;
+   - transformations and any truncation.
 
-## Migration (strangler, NIBRS first)
+   Caches are keyed by those versions.
+10. **Shared governance with Savant.**
+    - One reproducible build of the canonical and semantic layers, jointly governed.
+    - Savant's current facts become a derived serving artifact.
+    - Each product owns its acceptance criteria and serving configuration.
+11. **Multiple sources.** Each source gets its own subplan. Aggregates are aligned only where geography, period, units and coverage are compatible; overlapping NIBRS, Historical, Current Trends and Homicide Reports counts are never added together.
+
+## Migration
 
 | phase | done when |
 |---|---|
-| 0. Decision | Owner and Codex agree on the approach and the open decisions below |
-| 1. National facts available | Savant's national release covers all states for 2017-2026. Recount gate as Savant does now (every segment table-year matches raw). Pinned path on the server. |
-| 2. Shared registry module | Savant and NIBRSAI import the same registry version |
-| 3. Engine behind a flag | NIBRSAI's own DuckDB read-only process with a memory cap, thread limit, bounded queries and its own logging. Structured search, then SQL, then rows. |
-| 4. Shadow comparison | Every NIBRS question answered today also runs through the engine. Answers are compared, and every difference is explained: counting unit, coverage, or a bug in one side. Includes the frozen release questions and the named test cases below. |
-| 5. Switch by question family | A family switches when its shadow differences are all explained and accepted. Declined families switch when their new answers pass review. |
-| 6. Retire | The NIBRS summary tables and the model-SQL path for NIBRS are retired once every family has switched |
-| later | Homicide Reports (one row per victim), Historical (agency-years) and Current Trends (agency-months) follow the same pattern |
+| 0. Decision | The owner and Codex agree on this design and on the open decisions |
+| 1. Independent correctness examples | A small hand-traced test set exists, with expected answers computed by hand from raw segments: multiple victims, multiple offenders, multiple property segments, overlapping categories, missing versus zero months, denominator scopes. Raw recounts prove transfer integrity only, not analytical correctness. |
+| 2. Canonical build and semantic layer v1 (2017-2026) | Entities, links, reporting status and denominators are built and pass phase 1, plus raw recounts. The partial-year rule is resolved (Savant's refresh plan says cut to the last complete month; `etl/build.py` says "Nothing is cut"; the latest observed month is not proof of completeness). The Savant-side changes are in: a hold list, a schema version, Group B arrests. |
+| 3. Plan language and compiler | Plans compile deterministically against the semantic layer. Every named test case below passes on hand-checked expectations. |
+| 4. National performance and isolation | The national release is benchmarked under realistic concurrency, with and without accelerators. Web latency stays protected within the worker caps. |
+| 5. Shadow comparison | Sampled or queued, so it never doubles production load. It covers every outcome category, not only declines. Results are reported separately: correct answers, necessary clarifications, unsupported questions, incorrect answers, latency. Every difference from today's answers is explained. |
+| 6. Switch by semantic capability and coverage | A capability switches when its shadow results are accepted. Old paths are kept for rollback. |
+| 7. Backfill 1991-2016 | Pre-2017 questions answer on the new model, with phase 1-style checks for each era |
+| 8. Retire | The old NIBRS paths and the summary dependencies are retired; useful accelerators stay. Then Homicide Reports, Historical and Current Trends follow the same pattern. |
 
-**Named test cases.** Each must answer correctly or clarify precisely:
-1. Share of murder victims by race and sex per month in Houston since 2018. Houston NIBRS starts mid-2018 (7 months); shares are within each month; the counts are shown.
-2. Thefts from motor vehicles where a firearm was stolen, per month. Property description 13, loss stolen, offense 23F, nationally and for one state.
-3. Car thefts in Baltimore by month, January 2022 to June 2026: a month range across years.
-4. The frozen release questions (H1-H3) must stay byte-identical, or their differences be declared.
-5. Today's 146 "no capability path" declines from the last 60 days are replayed; the share answered is reported.
+## Named test cases (hand-checked expectations)
 
-## Alternatives considered
+1. **Share of murder victims by race and sex per month in Houston since 2018.**
+   - Each cell's denominator is that month's total murder victims for the Houston Police Department.
+   - Unknown race or sex is a visible category.
+   - Numerators and denominators are shown.
+   - Houston's NIBRS reporting starts mid-2018 (7 months).
+   - (Savant's `pct_of_total` divides by the whole result total and would be wrong here.)
+2. **Thefts from motor vehicles where a firearm was stolen, per month.** Answered as "23F offenses in incidents with a stolen-firearm property segment". The answer states that NIBRS does not tie a property segment to one offense in a multi-offense incident; no attribution is invented.
+3. **Car thefts in Baltimore by month, January 2022 to June 2026.** A month range across years.
+4. **The frozen release questions (H1-H3).** Unchanged, or the change is declared.
+5. **Replay of the last 60 days of NIBRS questions.** Every outcome category, reported as in phase 5.
 
-- **A. Keep the summaries and fix the reader.** Add a monthly property summary built off the server. Smallest change, but each new combination still needs a table and code, so the 4-in-10 decline rate is chipped at, not removed.
-- **B. Hybrid.** Keep the current paths and send only unanswerable questions to the engine. Lower risk, but two engines forever, with two sets of counting rules to keep aligned.
-- **C. This proposal.** One engine for NIBRS. Migrate with the shadow comparison so it is as safe as B during the transition, then retire the old paths.
+## Rules carried into the semantic layer (each with a test)
 
-## Risks
-
-1. **Different numbers.** Counting unit, deduplication and property-matching rules can differ between the two. The shadow comparison must explain every difference before a family switches.
-2. **Server load.** NIBRSAI and Savant share a 4-CPU, 15.6 GB server. NIBRSAI's engine process needs its own caps. National queries must be benchmarked, with and without cubes.
-3. **Data freshness and coupling.** The monthly NIBRS update now has to flow through the facts build before NIBRSAI sees it. Pinning keeps either product from changing the other's answers unannounced.
-4. **Lost guardrail knowledge.** Every rule in `lib/nibrs-claude.ts` and the route guardrails must become an engine test, not just a comment.
-5. **Effort.** This is a rebuild of NIBRS answering. A family-by-family switch keeps the site working throughout.
+- Person crimes counted by victim, with distinct victims versus victim-offense pairs named explicitly.
+- National is a sum of reported counts, never an agency; national answers say "reported NIBRS counts".
+- Participation change is distinguished from crime change, with a same-agencies cohort option.
+- Missing versus zero months, from the reporting-status table.
+- Partial years.
+- Rates use matched denominators. A demographic-filtered count over total residents is labeled as such, not called a group risk rate.
+- Small cells: numerator, denominator and restrained precision are shown, and larger periods offered. No silent suppression, no shares recomputed over only the displayed cells, no sampling confidence intervals.
+- The phantom-town geography guard, "US" means national, title formats, refusal wording.
+- Old workarounds are not frozen as rules: the first-weapon limit and the summary-table restrictions in the prompt are retired.
 
 ## Open decisions for the owner
 
-1. Years covered by the shared national release: 2017-2026, or back to 1991. NIBRSAI answers from 1991 today.
-2. Whether Savant's public product moves to the national release too, or stays on its states.
-3. How uncertain small-cell monthly shares are shown: counts beside shares, a minimum count, or a suggestion of quarterly or yearly.
-4. Order after NIBRS: Homicide Reports, Historical or Current Trends next.
+1. The order of the pre-2017 backfill relative to the first switch. The design requires it before retiring the old paths.
+2. Whether Savant's public product moves to the national release and the canonical model.
+3. How small-cell monthly shares are presented: counts beside shares, plus a larger-period suggestion.
+4. Which source follows NIBRS: Homicide Reports, Historical or Current Trends.
