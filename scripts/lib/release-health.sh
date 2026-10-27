@@ -58,7 +58,8 @@ app_healthy() {
     (( n == WORKERS )) || ok=0
     if (( ok )); then
       for p in / /test; do
-        s=$(bounded_run "$dl" 5 -- curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_BASE$p" 2>/dev/null)
+        # With a site password set, pages need the auth cookie (middleware.ts); HEALTH_COOKIE carries it.
+        s=$(bounded_run "$dl" 5 -- curl -s -o /dev/null -w '%{http_code}' --max-time 10 ${HEALTH_COOKIE:+-H "Cookie: nibrs_auth=$HEALTH_COOKIE"} "$HEALTH_BASE$p" 2>/dev/null)
         [[ "$s" =~ ^[0-9]{3}$ ]] || s=000
         [[ "$s" =~ ^(200|304)$ ]] || ok=0
       done

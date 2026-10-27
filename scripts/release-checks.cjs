@@ -2,9 +2,13 @@
 /**
  * Release answer checks for scripts/release.sh (design: docs/superpowers/specs/2026-10-27-server-side-release-design.md).
  *
+ *   node release-checks.cjs cookie
+ *     Prints the middleware's auth cookie value (nibrs_auth) signed with AUTH_PASSWORD, for the health checks.
+ *
  *   node release-checks.cjs ask <questions.json> <base url> <out dir> <session prefix>
- *     Asks every question once, as the page does (empty history, manual routing, the page token and the auth cookie
- *     signed with AUTH_PASSWORD from the environment), and writes <out>/<name>.status, <name>.body and
+ *     Asks every question once, as the page does (empty history, manual routing, the page token and the auth cookie;
+ *     both signed the way lib/page-token.ts and middleware.ts verify them: AUTH_PASSWORD, or each one's built-in
+ *     secret when the site runs without a password, as production does), and writes <out>/<name>.status, <name>.body and
  *     <out>/sessions.txt ("<name> <sessionId>"). Exits non-zero if any request fails to complete.
  *
  *   node release-checks.cjs validate <questions.json> <dir>
@@ -16,7 +20,8 @@
  *     success:true, or SSE whose only data event is type "result"); no error event. After masking only the
  *     enumerated volatile fields, the canonical answer after the switch must equal the one before it. A question
  *     named in expected-changes.json may differ ONLY in the fields its entry lists, and its checker (a module
- *     exporting check(after) -> {ok, why}, path relative to the repo root of that file) must pass. Two failed
+ *     exporting check(after) -> {ok, why}) must pass. The file and its checkers are read from the tree release.sh
+ *     extracted at the target SHA; a checker path must stay inside that tree. Two failed
  *     answers never compare equal: a failed answer fails the check on either side.
  *     Prints one line per question and exits 0 only if every question passes.
  */
@@ -42,26 +47,29 @@ function loadQuestions(p) {
   return q;
 }
 
-/** The middleware's auth cookie (prefix:expires:hmac) and the routes' page token (base64 ts:hmac16). */
-function credentials(secret) {
+/**
+ * The middleware's auth cookie (prefix:expires:hmac; middleware.ts, secret AUTH_PASSWORD || "nibrs-dev-secret") and
+ * the routes' page token (base64 ts:hmac16; lib/page-token.ts, secret AUTH_PASSWORD || "nibrs-page-token-secret").
+ * Without AUTH_PASSWORD the middleware lets every request through and only the page token is checked.
+ */
+function credentials() {
+  const pw = process.env.AUTH_PASSWORD || "";
   const expires = String(Date.now() + 3600_000);
   const payload = `release:${expires}`;
-  const cookie = `${payload}:${crypto.createHmac("sha256", secret).update(payload).digest("hex")}`;
+  const cookie = `${payload}:${crypto.createHmac("sha256", pw || "nibrs-dev-secret").update(payload).digest("hex")}`;
   const ts = String(Date.now() - 5000);
-  const pageToken = Buffer.from(`${ts}:${crypto.createHmac("sha256", secret).update(ts).digest("hex").slice(0, 16)}`).toString("base64");
+  const pageToken = Buffer.from(`${ts}:${crypto.createHmac("sha256", pw || "nibrs-page-token-secret").update(ts).digest("hex").slice(0, 16)}`).toString("base64");
   return { cookie, pageToken };
 }
 
 async function ask(qfile, base, out, prefix) {
   const q = loadQuestions(qfile);
-  const secret = process.env.AUTH_PASSWORD;
-  if (!secret) die("AUTH_PASSWORD is not set");
   fs.mkdirSync(out, { recursive: true });
   const sessions = [];
   let bad = 0;
   for (const x of q.questions) {
     const sessionId = `${prefix}-${x.name}`;
-    const { cookie, pageToken } = credentials(secret);
+    const { cookie, pageToken } = credentials();
     const body = { question: x.question, history: [], routingMode: "manual", sessionId, pageToken, ...(x.mode ? { mode: x.mode } : {}) };
     let status = 0, text = "";
     try {
@@ -114,24 +122,31 @@ function canonical(answer, masked, skip = []) {
   return JSON.stringify(sort(Object.fromEntries(Object.entries(answer).filter(([k]) => !drop.has(k)))));
 }
 
+/** The reviewed expected changes, validated: known questions, listed fields, a checker inside the extracted tree. */
+function loadExpected(expectedFile, names) {
+  const expected = {};
+  if (!expectedFile || !fs.existsSync(expectedFile)) return expected;
+  const e = readJson(expectedFile);
+  if ("root" in e) die(`${expectedFile}: "root" is not allowed; checker paths are relative to the extracted tree`);
+  const root = path.resolve(path.dirname(expectedFile), "../../..");
+  for (const [name, entry] of Object.entries(e.changes ?? {})) {
+    if (!names.has(name)) die(`${expectedFile}: unknown question ${name}`);
+    if (!Array.isArray(entry.fields) || entry.fields.length === 0) die(`${expectedFile}: ${name}: no fields listed`);
+    if (typeof entry.checker !== "string") die(`${expectedFile}: ${name}: no checker`);
+    const checkerPath = path.resolve(root, entry.checker);
+    const rel = path.relative(root, checkerPath);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) die(`${expectedFile}: ${name}: checker ${entry.checker} is outside the release tree`);
+    if (!fs.existsSync(checkerPath)) die(`${expectedFile}: ${name}: checker ${entry.checker} not found`);
+    const mod = require(checkerPath);
+    if (typeof mod.check !== "function") die(`${expectedFile}: ${name}: checker exports no check()`);
+    expected[name] = { fields: entry.fields, check: mod.check };
+  }
+  return expected;
+}
+
 function compare(qfile, beforeDir, afterDir, expectedFile) {
   const q = loadQuestions(qfile);
-  const names = new Set(q.questions.map((x) => x.name));
-  let expected = {};
-  if (expectedFile && fs.existsSync(expectedFile)) {
-    const e = readJson(expectedFile);
-    const root = path.resolve(path.dirname(expectedFile), e.root ?? "../../..");
-    for (const [name, entry] of Object.entries(e.changes ?? {})) {
-      if (!names.has(name)) die(`${expectedFile}: unknown question ${name}`);
-      if (!Array.isArray(entry.fields) || entry.fields.length === 0) die(`${expectedFile}: ${name}: no fields listed`);
-      if (typeof entry.checker !== "string") die(`${expectedFile}: ${name}: no checker`);
-      const checkerPath = path.resolve(root, entry.checker);
-      if (!fs.existsSync(checkerPath)) die(`${expectedFile}: ${name}: checker ${entry.checker} not found`);
-      const mod = require(checkerPath);
-      if (typeof mod.check !== "function") die(`${expectedFile}: ${name}: checker exports no check()`);
-      expected[name] = { fields: entry.fields, check: mod.check };
-    }
-  }
+  const expected = loadExpected(expectedFile, new Set(q.questions.map((x) => x.name)));
   const read = (dir, name) => parseAnswer(Number(fs.readFileSync(path.join(dir, `${name}.status`), "utf8")), fs.readFileSync(path.join(dir, `${name}.body`), "utf8"));
   let fail = 0;
   for (const x of q.questions) {
@@ -164,7 +179,9 @@ function validate(qfile, dir) {
 }
 
 const [cmd, ...args] = process.argv.slice(2);
-if (cmd === "ask" && args.length === 4) ask(...args).catch((e) => die(e.message));
+if (cmd === "cookie" && args.length === 0) console.log(credentials().cookie);
+else if (cmd === "ask" && args.length === 4) ask(...args).catch((e) => die(e.message));
 else if (cmd === "validate" && args.length === 2) validate(...args);
+else if (cmd === "expected" && args.length === 2) { const q = loadQuestions(args[0]); const e = loadExpected(args[1], new Set(q.questions.map((x) => x.name))); console.log(`expected changes: ${Object.keys(e).join(", ") || "none"}`); }
 else if (cmd === "compare" && (args.length === 3 || args.length === 4)) compare(...args);
-else die("usage: ask <questions.json> <base url> <out dir> <session prefix> | validate <questions.json> <dir> | compare <questions.json> <before> <after> [expected-changes.json]");
+else die("usage: cookie | expected <questions.json> <expected-changes.json> | ask <questions.json> <base url> <out dir> <session prefix> | validate <questions.json> <dir> | compare <questions.json> <before> <after> [expected-changes.json]");
