@@ -72,7 +72,8 @@ source "$BUNDLE/scripts/lib/release-health.sh"
 # shellcheck source=scripts/lib/prune-releases.sh
 source "$BUNDLE/scripts/lib/prune-releases.sh"
 
-TARGET="" TARGET_COMMIT="" UTIL_PRIOR="" PINNED_BY_US=0 STUDIO_TOKEN="" FINISHED=0 ABORTING=0 PHASE=start DEPLOY_PID=""
+TARGET="" TARGET_COMMIT="" UTIL_PRIOR="" PINNED_BY_US=0 STUDIO_TOKEN="" FINISHED=0 ABORTING=0 PHASE=start DEPLOY_PID="" DEPLOY_PGID=""
+PENDING_SIGNAL=""
 IN_EXIT=0 FINAL_RC=""
 
 # This attempt's result, written atomically, then copied atomically to <sha>.latest. Non-zero if either write fails.
@@ -116,22 +117,24 @@ cleanup() {
   [[ -n "$STUDIO_TOKEN" ]] && $STUDIO_CTL unlock "$STUDIO_TOKEN" > /dev/null 2>&1 8>&- 9>&-
 }
 
-# Stop the deploy and confirm it is gone. DEPLOY_PID is GNU timeout itself, which makes itself the leader of its own
-# process group, so the deploy and everything it started (npm, the build, pm2 calls) are signalled together: TERM,
-# then KILL, then the group must be empty. Non-zero if anything in it survives (then nothing may be called verified).
+# Stop the deploy and confirm it is gone. DEPLOY_PGID is GNU timeout's process group (timeout leads it), so the
+# deploy and everything it started (npm, the build, pm2 calls) are signalled together: TERM, then KILL, then the group
+# must be empty. The group is kept until it is confirmed empty, also after a normal exit of timeout (a descendant that
+# ignores TERM can outlive it). Non-zero if anything in it survives; then nothing may be called verified.
 stop_deploy() {
-  [[ -n "$DEPLOY_PID" ]] || return 0
-  local pg="$DEPLOY_PID"
+  [[ -n "$DEPLOY_PGID" ]] || return 0
+  local pg="$DEPLOY_PGID"
   if kill -0 -- "-$pg" 2>/dev/null; then
     log "stopping the deploy (process group $pg)"
     kill -TERM -- "-$pg" 2>/dev/null
-    for _ in $(seq 1 30); do kill -0 -- "-$pg" 2>/dev/null || break; sleep 1; done
+    for _ in $(seq 1 10); do kill -0 -- "-$pg" 2>/dev/null || break; sleep 1; done
     kill -KILL -- "-$pg" 2>/dev/null
     for _ in $(seq 1 10); do kill -0 -- "-$pg" 2>/dev/null || break; sleep 1; done
   fi
-  wait "$DEPLOY_PID" 2>/dev/null
-  if kill -0 -- "-$pg" 2>/dev/null; then log "the deploy's process group $pg is still alive"; return 1; fi
+  [[ -n "$DEPLOY_PID" ]] && wait "$DEPLOY_PID" 2>/dev/null
   DEPLOY_PID=""
+  if kill -0 -- "-$pg" 2>/dev/null; then log "the deploy's process group $pg is still alive"; return 1; fi
+  DEPLOY_PGID=""
 }
 
 # The rollback could not be verified: alert, then the result (shared by every path that ends this way).
@@ -286,14 +289,29 @@ DEPLOY_DL=$(( $(date +%s) + DEPLOY_MAX ))
 export SWITCH_NOT_AFTER_EPOCH=$(( DEPLOY_DL - 60 ))
 log "deploying $SHA (deadline in ${DEPLOY_MAX}s)"
 PHASE=deploy
-# timeout runs as the direct background child (not through a function), so $! is timeout itself, the leader of the
-# deploy's process group (stop_deploy).
+# timeout runs as the direct background child (not through a function), so $! is timeout itself, which becomes the
+# leader of the deploy's process group. Signals are held while it starts: a TERM that arrived before the group existed
+# could otherwise find nothing to stop and let the deploy go on.
+trap 'PENDING_SIGNAL="terminated by SIGTERM"' TERM
+trap 'PENDING_SIGNAL="interrupted by SIGINT"' INT
+trap 'PENDING_SIGNAL="terminated by SIGHUP"' HUP
 timeout --kill-after=30s "$DEPLOY_MAX"s $RELEASE_DEPLOY_CMD "$SHA" dev > "$WORK/deploy.log" 2>&1 < /dev/null 8>&- 9>&- &
-DEPLOY_PID=$!
+DEPLOY_PID=$!; DEPLOY_PGID=$DEPLOY_PID
+for _ in $(seq 1 50); do kill -0 -- "-$DEPLOY_PGID" 2>/dev/null && break; kill -0 "$DEPLOY_PID" 2>/dev/null || break; sleep 0.1; done
+trap 'abort "terminated by SIGTERM"' TERM
+trap 'abort "interrupted by SIGINT"' INT
+trap 'abort "terminated by SIGHUP"' HUP
+[[ -n "$PENDING_SIGNAL" ]] && abort "$PENDING_SIGNAL"
 wait "$DEPLOY_PID"
 deploy_rc=$?
 DEPLOY_PID=""
 log "deploy exited $deploy_rc (124/137 = stopped at the deadline)"
+# Whatever the deploy left running is stopped before anything is checked or rolled back.
+if ! stop_deploy; then
+  state=$(deploy_target_state "$CURRENT_LINK" "$TARGET" "$(( $(date +%s) + 10 ))")
+  PHASE=rollback
+  unconfirmed "processes the deploy started could not be stopped (switch state $state); production may still change"
+fi
 state=$(deploy_target_state "$CURRENT_LINK" "$TARGET" "$(( $(date +%s) + 10 ))")
 log "switch state: $state"
 

@@ -85,6 +85,7 @@ if [[ "\${FAKE_PRUNE:-}" == 1 ]]; then source "$T/bundle/scripts/lib/prune-relea
 case "\${FAKE_DEPLOY:-ok}" in
   fail-after) exit 1 ;;
   hang-after) sleep 20; ln -sfn "$R/releases/R2" "$R/late-switch-marker" ;;
+  orphan) ( trap '' TERM; sleep 15; ln -sfn "$R/releases/R2" "$R/late-orphan-marker" ) & ;;
 esac
 exit 0
 EOF
@@ -175,6 +176,11 @@ echo "8. the deploy hangs after the switch (stopped at the deadline, cannot swit
 setup same; t0=$(date +%s); run FAKE_DEPLOY=hang-after DEPLOY_MAX=8; ok "result" "$RES" "ROLLED BACK"; ok "live" "$LIVE" R1
 while (( $(date +%s) < t0 + 26 )); do sleep 1; done
 ok "the whole deploy process group was stopped (no action 20 s after its switch)" "$(ls "$R/late-switch-marker" 2>/dev/null | wc -l)" 0
+
+echo "8b. the deploy exits but leaves a TERM-ignoring process behind: it is killed before the checks"
+setup same; t0=$(date +%s); run FAKE_DEPLOY=orphan; ok "result" "$RES" "LIVE"
+while (( $(date +%s) < t0 + 20 )); do sleep 1; done
+ok "the leftover process was killed (no action 15 s later)" "$(ls "$R/late-orphan-marker" 2>/dev/null | wc -l)" 0
 
 echo "9. the new release is unhealthy"
 setup same; touch "$T/unhealthy-R2"; run; ok "result" "$RES" "ROLLED BACK"; ok "live" "$LIVE" R1
