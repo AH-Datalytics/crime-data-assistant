@@ -1,0 +1,74 @@
+/**
+ * Owner 2026-10-26 (presentation item 3): an embedded chart states, under it, the sample it covers and a partial last
+ * year ("Sample of N agencies covering N population." and "2026 covers data from January to August."). The chart
+ * metadata digest binds those facts only when present, so every earlier chart's digest is unchanged.
+ *   npx tsx scripts/test-embed-notes.ts
+ */
+import assert from "node:assert/strict";
+import { chartNotes as embedNotes } from "../lib/embed-notes";
+import { chartMetaDigestOf } from "../lib/chart-config-log";
+
+let passed = 0;
+let failed = 0;
+const pending: Promise<void>[] = [];
+function check(name: string, fn: () => void | Promise<void>) {
+  pending.push((async () => {
+    try { await fn(); passed += 1; console.log(`  PASS  ${name}`); } catch (e) { failed += 1; console.log(`  FAIL  ${name}\n        ${(e as Error).message}`); }
+  })());
+}
+
+const base = { source: "RTCI", agencyCount: 0, population: null };
+check("the national sample and its partial last year", () => {
+  assert.deepEqual(embedNotes({ ...base, sampleAgencies: 547, samplePopulation: 116958827, partialYear: { year: 2026, from: 1, to: 8 } }),
+    ["Sample of 547 agencies covering 117.0 million population.", "2026 covers data from January to August."]);
+});
+check("no population on file: the sample alone", () => {
+  assert.deepEqual(embedNotes({ ...base, sampleAgencies: 12, samplePopulation: null }), ["Sample of 12 agencies."]);
+});
+check("one month of the last year", () => {
+  assert.deepEqual(embedNotes({ ...base, partialYear: { year: 2026, from: 1, to: 1 } }), ["2026 covers data from January only."]);
+});
+check("nothing to state: an agency chart, other sources, no metadata, a malformed partial year", () => {
+  assert.deepEqual(embedNotes({ source: "RTCI", agencyCount: 1, population: 380000 }), []);
+  assert.deepEqual(embedNotes({ source: "FBI SRS", agencyCount: 0, population: null }), []);
+  assert.deepEqual(embedNotes(null), []);
+  assert.deepEqual(embedNotes({ ...base, partialYear: { year: 2026, from: 9, to: 3 } }), []);
+});
+check("an earlier chart's metadata digest is unchanged; the new facts change it", () => {
+  const before = chartMetaDigestOf(base);
+  assert.equal(chartMetaDigestOf({ ...base }), before);
+  assert.notEqual(chartMetaDigestOf({ ...base, sampleAgencies: 547, samplePopulation: 116958827 }), before);
+  assert.notEqual(chartMetaDigestOf({ ...base, sampleAgencies: 547, samplePopulation: 1 }), chartMetaDigestOf({ ...base, sampleAgencies: 547, samplePopulation: 2 }));
+  assert.notEqual(chartMetaDigestOf({ ...base, partialYear: { year: 2026, from: 1, to: 8 } }), chartMetaDigestOf({ ...base, partialYear: { year: 2026, from: 1, to: 7 } }));
+});
+
+check("the notes are drawn inside the chart panel (so a copied or saved image keeps them), and only when the answer has them", async () => {
+  const React = (await import("react")).default;
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const ChartPanel = (await import("../components/ChartPanel")).default;
+  const rows = [{ period: "2026-07", value: 6253 }, { period: "2026-08", value: 6158 }];
+  const config = { type: "line", xAxis: "period", yAxis: ["value"], title: "Murders Rolling Over 12 Months (National Sample), January 2018 - August 2026" };
+  const meta = { ...base, sampleAgencies: 547, samplePopulation: 116958827, partialYear: { year: 2026, from: 1, to: 8 } };
+  const out = renderToStaticMarkup(React.createElement(ChartPanel, { config, rows, meta } as never));
+  const notes = [...out.matchAll(/data-chart-note="1"[^>]*>([^<]*)</g)].map((m) => m[1]);
+  assert.deepEqual(notes, ["Sample of 547 agencies covering 117.0 million population.", "2026 covers data from January to August."]);
+  assert.ok(out.indexOf("Source:") < out.indexOf("Sample of 547"), "the notes follow the source line");
+  const plain = renderToStaticMarkup(React.createElement(ChartPanel, { config, rows, meta: base } as never));
+  assert.doesNotMatch(plain, /data-chart-note/);
+});
+
+check("Codex PR #55: the chart box reserves the notes' height, so the plot keeps its 150 px minimum", async () => {
+  const { chartBoxMinHeight } = await import("../lib/chart-layout");
+  const rows = Array.from({ length: 24 }, (_, k) => ({ period: `2025-${String((k % 12) + 1).padStart(2, "0")}`, value: k }));
+  const config = { type: "line", xAxis: "period", yAxis: ["value"], title: "Murders Rolling Over 12 Months (National Sample), January 2018 - August 2026" };
+  const notes = embedNotes({ ...base, sampleAgencies: 547, samplePopulation: 116958827, partialYear: { year: 2026, from: 1, to: 8 } });
+  const without = chartBoxMinHeight(config, rows);
+  assert.equal(chartBoxMinHeight(config, rows, []), without, "no notes: unchanged");
+  assert.equal(chartBoxMinHeight(config, rows, notes), without + 2 * 16, "two short notes: two 16 px lines");
+  assert.equal(chartBoxMinHeight(config, rows, ["x".repeat(65)]), without + 2 * 16, "a note that wraps reserves both lines");
+});
+
+void Promise.all(pending).then(() => {
+  console.log(`\nembed notes: ${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+});

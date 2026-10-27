@@ -18,9 +18,11 @@ export type PivotedChartData = {
  * after everything else in the box takes its space: the title (estimated at the narrow width, about 24 characters per
  * 22 px line), the legend (about 3 series per row), the x-axis (120 px for angled category labels, 34 px for time),
  * the chart margins and the source footer. Never below the previous 280 px floor.
+ * Codex PR #55: the chart's own notes under the source line (lib/embed-notes chartNotes) are reserved too, about 64
+ * characters per 16 px line at the narrow width.
  */
 export const MIN_PLOT_HEIGHT = 150;
-export function chartBoxMinHeight(config: { type: string; xAxis: string; yAxis: string[]; title?: string }, rows: Record<string, unknown>[]): number {
+export function chartBoxMinHeight(config: { type: string; xAxis: string; yAxis: string[]; title?: string }, rows: Record<string, unknown>[], notes: string[] = []): number {
   if (config.type === "none" || config.type === "pie") return 280;
   const titleLines = config.title ? Math.ceil(config.title.length / 24) : 0;
   const hasYearMonth = rows.length > 0 && "year" in rows[0] && "month" in rows[0];
@@ -30,7 +32,8 @@ export function chartBoxMinHeight(config: { type: string; xAxis: string; yAxis: 
   const sample = rows.slice(0, 5).map((r) => String(r[config.xAxis] ?? ""));
   const timeAxis = hasYearMonth || (sample.length > 0 && sample.every((v) => /^\d{4}(?:-\d{2}|\d{2})?$/.test(v)));
   const xAxis = config.type === "scatter" ? 50 : timeAxis ? 34 : 120;
-  return Math.max(280, titleLines * 22 + 8 + legendRows * 20 + 8 + xAxis + MIN_PLOT_HEIGHT + 28 + 24);
+  const noteLines = notes.reduce((n, t) => n + Math.ceil(t.length / 64), 0);
+  return Math.max(280, titleLines * 22 + 8 + legendRows * 20 + 8 + xAxis + MIN_PLOT_HEIGHT + 28 + 24 + noteLines * 16);
 }
 
 const CHART_METADATA_KEY = /^(?:note|notes|data_type|shr_status|shr_records|shr_coverage_caveat|coverage_status|coverage_caveat)$|_note$|_caveat$/i;

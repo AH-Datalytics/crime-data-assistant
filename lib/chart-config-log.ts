@@ -101,6 +101,9 @@ export function chartMetaDigestOf(chartMeta: ChartMeta | null | undefined): stri
     typeof chartMeta.source === "string" ? chartMeta.source : null,
     typeof chartMeta.agencyCount === "number" ? chartMeta.agencyCount : null,
     typeof chartMeta.population === "number" ? chartMeta.population : null,
+    // Owner 2026-10-26: the embed notes' facts are bound too, only when present (older digests are unchanged).
+    ...(typeof chartMeta.sampleAgencies === "number" ? [`sample:${chartMeta.sampleAgencies}:${typeof chartMeta.samplePopulation === "number" ? chartMeta.samplePopulation : "null"}`] : []),
+    ...(chartMeta.partialYear ? [`partial:${chartMeta.partialYear.year}:${chartMeta.partialYear.from}:${chartMeta.partialYear.to}`] : []),
   ]);
 }
 

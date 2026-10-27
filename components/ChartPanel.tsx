@@ -32,6 +32,7 @@ import {
   uniqueCategoryLabels,
 } from "@/lib/chart-layout";
 import { useChartRenderReceipt } from "./useChartRenderReceipt";
+import { chartNotes } from "@/lib/embed-notes";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -787,6 +788,13 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               </>
             )}
           </div>
+          {/* Owner 2026-10-26: the sample and a partial last year are stated in the chart itself, so they stay with a
+              copied or saved image (and an embedded chart), which carry no answer text. */}
+          {chartNotes(meta).map((n) => (
+            <div key={n} data-chart-note="1" style={{ color: "#5a6a7a", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", fontSize: "11px", letterSpacing: "0.2px" }}>
+              {n}
+            </div>
+          ))}
         </div>
       </div>
     );

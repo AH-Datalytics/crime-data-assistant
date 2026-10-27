@@ -59,6 +59,8 @@ function idColumnNeeded(col: string, columns: string[], rows: Record<string, unk
 interface DataTableProps {
   /** The answer's title: a constant it already states (e.g. the place) is not restated above the table. */
   title?: string;
+  /** Owner 2026-10-26: a table shown without a chart gets the chart-style title above it (single-number answers). */
+  heading?: string;
   /** Plain headers for technical column names, from the answer (display only). */
   columnLabels?: Record<string, string>;
   columns: string[];
@@ -70,7 +72,7 @@ interface DataTableProps {
   periodColumn?: string;
 }
 
-export default function DataTable({ columns: rawColumns, rows, truncated, fillHeight, title, columnLabels, partialPeriods, periodColumn }: DataTableProps) {
+export default function DataTable({ columns: rawColumns, rows, truncated, fillHeight, title, heading, columnLabels, partialPeriods, periodColumn }: DataTableProps) {
   // Round 1 W2: an ori column is hidden unless it is needed to tell rows apart.
   const allColumns = useMemo(
     () => rawColumns.filter((c) => !/^(?:ori|agency_ori)$/i.test(c) || idColumnNeeded(c, rawColumns, rows)),
@@ -78,7 +80,7 @@ export default function DataTable({ columns: rawColumns, rows, truncated, fillHe
   );
   // Table display hotfix (2026-10-22): empty columns are not shown, and a text column that is the same on every row is
   // stated once above the table instead of repeated on every row. The CSV export keeps every column.
-  const display = useMemo(() => tableDisplay(allColumns, rows, title ?? "", columnLabels ?? {}), [allColumns, rows, title, columnLabels]);
+  const display = useMemo(() => tableDisplay(allColumns, rows, title ?? heading ?? "", columnLabels ?? {}), [allColumns, rows, title, heading, columnLabels]);
   const columns = display.shown;
   const partialLabel = useMemo(() => new Map((partialPeriods ?? []).map((p) => [String(p.x), p.label] as const)), [partialPeriods]);
   const [sortCol, setSortCol] = useState<string | null>(null);
@@ -150,6 +152,15 @@ export default function DataTable({ columns: rawColumns, rows, truncated, fillHe
 
   return (
     <div className={fillHeight ? "flex flex-col flex-1 min-h-0" : ""}>
+      {heading && (
+        <div
+          className="text-[16px] sm:text-[20px] mb-2"
+          data-table-heading="1"
+          style={{ textAlign: "center", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", fontWeight: 800, color: "#1e2a35", padding: "8px 12px 0", overflowWrap: "break-word", wordBreak: "break-word" }}
+        >
+          {heading}
+        </div>
+      )}
       {display.constants.length > 0 && (
         <p className="mb-2 text-sm text-[var(--muted)]" data-table-constants="1">
           {display.constants.map((c) => `${formatHeader(c.column)}: ${/^(state|state_abbr)$/i.test(c.column) && /^[a-zA-Z]{2}$/.test(c.value) ? c.value.toUpperCase() : c.value}`).join("; ")}

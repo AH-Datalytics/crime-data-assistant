@@ -138,3 +138,15 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
   for (const c of shown) if (columnLabels[c] && !labels[c] && !/^(?:year|month|period)$/i.test(c)) labels[c] = columnLabels[c];
   return { shown, constants: stated.filter((c) => !(RECORD_STATUS.test(c.column) && c.value === "recorded")), labels, months: monthsOf(shown) };
 }
+
+/**
+ * Owner 2026-10-26 ("Place: Memphis, TN" above a single-number table): a one-row answer shown without a chart gets the
+ * answer's chart-style title above the table instead of the "Place:" line, only when that title names the row's place
+ * (so it can stand in for the line). Otherwise `undefined`: the table is unchanged.
+ */
+export function singleValueHeading(rows: Record<string, unknown>[], chartShown: boolean, answerTitle: string | undefined): string | undefined {
+  if (chartShown || rows.length !== 1 || !answerTitle) return undefined;
+  const place = rows[0].place;
+  if (typeof place !== "string" || place === "" || !answerTitle.includes(place)) return undefined;
+  return answerTitle;
+}

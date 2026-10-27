@@ -75,6 +75,11 @@ export interface ChartMeta {
   agencyCount: number;
   population: number | null;
   source?: string;
+  /** Owner 2026-10-26: a Current Trends sample answer's sample size and its population (null when not all on file). */
+  sampleAgencies?: number;
+  samplePopulation?: number | null;
+  /** Owner 2026-10-26: the answer's last year when the source covers only part of it (months 1-12). */
+  partialYear?: { year: number; from: number; to: number };
 }
 
 /**

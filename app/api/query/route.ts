@@ -2345,7 +2345,11 @@ async function handleQueryPost(req: NextRequest) {
         narrative: typedExplanation,
         db: typeDb,
       });
-      const typedChartMeta = { source: "RTCI", agencyCount: 0, population: null };
+      const typedChartMeta: ChartMeta = {
+        source: "RTCI", agencyCount: 0, population: null,
+        ...(compiled.sample ? { sampleAgencies: compiled.sample.agencies, samplePopulation: compiled.sample.population } : {}),
+        ...(compiled.partialYear ? { partialYear: compiled.partialYear } : {}),
+      };
       writeLog(question, compiled.sql, compiled.rows.length, null, ms, typedExplanation, tab, ["request-accounting", typeFamily], "deterministic", sessionId,
         serializeChartConfigForLog(compiled.chartConfig, compiled.columns, typedChartMeta), typedProof);
       const typedStream = new ReadableStream({
