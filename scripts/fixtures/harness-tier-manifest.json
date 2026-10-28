@@ -2412,6 +2412,15 @@
       "note": "NIBRS engine restructure: today's reader (request ledger + typed spec) adapted to plan-language plans; frozen release questions, forms and refusals; a stand-in place authority, no database, no model, no network"
     },
     {
+      "id": "test-answer-eval-cases",
+      "tier": "F",
+      "script": "scripts/test-answer-eval-cases.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Answer evaluation: the labeled interaction set (gold, replay and designed cases) is well formed; splits keep groups together; buttons answer clarifying cases; policy rows exist. No database, no model, no network"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",

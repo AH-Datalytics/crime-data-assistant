@@ -1,0 +1,4905 @@
+{
+ "version": 1,
+ "gold_set_sha256": "24e4d15068a343a0436995261937050e9324dece4cf140aa3274dd1f01f80c3b",
+ "cases": [
+  {
+   "id": "LS-001",
+   "group": "gold:GC-001",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-001"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "give me the share of all rape clearances that were prosecution declined in 2025 by state",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-002",
+   "group": "gold:GC-002",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-002"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "give me the share of all rape clearances that were prosecution declined in 2025",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-003",
+   "group": "gold:GC-003",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-003"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "what crime type and where had the highest share of offenses cleared because of prosecution being declined in 2025?",
+   "policy": [
+    "D01",
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-004",
+   "group": "gold:GC-004",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-004"
+   },
+   "tab": "nibrs",
+   "setup": [
+    {
+     "question": "Which states have the highest share of rapes cleared by exception in 2025?",
+     "tab": "nibrs"
+    }
+   ],
+   "question": "Now what about just the share that's prosecution declined",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-005",
+   "group": "gold:GC-005",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-005"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Can you provide the number or percentage of gun prosecutions per year over the last 20 years?",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-006",
+   "group": "gold:GC-006",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-006"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "conviction rates for murders in Houston",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-007",
+   "group": "gold:GC-007",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-007"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "how many offenders were sentenced to prison",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-008",
+   "group": "gold:GC-008",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-008"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "savannah police officers convicted of corruption related crimes from 1990 - 2024",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-009",
+   "group": "gold:GC-009",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-009"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Can you provide one bar per city with the race of defendants reflected in each bar?",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-010",
+   "group": "gold:GC-010",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-010"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Please show me a graph of the violent crime rate back to 1930 and also the U.S. prison population going back that far (or as far as possible)",
+   "policy": [
+    "D01",
+    "D04"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-011",
+   "group": "gold:GC-011",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-011"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "murders by zip code in Chicago",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-012",
+   "group": "gold:GC-012",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-012"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "crime by ZIP code in Chicago",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-013",
+   "group": "gold:GC-013",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-013"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "murders by neighborhood in Houston",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-014",
+   "group": "gold:GC-014",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-014"
+   },
+   "tab": "hate_crime",
+   "setup": [],
+   "question": "hate crimes by precinct in New York",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-015",
+   "group": "gold:GC-015",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-015"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Do you have data for Ward 4 in Washington DC",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-016",
+   "group": "gold:GC-016",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-016"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Provide current violent crime trends in Washington DC Ward 4",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-017",
+   "group": "gold:GC-017",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-017"
+   },
+   "tab": "hate_crime",
+   "setup": [],
+   "question": "What are the crime rates in San Antonio Texas in 78203 zip code",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-018",
+   "group": "gold:GC-018",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-018"
+   },
+   "tab": "historical",
+   "setup": [
+    {
+     "question": "What are the number of burglaries in Menlo Park, CA for the past 20 years?",
+     "tab": "historical"
+    }
+   ],
+   "question": "Show the same data for the Sharon Heights neighborhood of Menlo Park",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-019",
+   "group": "gold:GC-019",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-019"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "zip code 36832",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-020",
+   "group": "gold:GC-020",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-020"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Show me crimes in zip code 07040 from 1991 to the present",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-021",
+   "group": "gold:GC-021",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-021"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "How many murders were reported in Ward, AR in 2022?",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-022",
+   "group": "gold:GC-022",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-022"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Is there national crime data that includes the ZIP code where the crime occurred?",
+   "policy": [
+    "D02",
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-023",
+   "group": "gold:GC-023",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-023"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Murders per 100,000 Black residents in Detroit, 2023",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-024",
+   "group": "gold:GC-024",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-024"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Women's robbery victimization rate in Chicago",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-025",
+   "group": "gold:GC-025",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-025"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "what is the homicide victimization rate for women by year?",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-026",
+   "group": "gold:GC-026",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-026"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "arrest rate by race for robbery in Chicago",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-027",
+   "group": "gold:GC-027",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-027"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "murder rates by race and sex per 100000",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-028",
+   "group": "gold:GC-028",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-028"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Population by race and sex and rate per 100000",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-029",
+   "group": "gold:GC-029",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-029"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Please show me the juvenile crime rate over time, 2020-2025, in Minneapolis, MN.",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-030",
+   "group": "gold:GC-030",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-030"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "See trends for juvenile offenders for violent crimes per 100,000 population over time",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-031",
+   "group": "gold:GC-031",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-031"
+   },
+   "tab": "shr",
+   "setup": [
+    {
+     "question": "i want to know the counts of murder comited by blacks asians hispanics and white prople also seperated by sex for",
+     "tab": "shr"
+    },
+    {
+     "question": "i want recent data but if you want yyou can use 2000-2026 from america and no not victims like how likely is this or thyat group to commit murder",
+     "tab": "shr"
+    }
+   ],
+   "question": "i want ir in per capita seperated by race and sex",
+   "policy": [
+    "D03",
+    "D08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-032",
+   "group": "gold:GC-032",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-032"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-033",
+   "group": "gold:GC-033",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-033"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "What percentage of murder victims in Texas were male in 2023?",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-034",
+   "group": "gold:GC-034",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-034"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Share of murder victims with an unknown relationship by sex and year",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-035",
+   "group": "gold:GC-035",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-035"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "ratio of male to female homicide victims in philadelphia by year since 2010",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-036",
+   "group": "gold:GC-036",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-036"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault rate in White Plains, NY from 2021 to 2025",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-037",
+   "group": "gold:GC-037",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-037"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "What is the aggravated assault rate in White Plains, NY?",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-038",
+   "group": "gold:GC-038",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-038"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "what is the nationwide clearance rate for sex crimes in 2025",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-039",
+   "group": "gold:GC-039",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-039"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Show me the cities with the highest sexual assault rate per 100,000",
+   "policy": [
+    "D03",
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-040",
+   "group": "gold:GC-040",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-040"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "philadelphia murders per month 2017 to 2026",
+   "policy": [
+    "D04",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-041",
+   "group": "gold:GC-041",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-041"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "nyc murder per month 2020 to 2026",
+   "policy": [
+    "D04",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-042",
+   "group": "gold:GC-042",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-042"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "compare murders in Milwaukee and Chicago,2022 to 2026",
+   "policy": [
+    "D04",
+    "D06",
+    "D17"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-043",
+   "group": "gold:GC-043",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-043"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Houston vehicle burglaries by year and clearance status, 2018 to 2026",
+   "policy": [
+    "D04",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-044",
+   "group": "gold:GC-044",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-044"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Can I see murders by month in Boston from 2022 to 2026",
+   "policy": [
+    "D04",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-045",
+   "group": "gold:GC-045",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-045"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "How many murders did Kalamazoo, Michigan report in May 2026?",
+   "policy": [
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-046",
+   "group": "gold:GC-046",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-046"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Can I see the violent crime rate in New York City vs. Los Angeles, California since 1930?",
+   "policy": [
+    "D04",
+    "D11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-047",
+   "group": "gold:GC-047",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-047"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "NATIONWIDE VIOLENT CRIME FROM 1930-PRESENT",
+   "policy": [
+    "D04",
+    "D11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-048",
+   "group": "gold:GC-048",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-048"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "show murders per capita for the city of St. Louis city and the City of Chicago since 1950",
+   "policy": [
+    "D04"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-049",
+   "group": "gold:GC-049",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-049"
+   },
+   "tab": "nibrs",
+   "setup": [
+    {
+     "question": "NYPD shoplifting per month",
+     "tab": "nibrs"
+    }
+   ],
+   "question": "Add 2026",
+   "policy": [
+    "D06",
+    "D08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-050",
+   "group": "gold:GC-050",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-050"
+   },
+   "tab": "shr",
+   "setup": [
+    {
+     "question": "Show me which big cities had the highest share of firearm murders in 2024",
+     "tab": "shr"
+    }
+   ],
+   "question": "now give me 2026 so far",
+   "policy": [
+    "D06",
+    "D08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-051",
+   "group": "gold:GC-051",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-051"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "what months does 2026 include?",
+   "policy": [
+    "D06",
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-052",
+   "group": "gold:GC-052",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-052"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "what is seattle's 2026 per capita murder rate",
+   "policy": [
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-053",
+   "group": "gold:GC-053",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-053"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Allentown murder rate 2026",
+   "policy": [
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-054",
+   "group": "gold:GC-054",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-054"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "make a list of the 20 most populous cities and sort them by 2026 homicide rate",
+   "policy": [
+    "D05",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-055",
+   "group": "gold:GC-055",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-055"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Did violent crime decrease every year from 2023 to 2026?",
+   "policy": [
+    "D06",
+    "D17"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-056",
+   "group": "gold:GC-056",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-056"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "which city has the highest crime rate",
+   "policy": [
+    "D09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-057",
+   "group": "gold:GC-057",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-057"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "What jurisdictions had the highest murder rates in 2024?",
+   "policy": [
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-058",
+   "group": "gold:GC-058",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-058"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Using 2023 data, which cities in Louisiana had the highest violent crime rate",
+   "policy": [
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-059",
+   "group": "gold:GC-059",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-059"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "top 10 us cities by homicide rate in 2021",
+   "policy": [
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-060",
+   "group": "gold:GC-060",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-060"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Homicide rate for top 100 U.S. cities in 2026",
+   "policy": [
+    "D05",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-061",
+   "group": "gold:GC-061",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-061"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Which 10 cities (min 30 murders) had the highest share via firearm in 2025?",
+   "policy": [
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-062",
+   "group": "gold:GC-062",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-062"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Top 10 cities of 250,000 people or more by shoplifting rate in 2025",
+   "policy": [
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-063",
+   "group": "gold:GC-063",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-063"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "which cities in Texas (min 250k) had the highest rate of carjackings in 2025?",
+   "policy": [
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-064",
+   "group": "gold:GC-064",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-064"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "What cities over 100k population have highest homicide rates currently",
+   "policy": [
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-065",
+   "group": "gold:GC-065",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-065"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Which violent crime saw the greatest decrease in Chicago in 2025?",
+   "policy": [
+    "D07"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-066",
+   "group": "gold:GC-066",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-066"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "which sates have the greatest decrease 12  month rolling june 2019 to 12 month rolling june 2026",
+   "policy": [
+    "D07",
+    "D17"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-067",
+   "group": "gold:GC-067",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-067"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Are there any large cities where car thefts did not increase in the early 2020's?",
+   "policy": [
+    "D07"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-068",
+   "group": "gold:GC-068",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-068"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "How much did murders increase bv year-over-year from 2019 to 2020",
+   "policy": [
+    "D07"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-069",
+   "group": "gold:GC-069",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-069"
+   },
+   "tab": "hate_crime",
+   "setup": [],
+   "question": "Is the increase since 2015 more crime or more reporting?",
+   "policy": [
+    "D07",
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-070",
+   "group": "gold:GC-070",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-070"
+   },
+   "tab": "current",
+   "setup": [
+    {
+     "question": "Can I see murders rolling over 12 months nationally, 2018 to present?",
+     "tab": "current"
+    },
+    {
+     "question": "show me by per capita",
+     "tab": "current"
+    },
+    {
+     "question": "show seattle for 20206",
+     "tab": "current"
+    },
+    {
+     "question": "range",
+     "tab": "current"
+    },
+    {
+     "question": "do for nyc",
+     "tab": "current"
+    }
+   ],
+   "question": "now detroit",
+   "policy": [
+    "D08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-071",
+   "group": "gold:GC-071",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-071"
+   },
+   "tab": "historical",
+   "setup": [
+    {
+     "question": "murders in Houston since 2010",
+     "tab": "historical"
+    }
+   ],
+   "question": "What about Dallas?",
+   "policy": [
+    "D08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-072",
+   "group": "gold:GC-072",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-072"
+   },
+   "tab": "historical",
+   "setup": [
+    {
+     "question": "show me property crime per capita over the last decade for the cities in Santa Clara County, California",
+     "tab": "historical"
+    },
+    {
+     "question": "separate it by city",
+     "tab": "historical"
+    },
+    {
+     "question": "make each city a different color",
+     "tab": "historical"
+    }
+   ],
+   "question": "make it quarterly rather than annually",
+   "policy": [
+    "D08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-073",
+   "group": "gold:GC-073",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-073"
+   },
+   "tab": "nibrs",
+   "setup": [
+    {
+     "question": "Give me the number of murder clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
+     "tab": "nibrs"
+    }
+   ],
+   "question": "now do it for 2024",
+   "policy": [
+    "D08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-074",
+   "group": "gold:GC-075",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-075"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "What is the most prevalent crime in Lewis County, Missouri?",
+   "policy": [
+    "D09",
+    "D10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-075",
+   "group": "gold:GC-076",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-076"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "total crime last 10 years broken down by vilont vs nonvilont",
+   "policy": [
+    "D09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-076",
+   "group": "gold:GC-077",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-077"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "crime in Cook County Illinois",
+   "policy": [
+    "D09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-077",
+   "group": "gold:GC-078",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-078"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Trends in crime in Mesa, Arizona, since 2017",
+   "policy": [
+    "D09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-078",
+   "group": "gold:GC-079",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-079"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "which areas in westmoreland county have the highest rates of overall crime",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-079",
+   "group": "gold:GC-080",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-080"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "number of homicides in baldwin county al in 2025",
+   "policy": [
+    "D10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-080",
+   "group": "gold:GC-081",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-081"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "what is the percent cleared of auto theft arrests in Essex County, New Jersey in 2022",
+   "policy": [
+    "D10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-081",
+   "group": "gold:GC-082",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-082"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "what are the clearance rates by county in massachusetts",
+   "policy": [
+    "D10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-082",
+   "group": "gold:GC-083",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-083"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me murders, robberies, and aggravated assaults for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025",
+   "policy": [
+    "D10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-083",
+   "group": "gold:GC-084",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-084"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me violent crimes by offender age for worcester county, md sheriff's office and pocomoke city, md police department",
+   "policy": [
+    "D10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-084",
+   "group": "gold:GC-085",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-085"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "national, sexual assault, 2010-2024",
+   "policy": [
+    "D11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-085",
+   "group": "gold:GC-086",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-086"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "find me FBI crime data from 2020 through 2025 for total violent crime, murder, rape, robbery, aggrevated assault and total property crime, burglary, theft, moter vehicle theft",
+   "policy": [
+    "D11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-086",
+   "group": "gold:GC-087",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-087"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "rape clearance rate nationwide in 2025",
+   "policy": [
+    "D11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-087",
+   "group": "gold:GC-088",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-088"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "violent crime rate per year and state since 1960",
+   "policy": [
+    "D04",
+    "D11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-088",
+   "group": "gold:GC-089",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-089"
+   },
+   "tab": "nibrs",
+   "setup": [
+    {
+     "question": "Does NIBRS data have location codes like gambling parlors and convenience stores? I want to calculate the number of robberies that occur at those different locations by year",
+     "tab": "nibrs"
+    },
+    {
+     "question": "This is not even close, do Commercial robberies broken down by location type",
+     "tab": "nibrs"
+    }
+   ],
+   "question": "OK just do it for 2022, why are the location codes not all filled in?",
+   "policy": [
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-089",
+   "group": "gold:GC-090",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-090"
+   },
+   "tab": "current",
+   "setup": [
+    {
+     "question": "Give me an overview for trends in Iowa City, Iowa.",
+     "tab": "current"
+    }
+   ],
+   "question": "Why are there no trend lines in the chart?",
+   "policy": [
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-090",
+   "group": "gold:GC-091",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-091"
+   },
+   "tab": "nibrs",
+   "setup": [
+    {
+     "question": "Murders for top 10 police agencies from 2010 to present",
+     "tab": "nibrs"
+    }
+   ],
+   "question": "Why are murders the same for all of these cities?",
+   "policy": [
+    "D12",
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-091",
+   "group": "gold:GC-092",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-092"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Why is cybercrime not included when we say \"crime\"?",
+   "policy": [
+    "D12",
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-092",
+   "group": "gold:GC-093",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-093"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Why has crime dropped recently? My understanding of the consensus is that we basically don't know. There has been a nationwide drop in violent crime, but there are some regional or city-specific patterns. I'd like a comprehensive list of reasonable theories that have evidence. No need to be \"politically correct\" about it, but I also don't want theories that are not supported by at least some academics. There are social desirability biases in academia that I'm aware may be clouding the picture. I'm also not only interested in government-sponsored strategies, because to some extent the issue might be out of the hands of government control.",
+   "policy": [
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-093",
+   "group": "gold:GC-094",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-094"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Why do people commit crime?",
+   "policy": [
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-094",
+   "group": "gold:GC-095",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-095"
+   },
+   "tab": "historical",
+   "setup": [
+    {
+     "question": "Chicago officers per year, 1930–2026",
+     "tab": "historical"
+    }
+   ],
+   "question": "why the increase?",
+   "policy": [
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-095",
+   "group": "gold:GC-096",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-096"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Is there evidence for why an increase in 2025",
+   "policy": [
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-096",
+   "group": "gold:GC-097",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-097"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Which state has the highest murder rate?",
+   "policy": [
+    "D05",
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-097",
+   "group": "gold:GC-098",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-098"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Compare the total annual number of homicides in Baltimore and Chicago over the past 10 years",
+   "policy": [
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-098",
+   "group": "gold:GC-099",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-099"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "How has violent crime changed in the last year in Washington D.C.?",
+   "policy": [
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-099",
+   "group": "gold:GC-100",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-100"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "How does Chicago murder count compare to Illinois statewide?",
+   "policy": [
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-100",
+   "group": "gold:GC-101",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-101"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show rolling 12-month totals by age group by month from December 2022 to December 2025",
+   "policy": [
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-101",
+   "group": "gold:GC-102",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-102"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "immigrant homicide victims",
+   "policy": [
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-102",
+   "group": "gold:GC-103",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-103"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "nonfatal shootings in baltimore city by month",
+   "policy": [
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-103",
+   "group": "gold:GC-104",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-104"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Nonfatal shooting rates in baltimore city from 2022 to 2025.",
+   "policy": [
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-104",
+   "group": "gold:GC-105",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-105"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "How many non-fatal shootings has Aurora, Colorado has in 2026?",
+   "policy": [
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-105",
+   "group": "gold:GC-106",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-106"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Number of overdose deaths in NJ since 1990",
+   "policy": [
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-106",
+   "group": "gold:GC-107",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-107"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "memphis fatal shootings",
+   "policy": [
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-107",
+   "group": "gold:GC-108",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-108"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Birmingham, Alabama, fatal shootings through July of each year",
+   "policy": [
+    "D06",
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-108",
+   "group": "gold:GC-109",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-109"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "median age of fatal shooting victims per year",
+   "policy": [
+    "D03",
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-109",
+   "group": "gold:GC-110",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-110"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "shootings in Chicago since 2015",
+   "policy": [
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-110",
+   "group": "gold:GC-111",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-111"
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "people shot in Dallas",
+   "policy": [
+    "D14"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-111",
+   "group": "gold:GC-112",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-112"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me nationwide violent crimes involving use of a gun by offender age by year for consistent reporters for 2018 to 2025",
+   "policy": [
+    "D13",
+    "D15"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-112",
+   "group": "gold:GC-113",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-113"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me gun crimes by offender age by year for 2017 to 2025 for consistent reporters",
+   "policy": [
+    "D13",
+    "D15"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-113",
+   "group": "gold:GC-114",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-114"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many arrests each year in the united states?",
+   "policy": [
+    "D13",
+    "D15"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-114",
+   "group": "gold:GC-115",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-115"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.",
+   "policy": [
+    "D16"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-115",
+   "group": "gold:GC-116",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-116"
+   },
+   "tab": "nibrs",
+   "setup": [
+    {
+     "question": "Compare the rape clearance rate for the San Francisco Police Department against 3 agencies of similar size.",
+     "tab": "nibrs"
+    }
+   ],
+   "question": "Add San Francisco PD to the table and increase to 8 comparable agencies.",
+   "policy": [
+    "D08",
+    "D16"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-116",
+   "group": "gold:GC-117",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-117"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "compare crime trends in San Francisco per 100k to similar sized cities",
+   "policy": [
+    "D09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-117",
+   "group": "gold:GC-118",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-118"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "How does Philadelphia'homicide decline compare to the national average and peer city average?",
+   "policy": [
+    "D07",
+    "D16"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-118",
+   "group": "gold:GC-119",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-119"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "how does the clearance rate for violent crime in albuquerque compare to the national average and other comparable cities",
+   "policy": [
+    "D16"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-119",
+   "group": "gold:GC-120",
+   "split": "dev",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-120"
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "murder rate in Washington since 2010",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-120",
+   "group": "gold:GC-121",
+   "split": "heldout",
+   "origin": {
+    "kind": "gold",
+    "ref": "GC-121"
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "How many murders did Flagstaff, Arizona report in May 2026?",
+   "policy": [
+    "D13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-121",
+   "group": "replay:8853",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8853"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "what share of serious violent crimes in California are committed by youth under 18?",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-122",
+   "group": "replay:10592",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10592"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show nationwide homicides by offender age for consistent reporters by year for 2021 to 2025",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-123",
+   "group": "replay:8927",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8927"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Why are murders the same for all of these cities?",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-124",
+   "group": "replay:9226",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9226"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Narcotics possession or distribution arrests in tolleson Arizona in 2025",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-125",
+   "group": "replay:9663",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9663"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Compare the rape clearance rate for the Denver Police Department against 3 agencies of similar size.",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-126",
+   "group": "replay:9565",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9565"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me violent crimes with a firearm by offender age by year for the state of maine",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-127",
+   "group": "replay:8964",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8964"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "number of school aggravated assaults with a firearm",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-128",
+   "group": "replay:10106",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10106"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Show me the states wit the highest share of rapes that were cleared by exception in 2025 broken down by the type of exceptional clearance",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-129",
+   "group": "replay:10121",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10121"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Give me the 2025 murder clearance rate for Chicago Illinois, Los Angeles city California, Austin Texas, Columbus Ohio, Charlotte North Carolina, Nashville Tennessee, and St. Louis city",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-130",
+   "group": "replay:9235",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9235"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "what was the population of NIBRS participating agencies per year?",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-131",
+   "group": "replay:8978",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8978"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Minnesota clearance rate for murders of black victims and white victims",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-132",
+   "group": "replay:8997",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8997"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show be violent crime victims by race",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-133",
+   "group": "replay:8990",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8990"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "please show the violent crime rate by race",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-134",
+   "group": "replay:9318",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9318"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me violent crimes by state by year for 2019 to 2025 for consistent reporters",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-135",
+   "group": "replay:9204",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9204"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Posession or distribution of narcotics arrests in 2025 In Tucson az. Please provide total",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-136",
+   "group": "replay:9664",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9664"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Increase to 4 comparable agencies.",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-137",
+   "group": "replay:9101",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9101"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "dataset of Property Crime Rolling Over 12 Months Jan 2018 - Jun 2026 in texas",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-138",
+   "group": "replay:9305",
+   "split": "heldout",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9305"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me violent crime in maryland by arrestee age by month for 2022 to 2026",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-139",
+   "group": "replay:8731",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8731"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "generate graphs of crime rates for homicide, robbery, property crime, motor vehicle theft, and violent crime, for every state, with California in black and all others in half-transparent red. So that's six graphs, each with 49 red lines and one black (or 50 or 51 if DC/PR are included, whatever). Data should be normalized such that it's decline since 2024 (start of? Idk how granular the data is), so first point is zero for all.",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-140",
+   "group": "replay:10007",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10007"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "St Louis carjackings per month",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-141",
+   "group": "replay:8830",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8830"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "crime by ZIP code in Chicago",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-142",
+   "group": "replay:9903",
+   "split": "heldout",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9903"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show the shoplifting rate since 2010 by race of offender",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-143",
+   "group": "replay:10510",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10510"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Virginia murder clearances by Exception in 2025 by type",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-144",
+   "group": "replay:9590",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9590"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "montgomery county maryland all crime",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-145",
+   "group": "replay:8950",
+   "split": "heldout",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8950"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me gun crimes by offender age by year for 2017 to 2025 for consistent reporters",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-146",
+   "group": "replay:9202",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9202"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Posession or distribution of narcotics arrests in 2025 in Yuma Az",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-147",
+   "group": "replay:8954",
+   "split": "heldout",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8954"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Add San Francisco PD to the table and increase to 8 comparable agencies.",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-148",
+   "group": "replay:10500",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10500"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Share of rapes cleared by exception by type and state in 2025",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-149",
+   "group": "replay:9946",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9946"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "homicides in fairfax county viriginia in 2025",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-150",
+   "group": "replay:8747",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:8747"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "houston vehicle burglaries by month by clearance status",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-151",
+   "group": "replay:9898",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9898"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplfting in baltimore per month, 2021-2025",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-152",
+   "group": "replay:10220",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10220"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Give me the number of clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-153",
+   "group": "replay:9648",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9648"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "2025 burglaries by location",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-154",
+   "group": "replay:10477",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:10477"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "What is the auto theft clearance rate in Omaha by year?",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-155",
+   "group": "replay:9276",
+   "split": "dev",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9276"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "show me violent crime involving use of a firearm by offender race by year for 2017 to 2025 for consistent reporters",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-156",
+   "group": "replay:9203",
+   "split": "heldout",
+   "origin": {
+    "kind": "replay",
+    "ref": "replay:9203"
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Posession or distribution of narcotics arrests in 2025 in Avondale Az",
+   "policy": [],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-157",
+   "group": "designed:src-chicago",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "How many murders were there in Chicago in 2024?",
+   "policy": [
+    "P01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-158",
+   "group": "designed:src-chicago",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Chicago murder count for 2024",
+   "policy": [
+    "P01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-159",
+   "group": "designed:src-hate",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "How many hate crimes against Jewish people were reported in New York in 2023?",
+   "policy": [
+    "P01",
+    "D24"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-160",
+   "group": "designed:src-weapons",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "What weapons were used in robberies in Atlanta in 2024?",
+   "policy": [
+    "P01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-161",
+   "group": "designed:src-ytd",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "How many murders has Dallas had so far this year?",
+   "policy": [
+    "P01",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-162",
+   "group": "designed:src-staff",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "How many police officers did Seattle have in 2022?",
+   "policy": [
+    "P01",
+    "D26"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-163",
+   "group": "designed:nat-cov",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many robberies were there in the US in 2015?",
+   "policy": [
+    "P02",
+    "P12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-164",
+   "group": "designed:nat-cov2",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Total rapes reported in California in 2018",
+   "policy": [
+    "P02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-165",
+   "group": "designed:trend-cohort",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How did aggravated assaults change in Texas from 2018 to 2024?",
+   "policy": [
+    "P03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-166",
+   "group": "designed:trend-cohort2",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Burglaries per year in Florida from 2019 to 2024",
+   "policy": [
+    "P03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-167",
+   "group": "designed:rank-partial",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Top 20 cities by murder rate in 2024",
+   "policy": [
+    "P04",
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-168",
+   "group": "designed:rank-partial2",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Which cities had the most motor vehicle thefts in 2023?",
+   "policy": [
+    "P04",
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-169",
+   "group": "designed:rank-year",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Which cities had the most murders?",
+   "policy": [
+    "P05",
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-170",
+   "group": "designed:noperiod",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murders in Houston",
+   "policy": [
+    "P06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-171",
+   "group": "designed:noperiod-trend",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murders in Houston over time",
+   "policy": [
+    "P06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-172",
+   "group": "designed:noperiod-hist",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Robberies in Phoenix",
+   "policy": [
+    "P06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-173",
+   "group": "designed:lastyear",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Burglaries in Texas last year",
+   "policy": [
+    "P07"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-174",
+   "group": "designed:lastyear-n",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Burglaries in Texas last year",
+   "policy": [
+    "P07"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-175",
+   "group": "designed:large-city",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Which large US city had the highest violent crime rate in 2023?",
+   "policy": [
+    "P08"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-176",
+   "group": "designed:assault",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many assaults were there in Phoenix in 2024?",
+   "policy": [
+    "P09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-177",
+   "group": "designed:assault-c",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "How many assaults were there in Phoenix in 2024?",
+   "policy": [
+    "P09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-178",
+   "group": "designed:homicide-shr",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "How many homicides were there in Memphis in 2023?",
+   "policy": [
+    "P10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-179",
+   "group": "designed:homicide-n",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many homicides were there in Memphis in 2023?",
+   "policy": [
+    "P10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-180",
+   "group": "designed:victims",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many theft victims were there in Ohio in 2024?",
+   "policy": [
+    "P11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-181",
+   "group": "designed:victims-off",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many thefts were there in Ohio in 2024?",
+   "policy": [
+    "P11",
+    "D18"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-182",
+   "group": "designed:noplace",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many murders were there in 2024?",
+   "policy": [
+    "P12",
+    "P02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-183",
+   "group": "designed:safest",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "What is the safest city in America?",
+   "policy": [
+    "P13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-184",
+   "group": "designed:safest",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Which US city is the most dangerous?",
+   "policy": [
+    "P13"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-185",
+   "group": "designed:span",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murders in Chicago from 1990 to 2024",
+   "policy": [
+    "P14",
+    "D04"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-186",
+   "group": "designed:rate-den",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "What was the robbery rate in Georgia in 2024?",
+   "policy": [
+    "P15"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-187",
+   "group": "designed:city-agency",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Crime in Las Vegas in 2024",
+   "policy": [
+    "P16",
+    "D09"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-188",
+   "group": "designed:city-agency2",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Violent crime in Las Vegas in 2024",
+   "policy": [
+    "P16"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-189",
+   "group": "designed:ties",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Top 10 cities by murders in 2024",
+   "policy": [
+    "P17",
+    "D05"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-190",
+   "group": "designed:state-clr",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "What was the burglary clearance rate in Ohio in 2023?",
+   "policy": [
+    "P18"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-191",
+   "group": "designed:fentanyl",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many fentanyl seizures were there in Ohio in 2024?",
+   "policy": [
+    "P19"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-192",
+   "group": "designed:forecast",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Will crime go up in Chicago next year?",
+   "policy": [
+    "P20"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-193",
+   "group": "designed:incident",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "What happened in the shooting on Main Street in Akron last Friday?",
+   "policy": [
+    "P21"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-194",
+   "group": "designed:future",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Burglaries in Denver in 2027",
+   "policy": [
+    "P24",
+    "D04"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-195",
+   "group": "designed:county",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Violent crime in Cook County, Illinois in 2022",
+   "policy": [
+    "D10"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-196",
+   "group": "designed:bare-crime",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Crime in Denver in 2024",
+   "policy": [
+    "D09",
+    "P22"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-197",
+   "group": "designed:why",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Why did murders rise in 2020?",
+   "policy": [
+    "D12"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-198",
+   "group": "designed:why-data",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Why is the 2026 murder count for Chicago lower than 2025's?",
+   "policy": [
+    "D12",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-199",
+   "group": "designed:neighborhood",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Crime in the Mission District of San Francisco",
+   "policy": [
+    "D02"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-200",
+   "group": "designed:demo-rate",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "What is the murder rate for Black victims in Chicago in 2024?",
+   "policy": [
+    "D03"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-201",
+   "group": "designed:court",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many robbery arrests in Georgia in 2024 led to convictions?",
+   "policy": [
+    "D01"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-202",
+   "group": "designed:shootings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Shootings in Chicago in 2024",
+   "policy": [
+    "D14",
+    "P22"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-203",
+   "group": "designed:peers",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "How does Austin's 2023 violent crime rate compare with similar cities?",
+   "policy": [
+    "D16"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-204",
+   "group": "designed:drug",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Drug crimes in Kentucky in 2024",
+   "policy": [
+    "D19"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-205",
+   "group": "designed:dv",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Domestic violence murders in Texas in 2023",
+   "policy": [
+    "D20"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-206",
+   "group": "designed:flashmob",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many flash mob shoplifting incidents were there in California in 2024?",
+   "policy": [
+    "D21"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-207",
+   "group": "designed:coverage",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "What share of Florida's population is covered by NIBRS reporting in 2024?",
+   "policy": [
+    "D22"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-208",
+   "group": "designed:propval",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "What was the value of stolen property in New York in 2021?",
+   "policy": [
+    "D23"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-209",
+   "group": "designed:hate-file",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "hate_crime",
+   "setup": [],
+   "question": "How many hate crimes were reported in Texas in 2023?",
+   "policy": [
+    "D24"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-210",
+   "group": "designed:staffing",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "How many police officers did Baltimore have in 2020?",
+   "policy": [
+    "D26"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-211",
+   "group": "designed:state-rtci",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Robberies in Ohio this year",
+   "policy": [
+    "D27",
+    "D06"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-212",
+   "group": "designed:change-rank",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Which states saw the biggest increase in murders from 2022 to 2024?",
+   "policy": [
+    "D07"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-213",
+   "group": "designed:rape-2013",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Rapes in the United States from 2010 to 2016",
+   "policy": [
+    "D11"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-214",
+   "group": "designed:conv-dallas",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [
+    {
+     "question": "Murders in Houston in 2024 by victim race",
+     "tab": "nibrs"
+    }
+   ],
+   "question": "What about Dallas?",
+   "policy": [
+    "P23"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-215",
+   "group": "designed:conv-year",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [
+    {
+     "question": "Robberies in Atlanta in 2023",
+     "tab": "current"
+    }
+   ],
+   "question": "And in 2024?",
+   "policy": [
+    "P23"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-216",
+   "group": "designed:bare-crime",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Crime in Denver in 2024",
+   "button": {
+    "answers": "LS-196",
+    "option": "Violent crime"
+   },
+   "policy": [
+    "D09",
+    "P22"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-217",
+   "group": "designed:shootings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "shr",
+   "setup": [],
+   "question": "Shootings in Chicago in 2024",
+   "button": {
+    "answers": "LS-202",
+    "option": "Fatal shootings"
+   },
+   "policy": [
+    "D14",
+    "P22"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  },
+  {
+   "id": "LS-218",
+   "group": "designed:safest",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "What is the safest city in America?",
+   "button": {
+    "answers": "LS-183",
+    "option": "Violent crime rate"
+   },
+   "policy": [
+    "P13",
+    "P22"
+   ],
+   "expected": null,
+   "label": {
+    "status": "unlabeled",
+    "drafted_by": null,
+    "reviewed_by": null,
+    "notes": ""
+   }
+  }
+ ]
+}
