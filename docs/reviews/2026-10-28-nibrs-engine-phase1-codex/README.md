@@ -25,3 +25,5 @@ Branch `nibrs-engine/phase1`.
 | 18 | Design note: other sources in the engine, r1 | 6023308 | REVISE (6) | d276b8f (r2) |
 | 19 | Design note, r2 | d276b8f | REVISE (1: staffing's all_total prerequisite) | ec8365a (r3) |
 | 20 | Design note, r3 | ec8365a | **ACCEPT** | |
+| 21 | Plan language G1, G2, G5 (R6), G8: no NIBRS answer changes (289 snapshots identical) | 965ae7f | **ACCEPT** | |
+| 22 | Design note: the owner's decisions (Historical scope, hate crimes source, RTCI state samples) | 5c83ff7 | **ACCEPT** | |
