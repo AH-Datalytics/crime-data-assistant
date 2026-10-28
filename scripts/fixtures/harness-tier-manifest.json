@@ -2376,6 +2376,24 @@
       "note": "NIBRS typed-chart hotfix: the real NIBRS POST handler on its own temporary fixture database (operation-taxonomy DDL plus a carjacking monthly seed and reporting evidence), model stubbed, network refused; plus the chart-layout pivot safeguards"
     },
     {
+      "id": "test-answer-columns",
+      "tier": "F",
+      "script": "scripts/test-answer-columns.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "answer contract: annotation columns dropped, groupings and measures kept, and the finalized answer equals the emitted one at the two proof-finalize choke points; no database, no model, no network"
+    },
+    {
+      "id": "test-chart-text",
+      "tier": "F",
+      "script": "scripts/test-chart-text.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "chart labels measured and wrapped, never cut: wrap, axis heights and widths with a fixed measure; no browser"
+    },
+    {
       "id": "test-nibrs-plan-language",
       "tier": "F",
       "script": "scripts/test-nibrs-plan-language.ts",

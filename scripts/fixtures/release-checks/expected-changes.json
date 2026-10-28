@@ -1,0 +1,9 @@
+{
+  "_comment": "Answer contract release (2026-10-28): the four frozen answers lose their note column and nothing else. Remove after this release.",
+  "changes": {
+    "O352": { "fields": ["columns", "rows"], "checker": "scripts/fixtures/release-checks/annotations-removed-O352.cjs" },
+    "H1": { "fields": ["columns", "rows"], "checker": "scripts/fixtures/release-checks/annotations-removed-H1.cjs" },
+    "H2": { "fields": ["columns", "rows"], "checker": "scripts/fixtures/release-checks/annotations-removed-H2.cjs" },
+    "H3": { "fields": ["columns", "rows"], "checker": "scripts/fixtures/release-checks/annotations-removed-H3.cjs" }
+  }
+}

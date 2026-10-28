@@ -8,6 +8,7 @@
  * raw-token, empty-period and reversed-range case declines by name.
  */
 import "./offline-evidence-guard";
+import { tableDisplay } from "../lib/table-display";
 import Database from "better-sqlite3";
 import { readFileSync } from "fs";
 import { accountHistoricalRequest } from "../lib/historical-request-accounting";
@@ -50,6 +51,9 @@ const POP: Record<string, Record<number, number>> = { TXFTW0000: { 2018: 900000,
 for (const [ori, ys] of Object.entries(POP)) for (const [y, p] of Object.entries(ys)) ins("historical_agency_population", { ori, year: Number(y), population: p });
 for (const y of span(2018, 2022)) ins("historical_agency_clearance", { ori: "TXFTW0000", year: y, murder_clr: y === 2019 ? null : 50 + (y - 2018), violent_clr: 40 });
 for (const y of span(2018, 2022)) ins("historical_staffing", { ori: "TXFTW0000", year: y, all_total: y === 2021 ? 0 : 2000, officer_total: y === 2019 ? null : 1500 + y - 2018, civilian_total: 400 });
+ins("historical_staffing", { ori: "TXARL0000", year: 2019, all_total: 900, officer_total: 600, civilian_total: 300 });
+ins("historical_staffing", { ori: "TXPLA0000", year: 2019, all_total: 1000, officer_total: null, civilian_total: null });
+ins("historical_staffing", { ori: "TXPLA0000", year: 2020, all_total: 1050, officer_total: 0, civilian_total: null });
 const SN: Record<string, number> = { Texas: 1, Ohio: 3, "United States": 9 };
 for (const [state, k] of Object.entries(SN)) for (const y of span(2018, 2022)) ins("historical_state_national", { state, year: y, population: 1000000 * k, murder: 100 * k + y - 2018, rape: 10 * k, robbery: y === 2019 && state === "Texas" ? null : 20 * k, aggravated_assault: 30 * k, burglary: 40 * k, theft: 50 * k, auto_theft: 60 * k, murder_rate: 3 + k + (y - 2018) / 10, rape_rate: 2, robbery_rate: y === 2019 && state === "Texas" ? null : 4, aggravated_assault_rate: 7, burglary_rate: 8, theft_rate: 9, auto_theft_rate: 10, total_offenses: 1, total_offenses_rate: 1 });
 for (const y of span(2018, 2022)) ins("national_clearance_rate", { year: y, murder_rate: y === 2021 ? null : 60 + y - 2018, violent_rate: 45 });
@@ -101,9 +105,35 @@ for (const [pw, ys] of periods) {
   const n = answer("national murder clearance rate from 2020 to 2022").c;
   check(Boolean(n && n.kind === "answer" && JSON.stringify(n.rows.map((r) => [r.year, r.value, r.note])) === JSON.stringify([[2020, 62, null], [2021, null, "no clearance figures"], [2022, 64, null]])), "H1 national clearance");
   const s = answer("sworn officers in Fort Worth, Texas from 2018 to 2021").c;
-  check(Boolean(s && s.kind === "answer" && JSON.stringify(s.rows.map((r) => [r.year, r.value, r.note])) === JSON.stringify([[2018, 1500, null], [2019, null, "only total employees reported"], [2020, 1502, null], [2021, null, "no staffing reported"]])), "H1 officers: no Employees* substitution");
+  // Owner 2026-10-28, "Go back to the older rule": a year with no officer count shows total employees, marked.
+  check(Boolean(s && s.kind === "answer" && JSON.stringify(s.rows.map((r) => [r.year, r.value, r.reported])) === JSON.stringify([[2018, 1500, "Officers"], [2019, 2000, "Employees"], [2020, 1502, "Officers"], [2021, null, null]])), "H1 officers: total employees in a year with no officer count, marked Employees");
+  check(Boolean(s && s.kind === "answer" && s.columns.includes("reported") && s.rows.every((r) => r.measure === "officers_or_employees") && /total employees/.test(s.explanation) && /Or Total Employees/.test(s.title)), "H1 officers: the measure, title and explanation name both counts");
   const p = answer("officers per 1,000 residents in Fort Worth, Texas in 2018").c;
   check(Boolean(p && p.kind === "answer" && p.rows[0].value === Math.round(1500 * 1000 / 900000 * 10) / 10), "H1 officers per 1,000");
+  const pe = answer("officers per 1,000 residents in Fort Worth, Texas in 2019").c;
+  check(Boolean(pe && pe.kind === "answer" && pe.rows[0].value === Math.round(2000 * 1000 / 910000 * 10) / 10 && pe.rows[0].reported === "Employees"), "H1 officers per 1,000 on an employees year: the rate of the figure shown");
+  check(Boolean(pe && pe.kind === "answer" && /per 1,000/i.test(pe.title) && /total employees/i.test(pe.title)), `a mixed rate title keeps its unit (${pe && pe.kind === "answer" ? pe.title : ""})`);
+  const cv = answer("civilian employees in Fort Worth, Texas from 2018 to 2020").c;
+  check(Boolean(cv && cv.kind === "answer" && !cv.columns.includes("reported") && cv.rows.every((r) => r.measure === "civilians")), "civilians are never substituted and carry no reported column");
+  const tot = answer("total sworn officers in Fort Worth, Texas from 2018 to 2020 combined").c;
+  check(Boolean(tot && tot.kind === "answer" && JSON.stringify(tot.rows.map((r) => [r.period, r.value, r.reported])) === JSON.stringify([["2018", 1500, "Officers"], ["2019", 2000, "Employees"], ["2020", 1502, "Officers"]]) && /can't be added/.test(tot.explanation)), "an officers total over officer and employee years shows each year instead, marked");
+  const tot2 = answer("total sworn officers in Fort Worth, Texas from 2020 to 2022 combined").c;
+  check(Boolean(tot2 && tot2.kind === "answer" && tot2.rows.length === 1 && tot2.rows[0].value === 1502 + 1504 && tot2.rows[0].reported === "Officers"), "an officers total over like years is computed");
+  const tot3 = answer("total sworn officers in Plano, Texas from 2019 to 2020 combined").c;
+  check(Boolean(tot3 && tot3.kind === "answer" && tot3.rows[0].value === 1000 + 1050 && tot3.rows[0].measure === "employees" && /^Total Employees, /.test(tot3.title) && !/total total/i.test(tot3.explanation) && !/sworn officers/i.test(tot3.title)), "a total of employee years only is named total employees");
+  const ch = answer("change in sworn officers in Fort Worth, Texas from 2018 to 2019").c;
+  check(Boolean(ch && ch.kind === "answer" && ch.rows[0].change === null && ch.rows[0].reported === null && ch.rows[0].measure === "officers_then_employees" && ch.rows[0].earlier_value === 1500 && ch.rows[0].later_value === 2000 && ch.returnedEntities.length === 1), "a change across unlike figures is blank; the measure names each year's count; both figures count as delivered");
+  if (ch && ch.kind === "answer") {
+    const shown = tableDisplay(ch.columns, ch.rows, ch.title);
+    check(shown.labels.earlier_value === "Sworn officers" && shown.labels.later_value === "Total employees" && shown.shown.includes("earlier_value") && shown.shown.includes("later_value"),
+      `the table heads each figure with its own count (${shown.labels.earlier_value} / ${shown.labels.later_value})`);
+  }
+  const che = answer("change in sworn officers in Plano, Texas from 2019 to 2020").c;
+  check(Boolean(che && che.kind === "answer" && che.rows[0].change === 50 && che.rows[0].reported === "Employees" && che.rows[0].measure === "employees" && /total employees/.test(che.title.toLowerCase())), "a change between two employee years is named total employees");
+  const ch2 = answer("change in sworn officers in Fort Worth, Texas from 2018 to 2020").c;
+  check(Boolean(ch2 && ch2.kind === "answer" && ch2.rows[0].change === 2 && ch2.rows[0].reported === "Officers"), "a change across like figures is computed");
+  const rk = answer("top 3 cities in Texas by sworn officers in 2019").c;
+  check(Boolean(rk && rk.kind === "answer" && JSON.stringify(rk.rows.map((r) => [r.place, r.value, r.reported])) === JSON.stringify([["Fort Worth, TX", 2000, "Employees"], ["Plano, TX", 1000, "Employees"], ["Arlington, TX", 600, "Officers"]])), "a ranking selects total employees before sorting, marked");
 }
 // Period totals: summed in code, missing years named; all missing gives no total.
 {

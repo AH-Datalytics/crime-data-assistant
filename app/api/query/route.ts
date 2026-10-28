@@ -125,8 +125,7 @@ import {
   asOutcomeRecord,
   decisionFinalization,
   OPERATIONAL_RECORD,
-  type OutcomeLogRecord,
-} from "@/lib/proof-finalize";
+  type OutcomeLogRecord, annotationDropTagsFor, payloadDropTags } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import { readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity, withTypedHistoricalRapeNotes, typedCorrectionState, TYPED_STATE_CHANGED } from "@/lib/historical-national-rape";
@@ -634,7 +633,7 @@ async function handleQueryPost(req: NextRequest) {
     /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
     modelResponseJson: string | null = null
   ) => {
-    chartAuditQueryLogId = logQuery(q === question ? recordedQuestion : q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
+    chartAuditQueryLogId = logQuery(q === question ? recordedQuestion : q, sqlText, rowCount, logError, ms, logResponse, tabName, [...guardrails, ...annotationDropTagsFor(proof)], model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
     return chartAuditQueryLogId;
   };
 
@@ -723,7 +722,7 @@ async function handleQueryPost(req: NextRequest) {
         const cap = why.capture;
         const whyRows = Array.isArray(cap.payload.rows) ? (cap.payload.rows as unknown[]) : [];
         const whyProof = finalizeExit({ ...(cap.input as Partial<ProofFinalizationInput>), outcome: carriedOutcome<QueryLogOutcome>(cap.input), narrative: why.text });
-        writeLog(recordedQuestion, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, tab, why.tags, "deterministic", sessionId, null, whyProof);
+        writeLog(recordedQuestion, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, tab, [...why.tags, ...payloadDropTags(cap.payload)], "deterministic", sessionId, null, whyProof);
         const whyPayload = { ...cap.payload, type: "result" as const, explanation: why.text } as unknown as FactualStreamEvent;
         const whyStream = new ReadableStream({
           start(controller) {
@@ -1821,8 +1820,8 @@ async function handleQueryPost(req: NextRequest) {
       const proof = finalizeExit({
         outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: multiCityTrend.sql,
-        rows,
-        columns,
+        rows: deliveredRows,
+        columns: deliveredColumns,
         derivation: sealPlanDerivation(multiCityTrend.guardrail, multiCityTrend.sql),
         planFamily: multiCityTrend.guardrail,
         guardrails: [multiCityTrend.guardrail],
@@ -2247,7 +2246,10 @@ async function handleQueryPost(req: NextRequest) {
       if (typedState === "changed") return historicalAccountingExit({ parts: [], explanation: TYPED_STATE_CHANGED }, "question-type-compile");
       const typedExplanation = withTypedHistoricalRapeNotes(decision.explainLimitation ? `${compiled.explanation} ${decision.explainLimitation}` : compiled.explanation, compiled.deliveredSeries, typedState);
       const ms = Date.now() - totalStart;
-      const hasValue = compiled.rows.some((row) => ["value", "change", "percent_change"].some((c) => row[c] !== null && row[c] !== undefined));
+      // A change whose two figures are both delivered is an answer even when no difference is shown (a staffing change
+      // across an officer year and an employee year).
+      const hasValue = compiled.rows.some((row) => ["value", "change", "percent_change"].some((c) => row[c] !== null && row[c] !== undefined)
+        || (row.earlier_value !== null && row.earlier_value !== undefined && row.later_value !== null && row.later_value !== undefined));
       const typedProof = finalizeExit({
         outcome: hasValue ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: compiled.sql,
@@ -3646,8 +3648,8 @@ async function handleQueryPost(req: NextRequest) {
         const finalization = finalizeExit({
           outcome: OUTCOMES.model_sql_validated,
           sql,
-          rows,
-          columns,
+          rows: deliveredRows,
+          columns: deliveredColumns,
           truncated,
           planFamily: null,
           guardrails: firedGuardrails,
@@ -3763,8 +3765,8 @@ async function handleQueryPost(req: NextRequest) {
               outcome: OUTCOMES.model_sql_validated,
               question: guardrailQuestion,
               sql,
-              rows,
-              columns,
+              rows: deliveredRows,
+              columns: deliveredColumns,
               truncated,
               guardrails: firedGuardrails,
               returnedEntities: returnedEntityKeys(rows),
@@ -3841,8 +3843,8 @@ async function handleQueryPost(req: NextRequest) {
                 outcome: OUTCOMES.model_sql_validated,
                 question: guardrailQuestion,
                 sql,
-                rows,
-                columns,
+                rows: deliveredRows,
+                columns: deliveredColumns,
                 truncated,
                 guardrails: firedGuardrails,
                 returnedEntities: returnedEntityKeys(rows),

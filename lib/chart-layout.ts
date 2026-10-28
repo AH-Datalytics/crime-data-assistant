@@ -1,3 +1,5 @@
+import { LABEL_COLUMNS } from "./answer-columns";
+import { MAX_SLANTED_AXIS, estimateWidth, sideLabelWidth, sidewaysBandHeight, slantedAxisHeight } from "./chart-text";
 export const MAX_AUTO_CHART_SERIES = 16;
 
 export const DEFAULT_CHART_COLORS = [
@@ -33,7 +35,17 @@ export function chartBoxMinHeight(config: { type: string; xAxis: string; yAxis: 
   const timeAxis = hasYearMonth || (sample.length > 0 && sample.every((v) => /^\d{4}(?:-\d{2}|\d{2})?$/.test(v)));
   const xAxis = config.type === "scatter" ? 50 : timeAxis ? 34 : 120;
   const noteLines = notes.reduce((n, t) => n + Math.ceil(t.length / 64), 0);
-  return Math.max(280, titleLines * 22 + 8 + legendRows * 20 + 8 + xAxis + MIN_PLOT_HEIGHT + 28 + 24 + noteLines * 16);
+  const base = Math.max(280, titleLines * 22 + 8 + legendRows * 20 + 8 + xAxis + MIN_PLOT_HEIGHT + 28 + 24 + noteLines * 16);
+  // Owner item 3.1: category bars drawn sideways (labels too long to slant, or a phone width) take one band per label,
+  // as tall as the tallest wrapped label (Recharts gives every category the same band), estimated at the narrow 375 px width like the title. The box grows instead of the
+  // labels overlapping or the chart spilling out of it.
+  if ((config.type !== "bar" && config.type !== "stacked_bar") || timeAxis || rows.length === 0) return base;
+  const labels = rows.map((r) => String(r[config.xAxis] ?? ""));
+  const sidewaysAtNarrow = rows.length <= 8 || slantedAxisHeight(labels, estimateWidth) > MAX_SLANTED_AXIS;
+  if (!sidewaysAtNarrow) return base;
+  const labelWidth = sideLabelWidth(labels, 375, estimateWidth);
+  const bands = labels.length * sidewaysBandHeight(labels, labelWidth, estimateWidth);
+  return Math.max(base, titleLines * 22 + 8 + legendRows * 20 + 70 + bands + 24 + noteLines * 16);
 }
 
 const CHART_METADATA_KEY = /^(?:note|notes|data_type|shr_status|shr_records|shr_coverage_caveat|coverage_status|coverage_caveat)$|_note$|_caveat$/i;
@@ -72,7 +84,7 @@ export function detectAndPivotChartData(
   // Round 1 D3/D4: presentation metadata (row notes, coverage caveats and statuses) is never a series dimension, so a
   // partial-period note cannot split one series in two.
   const otherKeys = Object.keys(data[0]).filter(
-    (key) => key !== "_ym" && key !== xKey && key !== valueKey && !CHART_METADATA_KEY.test(key),
+    (key) => key !== "_ym" && key !== xKey && key !== valueKey && !CHART_METADATA_KEY.test(key) && !LABEL_COLUMNS.has(key),
   );
   let categoryKey: string | null = null;
   let categories: string[] = [];
@@ -102,11 +114,17 @@ export function detectAndPivotChartData(
     return { data, effectiveYKeys: yKeys, seriesOverflow: true };
   }
 
+  // A label column (staffing's `reported`) is kept per point: `<series>::<label column>` beside the series' value, so a
+  // tooltip still says which count each agency's figure is when two agencies differ in the same year.
+  const labels = [...LABEL_COLUMNS].filter((l) => l in data[0]);
   const pivot = new Map<unknown, Record<string, unknown>>();
   for (const row of data) {
     const x = row[xKey];
     if (!pivot.has(x)) pivot.set(x, { [xKey]: x });
-    pivot.get(x)![String(row[categoryKey] ?? "")] = row[valueKey];
+    const series = String(row[categoryKey] ?? "");
+    const out = pivot.get(x)!;
+    out[series] = row[valueKey];
+    for (const l of labels) out[`${series}::${l}`] = row[l];
   }
   return { data: [...pivot.values()], effectiveYKeys: categories, seriesOverflow: false };
 }

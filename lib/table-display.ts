@@ -42,6 +42,12 @@ const MEASURE_PLURAL: Record<string, string> = {
   carjacking: "carjackings", murder: "murders", robbery: "robberies", burglary: "burglaries", rape: "rapes",
   aggravated_assault: "aggravated assaults", motor_vehicle_theft: "motor vehicle thefts", theft: "thefts",
   larceny: "larcenies", arson: "arsons", shoplifting: "shoplifting offenses",
+  officers: "sworn officers", civilians: "civilian employees", employees: "total employees",
+  officers_or_employees: "sworn officers (total employees where marked)",
+};
+const STAFFING_PLURAL: Record<string, string> = {
+  officers: "sworn officers", civilians: "civilian employees", employees: "total employees",
+  officers_or_employees: "sworn officers (total employees where marked)",
 };
 
 /**
@@ -50,9 +56,14 @@ const MEASURE_PLURAL: Record<string, string> = {
  */
 function valueLabel(measure: string, unit: string | null, statistic: string | null): string | null {
   if (unit !== null && unit !== "offenses" && unit !== "victims") return null;
-  if (statistic !== null && statistic !== "count" && statistic !== "rate_per_100k") return null;
+  if (statistic !== null && statistic !== "count" && statistic !== "rate_per_100k" && statistic !== "per_1000" && statistic !== "per_100k") return null;
   const m = measure.toLowerCase();
   const words = m.replace(/_/g, " ");
+  // Staffing rates (Historical): the measure's own words and the denominator.
+  if (statistic === "per_1000" || statistic === "per_100k") {
+    if (!(m in STAFFING_PLURAL)) return null;
+    return cap(`${STAFFING_PLURAL[m]} per ${statistic === "per_1000" ? "1,000" : "100,000"} residents`);
+  }
   if (statistic === "rate_per_100k") return cap(`${unit === "victims" ? `${words} victim` : words} rate per 100k`);
   return cap(unit === "victims" ? `${words} victims` : MEASURE_PLURAL[m] ?? `${words} offenses`);
 }
@@ -120,6 +131,18 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
     else if (typeof unit === "string" && (statistic === null || statistic === "count")) {
       labels[valueCol] = `${measure.replace(/_/g, " ").replace(/^\w/, (ch) => ch.toUpperCase())} ${unit.replace(/_/g, " ")}`;
       for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c);
+    }
+  }
+  // Staffing changes (owner 2026-10-28): each figure column is headed by its own count, so an officer year and an
+  // employee year stay distinguishable on screen ("officers_then_employees": Sworn officers, then Total employees).
+  if (measure && shown.includes("earlier_value") && shown.includes("later_value") && statistic !== false) {
+    const pair = /^(officers|employees|civilians)_then_(officers|employees|civilians)$/.exec(measure);
+    const [a, b] = pair ? [pair[1], pair[2]] : measure in STAFFING_PLURAL ? [measure, measure] : [null, null];
+    if (a && b) {
+      const per = statistic === "per_1000" ? " per 1,000 residents" : statistic === "per_100k" ? " per 100,000 residents" : "";
+      labels.earlier_value = cap(`${STAFFING_PLURAL[a]}${per}`);
+      labels.later_value = cap(`${STAFFING_PLURAL[b]}${per}`);
+      absorbed.add("measure");
     }
   }
   // Only the place is left out for a displayed title that contains its whole label.

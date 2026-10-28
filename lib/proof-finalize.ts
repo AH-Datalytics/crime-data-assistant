@@ -60,6 +60,7 @@ import { buildQueryContract, type QueryContract, type QueryContractSource } from
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { narrativeDisclosesOmissions } from "./omission-wording";
 import { recordFinalization, recordEmission } from "./why-scope";
+import { annotationDropTags, projectAnswer, projectPayload } from "./answer-columns";
 import {
   omittedCandidatesFor,
   requestedEntitiesFromRequest,
@@ -387,10 +388,43 @@ function hypotheticalFor(intended: DeliveryAction, blocker: string | null): Deli
  * on every path including proof-off, so the outer "why" turn can finalize the composed answer from the same input.
  * Outside an inner run this records nothing.
  */
-export function finalizeProof(input: ProofFinalizationInput): ProofFinalization {
+export function finalizeProof(given: ProofFinalizationInput): ProofFinalization {
+  // The answer contract (lib/answer-columns.ts): proof checks and the digest see the answer the user is given.
+  const input = projectedInput(given);
   const finalization = finalizeProofPaths(input);
   recordFinalization(finalization, input);
+  if (pendingDrops.length) { annotationDrops.set(finalization, pendingDrops); pendingDrops = []; }
   return finalization;
+}
+
+function projectedInput(input: ProofFinalizationInput): ProofFinalizationInput {
+  const projected = projectAnswer(input.columns, input.rows);
+  if (projected.dropped.length) pendingDrops = projected.dropped;
+  return projected.columns === input.columns && projected.rows === input.rows ? input : { ...input, columns: projected.columns, rows: projected.rows };
+}
+
+/** The annotation columns each finalization's answer lost, for the request log's tags. */
+const annotationDrops = new WeakMap<ProofFinalization, string[]>();
+let pendingDrops: string[] = [];
+
+/**
+ * `answer-annotation-dropped:<name>` tags for the request log: which annotation columns the projection removed from
+ * this exit's answer. Empty when nothing was removed, or for an operational record.
+ */
+/**
+ * Drop tags for a payload about to be emitted, from its own columns and rows: for a "why" turn, whose outer
+ * finalization re-uses the inner capture's already-projected input (so its finalization recorded no drops) while the
+ * outer emission projects the captured, unprojected payload.
+ */
+export function payloadDropTags(payload: Record<string, unknown>): string[] {
+  const columns = Array.isArray(payload.columns) ? (payload.columns as string[]) : [];
+  const rows = Array.isArray(payload.rows) ? (payload.rows as Record<string, unknown>[]) : [];
+  return annotationDropTags(projectAnswer(columns, rows).dropped);
+}
+
+export function annotationDropTagsFor(proof: ProofFinalization | OutcomeLogRecord | null): string[] {
+  const f = decisionFinalization(proof);
+  return f ? annotationDropTags(annotationDrops.get(f) ?? []) : [];
 }
 
 function finalizeProofPaths(input: ProofFinalizationInput): ProofFinalization {
@@ -867,10 +901,16 @@ export function outcomeLogFields(
 export function emitFactualPayload<T>(finalization: ProofFinalization, payload: T): SealedPayload<T> {
   // Stage 3b (A1): an INNER run's emission is captured, paired with its finalization input; the outer turn delivers.
   recordEmission(finalization, payload);
-  if (!finalization.mayAlterDelivery) return payload as SealedPayload<T>;
+  // The capture keeps the unprojected payload: it is internal evidence (a "why" turn reads its notes), never
+  // delivered as is -- the outer turn re-emits through this function, which projects it.
+  // The answer contract (lib/answer-columns.ts): annotation columns never reach the user. The same pure projection
+  // runs on finalizeProof()'s input, so the delivered answer and the finalized one agree. A payload with nothing to
+  // drop is returned referentially identical, as before.
+  const delivered = projectPayload(payload);
+  if (!finalization.mayAlterDelivery) return delivered as SealedPayload<T>;
   // Stage 4 will substitute a clarify/decline payload here when `blocker` is
   // non-null. Until enforcement is approved by the owner, `mayAlterDelivery` is
   // false for every source and family, so this branch is unreachable in
   // production and intentionally returns the payload unchanged.
-  return payload as SealedPayload<T>;
+  return delivered as SealedPayload<T>;
 }

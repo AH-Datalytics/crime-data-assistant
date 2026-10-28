@@ -4,7 +4,7 @@
 // 6-digit check to Recharts' default ticks — overlapping labels every ~33 months.
 // Run: npx tsx scripts/test-chart-panel-ticks.ts
 import assert from "node:assert/strict";
-import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth, wrapCategoryLabel } from "../components/ChartPanel";
+import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth, wrapCategoryLabel, reportedLabel } from "../components/ChartPanel";
 import {
   formatNibrsMonthOnly,
   isNibrsYearMonth,
@@ -131,16 +131,17 @@ assert.deepEqual(
   assert.ok(r && r.ticks.some((v) => !Number.isInteger(v)) || (r && r.domain[1] <= 4), "rates may still use fractional steps");
 }
 
-// Owner 2026-10-25 ("the labels don't fit"): few-bar category labels wrap onto up to three whole-word lines.
+// Owner 2026-10-25 ("the labels don't fit") and item 3.1 ("cut at narrow widths"): category labels wrap by measured
+// width onto as many whole-word lines as they need, and are never cut. Outside a browser the width is estimated.
 {
   const c = "In custody of another jurisdiction (includes extradition denied)";
-  const lines = wrapCategoryLabel(c, 22);
-  assert.ok(lines.length <= 3 && lines.every((l) => l.length <= 22), lines.join(" | "));
-  assert.equal(lines.join(" "), c, "a label that fits in three lines is never cut");
-  assert.deepEqual(wrapCategoryLabel("Death of offender", 22), ["Death of offender"]);
-  const cut = wrapCategoryLabel("one two three four five six seven eight nine ten", 8);
-  assert.equal(cut.length, 3);
-  assert.ok(cut[2].endsWith("…"));
+  const lines = wrapCategoryLabel(c, 22 * 7.2);
+  assert.ok(lines.every((l) => l.length * 7.2 <= 22 * 7.2), lines.join(" | "));
+  assert.equal(lines.join(" "), c, "every word is kept");
+  assert.deepEqual(wrapCategoryLabel("Death of offender", 22 * 7.2), ["Death of offender"]);
+  const long = wrapCategoryLabel("one two three four five six seven eight nine ten", 8 * 7.2);
+  assert.equal(long.join(" "), "one two three four five six seven eight nine ten", "more than three lines: still not cut");
+  assert.ok(long.every((l) => !l.endsWith("…")), "no ellipsis");
 }
 
 // Dense or long-label pies use an internal legend instead of clipped labels.
@@ -149,3 +150,14 @@ assert.equal(shouldUsePieLegend([{ name: "A very long category label" }], "name"
 assert.equal(shouldUsePieLegend([{ name: "One" }, { name: "Two" }], "name"), false);
 
 console.log("chart panel tick tests passed");
+
+// Staffing (owner 2026-10-28): the tooltip names each point's count, looked up by the series' data key after a pivot.
+{
+  const pivoted = { year: 2019, "Fort Worth": 2000, "Fort Worth::reported": "Employees", Arlington: 600, "Arlington::reported": "Officers" };
+  assert.equal(reportedLabel(pivoted, "Fort Worth", "Fort Worth"), "Fort Worth (Employees)");
+  assert.equal(reportedLabel(pivoted, "Arlington", "Arlington"), "Arlington (Officers)");
+  const measurePivot = { year: 2019, officers_or_employees: 2000, "officers_or_employees::reported": "Employees" };
+  assert.equal(reportedLabel(measurePivot, "officers_or_employees", "Officers Or Employees"), "Officers Or Employees (Employees)", "display name formatted apart from the key");
+  assert.equal(reportedLabel({ year: 2019, value: 2000, reported: "Employees" }, "value", "Value"), "Employees");
+  assert.equal(reportedLabel({ year: 2019, value: 5 }, "value", "Value"), "Value", "no marker: the series name");
+}
