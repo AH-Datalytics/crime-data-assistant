@@ -47,14 +47,19 @@ function span(r: ResolvedPeriod): [string, string] {
 }
 
 export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: SemanticLayer, geo: GeographyResolver):
-  { problems: PlanProblem[]; period: ResolvedPeriod; combined?: { total: number; deduplicated: number } } {
+  { problems: PlanProblem[]; period: ResolvedPeriod; clippedTo?: string; combined?: { total: number; deduplicated: number } } {
   const problems: PlanProblem[] = [];
   const add = (rule: string, path: string, message: string) => problems.push({ rule, path, message });
   const period = resolvePeriod(plan.period, release);
-  const [from, to] = span(period);
+  const [from, asked] = span(period);
+  // A period running past the release's last month (a year still in progress) is answered through that month: it is
+  // clipped, and the clip is recorded (`clippedTo`, and the resolved period in provenance), never silent. A period
+  // starting after the release's last month, or before its first, is outside the release (R1).
+  const clippedTo = asked > release.lastMonth && from <= release.lastMonth ? release.lastMonth : undefined;
+  const to = clippedTo ?? asked;
 
   // R1: inside the release, and inside every measure's and dimension's era.
-  if (from < release.firstMonth || to > release.lastMonth) add("R1", "period", `${from}..${to} is outside the release (${release.firstMonth}..${release.lastMonth})`);
+  if (from < release.firstMonth || from > release.lastMonth) add("R1", "period", `${from}..${asked} is outside the release (${release.firstMonth}..${release.lastMonth})`);
   if (from > to) add("R1", "period", "the resolved period is empty");
   const y0 = Number(from.slice(0, 4)), y1 = Number(to.slice(0, 4));
   // The years actually selected: a noncontiguous period selects only its own years, never the ones between.
@@ -111,5 +116,5 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
   if (y0 !== y1 || (period.kind === "years" && period.years.length > 1)) {
     for (const r of ungroupedRates(plan)) add("R5", "statistics", `rate "${r}" spans ${from}..${to}: group by time.year or time.month`);
   }
-  return { problems, period, combined };
+  return { problems, period, ...(clippedTo ? { clippedTo } : {}), combined };
 }

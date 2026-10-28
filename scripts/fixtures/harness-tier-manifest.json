@@ -2385,6 +2385,15 @@
       "note": "NIBRS engine restructure, plan language v1: every example plan and reader outcome is valid, and each P/S/A/R validation rule refuses its case; an in-memory stand-in semantic layer and release, no database, no model, no network"
     },
     {
+      "id": "test-nibrs-plan-adapter",
+      "tier": "F",
+      "script": "scripts/test-nibrs-plan-adapter.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS engine restructure: today's reader (request ledger + typed spec) adapted to plan-language plans; frozen release questions, forms and refusals; a stand-in place authority, no database, no model, no network"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",

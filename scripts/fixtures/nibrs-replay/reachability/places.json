@@ -1,0 +1,23 @@
+{
+ "_comment": "STAND-IN place authority for the offline reachability measure only: each agency place the reader produced across the 605 questions, mapped to the largest-population City-type agency of that city and state in nibrs.db's agencies table (read 2026-10-28). At run time the route's resolver (resolveNibrsPlaces) supplies ORIs instead. Omaha, NE and Montgomery County, MD have no agencies row by that name here and stay unresolved.",
+ "city:Albuquerque:NM": {"ori": "NM0010100", "label": "Albuquerque Police Department, NM"},
+ "city:Allentown:PA": {"ori": "PA0390100", "label": "Allentown Police Department, PA"},
+ "city:Baltimore:MD": {"ori": "MDBPD0000", "label": "Baltimore Police Department, MD"},
+ "city:Bernalillo:NM": {"ori": "NM0230100", "label": "Bernalillo Police Department, NM"},
+ "city:Boston:MA": {"ori": "MA0130100", "label": "Boston Police Department, MA"},
+ "city:Chicago:IL": {"ori": "ILCPD0000", "label": "Chicago Police Department, IL"},
+ "city:Dallas:TX": {"ori": "TXDPD0000", "label": "Dallas Police Department, TX"},
+ "city:Denver:CO": {"ori": "CODPD0000", "label": "Denver Police Department, CO"},
+ "city:Fort Worth:TX": {"ori": "TX2201200", "label": "Fort Worth Police Department, TX"},
+ "city:Houston:TX": {"ori": "TXHPD0000", "label": "Houston Police Department, TX"},
+ "city:Manhattan:KS": {"ori": "KS0810100", "label": "Manhattan Police Department, KS"},
+ "city:Memphis:TN": {"ori": "TNMPD0000", "label": "Memphis Police Department, TN"},
+ "city:New York City:NY": {"ori": "NY0303000", "label": "New York City Police Department, NY"},
+ "city:Philadelphia:PA": {"ori": "PAPEP0000", "label": "Philadelphia Police Department, PA"},
+ "city:Richmond:VA": {"ori": "VA1220000", "label": "Richmond Police Department, VA"},
+ "city:San Antonio:TX": {"ori": "TXSPD0000", "label": "San Antonio Police Department, TX"},
+ "city:San Francisco:CA": {"ori": "CA0380100", "label": "San Francisco Police Department, CA"},
+ "city:Takoma Park:MD": {"ori": "MD0160600", "label": "Takoma Park Police Department, MD"},
+ "city:Washington:DC": {"ori": "DCMPD0000", "label": "Metropolitan Police Department, DC"},
+ "city:White Plains:NY": {"ori": "NY0590200", "label": "White Plains Police Department, NY"}
+}

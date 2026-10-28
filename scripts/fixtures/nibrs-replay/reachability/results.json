@@ -1,0 +1,4415 @@
+{
+ "_comment": "Built by scripts/nibrs-plan-reachability.ts; see summary.md.",
+ "rows": [
+  {
+   "id": 8701,
+   "origin": "unmatched",
+   "outcome_then": "unrecorded",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8702,
+   "origin": "unmatched",
+   "outcome_then": "unrecorded",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8706,
+   "origin": "unmatched",
+   "outcome_then": "unrecorded",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8708,
+   "origin": "unmatched",
+   "outcome_then": "unrecorded",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8731,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"decline\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8732,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8733,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8741,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:sql_shape_rejected",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"Rates\": rates are given for complete years, not for single months. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8745,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8747,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by month\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8748,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8749,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"no,\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"not\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 8750,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8751,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8769,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8771,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"historical\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"with felony all assault categories\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 8774,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8776,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"how\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"compared with\": comparisons are answered as named places side by side; ask for the places and the years. I haven't answered "
+  },
+  {
+   "id": 8779,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8791,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8792,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8795,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8818,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:share",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8819,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:share",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8820,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8821,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by exception\": a ranking of only part of an offense isn't built. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8822,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 8823,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8827,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8830,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8839,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8841,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8843,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"'s\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 8844,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8849,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8853,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "clarify",
+   "category": "clarify"
+  },
+  {
+   "id": 8857,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8858,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8859,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8864,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8870,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8871,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 8876,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8883,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8885,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8886,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8888,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8905,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8906,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 8908,
+   "origin": "internal",
+   "outcome_then": "decline_capability:sql_shape_rejected",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"by vilont\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"vs\": comparisons are answered as named places side by side; ask for the places and the years. I haven't answered with "
+  },
+  {
+   "id": 8915,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8916,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8919,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8921,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"have location codes like gambling parlors\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"convenience stores? I want to calculate the\" in this question, so I haven't ans"
+  },
+  {
+   "id": 8922,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8923,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8926,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8927,
+   "origin": "internal",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "decline",
+   "category": "decline_explanation_requested",
+   "detail": "I can't apply \"Why\": I report what NIBRS records; I can't explain causes. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8934,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8938,
+   "origin": "internal",
+   "outcome_then": "decline_capability:guardrail_block",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"totals\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out. I can't apply \"by month\": breakdowns come from yearly tables; monthly or rollin"
+  },
+  {
+   "id": 8949,
+   "origin": "internal",
+   "outcome_then": "operational",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8950,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8951,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8952,
+   "origin": "internal",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8953,
+   "origin": "internal",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8954,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"increase to 8 comparable agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8964,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"school\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 8978,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_invalid",
+   "rules": [
+    "A4"
+   ],
+   "detail": "A4 measures[0].unit: \"victims\": unit offense does not apply \"victims\" | A4 measures[0].unit: \"victims\": unit offense does not apply \"victims\""
+  },
+  {
+   "id": 8979,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8988,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 8989,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 8990,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "spec_unmapped",
+   "detail": "a breakdown of violent_crime by race: a mixed-unit composite has no single counted person"
+  },
+  {
+   "id": 8991,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 8992,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"show the\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 8993,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8994,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8995,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8996,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8997,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 8998,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:sql_shape_rejected",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"per year\": a share covers one period as a whole; ask for each year on its own. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 8999,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:sql_shape_rejected",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"where a\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9006,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9015,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"criminal\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"that covers\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"at "
+  },
+  {
+   "id": 9020,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9022,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9023,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9025,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9040,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9063,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I can't apply \"by state\": this answer type doesn't list every place. I haven't answered with a number that leaves it out. I couldn't interpret \"fro\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9083,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9085,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9086,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9091,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"for each different form of\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9094,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"dataset of\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"rolling over 12 months\" in this question, so I haven't answered it with a number that ignores it. I can't appl"
+  },
+  {
+   "id": 9096,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"for each different form of\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9101,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"2026\": one period per answer. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9111,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"types in\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9118,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9119,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9121,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"relationship between\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"evictions In\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9128,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"pinal code for\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"assult\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9132,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9133,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9134,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9135,
+   "origin": "unmatched",
+   "outcome_then": "operational",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9136,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9146,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9153,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9154,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"age\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9157,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9160,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9161,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9169,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9171,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9173,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9178,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9189,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"related to\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9190,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"citations in\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9191,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"kind of\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"citations are these?\" in this question, so I haven't answered it with a number that ignores it. I couldn't interp"
+  },
+  {
+   "id": 9192,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "I couldn't interpret \"Only posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't a"
+  },
+  {
+   "id": 9193,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9194,
+   "origin": "unmatched",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"avondale\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9195,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9196,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"for distribution or posession of\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9197,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9198,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9199,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9200,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9201,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9202,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "
+  },
+  {
+   "id": 9203,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "
+  },
+  {
+   "id": 9204,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "
+  },
+  {
+   "id": 9205,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "
+  },
+  {
+   "id": 9206,
+   "origin": "unmatched",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"glendale\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9207,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9208,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9209,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9210,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9211,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9212,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9213,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9214,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "
+  },
+  {
+   "id": 9215,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9216,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9217,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9218,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9219,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9220,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9221,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9222,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9223,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9224,
+   "origin": "unmatched",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"Prescott\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9225,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9226,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution\". I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9227,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9228,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9229,
+   "origin": "unmatched",
+   "outcome_then": "operational",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9230,
+   "origin": "unmatched",
+   "outcome_then": "operational",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9234,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9235,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9236,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"by case clearance status\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"race\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9243,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9261,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9262,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9263,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9264,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9265,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9266,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9267,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9268,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"race\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9269,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9270,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9271,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9272,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9273,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9274,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9275,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:sql_shape_rejected",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9276,
+   "origin": "unmatched",
+   "outcome_then": "operational",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9277,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9278,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9279,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9280,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9281,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9289,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9292,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"decline\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out. I can't apply \"decline\": I compare one measure for one place betwee"
+  },
+  {
+   "id": 9304,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by month\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9305,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"age\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9306,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9317,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9318,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9320,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"for all reporting\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9321,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9322,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9323,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9353,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9354,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9355,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9356,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9362,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9363,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9367,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9372,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9373,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:share",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9374,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:share",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9375,
+   "origin": "internal",
+   "outcome_then": "clarify:geography_scope_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9376,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by exception\": a ranking of only part of an offense isn't built. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9377,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9378,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9382,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9385,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9394,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9396,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9398,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"'s\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9399,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9404,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9408,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "clarify",
+   "category": "clarify"
+  },
+  {
+   "id": 9412,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9413,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9414,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9419,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9425,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9426,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9431,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9438,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9440,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9441,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9443,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9460,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9461,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9463,
+   "origin": "internal",
+   "outcome_then": "decline_capability:sql_shape_rejected",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"by vilont\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"vs\": comparisons are answered as named places side by side; ask for the places and the years. I haven't answered with "
+  },
+  {
+   "id": 9470,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9471,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9474,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9476,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"have location codes like gambling parlors\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"convenience stores? I want to calculate the\" in this question, so I haven't ans"
+  },
+  {
+   "id": 9477,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9478,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9481,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9482,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_explanation_requested",
+   "detail": "I can't apply \"Why\": I report what NIBRS records; I can't explain causes. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9489,
+   "origin": "internal",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9493,
+   "origin": "internal",
+   "outcome_then": "decline_capability:guardrail_block",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"totals\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out. I can't apply \"by month\": breakdowns come from yearly tables; monthly or rollin"
+  },
+  {
+   "id": 9504,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9505,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9506,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9507,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9508,
+   "origin": "internal",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9509,
+   "origin": "internal",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"increase to 8 comparable agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9531,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9546,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9555,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9557,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9560,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9561,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"state\": I couldn't use it in a supported question type. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9562,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9563,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9564,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9565,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"state\": I couldn't use it in a supported question type. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9570,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9590,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "spec_unmapped",
+   "detail": "a place did not resolve"
+  },
+  {
+   "id": 9591,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9592,
+   "origin": "unmatched",
+   "outcome_then": "clarify:measure_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9593,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9594,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9595,
+   "origin": "unmatched",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9596,
+   "origin": "unmatched",
+   "outcome_then": "clarify:measure_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9597,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9598,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"prince george's county\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9599,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9600,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9601,
+   "origin": "unmatched",
+   "outcome_then": "clarify:measure_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9602,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9603,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9604,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9605,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9606,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9607,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9608,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9609,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9610,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9611,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9612,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9613,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9614,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "spec_unmapped",
+   "detail": "a place did not resolve"
+  },
+  {
+   "id": 9615,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9616,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9617,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "spec_unmapped",
+   "detail": "a place did not resolve"
+  },
+  {
+   "id": 9618,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"prince george's\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9619,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9620,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9626,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9628,
+   "origin": "unmatched",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"Which big\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9629,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9632,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:sql_shape_rejected",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"happened on Troost Avenue in Kanas\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"City\": I couldn't use it in a supported question type. I haven't answered with a number that "
+  },
+  {
+   "id": 9640,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9641,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9646,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"consistent reporting agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9647,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9648,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9662,
+   "origin": "unmatched",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9663,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9664,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"Increase to 4 comparable agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9665,
+   "origin": "unmatched",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9666,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9667,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"Increase to 4 comparable agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9668,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9671,
+   "origin": "unmatched",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"Which big\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9672,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9673,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:query_contract_failed",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9674,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9679,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9683,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9684,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9685,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9686,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9690,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"rolling over 12 months\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"to present\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9695,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"non-negligent\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"by state\": this answer type doesn't list every place. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9697,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"for each state\": this answer type doesn't list every place. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9701,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:share",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9702,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:share",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9703,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9704,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by exception\": a ranking of only part of an offense isn't built. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9705,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9707,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9712,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9715,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9724,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9726,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9728,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"'s\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9729,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9734,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9738,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "clarify",
+   "category": "clarify"
+  },
+  {
+   "id": 9742,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9743,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9745,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9751,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9757,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9758,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9759,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9764,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9771,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9773,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9774,
+   "origin": "internal",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9776,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9793,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9794,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9796,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"by vilont\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"vs\": comparisons are answered as named places side by side; ask for the places and the years. I haven't answered with "
+  },
+  {
+   "id": 9803,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9804,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9807,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9809,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"have location codes like gambling parlors\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"convenience stores? I want to calculate the\" in this question, so I haven't ans"
+  },
+  {
+   "id": 9810,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9811,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9814,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9815,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_explanation_requested",
+   "detail": "I can't apply \"Why\": I report what NIBRS records; I can't explain causes. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9822,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9826,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"totals\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out. I can't apply \"by month\": breakdowns come from yearly tables; monthly or rollin"
+  },
+  {
+   "id": 9837,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9838,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9839,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9840,
+   "origin": "internal",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9841,
+   "origin": "internal",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9842,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_peer_selection_not_in_plan_v1",
+   "detail": "I can't apply \"increase to 8 comparable agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9852,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"month\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9853,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9854,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9855,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9856,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9857,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9858,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9870,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9871,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by month\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9873,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9878,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9879,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9880,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9881,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9885,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9888,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9889,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9896,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by exception\": a ranking of only part of an offense isn't built. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9897,
+   "origin": "internal",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"Baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9898,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9900,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by exception\": a ranking of only part of an offense isn't built. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9903,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_invalid",
+   "rules": [
+    "A1"
+   ],
+   "detail": "A1 bindings: \"rate\" (statistic) is not applied"
+  },
+  {
+   "id": 9904,
+   "origin": "internal",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9905,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9906,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9907,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9908,
+   "origin": "internal",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"Springfield\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9911,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9912,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9914,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "NIBRS doesn't record fentanyl as its own drug type (it falls under broader narcotic categories), so I can't apply \"fentanyl\". I haven't answered with a number that leaves it out. I can't apply \"vs\": comparisons are answered as named places "
+  },
+  {
+   "id": 9915,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"January 2024\": one period per answer. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 9918,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"demographics for\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9932,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9935,
+   "origin": "internal",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9936,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9946,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"viriginia\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9951,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9960,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9961,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"offender\": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply \"arrest\": one counting unit per question; ask for victi"
+  },
+  {
+   "id": 9968,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9972,
+   "origin": "internal",
+   "outcome_then": "clarify:measure_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9973,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"from motor vehicle\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 9974,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 9977,
+   "origin": "internal",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9987,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 9988,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 9989,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10007,
+   "origin": "internal",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"St Louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10015,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by year\": a ranking covers one year. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10016,
+   "origin": "internal",
+   "outcome_then": "clarify:geography_ambiguous",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"LA\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10023,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10029,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"in to different catagories\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10030,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by location\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10033,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10036,
+   "origin": "internal",
+   "outcome_then": "decline_source_health:required_component_unavailable",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10037,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10039,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"difference\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10044,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10046,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10048,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10049,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10061,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"total\": a ranking covers one year. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10062,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10064,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10066,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"(traditional\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"definition)\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10067,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"rate\": rates are given for complete years, not for single months. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10070,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10073,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10081,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"compared to\": comparisons are answered as named places side by side; ask for the places and the years. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10082,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10083,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10088,
+   "origin": "internal",
+   "outcome_then": "clarify:measure_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10091,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10098,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10099,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"st louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10106,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by exception\": a ranking of only part of an offense isn't built. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10107,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10111,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"offender\": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply \"offenses\": one counting unit per question; ask for vic"
+  },
+  {
+   "id": 10117,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10119,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"UCLA\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10121,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"Los Angeles\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10124,
+   "origin": "internal",
+   "outcome_then": "clarify:measure_ambiguous",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10125,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10133,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10134,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10150,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by city\": this answer type doesn't list every place. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10151,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for continuously reporting agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10157,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10158,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10162,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10163,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"'s\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10164,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"for the elderly in\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10179,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10181,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 10211,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10212,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10217,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10220,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10221,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10224,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10225,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10226,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10230,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10232,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_unresolved_place_or_period",
+   "detail": "I can't apply \"wayne\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10235,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10237,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10238,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10241,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"decline\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10242,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"decline\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10243,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10247,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10261,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"citations in\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10262,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_not_recorded_in_nibrs",
+   "detail": "I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "
+  },
+  {
+   "id": 10263,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10269,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10270,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10273,
+   "origin": "internal",
+   "outcome_then": "decline_capability:model_produced_no_sql",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10285,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10286,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"Which big\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10287,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10290,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:rank",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10292,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10296,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10299,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10300,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10301,
+   "origin": "internal",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"by month\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10315,
+   "origin": "unmatched",
+   "outcome_then": "answer_model_sql_historical",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10316,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading"
+  },
+  {
+   "id": 10317,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10328,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10329,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10330,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10333,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10334,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10335,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10336,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10337,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10338,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10340,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10341,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10342,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10343,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10344,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10345,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10346,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10348,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10350,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10351,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10352,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10353,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10354,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10355,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10356,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10357,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10366,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10367,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10368,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10401,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10402,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10403,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10410,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10416,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10425,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10426,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10427,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10431,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10432,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10433,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10437,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10443,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10444,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10445,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10447,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10448,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10449,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10451,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10454,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10455,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10456,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10471,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10477,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "spec_unmapped",
+   "detail": "a place did not resolve"
+  },
+  {
+   "id": 10479,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "spec_unmapped",
+   "detail": "a place did not resolve"
+  },
+  {
+   "id": 10495,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10496,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10497,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10498,
+   "origin": "unmatched",
+   "outcome_then": "decline_data:no_rows_in_source",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10499,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:share",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10500,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"state\": I couldn't use it in a supported question type. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10501,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10503,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10504,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10505,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10509,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10510,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10511,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10519,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10521,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10522,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10523,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10526,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10528,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10530,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10536,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10539,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10542,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10543,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"age\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10544,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10545,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "none",
+   "category": "no_typed_reading_follow_up"
+  },
+  {
+   "id": 10546,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10550,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10551,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10554,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10557,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10559,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_table_limit_removed_by_plan_language",
+   "detail": "I can't apply \"June 2026\": one period per answer. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10561,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10566,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10574,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10585,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"to 20225\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10586,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10590,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10592,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_cohort_supported_by_plan",
+   "detail": "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
+  },
+  {
+   "id": 10596,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10597,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10598,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10600,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10601,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10603,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10604,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10605,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10607,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10612,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10613,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10614,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10616,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "decline",
+   "category": "decline_reader_vocabulary_gap",
+   "detail": "I couldn't interpret \"where a\" in this question, so I haven't answered it with a number that ignores it."
+  },
+  {
+   "id": 10617,
+   "origin": "unmatched",
+   "outcome_then": "decline_capability:capability_path_unavailable",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10622,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10623,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10624,
+   "origin": "unmatched",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:breakdown",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10627,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10628,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10629,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10631,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10632,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  },
+  {
+   "id": 10633,
+   "origin": "internal",
+   "outcome_then": "answer_deterministic",
+   "reader": "spec:series",
+   "category": "plan_valid"
+  }
+ ]
+}

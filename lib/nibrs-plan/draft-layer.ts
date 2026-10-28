@@ -1,0 +1,113 @@
+/**
+ * NIBRSAI's DRAFT semantic layer: just enough of the shared layer's shape (semantic.ts) to validate the plans the
+ * adapter (from-spec.ts) writes, built from the codes the app uses today. It is replaced by the adapter over the
+ * shared YAML (nibrs-model/semantic/) once that exists; it is also NIBRSAI's concrete input to that schema.
+ *
+ * Measures are generated per offense family and counting unit: the units an offense allows are the measures defined
+ * for it (definitions doc, lesson 6). Their predicates are left null here: executable definitions come from the shared
+ * layer; this draft checks plan structure, units, reachability, cardinality and codes, not counts.
+ */
+import { LOCATION_TYPES, PROPERTY_LOSS_TYPES, RACE_CODES, ETHNICITY_CODES, WEAPON_TYPES } from "../nibrs-codes";
+import { MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
+import type { CountingUnit, TimeBasis } from "./plan";
+import type { EntityId, SemanticDimension, SemanticEntity, SemanticLayer, SemanticLink, SemanticMeasure } from "./semantic";
+
+export const DRAFT_SEMANTIC_VERSION = "nibrsai-draft/1";
+const YEARS: [number, number] = [1991, 2026];
+const ALL_ADD = { acrossAgencies: true, acrossMonths: true, acrossCategories: false };
+
+const entity = (id: string, key: string[], dates: Partial<Record<TimeBasis, string>> = { incident_date: "incident_date" }): SemanticEntity =>
+  ({ id, table: id, key, dates, agencyColumn: "ori" });
+const INC = ["data_year", "ori", "incident_num"];
+const ENTITIES: SemanticEntity[] = [
+  entity("incident", INC), entity("offense", [...INC, "offense_code"]), entity("victim", [...INC, "victim_seq"]),
+  entity("offender", [...INC, "offender_seq"]), entity("arrestee", [...INC, "arrestee_seq"], { incident_date: "incident_date", arrest_date: "arrest_date" }),
+  entity("group_b_arrest", ["data_year", "ori", "arrest_transaction_num", "arrestee_seq"], { arrest_date: "arrest_date" }),
+  entity("property", [...INC, "loss_type", "description", "ordinal"]), entity("property_drug", [...INC, "loss_type", "description", "ordinal", "drug_ordinal"]),
+  entity("victim_offense", [...INC, "victim_seq", "offense_code"]), entity("victim_offender", [...INC, "victim_seq", "offender_seq"]),
+  entity("offense_weapon", [...INC, "offense_code", "ordinal"]), entity("offense_bias", [...INC, "offense_code", "ordinal"]),
+];
+
+const L = (id: string, from: EntityId, to: EntityId, cardinality: "one" | "many", pairs?: SemanticLink["pairs"]): SemanticLink =>
+  ({ id, from, to, cardinality, on: [["incident_num", "incident_num"]], ...(pairs ? { pairs } : {}) });
+const LINKS: SemanticLink[] = [
+  ...["offense", "victim", "offender", "arrestee", "property"].flatMap((e) => [L(`${e}_incident`, e, "incident", "one"), L(`incident_${e}s`, "incident", e, "many")]),
+  L("property_drugs", "property", "property_drug", "many"), L("drug_property", "property_drug", "property", "one"),
+  L("victim_offenses", "victim", "victim_offense", "many"), L("victim_offense_offense", "victim_offense", "offense", "one"),
+  L("victim_offenders", "victim", "victim_offender", "many", { entity: "offender", dimensions: ["victim_offender.offender_age", "victim_offender.offender_sex", "victim_offender.offender_race"] }),
+  L("victim_offender_victim", "victim_offender", "victim", "one"),
+  L("offense_weapons", "offense", "offense_weapon", "many"), L("offense_biases", "offense", "offense_bias", "many"),
+  L("arrestee_arrest_offense", "arrestee", "offense", "one"),
+];
+
+/** Shortest declared path between two entities (breadth first). */
+function path(from: EntityId, to: EntityId): SemanticLink[] | undefined {
+  if (from === to) return [];
+  const seen = new Set([from]);
+  let frontier: [EntityId, SemanticLink[]][] = [[from, []]];
+  while (frontier.length) {
+    const next: [EntityId, SemanticLink[]][] = [];
+    for (const [at, route] of frontier) {
+      for (const l of LINKS.filter((x) => x.from === at && !seen.has(x.to))) {
+        if (l.to === to) return [...route, l];
+        seen.add(l.to);
+        next.push([l.to, [...route, l]]);
+      }
+    }
+    frontier = next;
+  }
+  return undefined;
+}
+
+const UNIT_ENTITY: Partial<Record<CountingUnit, EntityId>> = {
+  victim: "victim", offense: "offense", incident: "incident", offender: "offender", arrest: "arrestee",
+  victim_offender: "victim_offender", dollars: "property", property_segment: "property", fbi_standard: "incident",
+};
+const measure = (id: string, unit: CountingUnit, timeBases: TimeBasis[] = ["incident_date"]): SemanticMeasure =>
+  ({ id, entity: UNIT_ENTITY[unit] ?? "offense", unit, label: id, aggregation: unit === "dollars" ? { kind: "sum", column: "value" } : { kind: "count_distinct" }, predicate: null, additive: ALL_ADD, timeBases, validYears: YEARS });
+
+const MEASURES: SemanticMeasure[] = [];
+for (const [name, codes] of Object.entries(MEASURE_CODES)) {
+  const person = codes.some((c) => PERSON_CODES.has(c));
+  const units: CountingUnit[] = ["offense", "incident", "offender", "arrest", ...(person ? ["victim" as const, "victim_offender" as const] : [])];
+  for (const u of units) MEASURES.push(measure(`${{ offense: "offenses", incident: "incidents", offender: "offenders", arrest: "arrests", victim: "victims", victim_offender: "victim_offender" }[u as string]}.${name}`, u, u === "arrest" ? ["incident_date", "arrest_date"] : ["incident_date"]));
+  MEASURES.push(measure(`offenses.${name}_cleared`, "offense"));
+}
+// Property crimes also record victims (lesson 6): victims are a unit for every crime against property here.
+for (const name of ["theft", "theft_from_motor_vehicle", "motor_vehicle_theft", "burglary", "shoplifting", "arson", "property_crime"]) MEASURES.push(measure(`victims.${name}`, "victim"));
+for (const [name, units] of Object.entries({
+  carjacking: ["incident", "victim", "offender", "arrest", "offense"], domestic_violence: ["victim", "incident", "arrest", "offense"],
+  hate_crime: ["offense", "incident", "victim"], dui: ["arrest"],
+} as Record<string, CountingUnit[]>)) {
+  for (const u of units) MEASURES.push(measure(`${{ offense: "offenses", incident: "incidents", offender: "offenders", arrest: "arrests", victim: "victims" }[u as string]}.${name}`, u, u === "arrest" ? ["incident_date", "arrest_date"] : ["incident_date"]));
+}
+MEASURES.push({ ...measure("violent_crime.ucr", "fbi_standard"), aggregation: { kind: "composite", components: ["victims.murder", "victims.rape", "offenses.robbery", "victims.aggravated_assault"] } });
+MEASURES.push(measure("property_crime.ucr", "offense"), measure("all_crime.offenses", "offense"));
+MEASURES.push(measure("property.motor_vehicle_property", "dollars"), measure("property.property_value", "dollars"), measure("property.segments", "property_segment"));
+
+const dim = (id: string, ent: EntityId, extra: Partial<SemanticDimension> = {}): SemanticDimension =>
+  ({ id, entity: ent, column: id.split(".")[1], label: id, unknownCodes: ["U", "99", ""], validYears: YEARS, ...extra });
+const AGE = { min: 1, max: 99, special: { "00": "Unknown", NN: "Under 24 hours", NB: "1-6 days", BB: "7-364 days" } };
+const SEX = { F: "Female", M: "Male", U: "Unknown" };
+const DIMENSIONS: SemanticDimension[] = [
+  dim("time.month", "time"), dim("time.year", "time"), dim("geo.agency", "agency"), dim("geo.state", "agency"),
+  ...["victim", "offender", "arrestee"].flatMap((e) => [dim(`${e}.sex`, e, { values: SEX }), dim(`${e}.race`, e, { values: RACE_CODES }), dim(`${e}.ethnicity`, e, { values: ETHNICITY_CODES }), dim(`${e}.age`, e, { numeric: AGE })]),
+  dim("offense.location_type", "offense", { values: LOCATION_TYPES }), dim("offense.offense", "offense"),
+  dim("offense.clearance_type", "offense", { values: { A: "Death of offender", B: "Prosecution declined", C: "In custody of other jurisdiction", D: "Victim refused to cooperate", E: "Juvenile, no custody" } }),
+  dim("offense.clearance_method", "offense", { values: { arrest: "By arrest", exceptional: "By exceptional means" } }),
+  dim("offense_weapon.weapon", "offense_weapon", { values: { ...WEAPON_TYPES, ...Object.fromEntries(["11", "12", "13", "14", "15"].map((c) => [`${c}A`, `${WEAPON_TYPES[c]}, automatic`])) } }), dim("offense_bias.bias", "offense_bias"),
+  dim("property.loss_type", "property", { values: PROPERTY_LOSS_TYPES }), dim("property.description", "property"),
+  dim("property_drug.drug_type", "property_drug"), dim("property_drug.drug", "property_drug"),
+  dim("victim_offender.relationship", "victim_offender"), dim("victim_offender.victim_offender_race", "victim_offender"),
+  dim("victim_offense.offense", "victim_offense"), dim("incident.hour", "incident"),
+];
+
+export const DRAFT_LAYER: SemanticLayer = {
+  version: DRAFT_SEMANTIC_VERSION,
+  entity: (id) => ENTITIES.find((e) => e.id === id),
+  measure: (id) => MEASURES.find((m) => m.id === id),
+  dimension: (id) => DIMENSIONS.find((d) => d.id === id),
+  path,
+  link: (id) => LINKS.find((l) => l.id === id),
+  measures: () => MEASURES,
+};

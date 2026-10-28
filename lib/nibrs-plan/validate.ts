@@ -294,7 +294,7 @@ const UNIT_OF: Record<string, string> = { victims: "victim", offenses: "offense"
 const FILTER_DIMENSIONS: Record<string, string[]> = {
   sex: ["sex"], age: ["age"], race: ["race"], ethnicity: ["ethnicity"], weapon: ["weapon"], drug: ["drug_type"],
   location: ["location_type"], loss: ["loss_type"], relationship: ["relationship"], bias: ["bias"], dv: ["relationship"],
-  clearance: ["exceptional_clearance", "clearance_type"],
+  clearance: ["exceptional_clearance", "clearance_type", "clearance_method"],
 };
 /** Ledger filter values that name a range or a family rather than one code: the exact condition they mean. */
 const FILTER_VALUE_RANGE: Record<string, [number, number]> = { "age:Under 18": [1, 17] };
@@ -346,13 +346,16 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
       {
         // Ids are "<unit>.<name>@<version>" or a qualified composite "<name>.<variant>@<version>" (violent_crime.ucr@1).
         const parts = String(t.id ?? "").replace(/@\d+$/, "").split(".");
-        return parts[parts.length - 1] === v || parts[0] === v ? null : `the measure at ${path} is not "${v}"`;
+        // A cleared-offense measure applies its offense ("rape clearances": offenses.rape_cleared).
+        const last = parts[parts.length - 1];
+        return last === v || last === `${v}_cleared` || parts[0] === v ? null : `the measure at ${path} is not "${v}"`;
       }
     case "unit":
       if (!/^measures\[\d+\]\.unit$/.test(path)) return "a unit binds to measures[i].unit";
       return UNIT_OF[v] === target ? null : `unit ${String(target)} does not apply "${v}"`;
     case "place": {
-      if (!/^geography\.places\[\d+\]$/.test(path)) return "a place binds to geography.places";
+      // A ranking's place is its scope: the agency set's `within`.
+      if (!/^geography\.places\[\d+\](?:\.within)?$/.test(path)) return "a place binds to geography.places";
       if (v === "national") return t.kind === "national" ? null : "this place is not the nation";
       const st = /^state:(.+)$/.exec(v);
       if (st) return t.kind === "state" && t.code === STATE_CODE[st[1]] ? null : `this place is not ${st[1]}`;
@@ -399,7 +402,8 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
     case "breakdown": {
       const dim = String(t.dimension ?? "");
       const whose = /^(offender|victim|arrestee)-age$/.exec(v);
-      const ok = whose ? dim === `${whose[1]}.age` || dim === `victim_offender.${whose[1]}_age` : dim.split(".").pop() === v.replace(/-/g, "_");
+      const name = ({ location: "location_type" } as Record<string, string>)[v] ?? v.replace(/-/g, "_");
+      const ok = whose ? dim === `${whose[1]}.age` || dim === `victim_offender.${whose[1]}_age` : dim.split(".").pop() === name;
       return ok ? null : `grouping at ${path} is not by ${v}`;
     }
     case "entity":

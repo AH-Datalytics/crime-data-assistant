@@ -60,3 +60,5 @@ scripts/fixtures/nibrs-replay/** text eol=lf
 scripts/fixtures/nibrs-coverage-shadow/** text eol=lf
 
 scripts/fixtures/nibrs-semantic-evidence/** text eol=lf
+
+scripts/fixtures/nibrs-replay/reachability/** text eol=lf

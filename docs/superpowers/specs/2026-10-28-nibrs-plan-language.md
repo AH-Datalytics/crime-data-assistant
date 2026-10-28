@@ -117,7 +117,7 @@ request accounting checked by path and value; examples for every case and form, 
 | A2 | a binding to a path the plan does not have |
 | A3 | a concept no plan can apply (it must be a limitation instead), or a binding to a path of the wrong kind |
 | A4 | a binding whose plan value does not carry the part's value, by an explicit rule per concept: another measure or unit, another state or agency, a clipped or different period, a negated or different filter value, another grain, breakdown, statistic, rank or threshold; a broader filter than the part (exact equivalence; named families map to exact code sets); a rate not per 100,000; an agency whose ORI the app's geography resolver does not give for the part (the plan's label never decides) |
-| R1 | a resolved period outside the release, or outside a measure's, dimension's or code's era (every condition rechecked on the resolved years) |
+| R1 | a resolved period starting before the release's first month or after its last, or outside a measure's, dimension's or code's era (every condition rechecked on the resolved years). A period running past the release's last month (a year in progress) is not refused: it is answered through that month, and the clip is recorded (`clippedTo`, the resolved period in provenance) |
 | R2 | comparison periods outside the selected period (for noncontiguous years, outside the selected years), or out of order |
 | R3 | (not a refusal) a combined geography is counted as the deduplicated union of its agencies, recorded in provenance |
 | R4 | a place that matches no agency in the release in the selected years |
@@ -199,6 +199,8 @@ The compiler counts distinct entity keys, so reaching a dimension can never mult
 | `RankSpec` (N6) | `geo.state` or `geo.agency` grouping (agencies via `agency_set` with the population minimum); `rank` by the named statistic, `limit` n or null | `RANKED_RATES`, `TOP_N_PER_MONTH` |
 | `ChangeSpec` (N7) | a period spanning both years; `period_comparison`; cohort all reporting or same agencies | `SAME_AGENCIES_CHANGE`, `S3` |
 | `decline` / `clarify` | `limitation` with a reason / `clarify` with complete plans | `G1`-`G6` |
+
+`lib/nibrs-plan/from-spec.ts` implements this mapping (`planFromSpec`): today's typed spec and its request ledger become a plan with every part bound, validated like any reader output (`scripts/test-nibrs-plan-adapter.ts`; reachability over the replay inventory: `scripts/nibrs-plan-reachability.ts`).
 
 Today's limits that the plan drops: filters only where a summary table holds them, one breakdown per answer, no
 monthly breakdowns, shares over one period only, at most ten places, rankings by full years and fixed units only,
