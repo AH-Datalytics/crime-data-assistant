@@ -25,7 +25,7 @@ python scripts/nibrs-correctness-reference.py --check
 python scripts/nibrs-correctness-reference.py --compare <candidate-dir>
 ```
 
-`--check` recomputes every expected file from the extracts, cross-checks the hand-traced micro counts and measures
+`--check` recomputes every generated expected file (N, Z, D, R) from the extracts, cross-checks the hand-traced micro counts and a selected set of micro measures
 against the micro extract and the hand-traced S answers against an independent recomputation, and fails on any
 difference. It proves the set is internally consistent; it gates nothing by itself.
 

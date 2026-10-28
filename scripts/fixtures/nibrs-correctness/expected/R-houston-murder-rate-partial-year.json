@@ -12,7 +12,7 @@
    "population": 2296862,
    "population_source": "FBI agency population for TXHPD0000, data year 2018 (extracts/agency_years_2017_2026.csv: population group 1A, covered_flag Y)",
    "rate_per_100k": null,
-   "rate_unavailable_reason": "5 of 12 months have no Houston NIBRS data (UNKNOWN), so the year cannot be evidenced complete; numerator and denominator use the same agency-period eligibility (D6)",
+   "rate_unavailable_reason": "5 of 12 months have no Houston NIBRS data (UNKNOWN), so the year cannot be evidenced complete from the available evidence; numerator and denominator use the same agency-period eligibility (D6)",
    "rate_per_100k_if_year_evidenced_complete": null
   },
   {

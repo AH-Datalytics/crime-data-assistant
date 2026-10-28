@@ -322,7 +322,7 @@ def r_houston_murder_rate():
             row["rate_unavailable_reason"] = "the agency's year is not evidenced complete (12 months have crime rows; BH evidence is not decoded)"
             row["rate_per_100k_if_year_evidenced_complete"] = round(victims[y] * 100000 / pop, 2)
         else:
-            row["rate_unavailable_reason"] = f"{12 - len(reported)} of 12 months have no Houston NIBRS data (UNKNOWN), so the year cannot be evidenced complete; numerator and denominator use the same agency-period eligibility (D6)"
+            row["rate_unavailable_reason"] = f"{12 - len(reported)} of 12 months have no Houston NIBRS data (UNKNOWN), so the year cannot be evidenced complete from the available evidence; numerator and denominator use the same agency-period eligibility (D6)"
             row["rate_per_100k_if_year_evidenced_complete"] = None
         out.append(row)
     return {"case": "R", "question": "Murder victim rate per 100,000 residents in Houston, 2018 and 2019.",
