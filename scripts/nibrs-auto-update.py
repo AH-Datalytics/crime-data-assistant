@@ -287,11 +287,20 @@ def bh_population(line):
     roughly 3.4x the US population. Zero matches the covered-by convention
     already used for every other agency whose residents are counted under a
     different ORI.
+
+    The header carries five county slots, 24 characters apart, each with the
+    population of the part of the agency in that county. An agency spanning
+    counties is the sum of its slots: reading only the first put Kansas City,
+    MO at 317,692 instead of 518,039. The placeholder is zeroed per slot.
+    Returns None only when every slot is blank.
     """
-    v = sint(line, 105, 114)
-    if v is not None and v >= 100_000_000:
-        return 0
-    return v
+    total = None
+    for k in range(5):
+        v = sint(line, 105 + 24 * k, 114 + 24 * k)
+        if v is None:
+            continue
+        total = (total or 0) + (0 if v >= 100_000_000 else v)
+    return total
 
 
 def sha256_file(path):
