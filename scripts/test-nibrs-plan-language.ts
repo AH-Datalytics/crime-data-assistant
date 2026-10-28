@@ -9,6 +9,7 @@ import { parsePlan, parseReaderOutcome, type NibrsPlan, type PartRef } from "../
 import { resolvePeriod, validateResolved, type GeographyResolver } from "../lib/nibrs-plan/resolve";
 import { checkLayer, type SemanticDimension, type SemanticEntity, type SemanticLayer, type SemanticLink, type SemanticMeasure } from "../lib/nibrs-plan/semantic";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
+import { checkResultTable } from "../lib/nibrs-plan/result";
 
 /* ---------------------------------------------------------------- a stand-in semantic layer ---------------------- */
 const NIBRS: [number, number] = [1991, 2026];
@@ -254,5 +255,18 @@ assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ ki
 assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2019-01", to: "2019-12" }, later: { kind: "absolute", from: "2024-01", to: "2024-12" }, outputs: ["change"] }] }, release, layer, geo).problems), []);
 assert.deepEqual(validateResolved(ytdRate, release, layer, geo).problems, [], "since 2026-01 resolves to January-October 2026: one data year");
 assert.deepEqual(rules(validateResolved({ ...ytdRate, period: { kind: "since", from: "2024-01" } }, release, layer, geo).problems), ["R5"]);
+
+/* ---------------------------------------------------------------- the result-column rule ------------------------- */
+// Owner 2026-10-28: groupings and numbers only; unknown is a blank (null) number; no status, note, label or flag column.
+const N1_TABLE = {
+  columns: [{ name: "Month", role: "grouping" as const }, { name: "Victim race", role: "grouping" as const }, { name: "Victim sex", role: "grouping" as const },
+    { name: "Murder victims", role: "number" as const }, { name: "Murder victims in the month", role: "number" as const }, { name: "Share of the month's murder victims (%)", role: "number" as const }],
+  rows: [["2018-05", "White", "Male", null, null, null], ["2018-06", "White", "Male", 14, 31, 45.2], ["2018-06", "Asian", "Female", null, 31, null]],
+};
+assert.deepEqual(checkResultTable(N1_TABLE), [], "unknown months and unevidenced zeros are blank numbers");
+assert.equal(checkResultTable({ ...N1_TABLE, columns: [...N1_TABLE.columns, { name: "Status", role: "grouping" }], rows: N1_TABLE.rows.map((r) => [...r, "UNKNOWN"]) }).length, 1, "a status column is refused");
+assert.equal(checkResultTable({ columns: [{ name: "Month", role: "grouping" }, { name: "Data_note", role: "number" }], rows: [["2018-06", 1]] }).length, 1, "a note column is refused");
+assert.equal(checkResultTable({ columns: N1_TABLE.columns, rows: [["2018-05", "White", "Male", 0, 0, 0], ["2018-06", "White", "Male", "unknown", 31, null]] }).length, 1, "a label in a number column is refused (a zero is a number: only evidence can say it is wrong)");
+assert.equal(checkResultTable({ columns: N1_TABLE.columns, rows: [["", "White", "Male", 14, 31, 45.2]] }).length, 1, "a blank grouping value is refused");
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);

@@ -67,9 +67,9 @@ request accounting checked by path and value; examples for every case and form, 
   of the cells shown.
 - **rate** per `per` of covered population. Eligibility is fixed: for each output cell an agency enters only if every
   month of that cell's period is evidenced complete (REPORTED_ZERO, or a submission evidenced complete), and
-  numerator and population use the same agencies. The cell carries the observed count, the eligible count, the
-  covered population and, when unavailable, the reason (no eligible agency; covered population cannot be
-  established, D8). The population is the covered population of the cell's data year, so each cell's period lies
+  numerator and population use the same agencies. An unavailable rate is a blank number; the observed count, the
+  eligible count, the covered population and the reason (no eligible agency; covered population cannot be
+  established, D8) are server-side evidence, never columns. The population is the covered population of the cell's data year, so each cell's period lies
   in one data year (P14); a rate is not rolled (P11) and a compared rate uses one-year periods (P13). Periods are never annualized; partial periods are labelled. A filtered numerator over all
   residents is labelled "per N residents (all residents)".
 - **ratio** of two measures evaluated independently at the full grain (clearance rate, a subset share such as
@@ -123,6 +123,21 @@ request accounting checked by path and value; examples for every case and form, 
 | R4 | a place that matches no agency in the release in the selected years |
 | R5 | a rate with no time grouping and no comparison whose resolved period spans several data years |
 
+## Result columns (owner, 2026-10-28)
+
+"We should never need status and notes"; "the tables and exports should only give the appropriate columns."
+- A user-facing table, and every export of it, has grouping columns (place, period, category) and number columns
+  only. No status, note, caveat, label or flag column.
+- An unknown number is blank (null): never zero, never a label. A D6 unknown month, an unevidenced zero and an
+  unavailable rate are all blank numbers.
+- What a column means is in its name (for example "Female murder victims per 100,000 residents (all residents)",
+  "Motor vehicle thefts, January-March 2025"), not in an extra column.
+- Coverage, status and evidence the engine needs stay server-side (`ResultEnvelope.evidence`). They are never columns
+  and are never exported to users.
+- `ResultTable` in `lib/nibrs-plan/result.ts` is the contract, and `checkResultTable` enforces it before a table
+  leaves the engine. The current app enforces the same contract at egress (`lib/answer-columns.ts`), and its guard
+  tests will cover the engine's results once it produces them.
+
 ## Provenance (`ResultEnvelope`, filled by the compiler)
 
 - the plan and its digest; plan-language, semantic, canonical release (and manifest checksum), serving artifact and
@@ -132,10 +147,11 @@ request accounting checked by path and value; examples for every case and form, 
 - the compiled SQL, its hash and any accelerator used;
 - each statistic's denominator rule and cohort, with agency counts;
 - transformations, and any truncation (rank limits, withheld cells) with counts;
-- required statements only (property not attributed to one offense; a rate's unavailability reason). No other
-  notes: the owner's no-editorializing rule;
-- cells with a status: VALUE, REPORTED_ZERO, UNKNOWN, NOT_REPORTED, UNKNOWN_UNEVIDENCED_ZERO or UNAVAILABLE, and a
-  reason where a number is missing;
+- answer statements, as answer text and never a column: only the ones the plan language requires (property not
+  attributed to one offense; "reported NIBRS counts" for a national answer). No other notes: the owner's
+  no-editorializing rule;
+- server-side evidence for every number cell: its status (VALUE, REPORTED_ZERO, UNKNOWN, NOT_REPORTED,
+  UNKNOWN_UNEVIDENCED_ZERO or UNAVAILABLE), the reason a number is blank, a share's parts, a rate's cohort figures;
 - the cache key, built from every version above.
 
 ## What the semantic layer must give NIBRSAI (`semantic.ts`)
