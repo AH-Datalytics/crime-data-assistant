@@ -839,7 +839,7 @@ Agency-level staffing data, ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffin
 **IMPORTANT: Use INNER JOIN, not LEFT JOIN, for staffing queries.** Do NOT generate a years CTE and LEFT JOIN historical_staffing — this creates NULL rows for years with no data that plot as zeros. Use a direct SELECT from historical_staffing with WHERE all_total > 0 so only years with actual data appear.
 
 **CRITICAL — EMPLOYEES-ONLY FALLBACK:** Some years (especially pre-1960, but not exclusively) only have all_total without the officer/civilian breakdown — officer_total is NULL for those rows. For ALL staffing queries, you MUST:
-1. Use COALESCE(hs.officer_total, hs.all_total) as the data column, aliased as "staffing"
+1. Use COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) as the data column (a zero officer count falls back too), aliased as "staffing"
 2. Add the one text column staffing answers carry (owner 2026-10-28), saying which count each figure is: CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported
    IMPORTANT: The condition must check all_total > 0 first — otherwise LEFT JOIN NULL rows (years with NO data at all) get incorrectly marked as 'Employees'.
 3. Filter with all_total > 0 (NOT officer_total > 0, which would drop employees-only rows)
@@ -855,17 +855,17 @@ ${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year
 
 **IMPORTANT — FILL GAPS FOR STAFFING CHARTS:** To make missing years visible in bar charts, use a recursive CTE to produce all years in the range, then LEFT JOIN staffing data. Missing years will have NULL values and appear as gaps. The CTE range must match the actual data range for the agency — do NOT extend beyond the last year with data. Always JOIN through historical_agency by name — NEVER guess an ORI code. Always use the COALESCE pattern:
 WITH agency AS (SELECT ori FROM historical_agency WHERE agency = 'Chicago' AND state = 'il' AND type = 'city'), years AS (SELECT MIN(hs.year) AS year FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0 UNION ALL SELECT year + 1 FROM years WHERE year < (SELECT MAX(hs.year) FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0))
-SELECT y.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported FROM years y LEFT JOIN agency a ON 1=1 LEFT JOIN historical_staffing hs ON hs.ori = a.ori AND hs.year = y.year AND hs.all_total > 0 ORDER BY y.year
+SELECT y.year, COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported FROM years y LEFT JOIN agency a ON 1=1 LEFT JOIN historical_staffing hs ON hs.ori = a.ori AND hs.year = y.year AND hs.all_total > 0 ORDER BY y.year
 
 **MISSING DATA DISCLOSURE:** After reviewing the query results, if any rows have NULL values for the data column (indicating the agency did not report that year), you MUST note this in your explanation. Use the format: "[Agency name] may not have reported [data type] in [list the missing years]." For example: "New Orleans may not have reported staffing data in 2009, 2014, 2015, 2020, and 2021." This applies to ALL historical queries (staffing, crime, clearance) where gaps exist — not just staffing.
 
 **CRITICAL — STAFFING PER-CAPITA CONSISTENCY:**
 When the user asks for officers "per capita", "per 1,000", or "rate":
-- You MUST JOIN historical_agency_population and compute ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
+- You MUST JOIN historical_agency_population and compute ROUND(COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) * 1000.0 / hap.population, 1) AS officers_per_1k, with the same reported column (the rate is the shown figure over population)
 - You MUST set yAxisLabel to "Officers per 1,000 Residents"
 - Do NOT include raw officer_total in the SELECT — it confuses the chart when mixed with rates
 When the user explicitly asks for officers "per 100k" or "per 100,000":
-- You MUST compute ROUND(hs.officer_total * 100000.0 / hap.population, 1) AS officers_per_100k
+- You MUST compute ROUND(COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) * 100000.0 / hap.population, 1) AS officers_per_100k, with the same reported column
 - You MUST set yAxisLabel to "Officers per 100,000 Residents"
 - Do NOT use officers_per_1k or a 1,000 denominator when the user asked for 100k.
 When the user asks for officer COUNTS (not per capita):
@@ -875,19 +875,15 @@ When the user asks for officer COUNTS (not per capita):
 For crime-rate columns in mixed staffing/crime comparisons, include the denominator in the alias. Example: violent crime rate per 100k should be aliased as violent_crime_rate_per_100k, not violent_rate.
 
 **Staffing query examples:**
-- Officers for a specific agency: SELECT hs.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hs.all_total > 0 ORDER BY hs.year
-- Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
-- Officers per 100k for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 100000.0 / hap.population, 1) AS officers_per_100k
-- Top agencies by officers per capita: SELECT ha.agency, ha.state, hs.officer_total, hap.population, ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year WHERE hs.year = 2023 AND hs.officer_total > 0 AND hap.population > 50000 ORDER BY officers_per_1k DESC LIMIT 20
-- Compare staffing between two specific agencies over time (e.g., "Chicago vs NYPD officers per year"):
-    WITH years AS (SELECT DISTINCT year FROM historical_staffing WHERE all_total > 0)
-    SELECT y.year,
-      (SELECT COALESCE(officer_total, all_total) FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND ha.type = 'city' AND hs.year = y.year AND hs.all_total > 0 LIMIT 1) AS chicago,
-      (SELECT COALESCE(officer_total, all_total) FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'New York' AND ha.state = 'ny' AND ha.type = 'city' AND hs.year = y.year AND hs.all_total > 0 LIMIT 1) AS nypd
-    FROM years y
-    WHERE y.year >= 1960
-    ORDER BY y.year
-    Use correlated subqueries per agency — do NOT use complex cross-join MIN/MAX CTEs which are fragile and often collapse to 1 row.
+- Officers for a specific agency: SELECT hs.year, COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hs.all_total > 0 ORDER BY hs.year
+- Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) * 1000.0 / hap.population, 1) AS officers_per_1k plus the reported column
+- Officers per 100k for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) * 100000.0 / hap.population, 1) AS officers_per_100k plus the reported column
+- Top agencies by officers per capita: SELECT ha.agency, ha.state, COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported, hap.population, ROUND(COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) * 1000.0 / hap.population, 1) AS officers_per_1k FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year WHERE hs.year = 2023 AND hs.officer_total > 0 AND hap.population > 50000 ORDER BY officers_per_1k DESC LIMIT 20
+- Compare staffing between two specific agencies over time (e.g., "Chicago vs NYPD officers per year"): one row per agency and year, each with its own reported column (the chart draws one series per agency and keeps each point's marker):
+    SELECT ha.agency, hs.year, COALESCE(NULLIF(hs.officer_total, 0), hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported
+    FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori
+    WHERE ha.type = 'city' AND ((ha.agency = 'Chicago' AND ha.state = 'il') OR (ha.agency = 'New York' AND ha.state = 'ny')) AND hs.year >= 1960 AND hs.all_total > 0
+    ORDER BY ha.agency, hs.year
 - Multi-year staffing list (e.g., "agencies with 500+ officers in 2019, show 2019-2025"):
     SELECT ha.agency || ', ' || ha.state as agency,
       MAX(CASE WHEN hs.year = 2019 THEN hs.officer_total END) as officers_2019,

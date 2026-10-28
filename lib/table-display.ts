@@ -45,6 +45,10 @@ const MEASURE_PLURAL: Record<string, string> = {
   officers: "sworn officers", civilians: "civilian employees", employees: "total employees",
   officers_or_employees: "sworn officers (total employees where marked)",
 };
+const STAFFING_PLURAL: Record<string, string> = {
+  officers: "sworn officers", civilians: "civilian employees", employees: "total employees",
+  officers_or_employees: "sworn officers (total employees where marked)",
+};
 
 /**
  * The value column's name, only for a supported combination: unit "offenses" or "victims" (or no unit column), statistic
@@ -52,9 +56,14 @@ const MEASURE_PLURAL: Record<string, string> = {
  */
 function valueLabel(measure: string, unit: string | null, statistic: string | null): string | null {
   if (unit !== null && unit !== "offenses" && unit !== "victims") return null;
-  if (statistic !== null && statistic !== "count" && statistic !== "rate_per_100k") return null;
+  if (statistic !== null && statistic !== "count" && statistic !== "rate_per_100k" && statistic !== "per_1000" && statistic !== "per_100k") return null;
   const m = measure.toLowerCase();
   const words = m.replace(/_/g, " ");
+  // Staffing rates (Historical): the measure's own words and the denominator.
+  if (statistic === "per_1000" || statistic === "per_100k") {
+    if (!(m in STAFFING_PLURAL)) return null;
+    return cap(`${STAFFING_PLURAL[m]} per ${statistic === "per_1000" ? "1,000" : "100,000"} residents`);
+  }
   if (statistic === "rate_per_100k") return cap(`${unit === "victims" ? `${words} victim` : words} rate per 100k`);
   return cap(unit === "victims" ? `${words} victims` : MEASURE_PLURAL[m] ?? `${words} offenses`);
 }

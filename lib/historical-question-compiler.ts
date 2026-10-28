@@ -350,11 +350,20 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
         const period = `${Math.min(...resolved.years)}-${Math.max(...resolved.years)}`;
         // A period total's series years are the years summed into it (plan r2 §2).
         delivered.push({ source: t.source, placeKind: t.place.kind, measure: m, statistic: spec.statistic, years: valued.map((x) => x.y) });
-        rows.push({ period, place: t.label, measure: m, statistic: spec.statistic, value, ...(marked ? { reported: mixedKinds ? null : kinds[0] ?? null } : {}), years_with_reports: valued.length, note: missing.length ? `no report for ${yearsText(missing).replace(/–/g, "-")}` : null });
         if (mixedKinds) {
+          // Officers and employees can't be added into one total: each year's figure is shown instead, marked.
+          for (const { y, c } of cells) {
+            rows.push({ period: String(y), place: t.label, measure: m, statistic: spec.statistic, value: spec.statistic === "count" ? c.value : r1(c.value), reported: c.value === null ? null : c.reported ?? null, years_with_reports: c.value === null ? 0 : 1, note: c.note });
+          }
           const empYears = valued.filter((x) => x.c.reported === "Employees").map((x) => x.y);
-          notes.push(`${t.label}: ${yearsText(empYears)} ${empYears.length === 1 ? "has" : "have"} only total employees, so officers and employees can't be added into one total.`);
-        } else if (valued.length) gotValue = true;
+          notes.push(`${t.label}: ${yearsText(empYears)} ${empYears.length === 1 ? "has" : "have"} only total employees, so officers and employees can't be added into one total; each year is shown.`);
+          gotValue = true;
+        } else {
+          // A total made only of employee years is a total of employees, named as such.
+          const onlyEmployees = kinds.length === 1 && kinds[0] === "Employees";
+          rows.push({ period, place: t.label, measure: onlyEmployees ? "employees" : m, statistic: spec.statistic, value, ...(marked ? { reported: kinds[0] ?? null } : {}), years_with_reports: valued.length, note: missing.length ? `no report for ${yearsText(missing).replace(/–/g, "-")}` : null });
+          if (valued.length) gotValue = true;
+        }
         if (missing.length) notes.push(valued.length
           ? `${t.label}: the total covers the ${valued.length} year${valued.length === 1 ? "" : "s"} with reports; no report for ${yearsText(missing)}.`
           : `${t.label}: no report for ${yearsText(missing)}, so there is no total.`);
@@ -379,11 +388,15 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
   if (!anyYears) return { kind: "decline", explanation: `I can't answer this: ${notes.join(" ")}` };
   // Measure identity: a series that shows total employees in some years is not labeled officers alone.
   if (anyEmployees) for (const r of rows) if (r.measure === "officers") r.measure = "officers_or_employees";
-  const measureWords = spec.measures.map((m) => measureText(m, spec.statistic)).join(", ");
+  const measureWords = spec.measures.map((m) => (anyEmployees && m === "officers" ? withEmployees(measureText(m, spec.statistic)) : measureText(m, spec.statistic))).join(", ");
   const placeWords = spec.type === "H5" ? "each state" : targets.map((t) => t.label).join(", ");
   const sources = [...new Set(targets.map((t) => sourceWord(t.source)))].join(" and ");
+  // An officers total is named for what it adds up: officers, total employees, or (shown by year) both.
+  const totalLabel = !spec.total ? "" : rows.every((r) => r.measure === "employees") ? MEASURE_LABEL.employees
+    : rows.some((r) => r.measure === "officers_or_employees" || r.reported === "Employees") ? "sworn officers or total employees"
+    : MEASURE_LABEL[spec.measures[0]];
   const lead = spec.total
-    ? `Total ${MEASURE_LABEL[spec.measures[0]]} in ${placeWords}, ${periodWords} (${sources}).`
+    ? `Total ${totalLabel} in ${placeWords}, ${periodWords} (${sources}).`
     : `${capital(measureWords)} for ${placeWords}, ${periodWords}${spec.type === "H1" && rows.length === 1 ? "" : ", by year"} (${sources}).`;
   // GC-085: one delivered rape-COUNT series with values on both sides of the FBI's 2013 definition change carries the
   // application's 2013 sentence (the model path's rule), from the years actually delivered, not those requested.
@@ -400,8 +413,10 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
   const titleWords = (s: string) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
   const shownYears = rows.map((r) => Number(r.year)).filter(Number.isFinite);
   const yearSpan = !shownYears.length ? "" : Math.min(...shownYears) === Math.max(...shownYears) ? `, ${shownYears[0]}` : `, ${Math.min(...shownYears)} - ${Math.max(...shownYears)}`;
-  const titleMeasures = titleWords(spec.measures.map((m) => (anyEmployees && m === "officers" ? "officers or total employees" : spec.statistic === "count" ? SINGULAR[m] : measureText(m, spec.statistic))).join(" and "));
-  const title = spec.total ? `Total ${capital(MEASURE_LABEL[spec.measures[0]])}, ${placeWords}`
+  const titleMeasures = titleWords(spec.measures.map((m) => (anyEmployees && m === "officers"
+    ? (spec.statistic === "count" ? "officers or total employees" : withEmployees(measureText(m, spec.statistic)))
+    : spec.statistic === "count" ? SINGULAR[m] : measureText(m, spec.statistic))).join(" and "));
+  const title = spec.total ? `Total ${capital(totalLabel)}, ${placeWords}`
     : spec.type === "H5" ? `${titleMeasures} By State${yearSpan}`
     : `${targets.map((t) => t.label).join(" and ")} ${titleMeasures}${yearSpan}`;
   const chartConfig: ChartConfig | null = spec.total || rows.length <= 1 ? null : {
@@ -555,6 +570,7 @@ function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
   const notes: string[] = [];
   const returned: string[] = [];
   const delivered: TypedDeliveredSeries[] = [];
+  let changeEmployees = false;
   for (const t of targets) {
     const reader = t.reader([spec.earlier, later], [spec.measure]);
     sqls.push(reader.sql);
@@ -567,6 +583,7 @@ function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
     const unlike = e.value !== null && l.value !== null && e.reported !== l.reported;
     if (unlike) {
       note = "unlike figures";
+      returned.push(t.label); // both figures are delivered, each named by its own count
       notes.push(`${t.label}: ${spec.earlier} is ${e.reported === "Employees" ? "total employees" : "sworn officers"} and ${later} is ${l.reported === "Employees" ? "total employees" : "sworn officers"}, so no change is shown.`);
     } else if (e.value === null || l.value === null) {
       note = [e.value === null ? `${e.note} for ${spec.earlier}` : null, l.value === null ? `${l.note} for ${later}` : null].filter(Boolean).join("; ");
@@ -580,10 +597,16 @@ function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
     const out = (v: number | null) => (spec.base === "count" ? v : r1(v));
     const marked = spec.family === "staffing" && spec.measure === "officers";
     const kind = (c: Cell) => (c.value === null ? null : c.reported ?? null);
-    const reported = !marked ? undefined : kind(e) && kind(l) && kind(e) !== kind(l) ? `${kind(e)} to ${kind(l)}` : kind(e) ?? kind(l);
-    rows.push({ place: t.label, measure: spec.measure, statistic: spec.base, earlier_year: spec.earlier, earlier_value: out(e.value), later_year: later, later_value: out(l.value), change: change === null ? null : r1(change), percent_change: r1(pct), ...(marked ? { reported } : {}), note });
+    const reported = !marked ? undefined : unlike ? null : kind(e) ?? kind(l);
+    // Each endpoint's count is named: unlike endpoints in the measure itself; two employee years as total employees.
+    const COUNT_WORD: Record<string, string> = { Officers: "sworn officers", Employees: "total employees" };
+    const measure = !marked ? spec.measure
+      : unlike ? `${COUNT_WORD[kind(e) as string]} ${spec.earlier}, ${COUNT_WORD[kind(l) as string]} ${later}`
+      : reported === "Employees" ? "employees" : spec.measure;
+    if (marked && measure !== spec.measure) changeEmployees = true;
+    rows.push({ place: t.label, measure, statistic: spec.base, earlier_year: spec.earlier, earlier_value: out(e.value), later_year: later, later_value: out(l.value), change: change === null ? null : r1(change), percent_change: r1(pct), ...(marked ? { reported } : {}), note });
   }
-  const what = measureText(spec.measure, spec.base);
+  const what = changeEmployees ? withEmployees(measureText(spec.measure, spec.base)) : measureText(spec.measure, spec.base);
   const anchorWord = spec.later === "anchor" ? ` ${later} is the latest year in this data.` : "";
   const explanation = `Change in ${what} from ${spec.earlier} to ${later} for ${targets.map((t) => t.label).join(", ")} (${[...new Set(targets.map((t) => sourceWord(t.source)))].join(" and ")}). Percent change uses ${spec.earlier} as the base.${anchorWord} ${notes.join(" ")}`.replace(/\s+/g, " ").trim();
   const title = `Change in ${capital(what)}, ${spec.earlier} to ${later}`;
@@ -591,3 +614,5 @@ function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
 }
 
 function capital(s: string): string { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+/** "sworn officers per 1,000 residents" -> "sworn officers or total employees per 1,000 residents": the unit is kept. */
+function withEmployees(words: string): string { return words.replace("sworn officers", "sworn officers or total employees"); }

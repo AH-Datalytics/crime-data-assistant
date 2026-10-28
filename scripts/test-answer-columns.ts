@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import { annotationDropTagsFor, finalizeProof, emitFactualPayload, payloadDropTags, type ProofFinalizationInput } from "../lib/proof-finalize";
 import { serializeChartConfigForLog } from "../lib/chart-config-log";
 import { detectAndPivotChartData } from "../lib/chart-layout";
+import { tableDisplay } from "../lib/table-display";
 import { OUTCOMES } from "../lib/proof-contract";
 import { runInner } from "../lib/why-scope";
 import {
@@ -96,6 +97,16 @@ check("chart pivot by agency keeps each agency's reported label and never splits
   assert.deepEqual(p.data[0], { year: 2019, "Fort Worth": 2000, "Fort Worth::reported": "Employees", Arlington: 600, "Arlington::reported": "Officers" });
   const single = detectAndPivotChartData(rows.filter((r) => r.place === "Fort Worth"), "year", ["value"]);
   assert.deepEqual(single.effectiveYKeys, ["value"], "one agency: reported is not a series");
+});
+
+check("staffing value headers name the measure and keep a rate's denominator", () => {
+  const rows = [{ year: 2018, place: "Fort Worth, TX", measure: "officers_or_employees", statistic: "per_1000", value: 1.7, reported: "Officers" },
+    { year: 2019, place: "Fort Worth, TX", measure: "officers_or_employees", statistic: "per_1000", value: 2.2, reported: "Employees" }];
+  const d = tableDisplay(["year", "place", "measure", "statistic", "value", "reported"], rows, "Fort Worth");
+  assert.equal(d.labels.value, "Sworn officers (total employees where marked) per 1,000 residents");
+  assert.ok(d.shown.includes("reported"), "the reported column is shown");
+  const counts = tableDisplay(["year", "measure", "statistic", "value"], [{ year: 2018, measure: "officers", statistic: "count", value: 1500 }], "");
+  assert.equal(counts.labels.value, "Sworn officers", "not 'officers offenses'");
 });
 
 check("drop tags", () => {

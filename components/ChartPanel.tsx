@@ -90,9 +90,11 @@ export function SideCategoryTick(props: { x?: number; y?: number; payload?: { va
  * A tooltip's series name, or, for a staffing figure, which count it is ("Officers" / "Employees"): the point's own
  * `reported`, or after a pivot by agency, the series' `<series>::reported`.
  */
-function reportedLabel(payload: Record<string, unknown> | undefined, name: string): string {
-  const own = payload?.reported ?? payload?.[`${name}::reported`];
-  return typeof own === "string" && own ? (name && name !== "value" ? `${name} (${own})` : own) : name;
+export function reportedLabel(payload: Record<string, unknown> | undefined, dataKey: string, name: string): string {
+  // Looked up by the series' data key (the pivot stores `<data key>::reported`); the visible name is formatted apart.
+  const own = payload?.reported ?? payload?.[`${dataKey}::reported`];
+  if (typeof own !== "string" || !own) return name;
+  return dataKey && dataKey !== "value" ? `${name} (${own})` : own;
 }
 
 const GRID_COLOR = "#ddd8ce";
@@ -544,7 +546,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v, name, props) => [fmtVal(v as number, isPercent), reportedLabel(props?.payload, String(name))]}
+                formatter={(v, name, props) => [fmtVal(v as number, isPercent), reportedLabel(props?.payload, String(props?.dataKey ?? name), String(name))]}
                 contentStyle={tooltipContentStyle}
                 labelStyle={{ color: "#ffffff" }}
                 itemStyle={{ color: "#ffffff" }}
@@ -665,7 +667,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               )}
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v, name, props) => [fmtVal(v as number, isPercent), reportedLabel(props?.payload, String(name))]}
+                formatter={(v, name, props) => [fmtVal(v as number, isPercent), reportedLabel(props?.payload, String(props?.dataKey ?? name), String(name))]}
                 contentStyle={tooltipContentStyle}
                 labelStyle={{ color: "#ffffff" }}
                 itemStyle={{ color: "#ffffff" }}
