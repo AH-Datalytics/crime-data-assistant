@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Writes docs/policy/nibrsai-answer-policy.csv: the owner's review table of answer policies, in plain English.
 
-    python scripts/build-answer-policy-csv.py GOLD_SET_JSON
+    python scripts/build-answer-policy-csv.py
 
-GOLD_SET_JSON is the frozen correctness gold set (docs/superpowers/2026-09-06-correctness-gold-set-v7.json, untracked
-in the main checkout); it supplies the existing test case IDs for each frozen rule. Rows "P.." need the owner; rows
+The frozen correctness gold set (docs/superpowers/2026-09-06-correctness-gold-set-v7.json, committed byte-exact; its
+sha256 is checked below) supplies the existing test case IDs for each frozen rule. Rows "P.." need the owner; rows
 "D.." are already decided and are carried forward without re-asking. Open rows are sorted most consequential first.
 """
 import collections
@@ -13,7 +13,14 @@ import json
 import os
 import sys
 
-gold = json.load(open(sys.argv[1], encoding="utf-8"))
+import hashlib
+
+GOLD = os.path.join(os.path.dirname(__file__), "..", "docs", "superpowers", "2026-09-06-correctness-gold-set-v7.json")
+GOLD_SHA256 = "24e4d15068a343a0436995261937050e9324dece4cf140aa3274dd1f01f80c3b"  # docs/roadmap/correctness-backlog.md
+raw = open(GOLD, "rb").read()
+if hashlib.sha256(raw).hexdigest() != GOLD_SHA256:
+    sys.exit(f"{GOLD}: sha256 differs from the frozen gold set's")
+gold = json.loads(raw.decode("utf-8"))
 bydec = collections.defaultdict(list)
 for c in gold["cases"]:
     for e in c.get("expectations", []):

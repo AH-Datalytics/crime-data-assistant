@@ -62,3 +62,7 @@ scripts/fixtures/nibrs-coverage-shadow/** text eol=lf
 scripts/fixtures/nibrs-semantic-evidence/** text eol=lf
 
 scripts/fixtures/nibrs-replay/reachability/** text eol=lf
+
+# The frozen correctness gold set (17 owner rules, 120 cases) is byte-hashed: sha256 24e4d150...80c3b,
+# recorded in docs/roadmap/correctness-backlog.md. Never convert its line endings.
+docs/superpowers/2026-09-06-correctness-gold-set-v7.json -text
