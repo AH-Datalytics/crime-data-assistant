@@ -129,6 +129,12 @@ export function checkLayer(layer: SemanticLayer): string[] {
       if (!d) out.push(`${where}: unknown dimension ${p.dimension}`);
       else if (d.entity !== at) out.push(`${where}: ${p.dimension} belongs to ${d.entity}, evaluated on ${at}`);
       else if (!d.numeric) out.push(`${where}: ${p.dimension} is not numeric`);
+      else {
+        const n = p.op === "between" ? 2 : 1;
+        if (p.values.length !== n || !p.values.every(Number.isFinite)) out.push(`${where}: ${p.op} takes ${n} finite value(s)`);
+        else if (p.op === "between" && p.values[0] > p.values[1]) out.push(`${where}: between bounds are reversed`);
+        else if (p.values.some((v) => v < d.numeric!.min || v > d.numeric!.max)) out.push(`${where}: a bound is outside ${d.numeric.min}-${d.numeric.max}`);
+      }
     } else if (p.kind === "dimension") {
       const d = layer.dimension(p.dimension);
       if (!d) out.push(`${where}: unknown dimension ${p.dimension}`);

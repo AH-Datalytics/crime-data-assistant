@@ -85,6 +85,12 @@ assert.deepEqual(checkLayer(layer), [], "every measure predicate resolves throug
 const broken: SemanticLayer = { ...layer, measures: () => [{ ...MURDER_VICTIMS, predicate: { kind: "exists", link: "offense_weapons", where: [{ kind: "dimension", dimension: "victim.sex", op: "in", values: ["F"] }] } }] };
 assert.equal(checkLayer(broken).length, 1, "a link that starts elsewhere is caught");
 assert.equal(checkLayer({ ...layer, measures: () => [{ ...VIOLENT, aggregation: { kind: "composite", components: ["victims.nope"] } }] }).length, 1, "a composite's components must exist");
+const numeric = (op: ">=" | "<=" | "between", values: number[]) => checkLayer({ ...layer, measures: () => [{ ...FLASH_MOB, predicate: { kind: "numeric", dimension: "incident.offender_segment_count", op, values } }] }).length;
+assert.equal(numeric("between", [6, 5]), 1, "reversed bounds");
+assert.equal(numeric("between", [6]), 1, "between takes two");
+assert.equal(numeric(">=", [Number.NaN]), 1, "finite");
+assert.equal(numeric(">=", [500]), 1, "inside the decoded range");
+assert.equal(numeric("between", [6, 20]), 0);
 assert.equal(checkLayer({ ...layer, measures: () => [{ ...FLASH_MOB, predicate: { kind: "numeric", dimension: "victim.race", op: ">=", values: [6] } }] }).length, 1, "a numeric condition needs a dimension of its entity");
 assert.equal(checkLayer({ ...layer, measures: () => [{ ...FLASH_MOB, predicate: { kind: "numeric", dimension: "incident.offender_segment_count", op: ">=", values: [6] } }, { ...m("incidents.x", "victim", "victim"), predicate: { kind: "numeric", dimension: "victim.sex", op: ">=", values: [1] } }] }).length, 1, "and a numeric one");
 
@@ -182,6 +188,13 @@ assert.deepEqual(sem({ ...X.N1, filters: [{ kind: "attribute", dimension: "victi
 assert.deepEqual(sem({ ...X.AGE_BREAKDOWN, measures: [{ ...X.AGE_BREAKDOWN.measures[0], filters: [{ kind: "attribute", dimension: "offender.age", op: "between", values: [30, 18] }] }] }), ["S11"], "reversed bounds");
 assert.deepEqual(sem({ ...X.N1, groupings: [], measures: [...X.N1.measures, { id: "offenses.murder", unit: "offense", as: "murders" }], statistics: [{ kind: "share", as: "s", measure: "murder_victims", within: [], denominator: "murders" }] }), ["S12"]);
 
+// A composite share needs the same composite as denominator.
+const robberyOnly: SemanticMeasure = { ...VIOLENT, id: "violent_crime.robbery_only", aggregation: { kind: "composite", components: ["offenses.robbery"] } };
+const withComposites: SemanticLayer = { ...layer, measure: (id) => (id === robberyOnly.id ? robberyOnly : layer.measure(id)) };
+const compositeShare: NibrsPlan = { ...X.N3, measures: [{ id: "violent_crime.fbi_standard", unit: "fbi_standard", as: "violent" }, { id: "violent_crime.robbery_only", unit: "fbi_standard", as: "robbery_only" }], groupings: [], statistics: [{ kind: "share", as: "s", measure: "violent", within: [], denominator: "robbery_only" }] };
+assert.deepEqual(rules(validatePlanSemantics(compositeShare, withComposites)), ["S12"]);
+assert.deepEqual(rules(validatePlanSemantics({ ...compositeShare, statistics: [{ kind: "share", as: "s", measure: "violent", within: [] }] }, withComposites)), []);
+
 /* ---------------------------------------------------------------- A: request accounting by path and value ---------- */
 const part = (concept: string, value: string | null, text: string): PartRef => ({ concept, value, text, span: [90, 99], clause: 0, inherited: false });
 const withPart = (plan: NibrsPlan, pr: PartRef, path: string) => rules(vb({ ...plan, bindings: [...plan.bindings, { part: pr, path }] }, [...plan.bindings.map((b) => b.part), pr]));
@@ -195,6 +208,9 @@ assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("threshold", ">=|250000", "250
 assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("rank", "top:5", "5"), "transforms[0]"), []);
 assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("rank", "top:10", "10"), "transforms[0]"), ["A4"]);
 assert.deepEqual(withPart(X.SEPARATE_YEARS, part("period", "years:2024:2019", "2019 and 2024"), "period"), []);
+// Versioned and qualified measure ids bind.
+assert.deepEqual(withPart({ ...X.N3, measures: [{ id: "offenses.motor_vehicle_theft@1", unit: "offense", as: "motor_vehicle_thefts" }] }, part("measure", "motor_vehicle_theft", "car thefts"), "measures[0]"), []);
+assert.deepEqual(rules(vb({ ...X.N3, measures: [{ id: "violent_crime.ucr@1", unit: "fbi_standard", as: "motor_vehicle_thefts" }], bindings: [{ part: part("measure", "violent_crime", "violent crime"), path: "measures[0]" }] }, [part("measure", "violent_crime", "violent crime")])), []);
 // r3 probes: a broader population, a wrong rate scale, another city's ORI under a borrowed label.
 assert.deepEqual(withPart({ ...X.N3, filters: [{ kind: "attribute", dimension: "victim.sex", op: "in", values: ["F", "M"] }] }, part("filter", "sex:F", "female"), "filters[0]"), ["A4"], "female bound to female-or-male");
 assert.deepEqual(withPart({ ...X.N3, filters: [{ kind: "exists", scope: "offense", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"] }] }] }, part("filter", "weapon:firearm", "firearm"), "filters[0]"), [], "a named family maps to its exact codes");

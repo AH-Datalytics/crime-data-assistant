@@ -1,10 +1,16 @@
-# NIBRS semantic layer v1: custom definitions and definition lessons (r2)
+# NIBRS semantic layer v1: custom definitions and definition lessons (r3)
 
 Scope addition to `2026-10-27-nibrs-engine-restructure.md` and `2026-10-28-nibrs-plan-language.md` (r4, accepted).
 
 **Owner, 2026-10-28 (relayed by the NIBRSAI session):** "inventory our custom definitions, add them to the semantic
 layer v1 scope, and shadow-test them against the current tables"; and "send ... the definition lessons to the
 engine session, each with a test and Codex review."
+
+**r2 → r3 (Codex ACCEPT WITH CHANGES, 6 changes):** versioned and qualified measure ids bind in request accounting;
+a composite's share needs the same composite as denominator (S12); numeric conditions checked for operand count,
+finiteness, order and range; Group A arrests keep today's arrest-offense weapon as its own dimension beside armed-with;
+carjacking clearance at incident grain; hate crime qualified by known bias codes, blank never qualifies. Code and
+tests: `lib/nibrs-plan/{validate,semantic}.ts`, `scripts/test-nibrs-plan-language.ts`.
 
 **r1 → r2 (Codex REVISE, 7 changes):** the property-value rule restated at its real grain (row values zeroed, counts
 kept) as a declared difference; every definition mapped to measure ids with one entity and one unit, with two narrow
@@ -111,9 +117,10 @@ Two narrow extensions to the interface, made with this revision and tested in `s
 | `victims.domestic_violence@1` | victim, victim | victims with any relationship (all ten, through victim_offender) in today's intimate-partner or family list | summary_domestic_violence (relationship split) |
 | `incidents.domestic_violence@1` | incident, incident | incidents with such a victim | summary_dv_trends |
 | `arrestees.domestic_violence@1` | arrestee, arrestee | Group A arrestees of incidents with such a victim | summary_dv_arrests (builder to be recovered) |
-| `offenses.hate_crime@1` | offense, offense | offenses with **any** bias motivation other than 88 (none) and 99 (unknown) | summary_hate_crime (first bias only) |
+| `offenses.hate_crime@1` | offense, offense | offenses with **any** bias motivation that is a known substantive bias code (the FBI bias list, by era); 88 (none), 99 (unknown), blank and NULL never qualify | summary_hate_crime (first bias only) |
 | `victims.leoka@1` | victim, victim | victims of type L connected to 09A, 13A or 13B in any slot | prompt rule (slots 1-2) |
 | `offenses.cleared@1` | offense, offense | offenses whose incident has an arrestee or an exceptional clearance (today's rule, kept) | cleared_count |
+| `incidents.carjacking_cleared@1` | incident, incident | carjacking incidents with an arrestee or an exceptional clearance: one per incident however many offenses it holds | summary_carjacking_clearance (builder to be recovered) |
 | `incidents.victim_count_bucket@1` | incident, incident | incidents by the number of individual victims connected to an offense code (derived numeric incident-offense dimension `offense.individual_victims`) | summary_victims_per_incident |
 
 ### Dimensions and named groups
@@ -121,7 +128,8 @@ Two narrow extensions to the interface, made with this revision and tested in `s
 | Id | Entity | Definition |
 |---|---|---|
 | `offense_weapon.weapon` with groups `weapon.category@1` | offense_weapon | every weapon of an offense (up to three); category: Firearm = 11, 11A, 12, 12A, 13, 13A, 14, 14A, 15, 15A; Knife = 20; Blunt Object = 30; Unknown = 90, 95, 99, blank; Other = the rest (today's `weapon_category_expr`; D1 resolved to it) |
-| `arrestee_weapon.weapon` with the same groups | arrestee_weapon | every weapon of an arrestee (up to two), Group A and Group B: **a different concept from the robbery's weapon**, never substituted for it |
+| `arrestee_weapon.weapon` with the same groups | arrestee_weapon | "armed with": every weapon of an arrestee (up to two), Group A and Group B: **a different concept from an offense's weapon**, never substituted for it |
+| `arrestee.arrest_offense_weapon` with the same groups | offense_weapon of the arrestee's arrest offense | today's Group A concept (`nibrs-auto-update.py:822, 849-868`): the weapons of the offense the arrestee was arrested for, in that incident (all three, where today uses `MIN(type_weapon_1)`). For Group B arrests (no offense) it does not exist, and today's Group B weapon is armed-with |
 | `location.commercial@1` | offense | C12's list, named in every answer |
 | `drug.category@1` | property_drug | the first character of the suspected drug type, all three slots |
 | `relationship.group@1` | victim_offender | intimate partner, family (C8 lists), known (AQ, FR, NE, OK), stranger (ST) |
@@ -275,7 +283,7 @@ Compared by agency (or state), year, month and category. Every difference has a 
 | summary_carjacking_victim_demographics | `victims.carjacking@1` × race, sex, age group, robbery weapon | victims of other offenses in the incident; second and third robbery weapons; D1; D8 | T1, T2 |
 | summary_carjacking_offender_demographics | `offenders.carjacking@1` × robbery weapon | offender 00 rows; weapons | T2 |
 | summary_carjacking_arrestee_demographics | `arrestees.carjacking@1` × armed-with | the second arrestee weapon | T3 |
-| summary_carjacking_clearance | `offenses.cleared@1` on carjacking incidents | builder to be recovered | |
+| summary_carjacking_clearance | `incidents.carjacking_cleared@1` | builder to be recovered | T12 |
 | summary_victims_per_incident | `incidents.victim_count_bucket@1` | connected offenses beyond slot 3 | T4 |
 | summary_juvenile_offender_incidents | `incidents.juvenile_offender@1` | none expected | T5 |
 | summary_domestic_violence, summary_dv_trends | `victims.domestic_violence@1`, `incidents.domestic_violence@1` | relationships beyond nibrs.db's three | T6 |
@@ -284,7 +292,7 @@ Compared by agency (or state), year, month and category. Every difference has a 
 | summary_victim_circumstance | `circumstance.group@1` | none expected (two circumstances kept today) | |
 | summary_hate_crime, summary_hate_crime_location | `offenses.hate_crime@1` × `bias.motivation` | offenses whose first bias is 88 or 99 but a later one qualifies; offenses counted under several bias groups when grouped by bias | T7 |
 | summary_victim_demographics (incl. firearm), summary_victim_weapon | victims × `weapon.category@1` | second and third weapons; connected offenses beyond slot 1; D7 (robbery) | T1 |
-| summary_arrestee_demographics | arrestees × armed-with, Group A and B | the second arrestee weapon; Group A arrestees whose arrest offense has no offense row (INNER join today) | T3 |
+| summary_arrestee_demographics | Group A arrestees × `arrestee.arrest_offense_weapon` (today's concept); Group B arrests × armed-with (today's concept) | second and third offense weapons (Group A); the second arrestee weapon (Group B); Group A arrestees whose arrest offense has no offense row (INNER join today). Armed-with for Group A is a new, separate dimension, never compared with today's column | T3, T11 |
 | summary_offense_location | `location.commercial@1` | none expected | |
 | summary_drug_monthly | `drug.category@1` | none expected | |
 | summary_drug_arrests | arrestees by drug category | builder to be recovered | |
@@ -307,6 +315,9 @@ Compared by agency (or state), year, month and category. Every difference has a 
 | T8 | one property row averaging $1.2M and one averaging $5,000 in one agency-year | dollars: 0 + total of the second | dollars: both totals; counts equal |
 | T9 | 23C at location 07 with 6 offenders; with 5 offenders; at location 20 with 8 | 1 (model SQL) | 1, 0, 0 |
 | T10 | an L victim connected to 13B in slot 3 | not counted (slots 1-2) | counted |
+| T11 | a Group A arrest for 13A whose offense weapon is 12 (handgun) and whose arrestee is unarmed (01) | Firearm (the offense's weapon) | arrest-offense weapon: Firearm (equal); armed-with: Unarmed, a separate dimension |
+| T12 | a cleared carjacking incident holding 120 and 240 | builder to be recovered | `incidents.carjacking_cleared@1` = 1 (not 2 cleared offenses) |
+| T13 | an offense whose only bias field is blank; another with blank then 21 | blank-only: not in the hate-crime location table, in summary_hate_crime as written today | blank-only: not a hate crime; blank + 21: a hate crime, anti-Jewish |
 
 ## 5. Decisions for the owner
 

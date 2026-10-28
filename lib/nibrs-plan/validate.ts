@@ -268,6 +268,12 @@ export function validatePlanSemantics(plan: NibrsPlan, layer: SemanticLayer): Pl
   plan.statistics.forEach((s, i) => {
     const sm = (name: string) => layer.measure(plan.measures.find((m) => m.as === name)?.id ?? "");
     if (s.kind === "share" && s.denominator && units.get(s.denominator) !== units.get(s.measure)) add("S12", `statistics[${i}]`, "a share's numerator and denominator count the same unit");
+    // A composite's share needs the SAME composite as denominator (its own filters aside): two composites share a
+    // unit label ("fbi_standard") without sharing a meaning.
+    if (s.kind === "share" && s.denominator) {
+      const [n, d] = [sm(s.measure), sm(s.denominator)];
+      if (n && d && (n.aggregation.kind === "composite" || d.aggregation.kind === "composite") && n.id !== d.id) add("S12", `statistics[${i}]`, "a composite's share needs the same composite as its denominator");
+    }
     if (s.kind === "rate" && sm(s.measure) && !sm(s.measure)!.additive.acrossAgencies) add("S12", `statistics[${i}]`, "a rate needs a measure that adds across agencies");
   });
   return out;
@@ -337,7 +343,11 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
   switch (part.concept) {
     case "measure":
       if (!/^measures\[\d+\]$/.test(path)) return "a measure binds to measures[i]";
-      return String(t.id ?? "").split(".").pop() === v ? null : `the measure at ${path} is not "${v}"`;
+      {
+        // Ids are "<unit>.<name>@<version>" or a qualified composite "<name>.<variant>@<version>" (violent_crime.ucr@1).
+        const parts = String(t.id ?? "").replace(/@\d+$/, "").split(".");
+        return parts[parts.length - 1] === v || parts[0] === v ? null : `the measure at ${path} is not "${v}"`;
+      }
     case "unit":
       if (!/^measures\[\d+\]\.unit$/.test(path)) return "a unit binds to measures[i].unit";
       return UNIT_OF[v] === target ? null : `unit ${String(target)} does not apply "${v}"`;
