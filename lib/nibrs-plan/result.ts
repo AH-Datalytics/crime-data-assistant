@@ -108,12 +108,23 @@ export function columnHeader(binding: ResultColumn["binding"], labels: Record<st
   return labels[binding.kind === "grouping" ? `grouping:${binding.dimension}` : `statistic:${binding.as}`];
 }
 
+/**
+ * The plan's number outputs after its transforms: a statistic in a period comparison becomes one output per requested
+ * comparison output ("victims.earlier", "victims.later", "victims.change", "victims.pct_change"); rolling windows and
+ * ranks keep the statistic's name.
+ */
+export function finalStatistics(plan: NibrsPlan): string[] {
+  const compared = new Map<string, string[]>();
+  for (const t of plan.transforms) if (t.kind === "period_comparison") for (const s of t.of) compared.set(s, t.outputs);
+  return plan.statistics.flatMap((s) => (compared.has(s.as) ? compared.get(s.as)!.map((o) => `${s.as}.${o}`) : [s.as]));
+}
+
 /** The result-column rule over a whole envelope. Returns problems; empty means compliant. */
 export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evidence" | "answerStatements">, labels: Record<string, string>): string[] {
   const out: string[] = [];
   const { plan, table } = env;
   const groupings = plan.groupings.map((g) => g.dimension);
-  const stats = plan.statistics.map((s) => s.as);
+  const stats = finalStatistics(plan);
 
   // Columns: exactly the plan's groupings and statistics, each once, each with its template header.
   const bound = table.columns.map((c) => (c.binding.kind === "grouping" ? `grouping:${c.binding.dimension}` : `statistic:${c.binding.as}`));

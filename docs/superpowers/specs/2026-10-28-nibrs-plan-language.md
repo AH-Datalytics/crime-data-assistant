@@ -132,8 +132,10 @@ request accounting checked by path and value; examples for every case and form, 
   unavailable rate are all blank numbers. A category value is data, including an "Unknown" category and substantive
   categories such as a clearance type.
 - Enforced by purpose, not by words (`checkEnvelope` in `lib/nibrs-plan/result.ts`):
-  - every column is bound to exactly one grouping or one statistic of the plan, and each of the plan's groupings and
-    statistics has exactly one column;
+  - every column is bound to exactly one grouping or one number output of the plan, and each of them has exactly one
+    column. The number outputs are the statistics after transforms: a compared statistic becomes one output per
+    requested comparison output (`victims.earlier`, `victims.later`, `victims.change`, `victims.pct_change`;
+    `finalStatistics`);
   - each header is the compiler's template for its binding (the semantic layer's dimension label; the statistic's
     description from its measure, unit, period and, for a rate, the population wording such as "per 100,000
     residents (all residents)"), so no header carries an annotation;

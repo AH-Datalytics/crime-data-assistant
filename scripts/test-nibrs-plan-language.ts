@@ -286,6 +286,14 @@ assert.equal(checkEnvelope({ ...n1Env, evidence: N1_EVIDENCE.slice(1) }, LABELS)
 const clearanceEnv = { plan: X.CLEARANCE_BREAKDOWN, table: { columns: [col({ kind: "grouping", dimension: "offense.exceptional_clearance" }), col({ kind: "statistic", as: "count" }), col({ kind: "statistic", as: "share" })],
   rows: [["Prosecution declined", 12, 40.0], ["Death of offender", 18, 60.0]] }, evidence: [ev(0, "count", "VALUE"), ev(0, "share", "VALUE"), ev(1, "count", "VALUE"), ev(1, "share", "VALUE")], answerStatements: [] as never[] };
 assert.deepEqual(checkEnvelope(clearanceEnv, LABELS), []);
+// A period comparison's outputs are its columns (S3): the full comparison passes, a single count in its place does not.
+const S3_LABELS: Record<string, string> = { ...LABELS, "statistic:victims.earlier": "Murder victims, January 2025", "statistic:victims.later": "Murder victims, March 2025", "statistic:victims.change": "Change", "statistic:victims": "Murder victims" };
+const s3col = (as: string): ResultColumn => ({ binding: { kind: "statistic", as }, header: S3_LABELS[`statistic:${as}`] });
+const s3Env = { plan: X.S3, table: { columns: [s3col("victims.earlier"), s3col("victims.later"), s3col("victims.change")], rows: [[3, 0, -3]] },
+  evidence: [ev(0, "victims.earlier", "VALUE"), ev(0, "victims.later", "VALUE"), ev(0, "victims.change", "VALUE")], answerStatements: [] as never[] };
+assert.deepEqual(checkEnvelope(s3Env, S3_LABELS), []);
+assert.ok(checkEnvelope({ ...s3Env, table: { columns: [s3col("victims")], rows: [[0]] }, evidence: [ev(0, "victims", "VALUE")] }, S3_LABELS).length > 0, "an incomplete comparison is refused");
+
 // Answer statements: only the authorized ones, exactly where they apply.
 assert.equal(checkEnvelope({ ...n1Env, answerStatements: ["data_incomplete" as never] }, LABELS).length, 1);
 assert.equal(checkEnvelope({ ...n1Env, plan: { ...X.N1, geography: { places: [{ kind: "national" }], combine: "separate" } } }, LABELS).length, 1, "a national answer says reported NIBRS counts");
