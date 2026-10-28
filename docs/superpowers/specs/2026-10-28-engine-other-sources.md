@@ -85,7 +85,10 @@ matched eligible-agency numerator over covered population), cohorts, statuses an
   - Annual answers stop at the cutoff year minus one unless a current year is named (`:128`). That is a source rule
     of its own: it is not `latest_calendar_year_in_release`, which differs when a release ends in December.
 
-### Historical (UCR summary) and staffing
+### Historical: crime, clearance and staffing
+
+**Owner (2026-10-28, relayed):** "Historical means everything -- crime, clearance & staffing." One source family with
+one layer and one lighter compiler.
 
 - **Grain and entities.** Annual values per agency (ORI, year): crime, clearances, population and staffing
   (`all_total`, `officer_total`, `civilian_total`). It has no incidents or persons.
@@ -93,6 +96,17 @@ matched eligible-agency numerator over covered population), cohorts, statuses an
   `historical_state_national` holds FBI-estimated state and national counts and **stored rates**. There are also
   **published national clearance percentages** (`historical-question-compiler.ts:9-16`). Those are G7
   `published_value`s, never sums.
+- **Clearance.**
+  - **Agency:** `historical_agency_clearance` holds the FBI's annual **percent cleared** per agency and offense
+    (murder, rape, robbery, assault, burglary, theft, motor vehicle theft, violent, property), not cleared counts.
+  - **National:** `national_clearance_rate` holds the FBI's published national percentages (`historical-question-
+    compiler.ts:13, 170-179`).
+  - Both are `published_value`s (G7) with grain `year`. A percentage is never summed or averaged across agencies or
+    years, because there are no counts to weight it. State clearance has no table today, so it is a limitation, not a
+    computed figure.
+  - A missing figure is blank (UNAVAILABLE, reason "no clearance figures").
+  - Answers state percentages as the FBI publishes them. Today's compiler adds a sentence about small agencies
+    (`:543`); under the result contract that would be a fixed Historical answer statement (G8), or dropped.
 - **Fits as is:**
   - counts by place and year;
   - agency rates over the year's population;
@@ -132,10 +146,19 @@ matched eligible-agency numerator over covered population), cohorts, statuses an
   - `national_monthly` sums the sample. `state_monthly` sums **all agencies** (`:451-484`).
   - The typed compiler computes national and state from `agency_monthly` restricted to the sample, never from
     `national_monthly` or `state_monthly`.
+- **Definition (owner, 2026-10-28, relayed):** "state totals should be consistent agencies making state samples the
+  same as the national sample construction."
+  - The national sample is the agencies with every month of the data (`update-rtci-db.py:424-443`).
+  - A **state total** is the sum over that state's agencies chosen **by the same rule**: the national sample's members
+    in the state. It is never a sum of all agencies.
+  - In the engine, `rtci.*` state values read `agency_monthly` over the state's sample members. `state_monthly` is not
+    used.
+  - The live site is not changed here: its model-prompt path still uses `state_monthly`. The coordinator raises that
+    fix with the owner separately.
 - **Fits as is:** counts by month or year, agency rates, rolling counts, comparisons of periods.
 - **Needs:**
   - **Two separate cohort notions.**
-    - *Sample membership*: which agencies may contribute (the sample, for national and state).
+    - *Sample membership*: which agencies may contribute (the sample, for national and state, by the rule above).
     - *Reporting eligibility*: today's ordinary multi-month total needs the **identical set of contributors** every
       month. When the set changes, the compiler shows the months and leaves a rolling total blank
       (`current-question-compiler.ts:579-613`). Taking the intersection of reporting agencies would produce a number
@@ -178,8 +201,12 @@ matched eligible-agency numerator over covered population), cohorts, statuses an
   - places resolved to ORIs (today agencies are found by name, `hc-claude.ts:~165`);
   - reporting evidence. `reporting_agencies` counts agencies with an incident (`import-hate-crime.py:461-468`), so
     there is no zero evidence, and every zero stays UNKNOWN_UNEVIDENCED_ZERO until zero reports are decoded;
-  - an owner decision. NIBRS's `offenses.hate_crime@1` and this file count different things (this file also covers SRS
-    agencies). They stay separate measures, and which one answers an unqualified "hate crimes" is the owner's choice.
+  - **the owner's decision (2026-10-28, relayed):** "We should use the hate crimes file for sure."
+    - An unqualified "hate crimes" question reads this file.
+    - NIBRS's hate crime measure (`offenses.hate_crime@1`) answers only a question about something only NIBRS records
+      (an attribute the hate crime file does not carry; the reader checks it against the two layers' dimensions).
+    - The reader routes by that rule. The two stay separate measures under their own sources and are never combined
+      (G1).
 - **Build.** A **lighter compiler over `hate_crime_incidents`**. Today the tab is model SQL apart from its capability
   exits (`app/api/hc-query/route.ts:348-420`).
 
@@ -197,11 +224,11 @@ matched eligible-agency numerator over covered population), cohorts, statuses an
 
 1. **SHR** (agreed). Microdata already exists, its coverage rule is D6's, and it has closed types today. Needs: G1,
    G2, median and average, thresholds, the person-rate rule.
-2. **Historical and staffing.** An existing closed compiler. It brings annual grain (G3, G5), published values (G7)
+2. **Historical: crime, clearance and staffing.** An existing closed compiler covering all three. It brings annual grain (G3, G5), published values (G7)
    and the one label column (G6).
 3. **Current Trends.** The most new plan language: membership beside cohort, the contributors rule, rolling rates and
    `year_to_date` keyed by place.
-4. **Hate Crime.** No closed compiler, no zero evidence, and an owner decision.
+4. **Hate Crime.** No closed compiler and no zero evidence. The source for "hate crimes" is decided: this file.
 
 Each source follows NIBRS's sequence: correctness set, semantic layer, compiler, shadow against today's answers, then
 release through `scripts/release.sh` after shadow acceptance.
