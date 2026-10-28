@@ -1,0 +1,10457 @@
+{
+ "case": "N1",
+ "question": "What share of murder victims were of each race and sex, per month, in Houston since 2018?",
+ "interpretation": {
+  "agency": "TXHPD0000 (Houston Police Department, TX)",
+  "measure": "murder victims: distinct victim segments with a connected offense of 09A (murder and nonnegligent manslaughter)",
+  "counting_unit": "victim",
+  "groupings": [
+   "month (incident date)",
+   "victim race",
+   "victim sex"
+  ],
+  "denominator": "all murder victims of the same agency in the same month (partition: month)",
+  "period": "2018-01 through 2026-10 (dataset end)",
+  "unknown_handling": "race U and sex U are their own visible categories"
+ },
+ "must_state": [
+  "Houston's NIBRS data begins in June 2018: January-May 2018 have no Houston NIBRS records.",
+  "Each month's shares are of that month's murder victims; numerators and denominators are shown."
+ ],
+ "must_not": [
+  "divide by the whole-period total (NIBRS Savant's pct_of_total does this)",
+  "drop unknown race or sex",
+  "show months without data as 0"
+ ],
+ "combos_observed": [
+  {
+   "race": "A",
+   "race_label": "Asian",
+   "sex": "F",
+   "sex_label": "Female"
+  },
+  {
+   "race": "A",
+   "race_label": "Asian",
+   "sex": "M",
+   "sex_label": "Male"
+  },
+  {
+   "race": "B",
+   "race_label": "Black or African American",
+   "sex": "F",
+   "sex_label": "Female"
+  },
+  {
+   "race": "B",
+   "race_label": "Black or African American",
+   "sex": "M",
+   "sex_label": "Male"
+  },
+  {
+   "race": "B",
+   "race_label": "Black or African American",
+   "sex": "U",
+   "sex_label": "Unknown"
+  },
+  {
+   "race": "I",
+   "race_label": "American Indian or Alaska Native",
+   "sex": "M",
+   "sex_label": "Male"
+  },
+  {
+   "race": "P",
+   "race_label": "Native Hawaiian or Other Pacific Islander",
+   "sex": "F",
+   "sex_label": "Female"
+  },
+  {
+   "race": "P",
+   "race_label": "Native Hawaiian or Other Pacific Islander",
+   "sex": "M",
+   "sex_label": "Male"
+  },
+  {
+   "race": "U",
+   "race_label": "Unknown",
+   "sex": "F",
+   "sex_label": "Female"
+  },
+  {
+   "race": "U",
+   "race_label": "Unknown",
+   "sex": "M",
+   "sex_label": "Male"
+  },
+  {
+   "race": "U",
+   "race_label": "Unknown",
+   "sex": "U",
+   "sex_label": "Unknown"
+  },
+  {
+   "race": "W",
+   "race_label": "White",
+   "sex": "F",
+   "sex_label": "Female"
+  },
+  {
+   "race": "W",
+   "race_label": "White",
+   "sex": "M",
+   "sex_label": "Male"
+  },
+  {
+   "race": "W",
+   "race_label": "White",
+   "sex": "U",
+   "sex_label": "Unknown"
+  }
+ ],
+ "totals": {
+  "murder_victims": 2818,
+  "months_reported": 98,
+  "first_month_with_data": "2018-06"
+ },
+ "rows": [
+  {
+   "month": "2018-01",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  },
+  {
+   "month": "2018-02",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  },
+  {
+   "month": "2018-03",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  },
+  {
+   "month": "2018-04",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  },
+  {
+   "month": "2018-05",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  },
+  {
+   "month": "2018-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 31,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 31,
+     "pct_1dp": 6.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 31,
+     "pct_1dp": 32.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 5,
+     "den": 31,
+     "pct_1dp": 16.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 14,
+     "den": 31,
+     "pct_1dp": 45.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2018-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 25,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 25,
+     "pct_1dp": 4.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 25,
+     "pct_1dp": 44.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 4,
+     "den": 25,
+     "pct_1dp": 16.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 25,
+     "pct_1dp": 36.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2018-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 27,
+     "pct_1dp": 7.4
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 27,
+     "pct_1dp": 14.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 27,
+     "pct_1dp": 37.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 27,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 27,
+     "pct_1dp": 29.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2018-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 19,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 8,
+     "den": 19,
+     "pct_1dp": 42.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 4,
+     "den": 19,
+     "pct_1dp": 21.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 5,
+     "den": 19,
+     "pct_1dp": 26.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2018-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 23,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 23,
+     "pct_1dp": 17.4
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 23,
+     "pct_1dp": 52.2
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 23,
+     "pct_1dp": 13.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 4,
+     "den": 23,
+     "pct_1dp": 17.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2018-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 24,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 24,
+     "pct_1dp": 8.3
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 24,
+     "pct_1dp": 8.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 8,
+     "den": 24,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 24,
+     "pct_1dp": 12.5
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 24,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2018-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 22,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 22,
+     "pct_1dp": 9.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 22,
+     "pct_1dp": 63.6
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 22,
+     "pct_1dp": 4.5
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 5,
+     "den": 22,
+     "pct_1dp": 22.7
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 21,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 15,
+     "den": 21,
+     "pct_1dp": 71.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 21,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 21,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 4,
+     "den": 21,
+     "pct_1dp": 19.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 24,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 24,
+     "pct_1dp": 58.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 4,
+     "den": 24,
+     "pct_1dp": 16.7
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 6,
+     "den": 24,
+     "pct_1dp": 25.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 22,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 22,
+     "pct_1dp": 9.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 6,
+     "den": 22,
+     "pct_1dp": 27.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 22,
+     "pct_1dp": 9.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 22,
+     "pct_1dp": 54.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 20,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 20,
+     "pct_1dp": 5.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 20,
+     "pct_1dp": 5.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 8,
+     "den": 20,
+     "pct_1dp": 40.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 20,
+     "pct_1dp": 10.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 20,
+     "pct_1dp": 40.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 20,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 19,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 5,
+     "den": 19,
+     "pct_1dp": 26.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 9,
+     "den": 19,
+     "pct_1dp": 47.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 3,
+     "den": 19,
+     "pct_1dp": 15.8
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 28,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 28,
+     "pct_1dp": 3.6
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 17,
+     "den": 28,
+     "pct_1dp": 60.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 28,
+     "pct_1dp": 35.7
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 16,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 16,
+     "pct_1dp": 12.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 16,
+     "pct_1dp": 62.5
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 4,
+     "den": 16,
+     "pct_1dp": 25.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 28,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 28,
+     "pct_1dp": 7.1
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 28,
+     "pct_1dp": 7.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 28,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 28,
+     "pct_1dp": 3.6
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 28,
+     "pct_1dp": 3.6
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 28,
+     "pct_1dp": 28.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 23,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 23,
+     "pct_1dp": 13.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 9,
+     "den": 23,
+     "pct_1dp": 39.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 23,
+     "pct_1dp": 13.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 23,
+     "pct_1dp": 34.8
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 26,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 26,
+     "pct_1dp": 7.7
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 26,
+     "pct_1dp": 7.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 26,
+     "pct_1dp": 42.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 26,
+     "pct_1dp": 3.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 26,
+     "pct_1dp": 38.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 25,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 25,
+     "pct_1dp": 4.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 25,
+     "pct_1dp": 56.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 1,
+     "den": 25,
+     "pct_1dp": 4.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 25,
+     "pct_1dp": 36.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2019-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 29,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 3,
+     "den": 29,
+     "pct_1dp": 10.3
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 5,
+     "den": 29,
+     "pct_1dp": 17.2
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 29,
+     "pct_1dp": 48.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 29,
+     "pct_1dp": 3.4
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 29,
+     "pct_1dp": 3.4
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 5,
+     "den": 29,
+     "pct_1dp": 17.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 32,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 32,
+     "pct_1dp": 3.1
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 32,
+     "pct_1dp": 9.4
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 17,
+     "den": 32,
+     "pct_1dp": 53.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 32,
+     "pct_1dp": 3.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 32,
+     "pct_1dp": 31.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 19,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 13,
+     "den": 19,
+     "pct_1dp": 68.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 4,
+     "den": 19,
+     "pct_1dp": 21.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 27,
+     "pct_1dp": 40.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 27,
+     "pct_1dp": 7.4
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 27,
+     "pct_1dp": 44.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 38,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 38,
+     "pct_1dp": 2.6
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 38,
+     "pct_1dp": 7.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 22,
+     "den": 38,
+     "pct_1dp": 57.9
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 38,
+     "pct_1dp": 7.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 38,
+     "pct_1dp": 23.7
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 34,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 34,
+     "pct_1dp": 2.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 19,
+     "den": 34,
+     "pct_1dp": 55.9
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 1,
+     "den": 34,
+     "pct_1dp": 2.9
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 34,
+     "pct_1dp": 2.9
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 34,
+     "pct_1dp": 5.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 34,
+     "pct_1dp": 29.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 13,
+     "den": 27,
+     "pct_1dp": 48.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 27,
+     "pct_1dp": 44.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 29,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 29,
+     "pct_1dp": 10.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 15,
+     "den": 29,
+     "pct_1dp": 51.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 4,
+     "den": 29,
+     "pct_1dp": 13.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 29,
+     "pct_1dp": 24.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 36,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 36,
+     "pct_1dp": 2.8
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 36,
+     "pct_1dp": 2.8
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 36,
+     "pct_1dp": 8.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 18,
+     "den": 36,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 36,
+     "pct_1dp": 8.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 36,
+     "pct_1dp": 27.8
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 39,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 39,
+     "pct_1dp": 7.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 19,
+     "den": 39,
+     "pct_1dp": 48.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 39,
+     "pct_1dp": 2.6
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 16,
+     "den": 39,
+     "pct_1dp": 41.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 52,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 52,
+     "pct_1dp": 7.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 28,
+     "den": 52,
+     "pct_1dp": 53.8
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 1,
+     "den": 52,
+     "pct_1dp": 1.9
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 52,
+     "pct_1dp": 3.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 17,
+     "den": 52,
+     "pct_1dp": 32.7
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 52,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 41,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 41,
+     "pct_1dp": 4.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 22,
+     "den": 41,
+     "pct_1dp": 53.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 5,
+     "den": 41,
+     "pct_1dp": 12.2
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 41,
+     "pct_1dp": 29.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2020-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 40,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 5,
+     "den": 40,
+     "pct_1dp": 12.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 16,
+     "den": 40,
+     "pct_1dp": 40.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 4,
+     "den": 40,
+     "pct_1dp": 10.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 15,
+     "den": 40,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 33,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 33,
+     "pct_1dp": 3.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 33,
+     "pct_1dp": 3.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 22,
+     "den": 33,
+     "pct_1dp": 66.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 33,
+     "pct_1dp": 3.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 33,
+     "pct_1dp": 24.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 36,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 21,
+     "den": 36,
+     "pct_1dp": 58.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 36,
+     "pct_1dp": 2.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 14,
+     "den": 36,
+     "pct_1dp": 38.9
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 36,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 6,
+     "den": 36,
+     "pct_1dp": 16.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 18,
+     "den": 36,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 36,
+     "pct_1dp": 2.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 11,
+     "den": 36,
+     "pct_1dp": 30.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 39,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 39,
+     "pct_1dp": 5.1
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 39,
+     "pct_1dp": 5.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 25,
+     "den": 39,
+     "pct_1dp": 64.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 39,
+     "pct_1dp": 2.6
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 39,
+     "pct_1dp": 23.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 39,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 51,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 51,
+     "pct_1dp": 7.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 31,
+     "den": 51,
+     "pct_1dp": 60.8
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 51,
+     "pct_1dp": 2.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 51,
+     "pct_1dp": 5.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 51,
+     "pct_1dp": 23.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 51,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 45,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 45,
+     "pct_1dp": 2.2
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 8,
+     "den": 45,
+     "pct_1dp": 17.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 18,
+     "den": 45,
+     "pct_1dp": 40.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 5,
+     "den": 45,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 45,
+     "pct_1dp": 28.9
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 45,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 27,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 27,
+     "pct_1dp": 40.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 11,
+     "den": 27,
+     "pct_1dp": 40.7
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 38,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 38,
+     "pct_1dp": 7.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 19,
+     "den": 38,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 38,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 14,
+     "den": 38,
+     "pct_1dp": 36.8
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 47,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 47,
+     "pct_1dp": 2.1
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 47,
+     "pct_1dp": 8.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 20,
+     "den": 47,
+     "pct_1dp": 42.6
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 7,
+     "den": 47,
+     "pct_1dp": 14.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 15,
+     "den": 47,
+     "pct_1dp": 31.9
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 47,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 62,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 5,
+     "den": 62,
+     "pct_1dp": 8.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 26,
+     "den": 62,
+     "pct_1dp": 41.9
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 62,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 28,
+     "den": 62,
+     "pct_1dp": 45.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 62,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 34,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 34,
+     "pct_1dp": 2.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 22,
+     "den": 34,
+     "pct_1dp": 64.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 34,
+     "pct_1dp": 2.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 34,
+     "pct_1dp": 29.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 34,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2021-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 25,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 25,
+     "pct_1dp": 12.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 25,
+     "pct_1dp": 44.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 25,
+     "pct_1dp": 8.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 25,
+     "pct_1dp": 36.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 48,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 48,
+     "pct_1dp": 2.1
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 48,
+     "pct_1dp": 6.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 24,
+     "den": 48,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 48,
+     "pct_1dp": 6.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 17,
+     "den": 48,
+     "pct_1dp": 35.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 48,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 38,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 38,
+     "pct_1dp": 2.6
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 38,
+     "pct_1dp": 7.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 17,
+     "den": 38,
+     "pct_1dp": 44.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 5,
+     "den": 38,
+     "pct_1dp": 13.2
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 38,
+     "pct_1dp": 31.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 25,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 25,
+     "pct_1dp": 4.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 9,
+     "den": 25,
+     "pct_1dp": 36.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 25,
+     "pct_1dp": 8.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 25,
+     "pct_1dp": 52.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 37,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 37,
+     "pct_1dp": 2.7
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 6,
+     "den": 37,
+     "pct_1dp": 16.2
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 17,
+     "den": 37,
+     "pct_1dp": 45.9
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 37,
+     "pct_1dp": 8.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 37,
+     "pct_1dp": 27.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 38,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 38,
+     "pct_1dp": 2.6
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 38,
+     "pct_1dp": 2.6
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 20,
+     "den": 38,
+     "pct_1dp": 52.6
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 38,
+     "pct_1dp": 7.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 38,
+     "pct_1dp": 34.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 38,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 49,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 49,
+     "pct_1dp": 8.2
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 30,
+     "den": 49,
+     "pct_1dp": 61.2
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 49,
+     "pct_1dp": 2.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 14,
+     "den": 49,
+     "pct_1dp": 28.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 49,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 32,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 32,
+     "pct_1dp": 9.4
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 32,
+     "pct_1dp": 43.8
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 32,
+     "pct_1dp": 9.4
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 32,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 28,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 28,
+     "pct_1dp": 10.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 17,
+     "den": 28,
+     "pct_1dp": 60.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 1,
+     "den": 28,
+     "pct_1dp": 3.6
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 28,
+     "pct_1dp": 25.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 31,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 31,
+     "pct_1dp": 3.2
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 31,
+     "pct_1dp": 12.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 20,
+     "den": 31,
+     "pct_1dp": 64.5
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 6,
+     "den": 31,
+     "pct_1dp": 19.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 41,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 41,
+     "pct_1dp": 4.9
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 41,
+     "pct_1dp": 9.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 16,
+     "den": 41,
+     "pct_1dp": 39.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 41,
+     "pct_1dp": 7.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 16,
+     "den": 41,
+     "pct_1dp": 39.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 41,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 32,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 32,
+     "pct_1dp": 9.4
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 13,
+     "den": 32,
+     "pct_1dp": 40.6
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 32,
+     "pct_1dp": 9.4
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 32,
+     "pct_1dp": 40.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2022-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 36,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 36,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 16,
+     "den": 36,
+     "pct_1dp": 44.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 1,
+     "den": 36,
+     "pct_1dp": 2.8
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 36,
+     "pct_1dp": 8.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 36,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 36,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 32,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 32,
+     "pct_1dp": 3.1
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 32,
+     "pct_1dp": 9.4
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 32,
+     "pct_1dp": 43.8
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 32,
+     "pct_1dp": 6.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 32,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 26,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 26,
+     "pct_1dp": 3.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 13,
+     "den": 26,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 1,
+     "den": 26,
+     "pct_1dp": 3.8
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 1,
+     "den": 26,
+     "pct_1dp": 3.8
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 26,
+     "pct_1dp": 11.5
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 26,
+     "pct_1dp": 26.9
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 23,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 9,
+     "den": 23,
+     "pct_1dp": 39.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 4,
+     "den": 23,
+     "pct_1dp": 17.4
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 23,
+     "pct_1dp": 43.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 25,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 25,
+     "pct_1dp": 8.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 13,
+     "den": 25,
+     "pct_1dp": 52.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 25,
+     "pct_1dp": 12.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 25,
+     "pct_1dp": 28.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 40,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 4,
+     "den": 40,
+     "pct_1dp": 10.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 40,
+     "pct_1dp": 7.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 18,
+     "den": 40,
+     "pct_1dp": 45.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 1,
+     "den": 40,
+     "pct_1dp": 2.5
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 40,
+     "pct_1dp": 2.5
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 40,
+     "pct_1dp": 32.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 40,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 27,
+     "pct_1dp": 14.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 27,
+     "pct_1dp": 40.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 27,
+     "pct_1dp": 3.7
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 27,
+     "pct_1dp": 37.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 37,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 37,
+     "pct_1dp": 8.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 16,
+     "den": 37,
+     "pct_1dp": 43.2
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 1,
+     "den": 37,
+     "pct_1dp": 2.7
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 4,
+     "den": 37,
+     "pct_1dp": 10.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 37,
+     "pct_1dp": 35.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 37,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 29,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 29,
+     "pct_1dp": 6.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 18,
+     "den": 29,
+     "pct_1dp": 62.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 29,
+     "pct_1dp": 6.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 29,
+     "pct_1dp": 24.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 29,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 32,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 5,
+     "den": 32,
+     "pct_1dp": 15.6
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 32,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 1,
+     "den": 32,
+     "pct_1dp": 3.1
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 32,
+     "pct_1dp": 3.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 32,
+     "pct_1dp": 40.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 19,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 8,
+     "den": 19,
+     "pct_1dp": 42.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 19,
+     "pct_1dp": 5.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 19,
+     "pct_1dp": 42.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 19,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 26,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 26,
+     "pct_1dp": 3.8
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 26,
+     "pct_1dp": 3.8
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 26,
+     "pct_1dp": 7.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 8,
+     "den": 26,
+     "pct_1dp": 30.8
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 26,
+     "pct_1dp": 7.7
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 26,
+     "pct_1dp": 46.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2023-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 27,
+     "pct_1dp": 14.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 27,
+     "pct_1dp": 44.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 27,
+     "pct_1dp": 7.4
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 27,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 24,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 24,
+     "pct_1dp": 4.2
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 24,
+     "pct_1dp": 12.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 24,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 24,
+     "pct_1dp": 4.2
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 24,
+     "pct_1dp": 29.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 18,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 18,
+     "pct_1dp": 16.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 6,
+     "den": 18,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 18,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 18,
+     "pct_1dp": 38.9
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 21,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 21,
+     "pct_1dp": 9.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 21,
+     "pct_1dp": 47.6
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 21,
+     "pct_1dp": 14.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 6,
+     "den": 21,
+     "pct_1dp": 28.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 30,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 30,
+     "pct_1dp": 13.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 30,
+     "pct_1dp": 46.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 5,
+     "den": 30,
+     "pct_1dp": 16.7
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 30,
+     "pct_1dp": 23.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 30,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 30,
+     "pct_1dp": 13.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 15,
+     "den": 30,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 6,
+     "den": 30,
+     "pct_1dp": 20.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 5,
+     "den": 30,
+     "pct_1dp": 16.7
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 33,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 33,
+     "pct_1dp": 3.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 33,
+     "pct_1dp": 6.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 33,
+     "pct_1dp": 36.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 5,
+     "den": 33,
+     "pct_1dp": 15.2
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 13,
+     "den": 33,
+     "pct_1dp": 39.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 33,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 31,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 31,
+     "pct_1dp": 12.9
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 31,
+     "pct_1dp": 45.2
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 1,
+     "den": 31,
+     "pct_1dp": 3.2
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 31,
+     "pct_1dp": 6.5
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 10,
+     "den": 31,
+     "pct_1dp": 32.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 31,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 27,
+     "pct_1dp": 7.4
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 9,
+     "den": 27,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 7,
+     "den": 27,
+     "pct_1dp": 25.9
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 27,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 27,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 27,
+     "pct_1dp": 7.4
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 27,
+     "pct_1dp": 14.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 27,
+     "pct_1dp": 37.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 27,
+     "pct_1dp": 7.4
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 27,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 27,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 30,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 30,
+     "pct_1dp": 6.7
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 30,
+     "pct_1dp": 6.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 30,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 30,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 30,
+     "pct_1dp": 10.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 12,
+     "den": 30,
+     "pct_1dp": 40.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 1,
+     "den": 30,
+     "pct_1dp": 3.3
+    }
+   ]
+  },
+  {
+   "month": "2024-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 28,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 28,
+     "pct_1dp": 14.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 28,
+     "pct_1dp": 42.9
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 28,
+     "pct_1dp": 3.6
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 11,
+     "den": 28,
+     "pct_1dp": 39.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2024-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 21,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 21,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 21,
+     "pct_1dp": 9.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 21,
+     "pct_1dp": 52.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 21,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 6,
+     "den": 21,
+     "pct_1dp": 28.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 22,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 22,
+     "pct_1dp": 4.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 22,
+     "pct_1dp": 54.5
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 22,
+     "pct_1dp": 9.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 22,
+     "pct_1dp": 31.8
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 21,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 21,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 21,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 21,
+     "pct_1dp": 47.6
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 21,
+     "pct_1dp": 4.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 21,
+     "pct_1dp": 38.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 21,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 32,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 14,
+     "den": 32,
+     "pct_1dp": 43.8
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 32,
+     "pct_1dp": 3.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 17,
+     "den": 32,
+     "pct_1dp": 53.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 32,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 25,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 25,
+     "pct_1dp": 8.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 25,
+     "pct_1dp": 8.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 13,
+     "den": 25,
+     "pct_1dp": 52.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 25,
+     "pct_1dp": 4.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 25,
+     "pct_1dp": 28.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 25,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 28,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 28,
+     "pct_1dp": 3.6
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 28,
+     "pct_1dp": 7.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 13,
+     "den": 28,
+     "pct_1dp": 46.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 3,
+     "den": 28,
+     "pct_1dp": 10.7
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 28,
+     "pct_1dp": 32.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 28,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 23,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 23,
+     "pct_1dp": 8.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 11,
+     "den": 23,
+     "pct_1dp": 47.8
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 1,
+     "den": 23,
+     "pct_1dp": 4.3
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 23,
+     "pct_1dp": 8.7
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 23,
+     "pct_1dp": 30.4
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 23,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 26,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 26,
+     "pct_1dp": 7.7
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 18,
+     "den": 26,
+     "pct_1dp": 69.2
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 6,
+     "den": 26,
+     "pct_1dp": 23.1
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 26,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-08",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 22,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 22,
+     "pct_1dp": 4.5
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 22,
+     "pct_1dp": 18.2
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 22,
+     "pct_1dp": 54.5
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 22,
+     "pct_1dp": 9.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 3,
+     "den": 22,
+     "pct_1dp": 13.6
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 22,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-09",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 15,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 7,
+     "den": 15,
+     "pct_1dp": 46.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 8,
+     "den": 15,
+     "pct_1dp": 53.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-10",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 18,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 18,
+     "pct_1dp": 5.6
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 6,
+     "den": 18,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 2,
+     "den": 18,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 18,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 18,
+     "pct_1dp": 38.9
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-11",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 24,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 24,
+     "pct_1dp": 8.3
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 12,
+     "den": 24,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 1,
+     "den": 24,
+     "pct_1dp": 4.2
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 9,
+     "den": 24,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 24,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2025-12",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 16,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 16,
+     "pct_1dp": 12.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 6,
+     "den": 16,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 1,
+     "den": 16,
+     "pct_1dp": 6.3
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 16,
+     "pct_1dp": 6.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 6,
+     "den": 16,
+     "pct_1dp": 37.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-01",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 16,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 2,
+     "den": 16,
+     "pct_1dp": 12.5
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 10,
+     "den": 16,
+     "pct_1dp": 62.5
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 16,
+     "pct_1dp": 6.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 3,
+     "den": 16,
+     "pct_1dp": 18.8
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 16,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-02",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 18,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 18,
+     "pct_1dp": 22.2
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 9,
+     "den": 18,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 1,
+     "den": 18,
+     "pct_1dp": 5.6
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 4,
+     "den": 18,
+     "pct_1dp": 22.2
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-03",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 15,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 15,
+     "pct_1dp": 6.7
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 7,
+     "den": 15,
+     "pct_1dp": 46.7
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 15,
+     "pct_1dp": 13.3
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 5,
+     "den": 15,
+     "pct_1dp": 33.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 15,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-04",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 14,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 1,
+     "den": 14,
+     "pct_1dp": 7.1
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 1,
+     "den": 14,
+     "pct_1dp": 7.1
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 1,
+     "den": 14,
+     "pct_1dp": 7.1
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 4,
+     "den": 14,
+     "pct_1dp": 28.6
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 7,
+     "den": 14,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 14,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-05",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 18,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 2,
+     "den": 18,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 2,
+     "den": 18,
+     "pct_1dp": 11.1
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 9,
+     "den": 18,
+     "pct_1dp": 50.0
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 5,
+     "den": 18,
+     "pct_1dp": 27.8
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 18,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-06",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 17,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 3,
+     "den": 17,
+     "pct_1dp": 17.6
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 8,
+     "den": 17,
+     "pct_1dp": 47.1
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 2,
+     "den": 17,
+     "pct_1dp": 11.8
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 4,
+     "den": 17,
+     "pct_1dp": 23.5
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 17,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-07",
+   "status": "REPORTED_CRIMES",
+   "murder_victims": 11,
+   "cells": [
+    {
+     "race": "A",
+     "sex": "F",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "A",
+     "sex": "M",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "B",
+     "sex": "F",
+     "num": 4,
+     "den": 11,
+     "pct_1dp": 36.4
+    },
+    {
+     "race": "B",
+     "sex": "M",
+     "num": 4,
+     "den": 11,
+     "pct_1dp": 36.4
+    },
+    {
+     "race": "B",
+     "sex": "U",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "I",
+     "sex": "M",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "F",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "P",
+     "sex": "M",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "F",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "M",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "U",
+     "sex": "U",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "F",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    },
+    {
+     "race": "W",
+     "sex": "M",
+     "num": 3,
+     "den": 11,
+     "pct_1dp": 27.3
+    },
+    {
+     "race": "W",
+     "sex": "U",
+     "num": 0,
+     "den": 11,
+     "pct_1dp": 0.0
+    }
+   ]
+  },
+  {
+   "month": "2026-08",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  },
+  {
+   "month": "2026-09",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  },
+  {
+   "month": "2026-10",
+   "status": "UNKNOWN",
+   "murder_victims": null,
+   "cells": null
+  }
+ ]
+}

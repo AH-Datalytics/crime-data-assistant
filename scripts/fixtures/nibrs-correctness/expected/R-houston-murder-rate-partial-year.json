@@ -1,0 +1,24 @@
+{
+ "case": "R",
+ "question": "Murder victim rate per 100,000 residents in Houston, 2018 and 2019.",
+ "counting_unit": "victim",
+ "rows": [
+  {
+   "year": 2018,
+   "murder_victims": 171,
+   "months_with_data": 7,
+   "population": 2296862,
+   "population_source": "FBI agency population (nibrs.db agencies.population) for the data year",
+   "rate_per_100k": null,
+   "rate_unavailable_reason": "only 7 of 12 months have Houston NIBRS data; an annual rate needs the agency's whole year (numerator and denominator use the same agency-period eligibility, D6)"
+  },
+  {
+   "year": 2019,
+   "murder_victims": 281,
+   "months_with_data": 12,
+   "population": 2307560,
+   "population_source": "FBI agency population (nibrs.db agencies.population) for the data year",
+   "rate_per_100k": 12.18
+  }
+ ]
+}

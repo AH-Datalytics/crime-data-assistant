@@ -1,0 +1,98 @@
+{
+ "case": "N4",
+ "definition": "Carjacking (NIBRSAI's derived measure, unchanged): incidents with a 120 (robbery) offense and a property segment with loss type 7 (stolen) and a motor-vehicle description (03, 05, 24, 28, 37). NIBRS has no carjacking offense code.",
+ "counting_unit": "incident",
+ "H1": {
+  "question": "carjacking per month in Memphis",
+  "interpretation": "the latest complete year, 2025, by month (today's default; a change to it must be declared)",
+  "rows": [
+   {
+    "month": "2025-01",
+    "carjackings": 26
+   },
+   {
+    "month": "2025-02",
+    "carjackings": 16
+   },
+   {
+    "month": "2025-03",
+    "carjackings": 22
+   },
+   {
+    "month": "2025-04",
+    "carjackings": 25
+   },
+   {
+    "month": "2025-05",
+    "carjackings": 14
+   },
+   {
+    "month": "2025-06",
+    "carjackings": 13
+   },
+   {
+    "month": "2025-07",
+    "carjackings": 20
+   },
+   {
+    "month": "2025-08",
+    "carjackings": 20
+   },
+   {
+    "month": "2025-09",
+    "carjackings": 17
+   },
+   {
+    "month": "2025-10",
+    "carjackings": 5
+   },
+   {
+    "month": "2025-11",
+    "carjackings": 4
+   },
+   {
+    "month": "2025-12",
+    "carjackings": 8
+   }
+  ]
+ },
+ "H2": {
+  "question": "carjackings in Memphis in 2025",
+  "rows": [
+   {
+    "year": 2025,
+    "carjackings": 190
+   }
+  ]
+ },
+ "H3": {
+  "question": "carjackings per year in Memphis from 2020 to 2025",
+  "rows": [
+   {
+    "year": 2020,
+    "carjackings": 411
+   },
+   {
+    "year": 2021,
+    "carjackings": 535
+   },
+   {
+    "year": 2022,
+    "carjackings": 601
+   },
+   {
+    "year": 2023,
+    "carjackings": 528
+   },
+   {
+    "year": 2024,
+    "carjackings": 359
+   },
+   {
+    "year": 2025,
+    "carjackings": 190
+   }
+  ]
+ },
+ "live_check": "On 2026-10-27 these equal the live answers (query_log ids 10631-10633, summary_carjacking_monthly) month for month, 2017-01 through 2026-10."
+}

@@ -1,0 +1,6 @@
+year,state,ori,incident_num,incident_date,arrestee_sequence,arrest_number,arrest_date,arrest_type,multiple_indicator,ucr_arrest_offense,arrestee_weapon_1,arrestee_weapon_2,age,sex,race,ethnicity,resident_status,disposition_under_18
+2024,TN,TNMPD0000,0U0S3UJ2H0FF,20240112,01,ME031265091,20240621,T,N,120,01,"",25,F,B,N,R,""
+2019,TX,TXHPD0000,026992719,20190302,01,190010626,20190307,O,N,09A,01,"",20,M,W,H,U,""
+2019,TX,TXHPD0000,026992719,20190302,02,190011513,20190312,O,N,09A,01,"",18,M,W,H,R,""
+2019,TX,TXHPD0000,026992719,20190302,03,190012518,20190319,O,N,09A,13,"",19,M,W,H,R,""
+2019,TX,TXHPD0000,026992719,20190302,04,190023607,20190529,O,N,09A,01,"",16,M,W,H,R,H

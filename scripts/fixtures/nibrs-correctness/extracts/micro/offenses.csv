@@ -1,0 +1,12 @@
+year,state,ori,incident_num,incident_date,ucr_offense_code,attempted_completed,offender_suspected_of_using_1,offender_suspected_of_using_2,offender_suspected_of_using_3,location_type,num_premises_entered,method_of_entry,type_criminal_activity_1,type_criminal_activity_2,type_criminal_activity_3,type_weapon_1,type_weapon_2,type_weapon_3,bias_motivation
+2024,TN,TNMPD0000,0U0S3UG6NNFF,20240102,23F,C,N,"","",09,"","","","","","","","",88
+2024,TN,TNMPD0000,0U0S3UJ2H0FF,20240112,120,C,N,"","",14,"","","","","",11,"","",88
+2019,TX,TXHPD0000,008261219,20190119,09A,C,N,"","",20,"","",N,"","",11,"","",88
+2019,TX,TXHPD0000,008261219,20190119,13A,C,N,"","",20,"","",N,"","",11,"","",88
+2021,TX,TXHPD0000,6V139B1EZU72,20210529,09A,C,N,"","",13,"","",N,"","",12,"","",88
+2021,TX,TXHPD0000,729X9A1EZU72,20210905,09A,C,N,"","",20,"","",N,"","",11,"","",88
+2021,TX,TXHPD0000,729X9A1EZU72,20210905,200,C,N,"","",20,"","","","","","","","",88
+2021,TX,TXHPD0000,729X9A1EZU72,20210905,240,C,N,"","",20,"","","","","","","","",88
+2024,TN,TNMPD0000,0U023-G72OFF,20240427,23F,C,N,"","",20,"","","","","","","","",88
+2024,TN,TNMPD0000,0U023-G72OFF,20240427,240,C,N,"","",20,"","","","","","","","",88
+2019,TX,TXHPD0000,026992719,20190302,09A,C,N,"","",18,"","",G,"","",11,"","",88
