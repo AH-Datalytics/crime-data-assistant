@@ -1,4 +1,4 @@
-import { MAX_SLANTED_AXIS, estimateWidth, sideLabelWidth, slantedAxisHeight, wrapLabel } from "./chart-text";
+import { MAX_SLANTED_AXIS, estimateWidth, sideLabelWidth, sidewaysBandHeight, slantedAxisHeight } from "./chart-text";
 export const MAX_AUTO_CHART_SERIES = 16;
 
 export const DEFAULT_CHART_COLORS = [
@@ -36,14 +36,14 @@ export function chartBoxMinHeight(config: { type: string; xAxis: string; yAxis: 
   const noteLines = notes.reduce((n, t) => n + Math.ceil(t.length / 64), 0);
   const base = Math.max(280, titleLines * 22 + 8 + legendRows * 20 + 8 + xAxis + MIN_PLOT_HEIGHT + 28 + 24 + noteLines * 16);
   // Owner item 3.1: category bars drawn sideways (labels too long to slant, or a phone width) take one band per label,
-  // as tall as its wrapped lines, estimated at the narrow 375 px width like the title. The box grows instead of the
+  // as tall as the tallest wrapped label (Recharts gives every category the same band), estimated at the narrow 375 px width like the title. The box grows instead of the
   // labels overlapping or the chart spilling out of it.
   if ((config.type !== "bar" && config.type !== "stacked_bar") || timeAxis || rows.length === 0) return base;
   const labels = rows.map((r) => String(r[config.xAxis] ?? ""));
   const sidewaysAtNarrow = rows.length <= 8 || slantedAxisHeight(labels, estimateWidth) > MAX_SLANTED_AXIS;
   if (!sidewaysAtNarrow) return base;
   const labelWidth = sideLabelWidth(labels, 375, estimateWidth);
-  const bands = labels.reduce((sum, l) => sum + Math.max(28, wrapLabel(l, labelWidth - 8, estimateWidth).length * 14 + 10), 0);
+  const bands = labels.length * sidewaysBandHeight(labels, labelWidth, estimateWidth);
   return Math.max(base, titleLines * 22 + 8 + legendRows * 20 + 70 + bands + 24 + noteLines * 16);
 }
 

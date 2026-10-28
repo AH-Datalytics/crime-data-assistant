@@ -40,8 +40,7 @@ import {
   asOutcomeRecord,
   decisionFinalization,
   OPERATIONAL_RECORD,
-  type OutcomeLogRecord,
-} from "@/lib/proof-finalize";
+  type OutcomeLogRecord, annotationDropTagsFor } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import { OUTCOMES, type QueryLogOutcome } from "@/lib/proof-contract";
@@ -372,7 +371,7 @@ async function handleNibrsPost(req: NextRequest) {
       /** Proof finalization for this exit; null yields baseline-identical columns. */
       proof: ProofFinalization | OutcomeLogRecord | null = null
     ) => {
-      chartAuditQueryLogId = logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, guardrails, model, sid, routingMeta, chartConfigJson, modelResponseJson, chartAuditRequestId, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
+      chartAuditQueryLogId = logNibrsQuery(q, sqlText, rowCount, logError, ms, logResponse, [...guardrails, ...annotationDropTagsFor(proof)], model, sid, routingMeta, chartConfigJson, modelResponseJson, chartAuditRequestId, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
       return chartAuditQueryLogId;
     };
 

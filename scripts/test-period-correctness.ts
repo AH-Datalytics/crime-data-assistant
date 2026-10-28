@@ -1012,6 +1012,45 @@ console.log("14 - non-comparison answers are not disturbed");
     "and no month-coverage warning");
 }
 
+/* ── 9. proof finalizes the answer that is delivered (answer contract, Codex implementation review #3) ── */
+console.log("");
+console.log("9 - every finalization after a withholding presentation finalizes the delivered rows and columns");
+{
+  const file = "app/api/query/route.ts";
+  const src = fs.readFileSync(path.resolve(file), "utf8");
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.ES2022, true);
+  const presentations: ts.Statement[] = [];
+  const finds = (n: ts.Node): void => {
+    if (ts.isVariableStatement(n) && n.getText(sf).startsWith("const presentation = withholdUnverifiedChange")) presentations.push(n);
+    ts.forEachChild(n, finds);
+  };
+  finds(sf);
+  check(presentations.length === 2, `both presentation sites are findable (found ${presentations.length})`);
+  for (const p of presentations) {
+    // Every finalizeExit({...}) that follows the presentation within its own block (the exit it belongs to, including
+    // that exit's refinement and retry callbacks), with a rows property.
+    const fn: ts.Node | undefined = p.parent;
+    const calls: ts.CallExpression[] = [];
+    const collect = (n: ts.Node): void => {
+      if (ts.isCallExpression(n) && n.expression.getText(sf) === "finalizeExit" && n.pos > p.pos) calls.push(n);
+      ts.forEachChild(n, collect);
+    };
+    if (fn) collect(fn);
+    const withRows = calls.filter((c) => {
+      const arg = c.arguments[0];
+      return arg && ts.isObjectLiteralExpression(arg) && arg.properties.some((pr) => pr.name?.getText(sf) === "rows");
+    });
+    check(withRows.length > 0, `finalizations after the presentation at line ${sf.getLineAndCharacterOfPosition(p.pos).line + 1} are findable`);
+    for (const c of withRows) {
+      const props = (c.arguments[0] as ts.ObjectLiteralExpression).properties.filter(ts.isPropertyAssignment);
+      const init = (name: string) => props.find((pr) => pr.name.getText(sf) === name)?.initializer.getText(sf);
+      const line = sf.getLineAndCharacterOfPosition(c.pos).line + 1;
+      check(init("rows") === "deliveredRows" && init("columns") === "deliveredColumns",
+        `line ${line}: finalizes deliveredRows/deliveredColumns (got ${init("rows")}/${init("columns")})`);
+    }
+  }
+}
+
 console.log("");
 console.log(`checks: ${checks}   failures: ${failures}`);
 if (failures > 0) { console.log("RESULT: FAIL"); process.exit(1); }

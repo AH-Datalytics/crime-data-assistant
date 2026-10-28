@@ -70,7 +70,7 @@ export function annotationDropTags(dropped: readonly string[]): string[] {
   return dropped.map((name) => `answer-annotation-dropped:${name}`);
 }
 
-type ChartBinding = { xAxis?: unknown; yAxis?: unknown; [k: string]: unknown };
+type ChartBinding = { xAxis?: unknown; yAxis?: unknown };
 
 /**
  * A chart config reconciled with the projected columns: series naming a dropped column are removed. An x axis on a

@@ -30,8 +30,7 @@ import {
   asOutcomeRecord,
   decisionFinalization,
   OPERATIONAL_RECORD,
-  type OutcomeLogRecord,
-} from "@/lib/proof-finalize";
+  type OutcomeLogRecord, annotationDropTagsFor } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import type { SealedPayload } from "@/lib/proof-finalize";
@@ -294,7 +293,7 @@ export async function POST(req: NextRequest) {
       /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
       modelResponseJson: string | null = null
     ) => {
-      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
+      chartAuditQueryLogId = logQuery(q, sqlText, rowCount, logError, ms, logResponse, tabName, [...guardrails, ...annotationDropTagsFor(proof)], model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
       return chartAuditQueryLogId;
     };
     const routeGuardrailsFired: string[] = [];

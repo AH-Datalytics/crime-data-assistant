@@ -5,7 +5,8 @@
  *   npx tsx scripts/test-answer-columns.ts
  */
 import assert from "node:assert/strict";
-import { finalizeProof, emitFactualPayload, type ProofFinalizationInput } from "../lib/proof-finalize";
+import { annotationDropTagsFor, finalizeProof, emitFactualPayload, type ProofFinalizationInput } from "../lib/proof-finalize";
+import { serializeChartConfigForLog } from "../lib/chart-config-log";
 import { OUTCOMES } from "../lib/proof-contract";
 import { runInner } from "../lib/why-scope";
 import {
@@ -149,6 +150,22 @@ for (const env of [{}, { PROOF_MODE: "shadow" }] as Record<string, string>[]) {
     } catch (e) { failed += 1; console.log(`  FAIL  choke points agree (${mode})\n        ${(e as Error).message}`); }
   })());
 }
+
+check("the request log gets a drop tag per removed annotation (Codex implementation review #4)", () => {
+  const fin = finalizeProof(input({}));
+  assert.deepEqual(annotationDropTagsFor(fin), ["answer-annotation-dropped:note"]);
+  const clean = finalizeProof({ ...input({}), columns: ["year"], rows: [{ year: 1 }] });
+  assert.deepEqual(annotationDropTagsFor(clean), []);
+  assert.deepEqual(annotationDropTagsFor(null), []);
+});
+
+check("the chart log records the delivered chart: annotation columns and series removed", () => {
+  const logged = JSON.parse(serializeChartConfigForLog({ type: "line", xAxis: "year", yAxis: ["value", "note"], title: "T" } as never, ["year", "value", "note"]) as string);
+  assert.deepEqual(logged.yAxis, ["value"]);
+  assert.equal(logged.seriesCount, 1);
+  assert.ok(!logged.columns.includes("note"), `columns ${JSON.stringify(logged.columns)}`);
+  assert.equal(serializeChartConfigForLog({ type: "line", xAxis: "year", yAxis: ["note"], title: "T" } as never, ["year", "note"]), null, "no series left: no chart logged");
+});
 
 check("emission with nothing to drop is referentially identical (off mode)", () => {
   const fin = finalizeProof({ ...input({}), columns: ["year"], rows: [{ year: 1 }] });

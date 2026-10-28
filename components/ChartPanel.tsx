@@ -32,8 +32,9 @@ import {
   uniqueCategoryLabels,
 } from "@/lib/chart-layout";
 import { useChartRenderReceipt } from "./useChartRenderReceipt";
+import { useBoxWidth } from "./useBoxWidth";
 import { chartNotes } from "@/lib/embed-notes";
-import { resetTickTextCache, MAX_SLANTED_AXIS, slantedAxisHeight, slantedLeftMargin, sideLabelWidth as measuredSideLabelWidth, valueAxisWidth, wrapLabel, wrappedAxisHeight } from "@/lib/chart-text";
+import { resetTickTextCache, MAX_SLANTED_AXIS, sidewaysBandHeight, slantedAxisHeight, slantedLeftMargin, sideLabelWidth as measuredSideLabelWidth, valueAxisWidth, wrapLabel, wrappedAxisHeight } from "@/lib/chart-text";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -304,7 +305,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
 
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : collidingLabels ? "_xlabel" : config.xAxis;
     const receiptRef = useChartRenderReceipt({ requestId, component: "ChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
-    const [boxWidth, setBoxWidth] = React.useState(0);
+    const boxWidth = useBoxWidth(receiptRef);
     // Labels are measured in the tick font; measure again once the page's fonts have loaded.
     const [, setFontsReady] = React.useState(0);
     React.useEffect(() => {
@@ -348,7 +349,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
     const sideLabelWidth = measuredSideLabelWidth(categoryLabels, boxWidth);
     // Sideways bars need room for each wrapped label: the chart grows rather than letting labels overlap.
     const sidewaysMinHeight = sideways
-      ? 70 + categoryLabels.reduce((sum, l) => sum + Math.max(28, wrapLabel(l, sideLabelWidth - 8).length * 14 + 10), 0)
+      ? 70 + categoryLabels.length * sidewaysBandHeight(categoryLabels, sideLabelWidth)
       : 0;
 
     // Compute explicit tick positions for even spacing
@@ -377,7 +378,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
     const valueAxisLabelWidth = Math.max(isPercent ? 55 : 50, yTickInfo ? valueAxisWidth(yTickInfo.ticks.map((v) => String(yTickFormatter(v)))) : 0);
     // Slanted category labels: room at the left for the first one (it reaches left of its tick).
     const slanted = !sideways && !wrapCategories && !ym && !daily && !plainYears && !fewYearsMonthly;
-    const leftMargin = slanted && categoryLabels.length ? slantedLeftMargin(categoryLabels[0], valueAxisLabelWidth, boxWidth, dataLen) : 8;
+    const leftMargin = slanted && categoryLabels.length ? slantedLeftMargin(categoryLabels, valueAxisLabelWidth, boxWidth) : 8;
     // Round 1 D6: bars of non-negative values start at zero unless the user explicitly set a minimum; a max-only request
     // keeps the zero baseline (it no longer falls back to the data minimum). Signed values keep their own range.
     const isBarType = config.type === "bar" || config.type === "stacked_bar";
@@ -431,7 +432,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
             {config.title}
           </div>
         )}
-        <ResponsiveContainer width="100%" height="100%" minHeight={sidewaysMinHeight || undefined} onResize={(w) => setBoxWidth(w)}>
+        <ResponsiveContainer width="100%" height="100%" minHeight={sidewaysMinHeight || undefined}>
           {config.type === "scatter" ? (
             <ScatterChart
               data={chartData}

@@ -125,8 +125,7 @@ import {
   asOutcomeRecord,
   decisionFinalization,
   OPERATIONAL_RECORD,
-  type OutcomeLogRecord,
-} from "@/lib/proof-finalize";
+  type OutcomeLogRecord, annotationDropTagsFor } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import { readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity, withTypedHistoricalRapeNotes, typedCorrectionState, TYPED_STATE_CHANGED } from "@/lib/historical-national-rape";
@@ -634,7 +633,7 @@ async function handleQueryPost(req: NextRequest) {
     /** Bounded raw model text on no-SQL failures; diagnostic only, never user-visible. */
     modelResponseJson: string | null = null
   ) => {
-    chartAuditQueryLogId = logQuery(q === question ? recordedQuestion : q, sqlText, rowCount, logError, ms, logResponse, tabName, guardrails, model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
+    chartAuditQueryLogId = logQuery(q === question ? recordedQuestion : q, sqlText, rowCount, logError, ms, logResponse, tabName, [...guardrails, ...annotationDropTagsFor(proof)], model, sid, routingMeta, chartConfigJson, chartAuditRequestId, modelResponseJson, proofLogFields(decisionFinalization(proof)), outcomeLogFields(asOutcomeRecord(proof)));
     return chartAuditQueryLogId;
   };
 
@@ -1821,8 +1820,8 @@ async function handleQueryPost(req: NextRequest) {
       const proof = finalizeExit({
         outcome: rows.length > 0 ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: multiCityTrend.sql,
-        rows,
-        columns,
+        rows: deliveredRows,
+        columns: deliveredColumns,
         derivation: sealPlanDerivation(multiCityTrend.guardrail, multiCityTrend.sql),
         planFamily: multiCityTrend.guardrail,
         guardrails: [multiCityTrend.guardrail],
@@ -3646,8 +3645,8 @@ async function handleQueryPost(req: NextRequest) {
         const finalization = finalizeExit({
           outcome: OUTCOMES.model_sql_validated,
           sql,
-          rows,
-          columns,
+          rows: deliveredRows,
+          columns: deliveredColumns,
           truncated,
           planFamily: null,
           guardrails: firedGuardrails,
@@ -3763,8 +3762,8 @@ async function handleQueryPost(req: NextRequest) {
               outcome: OUTCOMES.model_sql_validated,
               question: guardrailQuestion,
               sql,
-              rows,
-              columns,
+              rows: deliveredRows,
+              columns: deliveredColumns,
               truncated,
               guardrails: firedGuardrails,
               returnedEntities: returnedEntityKeys(rows),
@@ -3841,8 +3840,8 @@ async function handleQueryPost(req: NextRequest) {
                 outcome: OUTCOMES.model_sql_validated,
                 question: guardrailQuestion,
                 sql,
-                rows,
-                columns,
+                rows: deliveredRows,
+                columns: deliveredColumns,
                 truncated,
                 guardrails: firedGuardrails,
                 returnedEntities: returnedEntityKeys(rows),

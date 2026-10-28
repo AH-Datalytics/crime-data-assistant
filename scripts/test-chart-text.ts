@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { chartBoxMinHeight } from "../lib/chart-layout";
-import { estimateWidth, sideLabelWidth, slantedAxisHeight, valueAxisWidth, widestLabel, wrapLabel, wrappedAxisHeight, type Measure } from "../lib/chart-text";
+import { estimateWidth, sideLabelWidth, sidewaysBandHeight, slantedAxisHeight, slantedLeftMargin, valueAxisWidth, widestLabel, wrapLabel, wrappedAxisHeight, type Measure } from "../lib/chart-text";
 
 let passed = 0;
 let failed = 0;
@@ -67,6 +67,26 @@ check("value axis width fits the widest formatted tick", () => {
 
 check("the estimate is used where nothing can measure", () => {
   assert.equal(widestLabel(["abc", "abcdef"], estimateWidth), 6 * 7.2);
+});
+
+check("sideways bands are equal height, set by the tallest label (Codex implementation review #1)", () => {
+  const labels = ["Austin", "In custody of another jurisdiction (includes extradition denied)", "Dallas"];
+  const tallest = Math.max(...labels.map((l) => wrapLabel(l, 100 - 8, m).length));
+  assert.equal(sidewaysBandHeight(labels, 100, m), tallest * 14 + 10);
+  assert.equal(sidewaysBandHeight(["A", "B"], 100, m), 28, "short labels: the 28 px floor");
+});
+
+check("the slanted left margin covers every label, not just the first (Codex implementation review #2)", () => {
+  const labels = ["Ada", "x".repeat(32), ...Array.from({ length: 14 }, (_, i) => `C${i}`)];
+  const margin = slantedLeftMargin(labels, 50, 375, 24, m);
+  assert.ok(margin > 8, `a long second label needs room (${margin})`);
+  // Verify geometrically: every label's left reach stays inside the chart.
+  const band = (375 - margin - 50 - 24) / labels.length;
+  labels.forEach((l, i) => {
+    const tick = margin + 50 + band * (i + 0.5);
+    assert.ok(tick - (m(l) * Math.SQRT1_2 + 6) >= -0.5, `label ${i} reaches ${tick - m(l) * Math.SQRT1_2 - 6}`);
+  });
+  assert.equal(slantedLeftMargin(["a", "b"], 50, 375, 24, m), 8, "short labels: the 8 px default");
 });
 
 check("the chart box grows for long sideways labels, and not for short ones", () => {

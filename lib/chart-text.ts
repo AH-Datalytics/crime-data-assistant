@@ -96,16 +96,29 @@ export function valueAxisWidth(ticks: readonly string[], measure: Measure = meas
 }
 
 /**
- * Left margin so the first slanted label (rotated -45 degrees, anchored at its end under the first tick) is not cut
- * at the chart's left edge. The label reaches width x cos 45 left of its tick; the tick sits at margin + value axis +
- * half a band, and the band itself narrows as the margin grows: band = (box - margin - axis - right) / bars. Solved
- * for the margin.
+ * Left margin so no slanted label (rotated -45 degrees, anchored at its end under its tick) is cut at the chart's left
+ * edge. Label i reaches width x cos 45 left of its tick, which sits at margin + value axis + (i + 0.5) bands, and the
+ * band narrows as the margin grows: band = (box - margin - axis - right) / bars. Solved for the margin for every label;
+ * the largest wins (a long second label can need more than a short first one).
  */
-export function slantedLeftMargin(firstLabel: string, valueAxisWidth: number, boxWidth: number, bars: number,
+export function slantedLeftMargin(labels: readonly string[], valueAxisWidth: number, boxWidth: number,
   rightMargin = 24, measure: Measure = measureTickText): number {
-  if (boxWidth <= 0) return 8;
-  const reach = measure(firstLabel) * Math.SQRT1_2 + 6;
-  const n = Math.max(1, bars);
-  const need = (reach - valueAxisWidth - (boxWidth - valueAxisWidth - rightMargin) / (2 * n)) / (1 - 1 / (2 * n));
-  return Math.max(8, Math.ceil(need));
+  if (boxWidth <= 0 || labels.length === 0) return 8;
+  const n = labels.length;
+  const plot = boxWidth - valueAxisWidth - rightMargin;
+  let need = 8;
+  labels.forEach((label, i) => {
+    const f = (i + 0.5) / n;
+    const reach = measure(label) * Math.SQRT1_2 + 6;
+    need = Math.max(need, (reach - valueAxisWidth - plot * f) / (1 - f));
+  });
+  return Math.ceil(need);
+}
+
+/**
+ * Height of each sideways category band. Recharts gives every category the same band, so it is set by the tallest
+ * wrapped label, not by each label's own height.
+ */
+export function sidewaysBandHeight(labels: readonly string[], labelWidth: number, measure: Measure = measureTickText): number {
+  return labels.reduce((m, l) => Math.max(m, wrapLabel(l, labelWidth - 8, measure).length * 14 + 10), 28);
 }

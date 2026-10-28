@@ -60,7 +60,7 @@ import { buildQueryContract, type QueryContract, type QueryContractSource } from
 import { verifyPlanDerivation, type PlanDerivation } from "./plan-derivation";
 import { narrativeDisclosesOmissions } from "./omission-wording";
 import { recordFinalization, recordEmission } from "./why-scope";
-import { projectAnswer, projectPayload } from "./answer-columns";
+import { annotationDropTags, projectAnswer, projectPayload } from "./answer-columns";
 import {
   omittedCandidatesFor,
   requestedEntitiesFromRequest,
@@ -393,12 +393,27 @@ export function finalizeProof(given: ProofFinalizationInput): ProofFinalization 
   const input = projectedInput(given);
   const finalization = finalizeProofPaths(input);
   recordFinalization(finalization, input);
+  if (pendingDrops.length) { annotationDrops.set(finalization, pendingDrops); pendingDrops = []; }
   return finalization;
 }
 
 function projectedInput(input: ProofFinalizationInput): ProofFinalizationInput {
   const projected = projectAnswer(input.columns, input.rows);
+  if (projected.dropped.length) pendingDrops = projected.dropped;
   return projected.dropped.length ? { ...input, columns: projected.columns, rows: projected.rows } : input;
+}
+
+/** The annotation columns each finalization's answer lost, for the request log's tags. */
+const annotationDrops = new WeakMap<ProofFinalization, string[]>();
+let pendingDrops: string[] = [];
+
+/**
+ * `answer-annotation-dropped:<name>` tags for the request log: which annotation columns the projection removed from
+ * this exit's answer. Empty when nothing was removed, or for an operational record.
+ */
+export function annotationDropTagsFor(proof: ProofFinalization | OutcomeLogRecord | null): string[] {
+  const f = decisionFinalization(proof);
+  return f ? annotationDropTags(annotationDrops.get(f) ?? []) : [];
 }
 
 function finalizeProofPaths(input: ProofFinalizationInput): ProofFinalization {
