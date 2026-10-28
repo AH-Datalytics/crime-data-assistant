@@ -158,7 +158,7 @@ Today zeroes `total_value` on a summary row (ori, year, state, offense code, los
 value is $1M or more, and keeps its count. That rule depends on the row's aggregate, so it cannot be a property of a
 segment. v1 does not reproduce it: `property.value@1` sums every segment's value, and the answer shows the dollars.
 Every shadow difference on value is then the zeroed rows, listed by key; counts (`property.segments@1`) must be equal.
-Whether to exclude outlier segments (a per-segment rule, `@2`) is an owner decision (section 6). Test: an agency-year
+Whether to exclude outlier segments (a per-segment rule, `@2`) is an owner decision (section 5). Test: an agency-year
 with one row whose average is over $1M and one under: counts equal, dollars differ by exactly the zeroed row's total.
 
 ## 3. Definition lessons
@@ -331,3 +331,31 @@ Compared by agency (or state), year, month and category. Every difference has a 
 
 v1 keeps today's membership rules for 1-3 so the shadow measures the engine, not the decisions; a decision becomes
 `@2` with its own shadow difference.
+
+### Owner's answers, 2026-10-28 (relayed by the NIBRSAI session)
+
+Each answer is a new version beside v1, never an edit of it. v1 stays the shadow baseline (it measures the engine); each
+`@2` is shadowed against its `@1` and every difference has to be the one declared here. The reader binds the wording to
+`@2` once the `@2` shadow passes.
+
+| Decision | New definition | Declared difference from `@1` (the shadow must show exactly this) | Test |
+|---|---|---|---|
+| D3 flash mob | `incidents.flash_mob_shoplifting@2`: incidents with a 23C offense whose location is in `location.commercial@1` (C12: 02, 03, 05, 07, 08, 09, 12, 14, 17, 19, 21, 23, 24, 40, 41, 47, 55), `incident.offender_segment_count >= 6`, and `incident.business_victim_count <= 1` (a derived incident dimension: victim segments of type B; the prompt's "at most 1 business victim", never in its SQL) | `@2 \ @1` (added): incidents meeting `@2` whose 23C locations are all outside today's list (05, 07, 08, 09, 12, 17, 21, 23, 24, 41, 56), so at least one of 02, 03, 14, 19, 40, 47, 55 and none of today's; `@1 \ @2` (removed): incidents meeting `@1` that fail `@2`, either because no 23C location is in C12 (only 56) or because they hold two or more business victims. An incident at 55 with two business victims is in neither | T14 |
+| D4 domestic violence | `victims.domestic_violence@2`, `incidents.domestic_violence@2`, `arrestees.domestic_violence@2`, `relationship.group@2`: the C8 lists, with SS (stepsibling), FP (foster parent) and FC (foster child) added to family, and CO (cohabitant, not intimate) as a third DV group, "cohabitant". `relationship.group@2` is C14 with these groups. "Domestic violence murders" stays relationship-based: `victims.domestic_violence@2` connected to 09A (circumstance 06 is not used) | by unit: **victims** added = victims whose qualifying relationships are only SS, FP, FC or CO; **incidents** added = incidents with such a victim and no victim qualifying under `@1`; **arrestees** added = Group A arrestees of the added incidents. **Groups** (`relationship.group@2`), declared separately: victim-offender pairs coded SS, FP or FC move from their `@1` group (none: not grouped) to family, CO pairs to cohabitant, including pairs of victims already DV under `@1` (a victim related as SE to one offender and SS to another gains the family group). Nothing is removed | T15 |
+| D5 drug crimes | `offenses.drug_crimes@2`: offenses 35A and 35B. "Drug crimes" and "drugs" bind to it; 35A stays available by its own name ("drug/narcotic violations", `offenses.drug_possession@1`). **Baseline:** today's "drug crimes" is `offenses.drug_possession@1` (35A); `offenses.drug_crimes@2` is shadowed against it | added: every 35B offense. An incident with both 35A and 35B counts two offenses (the offense unit) | T16 |
+| C4 property value | `property.value@2`: the sum of `value` over property segments, **excluding segments whose value is exactly** 999,999,999; 999,999,998; 99,999,999; 9,999,999; 7,777,777; 1,111,111; 19,999,998; 10,000,000 or 100,000,000 (rule A+ of the outlier report, plus $10,000,000 and $100,000,000; owner: "I'd do A+ but include $10 and $100 million"). No per-description caps, no agency flag. `property.segments@1` and `property.vehicles@1` are unchanged: an excluded segment still counts as a segment, only its dollars are left out. Answers say nothing about the exclusion (minimal editorializing); the rule lives here. Evidence: `2026-10-28-nibrs-property-value-outliers.md` | dollars only: `@1` minus `@2` equals, per agency, month, loss type and description, the sum of the excluded segments' values there (2017-2026 in the archive: 7,964 segments, $7,053.18B, of which stolen 3,822 segments, $3,417.23B, from 223 agencies); every count equal. Against today's tables, `@2` differs by both today's zeroed rows (C4, T8) and these excluded segments | T8, T17 |
+| Lesson 8 coverage | `coverage.population_pct@1` replaces today's 6-month rule as the coverage answer | the lesson-8 differences, reconciled agency by agency as stated there | lesson 8 |
+| H3 (correctness set) | acknowledged: the FBI's re-upload of 2026-08-14 changes Memphis carjackings (2023: 527; 2024: 356). A source revision, not a definition | none | H3 |
+
+**A fact for D4.** The FBI's NIBRS user manual of June 23, 2025 (PDF page 167, printed page 155) lists SS, FP, FC, CO
+and XR among the victim-to-offender relationship codes: FP and FC under family, and CO as a cohabitant who is not an
+intimate partner. (An earlier note from this session said FP, FC and CO were absent from the manual; that was wrong.)
+The shadow reports the count of each added code by year.
+
+| Test | Incident | `@1` | `@2` |
+|---|---|---|---|
+| T14 | 23C with 6 offenders: at location 55 with 1 business victim; at 56 with 1; at 07 with 2 business victims; at 07 with 0 | 0, 1, 1, 1 | 1, 0, 0, 1 |
+| T15 | incident 1: a 13A victim related to its offender as SS; incident 2: a 09A victim related as SE; incident 3: one victim related as SE and another as CO | DV victims 0, 1, 1; DV incidents 0, 1, 1 | DV victims 1, 1, 2; DV incidents 1, 1, 1 (incident 3 already qualified); "DV murders" counts incident 2's victim only; groups: family 1, intimate 2, cohabitant 1 |
+| T16 | one incident with 35A and 35B; one with 35B alone | drug crimes: 1, 0 | 2, 1 |
+| T17 | one agency-month, stolen property: segments valued 999,999,999; 10,000,000; 100,000,000; 10,000,001; 1,200,000; and one blank | dollars 1,121,200,000; segments 6 | dollars 11,200,001 (only 10,000,001 and 1,200,000: a value one dollar off a listed one is kept); segments 6 |
+
