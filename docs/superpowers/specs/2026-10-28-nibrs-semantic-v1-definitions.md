@@ -158,7 +158,7 @@ Today zeroes `total_value` on a summary row (ori, year, state, offense code, los
 value is $1M or more, and keeps its count. That rule depends on the row's aggregate, so it cannot be a property of a
 segment. v1 does not reproduce it: `property.value@1` sums every segment's value, and the answer shows the dollars.
 Every shadow difference on value is then the zeroed rows, listed by key; counts (`property.segments@1`) must be equal.
-Whether to exclude outlier segments (a per-segment rule, `@2`) is an owner decision (section 6). Test: an agency-year
+Whether to exclude outlier segments (a per-segment rule, `@2`) is an owner decision (section 5). Test: an agency-year
 with one row whose average is over $1M and one under: counts equal, dollars differ by exactly the zeroed row's total.
 
 ## 3. Definition lessons
@@ -331,3 +331,31 @@ Compared by agency (or state), year, month and category. Every difference has a 
 
 v1 keeps today's membership rules for 1-3 so the shadow measures the engine, not the decisions; a decision becomes
 `@2` with its own shadow difference.
+
+### Owner's answers, 2026-10-28 (relayed by the NIBRSAI session)
+
+Each answer is a new version beside v1, never an edit of it. v1 stays the shadow baseline (it measures the engine); each
+`@2` is shadowed against its `@1` and every difference has to be the one declared here. The reader binds the wording to
+`@2` once the `@2` shadow passes.
+
+| Decision | New definition | Declared difference from `@1` (the shadow must show exactly this) | Test |
+|---|---|---|---|
+| D3 flash mob | `incidents.flash_mob_shoplifting@2`: incidents with a 23C offense whose location is in `location.commercial@1` (C12: 02, 03, 05, 07, 08, 09, 12, 14, 17, 19, 21, 23, 24, 40, 41, 47, 55), `incident.offender_segment_count >= 6`, and `incident.business_victim_count <= 1` (a derived incident dimension: victim segments of type B; the prompt's "at most 1 business victim", never in its SQL) | added: incidents at 02, 03, 14, 19, 40, 47, 55; removed: incidents at 56 (tribal lands) and incidents with two or more business victims | T14 |
+| D4 domestic violence | `victims.domestic_violence@2`, `incidents.domestic_violence@2`, `arrestees.domestic_violence@2`, `relationship.group@2`: the C8 lists with SS (stepsibling) in family, and FP, FC and CO as decided. "Domestic violence murders" stays relationship-based: `victims.domestic_violence@2` connected to 09A (circumstance 06 is not used) | added: victims whose only qualifying relationship is SS, FP, FC or CO, and their incidents and arrestees | T15 |
+| D5 drug crimes | `offenses.drug_crimes@2`: offenses 35A and 35B. "Drug crimes" and "drugs" bind to it; 35A stays available by its own name ("drug/narcotic violations", `offenses.drug_possession@1`) | added: every 35B offense. An incident with both 35A and 35B counts two offenses (the offense unit) | T16 |
+| C4 property value | no rule yet. v1 keeps every value. The owner asked for the outliers ($10,000,000, $999,999,999 and other repeated values) to be found and discussed first: a separate outlier report | none until a rule is chosen | T8 |
+| Lesson 8 coverage | `coverage.population_pct@1` replaces today's 6-month rule as the coverage answer | the lesson-8 differences, reconciled agency by agency as stated there | lesson 8 |
+| H3 (correctness set) | acknowledged: the FBI's re-upload of 2026-08-14 changes Memphis carjackings (2023: 527; 2024: 356). A source revision, not a definition | none | H3 |
+
+**A fact for D4.** The FBI's 2025 NIBRS user manual (p. 167) lists SS among the victim-to-offender relationship codes,
+but not FP, FC or CO; those three appear only in the app's own label table. They are adopted as decided, and they match
+only if the data carries them: the shadow reports the count of each of the four codes by year, so a code that never
+occurs is visible as zero rather than silently doing nothing. (XR, also absent from the manual's list, does occur in the
+data and is already in C8.)
+
+| Test | Incident | `@1` | `@2` |
+|---|---|---|---|
+| T14 | 23C with 6 offenders: at location 55 with 1 business victim; at 56 with 1; at 07 with 2 business victims; at 07 with 0 | 0, 1, 1, 1 | 1, 0, 0, 1 |
+| T15 | a 13A victim related to its offender as SS; a 09A victim related as SE | DV: no, yes | DV: yes, yes; "DV murders" counts the second only |
+| T16 | one incident with 35A and 35B; one with 35B alone | drug crimes: 1, 0 | 2, 1 |
+
