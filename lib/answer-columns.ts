@@ -45,6 +45,8 @@ export type ProjectedAnswer = {
   rows: Record<string, unknown>[];
   /** Annotation columns removed, in their original order; each becomes an `answer-annotation-dropped:<name>` tag. */
   dropped: string[];
+  /** A legacy staffing answer with at least one total-employees figure: its saved officer-only labels need the other count. */
+  legacyEmployees?: boolean;
 };
 
 /**
@@ -80,13 +82,21 @@ export function projectAnswer(givenColumns: readonly string[], givenRows: readon
   const dropped = new Set<string>();
   for (const c of columns) if (isAnswerAnnotation(c)) dropped.add(c);
   for (const row of rows) for (const k of Object.keys(row)) if (isAnswerAnnotation(k)) dropped.add(k);
-  if (dropped.size === 0) return { columns: columns as string[], rows: rows as Record<string, unknown>[], dropped: [] };
+  const legacyEmployees = legacy !== null && rows.some((r) => r[STAFFING_LABEL_COLUMN] === "Employees");
+  if (dropped.size === 0) return { columns: columns as string[], rows: rows as Record<string, unknown>[], dropped: [], ...(legacyEmployees ? { legacyEmployees } : {}) };
   const keep = (k: string) => !dropped.has(k);
   return {
     columns: columns.filter(keep),
     rows: rows.map((row) => Object.fromEntries(Object.entries(row).filter(([k]) => keep(k)))),
     dropped: [...dropped],
+    ...(legacyEmployees ? { legacyEmployees } : {}),
   };
+}
+
+/** "Chicago Police Officers" -> "Chicago Police Officers or total employees"; unchanged if it already names employees. */
+export function withEmployeeCount(label: string): string {
+  if (/employees/i.test(label)) return label;
+  return label.replace(/\b(sworn officers|police officers|officers)\b/i, (m) => `${m} or total employees`);
 }
 
 export function annotationDropTags(dropped: readonly string[]): string[] {
@@ -122,5 +132,12 @@ export function projectPayload<T>(payload: T): T {
   if (projected.columns === p.columns && projected.rows === p.rows) return payload;
   const out: Record<string, unknown> = { ...p, columns: projected.columns, rows: projected.rows };
   if ("chartConfig" in p) out.chartConfig = reconcileChartConfig(p.chartConfig as ChartBinding | null | undefined, projected.dropped);
+  // A legacy staffing answer showing total employees in some years: its saved title and axis label named officers
+  // only; they now name both counts, as a current staffing answer does.
+  if (projected.legacyEmployees) {
+    if (typeof out.title === "string") out.title = withEmployeeCount(out.title);
+    const cfg = out.chartConfig as Record<string, unknown> | null | undefined;
+    if (cfg) out.chartConfig = { ...cfg, ...(typeof cfg.title === "string" ? { title: withEmployeeCount(cfg.title) } : {}), ...(typeof cfg.yAxisLabel === "string" ? { yAxisLabel: withEmployeeCount(cfg.yAxisLabel) } : {}) };
+  }
   return out as T;
 }

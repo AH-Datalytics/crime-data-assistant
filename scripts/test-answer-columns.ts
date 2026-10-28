@@ -14,7 +14,7 @@ import { OUTCOMES } from "../lib/proof-contract";
 import { runInner } from "../lib/why-scope";
 import {
   ANSWER_ANNOTATIONS, LABEL_COLUMNS, STAFFING_LABEL_COLUMN, annotationDropTags, isAnswerAnnotation, projectAnswer,
-  projectPayload, reconcileChartConfig,
+  projectPayload, reconcileChartConfig, withEmployeeCount,
 } from "../lib/answer-columns";
 
 let passed = 0;
@@ -77,6 +77,22 @@ check("legacy staffing: data_type 'Officers'/'Employees*' becomes reported, not 
   assert.deepEqual(out.dropped, []);
   const payload = { columns: ["year", "staffing", "data_type"], rows: [{ year: 2019, staffing: 2000, data_type: "Employees*" }] };
   assert.deepEqual(projectPayload(payload).columns, ["year", "staffing", "reported"], "the payload is renamed too");
+});
+
+check("legacy staffing with an employees year: saved officer-only title and axis label name both counts", () => {
+  const payload = {
+    title: "Chicago Police Officers", columns: ["year", "staffing", "data_type"],
+    rows: [{ year: 1950, staffing: 7000, data_type: "Employees*" }, { year: 1960, staffing: 9000, data_type: "Officers" }],
+    chartConfig: { type: "bar", xAxis: "year", yAxis: ["staffing"], title: "Chicago Police Officers, 1950-1960", yAxisLabel: "Officers" },
+  };
+  const out = projectPayload(payload) as typeof payload;
+  assert.equal(out.title, "Chicago Police Officers or total employees");
+  assert.equal(out.chartConfig.title, "Chicago Police Officers or total employees, 1950-1960");
+  assert.equal(out.chartConfig.yAxisLabel, "Officers or total employees");
+  assert.deepEqual(out.chartConfig.yAxis, ["staffing"], "the binding is unchanged: the value column keeps its name");
+  const allOfficers = projectPayload({ ...payload, rows: [{ year: 1960, staffing: 9000, data_type: "Officers" }] }) as typeof payload;
+  assert.equal(allOfficers.chartConfig.title, "Chicago Police Officers, 1950-1960", "no employees year: labels unchanged");
+  assert.equal(withEmployeeCount("Total employees"), "Total employees");
 });
 
 check("a data_type that is not the staffing marker is an annotation and is dropped", () => {

@@ -396,7 +396,7 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
     : rows.some((r) => r.measure === "officers_or_employees" || r.reported === "Employees") ? "sworn officers or total employees"
     : MEASURE_LABEL[spec.measures[0]];
   const lead = spec.total
-    ? `Total ${totalLabel} in ${placeWords}, ${periodWords} (${sources}).`
+    ? `${totalLabel.startsWith("total ") ? capital(totalLabel) : `Total ${totalLabel}`} in ${placeWords}, ${periodWords} (${sources}).`
     : `${capital(measureWords)} for ${placeWords}, ${periodWords}${spec.type === "H1" && rows.length === 1 ? "" : ", by year"} (${sources}).`;
   // GC-085: one delivered rape-COUNT series with values on both sides of the FBI's 2013 definition change carries the
   // application's 2013 sentence (the model path's rule), from the years actually delivered, not those requested.
@@ -416,7 +416,7 @@ function compileSeries(spec: SeriesSpec, deps: CompileDeps): CompileResult {
   const titleMeasures = titleWords(spec.measures.map((m) => (anyEmployees && m === "officers"
     ? (spec.statistic === "count" ? "officers or total employees" : withEmployees(measureText(m, spec.statistic)))
     : spec.statistic === "count" ? SINGULAR[m] : measureText(m, spec.statistic))).join(" and "));
-  const title = spec.total ? `Total ${capital(totalLabel)}, ${placeWords}`
+  const title = spec.total ? `${totalLabel.startsWith("total ") ? titleWords(totalLabel) : `Total ${capital(totalLabel)}`}, ${placeWords}`
     : spec.type === "H5" ? `${titleMeasures} By State${yearSpan}`
     : `${targets.map((t) => t.label).join(" and ")} ${titleMeasures}${yearSpan}`;
   const chartConfig: ChartConfig | null = spec.total || rows.length <= 1 ? null : {
@@ -599,9 +599,10 @@ function compileChange(spec: ChangeSpec, deps: CompileDeps): CompileResult {
     const kind = (c: Cell) => (c.value === null ? null : c.reported ?? null);
     const reported = !marked ? undefined : unlike ? null : kind(e) ?? kind(l);
     // Each endpoint's count is named: unlike endpoints in the measure itself; two employee years as total employees.
-    const COUNT_WORD: Record<string, string> = { Officers: "sworn officers", Employees: "total employees" };
+    // `<earlier>_then_<later>` names the two counts; the table heads each figure column with its own count.
+    const CODE: Record<string, string> = { Officers: "officers", Employees: "employees" };
     const measure = !marked ? spec.measure
-      : unlike ? `${COUNT_WORD[kind(e) as string]} ${spec.earlier}, ${COUNT_WORD[kind(l) as string]} ${later}`
+      : unlike ? `${CODE[kind(e) as string]}_then_${CODE[kind(l) as string]}`
       : reported === "Employees" ? "employees" : spec.measure;
     if (marked && measure !== spec.measure) changeEmployees = true;
     rows.push({ place: t.label, measure, statistic: spec.base, earlier_year: spec.earlier, earlier_value: out(e.value), later_year: later, later_value: out(l.value), change: change === null ? null : r1(change), percent_change: r1(pct), ...(marked ? { reported } : {}), note });

@@ -8,6 +8,7 @@
  * raw-token, empty-period and reversed-range case declines by name.
  */
 import "./offline-evidence-guard";
+import { tableDisplay } from "../lib/table-display";
 import Database from "better-sqlite3";
 import { readFileSync } from "fs";
 import { accountHistoricalRequest } from "../lib/historical-request-accounting";
@@ -119,9 +120,14 @@ for (const [pw, ys] of periods) {
   const tot2 = answer("total sworn officers in Fort Worth, Texas from 2020 to 2022 combined").c;
   check(Boolean(tot2 && tot2.kind === "answer" && tot2.rows.length === 1 && tot2.rows[0].value === 1502 + 1504 && tot2.rows[0].reported === "Officers"), "an officers total over like years is computed");
   const tot3 = answer("total sworn officers in Plano, Texas from 2019 to 2020 combined").c;
-  check(Boolean(tot3 && tot3.kind === "answer" && tot3.rows[0].value === 1000 + 1050 && tot3.rows[0].measure === "employees" && /Total Total Employees|Total total employees/i.test(`${tot3.title} ${tot3.explanation}`) && !/sworn officers/i.test(tot3.title)), "a total of employee years only is named total employees");
+  check(Boolean(tot3 && tot3.kind === "answer" && tot3.rows[0].value === 1000 + 1050 && tot3.rows[0].measure === "employees" && /^Total Employees, /.test(tot3.title) && !/total total/i.test(tot3.explanation) && !/sworn officers/i.test(tot3.title)), "a total of employee years only is named total employees");
   const ch = answer("change in sworn officers in Fort Worth, Texas from 2018 to 2019").c;
-  check(Boolean(ch && ch.kind === "answer" && ch.rows[0].change === null && ch.rows[0].reported === null && ch.rows[0].measure === "sworn officers 2018, total employees 2019" && ch.rows[0].earlier_value === 1500 && ch.rows[0].later_value === 2000 && ch.returnedEntities.length === 1), "a change across unlike figures is blank; the measure names each year's count; both figures count as delivered");
+  check(Boolean(ch && ch.kind === "answer" && ch.rows[0].change === null && ch.rows[0].reported === null && ch.rows[0].measure === "officers_then_employees" && ch.rows[0].earlier_value === 1500 && ch.rows[0].later_value === 2000 && ch.returnedEntities.length === 1), "a change across unlike figures is blank; the measure names each year's count; both figures count as delivered");
+  if (ch && ch.kind === "answer") {
+    const shown = tableDisplay(ch.columns, ch.rows, ch.title);
+    check(shown.labels.earlier_value === "Sworn officers" && shown.labels.later_value === "Total employees" && shown.shown.includes("earlier_value") && shown.shown.includes("later_value"),
+      `the table heads each figure with its own count (${shown.labels.earlier_value} / ${shown.labels.later_value})`);
+  }
   const che = answer("change in sworn officers in Plano, Texas from 2019 to 2020").c;
   check(Boolean(che && che.kind === "answer" && che.rows[0].change === 50 && che.rows[0].reported === "Employees" && che.rows[0].measure === "employees" && /total employees/.test(che.title.toLowerCase())), "a change between two employee years is named total employees");
   const ch2 = answer("change in sworn officers in Fort Worth, Texas from 2018 to 2020").c;

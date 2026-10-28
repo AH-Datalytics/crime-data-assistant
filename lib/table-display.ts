@@ -133,6 +133,18 @@ export function tableDisplay(columns: string[], rows: Record<string, unknown>[],
       for (const c of ["measure", "unit", "statistic"]) if (constantOf(c) !== undefined) absorbed.add(c);
     }
   }
+  // Staffing changes (owner 2026-10-28): each figure column is headed by its own count, so an officer year and an
+  // employee year stay distinguishable on screen ("officers_then_employees": Sworn officers, then Total employees).
+  if (measure && shown.includes("earlier_value") && shown.includes("later_value") && statistic !== false) {
+    const pair = /^(officers|employees|civilians)_then_(officers|employees|civilians)$/.exec(measure);
+    const [a, b] = pair ? [pair[1], pair[2]] : measure in STAFFING_PLURAL ? [measure, measure] : [null, null];
+    if (a && b) {
+      const per = statistic === "per_1000" ? " per 1,000 residents" : statistic === "per_100k" ? " per 100,000 residents" : "";
+      labels.earlier_value = cap(`${STAFFING_PLURAL[a]}${per}`);
+      labels.later_value = cap(`${STAFFING_PLURAL[b]}${per}`);
+      absorbed.add("measure");
+    }
+  }
   // Only the place is left out for a displayed title that contains its whole label.
   const placeShown = (c: { column: string; value: string }) => c.column === "place" && title !== "" && title.includes(c.value);
   // Owner 2026-10-25 ("Measure: rape · Unit: offenses · Dimension: clearance type"; "no extra line above the table or
