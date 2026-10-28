@@ -100,8 +100,9 @@ matched eligible-agency numerator over covered population), cohorts, statuses an
   - G3, G5, G7 and G8.
   - Staffing, G4 and G6, as implemented (c1f5381; `claude.ts:841-846, 878-888`;
     `historical-question-compiler.ts:343-359, 580-607`):
-    - **The figure.** `officers_or_employees@1` is `officer_total` when greater than 0, else `all_total` when greater
-      than 0, else blank.
+    - **The figure.** `officers_or_employees@1` is blank if `all_total` is missing or not positive
+      (`historical-question-compiler.ts:195`). Otherwise it is `officer_total` when positive, falling back to
+      `all_total`.
     - **The unit.** Its unit is `staff_reported`: one measure whose cell says which count it is through `reported`
       ("Officers" or "Employees"). It never claims that an employee figure counts officers. The measure's name in
       answers names both counts when employees appear.
