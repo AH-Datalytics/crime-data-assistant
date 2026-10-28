@@ -15,7 +15,7 @@ import { validateResolved, type GeographyResolver, type ReleaseInfo } from "./re
 import type { SemanticLayer } from "./semantic";
 import { validateBindings, validatePlanSemantics, validatePlanShape, type PlaceAuthority, type PlanProblem } from "./validate";
 
-/** The question's parts and the place authority, when request accounting is available (the route always has them). */
+/** The question's parts and the place authority. Required whenever the outcome offers an alternative (O4). */
 export type RequestContext = { parts: PartRef[]; places: PlaceAuthority };
 
 /** What a plan computes, without its descriptive metadata: wording, provenance, place labels, default reasons. */
@@ -40,11 +40,11 @@ export function validateOutcome(json: unknown, layer: SemanticLayer, release: Re
   };
   const alternative = (path: string, alt: Alternative) => {
     nested("O2", `${path}.plan`, alt.plan);
-    if (!request) return;
-    for (const part of request.parts) {
-      if (alt.changes.includes(part.concept)) continue;
-      for (const p of validateBindings(alt.plan, [part], request.places)) out.push({ rule: "O4", path: `${path}: ${p.rule} ${p.path}`, message: `${p.message} (not declared in changes)` });
-    }
+    // An offered alternative cannot be proven to keep the question's parts without them.
+    if (!request) { out.push({ rule: "O4", path, message: "an alternative is validated against the question's parts; none were given" }); return; }
+    // Every part not declared as changed, checked together (a measure's reading can depend on another part).
+    const kept = request.parts.filter((part) => !alt.changes.includes(part.concept));
+    for (const p of validateBindings(alt.plan, kept, request.places)) out.push({ rule: "O4", path: `${path}: ${p.rule} ${p.path}`, message: `${p.message} (not declared in changes)` });
   };
   if (o.kind === "plan") return planProblems(o.plan, layer, release, geo);
   if (o.kind === "limitation") {

@@ -325,7 +325,9 @@ assert.ok(checkEnvelope({ ...n1Env, plan: { ...X.N1, source: "shr" as never }, a
 
 // ---- reader outcomes: alternatives and clarifying options that lead to a limitation (answer evaluation part 3) ----
 {
-  const out = (o: unknown) => rules(validateOutcome(o, layer, release, geo));
+  const places = (v: string) => ({ "city:Baltimore:MD": { oris: ["MDBPD0000"] } } as Record<string, { oris: string[] }>)[v] ?? null;
+  const req = { parts: X.N3_PARTS, places };
+  const out = (o: unknown) => rules(validateOutcome(o, layer, release, geo, req));
   const part = X.N3_PARTS[0];
   const lim = (alternative: unknown) => ({ kind: "limitation", reason: "not_recorded_in_nibrs", parts: [part], explanation: "x", alternative });
   for (const [name, o] of Object.entries(X.OUTCOMES)) if (o.kind !== "plan") assert.deepEqual(out(o), [], `${name}: outcome valid`);
@@ -345,13 +347,12 @@ assert.ok(checkEnvelope({ ...n1Env, plan: { ...X.N1, source: "shr" as never }, a
   assert.deepEqual(out(clarify([answerable, { label: "Other", plan: relabelled }])), ["O3"], "same plan under other labels");
   assert.deepEqual(out({ kind: "limitation", reason: "not_recorded_in_nibrs", parts: [part], explanation: "x", alternative: { label: "x", plan: X.N3, changes: [] } }), ["P0"], "an alternative declares what it changes");
   // O4: an alternative keeps every part of the question it does not declare as changed.
-  const places = (v: string) => ({ "city:Baltimore:MD": { oris: ["MDBPD0000"] } } as Record<string, { oris: string[] }>)[v] ?? null;
-  const req = { parts: X.N3_PARTS, places };
   const moved = { ...X.N3, geography: { places: [{ kind: "agency" as const, ori: "TXHPD0000", label: "Houston Police Department, TX" }], combine: "separate" as const }, period: { kind: "absolute" as const, from: "2024-01", to: "2024-12" } };
   const withAlt = (alt: unknown) => rules(validateOutcome({ ...lim(alt) }, layer, release, geo, req));
   assert.deepEqual(withAlt({ label: "Counts instead", plan: X.N3, changes: ["statistic"] }), [], "same place and period");
   assert.deepEqual(withAlt({ label: "Counts instead", plan: moved, changes: ["statistic"] }), ["O4", "O4"], "a silently moved place and period");
   assert.deepEqual(withAlt({ label: "Houston in 2024 instead", plan: moved, changes: ["place", "period"] }), [], "declared changes");
+  assert.deepEqual(rules(validateOutcome(lim({ label: "Counts instead", plan: moved, changes: ["statistic"] }), layer, release, geo)), ["O4"], "no question parts given: the alternative cannot be proven");
 }
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);
