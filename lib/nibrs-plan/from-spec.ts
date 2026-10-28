@@ -11,7 +11,7 @@
  * from the spec's display text.
  */
 import type { RequestLedger } from "../request-accounting";
-import { MEASURE_CODES, PERSON_CODES, type NibrsSpec, type NPeriod, type NPlace } from "../nibrs-question-types";
+import { GROUP_B, MEASURE_CODES, PERSON_CODES, type NibrsSpec, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { COMMERCIAL_LOCATION_CODES } from "../nibrs-codes";
 import type { AttributeFilter, CountingUnit, Filter, Grouping, MeasureSpec, NibrsPlan, PartBinding, PartRef, Period, Place, Statistic, Transform } from "./plan";
 import { PLAN_VERSION } from "./plan";
@@ -43,15 +43,19 @@ const COMPOSITES: Record<string, { id: string; unit: CountingUnit }> = {
   all_crime: { id: "all_crime.offenses", unit: "offense" },
 };
 const FAMILY_DEFAULT_UNIT: Record<string, CountingUnit> = {
-  carjacking: "incident", domestic_violence: "victim", hate_crime: "offense", dui: "arrest",
+  carjacking: "incident", domestic_violence: "victim", hate_crime: "offense",
   motor_vehicle_property: "dollars", property_value: "dollars",
 };
 const UNIT_OF: Record<string, CountingUnit> = { victims: "victim", offenders: "offender", arrests: "arrest", offenses: "offense", incidents: "incident", pairs: "victim_offender", dollars: "dollars" };
-const PLURAL: Record<string, string> = { victim: "victims", offender: "offenders", arrest: "arrests", offense: "offenses", incident: "incidents", victim_offender: "victim_offender", dollars: "property", property_segment: "property" };
+const PLURAL: Record<string, string> = { group_b_arrest: "group_b_arrests", victim: "victims", offender: "offenders", arrest: "arrests", offense: "offenses", incident: "incidents", victim_offender: "victim_offender", dollars: "property", property_segment: "property" };
 /** The entity a counting unit counts, for filters and groupings on its attributes. */
-const ENTITY: Record<string, string> = { victim: "victim", offender: "offender", arrest: "arrestee", offense: "offense", incident: "incident", victim_offender: "victim_offender", fbi_standard: "incident", dollars: "property" };
+const ENTITY: Record<string, string> = { group_b_arrest: "group_b_arrest", victim: "victim", offender: "offender", arrest: "arrestee", offense: "offense", incident: "incident", victim_offender: "victim_offender", fbi_standard: "incident", dollars: "property" };
+
+/** A Group B offense (DUI ...) is recorded only as Group B arrests, counted by arrest date. */
+export const isGroupB = (measure: string) => (MEASURE_CODES[measure] ?? []).length > 0 && MEASURE_CODES[measure].every((c) => GROUP_B.has(c));
 
 export function unitFor(measure: string, unit: string | null): CountingUnit {
+  if (isGroupB(measure)) return "group_b_arrest";
   if (unit) return UNIT_OF[unit] ?? "offense";
   if (COMPOSITES[measure]) return COMPOSITES[measure].unit;
   if (FAMILY_DEFAULT_UNIT[measure]) return FAMILY_DEFAULT_UNIT[measure];
@@ -74,7 +78,8 @@ function period(p: NPeriod): Period | null {
     case "monthrange": return { kind: "absolute", from: `${p.from[0]}-${String(p.from[1]).padStart(2, "0")}`, to: `${p.to[0]}-${String(p.to[1]).padStart(2, "0")}` };
     case "since": return { kind: "since", from: `${p.from}-01` };
     case "last": return { kind: "last_n", unit: "years", count: p.n };
-    case "lastyear": case "latest": case "none": return { kind: "latest_calendar_year_in_release" };
+    case "lastyear": return { kind: "previous_calendar_year" };
+    case "latest": case "none": return { kind: "latest_calendar_year_in_release" };
   }
 }
 
@@ -85,7 +90,7 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
   const onEntity = (entity: string, cond: AttributeFilter): Filter =>
     entity === ent ? cond : { kind: "exists", scope: ent, entity, where: [cond], ...(entity === "property" || entity === "property_drug" ? { attribution: "incident_level_only" as const, scope: "incident" } : {}) };
   const attr = (dimension: string, values: (string | number)[], op: AttributeFilter["op"] = "in"): AttributeFilter => ({ kind: "attribute", dimension, op, values });
-  const person = ["victim", "offender", "arrestee"].includes(ent) ? ent : "victim";
+  const person = ["victim", "offender", "arrestee", "group_b_arrest"].includes(ent) ? ent : "victim";
   switch (dim) {
     case "sex": case "race": case "ethnicity": return onEntity(person, attr(`${person}.${dim}`, [val]));
     case "age": return val === "Under 18" ? onEntity(person, attr(`${person}.age`, [1, 17], "between")) : null;
@@ -106,7 +111,7 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
 export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
   const ent = ENTITY[unit] ?? "offense";
   const g = (dimension: string, extra: Partial<Grouping> = {}): Grouping => ({ dimension, unknown: "visible", absent: "show", ...extra });
-  const person = ["victim", "offender", "arrestee"].includes(ent) ? ent : "victim";
+  const person = ["victim", "offender", "arrestee", "group_b_arrest"].includes(ent) ? ent : "victim";
   switch (dim) {
     case "age": return g(`${person}.age`, { bins: AGE_BINS });
     case "offender-age": return g("offender.age", { bins: AGE_BINS });
@@ -190,13 +195,14 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       periodValue = periodOf(spec.period, spec.grain === "month");
       if (spec.grain === "month" || spec.grain === "rolling") groupings.push({ dimension: "time.month", unknown: "visible", absent: "show" });
       if (spec.grain === "year") groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
-      for (const m of measures) {
-        if (m.as.endsWith("_cleared")) continue;
+      // A fixed list: the loop adds denominator measures, which must not be visited themselves.
+      for (const m of measures.filter((x) => !x.as.endsWith("_cleared"))) {
         if (spec.statistic === "rate") statistics.push({ kind: "rate", as: `${m.as}_rate`, measure: m.as, per: 100000 });
         else if (spec.statistic === "clearance_rate") statistics.push({ kind: "ratio", as: `${m.as}_clearance_rate`, numerator: `${m.as}_cleared`, denominator: m.as });
         else if (spec.statistic === "average_value") {
-          addMeasure("property_segments", "property_segment", `${m.as}_segments`);
-          measures[measures.length - 1].id = "property.segments";
+          // The denominator counts the same property as the numerator's dollars (motor-vehicle segments for
+          // motor-vehicle value), with the same filters.
+          measures.push({ id: `${m.id}_segments`, unit: "property_segment", as: `${m.as}_segments`, ...(m.filters ? { filters: m.filters } : {}) });
           statistics.push({ kind: "ratio", as: `${m.as}_average`, numerator: m.as, denominator: `${m.as}_segments` });
         } else statistics.push({ kind: "count", as: `${m.as}_count`, measure: m.as });
       }
@@ -209,10 +215,9 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       if (unit === "fbi_standard" && !["location", "hour", "offense"].includes(spec.dim)) {
         return { kind: "unmapped", reason: `a breakdown of ${spec.measure} by ${spec.dim}: a mixed-unit composite has no single counted person` };
       }
-      if (clearanceDim) {
-        addMeasure(`${spec.measure}_cleared`, unit, spec.measure);
-        measurePath.set(spec.measure, "measures[0]");
-      } else addMeasure(spec.measure, unit, spec.measure);
+      // Today's clearance breakdowns count every offense, with "not cleared" as its own category, so the parts sum to
+      // the reported total; "by exception by type" narrows to the exceptional clearances (its filter).
+      addMeasure(spec.measure, unit, spec.measure);
       const err = addFilters(spec.filters, unit, filters, (i) => `filters[${i}]`);
       if (err) return { kind: "unmapped", reason: err };
       const p = resolve(spec.place);
@@ -291,7 +296,9 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
 
   const plan: NibrsPlan = {
     version: PLAN_VERSION, semanticVersion: deps.semanticVersion, question: ledger.question,
-    geography: { places, combine: "separate" }, period: periodValue!, timeBasis: "incident_date",
+    geography: { places, combine: "separate" }, period: periodValue!,
+    // Group B arrests have no incident: they are placed in time by arrest date.
+    timeBasis: measures.some((m) => m.unit === "group_b_arrest") ? "arrest_date" : "incident_date",
     measures, filters, groupings, statistics, transforms, coverage: ALL, defaults, bindings: [],
   };
 
@@ -333,7 +340,9 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       case "clearance": {
         if (v === "rate") { const i = si((s) => s.kind === "ratio"); return i >= 0 ? `statistics[${i}]` : null; }
         const i = plan.measures.findIndex((m) => /cleared/.test(m.id));
-        return i >= 0 ? `measures[${i}]` : null;
+        if (i >= 0) return `measures[${i}]`;
+        const g = gi((x) => x.dimension === "offense.clearance_type" || x.dimension === "offense.clearance_method");
+        return g >= 0 ? `groupings[${g}]` : null;
       }
       case "rank": { const i = ti("rank"); return i >= 0 ? `transforms[${i}]` : null; }
       case "threshold": return "geography.places[0]";

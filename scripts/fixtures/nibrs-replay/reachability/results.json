@@ -79,7 +79,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8749,
@@ -94,7 +94,7 @@
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8751,
@@ -108,7 +108,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8771,
@@ -138,14 +138,14 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8791,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8792,
@@ -159,21 +159,21 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8818,
    "origin": "internal",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:share",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8819,
    "origin": "internal",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:share",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8820,
@@ -245,14 +245,14 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8849,
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8853,
@@ -266,35 +266,35 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8858,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8859,
    "origin": "internal",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8864,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8870,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8871,
@@ -308,28 +308,28 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8883,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8885,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8886,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8888,
@@ -365,7 +365,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8916,
@@ -379,7 +379,7 @@
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8921,
@@ -394,7 +394,7 @@
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8923,
@@ -408,7 +408,7 @@
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8927,
@@ -423,7 +423,7 @@
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8938,
@@ -548,35 +548,35 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8994,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8995,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8996,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8997,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 8998,
@@ -599,7 +599,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9015,
@@ -642,7 +642,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9063,
@@ -664,14 +664,14 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9086,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9091,
@@ -702,7 +702,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "decline",
-   "category": "decline_table_limit_removed_by_plan_language",
+   "category": "decline_reader_could_not_combine_parts",
    "detail": "I can't apply \"2026\": one period per answer. I haven't answered with a number that leaves it out."
   },
   {
@@ -797,7 +797,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9154,
@@ -812,42 +812,42 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9160,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9161,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9169,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9171,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9173,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9178,
@@ -1155,14 +1155,14 @@
    "origin": "unmatched",
    "outcome_then": "operational",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9230,
    "origin": "unmatched",
    "outcome_then": "operational",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9234,
@@ -1191,7 +1191,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9261,
@@ -1314,7 +1314,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9278,
@@ -1351,7 +1351,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9292,
@@ -1413,7 +1413,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9322,
@@ -1435,7 +1435,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9354,
@@ -1450,7 +1450,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9356,
@@ -1464,7 +1464,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9363,
@@ -1485,21 +1485,21 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9373,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:share",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9374,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:share",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9375,
@@ -1571,14 +1571,14 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9404,
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9408,
@@ -1592,35 +1592,35 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9413,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9414,
    "origin": "internal",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9419,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9425,
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9426,
@@ -1634,28 +1634,28 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9438,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9440,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9441,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9443,
@@ -1691,7 +1691,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9471,
@@ -1705,7 +1705,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9476,
@@ -1720,7 +1720,7 @@
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9478,
@@ -1734,7 +1734,7 @@
    "origin": "internal",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9482,
@@ -1749,7 +1749,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9493,
@@ -1811,7 +1811,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9546,
@@ -1841,14 +1841,14 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9561,
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "decline",
-   "category": "decline_table_limit_removed_by_plan_language",
+   "category": "decline_reader_could_not_combine_parts",
    "detail": "I can't apply \"state\": I couldn't use it in a supported question type. I haven't answered with a number that leaves it out."
   },
   {
@@ -1863,7 +1863,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9564,
@@ -1878,7 +1878,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "decline",
-   "category": "decline_table_limit_removed_by_plan_language",
+   "category": "decline_reader_could_not_combine_parts",
    "detail": "I can't apply \"state\": I couldn't use it in a supported question type. I haven't answered with a number that leaves it out."
   },
   {
@@ -1901,7 +1901,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9592,
@@ -1915,7 +1915,7 @@
    "origin": "unmatched",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9594,
@@ -1943,7 +1943,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9598,
@@ -1965,7 +1965,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9601,
@@ -2115,7 +2115,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9628,
@@ -2174,7 +2174,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9662,
@@ -2229,7 +2229,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9671,
@@ -2244,14 +2244,14 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9673,
    "origin": "unmatched",
    "outcome_then": "decline_capability:query_contract_failed",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9674,
@@ -2265,35 +2265,35 @@
    "origin": "unmatched",
    "outcome_then": "answer_model_sql_historical",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9683,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9684,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9685,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9686,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9690,
@@ -2324,14 +2324,14 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:share",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9702,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:share",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9703,
@@ -2403,14 +2403,14 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9734,
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9738,
@@ -2424,35 +2424,35 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9743,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9745,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9751,
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9757,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9758,
@@ -2466,35 +2466,35 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9764,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9771,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9773,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9774,
    "origin": "internal",
    "outcome_then": "decline_source_health:required_component_unavailable",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9776,
@@ -2530,7 +2530,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9804,
@@ -2544,7 +2544,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9809,
@@ -2559,7 +2559,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9811,
@@ -2573,7 +2573,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9815,
@@ -2588,7 +2588,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9826,
@@ -2658,42 +2658,42 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9854,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9855,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9856,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9857,
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9858,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9870,
@@ -2715,14 +2715,14 @@
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9878,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9879,
@@ -2736,21 +2736,21 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9881,
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9885,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9888,
@@ -2764,7 +2764,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9896,
@@ -2821,7 +2821,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9906,
@@ -2835,7 +2835,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9908,
@@ -2850,14 +2850,14 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9912,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9914,
@@ -2872,7 +2872,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "decline",
-   "category": "decline_table_limit_removed_by_plan_language",
+   "category": "decline_reader_could_not_combine_parts",
    "detail": "I can't apply \"January 2024\": one period per answer. I haven't answered with a number that leaves it out."
   },
   {
@@ -2888,21 +2888,21 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9935,
    "origin": "internal",
    "outcome_then": "decline_source_health:required_component_unavailable",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9936,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9946,
@@ -2917,7 +2917,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9960,
@@ -2939,7 +2939,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9972,
@@ -2968,7 +2968,7 @@
    "origin": "internal",
    "outcome_then": "decline_data:no_rows_in_source",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9987,
@@ -2982,7 +2982,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 9989,
@@ -3050,7 +3050,7 @@
    "origin": "internal",
    "outcome_then": "decline_source_health:required_component_unavailable",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10037,
@@ -3079,7 +3079,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10048,
@@ -3160,14 +3160,14 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10083,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10088,
@@ -3257,7 +3257,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10133,
@@ -3345,14 +3345,14 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10212,
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10217,
@@ -3388,7 +3388,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10226,
@@ -3419,7 +3419,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10237,
@@ -3486,7 +3486,7 @@
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10269,
@@ -3514,7 +3514,7 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10286,
@@ -3536,28 +3536,28 @@
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:rank",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10292,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10296,
    "origin": "internal",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10299,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10300,
@@ -3593,280 +3593,280 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10328,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10329,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10330,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10333,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10334,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10335,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10336,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10337,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10338,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10340,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10341,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10342,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10343,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10344,
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10345,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10346,
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10348,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10350,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10351,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10352,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10353,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10354,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10355,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10356,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10357,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10366,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10367,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10368,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10401,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10402,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10403,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10410,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10416,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10425,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10426,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10427,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10431,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10432,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10433,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10437,
@@ -3881,42 +3881,42 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10444,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10445,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10447,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10448,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10449,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10451,
@@ -3931,28 +3931,28 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10455,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10456,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10471,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10477,
@@ -3975,42 +3975,42 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10496,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10497,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10498,
    "origin": "unmatched",
    "outcome_then": "decline_data:no_rows_in_source",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10499,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:share",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10500,
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "decline",
-   "category": "decline_table_limit_removed_by_plan_language",
+   "category": "decline_reader_could_not_combine_parts",
    "detail": "I can't apply \"state\": I couldn't use it in a supported question type. I haven't answered with a number that leaves it out."
   },
   {
@@ -4018,119 +4018,119 @@
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10503,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10504,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10505,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10509,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10510,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10511,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10519,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10521,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10522,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10523,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10526,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10528,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10530,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10536,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10539,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10542,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10543,
@@ -4145,7 +4145,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10545,
@@ -4159,42 +4159,42 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10550,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10551,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10554,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10557,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10559,
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "decline",
-   "category": "decline_table_limit_removed_by_plan_language",
+   "category": "decline_reader_could_not_combine_parts",
    "detail": "I can't apply \"June 2026\": one period per answer. I haven't answered with a number that leaves it out."
   },
   {
@@ -4202,21 +4202,21 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10566,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10574,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10585,
@@ -4231,7 +4231,7 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10590,
@@ -4254,84 +4254,84 @@
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10597,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10598,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10600,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10601,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10603,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10604,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10605,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10607,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10612,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10613,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10614,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10616,
@@ -4346,70 +4346,70 @@
    "origin": "unmatched",
    "outcome_then": "decline_capability:capability_path_unavailable",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10622,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10623,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10624,
    "origin": "unmatched",
    "outcome_then": "answer_deterministic",
    "reader": "spec:breakdown",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10627,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10628,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10629,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10631,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10632,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   },
   {
    "id": 10633,
    "origin": "internal",
    "outcome_then": "answer_deterministic",
    "reader": "spec:series",
-   "category": "plan_valid"
+   "category": "plan_structurally_valid"
   }
  ]
 }

@@ -17,10 +17,11 @@ import { validateBindings, validatePlanSemantics, validatePlanShape } from "../l
 const ORIS: Record<string, [string, string]> = {
   "city:Memphis:TN": ["TNMPD0000", "Memphis Police Department, TN"], "city:Fort Worth:TX": ["TX2201200", "Fort Worth Police Department, TX"],
   "city:Allentown:PA": ["PA0390100", "Allentown Police Department, PA"], "city:Houston:TX": ["TXHPD0000", "Houston Police Department, TX"],
+  "city:Chicago:IL": ["ILCPD0000", "Chicago Police Department, IL"],
 };
 const deps = { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v: string): Place | null => (ORIS[v] ? { kind: "agency", ori: ORIS[v][0], label: ORIS[v][1] } : null) };
 const authority = (v: string) => (ORIS[v] ? { oris: [ORIS[v][0]] } : null);
-const release = { id: "test", firstMonth: "1991-01", lastMonth: "2026-10" };
+const release = { id: "test", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
 const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : ["(any)"]) };
 
 function adapt(q: string): AdapterResult {
@@ -67,6 +68,41 @@ assert.equal(validateResolved(rate, release, DRAFT_LAYER, geo).clippedTo, "2026-
 assert.deepEqual(planOf("murder clearance rate in Memphis in 2024").measures.map((m) => m.id), ["offenses.murder", "offenses.murder_cleared"]);
 // "were cleared": the cleared offenses, a part today's typed spec does not carry.
 assert.deepEqual(planOf("How many rapes were cleared in 2025").measures.map((m) => m.id), ["offenses.rape_cleared"]);
+
+// Average value: terminates, and divides by the same property's segments.
+const avg = planOf("average value of stolen property in Texas in 2025");
+assert.deepEqual(avg.measures.map((m) => m.id), ["property.property_value", "property.property_value_segments"]);
+// DUI is Group B: Group B arrests, placed in time by arrest date.
+const dui = planOf("DUI arrests by age group nationally");
+assert.deepEqual([dui.measures[0].id, dui.measures[0].unit, dui.timeBasis, dui.groupings[0].dimension], ["group_b_arrests.dui", "group_b_arrest", "arrest_date", "group_b_arrest.age"]);
+// "last year" is the calendar year before the request, as today's reader reads it, whatever the release holds.
+const ly = planOf("burglaries in Texas last year");
+assert.deepEqual(ly.period, { kind: "previous_calendar_year" });
+assert.deepEqual(validateResolved(ly, { ...release, lastMonth: "2026-12" }, DRAFT_LAYER, geo).period, { kind: "absolute", from: "2025-01", to: "2025-12" });
+// A clipped period is returned clipped.
+assert.deepEqual(validateResolved({ ...rate, period: { kind: "absolute", from: "2025-01", to: "2026-12" } }, release, DRAFT_LAYER, geo).period, { kind: "absolute", from: "2025-01", to: "2026-10" });
+// A cleared-offense measure applies the offense only when the question asks about clearances.
+{
+  const ledger = accountNibrsRequest("How many burglary offenses in Texas in 2025");
+  const d = matchNibrsType(ledger);
+  assert(d.kind === "spec");
+  const r = planFromSpec(d.spec, ledger, deps);
+  assert(r.kind === "plan");
+  const swapped = { ...r.plan, measures: [{ ...r.plan.measures[0], id: "offenses.burglary_cleared" }] };
+  assert.ok(validateBindings(swapped, r.parts, authority).some((p) => p.rule === "A4"), "an unrequested clearance subset is refused");
+}
+// A compared period must lie entirely inside the release.
+{
+  const cmp = { ...X.SEPARATE_YEARS, period: { kind: "years" as const, years: [2024, 2026] }, transforms: [{ kind: "period_comparison" as const, of: ["count"], earlier: { kind: "absolute" as const, from: "2024-11", to: "2024-12" }, later: { kind: "absolute" as const, from: "2026-11", to: "2026-12" }, outputs: ["change" as const] }] };
+  assert.ok(validateResolved(cmp, release, DRAFT_LAYER, { members: () => ["TXHPD0000"] }).problems.some((p) => p.rule === "R2"));
+}
+
+// Clearance breakdowns count every offense, with "not cleared" a category (today's rule); "by exception by type" narrows
+// to the exceptional clearances.
+const byType = planOf("chicago murder clearances by clearance type in 2025");
+assert.deepEqual([byType.measures[0].id, byType.groupings[0].dimension, byType.filters.length], ["offenses.murder", "offense.clearance_type", 0]);
+const exc = planOf("virginia murder clearances by exception by type in 2025");
+assert.deepEqual([exc.measures[0].id, exc.groupings[0].dimension, JSON.stringify(exc.filters)], ["offenses.murder", "offense.clearance_type", JSON.stringify([{ kind: "attribute", dimension: "offense.clearance_method", op: "in", values: ["exceptional"] }])]);
 
 // ---- refusals ----
 // Today's typed breakdown drops "rate"; the plan refuses rather than answering counts (the live route declines these

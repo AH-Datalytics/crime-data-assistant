@@ -47,7 +47,7 @@ request accounting checked by path and value; examples for every case and form, 
 | Field | Says | Notes |
 |---|---|---|
 | `geography` | places; `separate` (a row per place; two or more need the `geo.place` grouping) or `combined` (one total over the deduplicated union of the places' agencies) | nation (a sum of reported counts, never an agency), state, agency by ORI, county, `agency_set` by population, type or population group |
-| `period` | `absolute` months, `years` (noncontiguous whole years), `since`, `last_n` years or months, `latest_calendar_year_in_release` (H1's rule), `latest_month_in_release` | relative forms resolve against the release (R) |
+| `period` | `absolute` months, `years` (noncontiguous whole years), `since`, `last_n` years or months, `latest_calendar_year_in_release` (H1's rule), `latest_month_in_release`, `previous_calendar_year` ("last year": the calendar year before the request date) | relative forms resolve against the release (R) |
 | `timeBasis` | incident, arrest or clearance date | each measure declares the bases it has (S2) |
 | `measures` | id, counting unit, name, optional own filters | units: victim, victim-offense pair, victim-offender pair, offense, incident, offender, arrestee, arrest, Group B arrest, property segment, dollars, vehicles |
 | `filters` | attribute filters; **scoped existence filters** | `exists` over `entity` from `scope` (the unit itself or an entity it belongs to); every condition belongs to `entity`; property needs `attribution: "incident_level_only"` |
@@ -118,7 +118,7 @@ request accounting checked by path and value; examples for every case and form, 
 | A3 | a concept no plan can apply (it must be a limitation instead), or a binding to a path of the wrong kind |
 | A4 | a binding whose plan value does not carry the part's value, by an explicit rule per concept: another measure or unit, another state or agency, a clipped or different period, a negated or different filter value, another grain, breakdown, statistic, rank or threshold; a broader filter than the part (exact equivalence; named families map to exact code sets); a rate not per 100,000; an agency whose ORI the app's geography resolver does not give for the part (the plan's label never decides) |
 | R1 | a resolved period starting before the release's first month or after its last, or outside a measure's, dimension's or code's era (every condition rechecked on the resolved years). A period running past the release's last month (a year in progress) is not refused: it is answered through that month, and the clip is recorded (`clippedTo`, the resolved period in provenance) |
-| R2 | comparison periods outside the selected period (for noncontiguous years, outside the selected years), or out of order |
+| R2 | comparison periods outside the selected period (for noncontiguous years, outside the selected years), not entirely inside the release, or out of order |
 | R3 | (not a refusal) a combined geography is counted as the deduplicated union of its agencies, recorded in provenance |
 | R4 | a place that matches no agency in the release in the selected years |
 | R5 | a rate with no time grouping and no comparison whose resolved period spans several data years |
@@ -187,7 +187,7 @@ The compiler counts distinct entity keys, so reaching a dimension can never mult
 |---|---|---|
 | `SeriesSpec`, one place, one or more measures | `measures` (unit explicit), `filters`, a time grouping per `grain` | `N3`, `MULTI_MEASURE` |
 | `SeriesSpec`, named places | `geography.places`, separate, with `geo.place` | `NAMED_PLACES` |
-| `SeriesSpec` period forms | `year`/`range`/`month`/`monthrange` → `absolute`; `years` (noncontiguous) → `years`; `since` → `since`; `last` → `last_n`; `lastyear`/`latest` → `latest_calendar_year_in_release`/`latest_month_in_release`, declared in `defaults` | `SEPARATE_YEARS`, `H1` |
+| `SeriesSpec` period forms | `year`/`range`/`month`/`monthrange` → `absolute`; `years` (noncontiguous) → `years`; `since` → `since`; `last` → `last_n`; `lastyear` → `previous_calendar_year` (resolved with the request date); `latest` and no period → `latest_calendar_year_in_release`, declared in `defaults` | `SEPARATE_YEARS`, `H1` |
 | `SeriesSpec` grain `rolling`, `combine` | `rolling` transform; `combine` → no time grouping over the period | `ROLLING` |
 | `statistic: rate` | `rate` (fixed evidenced-complete eligibility) | `R`, `S4_AGENCIES`, `S4_STATE` |
 | `statistic: total_value` / `average_value` | `count` of a dollars measure / `ratio` of dollars over property segments | `PROPERTY_VALUE` |

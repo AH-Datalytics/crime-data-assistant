@@ -323,7 +323,7 @@ const PERIOD_FORMS: [RegExp, (m: RegExpExecArray) => Period][] = [
   [/^monthrange:(\d{4}-\d{2}):(\d{4}-\d{2})$/, (m) => ({ kind: "absolute", from: m[1], to: m[2] })],
   [/^since:(\d{4})$/, (m) => ({ kind: "since", from: `${m[1]}-01` })],
   [/^last:(\d+)$/, (m) => ({ kind: "last_n", unit: "years", count: +m[1] })],
-  [/^lastyear$/, () => ({ kind: "latest_calendar_year_in_release" })],
+  [/^lastyear$/, () => ({ kind: "previous_calendar_year" })],
   [/^latest$/, () => ({ kind: "latest_calendar_year_in_release" })],
 ];
 
@@ -337,7 +337,7 @@ const PERIOD_FORMS: [RegExp, (m: RegExpExecArray) => Period][] = [
  */
 export type PlaceAuthority = (ledgerValue: string) => { oris: string[]; fips?: string[] } | null;
 
-function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unknown, places: PlaceAuthority): string | null {
+function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unknown, places: PlaceAuthority, clearanceAsked: boolean): string | null {
   const v = part.value ?? "";
   const t = target as Record<string, unknown>;
   switch (part.concept) {
@@ -346,13 +346,15 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
       {
         // Ids are "<unit>.<name>@<version>" or a qualified composite "<name>.<variant>@<version>" (violent_crime.ucr@1).
         const parts = String(t.id ?? "").replace(/@\d+$/, "").split(".");
-        // A cleared-offense measure applies its offense ("rape clearances": offenses.rape_cleared).
+        // A cleared-offense measure applies its offense ("rape clearances": offenses.rape_cleared), but only when the
+        // question asks about clearances; otherwise it would answer a subset of what was asked.
         const last = parts[parts.length - 1];
-        return last === v || last === `${v}_cleared` || parts[0] === v ? null : `the measure at ${path} is not "${v}"`;
+        return last === v || (clearanceAsked && last === `${v}_cleared`) || parts[0] === v ? null : `the measure at ${path} is not "${v}"`;
       }
     case "unit":
       if (!/^measures\[\d+\]\.unit$/.test(path)) return "a unit binds to measures[i].unit";
-      return UNIT_OF[v] === target ? null : `unit ${String(target)} does not apply "${v}"`;
+      // "arrests" is Group A arrestees or Group B arrests, as the offense decides.
+      return UNIT_OF[v] === target || (v === "arrests" && target === "group_b_arrest") ? null : `unit ${String(target)} does not apply "${v}"`;
     case "place": {
       // A ranking's place is its scope: the agency set's `within`.
       if (!/^geography\.places\[\d+\](?:\.within)?$/.test(path)) return "a place binds to geography.places";
@@ -424,7 +426,8 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
       return t.kind === "share" || t.kind === "ratio" ? null : `statistic at ${path} is not a share`;
     case "clearance":
       if (v === "rate") return t.kind === "ratio" ? null : "a clearance rate binds to a ratio";
-      return /cleared/.test(String(t.id ?? "")) || t.kind === "ratio" ? null : `nothing at ${path} counts clearances`;
+      // A cleared-offense measure, or a breakdown by clearance type or method (cleared and not cleared).
+      return /cleared/.test(String(t.id ?? "")) || t.kind === "ratio" || /^offense\.clearance_(?:type|method)$/.test(String(t.dimension ?? "")) ? null : `nothing at ${path} counts clearances`;
     case "rank": {
       const m = /^(top|bottom):(\d*)$/.exec(v);
       if (!m) return `rank value "${v}" has no mapping`;
@@ -453,12 +456,13 @@ export function validateBindings(plan: NibrsPlan, parts: PartRef[], places: Plac
   const out: PlanProblem[] = [];
   const id = (p: PartRef) => `${p.clause}:${p.span[0]}:${p.span[1]}:${p.inherited}`;
   const bound = new Map(plan.bindings.map((b) => [id(b.part), b]));
+  const clearanceAsked = parts.some((p) => p.concept === "clearance" || p.concept === "clearance-reason" || (p.concept === "filter" && (p.value ?? "").startsWith("clearance:")));
   for (const part of parts) {
     const b = bound.get(id(part));
     if (!b) { out.push({ rule: "A1", path: "bindings", message: `"${part.text}" (${part.concept}) is not applied` }); continue; }
     const target = at(plan, b.path);
     if (target === undefined) { out.push({ rule: "A2", path: b.path, message: `"${part.text}" is bound to a path the plan does not have` }); continue; }
-    const wrong = valueApplied(plan, part, b.path, target, places);
+    const wrong = valueApplied(plan, part, b.path, target, places, clearanceAsked);
     if (wrong) out.push({ rule: /has no mapping|cannot be applied|binds to/.test(wrong) ? "A3" : "A4", path: b.path, message: `"${part.text}": ${wrong}` });
   }
   return out;

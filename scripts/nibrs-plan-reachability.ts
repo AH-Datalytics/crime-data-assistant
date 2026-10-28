@@ -27,19 +27,19 @@ const PLACES: Record<string, { ori: string; label: string }> = JSON.parse(fs.rea
 
 const resolvePlace = (value: string, _p: NPlace): Place | null => (PLACES[value] ? { kind: "agency", ori: PLACES[value].ori, label: PLACES[value].label } : null);
 const placeAuthority = (value: string) => (PLACES[value] ? { oris: [PLACES[value].ori] } : null);
-const release = { id: "reachability", firstMonth: "1991-01", lastMonth: "2026-10" };
+const release = { id: "reachability", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
 const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : ["(any)"]) };
 
 /** Today's decline sentences that name a limit of the summary tables, which the plan language does not have. */
 const TABLE_LIMITS = [
   /one breakdown per answer/, /breakdowns come from yearly tables/, /a breakdown for part of a year/, /ask for each year on its own/,
-  /a share covers one period/, /one period per answer/, /rankings count each offense in its standard unit/, /a ranking covers (?:a full year|one year)/,
+  /a share covers one period/, /rankings count each offense in its standard unit/, /a ranking covers (?:a full year|one year)/,
   /a ranking of only part of an offense/, /states are ranked without a population minimum/, /a state ranking covers every state/,
   /a ranking covers the nation or one state/, /I rank places by a level, not by a change/, /I compare one measure for one place/,
   /rates are given for complete years/, /a rate over several years is given per year/, /one counting unit per question/,
   /one minimum population/, /clearance figures count offense records/, /clearance tables don't record it/, /this answer type doesn't list every place/,
   /comparisons are answered as named places side by side/, /that time grain isn't available/, /answered only by its own fixed path/,
-  /I couldn't use it in a supported question type/, /up to 10 named places/,
+  /up to 10 named places/,
 ];
 
 type Row = { id: number; origin: string; outcome_then: string; reader: string; category: string; detail?: string; rules?: string[] };
@@ -67,6 +67,8 @@ for (const it of inventory.items) {
             : has("coverage-lookup", "completeness") ? "decline_coverage_question_not_in_plan_v1"
               : has("cohort") ? "decline_cohort_supported_by_plan"
                 : /couldn't resolve that place|couldn't read that as a period/.test(d.explanation) ? "decline_unresolved_place_or_period"
+                  // The reader could not fit the parts together (a word it read as a stray part, a range split in two).
+                  : /I couldn't use it in a supported question type|one period per answer/.test(d.explanation) ? "decline_reader_could_not_combine_parts"
                   : TABLE_LIMITS.some((re) => re.test(d.explanation)) ? "decline_table_limit_removed_by_plan_language" : "decline_other";
     rows.push({ ...base, reader: "decline", category: cat, detail: d.explanation.slice(0, 240) });
     continue;
@@ -79,7 +81,8 @@ for (const it of inventory.items) {
     ...validateBindings(plan, parts, placeAuthority),
     ...validateResolved(plan, release, DRAFT_LAYER, geo).problems,
   ];
-  rows.push({ ...base, reader: `spec:${d.spec.type}`, category: problems.length ? "plan_invalid" : "plan_valid",
+  // Structural validity only: whether the plan is faithful to the question is audited separately (README).
+  rows.push({ ...base, reader: `spec:${d.spec.type}`, category: problems.length ? "plan_invalid" : "plan_structurally_valid",
               ...(problems.length ? { rules: [...new Set(problems.map((p) => p.rule))].sort(), detail: problems.slice(0, 3).map((p) => `${p.rule} ${p.path}: ${p.message}`).join(" | ").slice(0, 400) } : {}) });
 }
 
@@ -90,8 +93,8 @@ const lines = ["# Plan-language reachability over the replay inventory", "",
   "Today's reader, then the adapter, then every plan validation (draft semantic layer). Offline; no SQL.", "",
   "| Category | All (605) | Unmatched (358) | Internal (247) |", "|---|---|---|---|"];
 for (const [c, n] of count(rows, (r) => r.category)) lines.push(`| ${c} | ${n} | ${pub.filter((r) => r.category === c).length} | ${n - pub.filter((r) => r.category === c).length} |`);
-lines.push("", "## Valid plans by today's outcome", "", "| Outcome then | Valid plans |", "|---|---|");
-for (const [o, n] of count(rows.filter((r) => r.category === "plan_valid"), (r) => r.outcome_then)) lines.push(`| ${o} | ${n} |`);
+lines.push("", "## Structurally valid plans by today's outcome", "", "| Outcome then | Plans |", "|---|---|");
+for (const [o, n] of count(rows.filter((r) => r.category === "plan_structurally_valid"), (r) => r.outcome_then)) lines.push(`| ${o} | ${n} |`);
 lines.push("", "## Invalid plans by rule", "", "| Rules | Plans |", "|---|---|");
 for (const [k, n] of count(rows.filter((r) => r.category === "plan_invalid"), (r) => (r.rules ?? []).join(" "))) lines.push(`| ${k} | ${n} |`);
 fs.writeFileSync(path.join(OUT, "summary.md"), lines.join("\n") + "\n");

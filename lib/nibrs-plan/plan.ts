@@ -68,6 +68,8 @@ export const Period = z.discriminatedUnion("kind", [
    */
   z.strictObject({ kind: z.literal("latest_calendar_year_in_release") }),
   z.strictObject({ kind: z.literal("latest_month_in_release") }),
+  /** "last year": the calendar year before the request's date (today's reader), whatever the release holds. */
+  z.strictObject({ kind: z.literal("previous_calendar_year") }),
 ]);
 
 /** Which date places a unit in a period. Each measure declares the bases it supports (semantic layer). */
