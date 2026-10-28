@@ -153,8 +153,8 @@ one layer and one lighter compiler.
     in the state. It is never a sum of all agencies.
   - In the engine, `rtci.*` state values read `agency_monthly` over the state's sample members. `state_monthly` is not
     used.
-  - The live site is not changed here: its model-prompt path still uses `state_monthly`. The coordinator raises that
-    fix with the owner separately.
+  - The fix happens in the rebuild only (owner: "rebuild"). The live site's `state_monthly` path stays as it is until
+    the Current Trends compiler replaces it.
 - **Fits as is:** counts by month or year, agency rates, rolling counts, comparisons of periods.
 - **Needs:**
   - **Two separate cohort notions.**
