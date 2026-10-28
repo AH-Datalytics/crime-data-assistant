@@ -136,8 +136,10 @@ Each is one real incident with all its segments in `extracts/micro/`. Expectatio
   `C60DRA5MP28N` (July), `C60ARFECV28N` (August). Each counts once.
   - Today's live `summary_city_monthly` counts them twice: it is 1 higher in each of those five months and equal
     in the other 49. That is the only difference.
-  - Whether the FBI master file repeats them, or the nibrs.db import did, is checked when the canonical build
-    reads the 2023 file.
+  - Traced by the "NIBRS model" session (2026-10-28): the FBI 2023 master file itself repeats each incident, every
+    line identical, on consecutive lines (C60ARFECV28N 31096225-31096234, C60DRA5MP28N 31117884-31117893,
+    C60GRBS9V28N 31154128-31154137, C60 RWQQ628N 31257959-31257970, C60VRWRLQ28N 31289586-31289595). nibrs-model's
+    build rule T1 loads one copy and records the repeat; a non-identical repeat fails the build.
 - "Car" is read as motor vehicle theft, labelled as such. The narrower reading (240 in incidents with a stolen
   automobile segment) is recorded per month as `variant_with_stolen_automobile_segment`. It is much lower, for
   example July 2023: 1,571 against 926. The reader should be shown the label; whether "car" should ever narrow to

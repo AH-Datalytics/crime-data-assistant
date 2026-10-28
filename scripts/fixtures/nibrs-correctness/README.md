@@ -38,7 +38,8 @@ in the expected files' shapes into a directory; every number, null and status mu
 Before this set accepts a canonical build:
 - every named and micro case is re-derived from the FBI master-file lines for the same incident keys, with the
   source zip hashes recorded, and M4's `PENDING_MASTER_FILE` relationships filled;
-- the N3 duplicates are traced to the master file (repeated there, or introduced by the nibrs.db import);
+- the N3 duplicates: traced 2026-10-28, repeated in the FBI 2023 master file itself (CASES.md, N3); the canonical
+  build must load one copy of each and record the repeat;
 - a BH-evidence fixture from real master-file records shows each decoded status (REPORTED_ZERO, NOT_REPORTED,
   complete submission) on hand-traced agency-months. S1-S5 test the behaviour given a status, not the decoding.
 
