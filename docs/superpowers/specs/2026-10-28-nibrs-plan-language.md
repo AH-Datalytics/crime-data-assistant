@@ -1,4 +1,4 @@
-# NIBRS structured plan language, v1 (r2)
+# NIBRS structured plan language, v1 (r3)
 
 Phase 3 contract of `2026-10-27-nibrs-engine-restructure.md` (design point 3).
 
@@ -9,8 +9,14 @@ Phase 3 contract of `2026-10-27-nibrs-engine-restructure.md` (design point 3).
 | `lib/nibrs-plan/resolve.ts` | release resolution of relative periods and agency sets, and the R rules |
 | `lib/nibrs-plan/semantic.ts` | what NIBRSAI needs from the shared semantic layer, compiler-facing |
 | `lib/nibrs-plan/result.ts` | the result envelope and provenance the compiler fills |
-| `lib/nibrs-plan/examples.ts` | 33 plans and 6 reader outcomes: every correctness case and every typed form today |
+| `lib/nibrs-plan/examples.ts` | 35 plans and 6 reader outcomes: every correctness case and every typed form today |
 | `scripts/test-nibrs-plan-language.ts` | every example valid; every rule refuses its case |
+
+**r2 → r3 (Codex REVISE, 7 changes):** request accounting by explicit per-concept value rules (a concept with no
+rule cannot be bound); one attribute validator for every condition, rerun on resolved years; noncontiguous years
+checked as selected; strict schemas (unknown fields refused); `link()` lookup and a layer self-check; rank after a
+comparison names its output, rolling and comparison not combined, rates one data year per cell; S4, paired
+relationship and property-value examples corrected.
 
 **r1 → r2 (Codex REVISE, 10 changes):** a compiler-facing semantic interface; existence filters validated along
 their whole path; shares with an explicit, independently evaluated denominator; rate eligibility fixed to evidenced
@@ -51,12 +57,15 @@ request accounting checked by path and value; examples for every case and form, 
 - **share** of `measure` in each cell over a denominator evaluated independently at the grain of `within` (a subset
   of the groupings; `[]` is the whole result, still within each place when places are separate and `geo.place` is
   in `within`). The denominator is `denominator` if named (same unit, S12), else `measure` with its own filters,
-  counted as distinct units: a victim in two weapon cells counts once. Never a sum of the cells shown.
+  evaluated with that measure's own aggregation over deduplicated rows: a count-distinct measure counts each unit
+  once (a victim in two weapon cells counts once), a sum measure (dollars, vehicles) sums each row once. Never a sum
+  of the cells shown.
 - **rate** per `per` of covered population. Eligibility is fixed: for each output cell an agency enters only if every
   month of that cell's period is evidenced complete (REPORTED_ZERO, or a submission evidenced complete), and
   numerator and population use the same agencies. The cell carries the observed count, the eligible count, the
   covered population and, when unavailable, the reason (no eligible agency; covered population cannot be
-  established, D8). Periods are never annualized; partial periods are labelled. A filtered numerator over all
+  established, D8). The population is the covered population of the cell's data year, so each cell's period lies
+  in one data year (P14); a rate is not rolled (P11) and a compared rate uses one-year periods (P13). Periods are never annualized; partial periods are labelled. A filtered numerator over all
   residents is labelled "per N residents (all residents)".
 - **ratio** of two measures evaluated independently at the full grain (clearance rate, a subset share such as
   "rapes cleared because prosecution was declined over rapes", average property value). A zero or unknown
@@ -66,14 +75,14 @@ request accounting checked by path and value; examples for every case and form, 
 
 - **rolling** over `time.month`; a window is reported only when every month in it is known.
 - **period_comparison** of two absolute periods inside the plan's period, earlier ending before later starts.
-- **rank** by a named statistic within each combination of `per`; `limit` keeps the first n (ties at the cut kept) or,
+- **rank** by a named statistic (after a comparison, one of its outputs: `count.change`, `count.pct_change` ...) within each combination of `per`; `limit` keeps the first n (ties at the cut kept) or,
   when null, orders every row (today's ranking without a number).
 
 ## Validation
 
 | Rule | Refuses |
 |---|---|
-| P0 | reader JSON that does not match the schema: missing fields, wrong discriminants, non-integer or negative counts and limits, malformed months, mismatched agency predicates |
+| P0 | reader JSON that does not match the strict schema: unknown fields (refused, never stripped), missing fields, wrong discriminants, non-integer or negative counts and limits, malformed months, mismatched agency predicates |
 | P1 | another plan version |
 | P2 | one name used twice across measures and statistics |
 | P3 | a place listed twice; `combined` over one place or with the nation; two or more separate places without `geo.place`, or `geo.place` without them |
@@ -83,9 +92,10 @@ request accounting checked by path and value; examples for every case and form, 
 | P7 | `in`/`not_in` without values, `between` without two, `is_known`/`is_unknown` with values |
 | P9 | an existence filter over property without `attribution: "incident_level_only"` |
 | P10 | a same-agencies cohort with nothing to compare (no comparison and no time grouping) |
-| P11 | transforms out of order, naming unknown statistics, or a rolling window without `time.month` |
-| P12 | a rank `per` a non-grouping, with nothing left to rank, or two ranks |
-| P13 | comparison periods reversed, overlapping, or outside an absolute plan period |
+| P11 | transforms out of order or naming unknown statistics; a rolling window without `time.month`, combined with a comparison, or over a rate |
+| P12 | a rank by an unknown statistic, by a compared statistic without naming the output (or naming an output that does not exist), `per` a non-grouping, with nothing left to rank, or two ranks |
+| P13 | comparison periods reversed, overlapping, or outside an absolute plan period; a compared rate with a period spanning two data years |
+| P14 | a rate over several years without a time.year or time.month grouping (one data year per cell) |
 | S1 | a plan read against another semantic version |
 | S2 | an unknown measure; a unit different from the measure's; a time basis the measure lacks |
 | S3 | an unknown dimension |
@@ -100,10 +110,10 @@ request accounting checked by path and value; examples for every case and form, 
 | S12 | a share whose denominator counts another unit; a rate on a measure that does not add across agencies |
 | A1 | a part of the question (clause 0 or inherited from an earlier turn) left unbound |
 | A2 | a binding to a path the plan does not have |
-| A3 | a binding to a path that concept cannot apply at |
-| A4 | a binding whose plan value does not carry the part's value (another measure, a clipped period, a filter on another value) |
-| R1 | a resolved period outside the release, or outside a measure's or dimension's era |
-| R2 | comparison periods outside the resolved period, or out of order |
+| A3 | a concept no plan can apply (it must be a limitation instead), or a binding to a path of the wrong kind |
+| A4 | a binding whose plan value does not carry the part's value, by an explicit rule per concept: another measure or unit, another state or agency, a clipped or different period, a negated or different filter value, another grain, breakdown, statistic, rank or threshold |
+| R1 | a resolved period outside the release, or outside a measure's, dimension's or code's era (every condition rechecked on the resolved years) |
+| R2 | comparison periods outside the selected period (for noncontiguous years, outside the selected years), or out of order |
 | R3 | (not a refusal) a combined geography is counted as the deduplicated union of its agencies, recorded in provenance |
 | R4 | a place that matches no agency in the release in the period |
 
@@ -134,6 +144,8 @@ To be agreed with the "NIBRS model" session, which owns the shared layer. The co
   NB, BB), per-code era validity, valid years;
 - **links:** endpoints, cardinality, join keys, and for pair entities (victim-offender) the far-end dimensions read
   through the pair row, so relationship × offender age never becomes a cross product;
+- `link(id)` to resolve the links named in predicates, and `measures()` so `checkLayer` can verify every predicate
+  when a version is loaded;
 - a version string carried into every plan, answer and cache key.
 
 The compiler counts distinct entity keys, so reaching a dimension can never multiply a count.
@@ -146,7 +158,7 @@ The compiler counts distinct entity keys, so reaching a dimension can never mult
 | `SeriesSpec`, named places | `geography.places`, separate, with `geo.place` | `NAMED_PLACES` |
 | `SeriesSpec` period forms | `year`/`range`/`month`/`monthrange` → `absolute`; `years` (noncontiguous) → `years`; `since` → `since`; `last` → `last_n`; `lastyear`/`latest` → `latest_calendar_year_in_release`/`latest_month_in_release`, declared in `defaults` | `SEPARATE_YEARS`, `H1` |
 | `SeriesSpec` grain `rolling`, `combine` | `rolling` transform; `combine` → no time grouping over the period | `ROLLING` |
-| `statistic: rate` | `rate` (fixed evidenced-complete eligibility) | `R`, `S4` |
+| `statistic: rate` | `rate` (fixed evidenced-complete eligibility) | `R`, `S4_AGENCIES`, `S4_STATE` |
 | `statistic: total_value` / `average_value` | `count` of a dollars measure / `ratio` of dollars over property segments | `PROPERTY_VALUE` |
 | `statistic: clearance_rate` (N5 series) | `ratio` of a cleared-offense measure over offenses (both unit offense) | `CLEARANCE_RATE` |
 | `BreakdownSpec` (N3, N5 breakdowns) | `groupings: [dim]` (+ `time.year` when `byYear`), `count` and a `share` within `[]` or `["time.year"]`; age with bins | `AGE_BREAKDOWN`, `CLEARANCE_BREAKDOWN` |
@@ -160,7 +172,7 @@ The compiler counts distinct entity keys, so reaching a dimension can never mult
 Today's limits that the plan drops: filters only where a summary table holds them, one breakdown per answer, no
 monthly breakdowns, shares over one period only, at most ten places, rankings by full years and fixed units only,
 change for one place and measure only, and declines because no table holds a combination. Group B arrests
-(`GROUP_B_ARRESTS`, arrest date), victim-offender pairs (`PAIRED_RELATIONSHIP`), one-to-many groupings
+(`GROUP_B_ARRESTS`, arrest date), victim-offender pairs (`PAIRED_RELATIONSHIP` counting victims, `PAIR_COUNT` counting pairs), one-to-many groupings
 (`MULTI_VALUE_GROUPING`) and combined places (`COMBINED_PLACES`) are new.
 
 ## Not decided here

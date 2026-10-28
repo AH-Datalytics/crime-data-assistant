@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import * as X from "../lib/nibrs-plan/examples";
 import { parsePlan, parseReaderOutcome, type NibrsPlan, type PartRef } from "../lib/nibrs-plan/plan";
 import { resolvePeriod, validateResolved, type GeographyResolver } from "../lib/nibrs-plan/resolve";
-import type { SemanticDimension, SemanticEntity, SemanticLayer, SemanticLink, SemanticMeasure } from "../lib/nibrs-plan/semantic";
+import { checkLayer, type SemanticDimension, type SemanticEntity, type SemanticLayer, type SemanticLink, type SemanticMeasure } from "../lib/nibrs-plan/semantic";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 
 /* ---------------------------------------------------------------- a stand-in semantic layer ---------------------- */
@@ -19,8 +19,10 @@ ENTITIES.find((e) => e.id === "group_b_arrest")!.dates = { arrest_date: "arrest_
 const ALL_ADD = { acrossAgencies: true, acrossMonths: true, acrossCategories: false };
 const m = (id: string, entity: string, unit: SemanticMeasure["unit"], timeBases: SemanticMeasure["timeBases"] = ["incident_date"]): SemanticMeasure =>
   ({ id, entity, unit, label: id, aggregation: unit === "dollars" ? { kind: "sum", column: "value" } : { kind: "count_distinct" }, predicate: null, additive: ALL_ADD, timeBases, validYears: NIBRS });
+// victims.murder carries its executable definition: a victim with a connected offense 09A, through the link.
+const MURDER_VICTIMS: SemanticMeasure = { ...m("victims.murder", "victim", "victim"), predicate: { kind: "exists", link: "victim_offenses", where: [{ kind: "dimension", dimension: "victim_offense.offense_code", op: "in", values: ["09A"] }] } };
 const MEASURES = [
-  m("victims.murder", "victim", "victim"), m("victims.robbery", "victim", "victim"), m("victims.aggravated_assault", "victim", "victim"),
+  MURDER_VICTIMS, m("victims.robbery", "victim", "victim"), m("victims.aggravated_assault", "victim", "victim"),
   m("offenses.murder", "offense", "offense"), m("offenses.murder_cleared", "offense", "offense"), m("offenses.robbery", "offense", "offense"),
   m("offenses.rape", "offense", "offense"), m("offenses.rape_cleared", "offense", "offense"), m("offenses.justifiable_homicide", "offense", "offense"),
   m("offenses.theft_from_motor_vehicle", "offense", "offense"), m("offenses.motor_vehicle_theft", "offense", "offense"),
@@ -38,9 +40,10 @@ const DIMENSIONS = [
   d("property.loss_type", "property", { values: { 1: "none", 2: "burned", 5: "recovered", 7: "stolen" } }),
   d("property.description", "property", { values: { "03": "automobiles", 13: "firearms", 37: "trucks" } }),
   d("offense.exceptional_clearance", "offense"), d("offense_weapon.weapon", "offense_weapon"),
-  d("victim_offense.offense_code", "victim_offense"),
+  d("victim_offense.offense_code", "victim_offense", { values: { "09A": "murder", "13A": "aggravated assault", "26H": "money laundering" }, valueYears: { "26H": [2015, 2026] } }),
   d("victim_offender.relationship", "victim_offender"), d("victim_offender.offender_age", "victim_offender", { numeric: AGE }),
   d("victim.ethnicity_2013", "victim", { validYears: [2013, 2026] }),
+  d("offense.location_type", "offense", { values: { "05": "commercial office", 58: "cyberspace" }, valueYears: { 58: [2020, 2026] } }),
 ];
 const L = (id: string, from: string, to: string, cardinality: "one" | "many"): SemanticLink => ({ id, from, to, cardinality, on: [["incident_num", "incident_num"]] });
 const LINKS = [
@@ -54,6 +57,8 @@ const layer: SemanticLayer = {
   entity: (id) => ENTITIES.find((e) => e.id === id),
   measure: (id) => MEASURES.find((x) => x.id === id),
   dimension: (id) => DIMENSIONS.find((x) => x.id === id),
+  link: (id) => LINKS.find((l) => l.id === id),
+  measures: () => MEASURES,
   path: (from, to) => {
     const direct = LINKS.find((l) => l.from === from && l.to === to);
     if (direct) return [direct];
@@ -67,6 +72,11 @@ const rules = (problems: { rule: string }[]) => problems.map((p) => p.rule).sort
 const shape = (p: NibrsPlan) => rules(validatePlanShape(p));
 const sem = (p: NibrsPlan) => rules(validatePlanSemantics(p, layer));
 const parse = (p: unknown) => rules(parsePlan(p).problems);
+
+/* ---------------------------------------------------------------- the layer itself -------------------------------- */
+assert.deepEqual(checkLayer(layer), [], "every measure predicate resolves through link()");
+const broken: SemanticLayer = { ...layer, measures: () => [{ ...MURDER_VICTIMS, predicate: { kind: "exists", link: "offense_weapons", where: [{ kind: "dimension", dimension: "victim.sex", op: "in", values: ["F"] }] } }] };
+assert.equal(checkLayer(broken).length, 1, "a link that starts elsewhere is caught");
 
 /* ---------------------------------------------------------------- every example is valid ------------------------- */
 for (const [name, plan] of Object.entries(X.EXAMPLES)) {
@@ -84,6 +94,9 @@ assert.deepEqual(parse({ ...X.TOP_N_PER_MONTH, transforms: [{ kind: "rank", by: 
 assert.deepEqual(parse({ ...X.N3, period: { kind: "absolute", from: "2022-13", to: "2026-06" } }), ["P0"]);
 assert.deepEqual(parse({ ...X.N3, version: "nibrs-plan/0" }), ["P0"]);
 assert.deepEqual(parse({ ...X.TOP_N_PER_MONTH, geography: { places: [{ kind: "agency_set", where: [{ field: "agency.population", op: "in", value: 5 }], within: { kind: "national" } }], combine: "separate" } }), ["P0"]);
+
+assert.deepEqual(parse({ ...X.N3, filters: [{ kind: "attribute", dimension: "victim.sex", op: "in", values: ["F"], negate: true }] }), ["P0"], "an unsupported field is refused, not stripped");
+assert.deepEqual(parse({ ...X.N3, extra: 1 }), ["P0"]);
 
 /* ---------------------------------------------------------------- P: structural rules ----------------------------- */
 assert.deepEqual(shape({ ...X.N3, statistics: [{ kind: "count", as: "motor_vehicle_thefts", measure: "motor_vehicle_thefts" }] }), ["P2"]);
@@ -115,6 +128,18 @@ assert.deepEqual(shape({ ...X.RANKED_RATES, transforms: [{ kind: "rank", by: "ra
 assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2023-01", to: "2025-06" }, later: { kind: "absolute", from: "2025-01", to: "2025-12" }, outputs: ["change"] }] }), ["P13"]);
 assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2021-01", to: "2021-12" }, later: { kind: "absolute", from: "2025-01", to: "2025-12" }, outputs: ["change"] }] }), ["P13"], "comparison outside the plan's period");
 
+// Transform composition.
+const cmp = X.SAME_AGENCIES_CHANGE.transforms[0];
+assert(cmp.kind === "period_comparison");
+const geoState = { dimension: "geo.state", unknown: "visible" as const, absent: "show" as const };
+assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, groupings: [geoState], transforms: [cmp, { kind: "rank", by: "count", direction: "top", per: [], limit: 5 }] }), ["P12"], "rank after a comparison names an output");
+assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, groupings: [geoState], transforms: [cmp, { kind: "rank", by: "count.pct_change", direction: "top", per: [], limit: 5 }] }), []);
+assert.deepEqual(shape({ ...X.N3, transforms: [{ kind: "rank", by: "count.change", direction: "top", per: [], limit: 5 }] }), ["P12"], "no comparison, no change output");
+assert.deepEqual(shape({ ...X.ROLLING, period: { kind: "absolute", from: "2021-01", to: "2025-12" }, transforms: [X.ROLLING.transforms[0], { kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2021-01", to: "2021-12" }, later: { kind: "absolute", from: "2025-01", to: "2025-12" }, outputs: ["change"] }] }), ["P11"], "rolling and comparison not combined");
+assert.deepEqual(shape({ ...X.ROLLING, statistics: [{ kind: "rate", as: "count", measure: "murder_victims", per: 100000 }] }), ["P11"], "no rate in a rolling window");
+assert.deepEqual(shape({ ...X.R, groupings: [] }), ["P14"], "a 2018-2019 rate with no year grouping");
+assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, statistics: [{ kind: "rate", as: "count", measure: "victims", per: 100000 }], transforms: [{ ...cmp, earlier: { kind: "absolute", from: "2023-01", to: "2024-06" }, later: { kind: "absolute", from: "2025-01", to: "2025-12" } }] }), ["P13"], "a compared rate period inside one data year");
+
 /* ---------------------------------------------------------------- S: against the semantic layer ------------------- */
 assert.deepEqual(sem({ ...X.N3, semanticVersion: "nibrs-semantic/9" }), ["S1"]);
 assert.deepEqual(sem({ ...X.N3, measures: [{ id: "offenses.car_theft", unit: "offense", as: "motor_vehicle_thefts" }] }), ["S2"]);
@@ -134,9 +159,26 @@ assert.deepEqual(sem({ ...X.D_WITHIN_RACE, period: { kind: "absolute", from: "20
 assert.deepEqual(sem({ ...X.N1, groupings: [{ dimension: "victim_offense.offense_code", unknown: "visible", absent: "show", multiValue: "each_value" }, { dimension: "victim_offender.relationship", unknown: "visible", absent: "show", multiValue: "each_value" }], statistics: [{ kind: "count", as: "c", measure: "murder_victims" }] }), ["S8"]);
 assert.deepEqual(sem({ ...X.N1, groupings: [{ dimension: "victim.race", unknown: "visible", absent: "show", bins: [{ label: "x", from: 1, to: 2 }] }], statistics: [{ kind: "count", as: "c", measure: "murder_victims" }] }), ["S10"]);
 assert.deepEqual(sem({ ...X.N2, filters: [{ ...sf, where: [{ kind: "attribute", dimension: "property.description", op: "in", values: ["99"] }] }] }), ["S11"]);
+// The same value checks on plain filters (Codex probes).
+assert.deepEqual(sem({ ...X.N3, filters: [{ kind: "attribute", dimension: "offense.location_type", op: "in", values: ["99"] }] }), ["S11"]);
+assert.deepEqual(sem({ ...X.N3, period: { kind: "absolute", from: "2018-01", to: "2019-12" }, filters: [{ kind: "attribute", dimension: "offense.location_type", op: "in", values: ["58"] }] }), ["S7"], "cyberspace before 2020");
+assert.deepEqual(sem({ ...X.N1, filters: [{ kind: "attribute", dimension: "victim.race", op: "between", values: [1, 5] }] }), ["S11"], "between on a coded dimension");
+assert.deepEqual(sem({ ...X.AGE_BREAKDOWN, measures: [{ ...X.AGE_BREAKDOWN.measures[0], filters: [{ kind: "attribute", dimension: "offender.age", op: "between", values: [30, 18] }] }] }), ["S11"], "reversed bounds");
 assert.deepEqual(sem({ ...X.N1, groupings: [], measures: [...X.N1.measures, { id: "offenses.murder", unit: "offense", as: "murders" }], statistics: [{ kind: "share", as: "s", measure: "murder_victims", within: [], denominator: "murders" }] }), ["S12"]);
 
 /* ---------------------------------------------------------------- A: request accounting by path and value ---------- */
+const part = (concept: string, value: string | null, text: string): PartRef => ({ concept, value, text, span: [90, 99], clause: 0, inherited: false });
+const withPart = (plan: NibrsPlan, pr: PartRef, path: string) => rules(validateBindings({ ...plan, bindings: [...plan.bindings, { part: pr, path }] }, [...plan.bindings.map((b) => b.part), pr]));
+// Codex probes: each contradiction is refused.
+assert.deepEqual(withPart({ ...X.N3, geography: { places: [{ kind: "state", code: "MD" }], combine: "separate" } }, part("place", "state:Texas", "Texas"), "geography.places[0]"), ["A4", "A4"], "Texas bound to Maryland (and Baltimore no longer applied)");
+assert.deepEqual(withPart({ ...X.N3, filters: [{ kind: "attribute", dimension: "victim.sex", op: "not_in", values: ["F"] }] }, part("filter", "sex:F", "female"), "filters[0]"), ["A4"], "female bound to not-female");
+assert.deepEqual(rules(validateBindings({ ...X.N3, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] }, X.N3_PARTS)), ["A4"], "by month bound to a year grouping");
+assert.deepEqual(withPart(X.N3, part("immigration-status", "undocumented", "undocumented"), "question"), ["A3"], "a concept no plan can apply");
+assert.deepEqual(withPart(X.PROPERTY_VALUE, part("unit", "dollars", "dollars"), "measures[0].unit"), [], "dollars maps to the dollars unit");
+assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("threshold", ">=|250000", "250,000 or more"), "geography.places[0]"), []);
+assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("rank", "top:5", "5"), "transforms[0]"), []);
+assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("rank", "top:10", "10"), "transforms[0]"), ["A4"]);
+assert.deepEqual(withPart(X.SEPARATE_YEARS, part("period", "years:2024:2019", "2019 and 2024"), "period"), []);
 const bind = (path: string, i: number) => ({ ...X.N3, bindings: X.N3.bindings.map((b, j) => (j === i ? { ...b, path } : b)) });
 assert.deepEqual(rules(validateBindings({ ...X.N3, bindings: X.N3.bindings.slice(1) }, X.N3_PARTS)), ["A1"]);
 assert.deepEqual(rules(validateBindings(bind("no.such.path", 0), X.N3_PARTS)), ["A2"]);
@@ -168,5 +210,9 @@ assert.deepEqual(rules(validateResolved({ ...X.ROLLING, transforms: [{ kind: "pe
 const comb = validateResolved(X.COMBINED_PLACES, release, layer, geo);
 assert.deepEqual(comb.combined, { total: 3, deduplicated: 2 }, "Baltimore inside Maryland counts once");
 assert.deepEqual(rules(validateResolved({ ...X.N3, geography: { places: [{ kind: "agency", ori: "ZZ9999999", label: "nowhere" }], combine: "separate" } }, release, layer, geo).problems), ["R4"]);
+// Codex probes: code eras on a relative plan, and comparisons inside a noncontiguous selection.
+assert.deepEqual(rules(validateResolved({ ...X.Z, period: { kind: "since", from: "2010-01" }, filters: [{ kind: "attribute", dimension: "offense.location_type", op: "in", values: ["58"] }] }, release, layer, geo).problems), ["R1"]);
+assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2020-01", to: "2020-12" }, later: { kind: "absolute", from: "2024-01", to: "2024-12" }, outputs: ["change"] }] }, release, layer, geo).problems), ["R2"], "2020 is not selected");
+assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2019-01", to: "2019-12" }, later: { kind: "absolute", from: "2024-01", to: "2024-12" }, outputs: ["change"] }] }, release, layer, geo).problems), []);
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);

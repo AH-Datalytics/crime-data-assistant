@@ -141,10 +141,13 @@ export const S3: NibrsPlan = {
   transforms: [{ kind: "period_comparison", of: ["victims"], earlier: { kind: "absolute", from: "2025-01", to: "2025-01" }, later: { kind: "absolute", from: "2025-03", to: "2025-03" }, outputs: ["earlier", "later", "change"] }],
   coverage: SAME,
 };
-export const S4: NibrsPlan = {
-  ...S2, question: "Murder victim rate per 100,000 in ZZ and by agency, January-March 2025", groupings: [by("geo.agency")],
+/** S4, by agency: each agency's rate, or the reason it is unavailable. */
+export const S4_AGENCIES: NibrsPlan = {
+  ...S2, question: "Murder victim rate per 100,000 by agency in ZZ, January-March 2025", groupings: [by("geo.agency")],
   statistics: [{ kind: "count", as: "victims", measure: "murder_victims" }, { kind: "rate", as: "rate", measure: "murder_victims", per: 100000 }],
 };
+/** S4, the state: unavailable under D8 (C in the cohort without its primary E), with the eligible cohort's count. */
+export const S4_STATE: NibrsPlan = { ...S4_AGENCIES, question: "Murder victim rate per 100,000 in ZZ, January-March 2025", groupings: [] };
 export const S5: NibrsPlan = {
   ...S2, question: "Female murder victims per 100,000 residents in City A, January-March 2025",
   geography: { places: [{ kind: "agency", ori: "ZZ0000A00", label: "City A" }], combine: "separate" },
@@ -226,7 +229,7 @@ export const GROUP_B_ARRESTS: NibrsPlan = {
 
 /** Property value: total and average stolen value (today's total_value / average_value statistics). */
 export const PROPERTY_VALUE: NibrsPlan = {
-  ...base, question: "Total and average value of stolen vehicles in Baltimore in 2024",
+  ...base, question: "Total and average value of stolen automobiles in Baltimore in 2024",
   geography: { places: [BALTIMORE], combine: "separate" }, period: year(2024),
   measures: [
     { id: "property.stolen_value", unit: "dollars", as: "stolen_dollars", filters: [{ kind: "attribute", dimension: "property.description", op: "in", values: ["03"] }] },
@@ -289,13 +292,27 @@ export const MULTI_VALUE_GROUPING: NibrsPlan = {
   coverage: ALL,
 };
 
-/** Relationship x offender age: both read through the same victim-offender pair row, never a cross product. */
+/**
+ * Murder victims by relationship and offender age: both read through the same victim-offender pair row (never a
+ * cross product), counting DISTINCT VICTIMS in each cell; a victim with two offenders can appear in two cells.
+ */
 export const PAIRED_RELATIONSHIP: NibrsPlan = {
   ...base, question: "Murder victims by relationship to offender and offender age, Houston 2024",
   geography: { places: [HOUSTON], combine: "separate" }, period: year(2024),
+  measures: [{ id: "victims.murder", unit: "victim", as: "murder_victims" }],
+  groupings: [
+    by("victim_offender.relationship", { multiValue: "each_value" }),
+    by("victim_offender.offender_age", { multiValue: "each_value", bins: [{ label: "under 18", from: 1, to: 17 }, { label: "18 and over", from: 18, to: 99 }] }),
+  ],
+  statistics: [{ kind: "count", as: "count", measure: "murder_victims" }], coverage: ALL,
+};
+
+/** The same grouping counting victim-offender PAIRS, when the question asks for pairs. */
+export const PAIR_COUNT: NibrsPlan = {
+  ...PAIRED_RELATIONSHIP, question: "Victim-offender pairs in Houston murders by relationship and offender age, 2024",
   measures: [{ id: "victim_offender.murder", unit: "victim_offender", as: "pairs" }],
-  groupings: [by("victim_offender.relationship"), by("victim_offender.offender_age", { bins: [{ label: "under 18", from: 1, to: 17 }, { label: "18 and over", from: 18, to: 99 }] })],
-  statistics: [{ kind: "count", as: "count", measure: "pairs" }], coverage: ALL,
+  groupings: PAIRED_RELATIONSHIP.groupings.map((g) => ({ ...g, multiValue: undefined })),
+  statistics: [{ kind: "count", as: "count", measure: "pairs" }],
 };
 
 /** Two places combined into one total: the deduplicated union of their agencies. */
@@ -323,9 +340,9 @@ export const G5: ReaderOutcome = { kind: "limitation", reason: "not_recorded_in_
 export const G6: ReaderOutcome = { kind: "limitation", reason: "explanation_requested", parts: [g("explain", null, "why", [0, 3])], explanation: "NIBRS records reported offenses, not their causes." };
 
 export const EXAMPLES: Record<string, NibrsPlan> = {
-  N1, N2, N3, H1, H2, H3, Z, D_WITHIN_MONTH, D_WITHIN_PERIOD, D_WITHIN_RACE, R, S1, S2, S3, S4, S5,
+  N1, N2, N3, H1, H2, H3, Z, D_WITHIN_MONTH, D_WITHIN_PERIOD, D_WITHIN_RACE, R, S1, S2, S3, S4_AGENCIES, S4_STATE, S5,
   MULTI_MEASURE, NAMED_PLACES, SEPARATE_YEARS, CLEARANCE_RATE, SUBSET_SHARE, CLEARANCE_SHARE, CLEARANCE_BREAKDOWN,
   AGE_BREAKDOWN, GROUP_B_ARRESTS, PROPERTY_VALUE, RANKED_RATES, TOP_N_PER_MONTH, ROLLING, SAME_AGENCIES_CHANGE,
-  MULTI_VALUE_GROUPING, PAIRED_RELATIONSHIP, COMBINED_PLACES,
+  MULTI_VALUE_GROUPING, PAIRED_RELATIONSHIP, PAIR_COUNT, COMBINED_PLACES,
 };
 export const OUTCOMES: Record<string, ReaderOutcome> = { G1, G2, G3, G4, G5, G6 };

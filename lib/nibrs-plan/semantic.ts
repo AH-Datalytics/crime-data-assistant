@@ -27,6 +27,8 @@ export type SemanticEntity = {
 /** A predicate in the layer's own terms: a dimension condition on the measure's entity, or an existence over a link. */
 export type SemanticPredicate =
   | { kind: "dimension"; dimension: string; op: "in" | "not_in"; values: string[] }
+  /** True when a row reached through link `link` (resolved with SemanticLayer.link) satisfies `where`, whose
+   * dimensions belong to that link's `to` entity. Links chain: a nested exists starts from the outer link's `to`. */
   | { kind: "exists"; link: string; where: SemanticPredicate[] }
   | { kind: "all"; of: SemanticPredicate[] }
   | { kind: "any"; of: SemanticPredicate[] };
@@ -93,9 +95,40 @@ export type SemanticLayer = {
   dimension(id: string): SemanticDimension | undefined;
   /** The single link path from one entity to another (undefined when not related). Multi-step paths compose links. */
   path(from: EntityId, to: EntityId): SemanticLink[] | undefined;
+  /** A link by id, as named in measure predicates. */
+  link(id: string): SemanticLink | undefined;
+  /** Every measure, so a layer can be checked as a whole (checkLayer). */
+  measures(): SemanticMeasure[];
 };
 
 /** Cardinality of a path: many if any step is many. */
 export function pathCardinality(path: SemanticLink[]): "one" | "many" {
   return path.some((l) => l.cardinality === "many") ? "many" : "one";
+}
+
+/**
+ * The layer's own consistency, run when a semantic version is loaded: every measure's entity exists, and every
+ * predicate resolves (each exists names a link that starts where the predicate stands, and each dimension condition
+ * belongs to the entity it is evaluated on). A layer that fails is not used.
+ */
+export function checkLayer(layer: SemanticLayer): string[] {
+  const out: string[] = [];
+  const walk = (p: SemanticPredicate, at: EntityId, where: string) => {
+    if (p.kind === "dimension") {
+      const d = layer.dimension(p.dimension);
+      if (!d) out.push(`${where}: unknown dimension ${p.dimension}`);
+      else if (d.entity !== at) out.push(`${where}: ${p.dimension} belongs to ${d.entity}, evaluated on ${at}`);
+      else if (d.values) for (const v of p.values) if (!(v in d.values) && !d.unknownCodes.includes(v)) out.push(`${where}: ${v} is not a code of ${p.dimension}`);
+    } else if (p.kind === "exists") {
+      const l = layer.link(p.link);
+      if (!l) out.push(`${where}: unknown link ${p.link}`);
+      else if (l.from !== at) out.push(`${where}: link ${p.link} starts at ${l.from}, not ${at}`);
+      else p.where.forEach((w) => walk(w, l.to, `${where} > ${p.link}`));
+    } else p.of.forEach((w) => walk(w, at, where));
+  };
+  for (const m of layer.measures()) {
+    if (!layer.entity(m.entity)) out.push(`${m.id}: unknown entity ${m.entity}`);
+    if (m.predicate) walk(m.predicate, m.entity, m.id);
+  }
+  return out;
 }

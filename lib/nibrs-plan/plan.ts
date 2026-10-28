@@ -18,28 +18,28 @@ const Name = z.string().regex(/^[a-z][a-z0-9_]*$/, "names are lower_snake_case")
 /* ------------------------------------------------------------------ geography ------------------------------------ */
 
 const AgencyPredicate = z.union([
-  z.object({ field: z.literal("agency.population"), op: z.enum([">=", ">", "<=", "<"]), value: z.number().int().nonnegative() }),
-  z.object({ field: z.literal("agency.population"), op: z.literal("between"), value: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]) }),
-  z.object({ field: z.literal("agency.type"), op: z.literal("in"), value: z.array(Id).min(1) }),
-  z.object({ field: z.literal("agency.population_group"), op: z.literal("in"), value: z.array(Id).min(1) }),
+  z.strictObject({ field: z.literal("agency.population"), op: z.enum([">=", ">", "<=", "<"]), value: z.number().int().nonnegative() }),
+  z.strictObject({ field: z.literal("agency.population"), op: z.literal("between"), value: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]) }),
+  z.strictObject({ field: z.literal("agency.type"), op: z.literal("in"), value: z.array(Id).min(1) }),
+  z.strictObject({ field: z.literal("agency.population_group"), op: z.literal("in"), value: z.array(Id).min(1) }),
 ]);
 
 export const Place = z.discriminatedUnion("kind", [
   /** The nation: a sum of reported counts across agencies, never an agency. Answers say "reported NIBRS counts". */
-  z.object({ kind: z.literal("national") }),
-  z.object({ kind: z.literal("state"), code: z.string().regex(/^[A-Z]{2}$/) }),
+  z.strictObject({ kind: z.literal("national") }),
+  z.strictObject({ kind: z.literal("state"), code: z.string().regex(/^[A-Z]{2}$/) }),
   /** One agency by ORI. "Houston" resolves to TXHPD0000 before the plan is written. */
-  z.object({ kind: z.literal("agency"), ori: z.string().regex(/^[A-Z0-9]{9}$/), label: Id }),
-  z.object({ kind: z.literal("county"), fips: z.string().regex(/^\d{5}$/), label: Id }),
+  z.strictObject({ kind: z.literal("agency"), ori: z.string().regex(/^[A-Z0-9]{9}$/), label: Id }),
+  z.strictObject({ kind: z.literal("county"), fips: z.string().regex(/^\d{5}$/), label: Id }),
   /** Agencies chosen by attributes ("cities of 250,000 or more"), resolved per data year against the release. */
-  z.object({
+  z.strictObject({
     kind: z.literal("agency_set"),
     where: z.array(AgencyPredicate).min(1),
-    within: z.discriminatedUnion("kind", [z.object({ kind: z.literal("national") }), z.object({ kind: z.literal("state"), code: z.string().regex(/^[A-Z]{2}$/) })]),
+    within: z.discriminatedUnion("kind", [z.strictObject({ kind: z.literal("national") }), z.strictObject({ kind: z.literal("state"), code: z.string().regex(/^[A-Z]{2}$/) })]),
   }),
 ]);
 
-export const Geography = z.object({
+export const Geography = z.strictObject({
   places: z.array(Place).min(1),
   /**
    * "separate": one result per place; with two or more places the result has the grouping "geo.place", which the plan
@@ -51,23 +51,23 @@ export const Geography = z.object({
 
 /* ------------------------------------------------------------------ time ----------------------------------------- */
 
-export const AbsolutePeriod = z.object({ kind: z.literal("absolute"), from: YearMonth, to: YearMonth });
+export const AbsolutePeriod = z.strictObject({ kind: z.literal("absolute"), from: YearMonth, to: YearMonth });
 
 export const Period = z.discriminatedUnion("kind", [
   /** Months inclusive. A year is "2025-01".."2025-12". */
   AbsolutePeriod,
   /** Whole calendar years that need not be contiguous ("2019 and 2024"). Grouped by time.year unless combined. */
-  z.object({ kind: z.literal("years"), years: z.array(z.number().int().min(1991).max(2100)).min(1) }),
+  z.strictObject({ kind: z.literal("years"), years: z.array(z.number().int().min(1991).max(2100)).min(1) }),
   /** From `from` through the release's last month. */
-  z.object({ kind: z.literal("since"), from: YearMonth }),
+  z.strictObject({ kind: z.literal("since"), from: YearMonth }),
   /** The last `count` whole calendar years, or months, the release holds. */
-  z.object({ kind: z.literal("last_n"), unit: z.enum(["years", "months"]), count: z.number().int().positive() }),
+  z.strictObject({ kind: z.literal("last_n"), unit: z.enum(["years", "months"]), count: z.number().int().positive() }),
   /**
    * Today's reading rule for a monthly or yearly series with no period (H1): the latest calendar year whose December
    * the release holds. It says nothing about any agency's completeness; it is a release-level calendar rule.
    */
-  z.object({ kind: z.literal("latest_calendar_year_in_release") }),
-  z.object({ kind: z.literal("latest_month_in_release") }),
+  z.strictObject({ kind: z.literal("latest_calendar_year_in_release") }),
+  z.strictObject({ kind: z.literal("latest_month_in_release") }),
 ]);
 
 /** Which date places a unit in a period. Each measure declares the bases it supports (semantic layer). */
@@ -95,7 +95,7 @@ export const CountingUnit = z.enum([
 ]);
 
 /** A condition on one dimension. Which entity it applies to is the dimension's entity (semantic layer). */
-export const AttributeFilter = z.object({
+export const AttributeFilter = z.strictObject({
   kind: z.literal("attribute"),
   dimension: Id,
   op: z.enum(["in", "not_in", "between", "is_unknown", "is_known"]),
@@ -108,7 +108,7 @@ export const AttributeFilter = z.object({
  * (scope is the unit itself or an ancestor, e.g. the incident of a victim). Required whenever the condition sits on a
  * one-to-many relation of the counted unit: a join there would count the unit once per matching row.
  */
-export const ExistsFilter = z.object({
+export const ExistsFilter = z.strictObject({
   kind: z.literal("exists"),
   scope: Id,
   entity: Id,
@@ -123,7 +123,7 @@ export const ExistsFilter = z.object({
 
 export const Filter = z.discriminatedUnion("kind", [AttributeFilter, ExistsFilter]);
 
-export const MeasureSpec = z.object({
+export const MeasureSpec = z.strictObject({
   /** Semantic-layer measure id, e.g. "victims.murder", "offenses.theft_from_motor_vehicle", "incidents.carjacking". */
   id: Id,
   unit: CountingUnit,
@@ -134,9 +134,9 @@ export const MeasureSpec = z.object({
 
 /* ------------------------------------------------------------------ groupings ------------------------------------ */
 
-export const Bin = z.object({ label: Id, from: z.number().int().nonnegative(), to: z.number().int().nonnegative() });
+export const Bin = z.strictObject({ label: Id, from: z.number().int().nonnegative(), to: z.number().int().nonnegative() });
 
-export const Grouping = z.object({
+export const Grouping = z.strictObject({
   /** Semantic dimension id, or "geo.place" (the places of a separate geography). */
   dimension: Id,
   /**
@@ -159,14 +159,15 @@ export const Grouping = z.object({
 /* ------------------------------------------------------------------ statistics ----------------------------------- */
 
 export const Statistic = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("count"), as: Name, measure: Name }),
+  z.strictObject({ kind: z.literal("count"), as: Name, measure: Name }),
   /**
    * The share of `measure` in each cell, over a denominator evaluated INDEPENDENTLY at the grain of `within` (a
    * subset of the groupings; [] is the whole result). The denominator is `denominator` if given, else `measure`,
-   * with its own filters, counted as distinct units at that grain: a victim in two weapon cells counts once in the
-   * denominator. Never a sum of displayed cells.
+   * with its own filters, evaluated with that measure's OWN aggregation over deduplicated entity rows at that grain:
+   * a count-distinct measure counts each unit once (a victim in two weapon cells counts once in the denominator), a
+   * sum measure (dollars, vehicles) sums each row once. Never a sum of displayed cells.
    */
-  z.object({ kind: z.literal("share"), as: Name, measure: Name, within: z.array(Id), denominator: Name.optional() }),
+  z.strictObject({ kind: z.literal("share"), as: Name, measure: Name, within: z.array(Id), denominator: Name.optional() }),
   /**
    * Per `per` of covered population (shared spec D8). Eligibility is fixed, not configurable: for each output cell,
    * an agency enters only if every month of that cell's period is evidenced complete (REPORTED_ZERO or a submission
@@ -175,41 +176,47 @@ export const Statistic = z.discriminatedUnion("kind", [
    * population, and a reason whenever the rate is unavailable (no eligible agency; covered population cannot be
    * established, e.g. a secondary agency in the cohort without its primary).
    * A filtered numerator over all residents is labelled "per N residents (all residents)", never as a group rate.
+   * The population is the covered population of the cell's data year, so a cell's period must lie within one data
+   * year: a rate grouped by time.year or time.month, or over a period inside one year. A rate over a multi-year span
+   * without a time grouping is refused (P14); a rate inside a rolling window is refused in v1 (P11).
    */
-  z.object({ kind: z.literal("rate"), as: Name, measure: Name, per: z.number().int().positive() }),
+  z.strictObject({ kind: z.literal("rate"), as: Name, measure: Name, per: z.number().int().positive() }),
   /**
    * numerator / denominator, each evaluated independently at the full grain of the groupings (clearance rate:
    * cleared offenses / offenses; average property value: dollars / property segments). Cells where the denominator
    * is 0 or unknown are null with a reason.
    */
-  z.object({ kind: z.literal("ratio"), as: Name, numerator: Name, denominator: Name }),
+  z.strictObject({ kind: z.literal("ratio"), as: Name, numerator: Name, denominator: Name }),
 ]);
 
 /* ------------------------------------------------------------------ transforms ----------------------------------- */
 
 /**
- * Applied in this order only: rolling, then period_comparison, then rank (P11). Each names the statistics it acts on.
- * Counts are summed; shares, rates and ratios are always RECOMPUTED from their transformed numerators and
- * denominators, never summed or averaged.
+ * Applied in this order only: rolling, then period_comparison, then rank (P11); rolling and period_comparison are not
+ * combined in v1. Each names the statistics it acts on. Counts are summed; shares and ratios are RECOMPUTED from their
+ * transformed numerators and denominators, never summed or averaged. A rate in a comparison is computed for each
+ * period on its own (its own eligibility and population), and each comparison period lies within one data year when
+ * a rate is compared (P13).
  */
 export const Transform = z.discriminatedUnion("kind", [
   /** Trailing window over time.month. A window is reported only when every month in it is known. */
-  z.object({ kind: z.literal("rolling"), of: z.array(Name).min(1), months: z.number().int().min(2).max(120) }),
+  z.strictObject({ kind: z.literal("rolling"), of: z.array(Name).min(1), months: z.number().int().min(2).max(120) }),
   /** The later period against the earlier, per remaining group; both must lie inside the plan's period (R2). */
-  z.object({
+  z.strictObject({
     kind: z.literal("period_comparison"), of: z.array(Name).min(1), earlier: AbsolutePeriod, later: AbsolutePeriod,
     outputs: z.array(z.enum(["earlier", "later", "change", "pct_change"])).min(1),
   }),
   /**
    * Order by a statistic within each combination of `per`; keep the first `limit` (ties at the cut kept), or all
-   * when `limit` is null (today's ranking with no number).
+   * when `limit` is null (today's ranking with no number). After a period_comparison, `by` names one of its outputs:
+   * "<statistic>.earlier", ".later", ".change" or ".pct_change" (P12).
    */
-  z.object({ kind: z.literal("rank"), by: Name, direction: z.enum(["top", "bottom"]), per: z.array(Id), limit: z.number().int().positive().nullable() }),
+  z.strictObject({ kind: z.literal("rank"), by: z.string().regex(/^[a-z][a-z0-9_]*(?:\.(?:earlier|later|change|pct_change))?$/), direction: z.enum(["top", "bottom"]), per: z.array(Id), limit: z.number().int().positive().nullable() }),
 ]);
 
 /* ------------------------------------------------------------------ coverage ------------------------------------- */
 
-export const Coverage = z.object({
+export const Coverage = z.strictObject({
   /**
    * Which agencies count. "all_reporting": every agency-month with a known value. "same_agencies": only agencies with
    * a known value in every compared period (S3), so participation change is not read as crime change.
@@ -223,7 +230,7 @@ export const Coverage = z.object({
 /* ------------------------------------------------------------------ accounting ----------------------------------- */
 
 /** A part of the question as the request ledger records it (lib/request-accounting.ts Part), with its identity. */
-export const PartRef = z.object({
+export const PartRef = z.strictObject({
   concept: Id,
   value: z.string().nullable(),
   text: z.string(),
@@ -234,13 +241,13 @@ export const PartRef = z.object({
 });
 
 /** Where a part landed: a path into the plan whose value applies it (A1 checks the path and the value). */
-export const PartBinding = z.object({ part: PartRef, path: z.string().min(1) });
+export const PartBinding = z.strictObject({ part: PartRef, path: z.string().min(1) });
 
-export const AppliedDefault = z.object({ path: z.string().min(1), value: z.string(), reason: z.string().min(1) });
+export const AppliedDefault = z.strictObject({ path: z.string().min(1), value: z.string(), reason: z.string().min(1) });
 
 /* ------------------------------------------------------------------ the plan ------------------------------------- */
 
-export const NibrsPlan = z.object({
+export const NibrsPlan = z.strictObject({
   version: z.literal(PLAN_VERSION),
   semanticVersion: Id,
   question: z.string().min(1),
@@ -268,11 +275,11 @@ export const LimitationReason = z.enum([
 ]);
 
 export const ReaderOutcome = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("plan"), plan: NibrsPlan }),
+  z.strictObject({ kind: z.literal("plan"), plan: NibrsPlan }),
   /** Asked only when the readings give different answers. Each option is a complete plan. */
-  z.object({ kind: z.literal("clarify"), question: z.string().min(1), options: z.array(z.object({ label: z.string().min(1), plan: NibrsPlan })).min(2), parts: z.array(PartRef).min(1) }),
+  z.strictObject({ kind: z.literal("clarify"), question: z.string().min(1), options: z.array(z.strictObject({ label: z.string().min(1), plan: NibrsPlan })).min(2), parts: z.array(PartRef).min(1) }),
   /** Every unmet part is named; no number that drops a part is given. */
-  z.object({ kind: z.literal("limitation"), parts: z.array(PartRef).min(1), reason: LimitationReason, explanation: z.string().min(1) }),
+  z.strictObject({ kind: z.literal("limitation"), parts: z.array(PartRef).min(1), reason: LimitationReason, explanation: z.string().min(1) }),
 ]);
 
 export type NibrsPlan = z.infer<typeof NibrsPlan>;

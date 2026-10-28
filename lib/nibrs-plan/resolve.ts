@@ -6,6 +6,7 @@
 import type { AbsolutePeriod, NibrsPlan, Period, Place } from "./plan";
 import type { SemanticLayer } from "./semantic";
 import type { PlanProblem } from "./validate";
+import { attributeConditions, attributeValueProblems } from "./validate";
 
 export type ReleaseInfo = { id: string; firstMonth: string; lastMonth: string };
 
@@ -56,21 +57,32 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
   if (from < release.firstMonth || to > release.lastMonth) add("R1", "period", `${from}..${to} is outside the release (${release.firstMonth}..${release.lastMonth})`);
   if (from > to) add("R1", "period", "the resolved period is empty");
   const y0 = Number(from.slice(0, 4)), y1 = Number(to.slice(0, 4));
+  // The years actually selected: a noncontiguous period selects only its own years, never the ones between.
+  const selected = period.kind === "years" ? period.years : Array.from({ length: Math.max(0, y1 - y0 + 1) }, (_, k) => y0 + k);
+  const inSelection = (q: AbsolutePeriod) => period.kind === "years"
+    ? Array.from({ length: Number(q.to.slice(0, 4)) - Number(q.from.slice(0, 4)) + 1 }, (_, k) => Number(q.from.slice(0, 4)) + k).every((y) => selected.includes(y))
+    : q.from >= from && q.to <= to;
   plan.measures.forEach((m, i) => {
     const sm = layer.measure(m.id);
     if (sm && (y0 < sm.validYears[0] || y1 > sm.validYears[1])) add("R1", `measures[${i}]`, `"${m.id}" is defined for ${sm.validYears[0]}-${sm.validYears[1]}`);
   });
-  const dims = [...plan.groupings.map((g) => g.dimension), ...allAttributeFilters(plan).map((f) => f.dimension)];
-  for (const d of dims) {
-    const sd = layer.dimension(d);
-    if (sd && (y0 < sd.validYears[0] || y1 > sd.validYears[1])) add("R1", "dimensions", `"${d}" is recorded for ${sd.validYears[0]}-${sd.validYears[1]}`);
+  for (const g of plan.groupings) {
+    const sd = layer.dimension(g.dimension);
+    if (sd && (y0 < sd.validYears[0] || y1 > sd.validYears[1])) add("R1", "groupings", `"${g.dimension}" is recorded for ${sd.validYears[0]}-${sd.validYears[1]}`);
+  }
+  // Every condition's dimension and codes, against the RESOLVED years (a 'since' plan is checked here).
+  for (const [f, path] of attributeConditions(plan)) {
+    const sd = layer.dimension(f.dimension);
+    if (!sd) continue;
+    if (y0 < sd.validYears[0] || y1 > sd.validYears[1]) add("R1", path, `"${f.dimension}" is recorded for ${sd.validYears[0]}-${sd.validYears[1]}`);
+    for (const pr of attributeValueProblems(f, sd, [y0, y1], path)) if (pr.rule === "S7") add("R1", path, pr.message);
   }
 
   // R2: comparison periods lie inside the plan's period, in order, without overlap.
   plan.transforms.forEach((t, i) => {
     if (t.kind !== "period_comparison") return;
     for (const [name, p] of [["earlier", t.earlier], ["later", t.later]] as const) {
-      if (p.from < from || p.to > to) add("R2", `transforms[${i}].${name}`, `${p.from}..${p.to} is outside the plan's period ${from}..${to}`);
+      if (!inSelection(p)) add("R2", `transforms[${i}].${name}`, `${p.from}..${p.to} is outside the plan's selected period`);
     }
     if (t.earlier.to >= t.later.from) add("R2", `transforms[${i}]`, "the earlier period must end before the later one starts");
   });
@@ -79,7 +91,7 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
   let combined: { total: number; deduplicated: number } | undefined;
   if (plan.geography.combine === "combined") {
     let total = 0, dedup = 0;
-    for (let y = y0; y <= y1; y++) {
+    for (const y of selected) {
       const lists = plan.geography.places.map((p) => geo.members(p, y));
       total += lists.reduce((n, l) => n + l.length, 0);
       dedup += new Set(lists.flat()).size;
@@ -90,13 +102,8 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
   // R4: every place resolves to at least one agency in some year.
   plan.geography.places.forEach((p, i) => {
     let any = false;
-    for (let y = y0; y <= y1 && !any; y++) any = geo.members(p, y).length > 0;
+    for (const y of selected) any = any || geo.members(p, y).length > 0;
     if (!any) add("R4", `geography.places[${i}]`, "no agency in the release matches this place in the period");
   });
   return { problems, period, combined };
-}
-
-function allAttributeFilters(plan: NibrsPlan) {
-  const fs = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])];
-  return fs.flatMap((f) => (f.kind === "attribute" ? [f] : f.where));
 }
