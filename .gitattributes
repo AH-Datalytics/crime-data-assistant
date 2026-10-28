@@ -56,3 +56,5 @@ scripts/fixtures/nibrs-correctness/** text eol=lf
 scripts/fixtures/nibrs-correctness/**/*.gz binary
 
 scripts/fixtures/nibrs-replay/** text eol=lf
+
+scripts/fixtures/nibrs-coverage-shadow/** text eol=lf
