@@ -125,7 +125,7 @@
 | Rule |  | Segments | Dollars | Stolen segments | Stolen dollars | Agencies | Agency-years |
 |---|---|---|---|---|---|---|---|
 | A | exact sentinels | 7,679 | $7,043.78B | 3,654 | $3,410.64B | 116 | 217 |
-| A+ | exact sentinels and repeated fillers | 7,778 | $7,044.66B | 3,687 | $3,410.93B | 122 | 225 |
+| A+ | exact sentinels and other repeated values | 7,778 | $7,044.66B | 3,687 | $3,410.93B | 122 | 225 |
 | B | rule A plus per-description caps | 8,673 | $7,116.81B | 4,393 | $3,464.57B | 524 | 773 |
 | C | rule A plus an agency-year flag | 9,851 | $7,079.33B | 5,467 | $3,437.58B | 138 | 283 |
 
@@ -135,7 +135,7 @@ Rule B beyond rule A, dollars by description: 20 Money $24.08B, 77 Other $12.94B
 
 Rule C beyond rule A, dollars by description: 20 Money $14.52B, 77 Other $7.28B, 03 Automobile $4.79B, 17 Jewelry/precious metals $1.79B, 21 Negotiable instruments $1.36B, 31 Structure, commercial $880.2M, 43 Building materials $696.5M, 38 Vehicle parts $524.5M
 
-Flagged agency-years (rule C), by $1M+ segments: NY0303000 2023 (195), NY0303000 2024 (167), NY0303000 2025 (139), NY0303000 2026 (118), DCFBIWA01 2022 (79), VAPO0087Y 2025 (66), DCFBIWA01 2023 (61), DCFBIWA01 2021 (59), AL0020100 2022 (58), CA0194200 2025 (57), CA0194200 2024 (54), AL0020100 2025 (54), VAPO0087Y 2026 (51), VAPO0087Y 2024 (42), CA0194200 2026 (42), DCFBIWA01 2024 (36), VAPO0087Y 2023 (31), VAPO0087Y 2022 (28), NY0303000 2022 (28), AL0020100 2021 (26)
+Flagged agency-years (rule C), by $1M+ segments: NY0303000 2023 (195), NY0303000 2024 (167), NY0303000 2025 (139), NY0303000 2026 (118), DCFBIWA01 2022 (79), VAPO0087Y 2025 (66), DCFBIWA01 2023 (61), DCFBIWA01 2021 (59), AL0020100 2022 (58), CA0194200 2025 (57), CA0194200 2024 (54), AL0020100 2025 (54), VAPO0087Y 2026 (51), VAPO0087Y 2024 (42), CA0194200 2026 (42), DCFBIWA01 2024 (36), VAPO0087Y 2023 (31), NY0303000 2022 (28), VAPO0087Y 2022 (28), AL0020100 2021 (26)
 
 ## The largest stolen segments that rule A keeps
 

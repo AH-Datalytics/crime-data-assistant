@@ -17,40 +17,45 @@ This report gives the facts for that discussion. It sets no rule. Semantic v1 ke
   "not reported", which is not $0. Segments with loss type None (1) or Unknown (8) have no description and no value.
   Lines whose last two blank positions were trimmed (100 characters instead of 102) were padded back; every 03 line
   was read.
-- **Not removed:** repeated identical incidents (nibrs-model build rule T1). They are rare and do not change these
-  totals materially.
+- **Not removed:** repeated identical incidents (nibrs-model build rule T1). They remain in these counts; their effect
+  on dollars was not measured.
 - **State:** the ORI's first two letters. Federal agencies (for example `DCFBIWA01`) fall under their ORI's prefix.
 - **Code:** `scripts/nibrs-property-value-scan.py` (the scan) and `scripts/nibrs-property-value-report.py` (the
   tables). Output is in `nibrs-property-value-outliers/`:
   - `tables.md`: every table cited here;
   - `by_year_description.csv`: segments, blanks, zeros, dollars, maximum and power-of-ten bands per year, loss type
     and description;
-  - `sentinel_agencies.csv`: every agency-year holding a sentinel, a repeated filler value or $10,000,000;
+  - `sentinel_agencies.csv`: every agency-year holding a candidate sentinel, another repeated value of rule A+ or $10,000,000;
   - `stolen_by_state_year.csv`: stolen dollars by state and year, as reported and under each candidate rule.
 
 ## Findings
 
-1. **A few filler values account for most reported property dollars.**
+1. **A few repeated values account for most reported property dollars.**
    - In 2020 and 2021, segments of $1M or more hold 99.4% of all property dollars ($2.48 trillion and $3.54 trillion).
    - Stolen dollars as reported: $1,218.68B in 2020 and $1,770.68B in 2021. In 2017 they were $5.61B.
 2. **$999,999,999 (the field maximum)** appears in 5,619 segments ($5.62 trillion).
-   - 5,575 of them are in New York, from 90 agencies, nearly all in 2020 (2,436) and 2021 (3,039).
+   - It comes from 90 agencies. 5,575 of the segments are in New York, from 62 agencies, nearly all in 2020 (2,432)
+     and 2021 (3,031).
    - The largest agency-years are `NY0320100` 2021 (764), `NY0320100` 2020 (399) and `NY0270000` 2020 (378).
-   - It appears under 52 property descriptions, led by Other (77), Vehicle parts (38) and Household goods (16).
-3. **$999,999,998** appears in 1,416 segments: 1,414 in New York, from 6 agencies (`NY0015300` leads), 2020-2024.
+   - It appears under 52 property descriptions, led by Other (77: 2,021), Vehicle parts (38: 593) and Automobile
+     (03: 445).
+3. **$999,999,998** appears in 1,416 segments from 6 agencies, 2018-2024. 1,414 are in New York, from 4 agencies
+   (`NY0015300` leads), nearly all in 2021-2023.
 4. **$9,999,999** appears in 618 segments: 593 in New York, mostly `NY0303000` in 2023-2026 (583 of them).
 5. **$99,999,999** appears in 26 segments from 12 agencies in NY, WA, IN and others.
-6. **Repeated filler values** are confined to a handful of New York agencies, mainly `NY0320100` and `NY0303000`:
+6. **Other repeated values** come mostly from a handful of New York agencies, mainly `NY0320100` and `NY0303000`:
    - $7,777,777: 47 segments, all in New York;
-   - $1,111,111: 28 segments, 24 in New York;
+   - $1,111,111: 28 segments, 24 in New York and 4 from `GA0660000` (2), `WA0060000` and `LA0530100`;
    - $19,999,998: 24 segments, all from `NY0303000`.
-7. **$10,000,000** (named by the owner) looks different from the fillers:
+7. **$10,000,000** (named by the owner) is spread differently from the values above:
    - 112 segments from 75 agencies in many states (CA 16, MI 12, DC 11);
    - mostly Money (20) and Other (77);
    - no agency has more than 5 in a year.
 
    $100,000,000 is similar: 74 segments from 50 agencies. Round values from $1M to $5M are also spread widely ($1M:
-   1,729 segments from 876 agencies). The file cannot tell an estimate from a placeholder.
+   1,729 segments from 876 agencies). The file cannot tell an estimate from a placeholder: that any of these values,
+   the candidate sentinels included, was entered as a placeholder is a reading of the pattern, not something the file
+   records.
 8. **Large values that are not sentinels remain.** After the exact sentinels are removed, the largest stolen segments
    include:
    - `MI8121800` 2022, Money, $998,000,000;
@@ -67,7 +72,7 @@ This report gives the facts for that discussion. It sets no rule. Semantic v1 ke
    - `AL0020100`: 58 in 2022;
    - `CA0194200`: 57 in 2025.
 
-   Some of these may be genuine large losses: a federal field office, a county sheriff.
+   The file cannot say whether these are genuine large losses.
 
 ## Candidate rules and what each removes (2017-2026)
 
@@ -76,15 +81,15 @@ Each rule removes segment values from the dollars; segment counts (`property.seg
 | Rule | Definition | Segments | Dollars | Stolen segments | Stolen dollars | Agencies | Agency-years |
 |---|---|---|---|---|---|---|---|
 | A | exact sentinels: 999,999,999; 999,999,998; 99,999,999; 9,999,999 | 7,679 | $7,043.78B | 3,654 | $3,410.64B | 116 | 217 |
-| A+ | A plus the repeated fillers 7,777,777; 1,111,111; 19,999,998 | 7,778 | $7,044.66B | 3,687 | $3,410.93B | 122 | 225 |
-| B | A plus a cap per description: over $1M for everyday goods (clothes, household goods, tools, phones ...), over $10M for vehicles, jewelry, equipment and Other, over $100M for money, instruments, structures, merchandise, aircraft, watercraft | 8,673 | $7,116.81B | 4,393 | $3,464.57B | 524 | 773 |
+| A+ | A plus the other repeated values 7,777,777; 1,111,111; 19,999,998 | 7,778 | $7,044.66B | 3,687 | $3,410.93B | 122 | 225 |
+| B | A plus a cap per description (the description table's "Rule B cap" column is the definition): over $1M for everyday goods (clothes, household goods, tools, vehicle parts, phones ...); over $100M for money, instruments, structures, merchandise, aircraft, buses, trucks, watercraft, farm, industrial and logging equipment, crops, non-precious metals; over $10M for every other description (automobiles, other motor vehicles, jewelry, Other ...) | 8,673 | $7,116.81B | 4,393 | $3,464.57B | 524 | 773 |
 | C | A plus an agency-year flag: in an agency-year with 10 or more non-sentinel segments of $1M or more, every value of $1M or more is excluded | 9,851 | $7,079.33B | 5,467 | $3,437.58B | 138 | 283 |
 
 The cap for each description is in the description table. The caps are a starting proposal for discussion. They are
 not derived from the data.
 
 Beyond rule A:
-- rule B removes mostly Money ($24.08B), Other ($12.94B) and Automobile ($9.66B), across 524 agencies;
+- rule B removes mostly Money ($24.08B), Other ($12.94B) and Automobile ($9.66B), from 427 agencies (524 with rule A's);
 - rule C removes mostly Money ($14.52B), Other ($7.28B) and Automobile ($4.79B), from the 77 flagged agency-years.
 
 **Stolen dollars, all states:**
@@ -128,7 +133,7 @@ definitions (C4, test T8). A per-segment rule differs from it in two ways:
 
 1. Which rule, if any, becomes `property.value@2`: A, A+, B or C?
 2. Is $10,000,000 a sentinel? Here it looks like a rounded entry spread across many agencies, unlike the New York
-   fillers. The same question applies to $100,000,000.
+   repeated values. The same question applies to $100,000,000.
 3. For rule B: the caps per description.
 4. For rule C: the threshold (10 segments) and whether flagged agency-years are excluded or only flagged.
 5. Whether answers about property value say that values were excluded. Under the result-column rule that would be one
