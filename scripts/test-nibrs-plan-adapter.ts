@@ -72,6 +72,10 @@ assert.deepEqual(planOf("How many rapes were cleared in 2025").measures.map((m) 
 // Average value: terminates, and divides by the same property's segments.
 const avg = planOf("average value of stolen property in Texas in 2025");
 assert.deepEqual(avg.measures.map((m) => m.id), ["property.property_value", "property.property_value_segments"]);
+// Counting property, "stolen" applies to the counted segments, not to their incident.
+const avgMv = planOf("average value of stolen motor vehicles in Texas in 2025");
+assert.deepEqual(avgMv.filters, [{ kind: "attribute", dimension: "property.loss_type", op: "in", values: ["7"] }], "loss type on the counted segments");
+assert.ok(!JSON.stringify(avgMv).includes("incident_level_only"), "no incident-level property condition");
 // DUI is Group B: Group B arrests, placed in time by arrest date.
 const dui = planOf("DUI arrests by age group nationally");
 assert.deepEqual([dui.measures[0].id, dui.measures[0].unit, dui.timeBasis, dui.groupings[0].dimension], ["group_b_arrests.dui", "group_b_arrest", "arrest_date", "group_b_arrest.age"]);
@@ -81,6 +85,13 @@ assert.deepEqual(ly.period, { kind: "previous_calendar_year" });
 assert.deepEqual(validateResolved(ly, { ...release, lastMonth: "2026-12" }, DRAFT_LAYER, geo).period, { kind: "absolute", from: "2025-01", to: "2025-12" });
 // A clipped period is returned clipped.
 assert.deepEqual(validateResolved({ ...rate, period: { kind: "absolute", from: "2025-01", to: "2026-12" } }, release, DRAFT_LAYER, geo).period, { kind: "absolute", from: "2025-01", to: "2026-10" });
+// A year list running past the release keeps its years and records how far its last year goes; a year wholly past it
+// is outside the release.
+{
+  const yl = planOf("burglaries in Texas in 2024 and 2026");
+  assert.deepEqual(validateResolved(yl, release, DRAFT_LAYER, geo).period, { kind: "years", years: [2024, 2026], through: "2026-10" });
+  assert.ok(validateResolved({ ...yl, period: { kind: "years", years: [2024, 2027] } }, release, DRAFT_LAYER, geo).problems.some((p) => p.rule === "R1"));
+}
 // A cleared-offense measure applies the offense only when the question asks about clearances.
 {
   const ledger = accountNibrsRequest("How many burglary offenses in Texas in 2025");

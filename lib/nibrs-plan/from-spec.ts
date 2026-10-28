@@ -96,7 +96,8 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
     case "age": return val === "Under 18" ? onEntity(person, attr(`${person}.age`, [1, 17], "between")) : null;
     case "weapon": return { kind: "exists", scope: ent === "arrestee" ? "arrestee" : ent, entity: "offense_weapon", where: [attr("offense_weapon.weapon", val === "firearm" ? FIREARM : [val])] };
     case "location": return onEntity("offense", attr("offense.location_type", val === "commercial" ? COMMERCIAL_LOCATION_CODES : [val]));
-    case "loss": return { kind: "exists", scope: "incident", entity: "property", attribution: "incident_level_only", where: [attr("property.loss_type", [val])] };
+    // Counting property, the loss type applies to the counted segments; counting anything else, to the incident.
+    case "loss": return ent === "property" ? attr("property.loss_type", [val]) : { kind: "exists", scope: "incident", entity: "property", attribution: "incident_level_only", where: [attr("property.loss_type", [val])] };
     case "drug": return { kind: "exists", scope: "incident", entity: "property_drug", attribution: "incident_level_only", where: [attr("property_drug.drug_type", [val])] };
     case "dv": return DV[val] ? { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", DV[val])] } : null;
     case "relationship": return { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", [val])] };

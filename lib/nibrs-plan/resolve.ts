@@ -14,7 +14,8 @@ export type ReleaseInfo = { id: string; firstMonth: string; lastMonth: string; a
 /** Resolves a place to the ORIs it covers in a data year (from the release's agency tables). */
 export type GeographyResolver = { members(place: Place, year: number): string[] };
 
-export type ResolvedPeriod = AbsolutePeriod | { kind: "years"; years: number[] };
+/** A noncontiguous selection whose last year runs past the release carries `through`: that year only through that month. */
+export type ResolvedPeriod = AbsolutePeriod | { kind: "years"; years: number[]; through?: string };
 
 const ym = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
 
@@ -64,11 +65,14 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
   // starting after the release's last month, or before its first, is outside the release (R1).
   const clippedTo = asked > release.lastMonth && from <= release.lastMonth ? release.lastMonth : undefined;
   const to = clippedTo ?? asked;
-  const period: ResolvedPeriod = clippedTo && requested.kind === "absolute" ? { ...requested, to: clippedTo } : requested;
+  const period: ResolvedPeriod = !clippedTo ? requested
+    : requested.kind === "absolute" ? { ...requested, to: clippedTo } : { ...requested, through: clippedTo };
 
   // R1: inside the release, and inside every measure's and dimension's era.
   if (from < release.firstMonth || from > release.lastMonth) add("R1", "period", `${from}..${asked} is outside the release (${release.firstMonth}..${release.lastMonth})`);
   if (from > to) add("R1", "period", "the resolved period is empty");
+  // A selected year that starts after the release's last month has no data at all: outside the release.
+  if (requested.kind === "years") for (const y of requested.years) if (ym(y, 1) > release.lastMonth) add("R1", "period", `${y} is outside the release (${release.firstMonth}..${release.lastMonth})`);
   const y0 = Number(from.slice(0, 4)), y1 = Number(to.slice(0, 4));
   // The years actually selected: a noncontiguous period selects only its own years, never the ones between.
   const selected = period.kind === "years" ? period.years : Array.from({ length: Math.max(0, y1 - y0 + 1) }, (_, k) => y0 + k);
