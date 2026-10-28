@@ -162,7 +162,7 @@ def compute(zip_dir, agencies_csv, out_path, years=None):
         counts[(year, status)] = counts.get((year, status), 0) + 1
         rows.append((year, ori, cur, old, fixed, status))
     with open(out_path, "w", newline="") as out:
-        w = csv.writer(out)
+        w = csv.writer(out, lineterminator="\n")  # LF: the repository's checkouts are LF-only
         w.writerow(FIELDS)
         for r in rows:
             if r[5] != "unchanged":

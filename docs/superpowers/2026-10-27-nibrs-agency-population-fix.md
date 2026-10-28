@@ -84,7 +84,7 @@ No `conflict` or `duplicate_stored` rows. 9,517 ORI-years are corrected.
 
 **Rehearsal on production data (2026-10-28, laptop):** the four affected tables were copied read-only from
 production into a separate file and the script was run against the copy with the corrections CSV
-(`2026-10-28-nibrs-agency-population-corrections.csv`, sha256 f1c72dbe…a2dd58d):
+(`2026-10-28-nibrs-agency-population-corrections.csv`, sha256 f1c72dbe…a2dd58d as written with CRLF line endings and rehearsed; committed with LF endings, sha256 2f0d1d9a…683ca7b58, same rows):
 - dry run: all checks passed; it would write agencies 9,517, summary_clearance_city_annual 120,155,
   summary_carjacking_clearance 4,328 and agency_reporting_gaps 107 rows; the agencies total goes from 4,700,790,729
   to 4,732,325,545;
