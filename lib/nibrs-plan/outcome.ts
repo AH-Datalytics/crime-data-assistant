@@ -4,15 +4,25 @@
  * exactly as offered:
  *   O1  a clarifying option's plan fails a rule (shape, semantic layer or release);
  *   O2  an offered alternative's plan fails a rule; an alternative is offered, never run in place of the question;
- *   O3  two options share a label or lead to the same plan (asking is only for readings that differ).
- * Request accounting (A rules) applies to the plan that answers the question, not to alternatives: an alternative
- * deliberately answers a nearby question, which its label names.
+ *   O3  two options share a label or lead to the same executable plan (labels, wording and provenance aside);
+ *   O4  an alternative drops or changes a part of the question that it does not declare in `changes`.
+ * Request accounting applies to alternatives part by part: a part whose concept the alternative declares as changed
+ * may differ (its label says so); every other part must be bound and applied exactly as in the question.
  */
-import type { NibrsPlan, ReaderOutcome } from "./plan";
+import type { Alternative, NibrsPlan, PartRef, ReaderOutcome } from "./plan";
 import { parseReaderOutcome } from "./plan";
 import { validateResolved, type GeographyResolver, type ReleaseInfo } from "./resolve";
 import type { SemanticLayer } from "./semantic";
-import { validatePlanSemantics, validatePlanShape, type PlanProblem } from "./validate";
+import { validateBindings, validatePlanSemantics, validatePlanShape, type PlaceAuthority, type PlanProblem } from "./validate";
+
+/** The question's parts and the place authority, when request accounting is available (the route always has them). */
+export type RequestContext = { parts: PartRef[]; places: PlaceAuthority };
+
+/** What a plan computes, without its descriptive metadata: wording, provenance, place labels, default reasons. */
+function executable(plan: NibrsPlan): string {
+  const { question: _q, bindings: _b, defaults: _d, ...rest } = plan;
+  return JSON.stringify({ ...rest, geography: { ...rest.geography, places: rest.geography.places.map((p) => ("label" in p ? { ...p, label: "" } : p)) } });
+}
 
 function planProblems(plan: NibrsPlan, layer: SemanticLayer, release: ReleaseInfo, geo: GeographyResolver): PlanProblem[] {
   const before = [...validatePlanShape(plan), ...validatePlanSemantics(plan, layer)];
@@ -20,7 +30,7 @@ function planProblems(plan: NibrsPlan, layer: SemanticLayer, release: ReleaseInf
   return before.length ? before : validateResolved(plan, release, layer, geo).problems;
 }
 
-export function validateOutcome(json: unknown, layer: SemanticLayer, release: ReleaseInfo, geo: GeographyResolver): PlanProblem[] {
+export function validateOutcome(json: unknown, layer: SemanticLayer, release: ReleaseInfo, geo: GeographyResolver, request?: RequestContext): PlanProblem[] {
   const parsed = parseReaderOutcome(json);
   if (!parsed.success) return parsed.error.issues.map((i) => ({ rule: "P0", path: i.path.join("."), message: i.message }));
   const o: ReaderOutcome = parsed.data;
@@ -28,9 +38,17 @@ export function validateOutcome(json: unknown, layer: SemanticLayer, release: Re
   const nested = (rule: string, path: string, plan: NibrsPlan) => {
     for (const p of planProblems(plan, layer, release, geo)) out.push({ rule, path: `${path}: ${p.rule} ${p.path}`, message: p.message });
   };
+  const alternative = (path: string, alt: Alternative) => {
+    nested("O2", `${path}.plan`, alt.plan);
+    if (!request) return;
+    for (const part of request.parts) {
+      if (alt.changes.includes(part.concept)) continue;
+      for (const p of validateBindings(alt.plan, [part], request.places)) out.push({ rule: "O4", path: `${path}: ${p.rule} ${p.path}`, message: `${p.message} (not declared in changes)` });
+    }
+  };
   if (o.kind === "plan") return planProblems(o.plan, layer, release, geo);
   if (o.kind === "limitation") {
-    if (o.alternative) nested("O2", "alternative.plan", o.alternative.plan);
+    if (o.alternative) alternative("alternative", o.alternative);
     return out;
   }
   const labels = new Set<string>();
@@ -39,12 +57,12 @@ export function validateOutcome(json: unknown, layer: SemanticLayer, release: Re
     if (labels.has(opt.label)) out.push({ rule: "O3", path: `options[${i}].label`, message: `"${opt.label}" is offered twice` });
     labels.add(opt.label);
     if ("plan" in opt) {
-      const key = JSON.stringify({ ...opt.plan, question: "", bindings: [] });
+      const key = executable(opt.plan);
       if (plans.has(key)) out.push({ rule: "O3", path: `options[${i}].plan`, message: "two options lead to the same plan" });
       plans.add(key);
       nested("O1", `options[${i}].plan`, opt.plan);
     } else if (opt.limitation.alternative) {
-      nested("O2", `options[${i}].limitation.alternative.plan`, opt.limitation.alternative.plan);
+      alternative(`options[${i}].limitation.alternative`, opt.limitation.alternative);
     }
   });
   return out;

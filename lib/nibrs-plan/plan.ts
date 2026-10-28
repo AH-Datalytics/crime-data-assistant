@@ -298,7 +298,16 @@ export const LimitationReason = z.enum([
  * complete plan that must validate and resolve against the release, so it can run as offered. It is shown as an
  * option for the user to choose; it is never run in place of the question that was asked.
  */
-export const Alternative = z.strictObject({ label: z.string().min(1), plan: NibrsPlan });
+export const Alternative = z.strictObject({
+  label: z.string().min(1),
+  plan: NibrsPlan,
+  /**
+   * The request concepts it deliberately answers differently (ledger concepts: "measure", "statistic", "place",
+   * "period" ...), each disclosed by the label. Every other part of the question keeps its binding (O4), so choosing
+   * the offer never silently moves the place or the period.
+   */
+  changes: z.array(Id).min(1),
+});
 
 export const Limitation = z.strictObject({
   kind: z.literal("limitation"),

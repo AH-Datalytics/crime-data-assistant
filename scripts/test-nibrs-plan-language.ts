@@ -329,17 +329,29 @@ assert.ok(checkEnvelope({ ...n1Env, plan: { ...X.N1, source: "shr" as never }, a
   const part = X.N3_PARTS[0];
   const lim = (alternative: unknown) => ({ kind: "limitation", reason: "not_recorded_in_nibrs", parts: [part], explanation: "x", alternative });
   for (const [name, o] of Object.entries(X.OUTCOMES)) if (o.kind !== "plan") assert.deepEqual(out(o), [], `${name}: outcome valid`);
-  assert.deepEqual(out(lim({ label: "the nearest question", plan: X.N3 })), [], "a runnable alternative");
-  assert.deepEqual(out(lim({ label: "x", plan: { ...X.N3, measures: [{ ...X.N3.measures[0], id: "victims.nope" }] } })), ["O2"], "an alternative must run as offered");
-  assert.deepEqual(out(lim({ label: "x", plan: { ...X.N3, period: { kind: "absolute", from: "1985-01", to: "1985-12" } } })).filter((r) => r === "O2").length > 0, true, "an alternative outside the release");
+  assert.deepEqual(out(lim({ label: "the nearest question", plan: X.N3, changes: ["measure"] })), [], "a runnable alternative");
+  assert.deepEqual(out(lim({ label: "x", plan: { ...X.N3, measures: [{ ...X.N3.measures[0], id: "victims.nope" }] }, changes: ["measure"] })), ["O2"], "an alternative must run as offered");
+  assert.deepEqual(out(lim({ label: "x", plan: { ...X.N3, period: { kind: "absolute", from: "1985-01", to: "1985-12" } }, changes: ["period"] })).filter((r) => r === "O2").length > 0, true, "an alternative outside the release");
   const { alternative: _a, ...noAlt } = lim(null);
   assert.deepEqual(out(noAlt), ["P0"], "a limitation states its alternative, or null, explicitly");
   const clarify = (options: unknown[]) => ({ kind: "clarify", question: "Which?", parts: [part], options });
   const answerable = { label: "Fatal", plan: X.H2 };
-  const unanswerable = { label: "Nonfatal", limitation: { reason: "not_recorded_in_nibrs", explanation: "No nonfatal shooting code.", alternative: { label: "Aggravated assaults with a firearm", plan: X.N3 } } };
+  const unanswerable = { label: "Nonfatal", limitation: { reason: "not_recorded_in_nibrs", explanation: "No nonfatal shooting code.", alternative: { label: "Aggravated assaults with a firearm", plan: X.N3, changes: ["measure"] } } };
   assert.deepEqual(out(clarify([answerable, unanswerable])), [], "an option may lead to a limitation with its own alternative");
   assert.deepEqual(out(clarify([answerable, { ...answerable, plan: { ...X.H2, question: "other wording" } }])), ["O3", "O3"], "same label, same plan");
   assert.deepEqual(out(clarify([answerable, { label: "Other", plan: { ...X.N3, measures: [{ ...X.N3.measures[0], id: "victims.nope" }] } }])), ["O1"]);
+  // O3 compares what a plan computes: a relabelled agency or reworded default is the same plan.
+  const relabelled = { ...X.H2, geography: { ...X.H2.geography, places: X.H2.geography.places.map((pl) => ("label" in pl ? { ...pl, label: "Memphis PD" } : pl)) }, defaults: [{ path: "period", value: "x", reason: "other words" }] };
+  assert.deepEqual(out(clarify([answerable, { label: "Other", plan: relabelled }])), ["O3"], "same plan under other labels");
+  assert.deepEqual(out({ kind: "limitation", reason: "not_recorded_in_nibrs", parts: [part], explanation: "x", alternative: { label: "x", plan: X.N3, changes: [] } }), ["P0"], "an alternative declares what it changes");
+  // O4: an alternative keeps every part of the question it does not declare as changed.
+  const places = (v: string) => ({ "city:Baltimore:MD": { oris: ["MDBPD0000"] } } as Record<string, { oris: string[] }>)[v] ?? null;
+  const req = { parts: X.N3_PARTS, places };
+  const moved = { ...X.N3, geography: { places: [{ kind: "agency" as const, ori: "TXHPD0000", label: "Houston Police Department, TX" }], combine: "separate" as const }, period: { kind: "absolute" as const, from: "2024-01", to: "2024-12" } };
+  const withAlt = (alt: unknown) => rules(validateOutcome({ ...lim(alt) }, layer, release, geo, req));
+  assert.deepEqual(withAlt({ label: "Counts instead", plan: X.N3, changes: ["statistic"] }), [], "same place and period");
+  assert.deepEqual(withAlt({ label: "Counts instead", plan: moved, changes: ["statistic"] }), ["O4", "O4"], "a silently moved place and period");
+  assert.deepEqual(withAlt({ label: "Houston in 2024 instead", plan: moved, changes: ["place", "period"] }), [], "declared changes");
 }
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);

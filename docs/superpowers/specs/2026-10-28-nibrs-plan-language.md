@@ -39,13 +39,15 @@ request accounting checked by path and value; examples for every case and form, 
    - a **limitation**: a concept NIBRS does not record, data outside the release, a capability not yet switched on
      for an era, an unresolved place, a request for causes, data below the agency, a rate by group, a court outcome,
      a forecast, an incident detail, or a total from too little coverage. It always states its `alternative`
-     explicitly: the nearest answerable question as a complete plan with a label, or `null` when none genuinely
-     exists (frozen rule 14). An alternative is offered for the user to choose, and never run in place of the
+     explicitly: the nearest answerable question as a complete plan with a label and the request concepts it
+     deliberately changes (`changes`, disclosed by the label), or `null` when none genuinely exists (frozen rule 14). An alternative is offered for the user to choose, and never run in place of the
      question.
 
    `validateOutcome` (`lib/nibrs-plan/outcome.ts`) checks every option plan and alternative like any plan, so each
    one runs as offered. O1: an option's plan fails a rule. O2: an alternative fails one. O3: two options share a
-   label or lead to the same plan. Request accounting applies to the answering plan, not to alternatives.
+   label or lead to the same executable plan (wording, provenance and place labels aside). O4: an alternative
+   drops or changes a part of the question that it does not declare in `changes`, so choosing it never silently
+   moves the place or the period.
 2. `parsePlan` checks the JSON against the schema (P0). Malformed input is refused, never thrown.
 3. `validatePlanShape` (P1-P13), `validatePlanSemantics` against a pinned semantic version (S1-S12), and
    `validateBindings` against the request ledger (A1-A4).
