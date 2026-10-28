@@ -400,7 +400,7 @@ export function finalizeProof(given: ProofFinalizationInput): ProofFinalization 
 function projectedInput(input: ProofFinalizationInput): ProofFinalizationInput {
   const projected = projectAnswer(input.columns, input.rows);
   if (projected.dropped.length) pendingDrops = projected.dropped;
-  return projected.dropped.length ? { ...input, columns: projected.columns, rows: projected.rows } : input;
+  return projected.columns === input.columns && projected.rows === input.rows ? input : { ...input, columns: projected.columns, rows: projected.rows };
 }
 
 /** The annotation columns each finalization's answer lost, for the request log's tags. */

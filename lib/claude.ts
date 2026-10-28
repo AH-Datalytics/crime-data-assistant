@@ -840,10 +840,10 @@ Agency-level staffing data, ${HISTORICAL.staffingMinYear}–${HISTORICAL.staffin
 
 **CRITICAL — EMPLOYEES-ONLY FALLBACK:** Some years (especially pre-1960, but not exclusively) only have all_total without the officer/civilian breakdown — officer_total is NULL for those rows. For ALL staffing queries, you MUST:
 1. Use COALESCE(hs.officer_total, hs.all_total) as the data column, aliased as "staffing"
-2. Add an annotation column: CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type
-   IMPORTANT: The condition must check all_total > 0 first — otherwise LEFT JOIN NULL rows (years with NO data at all) get incorrectly marked as 'Employees*'.
+2. Add the one text column staffing answers carry (owner 2026-10-28), saying which count each figure is: CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported
+   IMPORTANT: The condition must check all_total > 0 first — otherwise LEFT JOIN NULL rows (years with NO data at all) get incorrectly marked as 'Employees'.
 3. Filter with all_total > 0 (NOT officer_total > 0, which would drop employees-only rows)
-4. If any rows in the result have data_type = 'Employees*', note in your explanation: "Years marked 'Employees*' reflect total department employees — the FBI did not separate sworn officers from civilians for those years."
+4. If any rows have reported = 'Employees', say in your explanation: "In years with no officer count, the figure is total employees, marked Employees in the reported column."
 
 ${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year pre-1960, ~12,000-14,000 agencies/year 1960+.
 
@@ -855,7 +855,7 @@ ${HISTORICAL.staffingRows.toLocaleString()} rows. Coverage: ~3,800 agencies/year
 
 **IMPORTANT — FILL GAPS FOR STAFFING CHARTS:** To make missing years visible in bar charts, use a recursive CTE to produce all years in the range, then LEFT JOIN staffing data. Missing years will have NULL values and appear as gaps. The CTE range must match the actual data range for the agency — do NOT extend beyond the last year with data. Always JOIN through historical_agency by name — NEVER guess an ORI code. Always use the COALESCE pattern:
 WITH agency AS (SELECT ori FROM historical_agency WHERE agency = 'Chicago' AND state = 'il' AND type = 'city'), years AS (SELECT MIN(hs.year) AS year FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0 UNION ALL SELECT year + 1 FROM years WHERE year < (SELECT MAX(hs.year) FROM historical_staffing hs JOIN agency a ON a.ori = hs.ori WHERE hs.all_total > 0))
-SELECT y.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type FROM years y LEFT JOIN agency a ON 1=1 LEFT JOIN historical_staffing hs ON hs.ori = a.ori AND hs.year = y.year AND hs.all_total > 0 ORDER BY y.year
+SELECT y.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported FROM years y LEFT JOIN agency a ON 1=1 LEFT JOIN historical_staffing hs ON hs.ori = a.ori AND hs.year = y.year AND hs.all_total > 0 ORDER BY y.year
 
 **MISSING DATA DISCLOSURE:** After reviewing the query results, if any rows have NULL values for the data column (indicating the agency did not report that year), you MUST note this in your explanation. Use the format: "[Agency name] may not have reported [data type] in [list the missing years]." For example: "New Orleans may not have reported staffing data in 2009, 2014, 2015, 2020, and 2021." This applies to ALL historical queries (staffing, crime, clearance) where gaps exist — not just staffing.
 
@@ -875,7 +875,7 @@ When the user asks for officer COUNTS (not per capita):
 For crime-rate columns in mixed staffing/crime comparisons, include the denominator in the alias. Example: violent crime rate per 100k should be aliased as violent_crime_rate_per_100k, not violent_rate.
 
 **Staffing query examples:**
-- Officers for a specific agency: SELECT hs.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees*' ELSE 'Officers' END AS data_type FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hs.all_total > 0 ORDER BY hs.year
+- Officers for a specific agency: SELECT hs.year, COALESCE(hs.officer_total, hs.all_total) AS staffing, CASE WHEN hs.all_total > 0 AND (hs.officer_total IS NULL OR hs.officer_total = 0) THEN 'Employees' ELSE 'Officers' END AS reported FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori WHERE ha.agency = 'Chicago' AND ha.state = 'il' AND hs.all_total > 0 ORDER BY hs.year
 - Officers per capita for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k
 - Officers per 100k for an agency: JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year, then ROUND(hs.officer_total * 100000.0 / hap.population, 1) AS officers_per_100k
 - Top agencies by officers per capita: SELECT ha.agency, ha.state, hs.officer_total, hap.population, ROUND(hs.officer_total * 1000.0 / hap.population, 1) AS officers_per_1k FROM historical_staffing hs JOIN historical_agency ha ON ha.ori = hs.ori JOIN historical_agency_population hap ON hap.ori = hs.ori AND hap.year = hs.year WHERE hs.year = 2023 AND hs.officer_total > 0 AND hap.population > 50000 ORDER BY officers_per_1k DESC LIMIT 20
