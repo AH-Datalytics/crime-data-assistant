@@ -86,6 +86,15 @@ export function SideCategoryTick(props: { x?: number; y?: number; payload?: { va
   );
 }
 
+/**
+ * A tooltip's series name, or, for a staffing figure, which count it is ("Officers" / "Employees"): the point's own
+ * `reported`, or after a pivot by agency, the series' `<series>::reported`.
+ */
+function reportedLabel(payload: Record<string, unknown> | undefined, name: string): string {
+  const own = payload?.reported ?? payload?.[`${name}::reported`];
+  return typeof own === "string" && own ? (name && name !== "value" ? `${name} (${own})` : own) : name;
+}
+
 const GRID_COLOR = "#ddd8ce";
 const X_AXIS_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
 const X_AXIS_TICK_LINE_STYLE = { stroke: "#b8b0a5", strokeWidth: 1 };
@@ -296,11 +305,12 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
     const multiSeries = effectiveYKeys.length > 1;
     const dataLen = chartData.length;
 
-    // Detect employees-only years (staffing data where officer breakdown unavailable)
-    const employeesYears = data
-      .filter((d) => d.data_type === "Employees*")
+    // Staffing (owner 2026-10-28, "Go back to the older rule"): years whose figure is total employees, from the
+    // answer's `reported` column.
+    const employeesYears = [...new Set(data
+      .filter((d) => d.reported === "Employees")
       .map((d) => String(d.year ?? d[config.xAxis] ?? ""))
-      .filter(Boolean);
+      .filter(Boolean))];
     const hasEmployeesDisclaimer = employeesYears.length > 0;
 
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : collidingLabels ? "_xlabel" : config.xAxis;
@@ -534,12 +544,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               />
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v, name, props) => {
-                  const label = props?.payload?.data_type
-                    ? String(props.payload.data_type).replace(/\*$/, "")
-                    : name;
-                  return [fmtVal(v as number, isPercent), label];
-                }}
+                formatter={(v, name, props) => [fmtVal(v as number, isPercent), reportedLabel(props?.payload, String(name))]}
                 contentStyle={tooltipContentStyle}
                 labelStyle={{ color: "#ffffff" }}
                 itemStyle={{ color: "#ffffff" }}
@@ -660,12 +665,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               )}
               <Tooltip
                 labelFormatter={tooltipLabelFormatter}
-                formatter={(v, name, props) => {
-                  const label = props?.payload?.data_type
-                    ? String(props.payload.data_type).replace(/\*$/, "")
-                    : name;
-                  return [fmtVal(v as number, isPercent), label];
-                }}
+                formatter={(v, name, props) => [fmtVal(v as number, isPercent), reportedLabel(props?.payload, String(name))]}
                 contentStyle={tooltipContentStyle}
                 labelStyle={{ color: "#ffffff" }}
                 itemStyle={{ color: "#ffffff" }}
@@ -771,7 +771,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
               padding: "2px 0 0",
             }}
           >
-            * Employees shown for {employeesYears.join(", ")} — FBI did not report officer/civilian breakdown those years
+            Total employees shown for {employeesYears.join(", ")}: no officer count was reported.
           </div>
         )}
         <div
