@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, type RefObject } from "react";
+import { projectAnswer } from "@/lib/answer-columns";
 
 interface EmbedData {
   tab: string;
@@ -39,10 +40,13 @@ function fmtCsvVal(val: unknown): string {
 }
 
 function downloadCsv(
-  data: Record<string, unknown>[],
-  columns: string[],
+  answerRows: Record<string, unknown>[],
+  answerColumns: string[],
   filename: string
 ) {
+  // The answer contract (lib/answer-columns.ts): every column of the answer, in order, constant ones included, and no
+  // annotation column -- also for an answer stored before the contract (a restored chat history).
+  const { columns, rows: data } = projectAnswer(answerColumns, answerRows);
   const header = columns.join(",");
   const rows = data.map((row) =>
     columns

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ChartConfig, ChartMeta } from "./types";
+import { isAnswerAnnotation, reconcileChartConfig } from "./answer-columns";
 
 /**
  * Serializes the FINALIZED chart configuration for the query log, so the
@@ -126,10 +127,15 @@ export function serializeChartConfigForLog(
   chartMeta?: ChartMeta | null
 ): string | null {
   try {
+    // The answer contract (lib/answer-columns.ts): the logged chart is the delivered one -- annotation columns removed
+    // and the binding reconciled exactly as emitFactualPayload() does, so an embed replay matches what the user saw.
+    const deliveredColumns = Array.isArray(columns) ? columns.filter((c) => typeof c === "string" && !isAnswerAnnotation(c)) : [];
+    const dropped = Array.isArray(columns) ? columns.filter((c) => typeof c === "string" && isAnswerAnnotation(c)) : [];
+    chartConfig = reconcileChartConfig(chartConfig, dropped);
     if (!chartConfig) return null;
 
     const rawSeries = Array.isArray(chartConfig.yAxis) ? chartConfig.yAxis.filter((s) => typeof s === "string") : [];
-    const rawColumns = Array.isArray(columns) ? columns.filter((c) => typeof c === "string") : [];
+    const rawColumns = deliveredColumns;
     let truncated = false;
 
     const series = rawSeries.slice(0, CHART_CONFIG_MAX_SERIES).map(str);

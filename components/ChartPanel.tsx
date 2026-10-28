@@ -32,7 +32,9 @@ import {
   uniqueCategoryLabels,
 } from "@/lib/chart-layout";
 import { useChartRenderReceipt } from "./useChartRenderReceipt";
+import { useBoxWidth } from "./useBoxWidth";
 import { chartNotes } from "@/lib/embed-notes";
+import { resetTickTextCache, MAX_SLANTED_AXIS, sidewaysBandHeight, slantedAxisHeight, slantedLeftMargin, sideLabelWidth as measuredSideLabelWidth, valueAxisWidth, wrapLabel, wrappedAxisHeight } from "@/lib/chart-text";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -49,26 +51,14 @@ const TICK_STYLE = {
  * Owner 2026-10-25 ("the labels don't fit"): category labels on a bar chart with few bars are written flat and wrapped
  * onto up to three lines under their bar, instead of slanted and cut off. Exported for tests.
  */
-export function wrapCategoryLabel(label: string, maxChars: number, maxLines = 3): string[] {
-  const words = String(label).split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    if (!cur) cur = w;
-    else if ((cur + " " + w).length <= maxChars) cur += " " + w;
-    else { lines.push(cur); cur = w; }
-  }
-  if (cur) lines.push(cur);
-  if (lines.length <= maxLines) return lines;
-  const kept = lines.slice(0, maxLines);
-  kept[maxLines - 1] = kept[maxLines - 1].replace(/\s*\S*$/, "") + "…";
-  return kept;
+export function wrapCategoryLabel(label: string, maxWidth: number): string[] {
+  return wrapLabel(label, maxWidth);
 }
 
 export function WrappedCategoryTick(props: { x?: number; y?: number; payload?: { value: unknown }; width?: number; visibleTicksCount?: number }) {
   const { x = 0, y = 0, payload, width = 600, visibleTicksCount = 1 } = props;
   const perBar = width / Math.max(1, visibleTicksCount);
-  const lines = wrapCategoryLabel(String(payload?.value ?? ""), Math.max(8, Math.floor(perBar / 7.2)));
+  const lines = wrapCategoryLabel(String(payload?.value ?? ""), perBar - 6);
   return (
     <g transform={`translate(${x},${y})`}>
       <text textAnchor="middle" fontSize={TICK_STYLE.fontSize} fill={TICK_STYLE.fill} fontFamily={TICK_STYLE.fontFamily}>
@@ -85,7 +75,7 @@ export function WrappedCategoryTick(props: { x?: number; y?: number; payload?: {
 export const SIDEWAYS_MIN_BAR = 90;
 export function SideCategoryTick(props: { x?: number; y?: number; payload?: { value: unknown }; labelWidth: number }) {
   const { x = 0, y = 0, payload, labelWidth } = props;
-  const lines = wrapCategoryLabel(String(payload?.value ?? ""), Math.max(8, Math.floor((labelWidth - 8) / 7)), 4);
+  const lines = wrapCategoryLabel(String(payload?.value ?? ""), labelWidth - 8);
   const top = -((lines.length - 1) * 14) / 2;
   return (
     <g transform={`translate(${x},${y})`}>
@@ -315,7 +305,15 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
 
     const xAxisDataKey = daily ? config.xAxis : ym ? xKey : collidingLabels ? "_xlabel" : config.xAxis;
     const receiptRef = useChartRenderReceipt({ requestId, component: "ChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
-    const [boxWidth, setBoxWidth] = React.useState(0);
+    const boxWidth = useBoxWidth(receiptRef);
+    // Labels are measured in the tick font; measure again once the page's fonts have loaded.
+    const [, setFontsReady] = React.useState(0);
+    React.useEffect(() => {
+      if (typeof document === "undefined" || !document.fonts) return;
+      let live = true;
+      void document.fonts.ready.then(() => { if (live) { resetTickTextCache(); setFontsReady((n) => n + 1); } });
+      return () => { live = false; };
+    }, []);
     // Round 1 D4: never a blank chart area. Too many series to draw is said plainly; every row stays in the table.
     if (seriesOverflow) {
       return (
@@ -338,11 +336,21 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
     // Owner 2026-10-25: category bars (not time) with 8 bars or fewer get flat labels wrapped under each bar.
     const wrapCategories = !ym && !daily && !plainYears && dataLen <= 8;
     // Slanted labels are no longer cut off: the axis is tall enough for the longest one (about 5.5px per character at 45°).
-    const longestLabel = Math.max(0, ...chartData.map((d) => String(d[xAxisDataKey] ?? "").length));
-    const slantedLabelHeight = Math.min(240, Math.max(60, Math.round(longestLabel * 5.5) + 16));
-    // Too narrow for wrapped labels under each bar (a phone): the bars are drawn sideways instead.
-    const sideways = wrapCategories && boxWidth > 0 && (boxWidth - 80) / Math.max(1, dataLen) < SIDEWAYS_MIN_BAR;
-    const sideLabelWidth = Math.min(170, Math.round(boxWidth * 0.42));
+    // Labels are measured, never cut (owner item 3.1; lib/chart-text.ts): axes take the room the labels need.
+    const categoryLabels = chartData.map((d) => String(d[xAxisDataKey] ?? ""));
+    const slantedLabelHeight = slantedAxisHeight(categoryLabels);
+    const perBar = boxWidth > 0 ? (boxWidth - 80) / Math.max(1, dataLen) : 120;
+    const wrappedLabelHeight = wrappedAxisHeight(categoryLabels, perBar);
+    // Too narrow for wrapped labels under each bar (a phone), or slanted labels that would take most of the chart:
+    // the bars are drawn sideways instead, each label in full beside its bar.
+    // Decided from the measured labels alone, so the first paint already has the final layout (no slanted-then-sideways flip).
+    const slantedTooTall = !wrapCategories && !ym && !daily && !plainYears && slantedLabelHeight > MAX_SLANTED_AXIS;
+    const sideways = (wrapCategories && boxWidth > 0 && perBar < SIDEWAYS_MIN_BAR) || slantedTooTall;
+    const sideLabelWidth = measuredSideLabelWidth(categoryLabels, boxWidth);
+    // Sideways bars need room for each wrapped label: the chart grows rather than letting labels overlap.
+    const sidewaysMinHeight = sideways
+      ? 70 + categoryLabels.length * sidewaysBandHeight(categoryLabels, sideLabelWidth)
+      : 0;
 
     // Compute explicit tick positions for even spacing
     const fewYearsMonthly = false;
@@ -366,6 +374,11 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
 
     // Compute clean Y-axis ticks (round intervals starting at 0)
     const yTickInfo = niceYTicks(chartData, effectiveYKeys, config.type === "stacked_bar");
+    // The value axis is as wide as its widest formatted tick, never narrower than before.
+    const valueAxisLabelWidth = Math.max(isPercent ? 55 : 50, yTickInfo ? valueAxisWidth(yTickInfo.ticks.map((v) => String(yTickFormatter(v)))) : 0);
+    // Slanted category labels: room at the left for the first one (it reaches left of its tick).
+    const slanted = !sideways && !wrapCategories && !ym && !daily && !plainYears && !fewYearsMonthly;
+    const leftMargin = slanted && categoryLabels.length ? slantedLeftMargin(categoryLabels, valueAxisLabelWidth, boxWidth) : 8;
     // Round 1 D6: bars of non-negative values start at zero unless the user explicitly set a minimum; a max-only request
     // keeps the zero baseline (it no longer falls back to the data minimum). Signed values keep their own range.
     const isBarType = config.type === "bar" || config.type === "stacked_bar";
@@ -419,7 +432,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
             {config.title}
           </div>
         )}
-        <ResponsiveContainer width="100%" height="100%" onResize={(w) => setBoxWidth(w)}>
+        <ResponsiveContainer width="100%" height="100%" minHeight={sidewaysMinHeight || undefined}>
           {config.type === "scatter" ? (
             <ScatterChart
               data={chartData}
@@ -446,7 +459,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                 tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
-                width={isPercent ? 55 : 50}
+                width={valueAxisLabelWidth}
                 padding={{ top: 12, bottom: 12 }}
                 {...yAxisScaleProps}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
@@ -480,7 +493,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
           ) : config.type === "line" ? (
             <LineChart
               data={chartData}
-              margin={{ top: 20, right: 24, bottom: 8, left: 8 }}
+              margin={{ top: 20, right: 24, bottom: 8, left: leftMargin }}
             >
               <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
               <XAxis
@@ -515,7 +528,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                 tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
-                width={isPercent ? 55 : 50}
+                width={valueAxisLabelWidth}
                 {...yAxisScaleProps}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />
@@ -597,7 +610,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
             <BarChart
               data={chartData}
               layout={sideways ? "vertical" : "horizontal"}
-              margin={{ top: 20, right: 24, bottom: (ym || daily || plainYears) ? 8 : 4, left: 8 }}
+              margin={{ top: 20, right: 24, bottom: (ym || daily || plainYears) ? 8 : 4, left: leftMargin }}
             >
               <CartesianGrid horizontal={!sideways} vertical={sideways} stroke={GRID_COLOR} strokeWidth={1} />
               {sideways ? (
@@ -628,7 +641,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                   : daily ? dailyTickInterval(dataLen)
                   : 0
                 }
-                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : wrapCategories ? 60 : slantedLabelHeight}
+                height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : wrapCategories ? wrappedLabelHeight : slantedLabelHeight}
               />
               )}
               {sideways ? (
@@ -640,7 +653,7 @@ function RenderedChartPanel({ config, rows, meta, requestId }: ChartPanelProps) 
                 tick={TICK_STYLE}
                 tickLine={false}
                 axisLine={false}
-                width={isPercent ? 55 : 50}
+                width={valueAxisLabelWidth}
                 {...yAxisScaleProps}
                 {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
               />

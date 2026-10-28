@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -30,7 +30,9 @@ import {
   shouldUsePieLegend,
 } from "@/lib/chart-layout";
 import { useChartRenderReceipt } from "./useChartRenderReceipt";
+import { useBoxWidth } from "./useBoxWidth";
 import { SIDEWAYS_MIN_BAR, SideCategoryTick, WrappedCategoryTick } from "./ChartPanel";
+import { resetTickTextCache, MAX_SLANTED_AXIS, sidewaysBandHeight, slantedAxisHeight, slantedLeftMargin, sideLabelWidth as measuredSideLabelWidth, valueAxisWidth, wrappedAxisHeight } from "@/lib/chart-text";
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -197,7 +199,15 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
   const dataLen = chartData.length;
   const xAxisDataKey = daily ? config.xAxis : ym ? xKey : config.xAxis;
   const receiptRef = useChartRenderReceipt({ requestId, component: "NibrsChartPanel", chartType: config.type, effectiveXKey: xAxisDataKey, effectiveYKeys });
-  const [boxWidth, setBoxWidth] = useState(0);
+  const boxWidth = useBoxWidth(receiptRef);
+  // Labels are measured in the tick font; measure again once the page's fonts have loaded.
+  const [, setFontsReady] = useState(0);
+  useEffect(() => {
+    if (typeof document === "undefined" || !document.fonts) return;
+    let live = true;
+    void document.fonts.ready.then(() => { if (live) { resetTickTextCache(); setFontsReady((n) => n + 1); } });
+    return () => { live = false; };
+  }, []);
   if (seriesOverflow) return null;
 
   // Detect plain-year x-axis (multi-year queries)
@@ -206,11 +216,21 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
   // Owner 2026-10-25 ("the labels don't fit"): as in ChartPanel, few category bars get flat wrapped labels, and slanted
   // labels are never cut off.
   const wrapCategories = !ym && !daily && !plainYears && dataLen <= 8;
-  const longestLabel = Math.max(0, ...chartData.map((d) => String(d[xAxisDataKey] ?? "").length));
-  const slantedLabelHeight = Math.min(240, Math.max(60, Math.round(longestLabel * 5.5) + 16));
-  // Too narrow for wrapped labels under each bar (a phone): the bars are drawn sideways instead.
-  const sideways = wrapCategories && boxWidth > 0 && (boxWidth - 80) / Math.max(1, dataLen) < SIDEWAYS_MIN_BAR;
-  const sideLabelWidth = Math.min(170, Math.round(boxWidth * 0.42));
+  // Labels are measured, never cut (owner item 3.1; lib/chart-text.ts): axes take the room the labels need.
+  const categoryLabels = chartData.map((d) => String(d[xAxisDataKey] ?? ""));
+  const slantedLabelHeight = slantedAxisHeight(categoryLabels);
+  const perBar = boxWidth > 0 ? (boxWidth - 80) / Math.max(1, dataLen) : 120;
+  const wrappedLabelHeight = wrappedAxisHeight(categoryLabels, perBar);
+  // Too narrow for wrapped labels under each bar (a phone), or slanted labels that would take most of the chart:
+  // the bars are drawn sideways instead, each label in full beside its bar.
+  // Decided from the measured labels alone, so the first paint already has the final layout (no slanted-then-sideways flip).
+  const slantedTooTall = !wrapCategories && !ym && !daily && !plainYears && slantedLabelHeight > MAX_SLANTED_AXIS;
+  const sideways = (wrapCategories && boxWidth > 0 && perBar < SIDEWAYS_MIN_BAR) || slantedTooTall;
+  const sideLabelWidth = measuredSideLabelWidth(categoryLabels, boxWidth);
+  // Sideways bars need room for each wrapped label: the chart grows rather than letting labels overlap.
+  const sidewaysMinHeight = sideways
+    ? 70 + categoryLabels.length * sidewaysBandHeight(categoryLabels, sideLabelWidth)
+    : 0;
 
   // Compute explicit tick positions for even spacing
   const ymTicks = ym && !singleYearMonthly ? nibrsYearTicksForYM(data, xKey) : [];
@@ -230,6 +250,11 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
     ? (v: number) => `${v}%`
     : formatAxisValue;
   const yTickInfo = niceYTicks(chartData, effectiveYKeys, config.type === "stacked_bar");
+  // The value axis is as wide as its widest formatted tick, never narrower than before.
+  const valueAxisLabelWidth = Math.max(isPercent ? 55 : 50, yTickInfo ? valueAxisWidth(yTickInfo.ticks.map((v) => String(yTickFormatter(v)))) : 0);
+  // Slanted category labels: room at the left for the first one (it reaches left of its tick).
+  const slanted = !sideways && !wrapCategories && !ym && !daily && !plainYears && !fewYearsMonthly;
+  const leftMargin = slanted && categoryLabels.length ? slantedLeftMargin(categoryLabels, valueAxisLabelWidth, boxWidth) : 8;
   const yAxisScaleProps = config.yAxisMin !== undefined || config.yAxisMax !== undefined
     ? { domain: [config.yAxisMin ?? "dataMin", config.yAxisMax ?? "dataMax"] as [number | string, number | string] }
     : yTickInfo
@@ -276,7 +301,7 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
           {config.title}
         </div>
       )}
-      <ResponsiveContainer width="100%" height="100%" onResize={(w) => setBoxWidth(w)}>
+      <ResponsiveContainer width="100%" height="100%" minHeight={sidewaysMinHeight || undefined}>
         {config.type === "scatter" ? (
           <ScatterChart data={chartData} margin={{ top: 20, right: 24, bottom: 24, left: 8 }}>
             <CartesianGrid horizontal vertical stroke={GRID_COLOR} strokeWidth={1} />
@@ -300,7 +325,7 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
               tick={TICK_STYLE}
               tickLine={false}
               axisLine={false}
-              width={isPercent ? 55 : 50}
+              width={valueAxisLabelWidth}
               padding={{ top: 12, bottom: 12 }}
               {...yAxisScaleProps}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
@@ -332,7 +357,7 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
             />
           </ScatterChart>
         ) : config.type === "line" ? (
-          <LineChart data={chartData} margin={{ top: 20, right: 24, bottom: 8, left: 8 }}>
+          <LineChart data={chartData} margin={{ top: 20, right: 24, bottom: 8, left: leftMargin }}>
             <CartesianGrid horizontal vertical={false} stroke={GRID_COLOR} strokeWidth={1} />
             <XAxis
               dataKey={xAxisDataKey}
@@ -361,7 +386,7 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
               textAnchor={fewYearsMonthly ? "end" : "middle"}
               height={fewYearsMonthly ? 60 : (plainYears || ym || daily) ? 34 : undefined}
             />
-            <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
+            <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={valueAxisLabelWidth}
               {...yAxisScaleProps}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
             />
@@ -398,7 +423,7 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
             ))}
           </LineChart>
         ) : config.type === "bar" || config.type === "stacked_bar" ? (
-          <BarChart data={chartData} layout={sideways ? "vertical" : "horizontal"} margin={{ top: 20, right: 24, bottom: ym || daily ? 8 : 4, left: 8 }}>
+          <BarChart data={chartData} layout={sideways ? "vertical" : "horizontal"} margin={{ top: 20, right: 24, bottom: ym || daily ? 8 : 4, left: leftMargin }}>
             <CartesianGrid horizontal={!sideways} vertical={sideways} stroke={GRID_COLOR} strokeWidth={1} />
             {sideways ? (
               <XAxis type="number" tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} {...yAxisScaleProps}
@@ -428,14 +453,14 @@ function RenderedNibrsChartPanel({ config, rows, requestId }: NibrsChartPanelPro
                 : daily ? dailyTickInterval(dataLen)
                 : 0
               }
-              height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : wrapCategories ? 60 : slantedLabelHeight}
+              height={fewYearsMonthly ? 60 : (ym || daily || plainYears) ? 30 : wrapCategories ? wrappedLabelHeight : slantedLabelHeight}
             />
             )}
             {sideways ? (
               <YAxis type="category" dataKey={xAxisDataKey} width={sideLabelWidth} interval={0} tickLine={false} axisLine={X_AXIS_LINE_STYLE}
                 tick={(p: object) => <SideCategoryTick {...p} labelWidth={sideLabelWidth} />} />
             ) : (
-            <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={isPercent ? 55 : 50}
+            <YAxis tickFormatter={yTickFormatter} tick={TICK_STYLE} tickLine={false} axisLine={false} width={valueAxisLabelWidth}
               {...yAxisScaleProps}
               {...(config.yAxisLabel ? { label: { value: config.yAxisLabel, angle: -90, position: "insideLeft", offset: 0, dy: -10, style: { fontSize: 10, fill: "#1e2a35", fontFamily: "'DM Sans', 'Segoe UI', Arial, sans-serif", textAnchor: "middle" } } } : {})}
             />

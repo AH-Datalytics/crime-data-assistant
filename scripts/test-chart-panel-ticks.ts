@@ -131,16 +131,17 @@ assert.deepEqual(
   assert.ok(r && r.ticks.some((v) => !Number.isInteger(v)) || (r && r.domain[1] <= 4), "rates may still use fractional steps");
 }
 
-// Owner 2026-10-25 ("the labels don't fit"): few-bar category labels wrap onto up to three whole-word lines.
+// Owner 2026-10-25 ("the labels don't fit") and item 3.1 ("cut at narrow widths"): category labels wrap by measured
+// width onto as many whole-word lines as they need, and are never cut. Outside a browser the width is estimated.
 {
   const c = "In custody of another jurisdiction (includes extradition denied)";
-  const lines = wrapCategoryLabel(c, 22);
-  assert.ok(lines.length <= 3 && lines.every((l) => l.length <= 22), lines.join(" | "));
-  assert.equal(lines.join(" "), c, "a label that fits in three lines is never cut");
-  assert.deepEqual(wrapCategoryLabel("Death of offender", 22), ["Death of offender"]);
-  const cut = wrapCategoryLabel("one two three four five six seven eight nine ten", 8);
-  assert.equal(cut.length, 3);
-  assert.ok(cut[2].endsWith("…"));
+  const lines = wrapCategoryLabel(c, 22 * 7.2);
+  assert.ok(lines.every((l) => l.length * 7.2 <= 22 * 7.2), lines.join(" | "));
+  assert.equal(lines.join(" "), c, "every word is kept");
+  assert.deepEqual(wrapCategoryLabel("Death of offender", 22 * 7.2), ["Death of offender"]);
+  const long = wrapCategoryLabel("one two three four five six seven eight nine ten", 8 * 7.2);
+  assert.equal(long.join(" "), "one two three four five six seven eight nine ten", "more than three lines: still not cut");
+  assert.ok(long.every((l) => !l.endsWith("…")), "no ellipsis");
 }
 
 // Dense or long-label pies use an internal legend instead of clipped labels.
