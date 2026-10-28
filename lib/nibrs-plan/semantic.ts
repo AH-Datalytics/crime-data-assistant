@@ -27,6 +27,8 @@ export type SemanticEntity = {
 /** A predicate in the layer's own terms: a dimension condition on the measure's entity, or an existence over a link. */
 export type SemanticPredicate =
   | { kind: "dimension"; dimension: string; op: "in" | "not_in"; values: string[] }
+  /** A numeric condition on a numerically decoded or derived dimension (flash mob: offender segments >= 6). */
+  | { kind: "numeric"; dimension: string; op: ">=" | "<=" | "between"; values: number[] }
   /** True when a row reached through link `link` (resolved with SemanticLayer.link) satisfies `where`, whose
    * dimensions belong to that link's `to` entity. Links chain: a nested exists starts from the outer link's `to`. */
   | { kind: "exists"; link: string; where: SemanticPredicate[] }
@@ -42,7 +44,15 @@ export type SemanticMeasure = {
    * count_distinct counts distinct `entity` keys satisfying `predicate` (victims.murder: victims with an exists over
    * victim_offense where offense_code = 09A). sum adds `column` over distinct entity rows (property dollars, vehicles).
    */
-  aggregation: { kind: "count_distinct" } | { kind: "sum"; column: string };
+  aggregation:
+    | { kind: "count_distinct" }
+    | { kind: "sum"; column: string }
+    /**
+     * A sum of component measures, each in its own (FBI standard) unit, with unit "fbi_standard" (violent crime:
+     * murder, rape and aggravated assault victims plus robbery offenses). Not additive across categories. A rate
+     * over it is allowed (as the FBI publishes); a share needs the same composite as its denominator (S12).
+     */
+    | { kind: "composite"; components: string[] };
   predicate: SemanticPredicate | null;
   /**
    * Where the measure may be added. Agencies and months: yes for counts. Categories: no when a unit can belong to two
@@ -114,7 +124,12 @@ export function pathCardinality(path: SemanticLink[]): "one" | "many" {
 export function checkLayer(layer: SemanticLayer): string[] {
   const out: string[] = [];
   const walk = (p: SemanticPredicate, at: EntityId, where: string) => {
-    if (p.kind === "dimension") {
+    if (p.kind === "numeric") {
+      const d = layer.dimension(p.dimension);
+      if (!d) out.push(`${where}: unknown dimension ${p.dimension}`);
+      else if (d.entity !== at) out.push(`${where}: ${p.dimension} belongs to ${d.entity}, evaluated on ${at}`);
+      else if (!d.numeric) out.push(`${where}: ${p.dimension} is not numeric`);
+    } else if (p.kind === "dimension") {
       const d = layer.dimension(p.dimension);
       if (!d) out.push(`${where}: unknown dimension ${p.dimension}`);
       else if (d.entity !== at) out.push(`${where}: ${p.dimension} belongs to ${d.entity}, evaluated on ${at}`);
@@ -129,6 +144,14 @@ export function checkLayer(layer: SemanticLayer): string[] {
   for (const m of layer.measures()) {
     if (!layer.entity(m.entity)) out.push(`${m.id}: unknown entity ${m.entity}`);
     if (m.predicate) walk(m.predicate, m.entity, m.id);
+    if (m.aggregation.kind === "composite") {
+      if (m.unit !== "fbi_standard") out.push(`${m.id}: a composite counts unit fbi_standard`);
+      for (const c of m.aggregation.components) {
+        const cm = layer.measures().find((x) => x.id === c);
+        if (!cm) out.push(`${m.id}: unknown component ${c}`);
+        else if (cm.aggregation.kind === "composite") out.push(`${m.id}: component ${c} is itself a composite`);
+      }
+    }
   }
   return out;
 }

@@ -92,6 +92,7 @@ export const CountingUnit = z.enum([
   "property_segment",
   "dollars",          // a sum of property values
   "vehicles",         // stolen or recovered motor vehicle quantities
+  "fbi_standard",     // a composite (violent crime): each component in the FBI's standard unit, summed and labelled
 ]);
 
 /** A condition on one dimension. Which entity it applies to is the dimension's entity (semantic layer). */

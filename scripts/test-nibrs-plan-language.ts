@@ -21,8 +21,11 @@ const m = (id: string, entity: string, unit: SemanticMeasure["unit"], timeBases:
   ({ id, entity, unit, label: id, aggregation: unit === "dollars" ? { kind: "sum", column: "value" } : { kind: "count_distinct" }, predicate: null, additive: ALL_ADD, timeBases, validYears: NIBRS });
 // victims.murder carries its executable definition: a victim with a connected offense 09A, through the link.
 const MURDER_VICTIMS: SemanticMeasure = { ...m("victims.murder", "victim", "victim"), predicate: { kind: "exists", link: "victim_offenses", where: [{ kind: "dimension", dimension: "victim_offense.offense_code", op: "in", values: ["09A"] }] } };
+// A composite (violent crime) and a derived numeric condition (flash mob: six or more offender segments).
+const VIOLENT: SemanticMeasure = { ...m("violent_crime.fbi_standard", "incident", "fbi_standard"), aggregation: { kind: "composite", components: ["victims.murder", "offenses.robbery", "victims.aggravated_assault"] } };
+const FLASH_MOB: SemanticMeasure = { ...m("incidents.flash_mob_shoplifting", "incident", "incident"), predicate: { kind: "numeric", dimension: "incident.offender_segment_count", op: ">=", values: [6] } };
 const MEASURES = [
-  MURDER_VICTIMS, m("victims.robbery", "victim", "victim"), m("victims.aggravated_assault", "victim", "victim"),
+  MURDER_VICTIMS, VIOLENT, FLASH_MOB, m("victims.robbery", "victim", "victim"), m("victims.aggravated_assault", "victim", "victim"),
   m("offenses.murder", "offense", "offense"), m("offenses.murder_cleared", "offense", "offense"), m("offenses.robbery", "offense", "offense"),
   m("offenses.rape", "offense", "offense"), m("offenses.rape_cleared", "offense", "offense"), m("offenses.justifiable_homicide", "offense", "offense"),
   m("offenses.theft_from_motor_vehicle", "offense", "offense"), m("offenses.motor_vehicle_theft", "offense", "offense"),
@@ -43,6 +46,7 @@ const DIMENSIONS = [
   d("victim_offense.offense_code", "victim_offense", { values: { "09A": "murder", "13A": "aggravated assault", "26H": "money laundering" }, valueYears: { "26H": [2015, 2026] } }),
   d("victim_offender.relationship", "victim_offender"), d("victim_offender.offender_age", "victim_offender", { numeric: AGE }),
   d("victim.ethnicity_2013", "victim", { validYears: [2013, 2026] }),
+  d("incident.offender_segment_count", "incident", { numeric: { min: 0, max: 99, special: {} } }),
   d("offense.location_type", "offense", { values: { "05": "commercial office", 58: "cyberspace" }, valueYears: { 58: [2020, 2026] } }),
 ];
 const L = (id: string, from: string, to: string, cardinality: "one" | "many"): SemanticLink => ({ id, from, to, cardinality, on: [["incident_num", "incident_num"]] });
@@ -80,6 +84,9 @@ const parse = (p: unknown) => rules(parsePlan(p).problems);
 assert.deepEqual(checkLayer(layer), [], "every measure predicate resolves through link()");
 const broken: SemanticLayer = { ...layer, measures: () => [{ ...MURDER_VICTIMS, predicate: { kind: "exists", link: "offense_weapons", where: [{ kind: "dimension", dimension: "victim.sex", op: "in", values: ["F"] }] } }] };
 assert.equal(checkLayer(broken).length, 1, "a link that starts elsewhere is caught");
+assert.equal(checkLayer({ ...layer, measures: () => [{ ...VIOLENT, aggregation: { kind: "composite", components: ["victims.nope"] } }] }).length, 1, "a composite's components must exist");
+assert.equal(checkLayer({ ...layer, measures: () => [{ ...FLASH_MOB, predicate: { kind: "numeric", dimension: "victim.race", op: ">=", values: [6] } }] }).length, 1, "a numeric condition needs a dimension of its entity");
+assert.equal(checkLayer({ ...layer, measures: () => [{ ...FLASH_MOB, predicate: { kind: "numeric", dimension: "incident.offender_segment_count", op: ">=", values: [6] } }, { ...m("incidents.x", "victim", "victim"), predicate: { kind: "numeric", dimension: "victim.sex", op: ">=", values: [1] } }] }).length, 1, "and a numeric one");
 
 /* ---------------------------------------------------------------- every example is valid ------------------------- */
 for (const [name, plan] of Object.entries(X.EXAMPLES)) {
