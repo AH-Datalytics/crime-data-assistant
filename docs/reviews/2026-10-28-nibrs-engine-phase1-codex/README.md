@@ -16,3 +16,6 @@ Branch `nibrs-engine/phase1`.
 | 09 | Semantic v1 definitions and lessons 6-8, r1 | fde64d6 | REVISE (7) | c98de70 (r2) |
 | 10 | Semantic v1 definitions, r2 | c98de70 | ACCEPT WITH CHANGES (6) | e0c91ef (r3) |
 | 11 | Semantic v1 definitions, r3 | e0c91ef | **ACCEPT WITH CHANGES** (1: T11 expected category) | applied in the commit that records this table; no further review required by Codex |
+| 12 | Result-column rule (owner 2026-10-28), r1 | 7772e93 | REVISE (3) | 9eb003d (r2) |
+| 13 | Result-column rule, r2 | 9eb003d | REVISE (1: comparison outputs) | efb313a (r3) |
+| 14 | Result-column rule, r3 | efb313a | **ACCEPT** | |
