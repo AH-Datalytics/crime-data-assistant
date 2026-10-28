@@ -1,0 +1,61 @@
+{
+ "_comment": "Hand-traced from synthetic/status-fixture.json (CASES.md S1-S5). scripts/nibrs-correctness-reference.py recomputes it and fails on any difference. null means no number is shown; 'status' says why.",
+ "S1_murder_victims_by_agency_month": [
+  {"ori": "ZZ0000A00", "month": "2025-01", "value": 2, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000A00", "month": "2025-02", "value": 0, "status": "REPORTED_ZERO"},
+  {"ori": "ZZ0000A00", "month": "2025-03", "value": 0, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000B00", "month": "2025-01", "value": 1, "status": "REPORTED_CRIMES"},
+  {"ori": "ZZ0000B00", "month": "2025-02", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000B00", "month": "2025-03", "value": null, "status": "UNKNOWN"},
+  {"ori": "ZZ0000C00", "month": "2025-01", "value": 1, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000C00", "month": "2025-02", "value": 0, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000C00", "month": "2025-03", "value": 0, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000E00", "month": "2025-01", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000E00", "month": "2025-02", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000E00", "month": "2025-03", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000F00", "month": "2025-01", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000F00", "month": "2025-02", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000F00", "month": "2025-03", "value": 3, "status": "REPORTED_CRIMES_COMPLETE"}
+ ],
+ "S1_female_murder_victims_by_agency_month": [
+  {"ori": "ZZ0000A00", "month": "2025-01", "value": 1, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000A00", "month": "2025-02", "value": 0, "status": "REPORTED_ZERO"},
+  {"ori": "ZZ0000A00", "month": "2025-03", "value": 0, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000B00", "month": "2025-01", "value": null, "status": "UNKNOWN_UNEVIDENCED_ZERO"},
+  {"ori": "ZZ0000B00", "month": "2025-02", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000B00", "month": "2025-03", "value": null, "status": "UNKNOWN"},
+  {"ori": "ZZ0000C00", "month": "2025-01", "value": 0, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000C00", "month": "2025-02", "value": 0, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000C00", "month": "2025-03", "value": 0, "status": "REPORTED_CRIMES_COMPLETE"},
+  {"ori": "ZZ0000E00", "month": "2025-01", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000E00", "month": "2025-02", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000E00", "month": "2025-03", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000F00", "month": "2025-01", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000F00", "month": "2025-02", "value": null, "status": "NOT_REPORTED"},
+  {"ori": "ZZ0000F00", "month": "2025-03", "value": 1, "status": "REPORTED_CRIMES_COMPLETE"}
+ ],
+ "S2_state_reported_totals_by_month": [
+  {"month": "2025-01", "reported_murder_victims": 4, "agencies_contributing": ["ZZ0000A00", "ZZ0000B00", "ZZ0000C00"], "not_reported": ["ZZ0000E00", "ZZ0000F00"], "unknown": []},
+  {"month": "2025-02", "reported_murder_victims": 0, "agencies_contributing": ["ZZ0000A00", "ZZ0000C00"], "not_reported": ["ZZ0000B00", "ZZ0000E00", "ZZ0000F00"], "unknown": []},
+  {"month": "2025-03", "reported_murder_victims": 3, "agencies_contributing": ["ZZ0000A00", "ZZ0000C00", "ZZ0000F00"], "not_reported": ["ZZ0000E00"], "unknown": ["ZZ0000B00"]}
+ ],
+ "S3_change_january_to_march": {
+  "all_reporting": {"earlier": 4, "later": 3, "change": -1},
+  "same_agencies": {"cohort": ["ZZ0000A00", "ZZ0000C00"], "earlier": 3, "later": 0, "change": -3}
+ },
+ "S4_rates_january_to_march_per_100k_not_annualized": {
+  "by_agency": [
+   {"ori": "ZZ0000A00", "eligible": true, "murder_victims": 2, "population": 100000, "rate": 2.0},
+   {"ori": "ZZ0000B00", "eligible": false, "murder_victims": null, "population": 50000, "rate": null, "reason": "months not evidenced complete: 2025-01 REPORTED_CRIMES, 2025-02 NOT_REPORTED, 2025-03 UNKNOWN"},
+   {"ori": "ZZ0000C00", "eligible": true, "murder_victims": 1, "population": null, "rate": null, "reason": "no counted population: its population is counted under its primary agency ZZ0000E00"},
+   {"ori": "ZZ0000E00", "eligible": false, "murder_victims": null, "population": 80000, "rate": null, "reason": "months not evidenced complete: 2025-01 NOT_REPORTED, 2025-02 NOT_REPORTED, 2025-03 NOT_REPORTED"},
+   {"ori": "ZZ0000F00", "eligible": false, "murder_victims": null, "population": 30000, "rate": null, "reason": "months not evidenced complete: 2025-01 NOT_REPORTED, 2025-02 NOT_REPORTED"}
+  ],
+  "state": {"cohort": ["ZZ0000A00", "ZZ0000C00"], "cohort_murder_victims": 3, "covered_population": null, "rate": null,
+            "reason": "covered population cannot be established: ZZ0000C00 is in the cohort but its primary agency ZZ0000E00 is not (D8)"}
+ },
+ "S5_female_murder_victims_per_100k_all_residents": {
+  "ori": "ZZ0000A00", "female_murder_victims": 1, "population": 100000, "rate": 1.0,
+  "label": "female murder victims per 100,000 residents (all residents, not per 100,000 women)"
+ }
+}

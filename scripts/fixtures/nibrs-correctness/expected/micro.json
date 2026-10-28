@@ -85,11 +85,13 @@
   },
   {
    "id": "M5", "ori": "TNMPD0000", "data_year": 2024, "incident_num": "0U0S3UG6NNFF", "incident_date": "2024-01-02",
-   "exercises": ["one firearm recorded as stolen and as recovered"],
+   "exercises": ["a stolen-firearm segment and a recovered-firearm segment in one incident", "existence versus join multiplicity"],
    "counts": {"offense_segments": 1, "victim_segments": 1, "victim_offense_pairs": 1, "offender_segments": 1, "known_offenders": 1, "arrestee_segments": 0, "property_segments": 2},
    "measures": {
     "theft_from_motor_vehicle_offenses_23F": 1,
     "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 1,
+    "theft_from_motor_vehicle_offenses_in_incidents_with_any_firearm_segment": 1,
+    "rows_if_23F_joined_to_firearm_segments": 2,
     "firearm_property_segments": 2,
     "stolen_firearm_segments": 1,
     "stolen_firearm_value": 550,

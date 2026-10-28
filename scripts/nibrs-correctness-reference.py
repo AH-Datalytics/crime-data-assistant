@@ -64,6 +64,16 @@ def pct(num, den):
     return {"num": num, "den": den, "pct_1dp": (tenths.numerator // tenths.denominator) / 10}
 
 
+def cell(num, den):
+    """One cell of a share table. A combination with no rows is a filtered zero, and D6 allows 0 only with
+    submission evidence for the month: until then it is UNKNOWN, with the value it takes once the month is
+    evidenced complete. The observed denominator is kept."""
+    if num:
+        return pct(num, den)
+    return {"num": None, "den": den, "pct_1dp": None, "status": "UNKNOWN_UNEVIDENCED_ZERO",
+            "if_month_evidenced_complete": {"num": 0, "pct_1dp": 0.0}}
+
+
 def agency_month_status(ori):
     """Evidence available in phase 1: crime rows only. A month with rows is REPORTED_CRIMES
     (which does not prove the month's submission is complete). A month without rows is
@@ -96,7 +106,7 @@ def n1_houston_murder_victims_race_sex():
             # A filtered zero needs submission evidence for the month (D6); none exists yet.
             out.append({"month": m, "status": "REPORTED_CRIMES_NO_MURDER_ROWS", "murder_victims": None, "cells": None})
             continue
-        cells = [{"race": r, "sex": s, **pct(by_month[m][(r, s)], den)} for (r, s) in combos]
+        cells = [{"race": r, "sex": s, **cell(by_month[m][(r, s)], den)} for (r, s) in combos]
         out.append({"month": m, "status": st, "murder_victims": den, "cells": cells})
     return {
         "case": "N1",
@@ -109,6 +119,7 @@ def n1_houston_murder_victims_race_sex():
             "denominator": "all murder victims of the same agency in the same month (partition: month)",
             "period": f"2018-01 through {DATASET_LAST_MONTH} (dataset end)",
             "unknown_handling": "race U and sex U are their own visible categories",
+            "absent_combinations": "a race-sex combination with no victims in a month is UNKNOWN_UNEVIDENCED_ZERO (D6), not 0; it becomes 0 when the month is evidenced complete",
         },
         "must_state": [
             "Houston's NIBRS data begins in June 2018: January-May 2018 have no Houston NIBRS records.",
@@ -234,7 +245,7 @@ def n4_memphis_carjacking():
         "definition": "Carjacking (NIBRSAI's derived measure, unchanged): incidents with a 120 (robbery) offense and a property segment with loss type 7 (stolen) and a motor-vehicle description (03, 05, 24, 28, 37). NIBRS has no carjacking offense code.",
         "counting_unit": "incident",
         "H1": {"question": "carjacking per month in Memphis",
-               "interpretation": "the latest complete year, 2025, by month (today's default; a change to it must be declared)",
+               "interpretation": "calendar year 2025 by month: today's legacy default year for a monthly series with no period (the year is not evidenced complete; a change to the default must be declared)",
                "rows": [{"month": m, "carjackings": n[m]} for m in months("2025-01", "2025-12")]},
         "H2": {"question": "carjackings in Memphis in 2025", "rows": [{"year": 2025, "carjackings": year(2025)}]},
         "H3": {"question": "carjackings per year in Memphis from 2020 to 2025",
@@ -284,9 +295,9 @@ def d_denominator_scopes():
             "within_period": "share of all 2021 Houston murder victims who were May 2021 victims of each sex (denominator: whole 2021 total; what pct_of_total over a 2021 monthly result computes)",
             "within_group": "share of May 2021 Houston murder victims of each race who were of each sex (denominator: that race's May 2021 victims)",
         },
-        "within_month": [{"sex": s, **pct(sum(v["sex"] == s for v in may), len(may))} for s in sexes],
-        "within_period": [{"sex": s, **pct(sum(v["sex"] == s for v in may), len(victims))} for s in sexes],
-        "within_group": [{"race": r, "sex": s, **pct(sum(v["race"] == r and v["sex"] == s for v in may), by_month_race[r])}
+        "within_month": [{"sex": s, **cell(sum(v["sex"] == s for v in may), len(may))} for s in sexes],
+        "within_period": [{"sex": s, **cell(sum(v["sex"] == s for v in may), len(victims))} for s in sexes],
+        "within_group": [{"race": r, "sex": s, **cell(sum(v["race"] == r and v["sex"] == s for v in may), by_month_race[r])}
                          for r in sorted(by_month_race) for s in sexes],
         "must_not": ["recompute shares over only the displayed cells", "substitute one scope for another"],
     }
@@ -296,20 +307,29 @@ def d_denominator_scopes():
 def r_houston_murder_rate():
     victims = Counter(v["incident_date"][:4] for v in rows("houston_09a_victims_2018_2026.csv"))
     status = agency_month_status("TXHPD0000")
-    pop = {"2018": 2296862, "2019": 2307560}  # nibrs.db agencies.population for TXHPD0000, read 2026-10-28
+    agency = {r["year"]: r for r in rows("agency_years_2017_2026.csv") if r["ori"] == "TXHPD0000"}
     out = []
     for y in ("2018", "2019"):
         reported = [m for m in months(f"{y}-01", f"{y}-12") if status(m)[0] == "REPORTED_CRIMES"]
-        row = {"year": int(y), "murder_victims": victims[y], "months_with_data": len(reported), "population": pop[y],
-               "population_source": "FBI agency population (nibrs.db agencies.population) for the data year"}
+        pop = int(agency[y]["population"])
+        row = {"year": int(y), "murder_victims": victims[y], "months_with_data": len(reported), "population": pop,
+               "population_source": f"FBI agency population for TXHPD0000, data year {y} (extracts/agency_years_2017_2026.csv: "
+                                    f"population group {agency[y]['pop_group']}, covered_flag {agency[y]['covered_flag']})",
+               "rate_per_100k": None}
         if len(reported) == 12:
-            row["rate_per_100k"] = round(victims[y] * 100000 / pop[y], 2)
+            # Crime rows in all 12 months do not prove the submission complete (D6), so the annual rate waits for
+            # completeness evidence. The arithmetic it will then show is fixed here.
+            row["rate_unavailable_reason"] = "the agency's year is not evidenced complete (12 months have crime rows; BH evidence is not decoded)"
+            row["rate_per_100k_if_year_evidenced_complete"] = round(victims[y] * 100000 / pop, 2)
         else:
-            row["rate_per_100k"] = None
-            row["rate_unavailable_reason"] = f"only {len(reported)} of 12 months have Houston NIBRS data; an annual rate needs the agency's whole year (numerator and denominator use the same agency-period eligibility, D6)"
+            row["rate_unavailable_reason"] = f"{12 - len(reported)} of 12 months have no Houston NIBRS data (UNKNOWN), so the year cannot be evidenced complete; numerator and denominator use the same agency-period eligibility (D6)"
+            row["rate_per_100k_if_year_evidenced_complete"] = None
         out.append(row)
     return {"case": "R", "question": "Murder victim rate per 100,000 residents in Houston, 2018 and 2019.",
-            "counting_unit": "victim", "rows": out}
+            "counting_unit": "victim",
+            "jurisdiction": "Houston Police Department is the primary agency for the city of Houston; under D8 its covered population is the denominator. The canonical agency_jurisdiction table must confirm population_counted for TXHPD0000.",
+            "scope_note": "This case tests annual rates only. A rate over an explicitly labelled partial period (year to date) is a separate rule with its own case, not covered here.",
+            "rows": out}
 
 
 CASES = {
@@ -323,8 +343,101 @@ CASES = {
 }
 
 
+COMPLETE = ("REPORTED_CRIMES_COMPLETE", "REPORTED_ZERO")
+
+
+def synthetic_status():
+    """S1-S5 from synthetic/status-fixture.json, computed independently of the hand-written expected file."""
+    with open(os.path.join(ROOT, "synthetic", "status-fixture.json"), encoding="utf-8") as f:
+        fx = json.load(f)
+    agencies = {a["ori"]: a for a in fx["agencies"]}
+    am = {(r["ori"], r["month"]): r for r in fx["agency_months"]}
+    first, last = fx["months"][0], fx["months"][-1]
+    every = lambda v: True
+
+    def value(ori, month, keep):
+        r = am[(ori, month)]
+        if r["status"] in ("NOT_REPORTED", "UNKNOWN"):
+            return None, r["status"]
+        n = sum(1 for v in r["murder_victims"] if keep(v))
+        if n == 0 and r["status"] not in COMPLETE:
+            return None, "UNKNOWN_UNEVIDENCED_ZERO"
+        return n, r["status"]
+
+    def series(keep):
+        out = []
+        for o in agencies:
+            for m in fx["months"]:
+                n, st = value(o, m, keep)
+                out.append({"ori": o, "month": m, "value": n, "status": st})
+        return out
+
+    totals = []
+    for m in fx["months"]:
+        known = [o for o in agencies if value(o, m, every)[0] is not None]
+        totals.append({"month": m, "reported_murder_victims": sum(value(o, m, every)[0] for o in known),
+                       "agencies_contributing": known,
+                       "not_reported": [o for o in agencies if am[(o, m)]["status"] == "NOT_REPORTED"],
+                       "unknown": [o for o in agencies if am[(o, m)]["status"] == "UNKNOWN"]})
+    by_m = {t["month"]: t for t in totals}
+    cohort = [o for o in agencies if value(o, first, every)[0] is not None and value(o, last, every)[0] is not None]
+    same = lambda m: sum(value(o, m, every)[0] for o in cohort)
+
+    rates, eligible = [], []
+    for o, a in agencies.items():
+        missing = [f"{m} {am[(o, m)]['status']}" for m in fx["months"] if am[(o, m)]["status"] not in COMPLETE]
+        row = {"ori": o, "eligible": not missing}
+        if missing:
+            row.update({"murder_victims": None, "population": a["population"], "rate": None,
+                        "reason": "months not evidenced complete: " + ", ".join(missing)})
+        else:
+            eligible.append(o)
+            n = sum(len(am[(o, m)]["murder_victims"]) for m in fx["months"])
+            if a["population_counted"]:
+                row.update({"murder_victims": n, "population": a["population"], "rate": round(n * 100000 / a["population"], 2)})
+            else:
+                row.update({"murder_victims": n, "population": None, "rate": None,
+                            "reason": f"no counted population: its population is counted under its primary agency {a['primary_ori']}"})
+        rates.append(row)
+    orphans = [o for o in eligible if not agencies[o]["population_counted"] and agencies[o]["primary_ori"] not in eligible]
+    state = {"cohort": eligible, "cohort_murder_victims": sum(r["murder_victims"] for r in rates if r["eligible"])}
+    if orphans:
+        o = orphans[0]
+        state.update({"covered_population": None, "rate": None,
+                      "reason": f"covered population cannot be established: {o} is in the cohort but its primary agency {agencies[o]['primary_ori']} is not (D8)"})
+    else:
+        pop = sum(agencies[o]["population"] for o in eligible if agencies[o]["population_counted"])
+        state.update({"covered_population": pop, "rate": round(state["cohort_murder_victims"] * 100000 / pop, 2)})
+
+    a = agencies["ZZ0000A00"]
+    female = sum(1 for m in fx["months"] for v in am[("ZZ0000A00", m)]["murder_victims"] if v["sex"] == "F")
+    earlier, later = by_m[first]["reported_murder_victims"], by_m[last]["reported_murder_victims"]
+    return {
+        "S1_murder_victims_by_agency_month": series(every),
+        "S1_female_murder_victims_by_agency_month": series(lambda v: v["sex"] == "F"),
+        "S2_state_reported_totals_by_month": totals,
+        "S3_change_january_to_march": {
+            "all_reporting": {"earlier": earlier, "later": later, "change": later - earlier},
+            "same_agencies": {"cohort": cohort, "earlier": same(first), "later": same(last), "change": same(last) - same(first)}},
+        "S4_rates_january_to_march_per_100k_not_annualized": {"by_agency": rates, "state": state},
+        "S5_female_murder_victims_per_100k_all_residents": {
+            "ori": "ZZ0000A00", "female_murder_victims": female, "population": a["population"],
+            "rate": round(female * 100000 / a["population"], 2),
+            "label": "female murder victims per 100,000 residents (all residents, not per 100,000 women)"},
+    }
+
+
+def check_synthetic():
+    with open(os.path.join(EXPECTED, "S-synthetic-status.json"), encoding="utf-8") as f:
+        hand = json.load(f)
+    hand.pop("_comment", None)
+    got = synthetic_status()
+    return [f"S: {k} hand-traced value differs from the reference computation" for k in hand if hand[k] != got.get(k)]
+
+
 def check_micro():
-    """Cross-check the hand-traced micro expectations against the micro extract."""
+    """Cross-check the hand-traced micro expectations against the micro extract: every segment count, and each
+    measure below wherever a case states it."""
     with open(os.path.join(EXPECTED, "micro.json"), encoding="utf-8") as f:
         micro = json.load(f)
     seg = {t: rows(f"micro/{t}.csv") for t in ("incidents", "offenses", "victims", "offenders", "property", "arrestees")}
@@ -333,25 +446,115 @@ def check_micro():
         key = lambda r: r["ori"] == case["ori"] and r["year"] == str(case["data_year"]) and r["incident_num"] == case["incident_num"]
         s = {t: [r for r in v if key(r)] for t, v in seg.items()}
         conn = lambda v: [c for c in (v["connected_offense_1"], v["connected_offense_2"], v["connected_offense_3"]) if c]
+        value = lambda loss: sum(int(p["value"] or 0) for p in s["property"] if p["type_property_loss"] == loss)
+        under18 = lambda rs: sum(r["age"].isdigit() and 0 < int(r["age"]) < 18 for r in rs)
+        codes = [o["ucr_offense_code"] for o in s["offenses"]]
+        firearm = [p for p in s["property"] if p["property_description"] == "13"]
+        known = [o for o in s["offenders"] if o["offender_sequence"] != "00"]
         got = {
             "offense_segments": len(s["offenses"]),
             "victim_segments": len(s["victims"]),
             "victim_offense_pairs": sum(len(conn(v)) for v in s["victims"]),
             "offender_segments": len(s["offenders"]),
-            "known_offenders": sum(o["offender_sequence"] != "00" for o in s["offenders"]),
+            "known_offenders": len(known),
             "arrestee_segments": len(s["arrestees"]),
             "property_segments": len(s["property"]),
+        }
+        measures = {
+            "incidents": 1,
+            "offenses": len(s["offenses"]),
+            "murder_victims": sum("09A" in conn(v) for v in s["victims"]),
+            "aggravated_assault_victims": sum("13A" in conn(v) for v in s["victims"]),
+            "victims_distinct": len(s["victims"]),
+            "victim_offense_pairs": got["victim_offense_pairs"],
+            "offenders": len(known),
+            "offenders_with_information": len(known),
+            "arrestees": len(s["arrestees"]),
+            "stolen_property_value": value("7"),
+            "recovered_property_value": value("5"),
+            "firearm_property_segments": len(firearm),
+            "stolen_firearm_segments": sum(p["type_property_loss"] == "7" for p in firearm),
+            "theft_from_motor_vehicle_offenses_23F": codes.count("23F"),
+            "motor_vehicle_theft_offenses_240": codes.count("240"),
+            "robbery_offenses_120": codes.count("120"),
+            "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm":
+                codes.count("23F") * any(p["type_property_loss"] == "7" for p in firearm),
+            "theft_from_motor_vehicle_offenses_in_incidents_with_any_firearm_segment": codes.count("23F") * bool(firearm),
+            "rows_if_23F_joined_to_firearm_segments": codes.count("23F") * len(firearm),
+            "juvenile_offenders_under_18": under18(known),
+            "juvenile_arrestees_under_18": under18(s["arrestees"]),
+            "offenders_by_age": dict(sorted(Counter(o["age"] for o in known).items())),
         }
         for k, v in got.items():
             if case["counts"].get(k) != v:
                 bad.append(f"{case['id']}: {k} hand={case['counts'].get(k)} extract={v}")
+        for k, v in measures.items():
+            hand = case["measures"].get(k)
+            if hand is None:
+                continue
+            if k == "offenders_by_age":
+                hand = {a.split(" ")[0]: n for a, n in hand.items()}
+            if hand != v:
+                bad.append(f"{case['id']}: measure {k} hand={hand} extract={v}")
+    return bad
+
+
+# ----------------------------------------------------------------- comparing a candidate engine
+# The answer-bearing parts of each expected file. Wording (must_state, labels, reasons) is reviewed by a person against
+# the expected file; the numbers, nulls and statuses must match exactly.
+ANSWER_KEYS = {
+    "N1": ["rows"], "N2": ["rows"], "N3": ["rows"], "N4": ["H1", "H2", "H3"], "Z": ["rows"],
+    "D": ["within_month", "within_period", "within_group"], "R": ["rows"],
+}
+WORDING = {"population_source", "rate_unavailable_reason", "reason", "label", "question", "interpretation"}
+
+
+def strip(x):
+    if isinstance(x, dict):
+        return {k: strip(v) for k, v in x.items() if k not in WORDING}
+    if isinstance(x, list):
+        return [strip(v) for v in x]
+    return x
+
+
+def compare(candidate_dir):
+    """Compare a candidate engine's answers, written in the expected files' shapes, with the expected answers."""
+    bad = []
+    for name in list(CASES) + ["micro.json", "S-synthetic-status.json"]:
+        path = os.path.join(candidate_dir, name)
+        if not os.path.exists(path):
+            bad.append(f"{name}: no candidate answer")
+            continue
+        with open(path, encoding="utf-8") as f:
+            got = json.load(f)
+        with open(os.path.join(EXPECTED, name), encoding="utf-8") as f:
+            want = json.load(f)
+        if name == "micro.json":
+            gm = {c["id"]: c.get("measures", {}) for c in got.get("cases", [])}
+            for c in want["cases"]:
+                for k, v in c["measures"].items():
+                    if isinstance(v, str) and (v == "PENDING_MASTER_FILE" or v.startswith("NOT DETERMINABLE")):
+                        continue
+                    if gm.get(c["id"], {}).get(k) != v:
+                        bad.append(f"micro {c['id']}.{k}: expected {v!r}, got {gm.get(c['id'], {}).get(k)!r}")
+            continue
+        keys = [k for k in want if k != "_comment"] if name.startswith("S-") else ANSWER_KEYS[want["case"]]
+        for k in keys:
+            if strip(got.get(k)) != strip(want[k]):
+                bad.append(f"{name}: {k} differs")
     return bad
 
 
 def main():
+    if "--compare" in sys.argv:
+        failures = compare(sys.argv[sys.argv.index("--compare") + 1])
+        for line in failures:
+            print("DIFF", line)
+        print("MATCH" if not failures else f"{len(failures)} difference(s)")
+        sys.exit(1 if failures else 0)
     check = "--check" in sys.argv
     os.makedirs(EXPECTED, exist_ok=True)
-    failures = check_micro()
+    failures = check_micro() + check_synthetic()
     for name, fn in CASES.items():
         text = json.dumps(fn(), indent=1, ensure_ascii=False) + "\n"
         path = os.path.join(EXPECTED, name)

@@ -13,8 +13,13 @@ individual, B business, L law enforcement officer. Relationship ST stranger, RU 
 | multiple offenders | M4 (6 offenders, 4 arrestees), M7 (offender segment 00: nothing known) |
 | multiple property segments | M3, M5, M6, M7, N2, N3 |
 | overlapping categories | M1 (09A + 13A, different victims), M3 (one victim in 09A, 200 and 240), M7 (23F + 240 share a stolen firearm) |
-| missing vs zero vs unknown months | Z, N1 (January-May 2018, August-October 2026), N3 |
-| denominator scopes | D, N1, R |
+| missing vs zero vs unknown months | Z, N1 (January-May 2018, August-October 2026, absent cells), S1-S2 (evidenced REPORTED_ZERO, NOT_REPORTED, UNKNOWN, a genuine filtered zero) |
+| denominator scopes | D, N1, R, S4-S5 |
+| national / state aggregation of reported counts | S2, G1 |
+| participation change vs crime change | S3 (same-agencies cohort) |
+| rate eligibility and the D8 unavailable-rate fallback | R, S4, S5 |
+| existence filter vs join multiplicity | M5, M3 |
+| reading: geography, clarification, limitations | G1-G6 (`expected/reader-cases.json`) |
 | the named cases | N1 = (a), N2 = (b), N3 = (c), N4 = (d) H1-H3 |
 
 ## Micro cases (traced by hand)
@@ -55,11 +60,16 @@ Each is one real incident with all its segments in `extracts/micro/`. Expectatio
 - Arrestees 01-04, all arrested for 09A, type O, ages 20, 18, 19, 16; the 16-year-old has disposition H.
 - So: 6 offenders (1 under 18), 4 arrestees (1 under 18), 1 victim. "Offenders by age" counts offenders, not incidents.
 
-### M5. Memphis 2024 `0U0S3UG6NNFF`, 2024-01-02: one firearm, stolen and recovered
+### M5. Memphis 2024 `0U0S3UG6NNFF`, 2024-01-02: a stolen-firearm segment and a recovered-firearm segment
 - One 23F offense, completed. One individual victim connected to 23F. One offender, 17, male, Black.
 - Property: loss 7 description 13 value 550; loss 5 description 13 value 550, recovered the same day.
-- So: it counts in N2 (a stolen-firearm segment exists). 2 firearm segments, 1 stolen.
-  "Firearms stolen" is 1, not 2.
+- So: it counts in N2 (a stolen-firearm segment exists). 2 firearm property segments, 1 with loss 7.
+  The segments carry a value, not a quantity of firearms, so no count of physical firearms follows.
+- Multiplicity: "thefts from motor vehicles in incidents with any firearm property" is 1 by existence; joining the
+  23F offense to its firearm segments gives 2 rows. A join filtered to loss 7 and description 13 gives 1 here, and
+  across N2 (1,503 matching segments in 1,503 incidents) it never multiplies, because a NIBRS incident has at most one
+  property segment per loss type and description. The existence rule is still the contract; M5's any-firearm
+  reading and M3's victim connected to three offenses are the cases where a join would be wrong.
 
 ### M6. Memphis 2024 `0U0S3UJ2H0FF`, 2024-01-12: carjacking with a stolen firearm
 - One 120 offense, weapon 11. One victim, man 49, RU to offender 01 (woman 25).
@@ -88,8 +98,11 @@ Each is one real incident with all its segments in `extracts/micro/`. Expectatio
 - Each cell is a share of that month's murder victims: numerator, denominator and share to one decimal
   (half up from the exact fraction).
 - Unknown race (U, 12 victims) and unknown sex (U, 6) are categories of their own. 14 race-sex combinations
-  occur over the period. A combination absent in a month is 0 of that month's denominator; an answer may show it
-  as 0 or leave it out, but must not recompute shares over the cells it shows.
+  occur over the period.
+- A combination with no victims in a month is a filtered zero. Under D6 it is 0 only with submission evidence for
+  that month, so until the BH evidence exists it is `UNKNOWN_UNEVIDENCED_ZERO` (number and share null), with the 0
+  it becomes recorded beside it. The month's observed denominator stays. Shares are never recomputed over the cells
+  shown.
 - Months: January-May 2018 have no Houston NIBRS rows: UNKNOWN, and the answer says Houston's NIBRS data begins
   June 2018. June 2018-July 2026 (98 months) have rows. August-October 2026 have none: UNKNOWN.
   Not one reported month has zero murder victims.
@@ -106,8 +119,8 @@ Each is one real incident with all its segments in `extracts/micro/`. Expectatio
 `expected/N2-memphis-23f-with-stolen-firearm-2024.json`
 - Scope of the extract: Memphis (TNMPD0000), 2024. The rule does not depend on the place.
 - Measure: 23F offenses in incidents that have at least one property segment with loss 7 and description 13.
-  This is a scoped existence filter at incident scope, not a join. A join would count a 23F once per firearm
-  segment (M5 has two firearm segments).
+  This is a scoped existence filter at incident scope. On this exact filter a join gives the same count (M5 says
+  why, and shows the readings where it would not).
 - 2024: 8,792 23F offenses. 1,503 are in incidents with a stolen-firearm segment, 156 of which also hold another
   offense (23F with 240, 290, 13C ...), as in M7.
 - The answer must state that NIBRS does not attribute property to one offense, so the firearm is not said to be
@@ -119,7 +132,7 @@ Each is one real incident with all its segments in `extracts/micro/`. Expectatio
 - Measure: 240 offenses of MDBPD0000, completed and attempted, by incident month. 54 months over five calendar
   years, all with Baltimore rows; 26,702 offenses.
 - **Duplicates in the source rows.** Five 2023 incidents are stored twice in nibrs.db, every segment identical
-  (incident, offense, victim, property): `C60 RWQQ628N` (March), `C60VRWRLQ28N` (May), `C60GRBS9V28N` (June),
+  (incident, offense, victim and property rows: `extracts/baltimore_2023_duplicates/`): `C60 RWQQ628N` (March), `C60VRWRLQ28N` (May), `C60GRBS9V28N` (June),
   `C60DRA5MP28N` (July), `C60ARFECV28N` (August). Each counts once.
   - Today's live `summary_city_monthly` counts them twice: it is 1 higher in each of those five months and equal
     in the other 49. That is the only difference.
@@ -136,7 +149,8 @@ Each is one real incident with all its segments in `extracts/micro/`. Expectatio
 `expected/N4-frozen-release-H1-H3-memphis-carjacking.json`
 - Definition unchanged: incidents with a 120 offense and a stolen (loss 7) motor-vehicle segment
   (03, 05, 24, 28, 37), counted once per incident.
-- H1 "carjacking per month in Memphis": today's default reads the latest complete year, 2025:
+- H1 "carjacking per month in Memphis": today's legacy default for a monthly series with no period is calendar
+  year 2025 (not evidenced complete; the default is a reading rule):
   26, 16, 22, 25, 14, 13, 20, 20, 17, 5, 4, 8.
 - H2 "carjackings in Memphis in 2025": 190.
 - H3 "carjackings per year in Memphis from 2020 to 2025": 411, 535, 601, 528, 359, 190.
@@ -161,24 +175,71 @@ Each is one real incident with all its segments in `extracts/micro/`. Expectatio
 - Within the period: what a whole-result percentage computes on a 2021 monthly table: women 7/473 = 1.5%,
   men 44/473 = 9.3%.
 - Within each race: Black women 4/35 = 11.4%, White women 3/15 = 20.0%, the one Pacific Islander victim 1/1 male.
+  Pacific Islander women, with no victims, are `UNKNOWN_UNEVIDENCED_ZERO`, as in N1.
 - The plan must name the partition. One scope must never be substituted for another.
 
 ### R. Rates and partial years: Houston murder victims per 100,000
 `expected/R-houston-murder-rate-partial-year.json`
-- 2019: 281 victims, 12 months, population 2,307,560 (FBI agency population for 2019): 12.18.
-- 2018: 171 victims in the 7 months June-December. The annual rate is unavailable: the agency's year is
-  incomplete, and numerator and denominator use the same agency-period eligibility (D6). The answer returns the
-  count and the months, and says why the rate is missing. It never divides 7 months of victims by a full year's
-  population.
-- Under D8 the population is the primary agency's covered population. Houston PD is the primary agency for the
-  city of Houston, so the FBI agency population is the right denominator.
+- Population: the FBI agency population for TXHPD0000 by data year, `extracts/agency_years_2017_2026.csv`
+  (2018: 2,296,862; 2019: 2,307,560; population group 1A, covered flag Y).
+- 2019: 281 victims, crime rows in all 12 months. Crime rows do not prove the year's submission complete (D6), so
+  the annual rate is unavailable until completeness evidence exists. When it does, the rate is 12.18
+  (`rate_per_100k_if_year_evidenced_complete`).
+- 2018: 171 victims in the 7 months June-December; January-May are UNKNOWN. The annual rate is unavailable: the
+  year cannot be evidenced complete, and numerator and denominator use the same agency-period eligibility (D6).
+  The answer returns the count and the months, and says why the rate is missing.
+- The policy tested: no annual rate for an incompletely observed year. A rate over an explicitly labelled partial
+  period (S4: January-March, not annualized) is a different, permitted form. Year-to-date rates have no case yet.
+- Under D8 the denominator is the primary agency's covered population. Houston PD is the primary agency for the
+  city; the canonical `agency_jurisdiction` table must confirm it.
+
+## Synthetic status cases (S1-S5)
+
+`synthetic/status-fixture.json`, expected `expected/S-synthetic-status.json` (hand-written; the reference script
+recomputes it and fails on a difference). Five invented agencies in an invented state ZZ, January-March 2025, with
+every status the evidence can establish. They test what an engine does with each status. They cannot test that a
+build decodes the BH indicators into those statuses.
+
+| Agency | Population | Jan | Feb | Mar |
+|---|---|---|---|---|
+| A, city | 100,000 | complete; victims F, M | REPORTED_ZERO | complete; 0 murders, 50 other offenses |
+| B, city | 50,000 | crime rows, not evidenced complete; victim M | NOT_REPORTED | UNKNOWN |
+| C, university | 20,000, not counted (primary E) | complete; victim M | complete; 0 | complete; 0 |
+| E, county | 80,000 | NOT_REPORTED | NOT_REPORTED | NOT_REPORTED |
+| F, city | 30,000 | NOT_REPORTED | NOT_REPORTED | complete; victims M, M, F |
+
+- **S1, murder victims by agency and month.** A: 2, 0 (reported zero), 0 (complete month: a genuine filtered
+  zero). B: 1, null NOT_REPORTED, null UNKNOWN. C: 1, 0, 0. E: three null NOT_REPORTED. F: null, null, 3.
+  Female victims: B January is null `UNKNOWN_UNEVIDENCED_ZERO` (crime rows without completeness evidence, and no
+  female victim); C's zeros are real (complete months).
+- **S2, state ZZ reported totals.** A sum of reported counts over the agencies with a known value, listing the
+  agencies not reported and unknown: January 4 (A, B, C; E and F not reported); February 0 (A, C; B, E, F not
+  reported); March 3 (A, C, F; E not reported; B unknown).
+- **S3, January to March.** All reporting: 4 to 3, change -1. Same agencies (known in both months: A and C):
+  3 to 0, change -3. F's March murders are participation, not a rise.
+- **S4, rates, January-March, per 100,000, not annualized.** A rate needs every month evidenced complete
+  (REPORTED_CRIMES_COMPLETE or REPORTED_ZERO).
+  - A: 2 victims / 100,000 = 2.0.
+  - B, E, F: not eligible; the failing months are named.
+  - C: eligible, but no counted population (its population is counted under its primary, E).
+  - State: the cohort is A and C. C is in it while its primary agency E is not, so the covered population cannot
+    be established and the rate is unavailable (D8). The answer still returns the cohort's 3 victims.
+- **S5, a demographic count over total residents.** A's 1 female murder victim per 100,000 residents is 1.0,
+  labelled per 100,000 residents of all sexes, never as a rate for women.
+
+## Reading cases (G1-G6)
+
+`expected/reader-cases.json`: the US as the nation (never an agency); an ambiguous place (clarify with each
+Springfield and its state); the stolen firearm as property; the cross-year month range without clarification;
+a concept NIBRS does not record (limitation, no count that drops it); a request for causes (limitation, no added
+offer or commentary).
 
 ## Open questions for review
 
 1. N3: should "car theft" ever narrow to automobiles (description 03), or always mean motor vehicle theft with the
    label shown? Recorded as motor vehicle theft.
-2. N1: should combinations absent from a month be shown as 0 or omitted? Both are allowed; recomputing over the
-   shown cells is not.
-3. M2 and M7: offender counts. Should an all-unknown offender segment (age 00, sex U) count as one offender of
-   unknown demographics (M2: yes), while segment 00 counts as no offender information (M7: 0)? This follows the
-   NIBRS rule that offender 00 means nothing is known.
+2. M2 and M7: offender counts. An all-unknown offender segment (age 00, sex U) counts as one offender of unknown
+   demographics (M2); segment 00 means nothing is known and counts as no offender (M7), following the NIBRS
+   offender-00 rule.
+3. N1, D, S1: until the BH evidence is decoded, every filtered zero is UNKNOWN. For Houston that blanks most
+   race-sex cells of most months. D6 requires it; it is listed so the owner sees the effect.

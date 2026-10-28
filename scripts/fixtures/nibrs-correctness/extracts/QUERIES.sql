@@ -54,3 +54,12 @@ select * from <table> where
  or (ori="TXHPD0000" and year=2021 and incident_num in ("6V139B1EZU72","729X9A1EZU72"))
  or (ori="TNMPD0000" and year=2024 and incident_num in ("0U0S3UG6NNFF","0U0S3UJ2H0FF","0U023-G72OFF"))
  order by ori,incident_num;
+
+-- agency_years_2017_2026.csv (added after the first Codex review, 2026-10-28 ~02:10 UTC, same safeguards)
+select ori,year,city,state,population,agency_type,pop_group,covered_flag,agency_indicator from agencies
+ where ori in ("TXHPD0000","MDBPD0000","TNMPD0000") and year between 2017 and 2026 order by ori,year;
+
+-- baltimore_2023_duplicates/*.csv: every row of each table for the five duplicated incidents
+-- (<table> in incidents, offenses, victims, property)
+select * from <table> where ori="MDBPD0000" and year=2023 and incident_num in
+ ("C60 RWQQ628N","C60VRWRLQ28N","C60GRBS9V28N","C60DRA5MP28N","C60ARFECV28N") order by incident_num;

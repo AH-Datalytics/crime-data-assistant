@@ -4,7 +4,7 @@
  "counting_unit": "incident",
  "H1": {
   "question": "carjacking per month in Memphis",
-  "interpretation": "the latest complete year, 2025, by month (today's default; a change to it must be declared)",
+  "interpretation": "calendar year 2025 by month: today's legacy default year for a monthly series with no period (the year is not evidenced complete; a change to the default must be declared)",
   "rows": [
    {
     "month": "2025-01",

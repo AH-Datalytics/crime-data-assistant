@@ -16,12 +16,33 @@ Plan: `docs/superpowers/specs/2026-10-27-nibrs-engine-restructure.md`, phase 1.
 | `expected/N*.json`, `Z`, `D`, `R` | expected answers for the named cases, written by the reference script |
 | `../../nibrs-correctness-reference.py` | the reference computation: stdlib Python, one loop per case, reads only `extracts/` |
 
+| `synthetic/status-fixture.json` | invented agencies with every agency-month status, for S1-S5 |
+| `expected/S-synthetic-status.json` | hand-traced S1-S5 answers |
+| `expected/reader-cases.json` | G1-G6: what the reader must produce (plan, clarify or limitation) |
+
 ```bash
 python scripts/nibrs-correctness-reference.py --check
+python scripts/nibrs-correctness-reference.py --compare <candidate-dir>
 ```
 
-`--check` recomputes every expected file from the extracts, cross-checks the hand-traced micro counts against the
-micro extract, and fails on any difference.
+`--check` recomputes every expected file from the extracts, cross-checks the hand-traced micro counts and measures
+against the micro extract and the hand-traced S answers against an independent recomputation, and fails on any
+difference. It proves the set is internally consistent; it gates nothing by itself.
+
+`--compare` is the gate. A candidate engine (canonical build plus semantic layer plus compiler) writes its answers
+in the expected files' shapes into a directory; every number, null and status must match. Wording
+(`must_state`, labels, reasons) and the G cases are reviewed by a person against the expected files.
+
+## Gate conditions
+
+Before this set accepts a canonical build:
+- every named and micro case is re-derived from the FBI master-file lines for the same incident keys, with the
+  source zip hashes recorded, and M4's `PENDING_MASTER_FILE` relationships filled;
+- the N3 duplicates are traced to the master file (repeated there, or introduced by the nibrs.db import);
+- a BH-evidence fixture from real master-file records shows each decoded status (REPORTED_ZERO, NOT_REPORTED,
+  complete submission) on hand-traced agency-months. S1-S5 test the behaviour given a status, not the decoding.
+
+Before it accepts the plan compiler: `--compare` matches on every file, and the G cases are reviewed.
 
 ## Independence
 
@@ -52,8 +73,9 @@ micro extract, and fails on any difference.
 The BH month indicators are not decoded yet (shared spec r4, D6), so the only evidence is crime rows:
 - a month with rows for the agency is `REPORTED_CRIMES` (this does not prove the submission was complete);
 - a month without rows is `UNKNOWN`, never 0 and never `NOT_REPORTED`;
-- a filtered measure with no rows in a `REPORTED_CRIMES` month is `UNKNOWN` for that measure (case Z), with the
-  value it takes once the month is evidenced complete recorded beside it.
+- a filtered measure with no rows in a `REPORTED_CRIMES` month is `UNKNOWN` for that measure (case Z, and every
+  absent race-sex cell in N1 and D), with the value it takes once the month is evidenced complete recorded beside it;
+- an annual rate needs the year evidenced complete, so R records the rate it will show then, not a rate now.
 
 When the BH indicators are decoded, the status-dependent fields are re-derived; the counts do not change.
 

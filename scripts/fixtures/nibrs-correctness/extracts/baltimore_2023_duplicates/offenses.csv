@@ -1,0 +1,11 @@
+year,state,ori,incident_num,incident_date,ucr_offense_code,attempted_completed,offender_suspected_of_using_1,offender_suspected_of_using_2,offender_suspected_of_using_3,location_type,num_premises_entered,method_of_entry,type_criminal_activity_1,type_criminal_activity_2,type_criminal_activity_3,type_weapon_1,type_weapon_2,type_weapon_3,bias_motivation
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,240,C,N,"","",13,"","","","","","","","",88
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,240,C,N,"","",13,"","","","","","","","",88
+2023,MD,MDBPD0000,C60ARFECV28N,20230812,240,A,N,"","",13,"","","","","","","","",88
+2023,MD,MDBPD0000,C60ARFECV28N,20230812,240,A,N,"","",13,"","","","","","","","",88
+2023,MD,MDBPD0000,C60DRA5MP28N,20230722,240,C,N,"","",20,"","","","","","","","",88
+2023,MD,MDBPD0000,C60DRA5MP28N,20230722,240,C,N,"","",20,"","","","","","","","",88
+2023,MD,MDBPD0000,C60GRBS9V28N,20230625,240,A,N,"","",13,"","","","","","","","",88
+2023,MD,MDBPD0000,C60GRBS9V28N,20230625,240,A,N,"","",13,"","","","","","","","",88
+2023,MD,MDBPD0000,C60VRWRLQ28N,20230520,240,C,N,"","",13,"","","","","","","","",88
+2023,MD,MDBPD0000,C60VRWRLQ28N,20230520,240,C,N,"","",13,"","","","","","","","",88

@@ -51,9 +51,14 @@
   {
    "race": "P",
    "sex": "F",
-   "num": 0,
+   "num": null,
    "den": 1,
-   "pct_1dp": 0.0
+   "pct_1dp": null,
+   "status": "UNKNOWN_UNEVIDENCED_ZERO",
+   "if_month_evidenced_complete": {
+    "num": 0,
+    "pct_1dp": 0.0
+   }
   },
   {
    "race": "P",

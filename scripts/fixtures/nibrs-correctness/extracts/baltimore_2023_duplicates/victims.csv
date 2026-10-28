@@ -1,0 +1,11 @@
+year,state,ori,incident_num,incident_date,victim_sequence,victim_type,age,sex,race,ethnicity,resident_status,aggravated_assault_homicide_1,aggravated_assault_homicide_2,additional_justifiable_homicide,injury_type_1,injury_type_2,injury_type_3,injury_type_4,injury_type_5,offender_number_1,relationship_1,offender_number_2,relationship_2,offender_number_3,relationship_3,connected_offense_1,connected_offense_2,connected_offense_3
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,001,I,37,F,B,N,R,"","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,001,I,37,F,B,N,R,"","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60ARFECV28N,20230812,001,I,33,M,U,N,"","","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60ARFECV28N,20230812,001,I,33,M,U,N,"","","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60DRA5MP28N,20230722,001,I,48,F,B,U,"","","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60DRA5MP28N,20230722,001,I,48,F,B,U,"","","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60GRBS9V28N,20230625,001,I,40,M,W,U,"","","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60GRBS9V28N,20230625,001,I,40,M,W,U,"","","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60VRWRLQ28N,20230520,001,I,51,F,W,U,R,"","","","","","","","","","","","","","",240,"",""
+2023,MD,MDBPD0000,C60VRWRLQ28N,20230520,001,I,51,F,W,U,R,"","","","","","","","","","","","","","",240,"",""

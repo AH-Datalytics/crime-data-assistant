@@ -1,0 +1,13 @@
+year,state,ori,incident_num,incident_date,type_property_loss,property_description,value,date_recovered,num_stolen_motor_vehicles,num_recovered_motor_vehicles,suspected_drug_type_1,suspected_drug_type_2,suspected_drug_type_3
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,5,03,18000,20230322,"",01,"","",""
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,5,03,18000,20230322,"",01,"","",""
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,7,03,18000,"",01,"","","",""
+2023,MD,MDBPD0000,"C60 RWQQ628N",20230321,7,03,18000,"",01,"","","",""
+2023,MD,MDBPD0000,C60ARFECV28N,20230812,1,"",,"","","","","",""
+2023,MD,MDBPD0000,C60ARFECV28N,20230812,1,"",,"","","","","",""
+2023,MD,MDBPD0000,C60DRA5MP28N,20230722,7,03,15000,"",01,"","","",""
+2023,MD,MDBPD0000,C60DRA5MP28N,20230722,7,03,15000,"",01,"","","",""
+2023,MD,MDBPD0000,C60GRBS9V28N,20230625,1,"",,"","","","","",""
+2023,MD,MDBPD0000,C60GRBS9V28N,20230625,1,"",,"","","","","",""
+2023,MD,MDBPD0000,C60VRWRLQ28N,20230520,7,03,25000,"",01,"","","",""
+2023,MD,MDBPD0000,C60VRWRLQ28N,20230520,7,03,25000,"",01,"","","",""
