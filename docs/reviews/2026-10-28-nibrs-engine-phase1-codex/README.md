@@ -19,3 +19,6 @@ Branch `nibrs-engine/phase1`.
 | 12 | Result-column rule (owner 2026-10-28), r1 | 7772e93 | REVISE (3) | 9eb003d (r2) |
 | 13 | Result-column rule, r2 | 9eb003d | REVISE (1: comparison outputs) | efb313a (r3) |
 | 14 | Result-column rule, r3 | efb313a | **ACCEPT** | |
+| 15 | Engine step 1: adapter, draft layer, reachability, r1 | 65420ca | REVISE (7) | e79f564 (r2) |
+| 16 | Engine step 1, r2 | e79f564 | REVISE (2: year-list clipping, property loss filter) | ca6dd18 (r3) |
+| 17 | Engine step 1, r3 | ca6dd18 | **ACCEPT** | |
