@@ -38,7 +38,7 @@ request accounting checked by path and value; examples for every case and form, 
 2. `parsePlan` checks the JSON against the schema (P0). Malformed input is refused, never thrown.
 3. `validatePlanShape` (P1-P13), `validatePlanSemantics` against a pinned semantic version (S1-S12), and
    `validateBindings` against the request ledger (A1-A4).
-4. `validateResolved` resolves relative periods and agency sets against the pinned release (R1-R4).
+4. `validateResolved` resolves relative periods and agency sets against the pinned release (R1-R6).
 5. The compiler turns the plan into DuckDB SQL deterministically, runs it on a worker pinned to the release, and
    returns a `ResultEnvelope` with provenance. Any problem at any step stops before compilation.
 
@@ -46,8 +46,9 @@ request accounting checked by path and value; examples for every case and form, 
 
 | Field | Says | Notes |
 |---|---|---|
+| `source` | the one data source the plan reads: `nibrs` (G1 of `2026-10-28-engine-other-sources.md`) | a plan never spans two sources; the layer names the same source (S1) |
 | `geography` | places; `separate` (a row per place; two or more need the `geo.place` grouping) or `combined` (one total over the deduplicated union of the places' agencies) | nation (a sum of reported counts, never an agency), state, agency by ORI, county, `agency_set` by population, type or population group |
-| `period` | `absolute` months, `years` (noncontiguous whole years), `since`, `last_n` years or months, `latest_calendar_year_in_release` (H1's rule), `latest_month_in_release` | relative forms resolve against the release (R) |
+| `period` | `absolute` months, `years` (noncontiguous whole years; their era is the layer's and the release's, R1, not the schema's: G2), `since`, `last_n` years or months, `latest_calendar_year_in_release` (H1's rule), `latest_month_in_release`, `previous_calendar_year` ("last year": the calendar year before the request date) | relative forms resolve against the release (R) |
 | `timeBasis` | incident, arrest or clearance date | each measure declares the bases it has (S2) |
 | `measures` | id, counting unit, name, optional own filters | units: victim, victim-offense pair, victim-offender pair, offense, incident, offender, arrestee, arrest, Group B arrest, property segment, dollars, vehicles |
 | `filters` | attribute filters; **scoped existence filters** | `exists` over `entity` from `scope` (the unit itself or an entity it belongs to); every condition belongs to `entity`; property needs `attribution: "incident_level_only"` |
@@ -101,7 +102,7 @@ request accounting checked by path and value; examples for every case and form, 
 | P12 | a rank by an unknown statistic, by a compared statistic without naming the output (or naming an output that does not exist), `per` a non-grouping, with nothing left to rank, or two ranks |
 | P13 | comparison periods reversed, overlapping, or outside an absolute plan period; a compared rate with a period spanning two data years; a statistic compared twice (its outputs would collide) |
 | P14 | a rate, not evaluated through a comparison, over an absolute or year-list period spanning several data years without a time.year or time.month grouping |
-| S1 | a plan read against another semantic version |
+| S1 | a plan read against another source's layer, or another semantic version |
 | S2 | an unknown measure; a unit different from the measure's; a time basis the measure lacks |
 | S3 | an unknown dimension |
 | S4 | a dimension, scope or existence target not related to the counted entity; a condition that does not belong to its target |
@@ -117,11 +118,12 @@ request accounting checked by path and value; examples for every case and form, 
 | A2 | a binding to a path the plan does not have |
 | A3 | a concept no plan can apply (it must be a limitation instead), or a binding to a path of the wrong kind |
 | A4 | a binding whose plan value does not carry the part's value, by an explicit rule per concept: another measure or unit, another state or agency, a clipped or different period, a negated or different filter value, another grain, breakdown, statistic, rank or threshold; a broader filter than the part (exact equivalence; named families map to exact code sets); a rate not per 100,000; an agency whose ORI the app's geography resolver does not give for the part (the plan's label never decides) |
-| R1 | a resolved period outside the release, or outside a measure's, dimension's or code's era (every condition rechecked on the resolved years) |
-| R2 | comparison periods outside the selected period (for noncontiguous years, outside the selected years), or out of order |
+| R1 | a resolved period starting before the release's first month or after its last, or outside a measure's, dimension's or code's era (every condition rechecked on the resolved years). A period running past the release's last month (a year in progress) is not refused: it is answered through that month, and the clip is recorded (`clippedTo`, the resolved period in provenance) |
+| R2 | comparison periods outside the selected period (for noncontiguous years, outside the selected years), not entirely inside the release, or out of order |
 | R3 | (not a refusal) a combined geography is counted as the deduplicated union of its agencies, recorded in provenance |
 | R4 | a place that matches no agency in the release in the selected years |
 | R5 | a rate with no time grouping and no comparison whose resolved period spans several data years |
+| R6 | over a measure recorded by year (`grain: "year"`, an annual source; G5): a month grouping, a rolling window, a resolved period that is not whole years (a clipped year included), or a comparison endpoint that is not a whole year. Every NIBRS measure is monthly, so R6 never applies to NIBRS |
 
 ## Result columns (owner, 2026-10-28)
 
@@ -143,6 +145,8 @@ request accounting checked by path and value; examples for every case and form, 
     status is UNKNOWN, NOT_REPORTED, UNKNOWN_UNEVIDENCED_ZERO or UNAVAILABLE; REPORTED_ZERO only with 0;
   - answer text is limited to two statements with fixed wording, each exactly where it applies: property not
     attributed to one offense (an incident-scoped property filter) and "reported NIBRS counts" (a national answer).
+    Each statement belongs to one source (`STATEMENT_SOURCE`, G8): both are NIBRS's, authorized and required only for
+    NIBRS plans, unchanged.
 - Status, reasons, a share's parts, a rate's cohort figures and coverage stay server-side (`ResultEnvelope.evidence`
   and the provenance below). They are never columns, never answer text and never exported to users.
 - The current app is being given the same contract (plan `docs/superpowers/specs/2026-10-28-answer-columns-and-chart-
@@ -170,14 +174,14 @@ To be agreed with the "NIBRS model" session, which owns the shared layer. The co
   basis, their agency column;
 - **measures:** counted entity, unit, aggregation (count distinct keys, or sum a column over distinct rows), a typed
   predicate (dimension conditions, existence over links, all/any), additivity across agencies, months and categories,
-  time bases, valid years;
+  time bases, grain (`month` or `year`: every NIBRS measure is `month`; G5), valid years;
 - **dimensions:** entity, column, codes and labels, unknown codes, numeric decoding with special codes (age 00, NN,
   NB, BB), per-code era validity, valid years;
 - **links:** endpoints, cardinality, join keys, and for pair entities (victim-offender) the far-end dimensions read
   through the pair row, so relationship × offender age never becomes a cross product;
 - `link(id)` to resolve the links named in predicates, and `measures()` so `checkLayer` can verify every predicate
   when a version is loaded;
-- a version string carried into every plan, answer and cache key.
+- the source it describes (`nibrs`) and a version string, carried into every plan, answer and cache key.
 
 The compiler counts distinct entity keys, so reaching a dimension can never multiply a count.
 
@@ -187,7 +191,7 @@ The compiler counts distinct entity keys, so reaching a dimension can never mult
 |---|---|---|
 | `SeriesSpec`, one place, one or more measures | `measures` (unit explicit), `filters`, a time grouping per `grain` | `N3`, `MULTI_MEASURE` |
 | `SeriesSpec`, named places | `geography.places`, separate, with `geo.place` | `NAMED_PLACES` |
-| `SeriesSpec` period forms | `year`/`range`/`month`/`monthrange` → `absolute`; `years` (noncontiguous) → `years`; `since` → `since`; `last` → `last_n`; `lastyear`/`latest` → `latest_calendar_year_in_release`/`latest_month_in_release`, declared in `defaults` | `SEPARATE_YEARS`, `H1` |
+| `SeriesSpec` period forms | `year`/`range`/`month`/`monthrange` → `absolute`; `years` (noncontiguous) → `years`; `since` → `since`; `last` → `last_n`; `lastyear` → `previous_calendar_year` (resolved with the request date); `latest` and no period → `latest_calendar_year_in_release`, declared in `defaults` | `SEPARATE_YEARS`, `H1` |
 | `SeriesSpec` grain `rolling`, `combine` | `rolling` transform; `combine` → no time grouping over the period | `ROLLING` |
 | `statistic: rate` | `rate` (fixed evidenced-complete eligibility) | `R`, `S4_AGENCIES`, `S4_STATE` |
 | `statistic: total_value` / `average_value` | `count` of a dollars measure / `ratio` of dollars over property segments | `PROPERTY_VALUE` |
@@ -199,6 +203,8 @@ The compiler counts distinct entity keys, so reaching a dimension can never mult
 | `RankSpec` (N6) | `geo.state` or `geo.agency` grouping (agencies via `agency_set` with the population minimum); `rank` by the named statistic, `limit` n or null | `RANKED_RATES`, `TOP_N_PER_MONTH` |
 | `ChangeSpec` (N7) | a period spanning both years; `period_comparison`; cohort all reporting or same agencies | `SAME_AGENCIES_CHANGE`, `S3` |
 | `decline` / `clarify` | `limitation` with a reason / `clarify` with complete plans | `G1`-`G6` |
+
+`lib/nibrs-plan/from-spec.ts` implements this mapping (`planFromSpec`): today's typed spec and its request ledger become a plan with every part bound, validated like any reader output (`scripts/test-nibrs-plan-adapter.ts`; reachability over the replay inventory: `scripts/nibrs-plan-reachability.ts`).
 
 Today's limits that the plan drops: filters only where a summary table holds them, one breakdown per answer, no
 monthly breakdowns, shares over one period only, at most ten places, rankings by full years and fixed units only,

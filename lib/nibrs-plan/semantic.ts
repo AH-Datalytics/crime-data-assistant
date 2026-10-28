@@ -8,7 +8,7 @@
  * decoding, and each link's path and cardinality. The compiler counts DISTINCT entity keys, so a join used to reach
  * a dimension can never multiply a count; one-to-many dimensions are reached through one link row (pairing).
  */
-import type { CountingUnit, TimeBasis } from "./plan";
+import type { CountingUnit, Source, TimeBasis } from "./plan";
 
 export type EntityId = string;
 
@@ -60,6 +60,8 @@ export type SemanticMeasure = {
    */
   additive: { acrossAgencies: boolean; acrossMonths: boolean; acrossCategories: boolean };
   timeBases: TimeBasis[];
+  /** The finest period the source records it in (G5): every NIBRS measure is monthly; annual sources are "year" (R6). */
+  grain: "month" | "year";
   validYears: [number, number];
 };
 
@@ -99,6 +101,8 @@ export type SemanticLink = {
 };
 
 export type SemanticLayer = {
+  /** The source this layer describes (G1); a plan must name the same one (S1). */
+  source: Source;
   version: string;
   entity(id: EntityId): SemanticEntity | undefined;
   measure(id: string): SemanticMeasure | undefined;

@@ -19,7 +19,7 @@ const ENTITIES = ["incident", "offense", "victim", "offender", "arrestee", "grou
 ENTITIES.find((e) => e.id === "group_b_arrest")!.dates = { arrest_date: "arrest_date" };
 const ALL_ADD = { acrossAgencies: true, acrossMonths: true, acrossCategories: false };
 const m = (id: string, entity: string, unit: SemanticMeasure["unit"], timeBases: SemanticMeasure["timeBases"] = ["incident_date"]): SemanticMeasure =>
-  ({ id, entity, unit, label: id, aggregation: unit === "dollars" ? { kind: "sum", column: "value" } : { kind: "count_distinct" }, predicate: null, additive: ALL_ADD, timeBases, validYears: NIBRS });
+  ({ id, entity, unit, label: id, aggregation: unit === "dollars" ? { kind: "sum", column: "value" } : { kind: "count_distinct" }, predicate: null, additive: ALL_ADD, timeBases, grain: "month", validYears: NIBRS });
 // victims.murder carries its executable definition: a victim with a connected offense 09A, through the link.
 const MURDER_VICTIMS: SemanticMeasure = { ...m("victims.murder", "victim", "victim"), predicate: { kind: "exists", link: "victim_offenses", where: [{ kind: "dimension", dimension: "victim_offense.offense_code", op: "in", values: ["09A"] }] } };
 // A composite (violent crime) and a derived numeric condition (flash mob: six or more offender segments).
@@ -58,6 +58,7 @@ const LINKS = [
   L("victim_offenders", "victim", "victim_offender", "many"),
 ];
 const layer: SemanticLayer = {
+  source: "nibrs",
   version: X.SEMANTIC_VERSION,
   entity: (id) => ENTITIES.find((e) => e.id === id),
   measure: (id) => MEASURES.find((x) => x.id === id),
@@ -297,5 +298,28 @@ assert.ok(checkEnvelope({ ...s3Env, table: { columns: [s3col("victims")], rows: 
 // Answer statements: only the authorized ones, exactly where they apply.
 assert.equal(checkEnvelope({ ...n1Env, answerStatements: ["data_incomplete" as never] }, LABELS).length, 1);
 assert.equal(checkEnvelope({ ...n1Env, plan: { ...X.N1, geography: { places: [{ kind: "national" }], combine: "separate" } } }, LABELS).length, 1, "a national answer says reported NIBRS counts");
+
+// ---- generalisations for other sources (G1, G2, G5, G8): none changes a NIBRS plan ----
+// G1: the plan's source must be the layer's.
+assert.deepEqual(sem(X.N3), [], "a NIBRS plan against the NIBRS layer");
+assert.ok(validatePlanSemantics(X.N3, { ...layer, source: "shr" as never }).some((p) => p.rule === "S1" && p.path === "source"), "a plan never reads another source's layer");
+assert.deepEqual(parse({ ...X.N3, source: "shr" as never }), ["P0"], "only known sources parse");
+// G2: eras are the release's and the layer's, not the schema's; 1985 parses and NIBRS refuses it at resolution.
+assert.deepEqual(parse({ ...X.SEPARATE_YEARS, period: { kind: "years", years: [1985, 2024] } }), []);
+assert.ok(rules(validateResolved({ ...X.SEPARATE_YEARS, period: { kind: "years", years: [1985, 2024] } }, release, layer, geo).problems).includes("R1"));
+// G5 / R6: a measure recorded by year is read in whole years only; NIBRS measures are monthly, so R6 never fires for them.
+assert.ok(layer.measures().every((x) => x.grain === "month"));
+const annualLayer: SemanticLayer = { ...layer, measure: (id) => { const x = layer.measure(id); return x && { ...x, grain: "year" }; } };
+const r6 = (p: NibrsPlan) => rules(validateResolved(p, release, annualLayer, geo).problems).filter((r) => r === "R6").length;
+assert.equal(r6(X.SAME_AGENCIES_CHANGE), 0, "whole years, whole-year endpoints");
+assert.equal(r6(X.SEPARATE_YEARS), 0);
+assert.equal(r6(X.H1), 1, "a month grouping");
+assert.equal(r6({ ...X.H2, period: { kind: "absolute", from: "2025-03", to: "2025-12" } }), 1, "part of a year");
+assert.equal(r6({ ...X.H2, period: { kind: "absolute", from: "2026-01", to: "2026-12" } }), 1, "a year clipped to the release's last month");
+assert.equal(r6({ ...X.SEPARATE_YEARS, period: { kind: "years", years: [2024, 2026] } }), 1, "a year list whose last year is clipped");
+assert.equal(r6({ ...X.SAME_AGENCIES_CHANGE, transforms: [{ ...X.SAME_AGENCIES_CHANGE.transforms[0], earlier: { kind: "absolute", from: "2023-01", to: "2023-01" } } as never] }), 1, "a comparison endpoint that is not a whole year");
+assert.equal(r6(X.ROLLING), 3, "a month grouping, a rolling window, and a period through 2026-10");
+// G8: answer statements belong to a source; for NIBRS plans they are required exactly as before.
+assert.ok(checkEnvelope({ ...n1Env, plan: { ...X.N1, source: "shr" as never }, answerStatements: ["reported_nibrs_counts"] }, LABELS).some((m) => m.includes("belongs to nibrs")));
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);

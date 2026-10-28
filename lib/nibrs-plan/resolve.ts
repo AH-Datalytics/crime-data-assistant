@@ -1,6 +1,6 @@
 /**
  * Release resolution: turn a plan's relative periods and agency sets into what a pinned release holds, then check the
- * rules that need it (R1-R5). Runs after validatePlanShape/Semantics and before compilation; a plan with any problem
+ * rules that need it (R1-R6). Runs after validatePlanShape/Semantics and before compilation; a plan with any problem
  * is not compiled.
  */
 import type { AbsolutePeriod, NibrsPlan, Period, Place } from "./plan";
@@ -8,12 +8,14 @@ import type { SemanticLayer } from "./semantic";
 import type { PlanProblem } from "./validate";
 import { attributeConditions, attributeValueProblems, ungroupedRates } from "./validate";
 
-export type ReleaseInfo = { id: string; firstMonth: string; lastMonth: string };
+/** asOf: the request's date (YYYY-MM-DD), for calendar-relative periods ("last year"). */
+export type ReleaseInfo = { id: string; firstMonth: string; lastMonth: string; asOf?: string };
 
 /** Resolves a place to the ORIs it covers in a data year (from the release's agency tables). */
 export type GeographyResolver = { members(place: Place, year: number): string[] };
 
-export type ResolvedPeriod = AbsolutePeriod | { kind: "years"; years: number[] };
+/** A noncontiguous selection whose last year runs past the release carries `through`: that year only through that month. */
+export type ResolvedPeriod = AbsolutePeriod | { kind: "years"; years: number[]; through?: string };
 
 const ym = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
 
@@ -25,6 +27,11 @@ export function resolvePeriod(p: Period, release: ReleaseInfo): ResolvedPeriod {
       return p;
     case "since":
       return { kind: "absolute", from: p.from, to: release.lastMonth };
+    case "previous_calendar_year": {
+      if (!release.asOf) throw new Error("previous_calendar_year needs the request date (ReleaseInfo.asOf)");
+      const y = Number(release.asOf.slice(0, 4)) - 1;
+      return { kind: "absolute", from: ym(y, 1), to: ym(y, 12) };
+    }
     case "latest_month_in_release":
       return { kind: "absolute", from: release.lastMonth, to: release.lastMonth };
     case "latest_calendar_year_in_release": {
@@ -47,15 +54,25 @@ function span(r: ResolvedPeriod): [string, string] {
 }
 
 export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: SemanticLayer, geo: GeographyResolver):
-  { problems: PlanProblem[]; period: ResolvedPeriod; combined?: { total: number; deduplicated: number } } {
+  { problems: PlanProblem[]; period: ResolvedPeriod; clippedTo?: string; combined?: { total: number; deduplicated: number } } {
+  // The returned period is the effective one: clipped to the release's last month when it runs past it.
   const problems: PlanProblem[] = [];
   const add = (rule: string, path: string, message: string) => problems.push({ rule, path, message });
-  const period = resolvePeriod(plan.period, release);
-  const [from, to] = span(period);
+  const requested = resolvePeriod(plan.period, release);
+  const [from, asked] = span(requested);
+  // A period running past the release's last month (a year still in progress) is answered through that month: it is
+  // clipped, and the clip is recorded (`clippedTo`, and the resolved period in provenance), never silent. A period
+  // starting after the release's last month, or before its first, is outside the release (R1).
+  const clippedTo = asked > release.lastMonth && from <= release.lastMonth ? release.lastMonth : undefined;
+  const to = clippedTo ?? asked;
+  const period: ResolvedPeriod = !clippedTo ? requested
+    : requested.kind === "absolute" ? { ...requested, to: clippedTo } : { ...requested, through: clippedTo };
 
   // R1: inside the release, and inside every measure's and dimension's era.
-  if (from < release.firstMonth || to > release.lastMonth) add("R1", "period", `${from}..${to} is outside the release (${release.firstMonth}..${release.lastMonth})`);
+  if (from < release.firstMonth || from > release.lastMonth) add("R1", "period", `${from}..${asked} is outside the release (${release.firstMonth}..${release.lastMonth})`);
   if (from > to) add("R1", "period", "the resolved period is empty");
+  // A selected year that starts after the release's last month has no data at all: outside the release.
+  if (requested.kind === "years") for (const y of requested.years) if (ym(y, 1) > release.lastMonth) add("R1", "period", `${y} is outside the release (${release.firstMonth}..${release.lastMonth})`);
   const y0 = Number(from.slice(0, 4)), y1 = Number(to.slice(0, 4));
   // The years actually selected: a noncontiguous period selects only its own years, never the ones between.
   const selected = period.kind === "years" ? period.years : Array.from({ length: Math.max(0, y1 - y0 + 1) }, (_, k) => y0 + k);
@@ -83,6 +100,8 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
     if (t.kind !== "period_comparison") return;
     for (const [name, p] of [["earlier", t.earlier], ["later", t.later]] as const) {
       if (!inSelection(p)) add("R2", `transforms[${i}].${name}`, `${p.from}..${p.to} is outside the plan's selected period`);
+      // A compared period is a whole period: it may not run past the release (clipping would change the comparison).
+      if (p.from < release.firstMonth || p.to > release.lastMonth) add("R2", `transforms[${i}].${name}`, `${p.from}..${p.to} is not entirely inside the release (${release.firstMonth}..${release.lastMonth})`);
     }
     if (t.earlier.to >= t.later.from) add("R2", `transforms[${i}]`, "the earlier period must end before the later one starts");
   });
@@ -111,5 +130,20 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
   if (y0 !== y1 || (period.kind === "years" && period.years.length > 1)) {
     for (const r of ungroupedRates(plan)) add("R5", "statistics", `rate "${r}" spans ${from}..${to}: group by time.year or time.month`);
   }
-  return { problems, period, combined };
+  // R6: a measure recorded by year (an annual source, G5) is read in whole years only: no month grouping, no rolling
+  // window, a resolved period of whole years (a clipped year is not whole), and whole-year comparison endpoints.
+  // Every NIBRS measure is monthly, so R6 never applies to NIBRS.
+  const annual = plan.measures.filter((m) => layer.measure(m.id)?.grain === "year").map((m) => m.id);
+  if (annual.length) {
+    const whole = (p: { from: string; to: string }) => p.from.endsWith("-01") && p.to.endsWith("-12");
+    const what = `"${annual.join('", "')}" ${annual.length > 1 ? "are" : "is"} recorded by year`;
+    if (plan.groupings.some((g) => g.dimension === "time.month")) add("R6", "groupings", `${what}: no month grouping`);
+    if (period.kind === "absolute" ? !whole(period) : period.through !== undefined) add("R6", "period", `${what}: the period must be whole years`);
+    plan.transforms.forEach((t, i) => {
+      if (t.kind === "rolling") add("R6", `transforms[${i}]`, `${what}: no rolling window over months`);
+      if (t.kind === "period_comparison") for (const [name, p] of [["earlier", t.earlier], ["later", t.later]] as const) if (!whole(p)) add("R6", `transforms[${i}].${name}`, `${what}: compared periods must be whole years`);
+    });
+  }
+
+  return { problems, period, ...(clippedTo ? { clippedTo } : {}), combined };
 }
