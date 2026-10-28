@@ -411,6 +411,17 @@ let pendingDrops: string[] = [];
  * `answer-annotation-dropped:<name>` tags for the request log: which annotation columns the projection removed from
  * this exit's answer. Empty when nothing was removed, or for an operational record.
  */
+/**
+ * Drop tags for a payload about to be emitted, from its own columns and rows: for a "why" turn, whose outer
+ * finalization re-uses the inner capture's already-projected input (so its finalization recorded no drops) while the
+ * outer emission projects the captured, unprojected payload.
+ */
+export function payloadDropTags(payload: Record<string, unknown>): string[] {
+  const columns = Array.isArray(payload.columns) ? (payload.columns as string[]) : [];
+  const rows = Array.isArray(payload.rows) ? (payload.rows as Record<string, unknown>[]) : [];
+  return annotationDropTags(projectAnswer(columns, rows).dropped);
+}
+
 export function annotationDropTagsFor(proof: ProofFinalization | OutcomeLogRecord | null): string[] {
   const f = decisionFinalization(proof);
   return f ? annotationDropTags(annotationDrops.get(f) ?? []) : [];

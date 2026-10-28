@@ -5,7 +5,8 @@
  *   npx tsx scripts/test-answer-columns.ts
  */
 import assert from "node:assert/strict";
-import { annotationDropTagsFor, finalizeProof, emitFactualPayload, type ProofFinalizationInput } from "../lib/proof-finalize";
+import * as fs from "node:fs";
+import { annotationDropTagsFor, finalizeProof, emitFactualPayload, payloadDropTags, type ProofFinalizationInput } from "../lib/proof-finalize";
 import { serializeChartConfigForLog } from "../lib/chart-config-log";
 import { OUTCOMES } from "../lib/proof-contract";
 import { runInner } from "../lib/why-scope";
@@ -166,6 +167,28 @@ check("the chart log records the delivered chart: annotation columns and series 
   assert.ok(!logged.columns.includes("note"), `columns ${JSON.stringify(logged.columns)}`);
   assert.equal(serializeChartConfigForLog({ type: "line", xAxis: "year", yAxis: ["note"], title: "T" } as never, ["year", "note"]), null, "no series left: no chart logged");
 });
+
+// Codex implementation review r2: a "why" turn's outer finalization re-uses the capture's projected input, so its own
+// finalization records no drops; the log tags come from the captured payload instead, and the delivered answer is
+// still projected.
+pending.push((async () => {
+  try {
+    const store = await runInner("data", async () => {
+      const fin = finalizeProof(input({}));
+      emitFactualPayload(fin, { success: true, ...withNote });
+    });
+    const cap = store.captures[0];
+    const outer = finalizeProof({ ...(cap.input as ProofFinalizationInput), env: {} });
+    assert.deepEqual(annotationDropTagsFor(outer), [], "the outer finalization saw an already-projected input");
+    assert.deepEqual(payloadDropTags(cap.payload), ["answer-annotation-dropped:note"], "the captured payload still carries the note");
+    const delivered = emitFactualPayload(outer, { ...cap.payload }) as unknown as Record<string, unknown>;
+    assert.deepEqual(delivered.columns, ["year", "agency", "murders"]);
+    for (const f of ["app/api/query/route.ts", "app/api/nibrs-query/route.ts", "app/api/shr-query/route.ts"]) {
+      assert.match(fs.readFileSync(f, "utf8"), /why\.tags, \.\.\.payloadDropTags\(cap\.payload\)\]/, `${f} logs the why turn's drop tags`);
+    }
+    passed += 1; console.log("  PASS  why turn: capture -> outer finalization -> log tags from the captured payload");
+  } catch (e) { failed += 1; console.log(`  FAIL  why turn drop tags\n        ${(e as Error).message}`); }
+})());
 
 check("emission with nothing to drop is referentially identical (off mode)", () => {
   const fin = finalizeProof({ ...input({}), columns: ["year"], rows: [{ year: 1 }] });

@@ -90,7 +90,7 @@ import {
   asOutcomeRecord,
   decisionFinalization,
   OPERATIONAL_RECORD,
-  type OutcomeLogRecord, annotationDropTagsFor } from "@/lib/proof-finalize";
+  type OutcomeLogRecord, annotationDropTagsFor, payloadDropTags } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import { OUTCOMES, type QueryLogOutcome } from "@/lib/proof-contract";
@@ -307,7 +307,7 @@ async function handleShrPost(req: NextRequest) {
         const cap = why.capture;
         const whyRows = Array.isArray(cap.payload.rows) ? (cap.payload.rows as unknown[]) : [];
         const whyProof = finalizeExit({ ...(cap.input as Partial<ProofFinalizationInput>), outcome: carriedOutcome<QueryLogOutcome>(cap.input), narrative: why.text });
-        logQuery(question, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, "shr", [...why.tags, ...annotationDropTagsFor(whyProof)], "deterministic", sessionId, null, null, null, null, proofLogFields(decisionFinalization(whyProof)), outcomeLogFields(asOutcomeRecord(whyProof)));
+        logQuery(question, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, "shr", [...why.tags, ...payloadDropTags(cap.payload)], "deterministic", sessionId, null, null, null, null, proofLogFields(decisionFinalization(whyProof)), outcomeLogFields(asOutcomeRecord(whyProof)));
         return jsonResp(emitFactualPayload(whyProof, { ...cap.payload, explanation: why.text } as unknown as Parameters<typeof jsonResp>[0]));
       }
       const answered = why.kind === "text" && why.answered;

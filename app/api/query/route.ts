@@ -125,7 +125,7 @@ import {
   asOutcomeRecord,
   decisionFinalization,
   OPERATIONAL_RECORD,
-  type OutcomeLogRecord, annotationDropTagsFor } from "@/lib/proof-finalize";
+  type OutcomeLogRecord, annotationDropTagsFor, payloadDropTags } from "@/lib/proof-finalize";
 import { sealPlanDerivation } from "@/lib/plan-derivation";
 import { cacheValiditySignature } from "@/lib/proof-cache-validity";
 import { readCorrectionState, executeWithCorrectionState, withHistoricalNationalRapeNotes, historicalCacheValidity, withTypedHistoricalRapeNotes, typedCorrectionState, TYPED_STATE_CHANGED } from "@/lib/historical-national-rape";
@@ -722,7 +722,7 @@ async function handleQueryPost(req: NextRequest) {
         const cap = why.capture;
         const whyRows = Array.isArray(cap.payload.rows) ? (cap.payload.rows as unknown[]) : [];
         const whyProof = finalizeExit({ ...(cap.input as Partial<ProofFinalizationInput>), outcome: carriedOutcome<QueryLogOutcome>(cap.input), narrative: why.text });
-        writeLog(recordedQuestion, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, tab, why.tags, "deterministic", sessionId, null, whyProof);
+        writeLog(recordedQuestion, (cap.payload.sql as string | null) ?? null, whyRows.length, null, ms, why.text, tab, [...why.tags, ...payloadDropTags(cap.payload)], "deterministic", sessionId, null, whyProof);
         const whyPayload = { ...cap.payload, type: "result" as const, explanation: why.text } as unknown as FactualStreamEvent;
         const whyStream = new ReadableStream({
           start(controller) {
