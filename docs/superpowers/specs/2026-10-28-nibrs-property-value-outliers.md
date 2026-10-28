@@ -84,6 +84,7 @@ Each rule removes segment values from the dollars; segment counts (`property.seg
 | A+ | A plus the other repeated values 7,777,777; 1,111,111; 19,999,998 | 7,778 | $7,044.66B | 3,687 | $3,410.93B | 122 | 225 |
 | B | A plus a cap per description (the description table's "Rule B cap" column is the definition): over $1M for everyday goods (clothes, household goods, tools, vehicle parts, phones ...); over $100M for money, instruments, structures, merchandise, aircraft, buses, trucks, watercraft, farm, industrial and logging equipment, crops, non-precious metals; over $10M for every other description (automobiles, other motor vehicles, jewelry, Other ...) | 8,673 | $7,116.81B | 4,393 | $3,464.57B | 524 | 773 |
 | C | A plus an agency-year flag: in an agency-year with 10 or more non-sentinel segments of $1M or more, every value of $1M or more is excluded | 9,851 | $7,079.33B | 5,467 | $3,437.58B | 138 | 283 |
+| @2 | **the owner's choice:** A+ plus 10,000,000 and 100,000,000 | 7,964 | $7,053.18B | 3,822 | $3,417.23B | 223 | 356 |
 
 The cap for each description is in the description table. The caps are a starting proposal for discussion. They are
 not derived from the data.
@@ -119,6 +120,25 @@ rule A. Other large moves under rule A:
 
 Every state-year is in `stolen_by_state_year.csv`.
 
+## The owner's decision: `property.value@2`
+
+**Owner, 2026-10-28 (relayed):** "I'd do A+ but include $10 and $100 million." `property.value@2` excludes the dollars
+of segments valued exactly 999,999,999; 999,999,998; 99,999,999; 9,999,999; 7,777,777; 1,111,111; 19,999,998;
+10,000,000 or 100,000,000. Counts are unchanged, and answers say nothing about the exclusion. The definition, shadow
+difference and test (T17) are in the semantic v1 definitions.
+
+**What adding $10,000,000 and $100,000,000 to A+ changes (2017-2026):**
+
+| | Segments | Dollars | Stolen segments | Stolen dollars | Agencies | Agency-years |
+|---|---|---|---|---|---|---|
+| A+ | 7,778 | $7,044.66B | 3,687 | $3,410.93B | 122 | 225 |
+| A+ plus $10M and $100M (`@2`) | 7,964 | $7,053.18B | 3,822 | $3,417.23B | 223 | 356 |
+| Added by $10M and $100M | 186 (112 + 74) | $8.52B | 135 | $6.30B | +101 | +131 |
+
+Stolen dollars, all states, under `@2`: 2017 $5.60B, 2018 $7.44B, 2019 $9.07B, 2020 $11.99B, 2021 $22.66B, 2022
+$35.78B, 2023 $34.97B, 2024 $35.53B, 2025 $40.20B, 2026 $24.72B (each year's change against A+ is in the yearly table).
+Stolen dollars fall by 10% or more in 52 state-years under `@2`, against 36 under A+.
+
 ## Today's rule, for comparison
 
 Today's C4 rule sets the dollars to zero on a summary row whose average value is $1M or more, and keeps the row's
@@ -129,7 +149,7 @@ definitions (C4, test T8). A per-segment rule differs from it in two ways:
   rule keeps it;
 - a genuine $1.2M loss in a row of its own is zeroed by today's rule and kept by rule A.
 
-## For the discussion
+## For the discussion (answered by the owner: `property.value@2` above)
 
 1. Which rule, if any, becomes `property.value@2`: A, A+, B or C?
 2. Is $10,000,000 a sentinel? Here it looks like a rounded entry spread across many agencies, unlike the New York

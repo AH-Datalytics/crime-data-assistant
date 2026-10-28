@@ -32,6 +32,7 @@ SENTINELS = {999_999_999, 999_999_998, 99_999_999, 9_999_999}  # the field maxim
 REPEATS = {7_777_777, 1_111_111, 19_999_998}  # other repeated values found by the scan, mostly from a few agencies
 CAP_1M = set("02 04 06 08 09 10 11 13 14 16 25 26 27 36 38 42 44 48 59 65 67 68 72 73 74 75 76 79 80".split())
 CAP_100M = set("01 05 12 15 19 20 21 22 29 30 31 32 33 34 35 37 39 47 66 69 71".split())
+ROUND = {10_000_000, 100_000_000}  # added by the owner's decision (property.value@2)
 cap = lambda d: 1_000_000 if d in CAP_1M else 100_000_000 if d in CAP_100M else 10_000_000
 # Rule C's flag: an agency-year with 10 or more non-sentinel segments of $1M or more.
 million_ay = collections.Counter((r["ori"], r["data_year"]) for r in high if r["value"] not in SENTINELS)
@@ -39,6 +40,7 @@ FLAGGED = {k for k, n in million_ay.items() if n >= 10}
 RULES = {
     "A": ("exact sentinels", lambda r: r["value"] in SENTINELS),
     "A+": ("exact sentinels and other repeated values", lambda r: r["value"] in SENTINELS | REPEATS),
+    "@2": ("A+ plus $10,000,000 and $100,000,000 (the owner's choice)", lambda r: r["value"] in SENTINELS | REPEATS | ROUND),
     "B": ("rule A plus per-description caps", lambda r: r["value"] in SENTINELS or r["value"] > cap(r["description"])),
     "C": ("rule A plus an agency-year flag", lambda r: r["value"] in SENTINELS or (r["ori"], r["data_year"]) in FLAGGED),
 }
