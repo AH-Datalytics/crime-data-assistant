@@ -144,7 +144,16 @@ NIBRS questions over the last 60 days (query_log, tab nibrs, test sessions exclu
 - **Savant's public site moves to the shared canonical build** once it exists: agreed.
 - **Small cells:** "No on #3, I want to minimize the editorializing of the app." Answers present the computed numbers without added notes, offers of larger periods, or special rounding rules. This overrides the small-cell rule under "Rules carried into the semantic layer".
 - **Next source after NIBRS:** Homicide Reports ("SHR makes sense as the next most complex"), then Current Trends, then Historical (Claude's proposed order for the last two).
-- **Backfill order:** under discussion. The owner asked whether NIBRSAI should be taken down for public use until the rebuild is done.
+- **Years:** all years from day one. All 36 master files are archived now, with parsing and validation designed for each layout era. 2017-2026 is used only for the fast first test builds; the full 1991-2026 build follows as soon as 2017+ passes. Questions switch to the new engine era by era as each era's checks pass. This supersedes phases 2 and 7 being separate.
+- **NIBRSAI stays up** for public use during the rebuild (confirmed).
+- **Shared infrastructure (confirmed 2026-10-27).** Both Codex reviews judged the core architecture ideal, with operational changes:
+  - a new `nibrs-model` repository;
+  - Backblaze B2 (the existing account) as the durable origin for source files, manifests, the semantic layer, canonical data and retained releases, instead of growing the volume; local disk holds only the active and rollback releases;
+  - a scripted temporary build host;
+  - monitoring, a demonstrated restore and named owners before unattended refreshes;
+  - **David Hatten (AH Datalytics)** as the second operator who must rebuild, deploy and restore from the repository alone.
+
+  See `nibrs-savant/docs/superpowers/specs/2026-10-28-shared-nibrs-data-infrastructure.md` (r4).
 
 ## Open decisions for the owner (as first listed)
 
