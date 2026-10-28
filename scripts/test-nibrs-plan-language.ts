@@ -9,7 +9,7 @@ import { parsePlan, parseReaderOutcome, type NibrsPlan, type PartRef } from "../
 import { resolvePeriod, validateResolved, type GeographyResolver } from "../lib/nibrs-plan/resolve";
 import { checkLayer, type SemanticDimension, type SemanticEntity, type SemanticLayer, type SemanticLink, type SemanticMeasure } from "../lib/nibrs-plan/semantic";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
-import { checkResultTable } from "../lib/nibrs-plan/result";
+import { checkEnvelope, type ResultColumn, type CellEvidence } from "../lib/nibrs-plan/result";
 
 /* ---------------------------------------------------------------- a stand-in semantic layer ---------------------- */
 const NIBRS: [number, number] = [1991, 2026];
@@ -257,16 +257,37 @@ assert.deepEqual(validateResolved(ytdRate, release, layer, geo).problems, [], "s
 assert.deepEqual(rules(validateResolved({ ...ytdRate, period: { kind: "since", from: "2024-01" } }, release, layer, geo).problems), ["R5"]);
 
 /* ---------------------------------------------------------------- the result-column rule ------------------------- */
-// Owner 2026-10-28: groupings and numbers only; unknown is a blank (null) number; no status, note, label or flag column.
-const N1_TABLE = {
-  columns: [{ name: "Month", role: "grouping" as const }, { name: "Victim race", role: "grouping" as const }, { name: "Victim sex", role: "grouping" as const },
-    { name: "Murder victims", role: "number" as const }, { name: "Murder victims in the month", role: "number" as const }, { name: "Share of the month's murder victims (%)", role: "number" as const }],
-  rows: [["2018-05", "White", "Male", null, null, null], ["2018-06", "White", "Male", 14, 31, 45.2], ["2018-06", "Asian", "Female", null, 31, null]],
+// Owner 2026-10-28: the plan's groupings and numbers only; unknown is a blank (null) number; anything else is
+// server-side evidence. Enforced by binding, not by words.
+const LABELS: Record<string, string> = {
+  "grouping:time.month": "Month", "grouping:victim.race": "Victim race", "grouping:victim.sex": "Victim sex",
+  "statistic:victims": "Murder victims", "statistic:share_of_month": "Share of the month's murder victims (%)",
+  "grouping:offense.exceptional_clearance": "Exceptional clearance reason", "statistic:count": "Murders cleared by exceptional means", "statistic:share": "Share (%)",
 };
-assert.deepEqual(checkResultTable(N1_TABLE), [], "unknown months and unevidenced zeros are blank numbers");
-assert.equal(checkResultTable({ ...N1_TABLE, columns: [...N1_TABLE.columns, { name: "Status", role: "grouping" }], rows: N1_TABLE.rows.map((r) => [...r, "UNKNOWN"]) }).length, 1, "a status column is refused");
-assert.equal(checkResultTable({ columns: [{ name: "Month", role: "grouping" }, { name: "Data_note", role: "number" }], rows: [["2018-06", 1]] }).length, 1, "a note column is refused");
-assert.equal(checkResultTable({ columns: N1_TABLE.columns, rows: [["2018-05", "White", "Male", 0, 0, 0], ["2018-06", "White", "Male", "unknown", 31, null]] }).length, 1, "a label in a number column is refused (a zero is a number: only evidence can say it is wrong)");
-assert.equal(checkResultTable({ columns: N1_TABLE.columns, rows: [["", "White", "Male", 14, 31, 45.2]] }).length, 1, "a blank grouping value is refused");
+const col = (binding: ResultColumn["binding"]): ResultColumn => ({ binding, header: LABELS[binding.kind === "grouping" ? `grouping:${binding.dimension}` : `statistic:${binding.as}`] } as ResultColumn);
+const N1_COLUMNS = [col({ kind: "grouping", dimension: "time.month" }), col({ kind: "grouping", dimension: "victim.race" }), col({ kind: "grouping", dimension: "victim.sex" }),
+  col({ kind: "statistic", as: "victims" }), col({ kind: "statistic", as: "share_of_month" })];
+const N1_ROWS: (string | number | null)[][] = [["2018-05", "White", "Male", null, null], ["2018-06", "White", "Male", 14, 45.2], ["2018-06", "Asian", "Female", null, null]];
+const ev = (row: number, statistic: string, status: CellEvidence["status"]): CellEvidence => ({ row, statistic, status });
+const N1_EVIDENCE = [ev(0, "victims", "UNKNOWN"), ev(0, "share_of_month", "UNKNOWN"), ev(1, "victims", "VALUE"), ev(1, "share_of_month", "VALUE"),
+  ev(2, "victims", "UNKNOWN_UNEVIDENCED_ZERO"), ev(2, "share_of_month", "UNKNOWN_UNEVIDENCED_ZERO")];
+const n1Env = { plan: X.N1, table: { columns: N1_COLUMNS, rows: N1_ROWS }, evidence: N1_EVIDENCE, answerStatements: [] as ("property_not_attributed" | "reported_nibrs_counts")[] };
+assert.deepEqual(checkEnvelope(n1Env, LABELS), [], "unknown months and unevidenced zeros are blank numbers with their status in evidence");
+// A column the plan does not ask for (a status column) is refused, whatever it is called.
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: [...N1_COLUMNS, { binding: { kind: "grouping", dimension: "cell.availability" }, header: "Availability" }], rows: N1_ROWS.map((r) => [...r, "UNAVAILABLE"]) } }, LABELS).length >= 1, true);
+// A header that is not the template (an annotation in a number column's name) is refused.
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: [...N1_COLUMNS.slice(0, 3), { ...N1_COLUMNS[3], header: "Murder victims (data incomplete)" }, N1_COLUMNS[4]], rows: N1_ROWS } }, LABELS).length, 1);
+// An unknown shown as 0, or as a label, is refused.
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: N1_COLUMNS, rows: [["2018-05", "White", "Male", 0, null], ...N1_ROWS.slice(1)] } }, LABELS).length, 1);
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: N1_COLUMNS, rows: [["2018-05", "White", "Male", "unknown", null], ...N1_ROWS.slice(1)] } }, LABELS).length, 2);
+// Evidence must cover every number cell exactly once.
+assert.equal(checkEnvelope({ ...n1Env, evidence: N1_EVIDENCE.slice(1) }, LABELS).length, 2);
+// A substantive category grouping (a clearance reason) is allowed: its values are data.
+const clearanceEnv = { plan: X.CLEARANCE_BREAKDOWN, table: { columns: [col({ kind: "grouping", dimension: "offense.exceptional_clearance" }), col({ kind: "statistic", as: "count" }), col({ kind: "statistic", as: "share" })],
+  rows: [["Prosecution declined", 12, 40.0], ["Death of offender", 18, 60.0]] }, evidence: [ev(0, "count", "VALUE"), ev(0, "share", "VALUE"), ev(1, "count", "VALUE"), ev(1, "share", "VALUE")], answerStatements: [] as never[] };
+assert.deepEqual(checkEnvelope(clearanceEnv, LABELS), []);
+// Answer statements: only the authorized ones, exactly where they apply.
+assert.equal(checkEnvelope({ ...n1Env, answerStatements: ["data_incomplete" as never] }, LABELS).length, 1);
+assert.equal(checkEnvelope({ ...n1Env, plan: { ...X.N1, geography: { places: [{ kind: "national" }], combine: "separate" } } }, LABELS).length, 1, "a national answer says reported NIBRS counts");
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);

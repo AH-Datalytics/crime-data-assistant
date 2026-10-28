@@ -141,7 +141,7 @@ export const S3: NibrsPlan = {
   transforms: [{ kind: "period_comparison", of: ["victims"], earlier: { kind: "absolute", from: "2025-01", to: "2025-01" }, later: { kind: "absolute", from: "2025-03", to: "2025-03" }, outputs: ["earlier", "later", "change"] }],
   coverage: SAME,
 };
-/** S4, by agency: each agency's rate, or the reason it is unavailable. */
+/** S4, by agency: each agency's rate; an unavailable rate is a blank number, its reason server-side evidence. */
 export const S4_AGENCIES: NibrsPlan = {
   ...S2, question: "Murder victim rate per 100,000 by agency in ZZ, January-March 2025", groupings: [by("geo.agency")],
   statistics: [{ kind: "count", as: "victims", measure: "murder_victims" }, { kind: "rate", as: "rate", measure: "murder_victims", per: 100000 }],

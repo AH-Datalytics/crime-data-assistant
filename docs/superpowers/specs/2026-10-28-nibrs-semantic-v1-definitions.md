@@ -266,8 +266,8 @@ December).
   years needs no special rule);
 - label: "share of residents covered by agencies reporting NIBRS data".
 
-UNKNOWN months make coverage a lower bound until the BH evidence is decoded; the answer says so only through the
-UNKNOWN status, with no added note.
+UNKNOWN months make coverage a lower bound until the BH evidence is decoded. The answer adds nothing about it: the
+UNKNOWN statuses are server-side evidence, and the table shows only the coverage numbers (the result-column rule).
 
 **Shadow test.** For the 10 states, and every state once the canonical build exists: v1 against CDE by month; every
 gap over 1 point is reconciled agency by agency (an agency counted by one side and not the other, or a different

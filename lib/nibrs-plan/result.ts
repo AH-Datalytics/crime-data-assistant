@@ -4,15 +4,25 @@
  *
  * THE RESULT-COLUMN RULE (owner, 2026-10-28: "We should never need status and notes"; "the tables and exports should
  * only give the appropriate columns"). A user-facing table, and every export of it, has two kinds of column only:
- * groupings (place, period, category) and numbers. No status, note, caveat, label or flag column. An unknown number is
- * a blank (null): never zero, never a label. Everything else the engine knows about a cell (its D6 status, why a rate
- * is unavailable, a share's parts, a rate's cohort) is server-side `evidence`, never a column. The current app enforces
- * the same contract at egress (`lib/answer-columns.ts`); `checkResultTable` is this engine's form of it.
+ * the plan's groupings (place, period, category) and the plan's numbers. No status, note, caveat, label or flag
+ * column. An unknown number is a blank (null): never zero, never a label. A category value is data, including an
+ * unknown category ("Unknown" race) and substantive categories such as a clearance type. Everything the engine knows
+ * about a cell beyond its number (its D6 status, why it is blank, a share's parts, a rate's cohort) is server-side
+ * `evidence`, never a column and never answer text.
+ *
+ * Enforcement is by purpose, not by words: every column is bound to one grouping or one statistic of the plan, and
+ * its header is the compiler's template for that binding (`columnHeader`), so no column, header or value can carry
+ * anything else. `checkEnvelope` checks the table, the evidence and the answer statements together.
+ * The current app is being given the same contract (plan: docs/superpowers/specs/2026-10-28-answer-columns-and-chart-
+ * labels.md, branch fix/answer-columns-only-data; implementation pending). Its guard tests will cover this engine's
+ * tables once it produces them.
  */
 import type { AbsolutePeriod, NibrsPlan } from "./plan";
 
-/** A user-facing column: a grouping (its values are place, period or category names) or a number. */
-export type ResultColumn = { name: string; role: "grouping" | "number" };
+/** A user-facing column, bound to exactly one grouping or one statistic of the plan. */
+export type ResultColumn =
+  | { binding: { kind: "grouping"; dimension: string }; header: string }
+  | { binding: { kind: "statistic"; as: string }; header: string };
 
 /** What users see and export: grouping values and numbers. A null number is unknown and shows blank. */
 export type ResultTable = {
@@ -20,18 +30,19 @@ export type ResultTable = {
   rows: (string | number | null)[][];
 };
 
-/** Server-side only: why a number is what it is, or why it is blank. Never a column, never exported to users. */
+/** Server-side only: why a number is what it is, or why it is blank. */
 export type CellStatus =
-  | "VALUE"                     // a number, from known months
+  | "VALUE"                     // a number from known evidence (it may be 0, e.g. in a month evidenced complete)
   | "REPORTED_ZERO"             // 0 from an evidenced zero report
   | "UNKNOWN"                   // no evidence for the agency-month
   | "NOT_REPORTED"              // evidence the agency did not submit
   | "UNKNOWN_UNEVIDENCED_ZERO"  // no rows for this filtered measure in a month not evidenced complete (D6)
   | "UNAVAILABLE";              // a rate, share or ratio that cannot be computed; `reason` says why
+const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "UNAVAILABLE"];
 
 export type CellEvidence = {
   row: number;                  // index into ResultTable.rows
-  column: string;               // a number column's name
+  statistic: string;            // the statistic's `as`: unique per table, so a cell's identity is (row, statistic)
   status: CellStatus;
   reason?: string;
   /** Shares and ratios: the parts (shown to users only as their own number columns when the plan asks for them). */
@@ -42,6 +53,17 @@ export type CellEvidence = {
   eligibleCount?: number | null;
   coveredPopulation?: number | null;
 };
+
+/**
+ * The only answer text the engine adds, each with fixed wording (owner: minimize editorializing). Never a column.
+ * - property_not_attributed: a plan with an incident-scoped property existence filter (case N2);
+ * - reported_nibrs_counts: a plan whose geography is the nation.
+ */
+export const ANSWER_STATEMENTS = {
+  property_not_attributed: "NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offense.",
+  reported_nibrs_counts: "These are reported NIBRS counts.",
+} as const;
+export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
 
 export type ResultEnvelope = {
   plan: NibrsPlan;
@@ -66,37 +88,81 @@ export type ResultEnvelope = {
   /** For each statistic: its denominator and the cohort rule that selected agencies. */
   denominators: { statistic: string; rule: string; cohort: string; agencies: number }[];
   transformations: string[];
-  /** Rows dropped by a rank limit, with the count. Nothing is truncated silently (server-side, like all provenance). */
+  /** Rows dropped by a rank limit, with the count (server-side, like all provenance). */
   truncation: { what: string; count: number }[];
-  /** The user-facing table: groupings and numbers only (checkResultTable). */
+  /** The user-facing table. */
   table: ResultTable;
-  /**
-   * Answer text, never a table column: only the statements the plan language requires (property not attributed to one
-   * offense, case N2; "reported NIBRS counts" for a national answer). No other notes (owner: minimize editorializing).
-   */
-  answerStatements: string[];
-  /** Server-side evidence for the table's number cells. Never rendered as columns or exported to users. */
+  /** Server-side evidence, one per number cell. Never rendered as columns or exported to users. */
   evidence: CellEvidence[];
+  /** Answer text: only these, with their fixed wording. */
+  answerStatements: AnswerStatement[];
   cacheKey: string;
 };
 
-const FORBIDDEN_NAME = /\b(?:status|note|notes|caveat|caveats|label|labels|flag|flags|reason|warning)\b/i;
+/**
+ * A column's header, from the compiler's templates only: the semantic layer's label for a grouping's dimension, and
+ * the statistic's own description (built by the compiler from the measure label, unit, period and, for rates, the
+ * population wording). `labels` are those strings, keyed by binding.
+ */
+export function columnHeader(binding: ResultColumn["binding"], labels: Record<string, string>): string | undefined {
+  return labels[binding.kind === "grouping" ? `grouping:${binding.dimension}` : `statistic:${binding.as}`];
+}
 
-/** The result-column rule, checked before a table leaves the engine. Returns problems; empty means compliant. */
-export function checkResultTable(table: ResultTable): string[] {
+/** The result-column rule over a whole envelope. Returns problems; empty means compliant. */
+export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evidence" | "answerStatements">, labels: Record<string, string>): string[] {
   const out: string[] = [];
+  const { plan, table } = env;
+  const groupings = plan.groupings.map((g) => g.dimension);
+  const stats = plan.statistics.map((s) => s.as);
+
+  // Columns: exactly the plan's groupings and statistics, each once, each with its template header.
+  const bound = table.columns.map((c) => (c.binding.kind === "grouping" ? `grouping:${c.binding.dimension}` : `statistic:${c.binding.as}`));
+  const want = [...groupings.map((d) => `grouping:${d}`), ...stats.map((s) => `statistic:${s}`)];
+  for (const b of bound) if (!want.includes(b)) out.push(`column ${b} is not one of the plan's groupings or statistics`);
+  for (const w of want) if (bound.filter((b) => b === w).length !== 1) out.push(`${w} must have exactly one column`);
   table.columns.forEach((c) => {
-    if (c.role !== "grouping" && c.role !== "number") out.push(`column "${c.name}" is neither a grouping nor a number`);
-    if (FORBIDDEN_NAME.test(c.name.replace(/_/g, " "))) out.push(`column "${c.name}" is a status, note, caveat, label or flag column`);
+    const h = columnHeader(c.binding, labels);
+    if (h === undefined || c.header !== h) out.push(`column header "${c.header}" is not the template header ${h === undefined ? "(none)" : `"${h}"`}`);
   });
+  const headers = table.columns.map((c) => c.header);
+  if (new Set(headers).size !== headers.length) out.push("two columns share a header");
+
+  // Values: groupings are non-blank names; numbers are finite or null.
   table.rows.forEach((r, i) => {
     if (r.length !== table.columns.length) out.push(`row ${i} has ${r.length} values for ${table.columns.length} columns`);
     r.forEach((v, j) => {
       const c = table.columns[j];
       if (!c) return;
-      if (c.role === "number" && v !== null && (typeof v !== "number" || !Number.isFinite(v))) out.push(`row ${i}, "${c.name}": a number column holds ${JSON.stringify(v)}; unknown is null`);
-      if (c.role === "grouping" && (v === null || v === "")) out.push(`row ${i}, "${c.name}": a grouping value is blank`);
+      if (c.binding.kind === "statistic" && v !== null && (typeof v !== "number" || !Number.isFinite(v))) out.push(`row ${i}, "${c.header}": a number column holds ${JSON.stringify(v)}; unknown is null`);
+      if (c.binding.kind === "grouping" && (v === null || v === "" || typeof v !== "string" && typeof v !== "number")) out.push(`row ${i}, "${c.header}": a grouping value is blank`);
     });
   });
+
+  // Evidence: exactly one per number cell, consistent with its value.
+  const ev = new Map<string, CellEvidence>();
+  for (const e of env.evidence) {
+    const k = `${e.row}:${e.statistic}`;
+    if (ev.has(k)) out.push(`two evidence records for row ${e.row}, ${e.statistic}`);
+    ev.set(k, e);
+  }
+  table.rows.forEach((r, i) => table.columns.forEach((c, j) => {
+    if (c.binding.kind !== "statistic") return;
+    const e = ev.get(`${i}:${c.binding.as}`);
+    const v = r[j];
+    if (!e) { out.push(`row ${i}, ${c.binding.as}: no evidence`); return; }
+    if (v === null && !BLANK.includes(e.status)) out.push(`row ${i}, ${c.binding.as}: blank but status ${e.status}`);
+    if (v !== null && BLANK.includes(e.status)) out.push(`row ${i}, ${c.binding.as}: ${v} but status ${e.status} (an unknown is blank, never a number)`);
+    if (e.status === "REPORTED_ZERO" && v !== 0) out.push(`row ${i}, ${c.binding.as}: REPORTED_ZERO with ${v}`);
+  }));
+  if (env.evidence.length !== table.rows.length * stats.length) out.push("evidence does not cover exactly the number cells");
+
+  // Answer statements: only the authorized ones, each only where it applies.
+  for (const s of env.answerStatements) {
+    if (!(s in ANSWER_STATEMENTS)) out.push(`answer statement "${s}" is not authorized`);
+  }
+  const hasPropertyExists = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "property");
+  const national = plan.geography.places.some((p) => p.kind === "national");
+  if (hasPropertyExists !== env.answerStatements.includes("property_not_attributed")) out.push("property_not_attributed is required exactly when the plan filters on incident property");
+  if (national !== env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts is required exactly when the geography is the nation");
   return out;
 }
