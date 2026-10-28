@@ -20,8 +20,9 @@ function parseCsv(text) {
   return rows;
 }
 const [, ...rows] = parseCsv(fs.readFileSync(path.join(DIR, "nibrsai-answer-policy.csv"), "utf8").replace(/^﻿/, ""));
-const open = rows.filter((r) => r[6] === "Needs Jeff");
-const decided = rows.filter((r) => r[6] !== "Needs Jeff");
+// Columns: id, topic, decision needed, situation, today, proposed, choices, why, status, tests.
+const open = rows.filter((r) => r[8] === "Needs Jeff");
+const decided = rows.filter((r) => r[8] !== "Needs Jeff");
 
 const FONT = "Calibri";
 const p = (text, opts = {}) => new Paragraph({ spacing: { after: 80 }, ...opts, children: [new TextRun({ text, font: FONT, size: 21, ...(opts.run || {}) })] });
@@ -31,12 +32,14 @@ const rule = () => new Paragraph({ spacing: { after: 160 }, border: { bottom: { 
 const body = [
   new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: "NIBRSAI answer policy", font: FONT })] }),
   p(`Draft for review, 28 October 2026. ${open.length} decisions need you; ${decided.length} are already decided and are listed at the end for reference. The same content is in nibrsai-answer-policy.csv.`),
-  p("Each decision says what the app does today, what is proposed, and the exact default or choices a user would see. Write your answer under each one: agree, change it, or a different rule."),
-  new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: "Decisions that need you (most consequential first)", font: FONT })] }),
+  p("Each item starts with the decision in one question. Answer yes, no, or say what you want instead. The example, what the app does today and what is proposed follow for reference."),
 ];
-for (const [id, situation, today, proposed, choices, why, , tests] of open) {
+let topic = "";
+for (const [id, t, decision, situation, today, proposed, choices, why, , tests] of open) {
+  if (t !== topic) { topic = t; body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: t, font: FONT })] })); }
   body.push(
-    new Paragraph({ heading: HeadingLevel.HEADING_2, keepNext: true, children: [new TextRun({ text: `${id}. ${situation}`, font: FONT })] }),
+    new Paragraph({ heading: HeadingLevel.HEADING_2, keepNext: true, children: [new TextRun({ text: `${id}. ${decision}`, font: FONT })] }),
+    labelled("Example", situation),
     labelled("Today", today),
     labelled("Proposed", proposed),
     ...(choices && choices !== "Not applicable." ? [labelled("Default or choices", choices)] : []),
@@ -63,7 +66,7 @@ body.push(
     columnWidths: W,
     rows: [
       new TableRow({ tableHeader: true, children: ["Id", "Situation", "Rule", "Decided"].map((t, i) => cell(t, W[i], true)) }),
-      ...decided.map((r) => new TableRow({ cantSplit: true, children: [r[0], r[1], r[3] === "Keep." ? r[2] : r[3], r[6].replace(/^Decided /, "")].map((t, i) => cell(t, W[i])) })),
+      ...decided.map((r) => new TableRow({ cantSplit: true, children: [r[0], r[3], r[5] === "Keep." ? r[4] : r[5], r[8].replace(/^Decided /, "")].map((t, i) => cell(t, W[i])) })),
     ],
   }),
 );

@@ -36,21 +36,21 @@ ROWS = [
     # ---------------- needs Jeff, most consequential first ----------------
     ("P01", "\"How many murders were there in Chicago in 2024?\" asked without choosing a data source",
      "Auto mode guesses a source; when it is not confident it shows a list of sources to pick from. On a chosen tab, that tab's data answers, with a banner when another source fits much better.",
-     "Answer from one source and name it. A source the user names, or a detail only one source records, decides first; otherwise a fixed order of preference. A source is used only if it can answer the same measure, filters and period. Ask only when two sources would give materially different answers and nothing decides it.",
-     "Order: hate crimes -> FBI Hate Crime file (NIBRS only for details only NIBRS records); homicide victim or offender details -> Homicide Reports; victim, offender, weapon, relationship, location or property details -> NIBRS; this year or recent months -> Current Trends; completed years, long history, clearance and police staffing -> Historical.",
-     "The same question can return different numbers from different sources. A fixed order makes answers repeatable, and naming the source lets the reader check it.",
+     "The best source for the measure answers, whichever tab is open, and the answer names it. A source the user names explicitly is used when it can answer. A source is used only if it can answer the same measure, filters and period.",
+     "Order: hate crimes -> FBI Hate Crime file; homicide victim or offender details (any year) -> Homicide Reports; details only NIBRS records (victims, offenders, weapons, relationships, locations, property, clearance types) -> NIBRS; this year or recent months -> Current Trends; counts and rates of the standard crimes for completed years, at any level, plus clearance and police staffing -> Historical (FBI annual figures, with FBI estimates for states and the nation).",
+     "The same question can return different numbers from different sources. The best source is the most complete one for that measure, and naming it lets the reader check it.",
      OPEN, NEW),
-    ("P02", "\"How many robberies were there in the US in 2015?\" on NIBRS, when only part of the country reported to NIBRS that year",
-     "Adds up the agencies that reported, with a statement of how many agencies and how much population they cover, saying it is not an estimate.",
-     "Keep today's answer and its coverage sentence. In addition, when the reporting agencies cover less than a set share of the population, decline the national or state total and offer the FBI estimate from Historical instead.",
-     "Proposed threshold: 80% of the population. Alternative offered: \"US robberies in 2015, FBI national estimate (Historical)\".",
-     "A total from agencies covering a third of the country reads like a national figure even with a coverage sentence beside it.",
-     OPEN, "engine checks of national answers; " + NEW),
-    ("P03", "\"How did aggravated assaults change in Texas from 2018 to 2024?\" (NIBRS; many agencies joined during those years)",
+    ("P02", "\"How many robberies were there in the US in 2015?\" or \"How did aggravated assaults change in Texas from 2018 to 2024?\" asked while the NIBRS tab is open",
+     "Answers from NIBRS: it adds up the agencies that reported to NIBRS (a fraction of the country in 2015; many Texas agencies joined over those years), with a sentence on how many agencies and how much population they cover.",
+     "Answer from Historical (FBI annual figures, complete coverage, FBI estimates for the state and nation), name the source, and offer the NIBRS figure for reporting agencies as a button.",
+     "Answer: Historical. Button: \"the same question from NIBRS (reporting agencies only)\".",
+     "For standard crime counts and rates, NIBRS covers only the agencies that report to it, so its totals and trends mostly measure participation; Historical covers everyone.",
+     OPEN, NEW),
+    ("P03", "\"How did aggravated assaults with a firearm change in Texas from 2018 to 2024?\" (a detail only NIBRS records, over years when many agencies joined NIBRS)",
      "Counts every agency that reported in each year, so agencies joining looks like crime rising. Consistent reporters only when the user asks.",
-     "For a state or national trend across years, count only agencies that reported in every year shown, and say so in one fixed sentence. Count every agency only when the user asks.",
+     "Count only agencies that reported in every year shown, and say so in one sentence. Count every agency only when the user asks. For a single national or state total of such a detail, say what share of the population the reporting agencies cover.",
      "Default: agencies that reported in every year shown. On request: all reporting agencies.",
-     "Current Trends already works this way. Without it, NIBRS trends mostly measure agencies joining.",
+     "Without it, a NIBRS trend mostly measures agencies joining. Current Trends already works this way.",
      OPEN, NEW),
     ("P04", "\"Top 20 cities by murder rate in 2024\" where some cities reported only part of the year",
      "Includes them, with their first and last reported month and a caveat that spans differ.",
@@ -88,7 +88,7 @@ ROWS = [
      "Default: aggravated assault. On request: all assaults; simple assault.",
      "Aggravated assault is the FBI's violent-crime measure, and today the same word gives two different counts on two tabs.",
      OPEN, NEW),
-    ("P10", "\"How many homicides in Memphis in 2023?\" on Homicide Reports and on NIBRS",
+    ("P10", "\"How many homicides in Memphis in 2023?\" (the word \"homicide\")",
      "NIBRS and Current Trends: homicide means murder. Homicide Reports: \"homicide\" means all homicide victims, \"murder\" means murder only.",
      "\"Homicide\" and \"murder\" both mean murder and non-negligent manslaughter on every tab. Negligent manslaughter and justifiable homicide only when asked (\"all homicides\").",
      "Default: murder and non-negligent manslaughter. On request: all homicide types.",
@@ -112,13 +112,13 @@ ROWS = [
      "Choices: violent crime rate (first), murder rate, property crime rate. Year: latest complete.",
      "The question is common and answerable once the measure is chosen; declining sends the user away.",
      OPEN, NEW),
-    ("P14", "\"Murders in Chicago from 1990 to 2024\" asked on NIBRS, which has Chicago only for recent years",
+    ("P14", "\"Murders in Chicago from 1990 to 2024\" (a span one source covers and another covers only in part)",
      "Each tab reads only its own data; no rule for a span only another source covers.",
      "Never join two sources in one series. Answer from the one source that covers the whole span with the same measure and filters (here Historical, for murders) and name it; if none does, answer the covered part and name the missing years (frozen rule 4).",
      "Source: the one covering the whole span; otherwise the covered years, with the gap named.",
      "Sources count differently; a joined series shows jumps that are not real.",
      OPEN, gc(4)),
-    ("P15", "\"Robbery rate in Georgia in 2024\" on NIBRS",
+    ("P15", "\"Rate of robberies with a firearm in Georgia in 2024\" (a rate of a detail only NIBRS records)",
      "Divides by the population of the agencies that reported (weighted by months reported), not the whole state.",
      "Keep today's rule, and say whose population in one fixed sentence: \"per 100,000 residents of the reporting agencies\".",
      "Denominator: population of the agencies counted.",
@@ -229,10 +229,50 @@ ROWS = [
     ("D29", "Commentary in answers", "The instructions ban causal commentary.", "No editorializing. Tables carry groupings and numbers only (no note or status columns); explanation sentences and chart notes stay.", "Not applicable.", "", O28, "answer-format tests"),
 ]
 
+# The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
+DECISION = {
+    "P01": "Should the app always answer from the most complete source for what was asked, and name that source, whichever tab is open?",
+    "P02": "When someone on the NIBRS tab asks for an ordinary crime count, rate or trend (like US robberies in 2015), should the answer come from Historical instead, with a button for the NIBRS figure?",
+    "P03": "For a detail only NIBRS has, tracked over several years, should the trend count only agencies that reported in every year?",
+    "P04": "In a ranking for one year, should agencies that reported fewer than 12 months be left out, with the number left out stated?",
+    "P05": "When a ranking names no year, should it use the latest complete year rather than this year so far?",
+    "P06": "When no period is given, should a single number use the latest complete year and a trend the last 10 complete years, on every tab?",
+    "P07": "Should \"last year\" always mean the calendar year before today?",
+    "P08": "Should \"large city\" mean 250,000 residents or more, and should comparisons of completed years come from Historical?",
+    "P09": "Should \"assault\" on its own mean aggravated assault?",
+    "P10": "Should \"homicide\" mean the same as \"murder\" (murder and non-negligent manslaughter) everywhere?",
+    "P11": "When someone asks for \"victims\" of a property crime, should the app count victims rather than offenses?",
+    "P12": "When no place is named, should the answer be for the whole United States?",
+    "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
+    "P14": "When one source covers the whole period and another only part of it, should the app always use the one that covers it all and never splice two sources?",
+    "P15": "For rates of details only NIBRS has, should the rate use the population of the reporting agencies only?",
+    "P16": "Should a city name mean that city's main police agency, named in the answer?",
+    "P17": "When a top-N list has a tie at the cutoff, should it keep exactly N and break the tie alphabetically?",
+    "P18": "For a state clearance rate (not in Historical), should the app decline and offer the national rate or the NIBRS state figure instead?",
+    "P19": "For fentanyl, should the app decline and offer \"synthetic narcotics\" (which includes fentanyl) instead?",
+    "P20": "For forecasts, should the app decline and offer the recent trend instead?",
+    "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
+    "P22": "When someone clicks a button in a clarifying question, should the app run the whole original question with that choice and never ask the same thing again?",
+    "P23": "In a follow-up like \"What about Dallas?\", should everything else from the previous question carry over?",
+    "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
+    "P25": "In counties with their own county police department (Montgomery County MD, Fairfax County VA), should a county name mean that department instead of the sheriff?",
+    "P26": "Should \"New York\" on its own make the app ask: New York City or New York State?",
+    "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
+}
+TOPIC = {
+    **{p: "1. Which source answers" for p in ["P01", "P02", "P08", "P14"]},
+    **{p: "2. How a number is counted" for p in ["P03", "P04", "P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
+    **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
+    **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
+}
+assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
+ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]
+
 out = os.path.join(os.path.dirname(__file__), "..", "docs", "policy", "nibrsai-answer-policy.csv")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 with open(out, "w", encoding="utf-8-sig", newline="") as f:
     w = csv.writer(f)
-    w.writerow(["id", "situation (example wording)", "what the app does today", "proposed behavior", "exact default or choices offered", "why", "status", "test cases"])
-    w.writerows(ROWS)
+    w.writerow(["id", "topic", "decision needed", "situation (example wording)", "what the app does today", "proposed behavior", "exact default or choices offered", "why", "status", "test cases"])
+    for r in ordered:
+        w.writerow([r[0], TOPIC.get(r[0], "Already decided"), DECISION.get(r[0], "None: already decided"), *r[1:]])
 print(len(ROWS), "rows,", sum(1 for r in ROWS if r[6] == OPEN), "need Jeff")
