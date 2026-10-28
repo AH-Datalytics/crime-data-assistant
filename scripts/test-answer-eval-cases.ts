@@ -14,7 +14,7 @@ const policyCsv = fs.readFileSync(path.join(ROOT, "docs/policy/nibrsai-answer-po
 const policyIds = new Set([...policyCsv.matchAll(/^﻿?([PD]\d{2}),/gm)].map((m) => m[1]));
 const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2}),.*Needs Jeff/gm)].map((m) => m[1]));
 
-const cases = file.cases.map((c: unknown, i: number) => {
+const cases: Case[] = file.cases.map((c: unknown, i: number) => {
   const r = Case.safeParse(c);
   assert.ok(r.success, `case ${i}: ${r.success ? "" : r.error.issues.map((x) => `${x.path.join(".")} ${x.message}`).join("; ")}`);
   return r.data!;
