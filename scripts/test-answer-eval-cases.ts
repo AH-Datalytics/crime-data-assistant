@@ -27,7 +27,8 @@ for (const c of cases) {
   assert.equal(splitOf.get(c.group) ?? c.split, c.split, `group ${c.group} straddles the split`);
   splitOf.set(c.group, c.split);
   for (const p of c.policy) assert.ok(policyIds.has(p), `${c.id}: unknown policy row ${p}`);
-  if (c.label.status !== "unlabeled") assert.ok(c.expected, `${c.id}: a ${c.label.status} label needs an expectation`);
+  if (c.label.status === "drafted" || c.label.status === "reviewed") assert.ok(c.expected, `${c.id}: a ${c.label.status} label needs an expectation`);
+  if (c.label.status === "unresolved") assert.ok(!c.expected && c.label.notes, `${c.id}: an unresolved label has no expectation and says why`);
   if (c.label.status === "reviewed") assert.ok(c.label.reviewed_by && c.label.reviewed_by !== c.label.drafted_by, `${c.id}: reviewed by someone other than its drafter`);
 }
 for (const c of cases.filter((x) => x.button)) {

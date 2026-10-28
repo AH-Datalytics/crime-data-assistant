@@ -1,0 +1,1679 @@
+{
+  "LS-121": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "offender age: under 18"
+        ],
+        "groupings": [],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "state",
+            "name": "California"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offender"
+          }
+        ],
+        "denominator": "violent crime offenders of known age"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the year",
+        "says how offenders of unknown age are handled",
+        "states California NIBRS coverage"
+      ]
+    },
+    "policy_add": [
+      "P06"
+    ],
+    "notes": "\"Serious violent crimes\" read as FBI violent crime (murder, rape, robbery, aggravated assault); share of offenders under 18. Doubt: denominator could include unknown-age offenders."
+  },
+  "LS-122": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "year",
+          "offender age"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2021-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "offender"
+          }
+        ],
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the consistent-reporter cohort and how many agencies it includes",
+        "says homicide means murder and non-negligent manslaughter",
+        "states national NIBRS coverage"
+      ]
+    },
+    "policy_add": [
+      "P10"
+    ],
+    "notes": "User asked for consistent reporters explicitly. Homicide = murder (P10). Counted per offender since grouped by offender age."
+  },
+  "LS-123": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "There is no earlier result in this conversation to explain; the app should ask which cities and which table the user means.",
+      "alternative": null
+    },
+    "policy_add": [],
+    "notes": "Replay question with no setup turn; a 'why' about the data (D12 allows) but nothing to refer to. Could be unresolved instead."
+  },
+  "LS-124": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Tolleson Police Department",
+            "state": "AZ"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "drug/narcotic violations",
+            "unit": "arrest"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency counted",
+        "names 2025 as the period",
+        "says possession and distribution are one NIBRS offense (drug/narcotic violations), so the count covers both"
+      ]
+    },
+    "policy_add": [
+      "P16"
+    ],
+    "notes": "Possession and distribution are both NIBRS 35A; counted as arrests for that offense. City read as its police department (P16)."
+  },
+  "LS-125": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "agency (Denver plus 3 peers by population)"
+        ],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Denver Police Department",
+            "state": "CO"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "rape",
+            "unit": "percent cleared"
+          }
+        ],
+        "denominator": "rape offenses"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "returns exactly 4 agencies: Denver and 3 peers",
+        "names every peer agency and the population band used, selected on population alone",
+        "names the year"
+      ]
+    },
+    "policy_add": [
+      "P06"
+    ],
+    "notes": "D16 peers by population. No year given: latest complete year (P06). Mirrors GC-115 for Denver."
+  },
+  "LS-126": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "weapon: firearm"
+        ],
+        "groupings": [
+          "year",
+          "offender age"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Maine"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offender"
+          }
+        ],
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the years covered and names years before Maine's NIBRS start as missing, not zero",
+        "states the agency cohort used"
+      ]
+    },
+    "policy_add": [
+      "P06",
+      "P03"
+    ],
+    "notes": "No years given: last 10 complete years by year (P06); state trend uses consistent reporters (P03). Maine joined NIBRS recently, so early years are missing (D04)."
+  },
+  "LS-127": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "location: school (elementary/secondary and college/university)",
+          "weapon: firearm"
+        ],
+        "groupings": [],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "aggravated assault",
+            "unit": "victim"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says the figure is for the United States",
+        "names the year",
+        "names the school location types counted",
+        "states national NIBRS coverage"
+      ]
+    },
+    "policy_add": [
+      "P12",
+      "P06",
+      "P02"
+    ],
+    "notes": "No place: national (P12); no year: latest complete year (P06). If national coverage falls under P02's threshold the expectation changes."
+  },
+  "LS-128": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "clearance: by exceptional means"
+        ],
+        "groupings": [
+          "state",
+          "exceptional clearance type"
+        ],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "rape",
+            "unit": "offense"
+          }
+        ],
+        "denominator": "rape offenses in the state",
+        "rank": {
+          "by": "share of rapes cleared by exception",
+          "direction": "top",
+          "limit": 20
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the exceptional clearance types (death of offender, prosecution declined, in custody elsewhere, victim refused to cooperate, juvenile no custody)",
+        "states the number of states shown"
+      ]
+    },
+    "policy_add": [],
+    "notes": "D01: police clearance data, answered. No count given: D05 default of 20 rows. Doubt: share of all rapes vs of cleared rapes; read as share of all rapes."
+  },
+  "LS-129": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          },
+          {
+            "kind": "agency",
+            "name": "Los Angeles Police Department",
+            "state": "CA"
+          },
+          {
+            "kind": "agency",
+            "name": "Austin Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Columbus Police Department",
+            "state": "OH"
+          },
+          {
+            "kind": "agency",
+            "name": "Charlotte-Mecklenburg Police Department",
+            "state": "NC"
+          },
+          {
+            "kind": "agency",
+            "name": "Metropolitan Nashville Police Department",
+            "state": "TN"
+          },
+          {
+            "kind": "agency",
+            "name": "St. Louis Metropolitan Police Department",
+            "state": "MO"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "percent cleared"
+          }
+        ],
+        "denominator": "murder offenses"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names each agency counted",
+        "names any listed city with no 2025 NIBRS data as missing, not zero"
+      ]
+    },
+    "policy_add": [
+      "P16"
+    ],
+    "notes": "Seven cities, each its principal police agency (P16), shown separately."
+  },
+  "LS-130": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "population covered by NIBRS-reporting agencies",
+            "unit": "resident"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the years shown",
+        "says coverage is computed month by month as the FBI does"
+      ]
+    },
+    "policy_add": [
+      "P06"
+    ],
+    "notes": "D22 coverage definition. No years given: last 10 complete years (P06); a reviewer may prefer the full 1991-on span since the question is about participation history."
+  },
+  "LS-131": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "victim race: Black",
+          "victim race: White"
+        ],
+        "groupings": [
+          "victim race"
+        ],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Minnesota"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "percent cleared"
+          }
+        ],
+        "denominator": "murder offenses with a victim of that race"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the year",
+        "states Minnesota NIBRS coverage"
+      ]
+    },
+    "policy_add": [
+      "P06"
+    ],
+    "notes": "Clearance rate is a share of offenses, not a per-capita group rate, so D03 does not apply. No year: latest complete year (P06)."
+  },
+  "LS-132": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "victim race"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "victim (robbery by offense)"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says the figure is for the United States",
+        "names the year",
+        "states national NIBRS coverage"
+      ]
+    },
+    "policy_add": [
+      "P12",
+      "P06"
+    ],
+    "notes": "Typo 'show be' = show me. No place: national (P12); no year: latest complete year (P06)."
+  },
+  "LS-133": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Rates are given only for places; there are no population figures by race at these levels, so a violent crime rate by race cannot be computed. Counts and shares by race are available.",
+      "alternative": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "victim race"
+        ],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "victim (robbery by offense)"
+          }
+        ]
+      }
+    },
+    "policy_add": [
+      "P12",
+      "P06"
+    ],
+    "notes": "D03. Alternative uses victim race (the question does not say victim or offender); national (P12), latest complete year (P06)."
+  },
+  "LS-134": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "state",
+          "year"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2019-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "victim (robbery by offense)"
+          }
+        ],
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "states the consistent-reporter cohort (agencies reporting every year 2019-2025) and how many agencies",
+        "names states with no qualifying agencies as missing, not zero"
+      ]
+    },
+    "policy_add": [],
+    "notes": "User asked for consistent reporters explicitly; one row per state and year."
+  },
+  "LS-135": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Tucson Police Department",
+            "state": "AZ"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "drug/narcotic violations",
+            "unit": "arrest"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency counted",
+        "names 2025 as the period",
+        "says possession and distribution are one NIBRS offense (drug/narcotic violations), so the count covers both"
+      ]
+    },
+    "policy_add": [
+      "P16"
+    ],
+    "notes": "Possession and distribution are both NIBRS 35A; counted as arrests for that offense. City read as its police department (P16)."
+  },
+  "LS-136": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "There is no earlier comparison table in this conversation to change; the app should ask the user to state the full question (measure, agencies, period).",
+      "alternative": null
+    },
+    "policy_add": [],
+    "notes": "Replay question with no setup turn: a follow-up wording without its context. Declined with no alternative since nothing can be inferred; a reviewer may prefer unresolved."
+  },
+  "LS-137": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "month (rolling 12-month total)"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Texas"
+          }
+        ],
+        "period": {
+          "from": "2018-01",
+          "to": "2026-06"
+        },
+        "measures": [
+          {
+            "name": "property crime",
+            "unit": "offense"
+          }
+        ],
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "defines each point as the sum of the 12 months ending that month",
+        "states the last month in the data if earlier than June 2026",
+        "states the agency cohort used"
+      ]
+    },
+    "policy_add": [
+      "P03"
+    ],
+    "notes": "Rolling 12-month totals by month; multi-year state trend uses consistent reporters (P03). Whether June 2026 is in the data is unknown (D04)."
+  },
+  "LS-138": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "month",
+          "arrestee age"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Maryland"
+          }
+        ],
+        "period": {
+          "rule": "2022-01 through the latest month in the data"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "arrest"
+          }
+        ],
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the months of 2026 covered",
+        "states the agency cohort used"
+      ]
+    },
+    "policy_add": [
+      "P03"
+    ],
+    "notes": "Arrestee age means arrests. 2026 is partial: through the latest month, named (D06). State trend across years: consistent reporters (P03)."
+  },
+  "LS-139": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "state",
+          "month"
+        ],
+        "statistic": "change",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "2024-01 through the latest month in the data"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          },
+          {
+            "name": "robbery",
+            "unit": "offense"
+          },
+          {
+            "name": "property crime",
+            "unit": "offense"
+          },
+          {
+            "name": "motor vehicle theft",
+            "unit": "offense"
+          },
+          {
+            "name": "violent crime",
+            "unit": "victim (robbery by offense)"
+          }
+        ],
+        "denominator": "population of the reporting agencies",
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "each series is change in the rate relative to January 2024, so the first point is zero",
+        "says homicide means murder and non-negligent manslaughter",
+        "names states with little or no NIBRS coverage",
+        "names the months covered",
+        "says the requested line colors cannot be set if the app cannot style charts"
+      ]
+    },
+    "policy_add": [
+      "P10",
+      "P15",
+      "P03"
+    ],
+    "notes": "Readable but sprawling: five measures listed (user says six), every state, monthly rates indexed to Jan 2024. Low confidence on the shape; styling is outside the data."
+  },
+  "LS-140": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "month"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "St. Louis Metropolitan Police Department",
+            "state": "MO"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "carjacking",
+            "unit": "incident"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency",
+        "names the months covered and names months with no NIBRS data as missing, not zero",
+        "defines carjacking (robbery in which a motor vehicle was taken)"
+      ]
+    },
+    "policy_add": [
+      "P06",
+      "P16"
+    ],
+    "notes": "No period: last 10 complete years (P06), by month as asked. St. Louis's NIBRS reporting starts late, so gaps must be named (D04)."
+  },
+  "LS-141": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source records ZIP codes.",
+      "alternative": null
+    },
+    "policy_add": [],
+    "notes": "D02: say so plainly and stop (same wording as GC-012)."
+  },
+  "LS-142": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Rates are given only for places; there are no population figures by race of offender, so a shoplifting rate by race cannot be computed. Counts and shares by offender race are available.",
+      "alternative": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "year",
+          "offender race"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "2010-01 through the latest month in the data"
+        },
+        "measures": [
+          {
+            "name": "shoplifting",
+            "unit": "offender"
+          }
+        ],
+        "cohort": "same_agencies"
+      }
+    },
+    "policy_add": [
+      "P12",
+      "P03"
+    ],
+    "notes": "D03 decline; alternative counts by offender race. No place: national (P12); national trend uses consistent reporters (P03). 2010 national coverage is low (P02 may also bear)."
+  },
+  "LS-143": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "clearance: by exceptional means"
+        ],
+        "groupings": [
+          "exceptional clearance type"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Virginia"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "offense"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the exceptional clearance types",
+        "states Virginia NIBRS coverage"
+      ]
+    },
+    "policy_add": [],
+    "notes": "D01: police clearance data. Count of murders cleared by exception, by type."
+  },
+  "LS-144": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which crimes \"all crime\" means: violent, property or both",
+      "options": [
+        {
+          "label": "Violent crime",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "filters": [],
+            "groupings": [],
+            "statistic": "count",
+            "places": [
+              {
+                "kind": "county",
+                "name": "Montgomery County Police Department",
+                "state": "MD"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "victim (robbery by offense)"
+              }
+            ]
+          }
+        },
+        {
+          "label": "Property crime",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "filters": [],
+            "groupings": [],
+            "statistic": "count",
+            "places": [
+              {
+                "kind": "county",
+                "name": "Montgomery County Police Department",
+                "state": "MD"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "property crime",
+                "unit": "offense"
+              }
+            ]
+          }
+        },
+        {
+          "label": "Both",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "filters": [],
+            "groupings": [],
+            "statistic": "count",
+            "places": [
+              {
+                "kind": "county",
+                "name": "Montgomery County Police Department",
+                "state": "MD"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "victim (robbery by offense)"
+              },
+              {
+                "name": "property crime",
+                "unit": "offense"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "P06"
+    ],
+    "notes": "D09 bare crime. Doubt 1: 'all crime' could mean all Group A offenses (answer, no ask). Doubt 2: D10 says sheriff, but Montgomery County MD is policed by the county police department; named that."
+  },
+  "LS-145": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "weapon: firearm"
+        ],
+        "groupings": [
+          "year",
+          "offender age"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2017-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offender"
+          }
+        ],
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says what 'gun crimes' counts (violent crimes with a firearm recorded)",
+        "states the consistent-reporter cohort",
+        "if it fails on size, names a specific narrower question"
+      ]
+    },
+    "policy_add": [
+      "P12"
+    ],
+    "notes": "Same wording as GC-113. 'Gun crimes' read as violent crime with a firearm; no place: national (P12)."
+  },
+  "LS-146": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Yuma Police Department",
+            "state": "AZ"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "drug/narcotic violations",
+            "unit": "arrest"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency counted",
+        "names 2025 as the period",
+        "says possession and distribution are one NIBRS offense (drug/narcotic violations), so the count covers both"
+      ]
+    },
+    "policy_add": [
+      "P16"
+    ],
+    "notes": "Possession and distribution are both NIBRS 35A; counted as arrests for that offense. City read as its police department (P16)."
+  },
+  "LS-147": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "There is no earlier comparison table in this conversation to change; the app should ask the user to state the full question (measure, agencies, period).",
+      "alternative": null
+    },
+    "policy_add": [],
+    "notes": "Replay question with no setup turn: a follow-up wording without its context. Declined with no alternative since nothing can be inferred; a reviewer may prefer unresolved."
+  },
+  "LS-148": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "clearance: by exceptional means"
+        ],
+        "groupings": [
+          "state",
+          "exceptional clearance type"
+        ],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "rape",
+            "unit": "offense"
+          }
+        ],
+        "denominator": "rape offenses in the state"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the exceptional clearance types",
+        "names the states with no data as missing"
+      ]
+    },
+    "policy_add": [],
+    "notes": "D01. Shape of GC-001: one share per state and exceptional type. Doubt: share of all rapes vs of cleared rapes."
+  },
+  "LS-149": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "county",
+            "name": "Fairfax County Police Department",
+            "state": "VA"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the county agency counted",
+        "says homicide means murder and non-negligent manslaughter"
+      ]
+    },
+    "policy_add": [
+      "P10"
+    ],
+    "notes": "County policed by Fairfax County Police Department (the sheriff does not patrol); D10 names the sheriff, so a reviewer should check. Homicide = murder (P10)."
+  },
+  "LS-150": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "month",
+          "clearance status"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Houston Police Department",
+            "state": "TX"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "theft from motor vehicle",
+            "unit": "offense"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency",
+        "names the months covered and names months before Houston's NIBRS start as missing",
+        "says vehicle burglary is counted as theft from motor vehicle"
+      ]
+    },
+    "policy_add": [
+      "P06",
+      "P16"
+    ],
+    "notes": "Vehicle burglary = theft from motor vehicle (as GC-043). No period: last 10 complete years (P06), by month as asked."
+  },
+  "LS-151": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "month"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Baltimore Police Department",
+            "state": "MD"
+          }
+        ],
+        "period": {
+          "from": "2021-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "shoplifting",
+            "unit": "offense"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency",
+        "names any months with no data as missing"
+      ]
+    },
+    "policy_add": [
+      "P16"
+    ],
+    "notes": "Plain monthly series; typo 'Shoplfting'."
+  },
+  "LS-152": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "cleared"
+        ],
+        "groupings": [
+          "agency",
+          "clearance type"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          },
+          {
+            "kind": "agency",
+            "name": "New York City Police Department",
+            "state": "NY"
+          },
+          {
+            "kind": "agency",
+            "name": "Houston Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Los Angeles Police Department",
+            "state": "CA"
+          },
+          {
+            "kind": "agency",
+            "name": "Philadelphia Police Department",
+            "state": "PA"
+          },
+          {
+            "kind": "agency",
+            "name": "Memphis Police Department",
+            "state": "TN"
+          },
+          {
+            "kind": "agency",
+            "name": "Detroit Police Department",
+            "state": "MI"
+          },
+          {
+            "kind": "agency",
+            "name": "Baltimore Police Department",
+            "state": "MD"
+          },
+          {
+            "kind": "agency",
+            "name": "Dallas Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Metropolitan Police Department",
+            "state": "DC"
+          },
+          {
+            "kind": "agency",
+            "name": "Indianapolis Metropolitan Police Department",
+            "state": "IN"
+          },
+          {
+            "kind": "agency",
+            "name": "St. Louis Metropolitan Police Department",
+            "state": "MO"
+          },
+          {
+            "kind": "agency",
+            "name": "Louisville Metro Police Department",
+            "state": "KY"
+          },
+          {
+            "kind": "agency",
+            "name": "Kansas City Police Department",
+            "state": "MO"
+          },
+          {
+            "kind": "agency",
+            "name": "Phoenix Police Department",
+            "state": "AZ"
+          },
+          {
+            "kind": "agency",
+            "name": "Milwaukee Police Department",
+            "state": "WI"
+          },
+          {
+            "kind": "agency",
+            "name": "San Antonio Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Birmingham Police Department",
+            "state": "AL"
+          },
+          {
+            "kind": "agency",
+            "name": "Columbus Police Department",
+            "state": "OH"
+          },
+          {
+            "kind": "agency",
+            "name": "Charlotte-Mecklenburg Police Department",
+            "state": "NC"
+          },
+          {
+            "kind": "agency",
+            "name": "Cleveland Police Department",
+            "state": "OH"
+          },
+          {
+            "kind": "agency",
+            "name": "Las Vegas Metropolitan Police Department",
+            "state": "NV"
+          },
+          {
+            "kind": "agency",
+            "name": "Albuquerque Police Department",
+            "state": "NM"
+          },
+          {
+            "kind": "agency",
+            "name": "Metropolitan Nashville Police Department",
+            "state": "TN"
+          },
+          {
+            "kind": "agency",
+            "name": "Atlanta Police Department",
+            "state": "GA"
+          },
+          {
+            "kind": "agency",
+            "name": "Oakland Police Department",
+            "state": "CA"
+          },
+          {
+            "kind": "agency",
+            "name": "Minneapolis Police Department",
+            "state": "MN"
+          },
+          {
+            "kind": "agency",
+            "name": "Fort Worth Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Oklahoma City Police Department",
+            "state": "OK"
+          },
+          {
+            "kind": "agency",
+            "name": "Denver Police Department",
+            "state": "CO"
+          },
+          {
+            "kind": "agency",
+            "name": "Cincinnati Police Department",
+            "state": "OH"
+          },
+          {
+            "kind": "agency",
+            "name": "Portland Police Bureau",
+            "state": "OR"
+          },
+          {
+            "kind": "agency",
+            "name": "Austin Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Richmond Police Department",
+            "state": "VA"
+          },
+          {
+            "kind": "agency",
+            "name": "Seattle Police Department",
+            "state": "WA"
+          },
+          {
+            "kind": "agency",
+            "name": "Stockton Police Department",
+            "state": "CA"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "all Group A offenses",
+            "unit": "offense"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names each agency counted",
+        "names listed cities with no 2025 NIBRS data (for example New York) as missing, not zero",
+        "names the clearance types (arrest and each exceptional type)"
+      ]
+    },
+    "policy_add": [
+      "P16"
+    ],
+    "notes": "No offense named: read as all Group A offenses cleared, by type. Doubt: could warrant a D09-style ask. 36 cities as principal agencies (P16)."
+  },
+  "LS-153": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "location type"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "burglary",
+            "unit": "offense"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says the figure is for the United States",
+        "states national NIBRS coverage"
+      ]
+    },
+    "policy_add": [
+      "P12",
+      "P02"
+    ],
+    "notes": "No place: national (P12); P02 bears on national totals."
+  },
+  "LS-154": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "share",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Omaha Police Department",
+            "state": "NE"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "motor vehicle theft",
+            "unit": "percent cleared"
+          }
+        ],
+        "denominator": "motor vehicle theft offenses"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency",
+        "names the years covered and years with no NIBRS data as missing"
+      ]
+    },
+    "policy_add": [
+      "P06",
+      "P16"
+    ],
+    "notes": "No years given: last 10 complete years (P06)."
+  },
+  "LS-155": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [
+          "weapon: firearm"
+        ],
+        "groupings": [
+          "year",
+          "offender race"
+        ],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2017-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offender"
+          }
+        ],
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "states the consistent-reporter cohort",
+        "if it fails on size, names a specific narrower question"
+      ]
+    },
+    "policy_add": [
+      "P12"
+    ],
+    "notes": "Counts by offender race (not a rate, so D03 not triggered). No place: national (P12)."
+  },
+  "LS-156": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "filters": [],
+        "groupings": [],
+        "statistic": "count",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Avondale Police Department",
+            "state": "AZ"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "drug/narcotic violations",
+            "unit": "arrest"
+          }
+        ]
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agency counted",
+        "names 2025 as the period",
+        "says possession and distribution are one NIBRS offense (drug/narcotic violations), so the count covers both"
+      ]
+    },
+    "policy_add": [
+      "P16"
+    ],
+    "notes": "Possession and distribution are both NIBRS 35A; counted as arrests for that offense. City read as its police department (P16)."
+  }
+}
