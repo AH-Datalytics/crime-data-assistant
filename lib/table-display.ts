@@ -42,6 +42,8 @@ const MEASURE_PLURAL: Record<string, string> = {
   carjacking: "carjackings", murder: "murders", robbery: "robberies", burglary: "burglaries", rape: "rapes",
   aggravated_assault: "aggravated assaults", motor_vehicle_theft: "motor vehicle thefts", theft: "thefts",
   larceny: "larcenies", arson: "arsons", shoplifting: "shoplifting offenses",
+  officers: "sworn officers", civilians: "civilian employees", employees: "total employees",
+  officers_or_employees: "sworn officers (total employees where marked)",
 };
 
 /**
