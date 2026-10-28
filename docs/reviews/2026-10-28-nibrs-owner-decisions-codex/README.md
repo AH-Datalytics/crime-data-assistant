@@ -6,3 +6,4 @@
 | 02 | Owner's answers, r2 | 5735d8a | **ACCEPT** | |
 | 03 | Property value outlier report, r1 | 76dc6d9 | REVISE (4: prose counts, rule B wording, intent claims, duplicates) | c26e7ba (r2) |
 | 04 | Property value outlier report, r2 | c26e7ba | **ACCEPT** | |
+| 05 | `property.value@2` (owner's C4 decision: A+ plus $10M and $100M) | 5cfb63a | **ACCEPT** | |
