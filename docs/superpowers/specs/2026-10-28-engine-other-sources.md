@@ -1,204 +1,214 @@
-# The engine beyond NIBRS: SHR, Current Trends, Hate Crime and Historical (design note)
+# The engine beyond NIBRS: SHR, Current Trends, Hate Crime and Historical (design note, r2)
 
 **Asked by the coordinator, owner's go-ahead (2026-10-28):** a short note on how the other four sources would plug into
 the new engine, so that choices made for NIBRS in the plan language (`lib/nibrs-plan/plan.ts`), the semantic layer
 interface (`semantic.ts`) and the result contract (`result.ts`, `lib/answer-columns.ts`) do not box them out. **Plan
 only.** Nothing here is built. SHR is already agreed as the next source.
 
-Facts about today's code are cited from `origin/dev` at c1f5381.
+Facts about today's code are cited from `origin/dev` at c1f5381. Facts about the plan language include step 1 (this
+branch, PR #62).
 
-## 1. What is already source-neutral, and what is NIBRS-shaped
+**r1 → r2 (Codex REVISE, 6 items):**
+- the "fits as is" claims now name their gaps: medians, thresholds, rolling rates, single-agency staffing rates;
+- source coverage evidence is kept apart from result-cell statuses, and SHR's zero rule is scoped;
+- the staffing contract is restated as it is implemented;
+- RTCI's sample facts are corrected, and its two cohort operations kept apart;
+- the time rules are completed;
+- published geography values and populations are placed, and NIBRS behaviour is preserved explicitly.
 
-Most of the design carries over unchanged. Each of the following holds for any source:
+## 1. What carries over, and what is NIBRS-shaped
+
+Carries over to every source:
 - a typed plan bound to the parts of a question (request accounting);
 - a versioned semantic layer of entities, measures, dimensions and links;
 - a compiler that invents no semantics;
 - release resolution;
-- the four cell statuses: REPORTED_CRIMES, REPORTED_ZERO, NOT_REPORTED, UNKNOWN;
-- answers that hold groupings and numbers only.
+- the result contract: groupings and numbers only, with each cell's status as server-side evidence.
 
-Seven choices are NIBRS-shaped today. Each is cheap to generalise now and expensive later:
+The result contract's cell statuses are VALUE, REPORTED_ZERO, UNKNOWN, NOT_REPORTED, UNKNOWN_UNEVIDENCED_ZERO and
+UNAVAILABLE with a reason (`result.ts`). Each source supplies its own **reporting evidence**, which the compiler maps
+into these statuses. The evidence is scoped to the measure, geography and period it actually covers.
+
+NIBRS-shaped choices to generalise. **Every one leaves NIBRS's behaviour unchanged**: its eras, rate eligibility (the
+matched eligible-agency numerator over covered population), cohorts, statuses and answer statements.
 
 | # | Today | Generalisation |
 |---|---|---|
-| G1 | `version: "nibrs-plan/1"`; one implicit source | the plan names its `source` and that source's semantic version. A plan never spans two sources (v1): a cross-source comparison is a limitation, never a join |
-| G2 | `Period.years` has `min(1991)` in the schema | eras come from the layer (`validYears`) and the release, as R1 already checks. SHR starts in 1976 and Historical in 1930 |
-| G3 | `TimeBasis` = incident, arrest or clearance date | the layer declares the time bases. Adds `data_year` (annual records: Historical, staffing) and `report_month` (RTCI's counted month) |
-| G4 | `CountingUnit` is a closed list of NIBRS entities | the units come from the layer, with the plan still repeating the unit (S2). New units: an aggregate `reported_count`, a published `estimate`, `officer` and `employee`, and `reported_victims` (a sum) |
-| G5 | the time grain is implicitly monthly | a measure declares its grain (`month` or `year`). A plan that groups by month, or whose period does not cover whole years, over an annual measure is refused with a new rule (R6) |
-| G6 | answers hold groupings and numbers only (`checkEnvelope`) | one exception, declared by a measure: a **label column** with a closed set of values, never a series. Today that is only staffing's `reported` (`answer-columns.ts:13-14`, `STAFFING_LABEL_COLUMN`) |
-| G7 | state and national values are always sums over agencies | a measure declares, per geography level, whether it is an `agency_sum` or a `published_estimate` (Historical's FBI estimates). An estimate never takes the same-agencies cohort and is never re-summed |
+| G1 | `version: "nibrs-plan/1"`; one implicit source | the plan names its `source` and that source's semantic version. A plan never spans two sources: a cross-source comparison is a limitation, never a join |
+| G2 | `Period.years` has `min(1991)` in the schema | eras come from the layer (`validYears`) and the release, as R1 checks. SHR starts in 1976 and Historical in 1930. NIBRS keeps 1991 through its layer |
+| G3 | `TimeBasis` = incident, arrest or clearance date | the layer declares the time bases. Adds `data_year` (annual records) and `report_month` (RTCI's counted month) |
+| G4 | `CountingUnit` is a closed list of NIBRS entities | the units come from the layer, with the plan still repeating the unit (S2). New units: an aggregate `reported_count`, a sum of `reported_victims` (Hate Crime), and the staffing unit described under Historical |
+| G5 | the time grain is implicitly monthly | a measure declares its grain (`month` or `year`). A new rule, R6, refuses a plan over an annual measure in three cases: it groups by month; its period does not cover whole years; or any **comparison endpoint** does not cover whole years. NIBRS measures are `month`, so nothing changes for them |
+| G6 | answers hold groupings and numbers only (`checkEnvelope`) | one exception, limited to Historical staffing answers with the officer fallback: the **label column** `reported` (`answer-columns.ts:13-14`). It is nullable, has a closed set of values, and is never a chart series. It is not a general permission for measures to add text |
+| G7 | state and national values are sums over agencies; R3 unions agencies; R4 needs agency members | a measure declares, per geography level, whether it is an `agency_sum` or a `published_value` (Historical's FBI estimates, stored rates, national clearance percentages). A published value resolves directly from its own table, outside `agencyColumn`, R3 and R4. A combination it cannot answer (a published value with the same-agencies cohort, a combined geography, or re-summing) is refused |
+| G8 | `checkEnvelope` requires "These are reported NIBRS counts." for every national plan | answer statements become source-specific, and the NIBRS condition and wording stay exactly as they are |
 
 ## 2. Per source
 
 ### SHR (Homicide Reports): next
 
-- **Grain and entities.** `incidents` has one row per homicide incident, with its year, month, ORI, agency population,
-  situation, weapon, circumstance and the **primary** offender's age, sex and race. `victims` has one row per victim,
-  joined by incident_id (`shr.ddl.sql`; `shr-claude.ts:54-68, 215`).
-  - Entities: incident, victim, and `primary_offender` (one-to-one with its incident).
+- **Grain and entities.** `incidents` has one row per homicide incident, with year, month, ORI, agency population,
+  situation, weapon, circumstance and the **primary** offender's attributes. `victims` has one row per victim, joined
+  by incident_id (`shr.ddl.sql`; `shr-claude.ts:54-68, 215`).
+  - Entities: incident, victim, `primary_offender` (one-to-one with its incident).
   - Units: victim (the default, `shr-claude.ts:129`) and incident.
   - Offender counts are refused: SHR records one offender per incident.
 - **Fits as is:**
   - counts, shares and rankings;
   - groupings by victim demographics, weapon, circumstance and relationship (the victim's relationship to the primary
     offender);
-  - places as national, state or agency; monthly and annual periods.
+  - places as national, state or agency; months and years.
+- **Needs extending (today's T1-T6 use them, `shr-question-types.ts:71-75`):**
+  - a `median` and an `average` statistic over a numeric dimension (T4: victim age);
+  - a threshold on an aggregate result ("places with at least N"; T2 and T5).
 
-  Today's six SHR types T1-T6 (`shr-question-types.ts:11-12`) are all expressible.
-- **Needs:**
-  - G1 and G2 (data from 1976).
-  - A rule the layer must carry: no rate grouped by a person dimension (`shr-claude.ts:157`). It is the same refusal as
-    NIBRS's rate by race, stated as a layer property, not a prompt sentence.
-  - Coverage. SHR has no submission evidence of its own. Its year statuses come from the comparison with Return A
-    (`shr_return_a_comparison`; `shr-annual-coverage.ts:1-9`), and they map onto the four statuses:
-    - count → REPORTED_CRIMES;
-    - validated_zero → REPORTED_ZERO;
-    - gap → NOT_REPORTED;
-    - coverage_unknown → UNKNOWN.
+  It also needs G1 and G2, and a layer property refusing a rate grouped by a person dimension (`shr-claude.ts:157`).
+- **Reporting evidence, scoped.** "No SHR records is UNKNOWN, never zero" (`shr-count-plan.ts:15`) is the rule. Record
+  presence elsewhere is not evidence of completeness, and **a Return A murder zero is not evidence about all
+  homicides** (`:15-18`).
 
-    "No SHR records is unknown, never zero" (`shr-count-plan.ts:15`) is D6 exactly.
-- **Build.** A **lighter compiler over shr.db.** shr.db is already rebuilt in full from the FBI master files every month
-  (`scripts/ops/shr-auto-update.js`), at incident and victim grain, with identity tables (`shr_agency_identity`,
-  `shr_agency_year_class`). A canonical rebuild adds little until the shadow finds a fault in the import.
-- **Shared definitions and conflicts:**
-  - Agency population is `AVG(i.population)` per agency-year (`shr-claude.ts:155-156`). State and national population
-    come from `state_population`, using the CDE estimate in recent years (`:158`).
-  - City or county membership comes from `shr_agency_year_class` (the only authority).
-  - An annual answer stops at the cutoff year minus one (`shr-claude.ts:128`). The release's last complete year
-    expresses that rule (`latest_calendar_year_in_release`).
+  The Return A comparison (`shr_return_a_comparison`; `shr-annual-coverage.ts`) is annual and agency-level evidence for
+  murder only. Its statuses map as follows:
+  - validated_zero → REPORTED_ZERO, for an annual murder count of that agency only;
+  - gap → UNKNOWN (a discrepancy, not a confirmed non-submission);
+  - coverage_unknown → UNKNOWN.
+
+  It says nothing about months. The accepted city-murder path keeps its own Return A policy
+  (`shr-deterministic-murder.ts`).
+- **Build.** A **lighter compiler over shr.db.** It is already rebuilt in full from the FBI master files every month
+  (`scripts/ops/shr-auto-update.js`), at incident and victim grain, with identity tables.
+- **Population and periods.**
+  - Agency population: `AVG(i.population)` per agency-year (`shr-claude.ts:155-156`).
+  - State and national population: `state_population`, which uses the CDE estimate in recent years (`:158`).
+  - Annual answers stop at the cutoff year minus one unless a current year is named (`:128`). That is a source rule
+    of its own: it is not `latest_calendar_year_in_release`, which differs when a release ends in December.
 
 ### Historical (UCR summary) and staffing
 
-- **Grain and entities.** Annual aggregates per agency (ORI, year):
-  - crime (`historical_agency_crime`);
-  - clearances;
-  - population;
-  - staffing (`all_total`, `officer_total`, `civilian_total`).
+- **Grain and entities.** Annual values per agency (ORI, year): crime, clearances, population and staffing
+  (`all_total`, `officer_total`, `civilian_total`). It has no incidents or persons.
 
-  There are FBI-estimated state and national figures in `historical_state_national`. There are no incidents and no
-  persons. The entities are agency-year rows, and every measure is a sum.
+  `historical_state_national` holds FBI-estimated state and national counts and **stored rates**. There are also
+  **published national clearance percentages** (`historical-question-compiler.ts:9-16`). Those are G7
+  `published_value`s, never sums.
 - **Fits as is:**
   - counts by place and year;
-  - rates over the year's population;
+  - agency rates over the year's population;
   - rankings of agencies;
-  - period comparisons between whole years.
-
-  Today's H1-H6 (`historical-question-types.ts:6-8`) are expressible.
+  - comparisons between whole years (R6 checks the endpoints).
 - **Needs:**
-  - G3 and G5: annual grain and `data_year`. A month in a Historical plan is refused (R6).
-  - G7: state and national crime come from the estimates (`historical-question-compiler.ts:5-13`). Summing
-    `historical_agency_crime` by state is refused today in guardrails (`guardrails.ts:1345`) and becomes a layer
-    property.
-  - Staffing becomes the label column (G6). `officers@1` is `officer_total` when greater than 0, else `all_total`, and
-    `reported` carries "Officers" or "Employees" (c1f5381; `claude.ts:841-846`). Its layer entry declares:
-    - not additive across agencies: "never summed by state or nationally" (`claude.ts:850`), so a state or national
-      staffing plan is refused;
-    - additive across years only within one label: a total over officer years and employee years is refused;
-    - a change between unlike years is a blank cell. Its evidence status is a new reason, `not_comparable`, and the
-      label reads "Officers to Employees";
-    - rankings choose the figure before rates and sorting, which is the compiler's existing order.
-  - Coverage. Months reported (`historical_core.py:893-896`: zero months is missing, an all-zero year is NULL) maps to
-    the four statuses. "Absence is never 0" is already the compiler's rule.
-- **Build.** A **lighter compiler over the existing tables.** The source is the FBI's published annual files, and
-  `import_historical.py` already loads them at the finest grain they have.
-- **Conflicts:**
-  - State keys: `historical_agency.state` is a lowercase code, while `historical_state_national` uses full names
-    including "United States". The layer normalises both to the plan's `state` code and `national`.
-  - National rape uses CIUS figures from 2017 (`historical_core.py:1348-1352`): a declared measure definition, not a
-    special case in the compiler.
+  - G3, G5, G7 and G8.
+  - Staffing, G4 and G6, as implemented (c1f5381; `claude.ts:841-846, 878-888`;
+    `historical-question-compiler.ts:343-359, 580-607`):
+    - **The figure.** `officers_or_employees@1` is `officer_total` when greater than 0, else `all_total` when greater
+      than 0, else blank.
+    - **The unit.** Its unit is `staff_reported`: one measure whose cell says which count it is through `reported`
+      ("Officers" or "Employees"). It never claims that an employee figure counts officers. The measure's name in
+      answers names both counts when employees appear.
+    - **Never substituted:** civilians and employees.
+    - **Totals.** A total over officer years and employee years is not computed: the individual years are returned.
+    - **Comparisons.** A comparison between unlike years keeps both endpoint values. The change is blank (UNAVAILABLE,
+      reason `not_comparable`), and `reported` is null on that row.
+    - **Rates.** A rate is the shown figure over that year's population. A **single agency's rate is allowed**, so the
+      measure is declared additive across agencies = false, which refuses only state and national sums. The S12-style
+      check must refuse sums, not single-place rates.
+    - **Rankings** choose the figure before rates and sorting.
+  - Reporting evidence: months reported (`historical_core.py:893-896`). Zero months is missing; an all-zero year is
+    NULL, so it maps to UNKNOWN. Absence is never 0.
+- **Build.** A **lighter compiler over the existing tables.** They are loaded from the FBI's published annual files.
+- **Conflicts.**
+  - State keys: lowercase codes in `historical_agency`, full names including "United States" in
+    `historical_state_national`. The layer normalises both to the plan's `state` and `national`.
+  - National rape from 2017 is CIUS Table 1 (`historical_core.py:1348-1352`): a declared measure definition.
 
 ### Current Trends (RTCI)
 
 - **Grain and entities.** Monthly reported counts per agency and offense (`agency_monthly`), from the RTCI sample's
-  CSVs (`update-rtci-db.py`). There are no incidents. `sample_agencies` is "an aggregation cohort, not an import
-  allowlist" (`:119`), and `national_monthly` and `state_monthly` are sums over it.
-- **Fits as is:**
-  - counts by month or year; agency rates;
-  - rolling windows (the `rolling` transform: months 2-120);
-  - comparisons of periods.
-
-  Today's C1-C6 (`current-question-types.ts:6-9`) are expressible apart from YTD.
+  CSVs (`update-rtci-db.py`).
+  - `sample_agencies` is a cohort, not an import allowlist (`:119`).
+  - `national_monthly` sums the sample. `state_monthly` sums **all agencies** (`:451-484`).
+  - The typed compiler computes national and state from `agency_monthly` restricted to the sample, never from
+    `national_monthly` or `state_monthly`.
+- **Fits as is:** counts by month or year, agency rates, rolling counts, comparisons of periods.
 - **Needs:**
-  - **A sample cohort.** National and state values are sums over the RTCI sample, not over every reporting agency. A
-    third `cohort` value, `source_sample` (the agencies of the source's declared sample in that release), sits beside
-    `all_reporting` and `same_agencies`.
+  - **Two separate cohort notions.**
+    - *Sample membership*: which agencies may contribute (the sample, for national and state).
+    - *Reporting eligibility*: today's ordinary multi-month total needs the **identical set of contributors** every
+      month. When the set changes, the compiler shows the months and leaves a rolling total blank
+      (`current-question-compiler.ts:579-613`). Taking the intersection of reporting agencies would produce a number
+      instead, so it is a different rule.
 
-    Today's compiler shows a multi-month total only when the same sample agencies reported every month
-    (`current-question-compiler.ts:9-12`). That is `source_sample` combined with the S3 rule of `same_agencies`, so the
-    cohort should be able to combine the two: sample members that reported in every compared period.
-  - **Year to date.** A period form, `year_to_date` (January through the release's latest month), and a comparison
-    transform, `same_period_previous_year`. "YTD comparisons use the agency's latest month" (`claude.ts:200`) makes the
-    period depend on the agency. Resolution therefore resolves YTD per place, and R2 checks each compared pair.
-  - **Rates.** A month's rate is not annualised; a year or YTD rate uses that year's population; a rolling rate uses
-    months-weighted population (`current-question-compiler.ts:13-15`). These are rules of the `rate` statistic that the
-    layer declares per measure. Population rules must not be hard-coded in the compiler.
-  - **One rule, not two.** The model prompt says national = `national_monthly` and never aggregate `agency_monthly`
-    (`claude.ts:148-149`). The compiler sums the sample from `agency_monthly` instead (`current-question-compiler.ts`).
-    The layer must pick one: the compiler's rule, since `national_monthly` is itself that sum.
-- **Build.** A **lighter compiler over the existing tables.** The source is aggregate counts, so no microdata exists to
-  rebuild.
-- **Conflicts:**
-  - Offense names: RTCI's "murder" or "violent crime" follows the SRS hierarchy and is not NIBRS's
-    `victims.murder@1`. Measure ids are qualified by source (`rtci.murder@1`), and a reader never maps a word to
-    another source's measure.
-  - State rates and state rankings are sent to Historical today (`claude.ts:103`). That becomes a limitation with the
-    redirect, unchanged.
+    The plan therefore carries membership (`members: all | source_sample`) separately from the existing `cohort`
+    (`all_reporting | same_agencies`). The compiler applies the identical-contributors rule to ordinary totals as
+    evidence (UNAVAILABLE, reason `contributors_changed`). The same-agencies cohort, constrained by P10, stays the
+    fixed-cohort comparison.
+  - **Rolling rates.** P11 refuses a rate inside a rolling window. RTCI supports one, using months-weighted
+    population (`current-question-compiler.ts:13-15`), so P11 must allow it for a measure whose layer declares that
+    rule. NIBRS keeps P11.
+  - **Year to date.** A period form, `year_to_date`, and a comparison, `same_period_previous_year`.
+    - The latest month is the place's and offense's own latest month (`claude.ts:200`), so resolution resolves YTD per
+      place and offense.
+    - Resolved provenance must record a period and comparison pair **keyed by place**; `result.ts` stores one period
+      today.
+    - The previous year's operand lies outside January-to-latest, so the selected period is the union of both
+      operands, and R2 checks each pair inside it.
+  - **Rates.** A month's rate is not annualised; a year or YTD rate uses that year's population (`:13-15`). These are
+    rules of the `rate` statistic declared per measure.
+- **Build.** A **lighter compiler over the existing tables** (aggregate counts; no microdata).
+- **Conflicts.**
+  - RTCI's "murder" and "violent crime" follow the SRS hierarchy. Measure ids are qualified by source (`rtci.*`), and a
+    reader never maps a word to another source's measure.
+  - The model prompt's national rule (`national_monthly`, `claude.ts:148-149`) and the compiler's differ. The layer
+    adopts the compiler's.
+  - State rates and rankings are sent to Historical (`claude.ts:103`), and that stays a limitation.
 
 ### Hate Crime
 
-- **Grain and entities.** A separate FBI hate crime master-file database for 1991-2025 (`data/hate-crime/README.md`):
-  - `hate_crime_incidents` has one row per incident and offense (multi-offense incidents are exploded), with bias,
-    location and a per-offense victim count;
-  - `hate_crime_participation` has, per state and year, total and reporting agencies.
+- **Grain and entities.** A separate FBI hate crime database for 1991-2025:
+  - `hate_crime_incidents` has one row per incident and offense, with bias, location and a per-offense victim count;
+  - `hate_crime_participation` has total and reporting agencies per state and year.
 
-  Entities: incident and incident_offense. Units: incident (the default), offense, and victims as `reported_victims`,
-  a **sum** of `offense_victims` (`hc-claude.ts:23-29`). It is not a count of distinct persons, and the label says so
-  through its unit.
+  Units: incident (the default), offense, and `reported_victims`, a sum of `offense_victims` (`hc-claude.ts:23-29`),
+  not distinct persons.
 - **Fits as is:** counts and shares by bias, offense, location, state and year.
 - **Needs:**
-  - **Places by ORI.** Today agencies are found by name (`agency_name LIKE '%HOUSTON%'`, `hc-claude.ts:~165`). The
-    engine resolves places to ORIs, as it does for the other sources.
-  - **Coverage.** `reporting_agencies` counts agencies that had an incident (`import-hate-crime.py:461-468`), so the file
-    has no evidence for a zero. A zero for an agency or state stays UNKNOWN until the zero-report records are decoded,
-    which is the same position as D6's filtered zeros.
-  - **A definition decision.** NIBRS has its own hate crime measure (`offenses.hate_crime@1`, every bias except
-    88/99/blank). The hate crime file also covers SRS agencies, so the two count different things. They stay separate
-    measures under their own sources, and which one answers an unqualified "hate crimes" is a reader decision for the
-    owner.
-- **Build.** A **lighter compiler over `hate_crime_incidents`**. There is no closed compiler today; the tab is model SQL
-  apart from its capability exits (`app/api/hc-query/route.ts:348-420`).
+  - places resolved to ORIs (today agencies are found by name, `hc-claude.ts:~165`);
+  - reporting evidence. `reporting_agencies` counts agencies with an incident (`import-hate-crime.py:461-468`), so
+    there is no zero evidence, and every zero stays UNKNOWN_UNEVIDENCED_ZERO until zero reports are decoded;
+  - an owner decision. NIBRS's `offenses.hate_crime@1` and this file count different things (this file also covers SRS
+    agencies). They stay separate measures, and which one answers an unqualified "hate crimes" is the owner's choice.
+- **Build.** A **lighter compiler over `hate_crime_incidents`**. Today the tab is model SQL apart from its capability
+  exits (`app/api/hc-query/route.ts:348-420`).
 
 ## 3. Shared definitions
 
-| Concept | Shared rule | Per source |
+| Concept | Shared | Per source |
 |---|---|---|
-| Place | ORI identity, place kinds national, state, agency, county and agency_set; labels from one authority; county through `agency_county_crosswalk` | SHR: `shr_agency_identity` and the year-scoped class; Historical: state keys normalised; Hate Crime: name lookup replaced by ORI resolution |
-| Period | calendar months and years; whole-year periods for annual measures (G5); a year in progress clipped and recorded (`clippedTo`) | RTCI: `year_to_date`, `same_period_previous_year`; SHR: the last complete year for annual answers |
-| Population | one agency-year population per source release, with its provenance recorded in evidence; state and national from Census | known differences to declare in each shadow: RTCI agency_population (sample ORIs only), SHR incident-row population averaged, Historical's own population table, NIBRS `geo_population`. They are not merged; each source uses its own, named in the measure |
-| Coverage | the four statuses; unknown is blank, never 0; a filtered zero needs evidence | SHR: Return A comparison; Historical: months reported; RTCI: the sample and its monthly reporting; Hate Crime: no zero evidence yet |
-| Answer contract | groupings and numbers; fixed answer statements; evidence server-side | the label-column exception (G6), staffing only |
+| Place | ORI identity; kinds national, state, agency, county, agency_set; labels from one authority; county via `agency_county_crosswalk` | SHR `shr_agency_identity` and year class; Historical state keys normalised; Hate Crime name lookup replaced by ORI resolution; published values bypass agency membership (G7) |
+| Period | months and years; whole years for annual measures and their comparison endpoints (R6). Clipping a year in progress (`clippedTo`) is proposed in step 1, PR #62, for NIBRS. Each source adopts it explicitly, never by default | RTCI `year_to_date`, keyed by place and offense; SHR annual cutoff rule |
+| Population | each source keeps its existing denominator and published-value policy, recorded in evidence; nothing is merged | NIBRS: covered population of the eligible agencies; RTCI: agency_population, months-weighted for rolling; SHR: averaged incident population, and `state_population` with CDE estimates; Historical: its population table and stored rates |
+| Reporting evidence | per source, scoped to measure, geography and period, mapped into the six cell statuses; unknown is blank, never 0 | SHR: annual Return A (murder, agency); Historical: months reported; RTCI: monthly contributors; Hate Crime: none for zeros |
+| Answer contract | groupings and numbers; fixed answer statements per source (G8); evidence server-side | the `reported` label column, Historical staffing only (G6) |
 
 ## 4. Suggested order
 
-1. **SHR** (agreed). It has incident and victim microdata already, the closest fit to NIBRS, closed types today, and
-   coverage statuses that map one to one. It needs G1, G2 and the person-rate rule.
-2. **Historical and staffing.** An existing closed compiler; annual grain (G3, G5); estimates (G7); and the label
-   column (G6), which tests the one exception to the result contract.
-3. **Current Trends.** It needs the most new plan language (`source_sample`, `year_to_date`,
-   `same_period_previous_year`, per-measure rate rules), and it should come once the cohort machinery is proven on
-   NIBRS's `same_agencies`.
-4. **Hate Crime.** No closed compiler, no zero evidence, and an owner decision on "hate crimes" across sources.
+1. **SHR** (agreed). Microdata already exists, its coverage rule is D6's, and it has closed types today. Needs: G1,
+   G2, median and average, thresholds, the person-rate rule.
+2. **Historical and staffing.** An existing closed compiler. It brings annual grain (G3, G5), published values (G7)
+   and the one label column (G6).
+3. **Current Trends.** The most new plan language: membership beside cohort, the contributors rule, rolling rates and
+   `year_to_date` keyed by place.
+4. **Hate Crime.** No closed compiler, no zero evidence, and an owner decision.
 
 Each source follows NIBRS's sequence: correctness set, semantic layer, compiler, shadow against today's answers, then
 release through `scripts/release.sh` after shadow acceptance.
 
 ## 5. What to do now, while NIBRS is being built
 
-Only the cheap parts of section 1, so the NIBRS compiler does not hard-code what other sources will change:
-- G1: carry `source` in the plan (fixed at `"nibrs"` for now);
-- G2: era bounds from the layer, not the schema;
-- G5: a grain field on measures (`month` for every NIBRS measure).
+Only what keeps the NIBRS compiler from hard-coding what other sources change:
+- G1: a `source` field in the plan, fixed at `"nibrs"`;
+- G2: era bounds from the layer;
+- G5: a grain field on measures (`month` for every NIBRS measure);
+- G8: answer statements keyed by source.
 
-G3, G4, G6 and G7 change types other sources need first; they are done with SHR and Historical. None of this changes a
-NIBRS answer.
+None of these changes a NIBRS answer. The rest is done with the source that needs it.
