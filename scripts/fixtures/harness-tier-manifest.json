@@ -1091,6 +1091,24 @@
       "note": "measured: prepared no SQLite statement at all in a clean clone"
     },
     {
+      "id": "test_nibrs_bh_population",
+      "tier": "F",
+      "script": "scripts/test_nibrs_bh_population.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS batch-header population: all five county slots summed, the 100,000,000 placeholder zeroed per slot; synthetic header lines, no database"
+    },
+    {
+      "id": "test_correct_nibrs_agency_population",
+      "tier": "F",
+      "script": "scripts/test_correct_nibrs_agency_population.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "agency population correction: compute statuses, apply and restore with their guards, on temporary SQLite files and a synthetic master ZIP; locks replaced by no-ops, no network"
+    },
+    {
       "id": "test_shr_incident_populations",
       "tier": "F",
       "script": "scripts/test_shr_incident_populations.py",
