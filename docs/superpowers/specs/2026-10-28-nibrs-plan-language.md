@@ -1,4 +1,4 @@
-# NIBRS structured plan language, v1 (r3)
+# NIBRS structured plan language, v1 (r4)
 
 Phase 3 contract of `2026-10-27-nibrs-engine-restructure.md` (design point 3).
 
@@ -11,6 +11,11 @@ Phase 3 contract of `2026-10-27-nibrs-engine-restructure.md` (design point 3).
 | `lib/nibrs-plan/result.ts` | the result envelope and provenance the compiler fills |
 | `lib/nibrs-plan/examples.ts` | 35 plans and 6 reader outcomes: every correctness case and every typed form today |
 | `scripts/test-nibrs-plan-language.ts` | every example valid; every rule refuses its case |
+
+**r3 → r4 (Codex REVISE, 3 changes):** accounting requires a condition that means the part exactly (a named family
+maps to its exact codes), the rate multiplier, and the place's identity from the app's geography resolver (never the
+plan's label); the one-data-year rule applies per rate statistic, and relative periods are decided after resolution
+(R5); a statistic compared twice is refused.
 
 **r2 → r3 (Codex REVISE, 7 changes):** request accounting by explicit per-concept value rules (a concept with no
 rule cannot be bound); one attribute validator for every condition, rerun on resolved years; noncontiguous years
@@ -94,8 +99,8 @@ request accounting checked by path and value; examples for every case and form, 
 | P10 | a same-agencies cohort with nothing to compare (no comparison and no time grouping) |
 | P11 | transforms out of order or naming unknown statistics; a rolling window without `time.month`, combined with a comparison, or over a rate |
 | P12 | a rank by an unknown statistic, by a compared statistic without naming the output (or naming an output that does not exist), `per` a non-grouping, with nothing left to rank, or two ranks |
-| P13 | comparison periods reversed, overlapping, or outside an absolute plan period; a compared rate with a period spanning two data years |
-| P14 | a rate over several years without a time.year or time.month grouping (one data year per cell) |
+| P13 | comparison periods reversed, overlapping, or outside an absolute plan period; a compared rate with a period spanning two data years; a statistic compared twice (its outputs would collide) |
+| P14 | a rate, not evaluated through a comparison, over an absolute or year-list period spanning several data years without a time.year or time.month grouping |
 | S1 | a plan read against another semantic version |
 | S2 | an unknown measure; a unit different from the measure's; a time basis the measure lacks |
 | S3 | an unknown dimension |
@@ -111,11 +116,12 @@ request accounting checked by path and value; examples for every case and form, 
 | A1 | a part of the question (clause 0 or inherited from an earlier turn) left unbound |
 | A2 | a binding to a path the plan does not have |
 | A3 | a concept no plan can apply (it must be a limitation instead), or a binding to a path of the wrong kind |
-| A4 | a binding whose plan value does not carry the part's value, by an explicit rule per concept: another measure or unit, another state or agency, a clipped or different period, a negated or different filter value, another grain, breakdown, statistic, rank or threshold |
+| A4 | a binding whose plan value does not carry the part's value, by an explicit rule per concept: another measure or unit, another state or agency, a clipped or different period, a negated or different filter value, another grain, breakdown, statistic, rank or threshold; a broader filter than the part (exact equivalence; named families map to exact code sets); a rate not per 100,000; an agency whose ORI the app's geography resolver does not give for the part (the plan's label never decides) |
 | R1 | a resolved period outside the release, or outside a measure's, dimension's or code's era (every condition rechecked on the resolved years) |
 | R2 | comparison periods outside the selected period (for noncontiguous years, outside the selected years), or out of order |
 | R3 | (not a refusal) a combined geography is counted as the deduplicated union of its agencies, recorded in provenance |
-| R4 | a place that matches no agency in the release in the period |
+| R4 | a place that matches no agency in the release in the selected years |
+| R5 | a rate with no time grouping and no comparison whose resolved period spans several data years |
 
 ## Provenance (`ResultEnvelope`, filled by the compiler)
 

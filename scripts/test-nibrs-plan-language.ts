@@ -69,6 +69,9 @@ const layer: SemanticLayer = {
 };
 
 const rules = (problems: { rule: string }[]) => problems.map((p) => p.rule).sort();
+/** The app's geography resolver stands behind place accounting; the plan's label never decides identity. */
+const PLACES: Record<string, { oris: string[] }> = { "city:Baltimore:MD": { oris: ["MDBPD0000"] } };
+const vb = (plan: NibrsPlan, parts: PartRef[]) => validateBindings(plan, parts, (v) => PLACES[v] ?? null);
 const shape = (p: NibrsPlan) => rules(validatePlanShape(p));
 const sem = (p: NibrsPlan) => rules(validatePlanSemantics(p, layer));
 const parse = (p: unknown) => rules(parsePlan(p).problems);
@@ -85,7 +88,7 @@ for (const [name, plan] of Object.entries(X.EXAMPLES)) {
   assert.deepEqual(validatePlanSemantics(plan, layer), [], `${name}: semantics`);
 }
 for (const [name, o] of Object.entries(X.OUTCOMES)) assert(parseReaderOutcome(o).success, `${name}: outcome parses`);
-assert.deepEqual(validateBindings(X.N3, X.N3_PARTS), [], "N3: every part bound by path and value");
+assert.deepEqual(vb(X.N3, X.N3_PARTS), [], "N3: every part bound by path and value");
 
 /* ---------------------------------------------------------------- P0: the runtime boundary ----------------------- */
 assert.deepEqual([...new Set(parse({}))], ["P0"], "an empty object is refused, not a crash");
@@ -138,6 +141,12 @@ assert.deepEqual(shape({ ...X.N3, transforms: [{ kind: "rank", by: "count.change
 assert.deepEqual(shape({ ...X.ROLLING, period: { kind: "absolute", from: "2021-01", to: "2025-12" }, transforms: [X.ROLLING.transforms[0], { kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2021-01", to: "2021-12" }, later: { kind: "absolute", from: "2025-01", to: "2025-12" }, outputs: ["change"] }] }), ["P11"], "rolling and comparison not combined");
 assert.deepEqual(shape({ ...X.ROLLING, statistics: [{ kind: "rate", as: "count", measure: "murder_victims", per: 100000 }] }), ["P11"], "no rate in a rolling window");
 assert.deepEqual(shape({ ...X.R, groupings: [] }), ["P14"], "a 2018-2019 rate with no year grouping");
+// r3 probes: an ungrouped rate is not excused by a comparison of something else; a statistic compared twice.
+assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, statistics: [...X.SAME_AGENCIES_CHANGE.statistics, { kind: "rate", as: "rate", measure: "victims", per: 100000 }] }), ["P14"]);
+assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, transforms: [cmp, { ...cmp, earlier: { kind: "absolute", from: "2024-01", to: "2024-12" } }] }), ["P13"], "count compared twice");
+// A relative ungrouped rate is decided on its resolved period (R5), not refused early.
+const ytdRate: NibrsPlan = { ...X.R, groupings: [], statistics: [{ kind: "rate", as: "rate", measure: "murder_victims", per: 100000 }], period: { kind: "since", from: "2026-01" } };
+assert.deepEqual(shape(ytdRate), []);
 assert.deepEqual(shape({ ...X.SAME_AGENCIES_CHANGE, statistics: [{ kind: "rate", as: "count", measure: "victims", per: 100000 }], transforms: [{ ...cmp, earlier: { kind: "absolute", from: "2023-01", to: "2024-06" }, later: { kind: "absolute", from: "2025-01", to: "2025-12" } }] }), ["P13"], "a compared rate period inside one data year");
 
 /* ---------------------------------------------------------------- S: against the semantic layer ------------------- */
@@ -168,30 +177,36 @@ assert.deepEqual(sem({ ...X.N1, groupings: [], measures: [...X.N1.measures, { id
 
 /* ---------------------------------------------------------------- A: request accounting by path and value ---------- */
 const part = (concept: string, value: string | null, text: string): PartRef => ({ concept, value, text, span: [90, 99], clause: 0, inherited: false });
-const withPart = (plan: NibrsPlan, pr: PartRef, path: string) => rules(validateBindings({ ...plan, bindings: [...plan.bindings, { part: pr, path }] }, [...plan.bindings.map((b) => b.part), pr]));
+const withPart = (plan: NibrsPlan, pr: PartRef, path: string) => rules(vb({ ...plan, bindings: [...plan.bindings, { part: pr, path }] }, [...plan.bindings.map((b) => b.part), pr]));
 // Codex probes: each contradiction is refused.
 assert.deepEqual(withPart({ ...X.N3, geography: { places: [{ kind: "state", code: "MD" }], combine: "separate" } }, part("place", "state:Texas", "Texas"), "geography.places[0]"), ["A4", "A4"], "Texas bound to Maryland (and Baltimore no longer applied)");
 assert.deepEqual(withPart({ ...X.N3, filters: [{ kind: "attribute", dimension: "victim.sex", op: "not_in", values: ["F"] }] }, part("filter", "sex:F", "female"), "filters[0]"), ["A4"], "female bound to not-female");
-assert.deepEqual(rules(validateBindings({ ...X.N3, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] }, X.N3_PARTS)), ["A4"], "by month bound to a year grouping");
+assert.deepEqual(rules(vb({ ...X.N3, groupings: [{ dimension: "time.year", unknown: "visible", absent: "show" }] }, X.N3_PARTS)), ["A4"], "by month bound to a year grouping");
 assert.deepEqual(withPart(X.N3, part("immigration-status", "undocumented", "undocumented"), "question"), ["A3"], "a concept no plan can apply");
 assert.deepEqual(withPart(X.PROPERTY_VALUE, part("unit", "dollars", "dollars"), "measures[0].unit"), [], "dollars maps to the dollars unit");
 assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("threshold", ">=|250000", "250,000 or more"), "geography.places[0]"), []);
 assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("rank", "top:5", "5"), "transforms[0]"), []);
 assert.deepEqual(withPart(X.TOP_N_PER_MONTH, part("rank", "top:10", "10"), "transforms[0]"), ["A4"]);
 assert.deepEqual(withPart(X.SEPARATE_YEARS, part("period", "years:2024:2019", "2019 and 2024"), "period"), []);
+// r3 probes: a broader population, a wrong rate scale, another city's ORI under a borrowed label.
+assert.deepEqual(withPart({ ...X.N3, filters: [{ kind: "attribute", dimension: "victim.sex", op: "in", values: ["F", "M"] }] }, part("filter", "sex:F", "female"), "filters[0]"), ["A4"], "female bound to female-or-male");
+assert.deepEqual(withPart({ ...X.N3, filters: [{ kind: "exists", scope: "offense", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"] }] }] }, part("filter", "weapon:firearm", "firearm"), "filters[0]"), [], "a named family maps to its exact codes");
+assert.deepEqual(withPart({ ...X.R, statistics: [X.R.statistics[0], { kind: "rate", as: "rate", measure: "murder_victims", per: 10 }] }, part("statistic", "per100k", "per 100,000"), "statistics[1]"), ["A4"], "a rate per 10 is not per 100,000");
+assert.deepEqual(withPart(X.R, part("statistic", "per100k", "per 100,000"), "statistics[1]"), []);
+assert.deepEqual(rules(vb({ ...X.N3, geography: { places: [{ kind: "agency", ori: "TXHPD0000", label: "Baltimore Police Department, MD" }], combine: "separate" } }, X.N3_PARTS)), ["A4"], "Houston's ORI under a Baltimore label");
 const bind = (path: string, i: number) => ({ ...X.N3, bindings: X.N3.bindings.map((b, j) => (j === i ? { ...b, path } : b)) });
-assert.deepEqual(rules(validateBindings({ ...X.N3, bindings: X.N3.bindings.slice(1) }, X.N3_PARTS)), ["A1"]);
-assert.deepEqual(rules(validateBindings(bind("no.such.path", 0), X.N3_PARTS)), ["A2"]);
-assert.deepEqual(rules(validateBindings(bind("geography.places[0]", 0), X.N3_PARTS)), ["A3"]);
-assert.deepEqual(rules(validateBindings({ ...X.N3, measures: [{ id: "offenses.robbery", unit: "offense", as: "motor_vehicle_thefts" }] }, X.N3_PARTS)), ["A4"], "bound, but the plan applies another measure");
-assert.deepEqual(rules(validateBindings({ ...X.N3, period: { kind: "absolute", from: "2022-01", to: "2025-12" } }, X.N3_PARTS)), ["A4"], "bound, but the plan clips the period");
+assert.deepEqual(rules(vb({ ...X.N3, bindings: X.N3.bindings.slice(1) }, X.N3_PARTS)), ["A1"]);
+assert.deepEqual(rules(vb(bind("no.such.path", 0), X.N3_PARTS)), ["A2"]);
+assert.deepEqual(rules(vb(bind("geography.places[0]", 0), X.N3_PARTS)), ["A3"]);
+assert.deepEqual(rules(vb({ ...X.N3, measures: [{ id: "offenses.robbery", unit: "offense", as: "motor_vehicle_thefts" }] }, X.N3_PARTS)), ["A4"], "bound, but the plan applies another measure");
+assert.deepEqual(rules(vb({ ...X.N3, period: { kind: "absolute", from: "2022-01", to: "2025-12" } }, X.N3_PARTS)), ["A4"], "bound, but the plan clips the period");
 // A filter part bound to a filter that does not carry its value is not applied.
 const femaleN3: NibrsPlan = { ...X.N3, filters: [{ kind: "attribute", dimension: "victim.sex", op: "in", values: ["M"] }] };
 const femalePart: PartRef = { concept: "filter", value: "sex:F", text: "female", span: [60, 66], clause: 0, inherited: false };
-assert.deepEqual(rules(validateBindings({ ...femaleN3, bindings: [...X.N3.bindings, { part: femalePart, path: "filters[0]" }] }, [...X.N3_PARTS, femalePart])), ["A4"]);
+assert.deepEqual(rules(vb({ ...femaleN3, bindings: [...X.N3.bindings, { part: femalePart, path: "filters[0]" }] }, [...X.N3_PARTS, femalePart])), ["A4"]);
 // An inherited part from an earlier turn is accounted for like any other.
 const inherited: PartRef = { ...X.N3_PARTS[1], inherited: true };
-assert.deepEqual(rules(validateBindings(X.N3, [...X.N3_PARTS, inherited])), ["A1"]);
+assert.deepEqual(rules(vb(X.N3, [...X.N3_PARTS, inherited])), ["A1"]);
 
 /* ---------------------------------------------------------------- R: release resolution ---------------------------- */
 const release = { id: "test", firstMonth: "1991-01", lastMonth: "2026-10" };
@@ -214,5 +229,7 @@ assert.deepEqual(rules(validateResolved({ ...X.N3, geography: { places: [{ kind:
 assert.deepEqual(rules(validateResolved({ ...X.Z, period: { kind: "since", from: "2010-01" }, filters: [{ kind: "attribute", dimension: "offense.location_type", op: "in", values: ["58"] }] }, release, layer, geo).problems), ["R1"]);
 assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2020-01", to: "2020-12" }, later: { kind: "absolute", from: "2024-01", to: "2024-12" }, outputs: ["change"] }] }, release, layer, geo).problems), ["R2"], "2020 is not selected");
 assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2019-01", to: "2019-12" }, later: { kind: "absolute", from: "2024-01", to: "2024-12" }, outputs: ["change"] }] }, release, layer, geo).problems), []);
+assert.deepEqual(validateResolved(ytdRate, release, layer, geo).problems, [], "since 2026-01 resolves to January-October 2026: one data year");
+assert.deepEqual(rules(validateResolved({ ...ytdRate, period: { kind: "since", from: "2024-01" } }, release, layer, geo).problems), ["R5"]);
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);

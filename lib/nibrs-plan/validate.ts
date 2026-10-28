@@ -63,10 +63,23 @@ export function attributeValueProblems(f: AttributeFilter, d: SemanticDimension,
   return out;
 }
 
-function multiYear(p: Period): boolean {
+/** Whether a period spans more than one data year; null for relative periods, decided after resolution (R5). */
+function multiYear(p: Period): boolean | null {
   if (p.kind === "absolute") return p.from.slice(0, 4) !== p.to.slice(0, 4);
   if (p.kind === "years") return p.years.length > 1;
-  return p.kind === "since" || (p.kind === "last_n" && (p.unit === "years" ? p.count > 1 : p.count > 1));
+  if (p.kind === "latest_calendar_year_in_release" || p.kind === "latest_month_in_release") return false;
+  return null;
+}
+
+/**
+ * The rates whose cells must each lie in one data year by the plan's own period: rates not evaluated through a
+ * period comparison (those are checked by P13), in a plan with no time.year or time.month grouping.
+ */
+export function ungroupedRates(plan: NibrsPlan): string[] {
+  const dims = plan.groupings.map((g) => g.dimension);
+  if (dims.includes("time.year") || dims.includes("time.month")) return [];
+  const compared = new Set(plan.transforms.flatMap((t) => (t.kind === "period_comparison" ? t.of : [])));
+  return plan.statistics.filter((s) => s.kind === "rate" && !compared.has(s.as)).map((s) => s.as);
 }
 
 export function validatePlanShape(plan: NibrsPlan): PlanProblem[] {
@@ -149,7 +162,10 @@ export function validatePlanShape(plan: NibrsPlan): PlanProblem[] {
       if (t.earlier.to >= t.later.from) add("P13", path, "the earlier period must end before the later one starts");
       if (p.kind === "absolute" && (t.earlier.from < p.from || t.later.to > p.to)) add("P13", path, "comparison periods must lie inside the plan's period");
       if (t.of.some((x) => statKind.get(x) === "rate") && [t.earlier, t.later].some((q) => q.from.slice(0, 4) !== q.to.slice(0, 4))) add("P13", path, "a compared rate needs each period inside one data year");
-      for (const x of t.of) compared.set(x, t.outputs);
+      for (const x of t.of) {
+        if (compared.has(x)) add("P13", path, `"${x}" is compared twice; its outputs would collide`);
+        compared.set(x, t.outputs);
+      }
     }
   });
   const ranks = plan.transforms.filter((t) => t.kind === "rank");
@@ -168,9 +184,8 @@ export function validatePlanShape(plan: NibrsPlan): PlanProblem[] {
   });
 
   // P14: a rate's population is one data year's, so a rate spans one year per cell.
-  const timeGrouped = groupDims.includes("time.year") || groupDims.includes("time.month");
-  if (plan.statistics.some((s) => s.kind === "rate") && multiYear(p) && !timeGrouped && !hasComparison) {
-    add("P14", "statistics", "a rate over several years needs a time.year or time.month grouping (one data year per cell)");
+  if (multiYear(p) === true) for (const r of ungroupedRates(plan)) {
+    add("P14", "statistics", `rate "${r}" spans several data years: group by time.year or time.month, or compare one-year periods`);
   }
   return out;
 }
@@ -275,8 +290,15 @@ const FILTER_DIMENSIONS: Record<string, string[]> = {
   location: ["location_type"], loss: ["loss_type"], relationship: ["relationship"], bias: ["bias"], dv: ["relationship"],
   clearance: ["exceptional_clearance", "clearance_type"],
 };
-/** Ledger filter values that name a range or a family rather than one code. */
+/** Ledger filter values that name a range or a family rather than one code: the exact condition they mean. */
 const FILTER_VALUE_RANGE: Record<string, [number, number]> = { "age:Under 18": [1, 17] };
+const FILTER_VALUE_SET: Record<string, string[]> = {
+  "weapon:firearm": ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"],
+  "dv:intimate_partner": ["SE", "CS", "BG", "XS", "XR", "HR"],
+  "dv:family": ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE"],
+  "location:commercial": ["02", "03", "05", "07", "08", "09", "12", "14", "17", "19", "21", "23", "24", "40", "41", "47", "55"],
+};
+const sameSet = (a: unknown[], b: string[]) => a.length === b.length && b.every((x) => a.map(String).includes(x));
 
 function at(plan: NibrsPlan, path: string): unknown {
   let x: unknown = plan;
@@ -303,7 +325,13 @@ const PERIOD_FORMS: [RegExp, (m: RegExpExecArray) => Period][] = [
  * Does the plan value at the binding's path carry the part's value? Every concept has an explicit check; a concept
  * without one cannot be bound at all (A3), so an unsupported condition can never be marked applied.
  */
-function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unknown): string | null {
+/**
+ * Authoritative place identity, from the app's geography resolver (never the plan's display label): the ORIs a
+ * ledger place value ("city:Baltimore:MD") resolves to. null when the resolver does not know the place.
+ */
+export type PlaceAuthority = (ledgerValue: string) => { oris: string[]; fips?: string[] } | null;
+
+function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unknown, places: PlaceAuthority): string | null {
   const v = part.value ?? "";
   const t = target as Record<string, unknown>;
   switch (part.concept) {
@@ -320,10 +348,11 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
       if (st) return t.kind === "state" && t.code === STATE_CODE[st[1]] ? null : `this place is not ${st[1]}`;
       const ag = /^(city|county):([^:]+):([A-Z]{2})?$/.exec(v);
       if (ag) {
-        const label = String(t.label ?? "").toLowerCase();
-        const okKind = ag[1] === "city" ? t.kind === "agency" : t.kind === "agency" || t.kind === "county";
-        const okState = !ag[3] || label.endsWith(`, ${ag[3].toLowerCase()}`) || String(t.ori ?? "").startsWith(ag[3]);
-        return okKind && okState && label.includes(ag[2].toLowerCase()) ? null : `this place is not ${ag[2]}${ag[3] ? `, ${ag[3]}` : ""}`;
+        const known = places(v);
+        if (!known) return `place "${v}" has no mapping`;
+        if (t.kind === "agency") return known.oris.includes(String(t.ori)) ? null : `ORI ${String(t.ori)} is not ${ag[2]}${ag[3] ? `, ${ag[3]}` : ""}`;
+        if (t.kind === "county") return (known.fips ?? []).includes(String(t.fips)) ? null : `county ${String(t.fips)} is not ${ag[2]}`;
+        return `this place is not ${ag[2]}`;
       }
       return `place value "${v}" has no mapping`;
     }
@@ -346,10 +375,12 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
       if (!ends) return `filter dimension "${dim}" has no mapping`;
       const range = FILTER_VALUE_RANGE[v];
       const conds = f.kind === "attribute" ? [f] : f.negate ? [] : f.where;
+      // The condition must MEAN the part exactly: the same range, the same family, or exactly the one code.
+      const want = FILTER_VALUE_SET[v] ?? [val];
       const hit = conds.some((a) => ends.some((e) => a.dimension.endsWith(`.${e}`)) && (
         range ? a.op === "between" && same((a.values ?? []).map(Number), range)
-          : a.op === "in" && (a.values ?? []).map(String).includes(val)));
-      return hit ? null : `no positive condition ${dim} = ${val} at ${path}`;
+          : a.op === "in" && sameSet(a.values ?? [], want)));
+      return hit ? null : `no condition meaning exactly ${dim} = ${val} at ${path}`;
     }
     case "grain": {
       const want = v === "month" ? "time.month" : v === "year" ? "time.year" : null;
@@ -370,7 +401,9 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
       return `${path} does not group or select ${ent}`;
     }
     case "statistic": {
-      const want = ["rate", "per100k", "percapita"].includes(v) ? "rate" : v === "average_value" ? "ratio" : "count";
+      // Rates are per 100,000 people in this product (today's rule); the multiplier is part of the value.
+      if (["rate", "per100k", "percapita"].includes(v)) return t.kind === "rate" && t.per === 100000 ? null : `statistic at ${path} is not a rate per 100,000`;
+      const want = v === "average_value" ? "ratio" : "count";
       return t.kind === want ? null : `statistic at ${path} is not a ${want}`;
     }
     case "share":
@@ -402,7 +435,7 @@ function valueApplied(plan: NibrsPlan, part: PartRef, path: string, target: unkn
  * path carries the part's value, by an explicit per-concept rule (A3 when the concept has no rule or the path is the
  * wrong kind, A4 when the value differs).
  */
-export function validateBindings(plan: NibrsPlan, parts: PartRef[]): PlanProblem[] {
+export function validateBindings(plan: NibrsPlan, parts: PartRef[], places: PlaceAuthority): PlanProblem[] {
   const out: PlanProblem[] = [];
   const id = (p: PartRef) => `${p.clause}:${p.span[0]}:${p.span[1]}:${p.inherited}`;
   const bound = new Map(plan.bindings.map((b) => [id(b.part), b]));
@@ -411,7 +444,7 @@ export function validateBindings(plan: NibrsPlan, parts: PartRef[]): PlanProblem
     if (!b) { out.push({ rule: "A1", path: "bindings", message: `"${part.text}" (${part.concept}) is not applied` }); continue; }
     const target = at(plan, b.path);
     if (target === undefined) { out.push({ rule: "A2", path: b.path, message: `"${part.text}" is bound to a path the plan does not have` }); continue; }
-    const wrong = valueApplied(plan, part, b.path, target);
+    const wrong = valueApplied(plan, part, b.path, target, places);
     if (wrong) out.push({ rule: /has no mapping|cannot be applied|binds to/.test(wrong) ? "A3" : "A4", path: b.path, message: `"${part.text}": ${wrong}` });
   }
   return out;

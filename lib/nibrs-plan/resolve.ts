@@ -1,12 +1,12 @@
 /**
  * Release resolution: turn a plan's relative periods and agency sets into what a pinned release holds, then check the
- * rules that need it (R1-R4). Runs after validatePlanShape/Semantics and before compilation; a plan with any problem
+ * rules that need it (R1-R5). Runs after validatePlanShape/Semantics and before compilation; a plan with any problem
  * is not compiled.
  */
 import type { AbsolutePeriod, NibrsPlan, Period, Place } from "./plan";
 import type { SemanticLayer } from "./semantic";
 import type { PlanProblem } from "./validate";
-import { attributeConditions, attributeValueProblems } from "./validate";
+import { attributeConditions, attributeValueProblems, ungroupedRates } from "./validate";
 
 export type ReleaseInfo = { id: string; firstMonth: string; lastMonth: string };
 
@@ -105,5 +105,11 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
     for (const y of selected) any = any || geo.members(p, y).length > 0;
     if (!any) add("R4", `geography.places[${i}]`, "no agency in the release matches this place in the period");
   });
+
+  // R5: a rate's population is one data year's; a rate with no time grouping and no comparison needs its RESOLVED
+  // period inside one data year (a 'since 2026-01' rate is January-October 2026; a 'since 2024' rate is refused).
+  if (y0 !== y1 || (period.kind === "years" && period.years.length > 1)) {
+    for (const r of ungroupedRates(plan)) add("R5", "statistics", `rate "${r}" spans ${from}..${to}: group by time.year or time.month`);
+  }
   return { problems, period, combined };
 }
