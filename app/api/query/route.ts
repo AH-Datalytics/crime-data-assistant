@@ -2246,7 +2246,10 @@ async function handleQueryPost(req: NextRequest) {
       if (typedState === "changed") return historicalAccountingExit({ parts: [], explanation: TYPED_STATE_CHANGED }, "question-type-compile");
       const typedExplanation = withTypedHistoricalRapeNotes(decision.explainLimitation ? `${compiled.explanation} ${decision.explainLimitation}` : compiled.explanation, compiled.deliveredSeries, typedState);
       const ms = Date.now() - totalStart;
-      const hasValue = compiled.rows.some((row) => ["value", "change", "percent_change"].some((c) => row[c] !== null && row[c] !== undefined));
+      // A change whose two figures are both delivered is an answer even when no difference is shown (a staffing change
+      // across an officer year and an employee year).
+      const hasValue = compiled.rows.some((row) => ["value", "change", "percent_change"].some((c) => row[c] !== null && row[c] !== undefined)
+        || (row.earlier_value !== null && row.earlier_value !== undefined && row.later_value !== null && row.later_value !== undefined));
       const typedProof = finalizeExit({
         outcome: hasValue ? OUTCOMES.deterministic_plan : OUTCOMES.no_rows_in_source,
         sql: compiled.sql,

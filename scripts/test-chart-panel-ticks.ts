@@ -4,7 +4,7 @@
 // 6-digit check to Recharts' default ticks — overlapping labels every ~33 months.
 // Run: npx tsx scripts/test-chart-panel-ticks.ts
 import assert from "node:assert/strict";
-import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth, wrapCategoryLabel } from "../components/ChartPanel";
+import { isYearMonth, yearTicksForYM, formatMonthOnly, formatYearMonth, wrapCategoryLabel, reportedLabel } from "../components/ChartPanel";
 import {
   formatNibrsMonthOnly,
   isNibrsYearMonth,
@@ -150,3 +150,14 @@ assert.equal(shouldUsePieLegend([{ name: "A very long category label" }], "name"
 assert.equal(shouldUsePieLegend([{ name: "One" }, { name: "Two" }], "name"), false);
 
 console.log("chart panel tick tests passed");
+
+// Staffing (owner 2026-10-28): the tooltip names each point's count, looked up by the series' data key after a pivot.
+{
+  const pivoted = { year: 2019, "Fort Worth": 2000, "Fort Worth::reported": "Employees", Arlington: 600, "Arlington::reported": "Officers" };
+  assert.equal(reportedLabel(pivoted, "Fort Worth", "Fort Worth"), "Fort Worth (Employees)");
+  assert.equal(reportedLabel(pivoted, "Arlington", "Arlington"), "Arlington (Officers)");
+  const measurePivot = { year: 2019, officers_or_employees: 2000, "officers_or_employees::reported": "Employees" };
+  assert.equal(reportedLabel(measurePivot, "officers_or_employees", "Officers Or Employees"), "Officers Or Employees (Employees)", "display name formatted apart from the key");
+  assert.equal(reportedLabel({ year: 2019, value: 2000, reported: "Employees" }, "value", "Value"), "Employees");
+  assert.equal(reportedLabel({ year: 2019, value: 5 }, "value", "Value"), "Value", "no marker: the series name");
+}

@@ -45,6 +45,8 @@ export type ProjectedAnswer = {
   rows: Record<string, unknown>[];
   /** Annotation columns removed, in their original order; each becomes an `answer-annotation-dropped:<name>` tag. */
   dropped: string[];
+  /** A legacy staffing answer with at least one total-employees figure: its saved officer-only labels need the other count. */
+  legacyEmployees?: boolean;
 };
 
 /**
@@ -53,17 +55,48 @@ export type ProjectedAnswer = {
  * every non-annotation key, including keys that are not in `columns` (internal row fields some surfaces read).
  * Returns the input arrays unchanged when there is nothing to drop.
  */
-export function projectAnswer(columns: readonly string[], rows: readonly Record<string, unknown>[]): ProjectedAnswer {
+/** Legacy staffing marker values (model SQL taught before 2026-10-28): "Employees*" is today's "Employees". */
+const LEGACY_STAFFING = new Map<string, string>([["Officers", "Officers"], ["Employees*", "Employees"], ["Employees", "Employees"]]);
+
+/**
+ * A legacy staffing answer (an old embed's stored SQL) marks each figure in `data_type`. That column is the staffing
+ * classification, not an annotation: it becomes `reported` before projection, so the marker is not lost. Any other
+ * `data_type` is an annotation and is dropped.
+ */
+function legacyStaffing(columns: readonly string[], rows: readonly Record<string, unknown>[]): { columns: string[]; rows: Record<string, unknown>[] } | null {
+  if (!columns.includes("data_type") || columns.includes(STAFFING_LABEL_COLUMN)) return null;
+  const values = rows.map((r) => r.data_type).filter((v) => v !== null && v !== undefined);
+  if (values.length === 0 || !values.every((v) => LEGACY_STAFFING.has(String(v)))) return null;
+  return {
+    columns: columns.map((c) => (c === "data_type" ? STAFFING_LABEL_COLUMN : c)),
+    rows: rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => (k === "data_type"
+      ? [STAFFING_LABEL_COLUMN, v === null || v === undefined ? null : LEGACY_STAFFING.get(String(v))]
+      : [k, v])))),
+  };
+}
+
+export function projectAnswer(givenColumns: readonly string[], givenRows: readonly Record<string, unknown>[]): ProjectedAnswer {
+  const legacy = legacyStaffing(givenColumns, givenRows);
+  const columns = legacy ? legacy.columns : givenColumns;
+  const rows = legacy ? legacy.rows : givenRows;
   const dropped = new Set<string>();
   for (const c of columns) if (isAnswerAnnotation(c)) dropped.add(c);
   for (const row of rows) for (const k of Object.keys(row)) if (isAnswerAnnotation(k)) dropped.add(k);
-  if (dropped.size === 0) return { columns: columns as string[], rows: rows as Record<string, unknown>[], dropped: [] };
+  const legacyEmployees = legacy !== null && rows.some((r) => r[STAFFING_LABEL_COLUMN] === "Employees");
+  if (dropped.size === 0) return { columns: columns as string[], rows: rows as Record<string, unknown>[], dropped: [], ...(legacyEmployees ? { legacyEmployees } : {}) };
   const keep = (k: string) => !dropped.has(k);
   return {
     columns: columns.filter(keep),
     rows: rows.map((row) => Object.fromEntries(Object.entries(row).filter(([k]) => keep(k)))),
     dropped: [...dropped],
+    ...(legacyEmployees ? { legacyEmployees } : {}),
   };
+}
+
+/** "Chicago Police Officers" -> "Chicago Police Officers or total employees"; unchanged if it already names employees. */
+export function withEmployeeCount(label: string): string {
+  if (/employees/i.test(label)) return label;
+  return label.replace(/\b(sworn officers|police officers|officers)\b/i, (m) => `${m} or total employees`);
 }
 
 export function annotationDropTags(dropped: readonly string[]): string[] {
@@ -96,8 +129,15 @@ export function projectPayload<T>(payload: T): T {
   const p = payload as Record<string, unknown>;
   if (!Array.isArray(p.columns) || !Array.isArray(p.rows)) return payload;
   const projected = projectAnswer(p.columns as string[], p.rows as Record<string, unknown>[]);
-  if (projected.dropped.length === 0) return payload;
+  if (projected.columns === p.columns && projected.rows === p.rows) return payload;
   const out: Record<string, unknown> = { ...p, columns: projected.columns, rows: projected.rows };
   if ("chartConfig" in p) out.chartConfig = reconcileChartConfig(p.chartConfig as ChartBinding | null | undefined, projected.dropped);
+  // A legacy staffing answer showing total employees in some years: its saved title and axis label named officers
+  // only; they now name both counts, as a current staffing answer does.
+  if (projected.legacyEmployees) {
+    if (typeof out.title === "string") out.title = withEmployeeCount(out.title);
+    const cfg = out.chartConfig as Record<string, unknown> | null | undefined;
+    if (cfg) out.chartConfig = { ...cfg, ...(typeof cfg.title === "string" ? { title: withEmployeeCount(cfg.title) } : {}), ...(typeof cfg.yAxisLabel === "string" ? { yAxisLabel: withEmployeeCount(cfg.yAxisLabel) } : {}) };
+  }
   return out as T;
 }

@@ -8,11 +8,13 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import { annotationDropTagsFor, finalizeProof, emitFactualPayload, payloadDropTags, type ProofFinalizationInput } from "../lib/proof-finalize";
 import { serializeChartConfigForLog } from "../lib/chart-config-log";
+import { detectAndPivotChartData } from "../lib/chart-layout";
+import { tableDisplay } from "../lib/table-display";
 import { OUTCOMES } from "../lib/proof-contract";
 import { runInner } from "../lib/why-scope";
 import {
   ANSWER_ANNOTATIONS, LABEL_COLUMNS, STAFFING_LABEL_COLUMN, annotationDropTags, isAnswerAnnotation, projectAnswer,
-  projectPayload, reconcileChartConfig,
+  projectPayload, reconcileChartConfig, withEmployeeCount,
 } from "../lib/answer-columns";
 
 let passed = 0;
@@ -63,6 +65,64 @@ check("an annotation only in row keys (not in columns) is dropped too", () => {
   const out = projectAnswer(["month", "murder_victims"], [{ month: "2025-01", murder_victims: 4, shr_status: "complete" }]);
   assert.deepEqual(out.rows, [{ month: "2025-01", murder_victims: 4 }]);
   assert.deepEqual(out.dropped, ["shr_status"]);
+});
+
+check("legacy staffing: data_type 'Officers'/'Employees*' becomes reported, not dropped (phase 2)", () => {
+  const out = projectAnswer(["year", "staffing", "data_type"], [
+    { year: 2018, staffing: 1500, data_type: "Officers" },
+    { year: 2019, staffing: 2000, data_type: "Employees*" },
+  ]);
+  assert.deepEqual(out.columns, ["year", "staffing", "reported"]);
+  assert.deepEqual(out.rows.map((r) => r.reported), ["Officers", "Employees"]);
+  assert.deepEqual(out.dropped, []);
+  const payload = { columns: ["year", "staffing", "data_type"], rows: [{ year: 2019, staffing: 2000, data_type: "Employees*" }] };
+  assert.deepEqual(projectPayload(payload).columns, ["year", "staffing", "reported"], "the payload is renamed too");
+});
+
+check("legacy staffing with an employees year: saved officer-only title and axis label name both counts", () => {
+  const payload = {
+    title: "Chicago Police Officers", columns: ["year", "staffing", "data_type"],
+    rows: [{ year: 1950, staffing: 7000, data_type: "Employees*" }, { year: 1960, staffing: 9000, data_type: "Officers" }],
+    chartConfig: { type: "bar", xAxis: "year", yAxis: ["staffing"], title: "Chicago Police Officers, 1950-1960", yAxisLabel: "Officers" },
+  };
+  const out = projectPayload(payload) as typeof payload;
+  assert.equal(out.title, "Chicago Police Officers or total employees");
+  assert.equal(out.chartConfig.title, "Chicago Police Officers or total employees, 1950-1960");
+  assert.equal(out.chartConfig.yAxisLabel, "Officers or total employees");
+  assert.deepEqual(out.chartConfig.yAxis, ["staffing"], "the binding is unchanged: the value column keeps its name");
+  const allOfficers = projectPayload({ ...payload, rows: [{ year: 1960, staffing: 9000, data_type: "Officers" }] }) as typeof payload;
+  assert.equal(allOfficers.chartConfig.title, "Chicago Police Officers, 1950-1960", "no employees year: labels unchanged");
+  assert.equal(withEmployeeCount("Total employees"), "Total employees");
+});
+
+check("a data_type that is not the staffing marker is an annotation and is dropped", () => {
+  const out = projectAnswer(["year", "value", "data_type"], [{ year: 2018, value: 1, data_type: "estimate" }]);
+  assert.deepEqual(out.columns, ["year", "value"]);
+  assert.deepEqual(out.dropped, ["data_type"]);
+});
+
+check("chart pivot by agency keeps each agency's reported label and never splits on it", () => {
+  const rows = [
+    { year: 2019, place: "Fort Worth", value: 2000, reported: "Employees" },
+    { year: 2019, place: "Arlington", value: 600, reported: "Officers" },
+    { year: 2020, place: "Fort Worth", value: 1502, reported: "Officers" },
+    { year: 2020, place: "Arlington", value: 610, reported: "Officers" },
+  ];
+  const p = detectAndPivotChartData(rows, "year", ["value"]);
+  assert.deepEqual(p.effectiveYKeys, ["Fort Worth", "Arlington"]);
+  assert.deepEqual(p.data[0], { year: 2019, "Fort Worth": 2000, "Fort Worth::reported": "Employees", Arlington: 600, "Arlington::reported": "Officers" });
+  const single = detectAndPivotChartData(rows.filter((r) => r.place === "Fort Worth"), "year", ["value"]);
+  assert.deepEqual(single.effectiveYKeys, ["value"], "one agency: reported is not a series");
+});
+
+check("staffing value headers name the measure and keep a rate's denominator", () => {
+  const rows = [{ year: 2018, place: "Fort Worth, TX", measure: "officers_or_employees", statistic: "per_1000", value: 1.7, reported: "Officers" },
+    { year: 2019, place: "Fort Worth, TX", measure: "officers_or_employees", statistic: "per_1000", value: 2.2, reported: "Employees" }];
+  const d = tableDisplay(["year", "place", "measure", "statistic", "value", "reported"], rows, "Fort Worth");
+  assert.equal(d.labels.value, "Sworn officers (total employees where marked) per 1,000 residents");
+  assert.ok(d.shown.includes("reported"), "the reported column is shown");
+  const counts = tableDisplay(["year", "measure", "statistic", "value"], [{ year: 2018, measure: "officers", statistic: "count", value: 1500 }], "");
+  assert.equal(counts.labels.value, "Sworn officers", "not 'officers offenses'");
 });
 
 check("drop tags", () => {

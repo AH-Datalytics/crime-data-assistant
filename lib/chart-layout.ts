@@ -1,3 +1,4 @@
+import { LABEL_COLUMNS } from "./answer-columns";
 import { MAX_SLANTED_AXIS, estimateWidth, sideLabelWidth, sidewaysBandHeight, slantedAxisHeight } from "./chart-text";
 export const MAX_AUTO_CHART_SERIES = 16;
 
@@ -83,7 +84,7 @@ export function detectAndPivotChartData(
   // Round 1 D3/D4: presentation metadata (row notes, coverage caveats and statuses) is never a series dimension, so a
   // partial-period note cannot split one series in two.
   const otherKeys = Object.keys(data[0]).filter(
-    (key) => key !== "_ym" && key !== xKey && key !== valueKey && !CHART_METADATA_KEY.test(key),
+    (key) => key !== "_ym" && key !== xKey && key !== valueKey && !CHART_METADATA_KEY.test(key) && !LABEL_COLUMNS.has(key),
   );
   let categoryKey: string | null = null;
   let categories: string[] = [];
@@ -113,11 +114,17 @@ export function detectAndPivotChartData(
     return { data, effectiveYKeys: yKeys, seriesOverflow: true };
   }
 
+  // A label column (staffing's `reported`) is kept per point: `<series>::<label column>` beside the series' value, so a
+  // tooltip still says which count each agency's figure is when two agencies differ in the same year.
+  const labels = [...LABEL_COLUMNS].filter((l) => l in data[0]);
   const pivot = new Map<unknown, Record<string, unknown>>();
   for (const row of data) {
     const x = row[xKey];
     if (!pivot.has(x)) pivot.set(x, { [xKey]: x });
-    pivot.get(x)![String(row[categoryKey] ?? "")] = row[valueKey];
+    const series = String(row[categoryKey] ?? "");
+    const out = pivot.get(x)!;
+    out[series] = row[valueKey];
+    for (const l of labels) out[`${series}::${l}`] = row[l];
   }
   return { data: [...pivot.values()], effectiveYKeys: categories, seriesOverflow: false };
 }
