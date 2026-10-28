@@ -29,8 +29,12 @@ export default function ChartAuditPreviewClient() {
   if (error) return <div data-chart-audit-error>{error}</div>;
   if (!artifact) return <div>Loading chart artifact...</div>;
   const nibrsStyle = ["nibrs", "shr", "hate_crime"].includes(artifact.source);
+  // ?w=375&h=520 renders the chart at another size, for the label-fit checks at phone and tablet widths.
+  const params = new URLSearchParams(window.location.search);
+  const width = Number(params.get("w")) || 960;
+  const height = Number(params.get("h")) || 600;
   return (
-    <main data-chart-audit-ready="true" style={{ width: 960, height: 600, padding: 24, background: "#F5F0E8" }}>
+    <main data-chart-audit-ready="true" style={{ width, height, padding: width < 600 ? 8 : 24, background: "#F5F0E8" }}>
       {nibrsStyle
         ? <NibrsChartPanel config={artifact.chartConfig} rows={artifact.rows} />
         : <ChartPanel config={artifact.chartConfig} rows={artifact.rows} />}

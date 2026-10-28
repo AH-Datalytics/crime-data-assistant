@@ -1,0 +1,695 @@
+{
+ "_comment": "Answer contract release (2026-10-28): the frozen answers as captured from nibrsai.com on 2026-10-28 with the note column removed; every other value identical. Captured with release-checks.cjs ask.",
+ "answers": {
+  "O352": {
+   "columns": [
+    "year",
+    "place",
+    "measure",
+    "statistic",
+    "value"
+   ],
+   "rows": [
+    {
+     "year": 1958,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.7
+    },
+    {
+     "year": 1959,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.8
+    },
+    {
+     "year": 1960,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.1
+    },
+    {
+     "year": 1961,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.7
+    },
+    {
+     "year": 1962,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.5
+    },
+    {
+     "year": 1963,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.5
+    },
+    {
+     "year": 1964,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.8
+    },
+    {
+     "year": 1965,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.1
+    },
+    {
+     "year": 1966,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.6
+    },
+    {
+     "year": 1967,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.1
+    },
+    {
+     "year": 1968,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.8
+    },
+    {
+     "year": 1969,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 7.2
+    },
+    {
+     "year": 1970,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 7.8
+    },
+    {
+     "year": 1971,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.5
+    },
+    {
+     "year": 1972,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.9
+    },
+    {
+     "year": 1973,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.3
+    },
+    {
+     "year": 1974,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.7
+    },
+    {
+     "year": 1975,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.6
+    },
+    {
+     "year": 1976,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.8
+    },
+    {
+     "year": 1977,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.8
+    },
+    {
+     "year": 1978,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9
+    },
+    {
+     "year": 1979,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.7
+    },
+    {
+     "year": 1980,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 10.2
+    },
+    {
+     "year": 1981,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.8
+    },
+    {
+     "year": 1982,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.1
+    },
+    {
+     "year": 1983,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.3
+    },
+    {
+     "year": 1984,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 7.9
+    },
+    {
+     "year": 1985,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 7.9
+    },
+    {
+     "year": 1986,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.6
+    },
+    {
+     "year": 1987,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.3
+    },
+    {
+     "year": 1988,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.4
+    },
+    {
+     "year": 1989,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.7
+    },
+    {
+     "year": 1990,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.4
+    },
+    {
+     "year": 1991,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.8
+    },
+    {
+     "year": 1992,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.3
+    },
+    {
+     "year": 1993,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9.5
+    },
+    {
+     "year": 1994,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 9
+    },
+    {
+     "year": 1995,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 8.2
+    },
+    {
+     "year": 1996,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 7.4
+    },
+    {
+     "year": 1997,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.8
+    },
+    {
+     "year": 1998,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.3
+    },
+    {
+     "year": 1999,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.7
+    },
+    {
+     "year": 2000,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.5
+    },
+    {
+     "year": 2001,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.6
+    },
+    {
+     "year": 2002,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.6
+    },
+    {
+     "year": 2003,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.1
+    },
+    {
+     "year": 2004,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.8
+    },
+    {
+     "year": 2005,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.9
+    },
+    {
+     "year": 2006,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.7
+    },
+    {
+     "year": 2007,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.7
+    },
+    {
+     "year": 2008,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.4
+    },
+    {
+     "year": 2009,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5
+    },
+    {
+     "year": 2010,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.8
+    },
+    {
+     "year": 2011,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.7
+    },
+    {
+     "year": 2012,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.8
+    },
+    {
+     "year": 2013,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.5
+    },
+    {
+     "year": 2014,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.4
+    },
+    {
+     "year": 2015,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 4.9
+    },
+    {
+     "year": 2016,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.4
+    },
+    {
+     "year": 2017,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.6
+    },
+    {
+     "year": 2018,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.1
+    },
+    {
+     "year": 2019,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.1
+    },
+    {
+     "year": 2020,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.7
+    },
+    {
+     "year": 2021,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.5
+    },
+    {
+     "year": 2022,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 6.6
+    },
+    {
+     "year": 2023,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5.9
+    },
+    {
+     "year": 2024,
+     "place": "United States",
+     "measure": "murder",
+     "statistic": "rate_per_100k",
+     "value": 5
+    }
+   ]
+  },
+  "H1": {
+   "columns": [
+    "period",
+    "place",
+    "measure",
+    "unit",
+    "filter",
+    "statistic",
+    "value"
+   ],
+   "rows": [
+    {
+     "period": "2025-01",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 26
+    },
+    {
+     "period": "2025-02",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 16
+    },
+    {
+     "period": "2025-03",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 22
+    },
+    {
+     "period": "2025-04",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 25
+    },
+    {
+     "period": "2025-05",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 14
+    },
+    {
+     "period": "2025-06",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 13
+    },
+    {
+     "period": "2025-07",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 20
+    },
+    {
+     "period": "2025-08",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 20
+    },
+    {
+     "period": "2025-09",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 17
+    },
+    {
+     "period": "2025-10",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 5
+    },
+    {
+     "period": "2025-11",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 4
+    },
+    {
+     "period": "2025-12",
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 8
+    }
+   ]
+  },
+  "H2": {
+   "columns": [
+    "period",
+    "place",
+    "measure",
+    "unit",
+    "filter",
+    "statistic",
+    "value"
+   ],
+   "rows": [
+    {
+     "period": 2025,
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 190
+    }
+   ]
+  },
+  "H3": {
+   "columns": [
+    "period",
+    "place",
+    "measure",
+    "unit",
+    "filter",
+    "statistic",
+    "value"
+   ],
+   "rows": [
+    {
+     "period": 2020,
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 411
+    },
+    {
+     "period": 2021,
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 535
+    },
+    {
+     "period": 2022,
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 601
+    },
+    {
+     "period": 2023,
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 528
+    },
+    {
+     "period": 2024,
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 359
+    },
+    {
+     "period": 2025,
+     "place": "Memphis, TN",
+     "measure": "carjacking",
+     "unit": "offenses",
+     "filter": null,
+     "statistic": "count",
+     "value": 190
+    }
+   ]
+  }
+ }
+}

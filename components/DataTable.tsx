@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { formatNumber, formatDate } from "@/lib/utils";
 import { monthLabel, tableDisplay } from "@/lib/table-display";
+import { isAnswerAnnotation } from "@/lib/answer-columns";
 
 /**
  * Round 1 W2 (owner threshold 2): plain-word headers for internal column names. "Rate per 100k" is the owner's choice.
@@ -74,8 +75,9 @@ interface DataTableProps {
 
 export default function DataTable({ columns: rawColumns, rows, truncated, fillHeight, title, heading, columnLabels, partialPeriods, periodColumn }: DataTableProps) {
   // Round 1 W2: an ori column is hidden unless it is needed to tell rows apart.
+  // The answer contract (lib/answer-columns.ts): no annotation column, also for an answer stored before it.
   const allColumns = useMemo(
-    () => rawColumns.filter((c) => !/^(?:ori|agency_ori)$/i.test(c) || idColumnNeeded(c, rawColumns, rows)),
+    () => rawColumns.filter((c) => !isAnswerAnnotation(c) && (!/^(?:ori|agency_ori)$/i.test(c) || idColumnNeeded(c, rawColumns, rows))),
     [rawColumns, rows]
   );
   // Table display hotfix (2026-10-22): empty columns are not shown, and a text column that is the same on every row is
