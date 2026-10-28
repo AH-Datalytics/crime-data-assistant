@@ -31,10 +31,21 @@ request accounting checked by path and value; examples for every case and form, 
 
 ## How a question becomes an answer
 
-1. The reader (model plus request ledger) returns a `ReaderOutcome`: a **plan**, a **clarification** (asked only when
-   the readings give different answers; every option is a complete plan), or a **limitation** (a concept NIBRS
-   does not record, data outside the release, a capability not yet switched on for an era, an unresolved place, or
-   a request for causes). It never writes SQL.
+1. The reader (model plus request ledger) returns a `ReaderOutcome`. It never writes SQL. The outcome is one of three:
+   - a **plan**;
+   - a **clarification**, asked only when the readings give different answers. Each option is the original question
+     with one choice filled in. It leads to a complete plan, or to a limitation when that reading cannot be answered.
+     An option is never asked again;
+   - a **limitation**: a concept NIBRS does not record, data outside the release, a capability not yet switched on
+     for an era, an unresolved place, a request for causes, data below the agency, a rate by group, a court outcome,
+     a forecast, an incident detail, or a total from too little coverage. It always states its `alternative`
+     explicitly: the nearest answerable question as a complete plan with a label, or `null` when none genuinely
+     exists (frozen rule 14). An alternative is offered for the user to choose, and never run in place of the
+     question.
+
+   `validateOutcome` (`lib/nibrs-plan/outcome.ts`) checks every option plan and alternative like any plan, so each
+   one runs as offered. O1: an option's plan fails a rule. O2: an alternative fails one. O3: two options share a
+   label or lead to the same plan. Request accounting applies to the answering plan, not to alternatives.
 2. `parsePlan` checks the JSON against the schema (P0). Malformed input is refused, never thrown.
 3. `validatePlanShape` (P1-P13), `validatePlanSemantics` against a pinned semantic version (S1-S12), and
    `validateBindings` against the request ledger (A1-A4).
@@ -202,7 +213,7 @@ The compiler counts distinct entity keys, so reaching a dimension can never mult
 | `ShareSpec`, `byState` | the same ratio with a `geo.state` grouping | (form of `CLEARANCE_SHARE`) |
 | `RankSpec` (N6) | `geo.state` or `geo.agency` grouping (agencies via `agency_set` with the population minimum); `rank` by the named statistic, `limit` n or null | `RANKED_RATES`, `TOP_N_PER_MONTH` |
 | `ChangeSpec` (N7) | a period spanning both years; `period_comparison`; cohort all reporting or same agencies | `SAME_AGENCIES_CHANGE`, `S3` |
-| `decline` / `clarify` | `limitation` with a reason / `clarify` with complete plans | `G1`-`G6` |
+| `decline` / `clarify` | `limitation` with a reason and an explicit alternative / `clarify` whose options lead to plans or limitations | `G1`-`G6` |
 
 `lib/nibrs-plan/from-spec.ts` implements this mapping (`planFromSpec`): today's typed spec and its request ledger become a plan with every part bound, validated like any reader output (`scripts/test-nibrs-plan-adapter.ts`; reachability over the replay inventory: `scripts/nibrs-plan-reachability.ts`).
 
