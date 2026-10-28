@@ -1,6 +1,6 @@
 /**
  * Release resolution: turn a plan's relative periods and agency sets into what a pinned release holds, then check the
- * rules that need it (R1-R5). Runs after validatePlanShape/Semantics and before compilation; a plan with any problem
+ * rules that need it (R1-R6). Runs after validatePlanShape/Semantics and before compilation; a plan with any problem
  * is not compiled.
  */
 import type { AbsolutePeriod, NibrsPlan, Period, Place } from "./plan";
@@ -130,5 +130,20 @@ export function validateResolved(plan: NibrsPlan, release: ReleaseInfo, layer: S
   if (y0 !== y1 || (period.kind === "years" && period.years.length > 1)) {
     for (const r of ungroupedRates(plan)) add("R5", "statistics", `rate "${r}" spans ${from}..${to}: group by time.year or time.month`);
   }
+  // R6: a measure recorded by year (an annual source, G5) is read in whole years only: no month grouping, no rolling
+  // window, a resolved period of whole years (a clipped year is not whole), and whole-year comparison endpoints.
+  // Every NIBRS measure is monthly, so R6 never applies to NIBRS.
+  const annual = plan.measures.filter((m) => layer.measure(m.id)?.grain === "year").map((m) => m.id);
+  if (annual.length) {
+    const whole = (p: { from: string; to: string }) => p.from.endsWith("-01") && p.to.endsWith("-12");
+    const what = `"${annual.join('", "')}" ${annual.length > 1 ? "are" : "is"} recorded by year`;
+    if (plan.groupings.some((g) => g.dimension === "time.month")) add("R6", "groupings", `${what}: no month grouping`);
+    if (period.kind === "absolute" ? !whole(period) : period.through !== undefined) add("R6", "period", `${what}: the period must be whole years`);
+    plan.transforms.forEach((t, i) => {
+      if (t.kind === "rolling") add("R6", `transforms[${i}]`, `${what}: no rolling window over months`);
+      if (t.kind === "period_comparison") for (const [name, p] of [["earlier", t.earlier], ["later", t.later]] as const) if (!whole(p)) add("R6", `transforms[${i}].${name}`, `${what}: compared periods must be whole years`);
+    });
+  }
+
   return { problems, period, ...(clippedTo ? { clippedTo } : {}), combined };
 }

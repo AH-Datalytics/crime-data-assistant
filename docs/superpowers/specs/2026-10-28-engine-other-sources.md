@@ -50,6 +50,8 @@ matched eligible-agency numerator over covered population), cohorts, statuses an
 - **Grain and entities.** `incidents` has one row per homicide incident, with year, month, ORI, agency population,
   situation, weapon, circumstance and the **primary** offender's attributes. `victims` has one row per victim, joined
   by incident_id (`shr.ddl.sql`; `shr-claude.ts:54-68, 215`).
+  - SHR is **monthly** data: each incident has its year and month, so SHR measures have grain `month` (G5), as NIBRS
+    measures do. Only its coverage evidence and its annual-answer cutoff are annual (below).
   - Entities: incident, victim, `primary_offender` (one-to-one with its incident).
   - Units: victim (the default, `shr-claude.ts:129`) and incident.
   - Offender counts are refused: SHR records one offender per incident.

@@ -11,6 +11,12 @@ import { z } from "zod";
 
 export const PLAN_VERSION = "nibrs-plan/1" as const;
 
+/**
+ * The data source a plan reads (G1, docs/superpowers/specs/2026-10-28-engine-other-sources.md). A plan reads exactly
+ * one source, through that source's semantic layer; NIBRS is the only one so far.
+ */
+export const Source = z.enum(["nibrs"]);
+
 const YearMonth = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "months are YYYY-MM");
 const Id = z.string().min(1);
 const Name = z.string().regex(/^[a-z][a-z0-9_]*$/, "names are lower_snake_case");
@@ -57,7 +63,8 @@ export const Period = z.discriminatedUnion("kind", [
   /** Months inclusive. A year is "2025-01".."2025-12". */
   AbsolutePeriod,
   /** Whole calendar years that need not be contiguous ("2019 and 2024"). Grouped by time.year unless combined. */
-  z.strictObject({ kind: z.literal("years"), years: z.array(z.number().int().min(1991).max(2100)).min(1) }),
+  // Eras are the semantic layer's and the release's (R1), not the schema's (G2).
+  z.strictObject({ kind: z.literal("years"), years: z.array(z.number().int().min(1).max(2100)).min(1) }),
   /** From `from` through the release's last month. */
   z.strictObject({ kind: z.literal("since"), from: YearMonth }),
   /** The last `count` whole calendar years, or months, the release holds. */
@@ -254,6 +261,7 @@ export const AppliedDefault = z.strictObject({ path: z.string().min(1), value: z
 
 export const NibrsPlan = z.strictObject({
   version: z.literal(PLAN_VERSION),
+  source: Source,
   semanticVersion: Id,
   question: z.string().min(1),
   geography: Geography,
@@ -292,6 +300,7 @@ export type ReaderOutcome = z.infer<typeof ReaderOutcome>;
 export type Place = z.infer<typeof Place>;
 export type Period = z.infer<typeof Period>;
 export type AbsolutePeriod = z.infer<typeof AbsolutePeriod>;
+export type Source = z.infer<typeof Source>;
 export type TimeBasis = z.infer<typeof TimeBasis>;
 export type CountingUnit = z.infer<typeof CountingUnit>;
 export type Filter = z.infer<typeof Filter>;

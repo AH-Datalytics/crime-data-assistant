@@ -17,7 +17,7 @@
  * labels.md, branch fix/answer-columns-only-data; implementation pending). Its guard tests will cover this engine's
  * tables once it produces them.
  */
-import type { AbsolutePeriod, NibrsPlan } from "./plan";
+import type { AbsolutePeriod, NibrsPlan, Source } from "./plan";
 
 /** A user-facing column, bound to exactly one grouping or one statistic of the plan. */
 export type ResultColumn =
@@ -64,6 +64,8 @@ export const ANSWER_STATEMENTS = {
   reported_nibrs_counts: "These are reported NIBRS counts.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
+/** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */
+export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs" };
 
 export type ResultEnvelope = {
   plan: NibrsPlan;
@@ -170,10 +172,11 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
   // Answer statements: only the authorized ones, each only where it applies.
   for (const s of env.answerStatements) {
     if (!(s in ANSWER_STATEMENTS)) out.push(`answer statement "${s}" is not authorized`);
+    else if (STATEMENT_SOURCE[s] !== plan.source) out.push(`answer statement "${s}" belongs to ${STATEMENT_SOURCE[s]}, not ${plan.source}`);
   }
   const hasPropertyExists = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "property");
   const national = plan.geography.places.some((p) => p.kind === "national");
-  if (hasPropertyExists !== env.answerStatements.includes("property_not_attributed")) out.push("property_not_attributed is required exactly when the plan filters on incident property");
-  if (national !== env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts is required exactly when the geography is the nation");
+  if (plan.source === "nibrs" && hasPropertyExists !== env.answerStatements.includes("property_not_attributed")) out.push("property_not_attributed is required exactly when the plan filters on incident property");
+  if (plan.source === "nibrs" && national !== env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts is required exactly when the geography is the nation");
   return out;
 }

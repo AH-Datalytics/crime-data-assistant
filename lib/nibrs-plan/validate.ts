@@ -6,7 +6,7 @@
  *   validatePlanShape          P1-P14 rules that need no semantic layer
  *   validatePlanSemantics      S1-S12 rules against a pinned semantic-layer version
  *   validateBindings           A1-A4  request accounting: every part bound, by path AND by value
- *   validateResolved (resolve) R1-R4  rules that need the pinned release
+ *   validateResolved (resolve) R1-R6  rules that need the pinned release
  *
  * Each returns problems; an empty list means valid. A plan with any problem is never compiled.
  */
@@ -199,6 +199,7 @@ export function planYears(p: Period): [number, number] | null {
 export function validatePlanSemantics(plan: NibrsPlan, layer: SemanticLayer): PlanProblem[] {
   const out: PlanProblem[] = [];
   const add = (rule: string, path: string, message: string) => out.push({ rule, path, message });
+  if (plan.source !== layer.source) add("S1", "source", `plan reads ${plan.source}, layer describes ${layer.source}`);
   if (plan.semanticVersion !== layer.version) add("S1", "semanticVersion", `plan was read against ${plan.semanticVersion}, layer is ${layer.version}`);
   const years = planYears(plan.period);
   const units = new Map(plan.measures.map((m) => [m.as, m.unit]));

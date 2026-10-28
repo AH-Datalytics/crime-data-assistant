@@ -296,7 +296,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
   }
 
   const plan: NibrsPlan = {
-    version: PLAN_VERSION, semanticVersion: deps.semanticVersion, question: ledger.question,
+    version: PLAN_VERSION, source: "nibrs", semanticVersion: deps.semanticVersion, question: ledger.question,
     geography: { places, combine: "separate" }, period: periodValue!,
     // Group B arrests have no incident: they are placed in time by arrest date.
     timeBasis: measures.some((m) => m.unit === "group_b_arrest") ? "arrest_date" : "incident_date",

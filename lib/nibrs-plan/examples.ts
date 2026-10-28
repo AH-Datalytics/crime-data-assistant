@@ -10,7 +10,7 @@ export const SEMANTIC_VERSION = "nibrs-semantic/0-draft";
 const ALL: Coverage = { cohort: "all_reporting", unknownMonths: "show_unknown", filteredZero: "requires_evidence" };
 const SAME: Coverage = { ...ALL, cohort: "same_agencies" };
 const by = (dimension: string, extra: Partial<Grouping> = {}): Grouping => ({ dimension, unknown: "visible", absent: "show", ...extra });
-const base = { version: PLAN_VERSION, semanticVersion: SEMANTIC_VERSION, timeBasis: "incident_date" as const, transforms: [], filters: [], defaults: [], bindings: [] };
+const base = { version: PLAN_VERSION, source: "nibrs" as const, semanticVersion: SEMANTIC_VERSION, timeBasis: "incident_date" as const, transforms: [], filters: [], defaults: [], bindings: [] };
 const year = (y: number) => ({ kind: "absolute" as const, from: `${y}-01`, to: `${y}-12` });
 
 const HOUSTON = { kind: "agency" as const, ori: "TXHPD0000", label: "Houston Police Department, TX" };

@@ -82,7 +82,7 @@ const UNIT_ENTITY: Partial<Record<CountingUnit, EntityId>> = {
   victim_offender: "victim_offender", dollars: "property", property_segment: "property", fbi_standard: "incident", group_b_arrest: "group_b_arrest",
 };
 const measure = (id: string, unit: CountingUnit, timeBases: TimeBasis[] = ["incident_date"]): SemanticMeasure =>
-  ({ id, entity: UNIT_ENTITY[unit] ?? "offense", unit, label: id, aggregation: unit === "dollars" ? { kind: "sum", column: "value" } : { kind: "count_distinct" }, predicate: null, additive: ALL_ADD, timeBases, validYears: YEARS });
+  ({ id, entity: UNIT_ENTITY[unit] ?? "offense", unit, label: id, aggregation: unit === "dollars" ? { kind: "sum", column: "value" } : { kind: "count_distinct" }, predicate: null, additive: ALL_ADD, timeBases, grain: "month", validYears: YEARS });
 
 const MEASURES: SemanticMeasure[] = [];
 for (const [name, codes] of Object.entries(MEASURE_CODES)) {
@@ -124,6 +124,7 @@ const DIMENSIONS: SemanticDimension[] = [
 ];
 
 export const DRAFT_LAYER: SemanticLayer = {
+  source: "nibrs",
   version: DRAFT_SEMANTIC_VERSION,
   entity: (id) => ENTITIES.find((e) => e.id === id),
   measure: (id) => MEASURES.find((m) => m.id === id),
