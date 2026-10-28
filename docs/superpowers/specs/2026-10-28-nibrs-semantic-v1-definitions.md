@@ -315,7 +315,7 @@ Compared by agency (or state), year, month and category. Every difference has a 
 | T8 | one property row averaging $1.2M and one averaging $5,000 in one agency-year | dollars: 0 + total of the second | dollars: both totals; counts equal |
 | T9 | 23C at location 07 with 6 offenders; with 5 offenders; at location 20 with 8 | 1 (model SQL) | 1, 0, 0 |
 | T10 | an L victim connected to 13B in slot 3 | not counted (slots 1-2) | counted |
-| T11 | a Group A arrest for 13A whose offense weapon is 12 (handgun) and whose arrestee is unarmed (01) | Firearm (the offense's weapon) | arrest-offense weapon: Firearm (equal); armed-with: Unarmed, a separate dimension |
+| T11 | a Group A arrest for 13A whose offense weapon is 12 (handgun) and whose arrestee is unarmed (01) | Firearm (the offense's weapon) | arrest-offense weapon: Firearm (equal); armed-with: Other (code 01, unarmed, falls in Other under `weapon.category@1`), a separate dimension |
 | T12 | a cleared carjacking incident holding 120 and 240 | builder to be recovered | `incidents.carjacking_cleared@1` = 1 (not 2 cleared offenses) |
 | T13 | an offense whose only bias field is blank; another with blank then 21 | blank-only: not in the hate-crime location table, in summary_hate_crime as written today | blank-only: not a hate crime; blank + 21: a hate crime, anti-Jewish |
 
