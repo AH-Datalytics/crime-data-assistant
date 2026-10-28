@@ -1,0 +1,29 @@
+{
+ "case": "R",
+ "question": "Murder victim rate per 100,000 residents in Houston, 2018 and 2019.",
+ "counting_unit": "victim",
+ "jurisdiction": "Houston Police Department is the primary agency for the city of Houston; under D8 its covered population is the denominator. The canonical agency_jurisdiction table must confirm population_counted for TXHPD0000.",
+ "scope_note": "This case tests annual rates only. A rate over an explicitly labelled partial period (year to date) is a separate rule with its own case, not covered here.",
+ "rows": [
+  {
+   "year": 2018,
+   "murder_victims": 171,
+   "months_with_data": 7,
+   "population": 2296862,
+   "population_source": "FBI agency population for TXHPD0000, data year 2018 (extracts/agency_years_2017_2026.csv: population group 1A, covered_flag Y)",
+   "rate_per_100k": null,
+   "rate_unavailable_reason": "5 of 12 months have no Houston NIBRS data (UNKNOWN), so the year cannot be evidenced complete from the available evidence; numerator and denominator use the same agency-period eligibility (D6)",
+   "rate_per_100k_if_year_evidenced_complete": null
+  },
+  {
+   "year": 2019,
+   "murder_victims": 281,
+   "months_with_data": 12,
+   "population": 2307560,
+   "population_source": "FBI agency population for TXHPD0000, data year 2019 (extracts/agency_years_2017_2026.csv: population group 1A, covered_flag Y)",
+   "rate_per_100k": null,
+   "rate_unavailable_reason": "the agency's year is not evidenced complete (12 months have crime rows; BH evidence is not decoded)",
+   "rate_per_100k_if_year_evidenced_complete": 12.18
+  }
+ ]
+}

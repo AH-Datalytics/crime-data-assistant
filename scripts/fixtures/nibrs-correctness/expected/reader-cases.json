@@ -1,0 +1,17 @@
+{
+ "_comment": "What the question reader must produce for questions whose difficulty is the reading, not the counting (CASES.md, G1-G6). 'outcome' is plan, clarify or limitation (lib/nibrs-plan/plan.ts ReaderOutcome). These are checked against the reader's output by a person or a test; the numbers come from the counting cases.",
+ "cases": [
+  {"id": "G1", "question": "murders in the US in 2024", "outcome": "plan",
+   "must": ["geography is national: a sum of reported counts across agencies, never an agency named 'US' or 'USA'", "the answer says 'reported NIBRS counts'"]},
+  {"id": "G2", "question": "murders in Springfield in 2024", "outcome": "clarify",
+   "must": ["options name each Springfield police department with its state", "no number is given before the place is chosen"]},
+  {"id": "G3", "question": "thefts from cars where a firearm was stolen in Memphis in 2024", "outcome": "plan",
+   "must": ["the firearm is property (loss 7, description 13) in an incident-scoped existence filter, as N2", "never the weapon used"]},
+  {"id": "G4", "question": "car thefts in Baltimore from January 2022 to June 2026", "outcome": "plan",
+   "must": ["period 2022-01 through 2026-06, monthly or as asked; no clarification", "labelled motor vehicle theft"]},
+  {"id": "G5", "question": "how many murders in Houston were committed by undocumented immigrants", "outcome": "limitation",
+   "must": ["reason not_recorded_in_nibrs, naming immigration status", "no murder count that drops the condition"]},
+  {"id": "G6", "question": "why did carjackings fall in Memphis", "outcome": "limitation",
+   "must": ["reason explanation_requested: no causes, policy or trend commentary", "no added offer or commentary (owner 2026-10-27: minimize editorializing)"]}
+ ]
+}

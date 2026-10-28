@@ -49,3 +49,14 @@ scripts/fixtures/operation-taxonomy/capability-answers.json text eol=lf
 scripts/fixtures/operation-taxonomy/capability-policy.json text eol=lf
 lib/source-health-inventory.ts text eol=lf
 lib/stage2b-plain-language.js text eol=lf
+
+# NIBRS hand-traced correctness set: extracts and expected answers are compared byte for byte by
+# scripts/nibrs-correctness-reference.py --check.
+scripts/fixtures/nibrs-correctness/** text eol=lf
+scripts/fixtures/nibrs-correctness/**/*.gz binary
+
+scripts/fixtures/nibrs-replay/** text eol=lf
+
+scripts/fixtures/nibrs-coverage-shadow/** text eol=lf
+
+scripts/fixtures/nibrs-semantic-evidence/** text eol=lf

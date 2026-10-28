@@ -1,0 +1,135 @@
+{
+ "_comment": "Hand-traced expectations for seven real incidents. Every number is read off the segment rows in extracts/micro/*.csv; CASES.md shows the trace. 'counts' are segment-level facts cross-checked by scripts/nibrs-correctness-reference.py; 'measures' are what an engine must return when the question is scoped to the one incident. PENDING_MASTER_FILE marks values nibrs.db cannot hold (it keeps 3 of 10 connected offenses and 3 of 10 victim-offender relationships); they are filled from the FBI master-file line when the canonical build reads it.",
+ "cases": [
+  {
+   "id": "M1", "ori": "TXHPD0000", "data_year": 2019, "incident_num": "008261219", "incident_date": "2019-01-19",
+   "exercises": ["multiple victims", "two offenses with different victims", "overlapping categories"],
+   "counts": {"offense_segments": 2, "victim_segments": 5, "victim_offense_pairs": 5, "offender_segments": 1, "known_offenders": 1, "arrestee_segments": 0, "property_segments": 0},
+   "measures": {
+    "incidents": 1,
+    "murder_offenses_09A": 1,
+    "aggravated_assault_offenses_13A": 1,
+    "murder_victims": 3,
+    "aggravated_assault_victims": 2,
+    "violent_crime_victims_distinct": 5,
+    "incidents_with_murder": 1,
+    "incidents_with_aggravated_assault": 1,
+    "incidents_with_murder_or_aggravated_assault": 1,
+    "murder_victims_by_sex": {"M": 3},
+    "murder_victims_by_race": {"W": 3},
+    "murder_victims_by_ethnicity": {"H": 3},
+    "murder_victims_by_relationship_to_offender_01": {"ST": 3},
+    "victims_with_circumstance_09": 5
+   }
+  },
+  {
+   "id": "M2", "ori": "TXHPD0000", "data_year": 2021, "incident_num": "6V139B1EZU72", "incident_date": "2021-05-29",
+   "exercises": ["five victims of one offense", "unknown offender demographics", "a victim with two circumstances"],
+   "counts": {"offense_segments": 1, "victim_segments": 5, "victim_offense_pairs": 5, "offender_segments": 1, "known_offenders": 1, "arrestee_segments": 0, "property_segments": 0},
+   "measures": {
+    "incidents": 1,
+    "murder_offenses_09A": 1,
+    "murder_victims": 5,
+    "murder_victims_by_sex": {"M": 3, "F": 2},
+    "murder_victims_by_race": {"P": 1, "B": 4},
+    "murder_victims_by_race_and_sex": {"P|M": 1, "B|M": 2, "B|F": 2},
+    "offenders_by_sex": {"U": 1},
+    "offenders_by_age": {"00 (unknown)": 1},
+    "victim_circumstance_pairs": 6,
+    "victims_with_circumstance_04": 4,
+    "victims_with_circumstance_09": 1,
+    "victims_with_circumstance_10": 1,
+    "murder_offenses_by_weapon_1": {"12": 1}
+   }
+  },
+  {
+   "id": "M3", "ori": "TXHPD0000", "data_year": 2021, "incident_num": "729X9A1EZU72", "incident_date": "2021-09-05",
+   "exercises": ["one victim connected to three offenses", "overlapping categories", "multiple property segments", "exceptional clearance"],
+   "counts": {"offense_segments": 3, "victim_segments": 4, "victim_offense_pairs": 6, "offender_segments": 1, "known_offenders": 1, "arrestee_segments": 0, "property_segments": 3},
+   "measures": {
+    "incidents": 1,
+    "offenses": 3,
+    "murder_victims": 4,
+    "arson_victims_200": 1,
+    "motor_vehicle_theft_victims_240": 1,
+    "victims_distinct": 4,
+    "victim_offense_pairs": 6,
+    "incidents_with_murder": 1,
+    "incidents_with_motor_vehicle_theft": 1,
+    "sum_of_incidents_across_the_three_offense_categories": 3,
+    "stolen_motor_vehicles": 1,
+    "recovered_motor_vehicles": 1,
+    "stolen_property_value": 7000,
+    "burned_property_segments": 1,
+    "cleared_exceptionally": "A (death of offender), 2021-10-26",
+    "murder_victims_by_age": {"10": 1, "12": 1, "37": 1, "46": 1}
+   }
+  },
+  {
+   "id": "M4", "ori": "TXHPD0000", "data_year": 2019, "incident_num": "026992719", "incident_date": "2019-03-02",
+   "exercises": ["multiple offenders", "multiple arrestees", "relationships beyond nibrs.db's three slots"],
+   "counts": {"offense_segments": 1, "victim_segments": 1, "victim_offense_pairs": 1, "offender_segments": 6, "known_offenders": 6, "arrestee_segments": 4, "property_segments": 0},
+   "measures": {
+    "incidents": 1,
+    "murder_victims": 1,
+    "offenders": 6,
+    "offenders_by_age": {"16": 1, "18": 2, "19": 1, "20": 1, "21": 1},
+    "juvenile_offenders_under_18": 1,
+    "arrestees": 4,
+    "arrestees_by_arrest_offense": {"09A": 4},
+    "juvenile_arrestees_under_18": 1,
+    "victim_offender_relationships_recorded_in_nibrs_db": {"01": "ST", "02": "ST", "03": "ST"},
+    "victim_offender_relationships_for_offenders_04_06": "PENDING_MASTER_FILE",
+    "incidents_cleared_by_arrest": 1
+   }
+  },
+  {
+   "id": "M5", "ori": "TNMPD0000", "data_year": 2024, "incident_num": "0U0S3UG6NNFF", "incident_date": "2024-01-02",
+   "exercises": ["a stolen-firearm segment and a recovered-firearm segment in one incident", "existence versus join multiplicity"],
+   "counts": {"offense_segments": 1, "victim_segments": 1, "victim_offense_pairs": 1, "offender_segments": 1, "known_offenders": 1, "arrestee_segments": 0, "property_segments": 2},
+   "measures": {
+    "theft_from_motor_vehicle_offenses_23F": 1,
+    "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 1,
+    "theft_from_motor_vehicle_offenses_in_incidents_with_any_firearm_segment": 1,
+    "rows_if_23F_joined_to_firearm_segments": 2,
+    "firearm_property_segments": 2,
+    "stolen_firearm_segments": 1,
+    "stolen_firearm_value": 550,
+    "recovered_firearm_value": 550,
+    "juvenile_offenders_under_18": 1
+   }
+  },
+  {
+   "id": "M6", "ori": "TNMPD0000", "data_year": 2024, "incident_num": "0U0S3UJ2H0FF", "incident_date": "2024-01-12",
+   "exercises": ["derived carjacking measure", "stolen firearm with no 23F", "arrest months after the incident"],
+   "counts": {"offense_segments": 1, "victim_segments": 1, "victim_offense_pairs": 1, "offender_segments": 1, "known_offenders": 1, "arrestee_segments": 1, "property_segments": 3},
+   "measures": {
+    "robbery_offenses_120": 1,
+    "carjackings": 1,
+    "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 0,
+    "incidents_with_stolen_firearm": 1,
+    "stolen_property_value": 30001,
+    "recovered_property_value": 30000,
+    "arrestees": 1,
+    "arrest_month": "2024-06 (the incident month is 2024-01; arrests by arrest date and incidents by incident date fall in different months)"
+   }
+  },
+  {
+   "id": "M7", "ori": "TNMPD0000", "data_year": 2024, "incident_num": "0U023-G72OFF", "incident_date": "2024-04-27",
+   "exercises": ["property not attributable to one offense", "business victim", "unknown offender segment 00"],
+   "counts": {"offense_segments": 2, "victim_segments": 2, "victim_offense_pairs": 2, "offender_segments": 1, "known_offenders": 0, "arrestee_segments": 0, "property_segments": 2},
+   "measures": {
+    "theft_from_motor_vehicle_offenses_23F": 1,
+    "motor_vehicle_theft_offenses_240": 1,
+    "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 1,
+    "motor_vehicle_theft_offenses_in_incidents_with_stolen_firearm": 1,
+    "firearm_attributable_to_23F": "NOT DETERMINABLE: NIBRS ties property to the incident, not to an offense",
+    "individual_victims": 1,
+    "business_victims": 1,
+    "offenders_with_information": 0,
+    "stolen_motor_vehicles": 1,
+    "stolen_firearm_value": 700
+   }
+  }
+ ]
+}

@@ -2358,6 +2358,15 @@
       "note": "NIBRS typed-chart hotfix: the real NIBRS POST handler on its own temporary fixture database (operation-taxonomy DDL plus a carjacking monthly seed and reporting evidence), model stubbed, network refused; plus the chart-layout pivot safeguards"
     },
     {
+      "id": "test-nibrs-plan-language",
+      "tier": "F",
+      "script": "scripts/test-nibrs-plan-language.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS engine restructure, plan language v1: every example plan and reader outcome is valid, and each P/S/A/R validation rule refuses its case; an in-memory stand-in semantic layer and release, no database, no model, no network"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",

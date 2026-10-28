@@ -1,0 +1,431 @@
+{
+ "case": "N3",
+ "question": "Car thefts in Baltimore by month, January 2022 to June 2026.",
+ "interpretation": {
+  "agency": "MDBPD0000 (Baltimore Police Department, MD)",
+  "measure": "240 (motor vehicle theft) offenses, completed and attempted",
+  "counting_unit": "offense",
+  "groupings": [
+   "month (incident date)"
+  ],
+  "period": "2022-01 through 2026-06: 54 months spanning five calendar years",
+  "label": "Motor vehicle theft"
+ },
+ "variant": "variant_with_stolen_automobile_segment counts 240 offenses whose incident has a stolen property segment with description 03 (automobiles). It is recorded so a reviewer can see how much 'car' read narrowly would change the answer; the primary expectation is motor vehicle theft.",
+ "must_not": [
+  "clip the range to one calendar year",
+  "treat the range as 2022 and 2026 only",
+  "count a duplicated incident twice"
+ ],
+ "duplicated_incidents_in_source_rows": [
+  {
+   "data_year": 2023,
+   "incident_num": "C60 RWQQ628N",
+   "month": "2023-03"
+  },
+  {
+   "data_year": 2023,
+   "incident_num": "C60VRWRLQ28N",
+   "month": "2023-05"
+  },
+  {
+   "data_year": 2023,
+   "incident_num": "C60GRBS9V28N",
+   "month": "2023-06"
+  },
+  {
+   "data_year": 2023,
+   "incident_num": "C60DRA5MP28N",
+   "month": "2023-07"
+  },
+  {
+   "data_year": 2023,
+   "incident_num": "C60ARFECV28N",
+   "month": "2023-08"
+  }
+ ],
+ "totals": {
+  "motor_vehicle_theft_offenses": 26702,
+  "months_reported": 54
+ },
+ "rows": [
+  {
+   "month": "2022-01",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 322,
+   "of_which_attempted": 6,
+   "variant_with_stolen_automobile_segment": 285
+  },
+  {
+   "month": "2022-02",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 220,
+   "of_which_attempted": 9,
+   "variant_with_stolen_automobile_segment": 187
+  },
+  {
+   "month": "2022-03",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 227,
+   "of_which_attempted": 6,
+   "variant_with_stolen_automobile_segment": 194
+  },
+  {
+   "month": "2022-04",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 217,
+   "of_which_attempted": 6,
+   "variant_with_stolen_automobile_segment": 190
+  },
+  {
+   "month": "2022-05",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 204,
+   "of_which_attempted": 5,
+   "variant_with_stolen_automobile_segment": 182
+  },
+  {
+   "month": "2022-06",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 279,
+   "of_which_attempted": 13,
+   "variant_with_stolen_automobile_segment": 241
+  },
+  {
+   "month": "2022-07",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 313,
+   "of_which_attempted": 24,
+   "variant_with_stolen_automobile_segment": 247
+  },
+  {
+   "month": "2022-08",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 341,
+   "of_which_attempted": 37,
+   "variant_with_stolen_automobile_segment": 282
+  },
+  {
+   "month": "2022-09",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 327,
+   "of_which_attempted": 28,
+   "variant_with_stolen_automobile_segment": 269
+  },
+  {
+   "month": "2022-10",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 383,
+   "of_which_attempted": 34,
+   "variant_with_stolen_automobile_segment": 312
+  },
+  {
+   "month": "2022-11",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 354,
+   "of_which_attempted": 39,
+   "variant_with_stolen_automobile_segment": 295
+  },
+  {
+   "month": "2022-12",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 370,
+   "of_which_attempted": 43,
+   "variant_with_stolen_automobile_segment": 314
+  },
+  {
+   "month": "2023-01",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 349,
+   "of_which_attempted": 49,
+   "variant_with_stolen_automobile_segment": 280
+  },
+  {
+   "month": "2023-02",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 428,
+   "of_which_attempted": 55,
+   "variant_with_stolen_automobile_segment": 356
+  },
+  {
+   "month": "2023-03",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 543,
+   "of_which_attempted": 113,
+   "variant_with_stolen_automobile_segment": 412
+  },
+  {
+   "month": "2023-04",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 562,
+   "of_which_attempted": 128,
+   "variant_with_stolen_automobile_segment": 407
+  },
+  {
+   "month": "2023-05",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 984,
+   "of_which_attempted": 342,
+   "variant_with_stolen_automobile_segment": 608
+  },
+  {
+   "month": "2023-06",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 1124,
+   "of_which_attempted": 397,
+   "variant_with_stolen_automobile_segment": 683
+  },
+  {
+   "month": "2023-07",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 1571,
+   "of_which_attempted": 604,
+   "variant_with_stolen_automobile_segment": 926
+  },
+  {
+   "month": "2023-08",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 1412,
+   "of_which_attempted": 560,
+   "variant_with_stolen_automobile_segment": 808
+  },
+  {
+   "month": "2023-09",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 1205,
+   "of_which_attempted": 443,
+   "variant_with_stolen_automobile_segment": 730
+  },
+  {
+   "month": "2023-10",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 1175,
+   "of_which_attempted": 421,
+   "variant_with_stolen_automobile_segment": 725
+  },
+  {
+   "month": "2023-11",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 659,
+   "of_which_attempted": 250,
+   "variant_with_stolen_automobile_segment": 392
+  },
+  {
+   "month": "2023-12",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 444,
+   "of_which_attempted": 105,
+   "variant_with_stolen_automobile_segment": 320
+  },
+  {
+   "month": "2024-01",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 712,
+   "of_which_attempted": 213,
+   "variant_with_stolen_automobile_segment": 474
+  },
+  {
+   "month": "2024-02",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 664,
+   "of_which_attempted": 212,
+   "variant_with_stolen_automobile_segment": 419
+  },
+  {
+   "month": "2024-03",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 551,
+   "of_which_attempted": 139,
+   "variant_with_stolen_automobile_segment": 393
+  },
+  {
+   "month": "2024-04",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 450,
+   "of_which_attempted": 107,
+   "variant_with_stolen_automobile_segment": 317
+  },
+  {
+   "month": "2024-05",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 447,
+   "of_which_attempted": 93,
+   "variant_with_stolen_automobile_segment": 309
+  },
+  {
+   "month": "2024-06",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 498,
+   "of_which_attempted": 109,
+   "variant_with_stolen_automobile_segment": 326
+  },
+  {
+   "month": "2024-07",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 562,
+   "of_which_attempted": 163,
+   "variant_with_stolen_automobile_segment": 353
+  },
+  {
+   "month": "2024-08",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 440,
+   "of_which_attempted": 113,
+   "variant_with_stolen_automobile_segment": 287
+  },
+  {
+   "month": "2024-09",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 515,
+   "of_which_attempted": 111,
+   "variant_with_stolen_automobile_segment": 347
+  },
+  {
+   "month": "2024-10",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 421,
+   "of_which_attempted": 92,
+   "variant_with_stolen_automobile_segment": 295
+  },
+  {
+   "month": "2024-11",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 366,
+   "of_which_attempted": 69,
+   "variant_with_stolen_automobile_segment": 272
+  },
+  {
+   "month": "2024-12",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 360,
+   "of_which_attempted": 73,
+   "variant_with_stolen_automobile_segment": 261
+  },
+  {
+   "month": "2025-01",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 336,
+   "of_which_attempted": 62,
+   "variant_with_stolen_automobile_segment": 256
+  },
+  {
+   "month": "2025-02",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 338,
+   "of_which_attempted": 86,
+   "variant_with_stolen_automobile_segment": 234
+  },
+  {
+   "month": "2025-03",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 407,
+   "of_which_attempted": 86,
+   "variant_with_stolen_automobile_segment": 275
+  },
+  {
+   "month": "2025-04",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 429,
+   "of_which_attempted": 105,
+   "variant_with_stolen_automobile_segment": 278
+  },
+  {
+   "month": "2025-05",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 395,
+   "of_which_attempted": 70,
+   "variant_with_stolen_automobile_segment": 277
+  },
+  {
+   "month": "2025-06",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 341,
+   "of_which_attempted": 53,
+   "variant_with_stolen_automobile_segment": 243
+  },
+  {
+   "month": "2025-07",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 318,
+   "of_which_attempted": 36,
+   "variant_with_stolen_automobile_segment": 240
+  },
+  {
+   "month": "2025-08",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 403,
+   "of_which_attempted": 85,
+   "variant_with_stolen_automobile_segment": 269
+  },
+  {
+   "month": "2025-09",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 374,
+   "of_which_attempted": 65,
+   "variant_with_stolen_automobile_segment": 251
+  },
+  {
+   "month": "2025-10",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 362,
+   "of_which_attempted": 65,
+   "variant_with_stolen_automobile_segment": 259
+  },
+  {
+   "month": "2025-11",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 361,
+   "of_which_attempted": 71,
+   "variant_with_stolen_automobile_segment": 253
+  },
+  {
+   "month": "2025-12",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 354,
+   "of_which_attempted": 49,
+   "variant_with_stolen_automobile_segment": 277
+  },
+  {
+   "month": "2026-01",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 283,
+   "of_which_attempted": 55,
+   "variant_with_stolen_automobile_segment": 191
+  },
+  {
+   "month": "2026-02",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 257,
+   "of_which_attempted": 42,
+   "variant_with_stolen_automobile_segment": 195
+  },
+  {
+   "month": "2026-03",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 374,
+   "of_which_attempted": 93,
+   "variant_with_stolen_automobile_segment": 258
+  },
+  {
+   "month": "2026-04",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 443,
+   "of_which_attempted": 116,
+   "variant_with_stolen_automobile_segment": 274
+  },
+  {
+   "month": "2026-05",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 428,
+   "of_which_attempted": 102,
+   "variant_with_stolen_automobile_segment": 273
+  },
+  {
+   "month": "2026-06",
+   "status": "REPORTED_CRIMES",
+   "motor_vehicle_theft_offenses": 500,
+   "of_which_attempted": 140,
+   "variant_with_stolen_automobile_segment": 307
+  }
+ ]
+}

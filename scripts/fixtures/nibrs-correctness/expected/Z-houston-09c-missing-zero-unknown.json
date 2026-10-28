@@ -1,0 +1,712 @@
+{
+ "case": "Z",
+ "question": "Justifiable homicides (09C) per month in Houston since 2018.",
+ "rule": "Shared spec r4 D6: a filtered measure is 0 only with submission evidence for that month (REPORTED_ZERO, or evidence that the agency's whole submission for the month is complete). Until the BH month indicators are decoded, months with Houston rows but no 09C rows are UNKNOWN for this measure (value null), and months with no Houston rows at all are UNKNOWN for the agency. With evidence of a complete submission, value_if_month_evidenced_complete applies.",
+ "counts": {
+  "offenses": 59,
+  "months_with_09c": 35,
+  "months_unknown_for_measure_only": 63,
+  "months_unknown_for_agency": 8
+ },
+ "rows": [
+  {
+   "month": "2018-01",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  },
+  {
+   "month": "2018-02",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  },
+  {
+   "month": "2018-03",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  },
+  {
+   "month": "2018-04",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  },
+  {
+   "month": "2018-05",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  },
+  {
+   "month": "2018-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16971
+  },
+  {
+   "month": "2018-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16396
+  },
+  {
+   "month": "2018-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17447
+  },
+  {
+   "month": "2018-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16277
+  },
+  {
+   "month": "2018-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16519
+  },
+  {
+   "month": "2018-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2018-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16009
+  },
+  {
+   "month": "2019-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15826
+  },
+  {
+   "month": "2019-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 14663
+  },
+  {
+   "month": "2019-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16111
+  },
+  {
+   "month": "2019-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16793
+  },
+  {
+   "month": "2019-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 18157
+  },
+  {
+   "month": "2019-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16926
+  },
+  {
+   "month": "2019-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 18057
+  },
+  {
+   "month": "2019-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 18099
+  },
+  {
+   "month": "2019-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16958
+  },
+  {
+   "month": "2019-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17739
+  },
+  {
+   "month": "2019-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16893
+  },
+  {
+   "month": "2019-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17607
+  },
+  {
+   "month": "2020-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17827
+  },
+  {
+   "month": "2020-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16493
+  },
+  {
+   "month": "2020-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16063
+  },
+  {
+   "month": "2020-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 14722
+  },
+  {
+   "month": "2020-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17303
+  },
+  {
+   "month": "2020-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17320
+  },
+  {
+   "month": "2020-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16837
+  },
+  {
+   "month": "2020-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17559
+  },
+  {
+   "month": "2020-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16492
+  },
+  {
+   "month": "2020-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2020-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17026
+  },
+  {
+   "month": "2020-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17623
+  },
+  {
+   "month": "2021-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17014
+  },
+  {
+   "month": "2021-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 14512
+  },
+  {
+   "month": "2021-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16279
+  },
+  {
+   "month": "2021-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16324
+  },
+  {
+   "month": "2021-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17465
+  },
+  {
+   "month": "2021-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17073
+  },
+  {
+   "month": "2021-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16639
+  },
+  {
+   "month": "2021-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16840
+  },
+  {
+   "month": "2021-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16831
+  },
+  {
+   "month": "2021-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2021-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16428
+  },
+  {
+   "month": "2021-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17094
+  },
+  {
+   "month": "2022-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16990
+  },
+  {
+   "month": "2022-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15765
+  },
+  {
+   "month": "2022-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17720
+  },
+  {
+   "month": "2022-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2022-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 2,
+   "value_if_month_evidenced_complete": 2
+  },
+  {
+   "month": "2022-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2022-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17990
+  },
+  {
+   "month": "2022-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17952
+  },
+  {
+   "month": "2022-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 2,
+   "value_if_month_evidenced_complete": 2
+  },
+  {
+   "month": "2022-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17565
+  },
+  {
+   "month": "2022-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15895
+  },
+  {
+   "month": "2022-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2023-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 3,
+   "value_if_month_evidenced_complete": 3
+  },
+  {
+   "month": "2023-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2023-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2023-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2023-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 3,
+   "value_if_month_evidenced_complete": 3
+  },
+  {
+   "month": "2023-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 17271
+  },
+  {
+   "month": "2023-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 3,
+   "value_if_month_evidenced_complete": 3
+  },
+  {
+   "month": "2023-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 2,
+   "value_if_month_evidenced_complete": 2
+  },
+  {
+   "month": "2023-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16508
+  },
+  {
+   "month": "2023-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16277
+  },
+  {
+   "month": "2023-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2023-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 3,
+   "value_if_month_evidenced_complete": 3
+  },
+  {
+   "month": "2024-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2024-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15274
+  },
+  {
+   "month": "2024-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2024-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2024-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 3,
+   "value_if_month_evidenced_complete": 3
+  },
+  {
+   "month": "2024-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16819
+  },
+  {
+   "month": "2024-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16590
+  },
+  {
+   "month": "2024-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16758
+  },
+  {
+   "month": "2024-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 16360
+  },
+  {
+   "month": "2024-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2024-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15384
+  },
+  {
+   "month": "2024-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2025-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 14924
+  },
+  {
+   "month": "2025-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2025-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15980
+  },
+  {
+   "month": "2025-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 2,
+   "value_if_month_evidenced_complete": 2
+  },
+  {
+   "month": "2025-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 5,
+   "value_if_month_evidenced_complete": 5
+  },
+  {
+   "month": "2025-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2025-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 3,
+   "value_if_month_evidenced_complete": 3
+  },
+  {
+   "month": "2025-08",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15650
+  },
+  {
+   "month": "2025-09",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15147
+  },
+  {
+   "month": "2025-10",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 15063
+  },
+  {
+   "month": "2025-11",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2025-12",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2026-01",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 14774
+  },
+  {
+   "month": "2026-02",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2026-03",
+   "agency_status": "REPORTED_CRIMES",
+   "value": null,
+   "value_if_month_evidenced_complete": 0,
+   "other_incidents_in_month": 14298
+  },
+  {
+   "month": "2026-04",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 2,
+   "value_if_month_evidenced_complete": 2
+  },
+  {
+   "month": "2026-05",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 4,
+   "value_if_month_evidenced_complete": 4
+  },
+  {
+   "month": "2026-06",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2026-07",
+   "agency_status": "REPORTED_CRIMES",
+   "value": 1,
+   "value_if_month_evidenced_complete": 1
+  },
+  {
+   "month": "2026-08",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  },
+  {
+   "month": "2026-09",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  },
+  {
+   "month": "2026-10",
+   "agency_status": "UNKNOWN",
+   "value": null,
+   "value_if_month_evidenced_complete": null
+  }
+ ]
+}

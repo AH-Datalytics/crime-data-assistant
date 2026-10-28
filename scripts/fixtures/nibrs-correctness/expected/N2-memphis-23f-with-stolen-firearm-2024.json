@@ -1,0 +1,112 @@
+{
+ "case": "N2",
+ "question": "Thefts from motor vehicles where a firearm was stolen, per month (Memphis, 2024).",
+ "interpretation": {
+  "agency": "TNMPD0000 (Memphis Police Department, TN), data year 2024 (the extract's scope)",
+  "measure": "23F (theft from motor vehicle) offenses in incidents that contain at least one property segment with loss type 7 (stolen) and description 13 (firearms)",
+  "counting_unit": "offense (equal to incidents here: an incident holds at most one 23F offense segment)",
+  "filter_kind": "scoped existence filter at incident scope: exists(property where loss=stolen and description=firearm)",
+  "groupings": [
+   "month (incident date)"
+  ],
+  "excluded": "property segments with loss type 5 (recovered) or 6 (seized) alone; firearms as a weapon (offense weapon codes) are a different field"
+ },
+ "must_state": [
+  "NIBRS records property per incident, not per offense: in an incident with several offenses the stolen firearm is not attributed to the theft from motor vehicle."
+ ],
+ "must_not": [
+  "read 'firearm stolen' as the weapon used",
+  "attribute the property to the 23F offense"
+ ],
+ "totals": {
+  "matching_offenses": 1503,
+  "incidents_with_another_offense": 156,
+  "incidents_with_recovered_firearm_but_no_stolen_firearm_segment": 0
+ },
+ "rows": [
+  {
+   "month": "2024-01",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 108,
+   "of_which_incident_has_another_offense": 13,
+   "all_theft_from_motor_vehicle_offenses": 696
+  },
+  {
+   "month": "2024-02",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 118,
+   "of_which_incident_has_another_offense": 10,
+   "all_theft_from_motor_vehicle_offenses": 698
+  },
+  {
+   "month": "2024-03",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 110,
+   "of_which_incident_has_another_offense": 6,
+   "all_theft_from_motor_vehicle_offenses": 561
+  },
+  {
+   "month": "2024-04",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 124,
+   "of_which_incident_has_another_offense": 18,
+   "all_theft_from_motor_vehicle_offenses": 672
+  },
+  {
+   "month": "2024-05",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 169,
+   "of_which_incident_has_another_offense": 22,
+   "all_theft_from_motor_vehicle_offenses": 966
+  },
+  {
+   "month": "2024-06",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 185,
+   "of_which_incident_has_another_offense": 30,
+   "all_theft_from_motor_vehicle_offenses": 1013
+  },
+  {
+   "month": "2024-07",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 132,
+   "of_which_incident_has_another_offense": 8,
+   "all_theft_from_motor_vehicle_offenses": 799
+  },
+  {
+   "month": "2024-08",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 133,
+   "of_which_incident_has_another_offense": 11,
+   "all_theft_from_motor_vehicle_offenses": 647
+  },
+  {
+   "month": "2024-09",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 127,
+   "of_which_incident_has_another_offense": 11,
+   "all_theft_from_motor_vehicle_offenses": 744
+  },
+  {
+   "month": "2024-10",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 96,
+   "of_which_incident_has_another_offense": 13,
+   "all_theft_from_motor_vehicle_offenses": 689
+  },
+  {
+   "month": "2024-11",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 111,
+   "of_which_incident_has_another_offense": 7,
+   "all_theft_from_motor_vehicle_offenses": 673
+  },
+  {
+   "month": "2024-12",
+   "status": "REPORTED_CRIMES",
+   "theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm": 90,
+   "of_which_incident_has_another_offense": 7,
+   "all_theft_from_motor_vehicle_offenses": 634
+  }
+ ]
+}

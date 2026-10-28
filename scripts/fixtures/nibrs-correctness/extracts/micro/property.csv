@@ -1,0 +1,11 @@
+year,state,ori,incident_num,incident_date,type_property_loss,property_description,value,date_recovered,num_stolen_motor_vehicles,num_recovered_motor_vehicles,suspected_drug_type_1,suspected_drug_type_2,suspected_drug_type_3
+2024,TN,TNMPD0000,0U0S3UG6NNFF,20240102,5,13,550,20240102,"","","","",""
+2024,TN,TNMPD0000,0U0S3UG6NNFF,20240102,7,13,550,"","","","","",""
+2024,TN,TNMPD0000,0U0S3UJ2H0FF,20240112,5,03,30000,20240112,"","","","",""
+2024,TN,TNMPD0000,0U0S3UJ2H0FF,20240112,7,03,30000,"","","","","",""
+2024,TN,TNMPD0000,0U0S3UJ2H0FF,20240112,7,13,1,"","","","","",""
+2021,TX,TXHPD0000,729X9A1EZU72,20210905,2,77,0,"","","","","",""
+2021,TX,TXHPD0000,729X9A1EZU72,20210905,5,37,7000,20210909,"",01,"","",""
+2021,TX,TXHPD0000,729X9A1EZU72,20210905,7,37,7000,"",01,"","","",""
+2024,TN,TNMPD0000,0U023-G72OFF,20240427,7,03,1,"",01,"","","",""
+2024,TN,TNMPD0000,0U023-G72OFF,20240427,7,13,700,"","","","","",""

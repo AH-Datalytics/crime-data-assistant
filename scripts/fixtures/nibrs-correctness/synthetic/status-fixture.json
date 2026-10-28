@@ -1,0 +1,36 @@
+{
+ "_comment": "SYNTHETIC. Five invented agencies in an invented state ZZ, January-March 2025. It tests what an engine does with each agency-month status once the evidence exists (shared spec r4 D6, D8). It cannot test BH decoding: that needs master-file records (README, gate conditions). Hand trace and expected answers: CASES.md, S1-S5; expected/S-synthetic-status.json.",
+ "state": "ZZ",
+ "months": ["2025-01", "2025-02", "2025-03"],
+ "agencies": [
+  {"ori": "ZZ0000A00", "label": "City A", "type": "city", "population": 100000, "population_counted": true, "primary_ori": null},
+  {"ori": "ZZ0000B00", "label": "City B", "type": "city", "population": 50000, "population_counted": true, "primary_ori": null},
+  {"ori": "ZZ0000C00", "label": "University C", "type": "university", "population": 20000, "population_counted": false, "primary_ori": "ZZ0000E00"},
+  {"ori": "ZZ0000E00", "label": "County E", "type": "county", "population": 80000, "population_counted": true, "primary_ori": null},
+  {"ori": "ZZ0000F00", "label": "City F", "type": "city", "population": 30000, "population_counted": true, "primary_ori": null}
+ ],
+ "status_values": {
+  "REPORTED_CRIMES_COMPLETE": "crime rows, and evidence that the month's whole submission is complete",
+  "REPORTED_CRIMES": "crime rows, no completeness evidence",
+  "REPORTED_ZERO": "evidence the agency reported no crimes for the month",
+  "NOT_REPORTED": "evidence the agency did not submit for the month",
+  "UNKNOWN": "no evidence either way"
+ },
+ "agency_months": [
+  {"ori": "ZZ0000A00", "month": "2025-01", "status": "REPORTED_CRIMES_COMPLETE", "murder_victims": [{"sex": "F"}, {"sex": "M"}], "other_offenses": 40},
+  {"ori": "ZZ0000A00", "month": "2025-02", "status": "REPORTED_ZERO", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000A00", "month": "2025-03", "status": "REPORTED_CRIMES_COMPLETE", "murder_victims": [], "other_offenses": 50},
+  {"ori": "ZZ0000B00", "month": "2025-01", "status": "REPORTED_CRIMES", "murder_victims": [{"sex": "M"}], "other_offenses": 30},
+  {"ori": "ZZ0000B00", "month": "2025-02", "status": "NOT_REPORTED", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000B00", "month": "2025-03", "status": "UNKNOWN", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000C00", "month": "2025-01", "status": "REPORTED_CRIMES_COMPLETE", "murder_victims": [{"sex": "M"}], "other_offenses": 5},
+  {"ori": "ZZ0000C00", "month": "2025-02", "status": "REPORTED_CRIMES_COMPLETE", "murder_victims": [], "other_offenses": 4},
+  {"ori": "ZZ0000C00", "month": "2025-03", "status": "REPORTED_CRIMES_COMPLETE", "murder_victims": [], "other_offenses": 6},
+  {"ori": "ZZ0000E00", "month": "2025-01", "status": "NOT_REPORTED", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000E00", "month": "2025-02", "status": "NOT_REPORTED", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000E00", "month": "2025-03", "status": "NOT_REPORTED", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000F00", "month": "2025-01", "status": "NOT_REPORTED", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000F00", "month": "2025-02", "status": "NOT_REPORTED", "murder_victims": [], "other_offenses": 0},
+  {"ori": "ZZ0000F00", "month": "2025-03", "status": "REPORTED_CRIMES_COMPLETE", "murder_victims": [{"sex": "M"}, {"sex": "M"}, {"sex": "F"}], "other_offenses": 25}
+ ]
+}

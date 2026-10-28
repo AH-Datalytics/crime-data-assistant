@@ -1,0 +1,8 @@
+year,state,ori,incident_num,incident_date,report_date_indicator,incident_hour,total_offense_segments,total_victim_segments,total_offender_segments,total_arrestee_segments,cleared_exceptionally,clearance_date,cargo_theft
+2024,TN,TNMPD0000,0U0S3UG6NNFF,20240102,"",15,1,0,10,10,N,"",N
+2024,TN,TNMPD0000,0U0S3UJ2H0FF,20240112,"",02,1,0,10,10,N,"",N
+2019,TX,TXHPD0000,008261219,20190119,"",00,2,0,50,10,N,"",N
+2021,TX,TXHPD0000,6V139B1EZU72,20210529,"",02,1,0,50,10,N,"",N
+2021,TX,TXHPD0000,729X9A1EZU72,20210905,"",07,3,0,40,10,A,20211026,N
+2024,TN,TNMPD0000,0U023-G72OFF,20240427,"",03,2,0,20,10,N,"",N
+2019,TX,TXHPD0000,026992719,20190302,"",18,1,0,10,60,N,"",N

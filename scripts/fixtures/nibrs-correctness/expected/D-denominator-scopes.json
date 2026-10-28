@@ -1,0 +1,89 @@
+{
+ "case": "D",
+ "question_variants": {
+  "within_month": "share of Houston murder victims in May 2021 by sex (denominator: May 2021 murder victims)",
+  "within_period": "share of all 2021 Houston murder victims who were May 2021 victims of each sex (denominator: whole 2021 total; what pct_of_total over a 2021 monthly result computes)",
+  "within_group": "share of May 2021 Houston murder victims of each race who were of each sex (denominator: that race's May 2021 victims)"
+ },
+ "within_month": [
+  {
+   "sex": "F",
+   "num": 7,
+   "den": 51,
+   "pct_1dp": 13.7
+  },
+  {
+   "sex": "M",
+   "num": 44,
+   "den": 51,
+   "pct_1dp": 86.3
+  }
+ ],
+ "within_period": [
+  {
+   "sex": "F",
+   "num": 7,
+   "den": 473,
+   "pct_1dp": 1.5
+  },
+  {
+   "sex": "M",
+   "num": 44,
+   "den": 473,
+   "pct_1dp": 9.3
+  }
+ ],
+ "within_group": [
+  {
+   "race": "B",
+   "sex": "F",
+   "num": 4,
+   "den": 35,
+   "pct_1dp": 11.4
+  },
+  {
+   "race": "B",
+   "sex": "M",
+   "num": 31,
+   "den": 35,
+   "pct_1dp": 88.6
+  },
+  {
+   "race": "P",
+   "sex": "F",
+   "num": null,
+   "den": 1,
+   "pct_1dp": null,
+   "status": "UNKNOWN_UNEVIDENCED_ZERO",
+   "if_month_evidenced_complete": {
+    "num": 0,
+    "pct_1dp": 0.0
+   }
+  },
+  {
+   "race": "P",
+   "sex": "M",
+   "num": 1,
+   "den": 1,
+   "pct_1dp": 100.0
+  },
+  {
+   "race": "W",
+   "sex": "F",
+   "num": 3,
+   "den": 15,
+   "pct_1dp": 20.0
+  },
+  {
+   "race": "W",
+   "sex": "M",
+   "num": 12,
+   "den": 15,
+   "pct_1dp": 80.0
+  }
+ ],
+ "must_not": [
+  "recompute shares over only the displayed cells",
+  "substitute one scope for another"
+ ]
+}
