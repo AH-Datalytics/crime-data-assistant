@@ -67,9 +67,9 @@ request accounting checked by path and value; examples for every case and form, 
   of the cells shown.
 - **rate** per `per` of covered population. Eligibility is fixed: for each output cell an agency enters only if every
   month of that cell's period is evidenced complete (REPORTED_ZERO, or a submission evidenced complete), and
-  numerator and population use the same agencies. The cell carries the observed count, the eligible count, the
-  covered population and, when unavailable, the reason (no eligible agency; covered population cannot be
-  established, D8). The population is the covered population of the cell's data year, so each cell's period lies
+  numerator and population use the same agencies. An unavailable rate is a blank number; the observed count, the
+  eligible count, the covered population and the reason (no eligible agency; covered population cannot be
+  established, D8) are server-side evidence, never columns. The population is the covered population of the cell's data year, so each cell's period lies
   in one data year (P14); a rate is not rolled (P11) and a compared rate uses one-year periods (P13). Periods are never annualized; partial periods are labelled. A filtered numerator over all
   residents is labelled "per N residents (all residents)".
 - **ratio** of two measures evaluated independently at the full grain (clearance rate, a subset share such as
@@ -123,6 +123,32 @@ request accounting checked by path and value; examples for every case and form, 
 | R4 | a place that matches no agency in the release in the selected years |
 | R5 | a rate with no time grouping and no comparison whose resolved period spans several data years |
 
+## Result columns (owner, 2026-10-28)
+
+"We should never need status and notes"; "the tables and exports should only give the appropriate columns."
+- A user-facing table, and every export of it, has the plan's groupings (place, period, category) and the plan's
+  numbers as its columns, nothing else: no status, note, caveat, label or flag column.
+- An unknown number is blank (null): never zero, never a label. A D6 unknown month, an unevidenced zero and an
+  unavailable rate are all blank numbers. A category value is data, including an "Unknown" category and substantive
+  categories such as a clearance type.
+- Enforced by purpose, not by words (`checkEnvelope` in `lib/nibrs-plan/result.ts`):
+  - every column is bound to exactly one grouping or one number output of the plan, and each of them has exactly one
+    column. The number outputs are the statistics after transforms: a compared statistic becomes one output per
+    requested comparison output (`victims.earlier`, `victims.later`, `victims.change`, `victims.pct_change`;
+    `finalStatistics`);
+  - each header is the compiler's template for its binding (the semantic layer's dimension label; the statistic's
+    description from its measure, unit, period and, for a rate, the population wording such as "per 100,000
+    residents (all residents)"), so no header carries an annotation;
+  - each number cell has exactly one server-side evidence record whose status agrees with it: blank exactly when the
+    status is UNKNOWN, NOT_REPORTED, UNKNOWN_UNEVIDENCED_ZERO or UNAVAILABLE; REPORTED_ZERO only with 0;
+  - answer text is limited to two statements with fixed wording, each exactly where it applies: property not
+    attributed to one offense (an incident-scoped property filter) and "reported NIBRS counts" (a national answer).
+- Status, reasons, a share's parts, a rate's cohort figures and coverage stay server-side (`ResultEnvelope.evidence`
+  and the provenance below). They are never columns, never answer text and never exported to users.
+- The current app is being given the same contract (plan `docs/superpowers/specs/2026-10-28-answer-columns-and-chart-
+  labels.md`, branch `fix/answer-columns-only-data`; implementation pending). Its guard tests will cover the engine's
+  tables once it produces them.
+
 ## Provenance (`ResultEnvelope`, filled by the compiler)
 
 - the plan and its digest; plan-language, semantic, canonical release (and manifest checksum), serving artifact and
@@ -132,10 +158,9 @@ request accounting checked by path and value; examples for every case and form, 
 - the compiled SQL, its hash and any accelerator used;
 - each statistic's denominator rule and cohort, with agency counts;
 - transformations, and any truncation (rank limits, withheld cells) with counts;
-- required statements only (property not attributed to one offense; a rate's unavailability reason). No other
-  notes: the owner's no-editorializing rule;
-- cells with a status: VALUE, REPORTED_ZERO, UNKNOWN, NOT_REPORTED, UNKNOWN_UNEVIDENCED_ZERO or UNAVAILABLE, and a
-  reason where a number is missing;
+- answer statements: only the two above, with fixed wording;
+- server-side evidence for every number cell: its status (VALUE, REPORTED_ZERO, UNKNOWN, NOT_REPORTED,
+  UNKNOWN_UNEVIDENCED_ZERO or UNAVAILABLE), the reason a number is blank, a share's parts, a rate's cohort figures;
 - the cache key, built from every version above.
 
 ## What the semantic layer must give NIBRSAI (`semantic.ts`)
@@ -184,6 +209,5 @@ change for one place and measure only, and declines because no table holds a com
 ## Not decided here
 
 - The compiler itself (SQL generation, accelerators, workers): phase 3 implementation.
-- Wording of unknown and evidenced-zero cells in answers: presentation, under the no-editorializing rule.
 - The clarification threshold ("does this ambiguity change the answer"): the reader spec.
 - The shared semantic layer's own YAML schema: owned by the "NIBRS model" session; `semantic.ts` is the adapter target.

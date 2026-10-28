@@ -9,6 +9,7 @@ import { parsePlan, parseReaderOutcome, type NibrsPlan, type PartRef } from "../
 import { resolvePeriod, validateResolved, type GeographyResolver } from "../lib/nibrs-plan/resolve";
 import { checkLayer, type SemanticDimension, type SemanticEntity, type SemanticLayer, type SemanticLink, type SemanticMeasure } from "../lib/nibrs-plan/semantic";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
+import { checkEnvelope, type ResultColumn, type CellEvidence } from "../lib/nibrs-plan/result";
 
 /* ---------------------------------------------------------------- a stand-in semantic layer ---------------------- */
 const NIBRS: [number, number] = [1991, 2026];
@@ -254,5 +255,47 @@ assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ ki
 assert.deepEqual(rules(validateResolved({ ...X.SEPARATE_YEARS, transforms: [{ kind: "period_comparison", of: ["count"], earlier: { kind: "absolute", from: "2019-01", to: "2019-12" }, later: { kind: "absolute", from: "2024-01", to: "2024-12" }, outputs: ["change"] }] }, release, layer, geo).problems), []);
 assert.deepEqual(validateResolved(ytdRate, release, layer, geo).problems, [], "since 2026-01 resolves to January-October 2026: one data year");
 assert.deepEqual(rules(validateResolved({ ...ytdRate, period: { kind: "since", from: "2024-01" } }, release, layer, geo).problems), ["R5"]);
+
+/* ---------------------------------------------------------------- the result-column rule ------------------------- */
+// Owner 2026-10-28: the plan's groupings and numbers only; unknown is a blank (null) number; anything else is
+// server-side evidence. Enforced by binding, not by words.
+const LABELS: Record<string, string> = {
+  "grouping:time.month": "Month", "grouping:victim.race": "Victim race", "grouping:victim.sex": "Victim sex",
+  "statistic:victims": "Murder victims", "statistic:share_of_month": "Share of the month's murder victims (%)",
+  "grouping:offense.exceptional_clearance": "Exceptional clearance reason", "statistic:count": "Murders cleared by exceptional means", "statistic:share": "Share (%)",
+};
+const col = (binding: ResultColumn["binding"]): ResultColumn => ({ binding, header: LABELS[binding.kind === "grouping" ? `grouping:${binding.dimension}` : `statistic:${binding.as}`] } as ResultColumn);
+const N1_COLUMNS = [col({ kind: "grouping", dimension: "time.month" }), col({ kind: "grouping", dimension: "victim.race" }), col({ kind: "grouping", dimension: "victim.sex" }),
+  col({ kind: "statistic", as: "victims" }), col({ kind: "statistic", as: "share_of_month" })];
+const N1_ROWS: (string | number | null)[][] = [["2018-05", "White", "Male", null, null], ["2018-06", "White", "Male", 14, 45.2], ["2018-06", "Asian", "Female", null, null]];
+const ev = (row: number, statistic: string, status: CellEvidence["status"]): CellEvidence => ({ row, statistic, status });
+const N1_EVIDENCE = [ev(0, "victims", "UNKNOWN"), ev(0, "share_of_month", "UNKNOWN"), ev(1, "victims", "VALUE"), ev(1, "share_of_month", "VALUE"),
+  ev(2, "victims", "UNKNOWN_UNEVIDENCED_ZERO"), ev(2, "share_of_month", "UNKNOWN_UNEVIDENCED_ZERO")];
+const n1Env = { plan: X.N1, table: { columns: N1_COLUMNS, rows: N1_ROWS }, evidence: N1_EVIDENCE, answerStatements: [] as ("property_not_attributed" | "reported_nibrs_counts")[] };
+assert.deepEqual(checkEnvelope(n1Env, LABELS), [], "unknown months and unevidenced zeros are blank numbers with their status in evidence");
+// A column the plan does not ask for (a status column) is refused, whatever it is called.
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: [...N1_COLUMNS, { binding: { kind: "grouping", dimension: "cell.availability" }, header: "Availability" }], rows: N1_ROWS.map((r) => [...r, "UNAVAILABLE"]) } }, LABELS).length >= 1, true);
+// A header that is not the template (an annotation in a number column's name) is refused.
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: [...N1_COLUMNS.slice(0, 3), { ...N1_COLUMNS[3], header: "Murder victims (data incomplete)" }, N1_COLUMNS[4]], rows: N1_ROWS } }, LABELS).length, 1);
+// An unknown shown as 0, or as a label, is refused.
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: N1_COLUMNS, rows: [["2018-05", "White", "Male", 0, null], ...N1_ROWS.slice(1)] } }, LABELS).length, 1);
+assert.equal(checkEnvelope({ ...n1Env, table: { columns: N1_COLUMNS, rows: [["2018-05", "White", "Male", "unknown", null], ...N1_ROWS.slice(1)] } }, LABELS).length, 2);
+// Evidence must cover every number cell exactly once.
+assert.equal(checkEnvelope({ ...n1Env, evidence: N1_EVIDENCE.slice(1) }, LABELS).length, 2);
+// A substantive category grouping (a clearance reason) is allowed: its values are data.
+const clearanceEnv = { plan: X.CLEARANCE_BREAKDOWN, table: { columns: [col({ kind: "grouping", dimension: "offense.exceptional_clearance" }), col({ kind: "statistic", as: "count" }), col({ kind: "statistic", as: "share" })],
+  rows: [["Prosecution declined", 12, 40.0], ["Death of offender", 18, 60.0]] }, evidence: [ev(0, "count", "VALUE"), ev(0, "share", "VALUE"), ev(1, "count", "VALUE"), ev(1, "share", "VALUE")], answerStatements: [] as never[] };
+assert.deepEqual(checkEnvelope(clearanceEnv, LABELS), []);
+// A period comparison's outputs are its columns (S3): the full comparison passes, a single count in its place does not.
+const S3_LABELS: Record<string, string> = { ...LABELS, "statistic:victims.earlier": "Murder victims, January 2025", "statistic:victims.later": "Murder victims, March 2025", "statistic:victims.change": "Change", "statistic:victims": "Murder victims" };
+const s3col = (as: string): ResultColumn => ({ binding: { kind: "statistic", as }, header: S3_LABELS[`statistic:${as}`] });
+const s3Env = { plan: X.S3, table: { columns: [s3col("victims.earlier"), s3col("victims.later"), s3col("victims.change")], rows: [[3, 0, -3]] },
+  evidence: [ev(0, "victims.earlier", "VALUE"), ev(0, "victims.later", "VALUE"), ev(0, "victims.change", "VALUE")], answerStatements: [] as never[] };
+assert.deepEqual(checkEnvelope(s3Env, S3_LABELS), []);
+assert.ok(checkEnvelope({ ...s3Env, table: { columns: [s3col("victims")], rows: [[0]] }, evidence: [ev(0, "victims", "VALUE")] }, S3_LABELS).length > 0, "an incomplete comparison is refused");
+
+// Answer statements: only the authorized ones, exactly where they apply.
+assert.equal(checkEnvelope({ ...n1Env, answerStatements: ["data_incomplete" as never] }, LABELS).length, 1);
+assert.equal(checkEnvelope({ ...n1Env, plan: { ...X.N1, geography: { places: [{ kind: "national" }], combine: "separate" } } }, LABELS).length, 1, "a national answer says reported NIBRS counts");
 
 console.log(`nibrs plan language: ${Object.keys(X.EXAMPLES).length} plans and ${Object.keys(X.OUTCOMES).length} reader outcomes valid; every rule refuses its case`);

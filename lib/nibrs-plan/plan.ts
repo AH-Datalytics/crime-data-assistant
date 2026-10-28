@@ -173,10 +173,12 @@ export const Statistic = z.discriminatedUnion("kind", [
    * Per `per` of covered population (shared spec D8). Eligibility is fixed, not configurable: for each output cell,
    * an agency enters only if every month of that cell's period is evidenced complete (REPORTED_ZERO or a submission
    * evidenced complete), and numerator and population use the same eligible agencies. Periods are never annualized;
-   * a partial period is labelled as such. The result cell carries the observed count, the eligible count, the covered
-   * population, and a reason whenever the rate is unavailable (no eligible agency; covered population cannot be
-   * established, e.g. a secondary agency in the cohort without its primary).
-   * A filtered numerator over all residents is labelled "per N residents (all residents)", never as a group rate.
+   * a partial period is named in the column header. An unavailable rate is a blank (null) number in the table; the
+   * observed count, the eligible count, the covered population and the reason (no eligible agency; covered population
+   * cannot be established, e.g. a secondary agency in the cohort without its primary) are server-side evidence, never
+   * columns (result.ts, the result-column rule).
+   * A filtered numerator over all residents is named in the column header "per N residents (all residents)", never as
+   * a group rate.
    * The population is the covered population of the cell's data year, so a cell's period must lie within one data
    * year: a rate grouped by time.year or time.month, or over a period inside one year. A rate over a multi-year span
    * without a time grouping is refused (P14); a rate inside a rolling window is refused in v1 (P11).
