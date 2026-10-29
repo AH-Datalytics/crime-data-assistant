@@ -121,7 +121,8 @@ export type PlanView = {
   measures: { name: string; unit: string; role: "value" | "numerator" | "denominator" }[];
   filterKeys: (string | null)[];
   statistics: string[];
-  years: number[] | null;          // a noncontiguous year selection, else null
+  years: number[] | null;          // a year selection, else null
+  yearsThrough: string | null;     // the month its last year is clipped to (a year still in progress), else null
   rank: { direction: string; limit: number | null } | null;
   untracked: string[];             // plan features the label schema cannot express (transform parameters, bins)
 };
@@ -165,7 +166,7 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
       statistic: headline as Meaning["statistic"], cohort: plan.coverage.cohort,
     },
     measures: plan.measures.map((m) => ({ name: m.id, unit: m.unit, role: roles.get(m.as) ?? "value" })),
-    filterKeys, statistics: [...new Set([headline, ...statistics])], years,
+    filterKeys, statistics: [...new Set([headline, ...statistics])], years, yearsThrough: period.kind === "years" ? period.through ?? null : null,
     rank: rankT && rankT.kind === "rank" ? { direction: rankT.direction, limit: rankT.limit } : null,
     untracked,
   };
@@ -197,10 +198,12 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
   const ap = actual.meaning.period as { from: string; to: string };
   if (!ep) add("period", JSON.stringify(expected.period), `${ap.from}..${ap.to}`, "unverified");
   else if (actual.years) {
-    // A noncontiguous year selection matches only a label range of exactly those years.
+    // A year selection matches only a label range of exactly those years, from January through the effective end: December,
+    // or the month its last year is clipped to.
     const span = Array.from({ length: Number(ep.to.slice(0, 4)) - Number(ep.from.slice(0, 4)) + 1 }, (_, i) => Number(ep.from.slice(0, 4)) + i);
-    const wholeYears = ep.from.endsWith("-01") && ep.to.endsWith("-12");
-    if (!wholeYears || span.join(",") !== actual.years.join(",")) add("period", `${ep.from}..${ep.to}`, `years ${actual.years.join(", ")}`, "material");
+    const end = actual.yearsThrough ?? `${actual.years[actual.years.length - 1]}-12`;
+    const shown = `years ${actual.years.join(", ")}${actual.yearsThrough ? ` through ${actual.yearsThrough}` : ""}`;
+    if (!ep.from.endsWith("-01") || ep.to !== end || span.join(",") !== actual.years.join(",")) add("period", `${ep.from}..${ep.to}`, shown, "material");
   } else if (`${ep.from}..${ep.to}` !== `${ap.from}..${ap.to}`) add("period", `${ep.from}..${ep.to}`, `${ap.from}..${ap.to}`, "material");
   // Measures with their units, kept together. A share's numerator and denominator roles cannot be read from the label.
   const ratio = actual.measures.some((m) => m.role !== "value");

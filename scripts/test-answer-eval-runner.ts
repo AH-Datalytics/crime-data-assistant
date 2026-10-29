@@ -56,6 +56,11 @@ assert.deepEqual(kinds({ ...label, groupings: ["victim ethnicity"] }, planToMean
 // Codex probe: month boundaries hold for a year selection; comparison baselines and native shares are unverified.
 const yrs = planToMeaning({ ...X.SEPARATE_YEARS, period: { kind: "years", years: [2025] } }, { kind: "years", years: [2025] });
 assert.ok(compareMeaning({ ...label, places: yrs.meaning.places, measures: yrs.meaning.measures, groupings: yrs.meaning.groupings, period: { from: "2025-06", to: "2025-08" } }, yrs, r).some((d) => d.kind === "material" && d.field === "period"), "June-August is not 2025");
+// Codex probe: a year clipped to the release's last month ends there.
+const clipped = planToMeaning({ ...X.SEPARATE_YEARS, period: { kind: "years", years: [2026] } }, { kind: "years", years: [2026], through: "2026-10" });
+const clippedLabel = (to: string) => compareMeaning({ ...label, places: clipped.meaning.places, measures: clipped.meaning.measures, groupings: clipped.meaning.groupings, period: { from: "2026-01", to } }, clipped, r).filter((d) => d.field === "period").map((d) => d.kind);
+assert.deepEqual(clippedLabel("2026-10"), [], "January-October 2026 is the clipped year");
+assert.deepEqual(clippedLabel("2026-12"), ["material"], "a full 2026 is not the clipped year");
 const cmp = planToMeaning(X.SAME_AGENCIES_CHANGE, { kind: "absolute", from: "2023-01", to: "2025-12" });
 assert.ok(compareMeaning({ ...label, places: cmp.meaning.places, measures: cmp.meaning.measures, period: { from: "2023-01", to: "2025-12" }, statistic: "change", cohort: "same_agencies" }, cmp, r).some((d) => d.kind === "unverified" && d.field === "untracked"), "comparison baselines are not in the label");
 // Codex probe: combined versus separate places.
