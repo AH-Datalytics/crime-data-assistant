@@ -171,7 +171,7 @@ ROWS = [
      "Keep today's behavior.",
      "Not applicable.",
      "It is what users expect.",
-     OPEN, NEW),
+     O28 + " (Jeff: yes)", NEW),
     ("P24", "\"Burglaries in Denver in 2027\" (a year not yet in the data)",
      "Declines and states the covered range; some tabs point to another source.",
      "Decline, state the latest month or year available, and offer it as a button. Never answer another year silently.",
@@ -237,13 +237,12 @@ DECISION = {
     "P19": "For fentanyl, should the app decline and offer \"synthetic narcotics\" (which includes fentanyl) instead?",
     "P20": "For forecasts, should the app decline and offer the recent trend instead?",
     "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
-    "P23": "In a follow-up like \"What about Dallas?\", should everything else from the previous question carry over?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
     "P26": "Should \"New York\" on its own make the app ask: New York City or New York State?",
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "3. When to ask a question" for p in ["P23", "P26", "P27"]},
+    **{p: "3. When to ask a question" for p in ["P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
