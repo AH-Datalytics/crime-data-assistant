@@ -197,6 +197,13 @@ ROWS = [
      "Choices: states; cities; individual agencies.",
      "Each level gives a different ranking with a different winner.",
      O28 + " (Jeff: yes)", "GC-003; labeled cases with \"where\""),
+    ("P28", "\"Shoplifting in Kansas City in 2024\", \"... in Baltimore\", \"... in Washington\" (a place name that fits more than one place)",
+     "Each path picks one reading: the reader fills in a state it was not given (\"Columbus\" -> Ohio), or declines the name as ambiguous.",
+     "A city named without a state: when two or more states have a city of that name with at least 100,000 residents, ask which, with a button for each; otherwise use the most populous, without asking. The same rule when the name fits agencies of different kinds: a city and a county (Baltimore city or Baltimore County), with the same 100,000 floor for the county's agency. A name that is also a state (\"Washington\") always offers the state beside its large cities and counties. A state named in the question narrows the choice to that state.",
+     "Buttons, one per real candidate, most likely first: e.g. Kansas City, Missouri; Kansas City, Kansas. Baltimore city, Maryland; Baltimore County, Maryland. Washington, D.C.; Washington state; Washington County, Oregon; Washington County, Maryland.",
+     "A city in another state, or a county beside its city, is a different place with a different count; asking costs one click.",
+     "Decided 2026-10-29 (Jeff: \"Yes, 100%, same issue with a city/county that share a name (Baltimore, Washington, etc)\")",
+     "labeled cases LS-140, LS-151, LS-223, LS-224, LS-231, LS-242, LS-243, LS-244, LS-245"),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),

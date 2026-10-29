@@ -188,6 +188,21 @@ for (const [name, plan, expected, statements] of cases) {
   if (resolved.problems.length) { console.log(`${name}: RESOLUTION FAILED ${resolved.problems.map((p) => `${p.rule} ${p.message}`).join("; ")}`); failed++; continue; }
   check(name, plan, resolved.period, ROOT, BUILT, expected, statements);
 }
+
+// D18 counts carjacking by offense. NIBRS allows one segment per offense code per incident, so on this build a
+// carjacking's offenses and incidents are the same number: H1's independent incident counts must hold for offenses too,
+// and no agency-month in the release may differ.
+const h1Offenses: NibrsPlan = { ...X.H1, measures: X.H1.measures.map((m) => ({ ...m, id: "offenses.carjacking", unit: "offense" as const })) };
+check("H1 by offense", h1Offenses, validateResolved(X.H1, release, DRAFT_LAYER, geo).period, ROOT, BUILT, cases[0][2]);
+const readAll = (t: string) => `read_parquet('${ROOT}/${t}/data_year=*/data.parquet', hive_partitioning = true)`;
+const [[agencyMonths, offenses, incidents, differing]] = runSql(`WITH cj AS (
+    SELECT o.ori, substr(o.incident_date, 1, 6) AS ym, o.incident_num, o.key_occurrence FROM ${readAll("offense")} o
+    WHERE o.offense_code = '120' AND EXISTS (SELECT 1 FROM ${readAll("property")} p WHERE p.data_year = o.data_year AND p.ori = o.ori
+      AND p.incident_num = o.incident_num AND p.loss_type = '7' AND p.property_description IN ('03', '05', '24', '28', '37'))),
+  m AS (SELECT ori, ym, count(*) AS offenses, count(DISTINCT incident_num) AS incidents FROM cj GROUP BY ALL)
+  SELECT count(*), sum(offenses), sum(incidents), count(*) FILTER (WHERE offenses <> incidents) FROM m`) as number[][];
+console.log(`carjacking offenses = incidents: ${agencyMonths} agency-months, ${offenses} offenses, ${incidents} incidents, ${differing} differing`);
+if (Number(differing) !== 0 || Number(offenses) !== Number(incidents)) failed++;
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(failed ? `compile gate: ${failed} check(s) failed` : "compile gate: every check passed");
 process.exit(failed ? 1 : 0);

@@ -2,6 +2,14 @@
  * Runs a candidate over the labeled set and writes a readable discrepancy report (answer evaluation part 4).
  *
  *   npx tsx scripts/run-answer-eval.ts            # writes scripts/fixtures/answer-eval/runs/nibrs-reader.{json,md}
+ *   npx tsx scripts/run-answer-eval.ts --candidate nibrs-shadow [--root <canonical dir>] [--python <python with duckdb>]
+ *       [--values-repo <nibrs-model checkout>]  # writes runs/nibrs-shadow.{json,md}; local only (reads the canonical build,
+ *                                               # and the independent values from that repo's main branch with git show)
+ *
+ * Candidate "nibrs-shadow": the shadow slice (lib/nibrs-shadow), question to delivered answer for single-agency NIBRS
+ * counts on canonical release 20261028-test5, scored at every level by lib/answer-eval/shadow.ts on the slice's cases:
+ * its designed group, the replay cases inside it, and replay cases next to it. Everything else is listed as outside
+ * the slice. A refusal because the build lacks the months is listed apart, never scored.
  *
  * Candidate "nibrs-reader": today's NIBRS reader (request ledger + typed matcher) -> the plan adapter -> every plan
  * validation and release resolution. This is the question -> reader level ONLY. Not executed, and reported as not
@@ -13,6 +21,7 @@
  * compared, in a separate PROVISIONAL section that is never a gate. Development and held-out cases are reported
  * separately. Offline: no database, no model, no network.
  */
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { Case, scorable } from "../lib/answer-eval/case";
@@ -25,11 +34,33 @@ import { validateResolved } from "../lib/nibrs-plan/resolve";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { matchNibrsType } from "../lib/nibrs-question-types";
+import { scoreShadow, sliceGroup, sliceValues, type ExpectedValues } from "../lib/answer-eval/shadow";
+import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
+import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
+import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "scripts/fixtures/answer-eval/runs");
-const CANDIDATE = "nibrs-reader";
-const release: Release & { id: string } = { id: "eval", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
+const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
+const CANDIDATE = arg("--candidate", "nibrs-reader")!;
+if (!["nibrs-reader", "nibrs-shadow"].includes(CANDIDATE)) throw new Error(`unknown candidate ${CANDIDATE}`);
+const SHADOW = CANDIDATE === "nibrs-shadow";
+const release: Release & { id: string; asOf: string } = SHADOW
+  ? { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" }
+  : { id: "eval", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
+const shadowDeps = (): ShadowDeps => ({
+  places: loadPlaceIndex(), release,
+  target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/build/20261028-test5/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+  execute: duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!),
+});
+/** Independent expected values: nibrs-model's correctness/slice/V*.json on its main branch, read with git show (read-only). */
+function readSliceValues(repo: string): ExpectedValues {
+  const git = (...a: string[]) => execFileSync("git", ["-C", repo, ...a], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const names = git("ls-tree", "--name-only", "main", "correctness/slice/").split(/\r?\n/).filter((n) => /\/V\d+\.json$/.test(n));
+  return sliceValues(names.map((name) => ({ name, json: git("show", `main:${name}`) })));
+}
+const VALUES_REPO = arg("--values-repo", "C:/Users/jeffm/nibrs-model")!;
+const expectedValues: ExpectedValues | undefined = SHADOW ? readSliceValues(VALUES_REPO) : undefined;
 const PLACES: Record<string, { ori: string; label: string }> = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/fixtures/nibrs-replay/reachability/places.json"), "utf8"));
 const resolvePlace = (v: string): Place | null => (PLACES[v] ? { kind: "agency", ori: PLACES[v].ori, label: PLACES[v].label } : null);
 const authority = (v: string) => (PLACES[v] ? { oris: [PLACES[v].ori] } : null);
@@ -95,14 +126,24 @@ const coverage: Record<string, string[]> = {};
 const eligibility: Record<string, string[]> = {};
 const scored: CaseResult[] = [];
 const provisional: CaseResult[] = [];
+const notBuilt: string[] = [];
+const groupOf = new Map<string, string>();
+const deps = SHADOW ? shadowDeps() : null;
 for (const c of cases) {
   const s = scorable(c, openPolicy);
   (eligibility[s.scored ? "scorable (reviewed, decided policy)" : s.why!.replace(/ P\d.*$/, " (open rows)")] ??= []).push(c.id);
-  const nr = notRun(c);
+  const group = SHADOW ? sliceGroup(c) : null;
+  const nr = SHADOW ? (!group ? "outside the shadow slice" : c.setup.length || c.button ? "a follow-up or button case: options are scored on their parent" : null) : notRun(c);
   (coverage[nr ?? "run by this candidate"] ??= []).push(c.id);
   if (nr || !c.expected) continue;
-  const res = score(c, run(c));
-  (s.scored ? scored : provisional).push(res);
+  let res: CaseResult | null;
+  if (deps) {
+    const sc = scoreShadow(c, shadowAnswer(c.question, deps), release, { capability: capability(c), era: era(c) }, expectedValues);
+    if (sc.excluded) notBuilt.push(`${c.id}: ${sc.excluded}`);
+    res = sc.result;
+    if (res) groupOf.set(c.id, group!);
+  } else res = score(c, run(c));
+  if (res) (s.scored ? scored : provisional).push(res);
 }
 
 const list = (m: Record<string, string[]>) => Object.entries(m).sort((a, b) => b[1].length - a[1].length).map(([why, ids]) => `- ${ids.length}: ${why}`);
@@ -127,12 +168,20 @@ const section = (title: string, rs: CaseResult[], gate: boolean) => {
 const bySplit = (title: string, rs: CaseResult[], gate: boolean) =>
   [`## ${title}`, "", section("Development", rs.filter((r) => r.split === "dev"), gate), section("Held out", rs.filter((r) => r.split === "heldout"), gate)].join("\n");
 
+/** The shadow's report keeps its designed cases apart from the replay-derived ones. */
+const GROUPS: [string, string][] = [["designed", "designed slice cases"], ["replay", "replay cases inside the slice"], ["near", "replay cases next to the slice (action and reason)"]];
+const byGroup = (title: string, rs: CaseResult[], gate: boolean) =>
+  GROUPS.map(([g, name]) => bySplit(`${title}: ${name}`, rs.filter((r) => groupOf.get(r.id) === g), gate)).join("\n");
+const LEVEL = SHADOW
+  ? "**Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns."
+  : "**Level: question -> reader only.** An \"answer\" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).";
+
 const md = [
   `# Answer evaluation: ${CANDIDATE}`,
   "",
   `Labeled set: ${cases.length} cases. Release for resolution: ${release.firstMonth}..${release.lastMonth}, request date ${release.asOf}.`,
   "",
-  "**Level: question -> reader only.** An \"answer\" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).",
+  LEVEL,
   "",
   "## Execution coverage (can this candidate take the case)",
   "",
@@ -142,10 +191,11 @@ const md = [
   "",
   ...list(eligibility),
   "",
-  bySplit("Scored (reviewed labels, decided policy)", scored, true),
-  bySplit("PROVISIONAL: drafted labels (never a gate)", provisional, false),
+  ...(SHADOW ? ["## Refused as not built (not scored)", "", ...(notBuilt.length ? notBuilt.map((x) => `- ${x}`) : ["None."]), ""] : []),
+  (SHADOW ? byGroup : bySplit)("Scored (reviewed labels, decided policy)", scored, true),
+  (SHADOW ? byGroup : bySplit)("PROVISIONAL: drafted labels (never a gate)", provisional, false),
 ].join("\n");
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, `${CANDIDATE}.md`), md);
-fs.writeFileSync(path.join(OUT, `${CANDIDATE}.json`), JSON.stringify({ candidate: CANDIDATE, release, coverage, eligibility, scored, provisional }, null, 1) + "\n");
+fs.writeFileSync(path.join(OUT, `${CANDIDATE}.json`), JSON.stringify({ candidate: CANDIDATE, release, coverage, eligibility, ...(SHADOW ? { notBuilt, groups: Object.fromEntries(groupOf) } : {}), scored, provisional }, null, 1) + "\n");
 console.log(`${CANDIDATE}: scored ${scored.length}, provisional ${provisional.length}; run ${coverage["run by this candidate"]?.length ?? 0} of ${cases.length}`);

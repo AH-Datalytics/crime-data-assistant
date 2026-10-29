@@ -53,6 +53,10 @@ const withMeasure = (id: string, unit: "offense" | "incident" | "victim") => ({ 
 assert.match(refuse(withMeasure("offenses.motor_vehicle_theft.typo", "offense")), /no executable definition/);
 assert.match(refuse(withMeasure("offenses.dui", "offense")), /Group B/);
 assert.match(refuse(withMeasure("victims.burglary", "victim")), /not crimes against persons/);
+// D18: carjacking by offense keeps each 120 segment's occurrence key; by incident it stays distinct incidents.
+const cjOff = ok(compilePlan({ ...X.H2, measures: [{ ...X.H2.measures[0], id: "offenses.carjacking", unit: "offense" }] }, year(2025), t));
+assert.ok(cjOff.sql.includes("o.offense_code || ':' || o.key_occurrence AS sub") && cjOff.sql.includes("o.offense_code = '120'") && cjOff.sql.includes("'03', '05', '24', '28', '37'"));
+assert.match(refuse({ ...X.H2, measures: [{ ...X.H2.measures[0], id: "offenses.carjacking", unit: "incident" }] }), /counted by offense/);
 // New forms' limits: an attribute the counted entity does not hold; a share without categories; a negated or
 // non-property existence; a property condition v0 cannot apply.
 assert.match(refuse({ ...X.N1, groupings: [X.N1.groupings[0], { ...X.N1.groupings[1], dimension: "offender.race" }] }), /cannot group victim by offender.race/);

@@ -99,7 +99,34 @@
    "LS-206",
    "LS-207",
    "LS-208",
-   "LS-212"
+   "LS-212",
+   "LS-219",
+   "LS-220",
+   "LS-221",
+   "LS-222",
+   "LS-223",
+   "LS-224",
+   "LS-225",
+   "LS-226",
+   "LS-227",
+   "LS-228",
+   "LS-229",
+   "LS-230",
+   "LS-231",
+   "LS-232",
+   "LS-233",
+   "LS-234",
+   "LS-235",
+   "LS-236",
+   "LS-237",
+   "LS-238",
+   "LS-239",
+   "LS-240",
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245"
   ],
   "a follow-up: the reader takes one turn": [
    "LS-004",
@@ -399,7 +426,34 @@
    "LS-214",
    "LS-215",
    "LS-216",
-   "LS-217"
+   "LS-217",
+   "LS-219",
+   "LS-220",
+   "LS-221",
+   "LS-222",
+   "LS-223",
+   "LS-224",
+   "LS-225",
+   "LS-226",
+   "LS-227",
+   "LS-228",
+   "LS-229",
+   "LS-230",
+   "LS-231",
+   "LS-232",
+   "LS-233",
+   "LS-234",
+   "LS-235",
+   "LS-236",
+   "LS-237",
+   "LS-238",
+   "LS-239",
+   "LS-240",
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245"
   ],
   "label unresolved": [
    "LS-024",
@@ -740,9 +794,9 @@
    "diffs": [
     {
      "field": "measures",
-     "expected": "?",
+     "expected": "carjacking|offense",
      "actual": "carjacking|incident",
-     "kind": "unverified"
+     "kind": "material"
     },
     {
      "field": "filters",
@@ -1024,8 +1078,8 @@
    "notes": [
     "declined (reason not judged): I can't apply \"St Louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
    ],
-   "capability": "clarify:nibrs count",
-   "era": "spans 2021"
+   "capability": "clarify:no meaning",
+   "era": "no period"
   },
   {
    "id": "LS-141",
@@ -1145,14 +1199,14 @@
   {
    "id": "LS-151",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "declined (reason not judged): I can't apply \"baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
    ],
-   "capability": "answer:nibrs count",
+   "capability": "clarify:nibrs count",
    "era": "2021 and later"
   },
   {
@@ -1605,6 +1659,354 @@
     "declined (reason not judged): I can't apply \"increase\": I rank places by a level, not by a change, in this version. I haven't answered with a number that leaves it out."
    ],
    "capability": "clarify:historical change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-219",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-220",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-221",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-222",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "measures",
+     "expected": "shoplifting|offense",
+     "actual": "shoplifting|victim",
+     "kind": "material"
+    }
+   ],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-223",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"Baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-224",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"St. Louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-225",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "measures",
+     "expected": "carjacking|offense",
+     "actual": "carjacking|incident",
+     "kind": "material"
+    }
+   ],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-226",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): a place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-227",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): a place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-228",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"from motor vehicles in\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-229",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): a place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-230",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"so far this year\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-231",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"Kansas City\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-232",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [],
+   "notes": [],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-233",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [],
+   "notes": [],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-234",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [],
+   "notes": [],
+   "capability": "clarify:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-235",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "no_reading",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "no typed reading: no answer, no reason"
+   ],
+   "capability": "clarify:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-236",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "plan refused (reason not judged): S7",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-237",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "before 2021"
+  },
+  {
+   "id": "LS-238",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"ZIP code\". I haven't answered with a number that leaves it out."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-239",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"led to\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances, so I can't apply \"convictions\". I haven't answered with a number that leaves it out.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-240",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"Will\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"go up in\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"next year\" in this question, so I haven't answered it with a number that ignores it.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-241",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-242",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"Baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-243",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"Washington\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-244",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): a place did not resolve"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-245",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"New York\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
    "era": "2021 and later"
   }
  ],

@@ -1,0 +1,76 @@
+/**
+ * The shadow slice's place resolution: a place named in a question -> one agency, a state, or a choice to ask about. It
+ * reads scripts/fixtures/nibrs-shadow/agencies.json (city police and county agencies of the canonical build with
+ * 10,000+ residents) and stands in for the app's resolveNibrsPlaces, which needs nibrs.db.
+ *
+ * The rule (P28, Jeff 2026-10-29): a name is asked about when it fits two or more real candidates of 100,000+ residents:
+ * cities of that name in different states, a city and a county of that name ("Baltimore": the city or Baltimore County),
+ * or counties of that name in different states. A name that is also a state ("Washington") always offers the state
+ * beside its large cities and counties. Otherwise the most populous match is used without a question (P16: a city
+ * means its principal police agency). A state named in the question narrows the candidates to that state.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import type { Place } from "../nibrs-plan/plan";
+
+export type Agency = { ori: string; kind: "city" | "county"; name: string; state: string; population: number; year: number };
+export type Candidate = { kind: "agency"; agency: Agency } | { kind: "state"; code: string; name: string };
+export type PlaceResolution =
+  | { kind: "agency"; place: Extract<Place, { kind: "agency" }>; agency: Agency }
+  | { kind: "ask"; name: string; candidates: Candidate[] }
+  | { kind: "unresolved"; why: string };
+
+export const ASK_POPULATION = 100_000;
+const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
+export const stateName = (code: string) => STATE_NAMES[code] ?? code;
+const STATE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAMES).filter(([c]) => c !== "DC").map(([c, n]) => [n.toLowerCase(), c]));
+
+/** Names compared without case, punctuation, the St./Saint difference or a trailing "County". */
+const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\bsaint\b/g, "st").replace(/\s+/g, " ").trim();
+const base = (s: string) => key(s).replace(/ county$/, "");
+
+export type PlaceIndex = { byName: Map<string, Agency[]> };
+export function loadPlaceIndex(file = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
+  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies;
+  const byName = new Map<string, Agency[]>();
+  for (const a of agencies) (byName.get(base(a.name)) ?? byName.set(base(a.name), []).get(base(a.name))!).push(a);
+  for (const xs of byName.values()) xs.sort((a, b) => b.population - a.population);
+  return { byName };
+}
+
+/** The build names no agency, so the label says what is known: the city's police or the county's agency, and the state. */
+export const agencyLabel = (a: Agency) => (a.kind === "city" ? `${a.name} city police, ${a.state}` : `${a.name} agency, ${a.state}`);
+const asPlace = (a: Agency): PlaceResolution => ({ kind: "agency", place: { kind: "agency", ori: a.ori, label: agencyLabel(a) }, agency: a });
+/** A button's label for a candidate: "Kansas City, Missouri"; "Baltimore city, Maryland" beside "Baltimore County, Maryland"; "Washington state". */
+export function candidateLabel(c: Candidate, all: Candidate[]): string {
+  if (c.kind === "state") return `${c.name} state`;
+  const a = c.agency;
+  const countyToo = a.kind === "city" && all.some((x) => x.kind === "agency" && x.agency.kind === "county" && x.agency.state === a.state);
+  if (a.kind === "city" && stateName(a.state) === a.name) return `${a.name} City`;   // "New York City" beside "New York state" (P26)
+  return `${a.name}${countyToo ? " city" : ""}, ${a.state === "DC" ? "D.C." : stateName(a.state)}`;
+}
+
+/**
+ * A ledger place value ("city:Memphis:TN", "county:Baltimore County:MD", "ambiguous:Baltimore") and the words the
+ * question used for it. The reader fills in a state it was not given ("Columbus" -> OH), so a state counts as named
+ * only when the words say more than the name.
+ */
+export function resolvePlace(idx: PlaceIndex, value: string, text: string): PlaceResolution {
+  const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
+  if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };
+  const name = (m[2] ?? m[4]).trim();
+  const countyNamed = m[1] === "county" || / county$/.test(key(name));
+  const words = key(text).replace(/ (city|county)$/, "");
+  const stateNamed = m[3] && words !== base(name) ? m[3] : null;
+  let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed));
+  if (/ city$/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
+  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with 10,000+ residents in this build` };
+  // The most populous agency of each kind in each state; the large ones are the real candidates.
+  const firsts = pool.filter((a, i) => pool.findIndex((b) => b.kind === a.kind && b.state === a.state) === i);
+  // Buttons, most likely first: cities, then counties, each by population; the state (when the name is one) second.
+  const large: Candidate[] = firsts.filter((a) => a.population >= ASK_POPULATION)
+    .sort((x, y) => (x.kind === y.kind ? y.population - x.population : x.kind === "city" ? -1 : 1)).map((a) => ({ kind: "agency", agency: a }));
+  const asState = !countyNamed && !stateNamed ? STATE_BY_NAME[base(name)] : undefined;
+  if (asState) large.splice(1, 0, { kind: "state", code: asState, name: stateName(asState) });
+  return large.length >= 2 ? { kind: "ask", name, candidates: large } : asPlace(pool[0]);
+}

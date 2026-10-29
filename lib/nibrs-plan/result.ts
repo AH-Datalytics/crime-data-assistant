@@ -57,15 +57,18 @@ export type CellEvidence = {
 /**
  * The only answer text the engine adds, each with fixed wording (owner: minimize editorializing). Never a column.
  * - property_not_attributed: a plan with an incident-scoped property existence filter (case N2);
- * - reported_nibrs_counts: a plan whose geography is the nation.
+ * - reported_nibrs_counts: a plan whose geography is the nation;
+ * - property_counted_by_offense: a question that asked for victims of a property crime, answered with offenses (P11).
+ *   It depends on the question's words, not the plan, so checkEnvelope authorizes it but cannot require it.
  */
 export const ANSWER_STATEMENTS = {
   property_not_attributed: "NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offense.",
   reported_nibrs_counts: "These are reported NIBRS counts.",
+  property_counted_by_offense: "Property crimes are counted by offense, not by victim.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */
-export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs" };
+export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs" };
 
 export type ResultEnvelope = {
   plan: NibrsPlan;

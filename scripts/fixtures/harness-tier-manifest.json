@@ -2421,6 +2421,15 @@
       "note": "NIBRS engine step 2: the plan -> DuckDB compiler v0 emits SQL for the simplest forms and refuses the rest with a reason; SQL is checked, not run (scripts/nibrs-compile-gate.ts runs it locally against a canonical build)"
     },
     {
+      "id": "test-nibrs-shadow",
+      "tier": "F",
+      "script": "scripts/test-nibrs-shadow.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS shadow slice: question to answer, clarification or decline under the decided policy, with a stubbed DuckDB step and the checked-in place index; the runner scores it locally against a canonical build"
+    },
+    {
       "id": "test-answer-eval-cases",
       "tier": "F",
       "script": "scripts/test-answer-eval-cases.ts",
