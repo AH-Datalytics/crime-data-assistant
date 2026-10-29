@@ -292,7 +292,26 @@
    "LS-280",
    "LS-281",
    "LS-282",
-   "LS-283"
+   "LS-283",
+   "LS-284",
+   "LS-285",
+   "LS-286",
+   "LS-287",
+   "LS-288",
+   "LS-289",
+   "LS-290",
+   "LS-291",
+   "LS-292",
+   "LS-293",
+   "LS-294",
+   "LS-295",
+   "LS-296",
+   "LS-297",
+   "LS-298",
+   "LS-299",
+   "LS-300",
+   "LS-301",
+   "LS-302"
   ]
  },
  "eligibility": {
@@ -525,7 +544,26 @@
    "LS-280",
    "LS-281",
    "LS-282",
-   "LS-283"
+   "LS-283",
+   "LS-284",
+   "LS-285",
+   "LS-286",
+   "LS-287",
+   "LS-288",
+   "LS-289",
+   "LS-290",
+   "LS-291",
+   "LS-292",
+   "LS-293",
+   "LS-294",
+   "LS-295",
+   "LS-296",
+   "LS-297",
+   "LS-298",
+   "LS-299",
+   "LS-300",
+   "LS-301",
+   "LS-302"
   ],
   "label unresolved": [
    "LS-024",
@@ -665,7 +703,26 @@
   "LS-280": "designed",
   "LS-281": "designed",
   "LS-282": "designed",
-  "LS-283": "designed"
+  "LS-283": "designed",
+  "LS-284": "designed",
+  "LS-285": "designed",
+  "LS-286": "designed",
+  "LS-287": "designed",
+  "LS-288": "designed",
+  "LS-289": "designed",
+  "LS-290": "designed",
+  "LS-291": "designed",
+  "LS-292": "designed",
+  "LS-293": "designed",
+  "LS-294": "designed",
+  "LS-295": "designed",
+  "LS-296": "designed",
+  "LS-297": "designed",
+  "LS-298": "designed",
+  "LS-299": "designed",
+  "LS-300": "designed",
+  "LS-301": "designed",
+  "LS-302": "designed"
  },
  "scored": [
   {
@@ -1848,6 +1905,274 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
+  },
+  {
+   "id": "LS-284",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-285",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: drug crimes are drug/narcotic violations plus drug equipment violations (D19), two measures."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-286",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-287",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-288",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-289",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-290",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: v0 compiles filters that are incident-level existences over property only"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-291",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-292",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: \"by\" a group names the offenders (P29), and offender breakdowns are not built yet."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-293",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-294",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-295",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [],
+   "notes": [
+    "asked which kind of crime: Violent crime | Property crime | Both"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-296",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): The question could not be read: no typed reading."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-297",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: measure \"arrests.shoplifting\" has no executable definition in v0"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-298",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: measure \"arrests.robbery\" has no executable definition in v0"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-299",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I couldn't interpret \"people were\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-300",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [
+    {
+     "field": "reason",
+     "expected": "Charging records are not in the data; it records police arrests and clearances.",
+     "actual": "reader",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (reader): I couldn't interpret \"were charged in\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-301",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "reason",
+     "expected": "\"Shooters\" is not a term the data defines.",
+     "actual": "reader",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (reader): The question could not be read: no typed reading."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-302",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "reason",
+     "expected": "The data has no counts of non-fatal shootings, so gun violence cannot be counted.",
+     "actual": "reader",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (reader): The question could not be read: no typed reading."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
   }
  ],
  "provisional": []

@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 283 cases. Release for resolution: 2017-01..2026-10, request date 2026-10-29.
+Labeled set: 302 cases. Release for resolution: 2017-01..2026-10, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 79: run by this candidate
+- 98: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 229: scorable (reviewed, decided policy)
+- 248: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Refused as not built (not scored)
@@ -71,26 +71,27 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-42 cases. Correct 26; unverified 7; wrong answers 0; avoidable declines 7; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 150 (trend only).
+61 cases. Correct 26; unverified 9; wrong answers 0; avoidable declines 22; unnecessary clarifications 1; wrong actions 2; incomplete 1. Severity score 456 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 24 | 0 | 7 | 0 |
+| answer | 24 | 1 | 22 | 0 |
 | clarify | 0 | 3 | 2 | 0 |
-| decline | 0 | 0 | 6 | 0 |
+| decline | 0 | 0 | 9 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs change | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs count | 2021 and later | 29 | fail | wrong answers: pass (0); initial action: fail (83% (24/29)); direct answers: fail (83% (0 unverified)); numeric fixtures: pass (24/24 match) |
+| answer:nibrs count | 2021 and later | 45 | fail | wrong answers: pass (0); initial action: fail (53% (24/45)); direct answers: fail (53% (0 unverified)); numeric fixtures: pass (24/24 match) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| decline:nibrs count | 2021 and later | 2 | not measured | wrong answers: pass (0); declines: not measured (0/2 verified correct, 2 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | 2021 and later | 3 | fail | wrong answers: pass (0); declines: fail (0/3 verified correct, 2 unverified, 1 failing); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: pass (0); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 2 | not measured | wrong answers: pass (0); declines: not measured (0/2 verified correct, 2 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -133,6 +134,47 @@ Discrepancies and unverified cases:
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
 - **LS-283** (avoidable_decline; expected answer, got decline) "Carjackings in Kansas City, Missouri by location type in 2024"
   - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-284** (avoidable_decline; expected answer, got decline) "Shoplifting and theft from motor vehicle offenses in Oklahoma City in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-285** (avoidable_decline; expected answer, got decline) "Drug crimes in Wichita in 2023"
+  - declined (unsupported_capability): Not in the slice yet: drug crimes are drug/narcotic violations plus drug equipment violations (D19), two measures.
+- **LS-286** (avoidable_decline; expected answer, got decline) "Carjackings and shoplifting in Raleigh by month in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-287** (avoidable_decline; expected answer, got decline) "Robberies in Fort Worth by weapon in 2023"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-288** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by age in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-289** (avoidable_decline; expected answer, got decline) "Murder victims in Colorado Springs by relationship to the offender in 2023"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-290** (avoidable_decline; expected answer, got decline) "Murders by strangers in Virginia Beach in 2024"
+  - declined (unsupported_capability): Not in the slice yet: v0 compiles filters that are incident-level existences over property only
+- **LS-291** (avoidable_decline; expected answer, got decline) "Carjackings in Wichita by location type in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-292** (avoidable_decline; expected answer, got decline) "Simple assaults by men and women in Oklahoma City in 2024"
+  - declined (unsupported_capability): Not in the slice yet: "by" a group names the offenders (P29), and offender breakdowns are not built yet.
+- **LS-293** (avoidable_decline; expected answer, got decline) "Robbery offenders in Raleigh by sex in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.
+- **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
+  - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
+- **LS-295** (unnecessary_clarify; expected answer, got clarify) "Gun crime in Fort Worth in 2023"
+  - asked which kind of crime: Violent crime | Property crime | Both
+- **LS-296** (avoidable_decline; expected answer, got decline) "Stabbings in Oklahoma City in 2024"
+  - declined (reader): The question could not be read: no typed reading.
+- **LS-297** (avoidable_decline; expected answer, got decline) "Shoplifting arrests in Colorado Springs in 2024"
+  - declined (unsupported_capability): Not in the slice yet: measure "arrests.shoplifting" has no executable definition in v0
+- **LS-298** (avoidable_decline; expected answer, got decline) "Robbery arrests in Wichita by month in 2023"
+  - declined (unsupported_capability): Not in the slice yet: measure "arrests.robbery" has no executable definition in v0
+- **LS-299** (avoidable_decline; expected answer, got decline) "How many people were arrested for burglary in Raleigh in 2024?"
+  - declined (reader): I couldn't interpret "people were" in this question, so I haven't answered it with a number that ignores it.
+- **LS-300** (incomplete; expected decline, got decline) "How many robbery suspects were charged in Wichita in 2024?"
+  - unverified reason: expected `Charging records are not in the data; it records police arrests and clearances.`, got `reader`
+  - declined (reader): I couldn't interpret "were charged in" in this question, so I haven't answered it with a number that ignores it.
+- **LS-301** (unverified; expected decline, got decline) "How many shooters were there in Raleigh in 2024?"
+  - unverified reason: expected `"Shooters" is not a term the data defines.`, got `reader`
+  - declined (reader): The question could not be read: no typed reading.
+- **LS-302** (unverified; expected decline, got decline) "Gun violence in Fort Worth in 2024"
+  - unverified reason: expected `The data has no counts of non-fatal shootings, so gun violence cannot be counted.`, got `reader`
+  - declined (reader): The question could not be read: no typed reading.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
