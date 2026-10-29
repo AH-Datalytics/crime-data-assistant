@@ -108,10 +108,10 @@ ROWS = [
      O28 + " (Jeff: ask, as for any missing part; general rule)", NEW),
     ("P13", "\"What is the safest city in America?\" / \"most dangerous city\"",
      "Declines: no agreed definition; asks the user to name an offense and a count or rate.",
-     "Ask with buttons, then rank: violent crime rate, murder rate, or property crime rate.",
-     "Choices: violent crime rate (first), murder rate, property crime rate. Year: latest complete.",
-     "The question is common and answerable once the measure is chosen; declining sends the user away.",
-     OPEN, NEW),
+     "Decline, with today's note: there is no agreed definition of safest or most dangerous, so ask about a specific offense and a count or rate. No ranking is offered in its place.",
+     "Not applicable: a decline with the note.",
+     "\"Safe\" and \"dangerous\" are judgements the data cannot make; the app reports counts and rates without editorializing.",
+     O28 + " (Jeff: decline, with the note about safe and dangerous)", NEW),
     ("P14", "\"Murders in Chicago from 1990 to 2024\" (a span one source covers and another covers only in part)",
      "Each tab reads only its own data; no rule for a span only another source covers.",
      "Never join two sources in one series. Answer from the one source that covers the whole span with the same measure and filters (here Historical, for murders) and name it; if none does, answer the covered part and name the missing years (frozen rule 4).",
@@ -233,7 +233,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
     "P18": "For a state clearance rate (not in Historical), should the app decline and offer the national rate or the NIBRS state figure instead?",
     "P19": "For fentanyl, should the app decline and offer \"synthetic narcotics\" (which includes fentanyl) instead?",
     "P20": "For forecasts, should the app decline and offer the recent trend instead?",
@@ -245,7 +244,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
+    **{p: "3. When to ask a question" for p in ["P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
