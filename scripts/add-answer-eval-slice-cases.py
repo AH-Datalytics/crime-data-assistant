@@ -31,7 +31,21 @@ AG = {
     "columbus": {"kind": "agency", "name": "Columbus Police Department", "state": "OH"},
     "kcmo": {"kind": "agency", "name": "Kansas City Police Department", "state": "MO"},
     "kcks": {"kind": "agency", "name": "Kansas City Police Department", "state": "KS"},
+    "baltimore_county": {"kind": "agency", "name": "Baltimore County Police Department", "state": "MD"},
+    "stl_county": {"kind": "agency", "name": "St. Louis County Police Department", "state": "MO"},
+    "dc": {"kind": "agency", "name": "Washington Metropolitan Police Department", "state": "DC"},
+    "washington_or": {"kind": "agency", "name": "Washington County Sheriff's Office", "state": "OR"},
+    "washington_md": {"kind": "agency", "name": "Washington County Sheriff's Office", "state": "MD"},
+    "columbus_ga": {"kind": "agency", "name": "Columbus Police Department", "state": "GA"},
+    "nyc": {"kind": "agency", "name": "New York City Police Department", "state": "NY"},
 }
+
+
+def choose(about, *options):
+    """A P28 place question: (label, meaning or None, next part asked when the meaning is None)."""
+    return {"action": "clarify", "about": about, "options": [
+        {"label": l, "leads_to": "answer", "meaning": m} if m else {"label": l, "leads_to": "clarify", "meaning": None, "next_about": nxt}
+        for l, m, nxt in options]}
 
 
 def year(y):
@@ -71,12 +85,16 @@ SLICE = [
     ("slice-victims", "How many shoplifting victims were there in Memphis in 2024?", ["D18", "D30", "P01", "P11", "P16"],
      answer(meaning("memphis", year(2024), SHOP), "Property crimes are counted by offense, not by victim.", names("memphis"), SOURCE_LAST),
      "P11: victims of a property crime -> offenses, with the fixed sentence."),
-    ("slice-baltimore-month", "Shoplifting in Baltimore by month from 2022 to 2025", ["D04", "D18", "D30", "P01", "P16"],
-     answer(meaning("baltimore", {"from": "2022-01", "to": "2025-12"}, SHOP, ["month"]), names("baltimore"), MISSING, SOURCE_LAST),
-     "Baltimore means the city's police department (P16), not Baltimore County."),
-    ("slice-stl-year", "Carjackings in St. Louis by year, 2021 to 2025", ["D04", "D18", "D30", "P01", "P16"],
-     answer(meaning("stl", {"from": "2021-01", "to": "2025-12"}, CARJACK, ["year"]), names("stl"), MISSING, SOURCE_LAST),
-     "Carjacking is robbery-based: unit offense (D18, as LS-140). St. Louis means the city's police department (P16)."),
+    ("slice-baltimore-month", "Shoplifting in Baltimore by month from 2022 to 2025", ["D04", "D18", "D30", "P01", "P16", "P22", "P28"],
+     choose("which Baltimore",
+            ("Baltimore city, Maryland", meaning("baltimore", {"from": "2022-01", "to": "2025-12"}, SHOP, ["month"]), None),
+            ("Baltimore County, Maryland", meaning("baltimore_county", {"from": "2022-01", "to": "2025-12"}, SHOP, ["month"]), None)),
+     "P28: Baltimore names a city and a county of 100,000+, so ask; each button keeps crime, months and grouping (P22). [superseded by P28]"),
+    ("slice-stl-year", "Carjackings in St. Louis by year, 2021 to 2025", ["D04", "D18", "D30", "P01", "P16", "P22", "P28"],
+     choose("which St. Louis",
+            ("St. Louis city, Missouri", meaning("stl", {"from": "2021-01", "to": "2025-12"}, CARJACK, ["year"]), None),
+            ("St. Louis County, Missouri", meaning("stl_county", {"from": "2021-01", "to": "2025-12"}, CARJACK, ["year"]), None)),
+     "P28: St. Louis names a city and a county of 100,000+ (St. Louis County, Minnesota is under 100,000). Carjacking by offense (D18). [superseded by P28]"),
     ("slice-memphis-cj", "carjackings in Memphis TN by month in 2025", ["D18", "D30", "P01", "P16"],
      answer(meaning("memphis", year(2025), CARJACK, ["month"]), names("memphis"), MISSING, SOURCE_LAST), "Carjacking by offense (D18)."),
     ("slice-detroit-sa", "How many simple assaults were there in Detroit in 2023?", ["D18", "D30", "P01", "P09", "P16"],
@@ -107,10 +125,10 @@ SLICE = [
      "P12/D31: ask for the missing place. Shoplifting stays on NIBRS (P01), counted from reporting agencies."),
     ("slice-noperiod", "Shoplifting in Memphis", ["D18", "D31", "P01", "P06", "P16", "P22"],
      {"action": "clarify", "about": "which period", "options": [
-         {"label": "The latest complete year", "leads_to": "answer", "meaning": meaning("memphis", {"rule": "latest complete year"}, SHOP)},
+         {"label": "The latest complete year (2025)", "leads_to": "answer", "meaning": meaning("memphis", {"rule": "latest complete year"}, SHOP)},
          {"label": "This year so far", "leads_to": "answer", "meaning": meaning("memphis", {"rule": "year to date through the latest month"}, SHOP)},
          {"label": "Another year", "leads_to": "clarify", "meaning": None, "next_about": "which year"}]},
-     "P06 single figure: latest complete year; this year so far; another year. NIBRS for both (P01: no shoplifting in Current Trends)."),
+     "P06 single figure: the latest complete year, named (2025 for this release); this year so far; another year. NIBRS for both (P01: no shoplifting in Current Trends). Codex slice review 1: the year is named."),
     ("slice-noperiod-trend", "Carjackings in Memphis by month", ["D18", "D31", "P01", "P06", "P16", "P22"],
      {"action": "clarify", "about": "which range of years", "options": [
          {"label": "The last 10 complete years", "leads_to": "answer", "meaning": meaning("memphis", {"rule": "last 10 complete years"}, CARJACK, ["month"])},
@@ -144,16 +162,59 @@ SLICE = [
     ("slice-arrests", "Shoplifting arrests in Memphis in 2024", ["D18", "D30", "P01", "P16"],
      answer(meaning("memphis", year(2024), [("shoplifting", "arrest")]), names("memphis"), SOURCE_LAST),
      "Arrests asked for by name: counted by arrest."),
+    ("slice-place-baltimore", "Shoplifting in Baltimore in 2024", ["D18", "P01", "P22", "P28"],
+     choose("which Baltimore",
+            ("Baltimore city, Maryland", meaning("baltimore", year(2024), SHOP), None),
+            ("Baltimore County, Maryland", meaning("baltimore_county", year(2024), SHOP), None)),
+     "P28: a city and a county share the name, both 100,000+."),
+    ("slice-place-washington", "Shoplifting in Washington in 2024", ["D18", "P01", "P22", "P28"],
+     choose("which Washington",
+            ("Washington, D.C.", meaning("dc", year(2024), SHOP), None),
+            ("Washington state", meaning({"kind": "state", "name": "Washington", "state": "WA"}, year(2024), SHOP, cohort="all_reporting"), None),
+            ("Washington County, Oregon", meaning("washington_or", year(2024), SHOP), None),
+            ("Washington County, Maryland", meaning("washington_md", year(2024), SHOP), None)),
+     "P28: the name is a state, so the state is always offered, beside D.C. and the Washington County agencies of 100,000+ (Oregon, Maryland). Shoplifting stays on NIBRS (P01)."),
+    ("slice-place-columbus", "Shoplifting in Columbus in 2024", ["D18", "P01", "P22", "P28"],
+     choose("which Columbus",
+            ("Columbus, Ohio", meaning("columbus", year(2024), SHOP), None),
+            ("Columbus, Georgia", meaning("columbus_ga", year(2024), SHOP), None)),
+     "P28: two states have a Columbus of 100,000+."),
+    ("slice-place-newyork", "Shoplifting in New York in 2024", ["D18", "P01", "P22", "P26", "P28"],
+     choose("which New York",
+            ("New York City", meaning("nyc", year(2024), SHOP), None),
+            ("New York state", meaning({"kind": "state", "name": "New York", "state": "NY"}, year(2024), SHOP, cohort="all_reporting"), None)),
+     "P26: New York alone asks city or state."),
 ]
+
+# Replay labels P28 changes (reviewed before P28): drafted again, for review.
+RELABEL = {
+    "LS-151": (["P22", "P28"], choose("which Baltimore",
+        ("Baltimore city, Maryland", meaning("baltimore", {"from": "2021-01", "to": "2025-12"}, SHOP, ["month"]), None),
+        ("Baltimore County, Maryland", meaning("baltimore_county", {"from": "2021-01", "to": "2025-12"}, SHOP, ["month"]), None)),
+        "P28 (Jeff 2026-10-29): Baltimore names a city and a county of 100,000+, so ask first; each button keeps crime, months and grouping."),
+    "LS-140": (["P22", "P28"], choose("which St. Louis",
+        ("St. Louis city, Missouri", None, "which range of years"),
+        ("St. Louis County, Missouri", None, "which range of years")),
+        "P28 (Jeff 2026-10-29): ask which St. Louis first; the years are asked next, one part at a time (D31)."),
+}
 
 args = sys.argv[1:]
 reviewer = args[1] if args[:1] == ["--reviewed-by"] else None
 data = json.load(open(CASES, encoding="utf-8"))
 have = {(c["group"], c["question"]) for c in data["cases"]}
 added = 0
+for c in data["cases"]:
+    if c["id"] in RELABEL and c["label"]["drafted_by"] != DRAFTER:
+        add, exp, why = RELABEL[c["id"]]
+        c["expected"], c["policy"] = exp, sorted(set(c["policy"]) | set(add))
+        c["label"] = {"status": "drafted", "drafted_by": DRAFTER, "reviewed_by": None, "notes": f"{c['label']['notes']} [superseded by P28: {why}]"}
 for g, q, pol, exp, notes in SLICE:
     group = f"designed:{g}"
     if (group, q) in have:
+        old = next(c for c in data["cases"] if (c["group"], c["question"]) == (group, q))
+        if old["label"]["drafted_by"] == DRAFTER and old["label"]["status"] == "drafted":
+            old.update(policy=pol, expected=exp)
+            old["label"]["notes"] = notes
         continue
     h = int(hashlib.sha256(group.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
     data["cases"].append({

@@ -250,7 +250,11 @@
    "LS-238",
    "LS-239",
    "LS-240",
-   "LS-241"
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245"
   ]
  },
  "eligibility": {
@@ -350,7 +354,6 @@
    "LS-135",
    "LS-137",
    "LS-138",
-   "LS-140",
    "LS-141",
    "LS-142",
    "LS-143",
@@ -358,7 +361,6 @@
    "LS-148",
    "LS-149",
    "LS-150",
-   "LS-151",
    "LS-152",
    "LS-153",
    "LS-154",
@@ -477,6 +479,8 @@
    "LS-218"
   ],
   "label drafted": [
+   "LS-140",
+   "LS-151",
    "LS-219",
    "LS-220",
    "LS-221",
@@ -499,11 +503,15 @@
    "LS-238",
    "LS-239",
    "LS-240",
-   "LS-241"
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245"
   ]
  },
  "notBuilt": [
-  "LS-237: refused as not built: This build holds January 2017 through October 2026; 2012 is not in it."
+  "LS-237: refused as not built: This build holds January 2017 through October 2026, so it does not cover 2012."
  ],
  "groups": {
   "LS-005": "near",
@@ -541,7 +549,11 @@
   "LS-238": "designed",
   "LS-239": "designed",
   "LS-240": "designed",
-  "LS-241": "designed"
+  "LS-241": "designed",
+  "LS-242": "designed",
+  "LS-243": "designed",
+  "LS-244": "designed",
+  "LS-245": "designed"
  },
  "scored": [
   {
@@ -604,7 +616,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: v0 cannot group offense by offense.clearance_type"
+    "declined (unsupported_capability): Not in the slice yet: breakdowns by category, shares and rates."
    ],
    "capability": "answer:nibrs count",
    "era": "period not mapped"
@@ -630,30 +642,10 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug "
+    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
-  },
-  {
-   "id": "LS-140",
-   "split": "dev",
-   "expected": "clarify",
-   "actual": "clarify",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "option \"Last 10 complete years\" ",
-     "expected": "answer",
-     "actual": "refused: this build does not hold the months (not built)",
-     "kind": "unverified"
-    }
-   ],
-   "notes": [
-    "asked which range of years: The last 10 complete years | Every year available | Another range"
-   ],
-   "capability": "clarify:nibrs count",
-   "era": "spans 2021"
   },
   {
    "id": "LS-141",
@@ -676,7 +668,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug "
+    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -695,19 +687,6 @@
    "era": "spans 2021"
   },
   {
-   "id": "LS-151",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "declined (reader): The question could not be read: no typed reading."
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later"
-  },
-  {
    "id": "LS-156",
    "split": "heldout",
    "expected": "answer",
@@ -715,7 +694,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"Posession\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug "
+    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -736,128 +715,126 @@
  ],
  "provisional": [
   {
+   "id": "LS-140",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri"
+   ],
+   "capability": "clarify:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-151",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reader): The question could not be read: no typed reading."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
    "id": "LS-219",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis city police, TN: 10,149 shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-220",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis city police, TN: 10,149 shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-221",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis city police, TN: 10,149 shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-222",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis city police, TN: 10,149 shoplifting offenses in 2024. / Property crimes are counted by offense, not by victim. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-tes"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-223",
    "split": "heldout",
-   "expected": "answer",
-   "actual": "answer",
+   "expected": "clarify",
+   "actual": "clarify",
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
+     "field": "option \"Baltimore County, Maryland\" values",
      "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "delivered: Baltimore city police, MD: shoplifting offenses by month, 2022 to 2025. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "asked which Baltimore: Baltimore city, Maryland | Baltimore County, Maryland"
    ],
-   "capability": "answer:nibrs count",
+   "capability": "clarify:nibrs count",
    "era": "2021 and later",
    "values": "not measured"
   },
   {
    "id": "LS-224",
    "split": "dev",
-   "expected": "answer",
-   "actual": "answer",
+   "expected": "clarify",
+   "actual": "clarify",
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
+     "field": "option \"St. Louis County, Missouri\" values",
      "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "delivered: St. Louis city police, MO: carjacking offenses by year, 2021 to 2025. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri"
    ],
-   "capability": "answer:nibrs count",
+   "capability": "clarify:nibrs count",
    "era": "2021 and later",
    "values": "not measured"
   },
@@ -866,63 +843,42 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis city police, TN: carjacking offenses by month, 2025. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-226",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Detroit city police, MI: 16,163 simple assault victims in 2023. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-227",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given yet: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Detroit city police, MI: simple assault victims by month, 2023. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-228",
@@ -967,24 +923,11 @@
    "id": "LS-231",
    "split": "dev",
    "expected": "clarify",
-   "actual": "clarify",
-   "outcome": "incomplete",
-   "diffs": [
-    {
-     "field": "option \"Kansas City, Missouri\" ",
-     "expected": "answer",
-     "actual": "decline: I couldn't interpret \"from motor vehicles in\" in this question, so I haven't answered it with a number that ignores it.",
-     "kind": "material"
-    },
-    {
-     "field": "option \"Kansas City, Kansas\" ",
-     "expected": "answer",
-     "actual": "decline: I couldn't interpret \"from motor vehicles in\" in this question, so I haven't answered it with a number that ignores it.",
-     "kind": "material"
-    }
-   ],
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
    "notes": [
-    "asked which Kansas City: Kansas City, Missouri | Kansas City, Kansas"
+    "declined (reader): I couldn't interpret \"from motor vehicles in\" in this question, so I haven't answered it with a number that ignores it."
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later"
@@ -1017,10 +960,11 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "asked which period: The latest complete year | This year so far | Another year"
+    "asked which period: The latest complete year (2025) | This year so far | Another year"
    ],
    "capability": "clarify:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-234",
@@ -1040,7 +984,8 @@
     "asked which range of years: The last 10 complete years | Every year available | Another range"
    ],
    "capability": "clarify:nibrs count",
-   "era": "spans 2021"
+   "era": "spans 2021",
+   "values": "match"
   },
   {
    "id": "LS-235",
@@ -1085,7 +1030,8 @@
     "declined (outside_release_coverage): 2027 is not in the data; the latest month available is October 2026."
    ],
    "capability": "decline:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-238",
@@ -1108,7 +1054,7 @@
    "outcome": "incomplete",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): I couldn't interpret \"led to\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it rec"
+    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances, so I can't apply \"convictions\". I haven't answer"
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later"
@@ -1145,6 +1091,126 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
+  },
+  {
+   "id": "LS-242",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Baltimore city, Maryland\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Baltimore County, Maryland\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which Baltimore: Baltimore city, Maryland | Baltimore County, Maryland"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-243",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Washington, D.C.\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Washington state\" ",
+     "expected": "answer",
+     "actual": "Not in the slice yet: state and national totals come later.",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Washington County, Oregon\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Washington County, Maryland\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which Washington: Washington, D.C. | Washington state | Washington County, Oregon | Washington County, Maryland"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-244",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Columbus, Ohio\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Columbus, Georgia\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which Columbus: Columbus, Ohio | Columbus, Georgia"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-245",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"New York City\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"New York state\" ",
+     "expected": "answer",
+     "actual": "Not in the slice yet: state and national totals come later.",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which New York: New York City | New York state"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured"
   }
  ]
 }

@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { loadPlaceIndex, resolveCity } from "../lib/nibrs-shadow/places";
+import { candidateLabel, loadPlaceIndex, resolvePlace } from "../lib/nibrs-shadow/places";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { scoreShadow } from "../lib/answer-eval/shadow";
 import type { Case } from "../lib/answer-eval/case";
@@ -34,15 +34,21 @@ const deps: ShadowDeps = {
 const ask = (q: string) => shadowAnswer(q, deps);
 const as = <K extends ShadowOutcome["kind"]>(o: ShadowOutcome, k: K) => { assert.equal(o.kind, k, JSON.stringify(o).slice(0, 300)); return o as Extract<ShadowOutcome, { kind: K }>; };
 
-// Places (P16, D28): a city is its principal police agency; a name two states use for large cities is asked about.
-const at = (v: string, text: string) => resolveCity(places, v, text);
-assert.equal((at("city:Memphis:TN", "Memphis") as { agency: { ori: string } }).agency.ori, "TNMPD0000");
-assert.equal((at("ambiguous:Baltimore", "Baltimore") as { agency: { ori: string } }).agency.ori, "MDBPD0000");
-assert.equal((at("ambiguous:St Louis", "St Louis") as { agency: { ori: string } }).agency.ori, "MOSPD0000");
-assert.equal((at("city:Portland:OR", "Portland") as { agency: { state: string } }).agency.state, "OR", "Portland, Maine is under 100,000");
-assert.deepEqual((at("ambiguous:Kansas City", "Kansas City") as { candidates: { state: string }[] }).candidates.map((a) => a.state), ["MO", "KS"]);
-assert.deepEqual((at("city:Columbus:OH", "Columbus") as { candidates: { state: string }[] }).candidates.map((a) => a.state), ["OH", "GA"], "the reader's filled-in state is not the question's");
-assert.equal((at("city:Columbus:OH", "Columbus, Ohio") as { agency: { ori: string } }).agency.ori, "OHCOP0000");
+// Places (P16, P28): a city is its principal police agency; a name with several real candidates of 100,000+ residents
+// (cities in two states, a city and a county, a state) is asked about, cities first.
+const at = (v: string, text: string) => resolvePlace(places, v, text);
+const ori = (r: ReturnType<typeof at>) => (r.kind === "agency" ? r.agency.ori : r.kind);
+const asked = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates)) : r.kind);
+assert.equal(ori(at("city:Memphis:TN", "Memphis")), "TNMPD0000");
+assert.deepEqual(asked(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+assert.deepEqual(asked(at("ambiguous:St Louis", "St Louis")), ["St. Louis city, Missouri", "St. Louis County, Missouri"], "St. Louis County, Minnesota is under 100,000");
+assert.deepEqual(asked(at("ambiguous:Washington", "Washington")), ["Washington, D.C.", "Washington state", "Washington County, Oregon", "Washington County, Maryland"]);
+assert.deepEqual(asked(at("ambiguous:Kansas City", "Kansas City")), ["Kansas City, Missouri", "Kansas City, Kansas"]);
+assert.deepEqual(asked(at("city:Columbus:OH", "Columbus")), ["Columbus, Ohio", "Columbus, Georgia"], "the reader's filled-in state is not the question's");
+assert.equal(ori(at("city:Columbus:OH", "Columbus, Ohio")), "OHCOP0000");
+assert.equal(ori(at("city:Washington:DC", "Washington DC")), "DCMPD0000");
+assert.equal(ori(at("county:Baltimore County:MD", "Baltimore County")), "MD0030100");
+assert.equal(ori(at("city:Portland:OR", "Portland")), "OR0260200", "Portland, Maine is under 100,000");
 assert.equal(at("city:Nowhere:TX", "Nowhere").kind, "unresolved");
 
 // An answer: the plan, the compiled read, the delivered table and text (source statement last, D30).
@@ -60,7 +66,7 @@ assert.equal(a.delivered.chart, null);
 const m = as(ask("Shoplifting in Memphis by month in 2024"), "answer");
 assert.equal(m.delivered.table.rows.length, 12);
 assert.deepEqual(m.delivered.table.rows[2], ["2024-03", null]);
-assert.ok(m.delivered.text.includes("No data for March 2024: the agency reported nothing for that month. Shown blank, not zero."));
+assert.ok(m.delivered.text.includes("No report is known for March 2024: shown blank, not zero."));
 assert.deepEqual(m.delivered.chart, { kind: "line", x: "Month", y: ["Shoplifting offenses"] });
 assert.deepEqual(m.delivered.contractProblems, []);
 
@@ -79,7 +85,7 @@ assert.deepEqual(noPlace.options.map((o) => o.label), ["The United States", "A s
 assert.match(as(noPlace.options[0].continuation!, "decline").explanation, /^Not in the slice yet: state and national/);
 assert.equal(noPlace.options[1].entry, "which state");
 const noPeriod = as(ask("Shoplifting in Memphis"), "clarify");
-assert.deepEqual(noPeriod.options.map((o) => o.label), ["The latest complete year", "This year so far", "Another year"]);
+assert.deepEqual(noPeriod.options.map((o) => o.label), ["The latest complete year (2025)", "This year so far", "Another year"]);
 assert.deepEqual(as(noPeriod.options[0].continuation!, "answer").period, { from: "2025-01", to: "2025-12" });
 const ytd = as(noPeriod.options[1].continuation!, "answer");
 assert.deepEqual(ytd.period, { from: "2026-01", to: "2026-10" });
@@ -93,6 +99,17 @@ const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
 assert.deepEqual(kc.options.map((o) => o.label), ["Kansas City, Missouri", "Kansas City, Kansas"]);
 assert.deepEqual(kc.options.map((o) => as(o.continuation!, "answer").plan.geography.places[0]), [
   { kind: "agency", ori: "MOKPD0000", label: "Kansas City city police, MO" }, { kind: "agency", ori: "KS1050200", label: "Kansas City city police, KS" }]);
+// A city and a county of one name: a button each, and a choice is not asked again in a later question (P22).
+const balt = as(ask("Shoplifting in Baltimore by month from 2022 to 2025"), "clarify");
+assert.deepEqual(balt.options.map((o) => as(o.continuation!, "answer").plan.geography.places[0]), [
+  { kind: "agency", ori: "MDBPD0000", label: "Baltimore city police, MD" }, { kind: "agency", ori: "MD0030100", label: "Baltimore County agency, MD" }]);
+const stl = as(ask("St Louis carjackings per month"), "clarify");
+assert.equal(stl.about, "which St. Louis");
+const stlCity = as(stl.options[0].continuation!, "clarify");
+assert.equal(stlCity.about, "which range of years", "the place is chosen; the period is asked next");
+assert.equal(as(stlCity.options[1].continuation!, "answer").plan.geography.places[0].kind === "agency" && (as(stlCity.options[1].continuation!, "answer").plan.geography.places[0] as { ori: string }).ori, "MOSPD0000");
+const wa = as(ask("Shoplifting in Washington in 2024"), "clarify");
+assert.match(as(wa.options[1].continuation!, "decline").explanation, /^Not in the slice yet: state and national/);
 
 // Declines: what the data does not record is declined before anything is asked; after the data, P24; before this build,
 // not built; drug crimes (D19) are not one measure.
@@ -102,6 +119,18 @@ assert.equal(future.explanation, "2027 is not in the data; the latest month avai
 assert.deepEqual(as(future.alternative!.continuation!, "answer").period, { from: "2026-01", to: "2026-10" });
 assert.equal(as(ask("Shoplifting in Memphis in 2012"), "decline").notBuilt, true);
 assert.match(as(ask("Drug crimes in Detroit in 2024"), "decline").explanation, /D19/);
+// No question is asked when every choice ends in the same refusal (D28): the reader cannot read "Shoplfting".
+assert.equal(as(ask("Shoplfting in baltimore per month, 2021-2025"), "decline").reason, "reader");
+
+// Codex review 1: what the slice cannot deliver is declined before anything runs or is asked; P11 covers carjacking;
+// a future month is named as asked; P26 asks city or state for "New York".
+assert.match(as(ask("Simple assault victims in Detroit by sex in 2023"), "decline").explanation, /^Not in the slice yet: breakdowns/);
+assert.equal(as(ask("Shoplifting in Kansas City by ZIP code in 2024"), "decline").reason, "below_agency_level");
+const cjv = as(ask("How many carjacking victims were there in Memphis in 2024?"), "answer");
+assert.deepEqual([cjv.plan.measures[0].id, cjv.delivered.answerStatements], ["offenses.carjacking", ["property_counted_by_offense"]]);
+assert.equal(as(ask("Shoplifting in Memphis in November 2026"), "decline").explanation, "November 2026 is not in the data; the latest month available is October 2026.");
+assert.deepEqual(as(ask("Shoplifting in New York in 2024"), "clarify").options.map((o) => o.label), ["New York City", "New York state"]);
+assert.deepEqual(as(ask("Shoplifting in Memphis by month"), "clarify").options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
 
 assert.equal(periodWords("2021-01", "2025-12"), "2021 to 2025");
 assert.equal(periodWords("2021-03", "2025-06"), "March 2021 through June 2025");
@@ -113,13 +142,29 @@ const ctx = { capability: "answer:nibrs count", era: "2021 and later" };
 const label = (expected: Case["expected"]): Case => ({ id: "LS-999", group: "designed:slice-test", split: "dev", origin: { kind: "designed", ref: null }, tab: "nibrs", setup: [], question: "q", policy: [], expected, label: { status: "reviewed", drafted_by: "a", reviewed_by: "b", notes: "" } });
 const shop: Case["expected"] = { action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Memphis Police Department", state: "TN" }], period: { from: "2023-01", to: "2023-12" }, measures: [{ name: "shoplifting", unit: "offense" }], filters: [], groupings: [], statistic: "count" }, values: { status: "pending_build" }, statements: ["names the agency (Memphis Police Department)", "names its source at the end"] };
 assert.equal(scoreShadow(label(shop), a, r, ctx).result!.outcome, "unverified");
-assert.equal(scoreShadow(label(shop), a, r, ctx, new Map([["LS-999", [{ key: "", value: 84 }]]])).result!.outcome, "correct");
-const wrong = scoreShadow(label(shop), a, r, ctx, new Map([["LS-999", [{ key: "", value: 85 }]]])).result!;
+assert.equal(scoreShadow(label(shop), a, r, ctx, new Map([["LS-999", [{ key: "", value: 84, status: "VALUE" }]]])).result!.outcome, "correct");
+const wrong = scoreShadow(label(shop), a, r, ctx, new Map([["LS-999", [{ key: "", value: 85, status: "VALUE" }]]])).result!;
 assert.deepEqual([wrong.outcome, wrong.values], ["wrong_answer", "mismatch"]);
 assert.equal(scoreShadow(label(shop), as(ask("Shoplifting in Memphis in 2012"), "decline"), r, ctx).result, null);
 const zip = scoreShadow(label({ action: "decline", reason: "The data stops at the agency level; no source here has counts by ZIP code.", alternative: null }), as(ask("crime by ZIP code in Chicago"), "decline"), r, ctx).result!;
 assert.equal(zip.outcome, "correct");
 const court = scoreShadow(label({ action: "decline", reason: "Court outcomes such as convictions are not in the data.", alternative: null }), future, r, ctx).result!;
 assert.equal(court.outcome, "incomplete", "a decline with the wrong reason is not correct");
+
+// Continuations are scored like direct answers: a button's delivered number is checked against its own expected cells,
+// a wrong one is a wrong answer, none given leaves it unverified; an entry must ask the part the label names.
+const periodLabel = (opts: { label: string; leads_to: "answer" | "clarify"; meaning: Case["expected"] extends infer E ? (E extends { action: "answer"; meaning: infer M } ? M : never) : never | null; next_about?: string }[]): Case["expected"] => ({ action: "clarify", about: "which period", options: opts as never });
+const shopIn = (period: { from: string; to: string }) => ({ ...(shop as { meaning: object }).meaning, period }) as never;
+const np = periodLabel([
+  { label: "The latest complete year (2025)", leads_to: "answer", meaning: shopIn({ from: "2025-01", to: "2025-12" }) },
+  { label: "This year so far", leads_to: "answer", meaning: shopIn({ from: "2026-01", to: "2026-10" }) },
+  { label: "Another year", leads_to: "clarify", meaning: null as never, next_about: "which year" }]);
+const score = (vals?: Map<string, { key: string; value: number | null; status: string }[]>) => scoreShadow(label(np), noPeriod, r, ctx, vals).result!;
+assert.deepEqual([score().outcome, score().values], ["unverified", "not measured"]);
+const both = (a1: number) => new Map([["LS-999|The latest complete year (2025)", [{ key: "", value: a1, status: "VALUE" }]], ["LS-999|This year so far", [{ key: "", value: 70, status: "VALUE" }]]]);
+assert.deepEqual([score(both(84)).outcome, score(both(84)).values], ["correct", "match"]);
+assert.deepEqual([score(both(83)).outcome, score(both(83)).values], ["wrong_answer", "mismatch"]);
+const wrongEntry = periodLabel([...(np as unknown as { options: never[] }).options.slice(0, 2), { label: "Another year", leads_to: "clarify", meaning: null as never, next_about: "which range of years" }]);
+assert.equal(scoreShadow(label(wrongEntry), noPeriod, r, ctx, both(84)).result!.outcome, "incomplete");
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

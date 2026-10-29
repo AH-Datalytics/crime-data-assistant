@@ -7238,70 +7238,21 @@
     "P01",
     "P06",
     "P16",
-    "P22"
+    "P22",
+    "P28"
    ],
    "expected": {
     "action": "clarify",
-    "about": "which years",
+    "about": "which St. Louis",
     "options": [
      {
-      "label": "Last 10 complete years",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "St. Louis Metropolitan Police Department",
-         "state": "MO"
-        }
-       ],
-       "period": {
-        "rule": "last 10 complete years"
-       },
-       "measures": [
-        {
-         "name": "carjacking (robbery in which a motor vehicle was taken)",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month"
-       ],
-       "statistic": "count"
-      }
+      "label": "St. Louis city, Missouri",
+      "leads_to": "clarify",
+      "meaning": null,
+      "next_about": "which range of years"
      },
      {
-      "label": "Every year available",
-      "leads_to": "answer",
-      "meaning": {
-       "source": "nibrs",
-       "places": [
-        {
-         "kind": "agency",
-         "name": "St. Louis Metropolitan Police Department",
-         "state": "MO"
-        }
-       ],
-       "period": {
-        "rule": "every year available"
-       },
-       "measures": [
-        {
-         "name": "carjacking (robbery in which a motor vehicle was taken)",
-         "unit": "offense"
-        }
-       ],
-       "filters": [],
-       "groupings": [
-        "month"
-       ],
-       "statistic": "count"
-      }
-     },
-     {
-      "label": "Another range",
+      "label": "St. Louis County, Missouri",
       "leads_to": "clarify",
       "meaning": null,
       "next_about": "which range of years"
@@ -7309,10 +7260,10 @@
     ]
    },
    "label": {
-    "status": "reviewed",
-    "drafted_by": "claude-draft-r2:r",
-    "reviewed_by": "codex:labels-2 (fix applied)",
-    "notes": "Period missing: ask (P06), superseding the ten-year span Codex preserved. Carjacking is a robbery-based measure: unit offense (Codex, D18). NIBRS-only detail. The 'Another ...', 'A state' and 'A city or agency' buttons open an entry, so their meaning is null (no fixed question). [superseded by D31] [codex labels-2 fix applied: 'Another range' leads to clarify (which range of years); added D28, P22]"
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Period missing: ask (P06), superseding the ten-year span Codex preserved. Carjacking is a robbery-based measure: unit offense (Codex, D18). NIBRS-only detail. The 'Another ...', 'A state' and 'A city or agency' buttons open an entry, so their meaning is null (no fixed question). [superseded by D31] [codex labels-2 fix applied: 'Another range' leads to clarify (which range of years); added D28, P22] [superseded by P28: P28 (Jeff 2026-10-29): ask which St. Louis first; the years are asked next, one part at a time (D31).]"
    }
   },
   {
@@ -7800,49 +7751,79 @@
     "D18",
     "D30",
     "P01",
-    "P16"
+    "P16",
+    "P22",
+    "P28"
    ],
    "expected": {
-    "action": "answer",
-    "meaning": {
-     "source": "nibrs",
-     "places": [
-      {
-       "kind": "agency",
-       "name": "Baltimore Police Department",
-       "state": "MD"
+    "action": "clarify",
+    "about": "which Baltimore",
+    "options": [
+     {
+      "label": "Baltimore city, Maryland",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Baltimore Police Department",
+         "state": "MD"
+        }
+       ],
+       "period": {
+        "from": "2021-01",
+        "to": "2025-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "month"
+       ],
+       "statistic": "count"
       }
-     ],
-     "period": {
-      "from": "2021-01",
-      "to": "2025-12"
      },
-     "measures": [
-      {
-       "name": "shoplifting",
-       "unit": "offense"
+     {
+      "label": "Baltimore County, Maryland",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Baltimore County Police Department",
+         "state": "MD"
+        }
+       ],
+       "period": {
+        "from": "2021-01",
+        "to": "2025-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "month"
+       ],
+       "statistic": "count"
       }
-     ],
-     "filters": [],
-     "groupings": [
-      "month"
-     ],
-     "statistic": "count"
-    },
-    "values": {
-     "status": "pending_build"
-    },
-    "statements": [
-     "names the agency (Baltimore Police Department)",
-     "names any months with no data as missing, not zero",
-     "names its source at the end"
+     }
     ]
    },
    "label": {
-    "status": "reviewed",
-    "drafted_by": "claude-draft-r2:r",
-    "reviewed_by": "codex:labels-2",
-    "notes": "Shoplifting by month is a NIBRS-only detail (P01). Added the source statement (D30)."
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Shoplifting by month is a NIBRS-only detail (P01). Added the source statement (D30). [superseded by P28: P28 (Jeff 2026-10-29): Baltimore names a city and a county of 100,000+, so ask first; each button keeps crime, months and grouping.]"
    }
   },
   {
@@ -12814,49 +12795,79 @@
     "D18",
     "D30",
     "P01",
-    "P16"
+    "P16",
+    "P22",
+    "P28"
    ],
    "expected": {
-    "action": "answer",
-    "meaning": {
-     "source": "nibrs",
-     "places": [
-      {
-       "kind": "agency",
-       "name": "Baltimore Police Department",
-       "state": "MD"
+    "action": "clarify",
+    "about": "which Baltimore",
+    "options": [
+     {
+      "label": "Baltimore city, Maryland",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Baltimore Police Department",
+         "state": "MD"
+        }
+       ],
+       "period": {
+        "from": "2022-01",
+        "to": "2025-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "month"
+       ],
+       "statistic": "count"
       }
-     ],
-     "period": {
-      "from": "2022-01",
-      "to": "2025-12"
      },
-     "measures": [
-      {
-       "name": "shoplifting",
-       "unit": "offense"
+     {
+      "label": "Baltimore County, Maryland",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Baltimore County Police Department",
+         "state": "MD"
+        }
+       ],
+       "period": {
+        "from": "2022-01",
+        "to": "2025-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "month"
+       ],
+       "statistic": "count"
       }
-     ],
-     "filters": [],
-     "groupings": [
-      "month"
-     ],
-     "statistic": "count"
-    },
-    "values": {
-     "status": "pending_build"
-    },
-    "statements": [
-     "names the agency (Baltimore Police Department)",
-     "names any months with no data as missing, not zero",
-     "names its source at the end"
+     }
     ]
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-slice",
     "reviewed_by": null,
-    "notes": "Baltimore means the city's police department (P16), not Baltimore County."
+    "notes": "P28: Baltimore names a city and a county of 100,000+, so ask; each button keeps crime, months and grouping (P22). [superseded by P28]"
    }
   },
   {
@@ -12875,49 +12886,79 @@
     "D18",
     "D30",
     "P01",
-    "P16"
+    "P16",
+    "P22",
+    "P28"
    ],
    "expected": {
-    "action": "answer",
-    "meaning": {
-     "source": "nibrs",
-     "places": [
-      {
-       "kind": "agency",
-       "name": "St. Louis Metropolitan Police Department",
-       "state": "MO"
+    "action": "clarify",
+    "about": "which St. Louis",
+    "options": [
+     {
+      "label": "St. Louis city, Missouri",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "St. Louis Metropolitan Police Department",
+         "state": "MO"
+        }
+       ],
+       "period": {
+        "from": "2021-01",
+        "to": "2025-12"
+       },
+       "measures": [
+        {
+         "name": "carjacking",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "year"
+       ],
+       "statistic": "count"
       }
-     ],
-     "period": {
-      "from": "2021-01",
-      "to": "2025-12"
      },
-     "measures": [
-      {
-       "name": "carjacking",
-       "unit": "offense"
+     {
+      "label": "St. Louis County, Missouri",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "St. Louis County Police Department",
+         "state": "MO"
+        }
+       ],
+       "period": {
+        "from": "2021-01",
+        "to": "2025-12"
+       },
+       "measures": [
+        {
+         "name": "carjacking",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "year"
+       ],
+       "statistic": "count"
       }
-     ],
-     "filters": [],
-     "groupings": [
-      "year"
-     ],
-     "statistic": "count"
-    },
-    "values": {
-     "status": "pending_build"
-    },
-    "statements": [
-     "names the agency (St. Louis Metropolitan Police Department)",
-     "names any months with no data as missing, not zero",
-     "names its source at the end"
+     }
     ]
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-slice",
     "reviewed_by": null,
-    "notes": "Carjacking is robbery-based: unit offense (D18, as LS-140). St. Louis means the city's police department (P16)."
+    "notes": "P28: St. Louis names a city and a county of 100,000+ (St. Louis County, Minnesota is under 100,000). Carjacking by offense (D18). [superseded by P28]"
    }
   },
   {
@@ -13454,7 +13495,7 @@
     "about": "which period",
     "options": [
      {
-      "label": "The latest complete year",
+      "label": "The latest complete year (2025)",
       "leads_to": "answer",
       "meaning": {
        "source": "nibrs",
@@ -13517,7 +13558,7 @@
     "status": "drafted",
     "drafted_by": "claude-slice",
     "reviewed_by": null,
-    "notes": "P06 single figure: latest complete year; this year so far; another year. NIBRS for both (P01: no shoplifting in Current Trends)."
+    "notes": "P06 single figure: the latest complete year, named (2025 for this release); this year so far; another year. NIBRS for both (P01: no shoplifting in Current Trends). Codex slice review 1: the year is named."
    }
   },
   {
@@ -14019,6 +14060,399 @@
     "drafted_by": "claude-slice",
     "reviewed_by": null,
     "notes": "Arrests asked for by name: counted by arrest."
+   }
+  },
+  {
+   "id": "LS-242",
+   "group": "designed:slice-place-baltimore",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Baltimore in 2024",
+   "policy": [
+    "D18",
+    "P01",
+    "P22",
+    "P28"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which Baltimore",
+    "options": [
+     {
+      "label": "Baltimore city, Maryland",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Baltimore Police Department",
+         "state": "MD"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Baltimore County, Maryland",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Baltimore County Police Department",
+         "state": "MD"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P28: a city and a county share the name, both 100,000+."
+   }
+  },
+  {
+   "id": "LS-243",
+   "group": "designed:slice-place-washington",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Washington in 2024",
+   "policy": [
+    "D18",
+    "P01",
+    "P22",
+    "P28"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which Washington",
+    "options": [
+     {
+      "label": "Washington, D.C.",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Washington Metropolitan Police Department",
+         "state": "DC"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Washington state",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "state",
+         "name": "Washington",
+         "state": "WA"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count",
+       "cohort": "all_reporting"
+      }
+     },
+     {
+      "label": "Washington County, Oregon",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Washington County Sheriff's Office",
+         "state": "OR"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Washington County, Maryland",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Washington County Sheriff's Office",
+         "state": "MD"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P28: the name is a state, so the state is always offered, beside D.C. and the Washington County agencies of 100,000+ (Oregon, Maryland). Shoplifting stays on NIBRS (P01)."
+   }
+  },
+  {
+   "id": "LS-244",
+   "group": "designed:slice-place-columbus",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Columbus in 2024",
+   "policy": [
+    "D18",
+    "P01",
+    "P22",
+    "P28"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which Columbus",
+    "options": [
+     {
+      "label": "Columbus, Ohio",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Columbus Police Department",
+         "state": "OH"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Columbus, Georgia",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Columbus Police Department",
+         "state": "GA"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P28: two states have a Columbus of 100,000+."
+   }
+  },
+  {
+   "id": "LS-245",
+   "group": "designed:slice-place-newyork",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in New York in 2024",
+   "policy": [
+    "D18",
+    "P01",
+    "P22",
+    "P26",
+    "P28"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which New York",
+    "options": [
+     {
+      "label": "New York City",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "New York City Police Department",
+         "state": "NY"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "New York state",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "state",
+         "name": "New York",
+         "state": "NY"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count",
+       "cohort": "all_reporting"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P26: New York alone asks city or state."
    }
   }
  ]

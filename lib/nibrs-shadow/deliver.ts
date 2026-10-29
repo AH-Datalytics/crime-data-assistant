@@ -88,14 +88,15 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   if (!grain) {
     const v = tableRows[0]?.[0] as number | null | undefined;
     text.push(v === null || v === undefined
-      ? `${agency}: the number of ${what} in ${when} is not known, because the agency's reports do not cover every month.`
+      ? `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`
       : `${agency}: ${fmt(v)} ${what} in ${when}.`);
   } else {
     text.push(`${agency}: ${what} by ${grain === "time.month" ? "month" : "year"}, ${when}.`);
     const missing = rows.filter((r) => String(r[is]) === "UNKNOWN" || String(r[is]) === "NOT_REPORTED").map((r) => String(r[ip]));
     const unevidenced = rows.filter((r) => String(r[is]) === "UNKNOWN_UNEVIDENCED_ZERO").map((r) => String(r[ip]));
-    if (missing.length) text.push(`No data for ${runs(missing)}: ${grain === "time.year" ? "the agency's reports do not cover every month of " + (missing.length > 1 ? "these years" : "that year") : "the agency reported nothing for " + (missing.length > 1 ? "these months" : "that month")}. Shown blank, not zero.`);
-    if (unevidenced.length) text.push(`No ${what} recorded for ${runs(unevidenced)}, and the agency did not report a zero; shown blank.`);
+    // Only what the status establishes: an unknown month has no known report; a year is known only when all its months are.
+    if (missing.length) text.push(grain === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
+    if (unevidenced.length) text.push(`No ${what} were recorded for ${runs(unevidenced)}, and no zero report confirms a zero: shown blank.`);
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   for (const s of statements) text.push(ANSWER_STATEMENTS[s]);

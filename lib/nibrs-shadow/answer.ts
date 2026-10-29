@@ -12,7 +12,8 @@
  *
  * The slice's policy steps, each from a decided row:
  *   D31/P05/P06/P12/D09  a question missing its crime, place or period is asked about, one part at a time;
- *   D28                  a city name that is materially ambiguous is asked about (places.ts);
+ *   P28                  a place name with several real candidates (cities in two states, a city and a county, a
+ *                        state) is asked about, a button per candidate (places.ts);
  *   P16                  a city means its principal police agency (places.ts);
  *   P11                  victims of a property crime are answered with offenses, with the fixed sentence;
  *   D18                  carjacking is counted by offense;
@@ -21,7 +22,7 @@
  */
 import type { Part, RequestLedger } from "../request-accounting";
 import { accountNibrsRequest } from "../nibrs-request-accounting";
-import { matchNibrsType, PERSON_CODES, MEASURE_CODES } from "../nibrs-question-types";
+import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
 import { planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
 import { compilePlan, type CompileTarget } from "../nibrs-plan/compile";
@@ -30,8 +31,8 @@ import type { LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { deliver, monthName, type Delivered } from "./deliver";
-import { resolveCity, stateName, type PlaceIndex } from "./places";
+import { deliver, monthName, periodWords, type Delivered } from "./deliver";
+import { agencyLabel, candidateLabel, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -53,6 +54,10 @@ export type ShadowOutcome =
   | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
   | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean };
+
+/** NIBRS Group A offenses whose crime-against category is property (robbery, and so carjacking, included). */
+const CRIMES_AGAINST_PROPERTY = new Set(["120", "200", "210", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240", "250",
+  "26A", "26B", "26C", "26D", "26E", "26F", "26G", "26H", "270", "280", "290", "510"]);
 
 const decline = (reason: LimitationReason | "reader", explanation: string, extra: { alternative?: ShadowOption | null; notBuilt?: boolean } = {}): ShadowOutcome =>
   ({ kind: "decline", reason, explanation, alternative: extra.alternative ?? null, ...(extra.notBuilt ? { notBuilt: true } : {}) });
@@ -81,42 +86,43 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   return fromLedger(accountNibrsRequest(question), deps);
 }
 
-function fromLedger(ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome {
+/** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
+function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const { release } = deps;
   const clause0 = (c: string) => ledger0.parts.filter((p) => p.clause === 0 && p.concept === c && p.state !== "context");
 
-  // Places first (P16, D28): resolve each city through the build's agencies; the reader then sees a resolved value.
+  // A part the data does not record (a ZIP code, a conviction) is declined first: asking which place, period or crime
+  // is meant in a question that cannot be answered would be an unnecessary question (D28).
+  const unrecorded = ledger0.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
+  if (unrecorded.length) {
+    const why = unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
+    return decline(readerReason(why), why);
+  }
+
+  // Places next (P16, P28): resolve each city or county through the build's agencies; the reader then sees a resolved
+  // value. A name with several real candidates is asked about.
   const resolved = new Map<string, Place>();
-  let ask: { part: Part; city: string; states: string[] } | null = null;
+  let ask: { part: Part; name: string; candidates: Candidate[] } | null = null;
   const parts = ledger0.parts.map((p) => {
-    if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|ambiguous):/.test(p.value)) return p;
-    const r = resolveCity(deps.places, p.value, p.text);
+    if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
+    const pin = pins.get(p.span[0]);
+    const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text);
+    if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") return p;
-    if (r.kind === "ask") { ask ??= { part: p, city: r.city, states: r.candidates.map((a) => a.state) }; return p; }
-    const value = `city:${r.agency.city}:${r.agency.state}`;
+    if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates }; return p; }
+    const value = `${r.agency.kind}:${r.agency.name}:${r.agency.state}`;
     resolved.set(value, r.place);
     return { ...p, value };
   });
   const ledger = withParts(ledger0, parts);
   if (ask) {
-    const a: { part: Part; city: string; states: string[] } = ask;
-    return {
-      kind: "clarify", about: `which ${a.city}`, question: ledger0.question,
-      options: a.states.map((st) => {
-        const label = `${a.city}, ${stateName(st)}`;
-        const fixed = withParts(ledger, ledger.parts.map((p) => (p === a.part || (p.span[0] === a.part.span[0] && p.concept === "place") ? { ...p, value: `city:${a.city}:${st}`, text: label } : p)));
-        return { label, continuation: fromLedger(fixed, deps) };
-      }),
-    };
-  }
-
-  // A part the data does not record (a ZIP code, a conviction) is declined first: asking about the rest of a question
-  // that cannot be answered would be an unnecessary question (D28).
-  const unrecorded = ledger.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
-  if (unrecorded.length) {
-    const d0 = matchNibrsType(ledger);
-    const why = d0.kind === "decline" ? d0.explanation : unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
-    return decline(readerReason(why), why);
+    const a: { part: Part; name: string; candidates: Candidate[] } = ask;
+    const options = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
+    // A question no choice could answer is declined, not asked about (D28): every button would lead to the same refusal.
+    const first = options[0].continuation;
+    if (first.kind === "decline" && options.every((o) => o.continuation.kind === "decline" && o.continuation.explanation === first.explanation)) return first;
+    const named = a.candidates.find((c) => c.kind === "agency");
+    return { kind: "clarify", about: `which ${named?.kind === "agency" ? named.agency.name.replace(/ County$/, "") : a.name}`, question: ledger0.question, options };
   }
 
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
@@ -127,27 +133,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome {
   }
   if (!clause0("place").length) {
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
-      { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps) },
+      { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },
       { label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }] };
   }
   const d = matchNibrsType(ledger);
   if (d.kind === "none") return decline("reader", "The question could not be read: no typed reading.");
   if (d.kind === "decline") return decline(readerReason(d.explanation), d.explanation);
   if (d.kind === "clarify") return decline("reader", `The reader asked in text only: ${d.explanation}`);
-  if (d.spec.type === "series" && d.spec.period.form === "none") {
-    const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
-    const thisYear = Number(release.lastMonth.slice(0, 4));
-    const trend = d.spec.grain !== "total";
-    const opts: ShadowOption[] = trend
-      ? [{ label: "The last 10 complete years", continuation: fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), deps) },
-         { label: "Every year available", continuation: fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), deps) },
-         { label: "Another range", entry: "which range of years" }]
-      : [{ label: "The latest complete year", continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps) },
-         { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps) },
-         { label: "Another year", entry: "which year" }];
-    return { kind: "clarify", about: trend ? "which range of years" : "which period", question: ledger0.question, options: opts };
-  }
-
   // The plan.
   const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v) => resolved.get(v) ?? null });
   if (a.kind === "unmapped") return decline("unsupported_capability", `No plan form for this reading: ${a.reason}`);
@@ -167,7 +159,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome {
   // P11: victims of a property crime -> offenses, with the fixed sentence. The unit part is answered differently by
   // decided policy and disclosed by that sentence, so it is not held to the victim unit.
   const codes = MEASURE_CODES[name];
-  if (m.id.startsWith("victims.") && codes && !codes.every((c) => PERSON_CODES.has(c))) {
+  const property = name === "carjacking" || (!!codes && codes.every((c) => CRIMES_AGAINST_PROPERTY.has(c)));
+  if (m.id.startsWith("victims.") && property) {
     plan.measures[0] = { ...m, id: `offenses.${name}`, unit: "offense" };
     plan.defaults.push({ path: "measures[0].unit", value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
     const unitPart = parts2.filter((p) => p.concept === "unit");
@@ -176,17 +169,38 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome {
     statements.push("property_counted_by_offense");
   }
 
+  // The slice delivers one count, as a total or by month or year. Breakdowns by category, shares and rates are not
+  // delivered yet, so they are declined before anything is asked or run.
+  if (plan.groupings.some((g) => !g.dimension.startsWith("time.")) || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count")
+    return decline("unsupported_capability", "Not in the slice yet: breakdowns by category, shares and rates.");
+
+  // D31/P06: a missing period is asked about, for any reader form, once the question is known to be in the slice.
+  const spec = d.spec as { period?: { form: string }; grain?: string };
+  if (spec.period?.form === "none") {
+    const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
+    const thisYear = Number(release.lastMonth.slice(0, 4));
+    const trend = !!spec.grain && spec.grain !== "total";
+    const opts: ShadowOption[] = trend
+      ? [{ label: "The last 10 complete years", continuation: fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), deps, pins) },
+         { label: "Every year available", continuation: fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), deps, pins) },
+         { label: "Another range", entry: "which range of years" }]
+      : [{ label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
+         { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps, pins) },
+         { label: "Another year", entry: "which year" }];
+    return { kind: "clarify", about: trend ? "which range of years" : "which period", question: ledger0.question, options: opts };
+  }
+
   // Release: the effective months. After the data: P24. Before this build: not built.
   let period: { from: string; to: string };
   try { const r = resolvePeriod(plan.period, release); if (r.kind !== "absolute") return decline("unsupported_capability", "Separate years are not in the slice."); period = { from: r.from, to: r.to }; }
   catch (e) { return decline("unsupported_capability", String(e)); }
   if (period.from > release.lastMonth) {
     const y = release.lastMonth.slice(0, 4);
-    return decline("outside_release_coverage", `${period.from.slice(0, 4)} is not in the data; the latest month available is ${monthName(release.lastMonth)}.`,
-      { alternative: { label: `This year so far (${periodWordsShort(`${y}-01`, release.lastMonth)})`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, "this year so far"), deps) } });
+    return decline("outside_release_coverage", `${periodWords(period.from, period.to)} is not in the data; the latest month available is ${monthName(release.lastMonth)}.`,
+      { alternative: { label: `This year so far (${periodWordsShort(`${y}-01`, release.lastMonth)})`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, "this year so far"), deps, pins) } });
   }
   if (period.from < release.firstMonth) {
-    return decline("outside_release_coverage", `This build holds ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}; ${period.from.slice(0, 4)} is not in it.`, { notBuilt: true });
+    return decline("outside_release_coverage", `This build holds ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so it does not cover ${periodWords(period.from, period.to)}.`, { notBuilt: true });
   }
   const requestedTo = period.to;
   // A year still in progress runs through the release's last month (D06: the answer names the months covered). The
@@ -204,8 +218,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome {
   if (c.kind === "unsupported") return decline("unsupported_capability", `Not in the slice yet: ${c.reason}`);
   const rows = deps.execute(c.query.sql);
   const refused = rows.filter((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i]))));
-  if (refused.length) return decline("unsupported_capability", "The data contradicts itself for this agency and period (a count in a month reported as having none), so no number is given.");
-  return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered: deliver(checked, period, requestedTo, c.query.columns, rows, [...c.query.statements, ...statements], release.id) };
+  if (refused.length) return decline("unsupported_capability", "The records for this agency and period conflict with its monthly reporting status, so no number is given.");
+  const delivered = deliver(checked, period, requestedTo, c.query.columns, rows, [...c.query.statements, ...statements], release.id);
+  if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
+  return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered };
 }
 
 const periodWordsShort = (from: string, to: string) => (from === to ? monthName(to) : `${monthName(from).split(" ")[0]} to ${monthName(to)}`);

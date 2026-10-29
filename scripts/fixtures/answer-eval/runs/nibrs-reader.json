@@ -122,7 +122,11 @@
    "LS-238",
    "LS-239",
    "LS-240",
-   "LS-241"
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245"
   ],
   "a follow-up: the reader takes one turn": [
    "LS-004",
@@ -354,7 +358,6 @@
    "LS-135",
    "LS-137",
    "LS-138",
-   "LS-140",
    "LS-141",
    "LS-142",
    "LS-143",
@@ -362,7 +365,6 @@
    "LS-148",
    "LS-149",
    "LS-150",
-   "LS-151",
    "LS-152",
    "LS-153",
    "LS-154",
@@ -481,6 +483,8 @@
    "LS-218"
   ],
   "label drafted": [
+   "LS-140",
+   "LS-151",
    "LS-219",
    "LS-220",
    "LS-221",
@@ -503,7 +507,11 @@
    "LS-238",
    "LS-239",
    "LS-240",
-   "LS-241"
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245"
   ]
  },
  "scored": [
@@ -1063,19 +1071,6 @@
    "era": "period not mapped"
   },
   {
-   "id": "LS-140",
-   "split": "dev",
-   "expected": "clarify",
-   "actual": "decline",
-   "outcome": "wrong_action",
-   "diffs": [],
-   "notes": [
-    "declined (reason not judged): I can't apply \"St Louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "clarify:nibrs count",
-   "era": "spans 2021"
-  },
-  {
    "id": "LS-141",
    "split": "dev",
    "expected": "decline",
@@ -1189,19 +1184,6 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "spans 2021"
-  },
-  {
-   "id": "LS-151",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "declined (reason not judged): I can't apply \"baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later"
   },
   {
    "id": "LS-152",
@@ -1658,6 +1640,32 @@
  ],
  "provisional": [
   {
+   "id": "LS-140",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"St Louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-151",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
    "id": "LS-219",
    "split": "dev",
    "expected": "answer",
@@ -1711,27 +1719,27 @@
   {
    "id": "LS-223",
    "split": "heldout",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "declined (reason not judged): I can't apply \"Baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
    ],
-   "capability": "answer:nibrs count",
+   "capability": "clarify:nibrs count",
    "era": "2021 and later"
   },
   {
    "id": "LS-224",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "declined (reason not judged): I can't apply \"St. Louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
    ],
-   "capability": "answer:nibrs count",
+   "capability": "clarify:nibrs count",
    "era": "2021 and later"
   },
   {
@@ -1951,6 +1959,58 @@
    "diffs": [],
    "notes": [],
    "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-242",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"Baltimore\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-243",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"Washington\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-244",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): a place did not resolve"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-245",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"New York\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "clarify:nibrs count",
    "era": "2021 and later"
   }
  ]

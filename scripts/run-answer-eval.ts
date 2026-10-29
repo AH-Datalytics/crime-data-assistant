@@ -3,7 +3,8 @@
  *
  *   npx tsx scripts/run-answer-eval.ts            # writes scripts/fixtures/answer-eval/runs/nibrs-reader.{json,md}
  *   npx tsx scripts/run-answer-eval.ts --candidate nibrs-shadow [--root <canonical dir>] [--python <python with duckdb>]
- *       [--values <expected values json>]       # writes runs/nibrs-shadow.{json,md}; local only (reads the canonical build)
+ *       [--values-repo <nibrs-model checkout>]  # writes runs/nibrs-shadow.{json,md}; local only (reads the canonical build,
+ *                                               # and the independent values from that repo's main branch with git show)
  *
  * Candidate "nibrs-shadow": the shadow slice (lib/nibrs-shadow), question to delivered answer for single-agency NIBRS
  * counts on canonical release 20261028-test5, scored at every level by lib/answer-eval/shadow.ts on the slice's cases:
@@ -20,6 +21,7 @@
  * compared, in a separate PROVISIONAL section that is never a gate. Development and held-out cases are reported
  * separately. Offline: no database, no model, no network.
  */
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { Case, scorable } from "../lib/answer-eval/case";
@@ -32,7 +34,7 @@ import { validateResolved } from "../lib/nibrs-plan/resolve";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { matchNibrsType } from "../lib/nibrs-question-types";
-import { scoreShadow, sliceGroup, type ExpectedValues } from "../lib/answer-eval/shadow";
+import { scoreShadow, sliceGroup, sliceValues, type ExpectedValues } from "../lib/answer-eval/shadow";
 import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
@@ -51,8 +53,14 @@ const shadowDeps = (): ShadowDeps => ({
   target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/build/20261028-test5/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
   execute: duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!),
 });
-/** Independent expected values: { "<case id>": [{ "key": "2024-03" | "2024" | "", "value": n | null }] }. */
-const expectedValues: ExpectedValues | undefined = arg("--values") ? new Map(Object.entries(JSON.parse(fs.readFileSync(arg("--values")!, "utf8")))) : undefined;
+/** Independent expected values: nibrs-model's correctness/slice/V*.json on its main branch, read with git show (read-only). */
+function readSliceValues(repo: string): ExpectedValues {
+  const git = (...a: string[]) => execFileSync("git", ["-C", repo, ...a], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const names = git("ls-tree", "--name-only", "main", "correctness/slice/").split(/\r?\n/).filter((n) => /\/V\d+\.json$/.test(n));
+  return sliceValues(names.map((name) => ({ name, json: git("show", `main:${name}`) })));
+}
+const VALUES_REPO = arg("--values-repo", "C:/Users/jeffm/nibrs-model")!;
+const expectedValues: ExpectedValues | undefined = SHADOW ? readSliceValues(VALUES_REPO) : undefined;
 const PLACES: Record<string, { ori: string; label: string }> = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/fixtures/nibrs-replay/reachability/places.json"), "utf8"));
 const resolvePlace = (v: string): Place | null => (PLACES[v] ? { kind: "agency", ori: PLACES[v].ori, label: PLACES[v].label } : null);
 const authority = (v: string) => (PLACES[v] ? { oris: [PLACES[v].ori] } : null);
@@ -165,7 +173,7 @@ const GROUPS: [string, string][] = [["designed", "designed slice cases"], ["repl
 const byGroup = (title: string, rs: CaseResult[], gate: boolean) =>
   GROUPS.map(([g, name]) => bySplit(`${title}: ${name}`, rs.filter((r) => groupOf.get(r.id) === g), gate)).join("\n");
 const LEVEL = SHADOW
-  ? "**Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values against independent expected values (NOT MEASURED until they are given). Not measured: other sources (an option routed to Historical is not run), follow-up turns."
+  ? "**Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns."
   : "**Level: question -> reader only.** An \"answer\" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).";
 
 const md = [

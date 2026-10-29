@@ -1,34 +1,34 @@
 # Answer evaluation: nibrs-reader
 
-Labeled set: 241 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
+Labeled set: 245 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
 
 **Level: question -> reader only.** An "answer" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).
 
 ## Execution coverage (can this candidate take the case)
 
+- 119: run by this candidate
 - 118: another source: no adapter for it yet
-- 115: run by this candidate
 - 7: a follow-up: the reader takes one turn
 - 1: a button continuation: the reader returns no structured options
 
 ## Label eligibility (can the case be scored)
 
-- 164: scorable (reviewed, decided policy)
+- 162: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 23: label drafted
+- 29: label drafted
 
 ## Scored (reviewed labels, decided policy)
 
 ### Development
 
-61 cases. Correct 0; unverified 7; wrong answers 24; avoidable declines 13; unnecessary clarifications 0; wrong actions 11; incomplete 6. Severity score 2721 (trend only).
+59 cases. Correct 0; unverified 7; wrong answers 24; avoidable declines 12; unnecessary clarifications 0; wrong actions 10; incomplete 6. Severity score 2696 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 19 | 0 | 9 | 4 |
-| clarify | 7 | 0 | 7 | 4 |
+| answer | 19 | 0 | 8 | 4 |
+| clarify | 7 | 0 | 6 | 4 |
 | decline | 2 | 0 | 5 | 4 |
 
 | Capability | Era | Cases | Gate | Categories |
@@ -41,7 +41,7 @@ Expected (rows) by actual (columns):
 | answer:historical rank | 2021 and later | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:historical rate | 2021 and later | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:historical share | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: fail (50% (1/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs count | 2021 and later | 8 | fail | wrong answers: fail (3); initial action: fail (38% (3/8)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 7 | fail | wrong answers: fail (3); initial action: fail (43% (3/7)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs list | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
@@ -54,7 +54,7 @@ Expected (rows) by actual (columns):
 | clarify:historical rate | 2021 and later | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:historical share | spans 2021 | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1); clarifications: fail (0/2 verified correct, 2 failing); initial action: fail (0% (0/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | spans 2021 | 6 | fail | wrong answers: pass (0); clarifications: fail (0/6 verified correct, 6 failing); initial action: fail (0% (0/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | spans 2021 | 5 | fail | wrong answers: pass (0); clarifications: fail (0/5 verified correct, 5 failing); initial action: fail (0% (0/5)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs share | 2021 and later | 2 | fail | wrong answers: fail (1); clarifications: fail (0/2 verified correct, 2 failing); initial action: fail (0% (0/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:rtci rate | 2021 and later | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | 2021 and later | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -139,8 +139,6 @@ Discrepancies and unverified cases:
   - declined (reason not judged): I couldn't interpret "Posession" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession
 - **LS-137** (avoidable_decline; expected answer, got decline) "dataset of Property Crime Rolling Over 12 Months Jan 2018 - Jun 2026 in texas"
   - declined (reason not judged): I can't apply "2026": one period per answer. I haven't answered with a number that leaves it out.
-- **LS-140** (wrong_action; expected clarify, got decline) "St Louis carjackings per month"
-  - declined (reason not judged): I can't apply "St Louis": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
 - **LS-141** (incomplete; expected decline, got no_reading) "crime by ZIP code in Chicago"
   - no typed reading: no answer, no reason
 - **LS-143** (wrong_answer; expected answer, got answer) "Virginia murder clearances by Exception in 2025 by type"
@@ -156,8 +154,6 @@ Discrepancies and unverified cases:
   - declined (reason not judged): I couldn't interpret "viriginia" in this question, so I haven't answered it with a number that ignores it.
 - **LS-150** (wrong_action; expected clarify, got decline) "houston vehicle burglaries by month by clearance status"
   - declined (reason not judged): I can't apply "by month": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out.
-- **LS-151** (avoidable_decline; expected answer, got decline) "Shoplfting in baltimore per month, 2021-2025"
-  - declined (reason not judged): I can't apply "baltimore": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
 - **LS-152** (wrong_action; expected clarify, got no_reading) "Give me the number of clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadel"
   - no typed reading: no answer, no reason
 - **LS-153** (wrong_answer; expected clarify, got answer) "2025 burglaries by location"
@@ -252,29 +248,34 @@ Discrepancies and unverified cases:
 
 ### Development
 
-20 cases. Correct 4; unverified 1; wrong answers 4; avoidable declines 6; unnecessary clarifications 0; wrong actions 2; incomplete 3. Severity score 533 (trend only).
+24 cases. Correct 4; unverified 1; wrong answers 4; avoidable declines 5; unnecessary clarifications 0; wrong actions 7; incomplete 3. Severity score 538 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 5 | 0 | 6 | 0 |
-| clarify | 3 | 0 | 1 | 1 |
+| clarify | 3 | 0 | 6 | 1 |
+| answer | 5 | 0 | 5 | 0 |
 | decline | 0 | 0 | 4 | 0 |
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 11 | fail | wrong answers: fail (1); initial action: fail (45% (5/11)); direct answers: fail (36% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 10 | fail | wrong answers: fail (1); initial action: fail (50% (5/10)); direct answers: fail (40% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | 2021 and later | 3 | fail | wrong answers: fail (2); clarifications: fail (0/3 verified correct, 3 failing); initial action: fail (0% (0/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | 2021 and later | 7 | fail | wrong answers: fail (2); clarifications: fail (0/7 verified correct, 7 failing); initial action: fail (0% (0/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | spans 2021 | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:no meaning | no period | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | 2021 and later | 2 | fail | wrong answers: pass (0); declines: fail (0/2 verified correct, 2 failing); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:no meaning | no period | 1 | not measured | wrong answers: pass (0); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
-- **LS-224** (avoidable_decline; expected answer, got decline) "Carjackings in St. Louis by year, 2021 to 2025"
+- **LS-140** (wrong_action; expected clarify, got decline) "St Louis carjackings per month"
+  - declined (reason not judged): I can't apply "St Louis": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
+- **LS-151** (wrong_action; expected clarify, got decline) "Shoplfting in baltimore per month, 2021-2025"
+  - declined (reason not judged): I can't apply "baltimore": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
+- **LS-224** (wrong_action; expected clarify, got decline) "Carjackings in St. Louis by year, 2021 to 2025"
   - declined (reason not judged): I can't apply "St. Louis": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
 - **LS-225** (wrong_answer; expected answer, got answer) "carjackings in Memphis TN by month in 2025"
   - material measures: expected `carjacking|offense`, got `carjacking|incident`
@@ -306,25 +307,35 @@ Discrepancies and unverified cases:
 - **LS-240** (incomplete; expected decline, got decline) "Will carjackings go up in Memphis next year?"
   - declined (reason not judged): I couldn't interpret "Will" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret "go up in" in this question, so I haven't answered it with a number
   - no alternative offered; the label expects one
+- **LS-242** (wrong_action; expected clarify, got decline) "Shoplifting in Baltimore in 2024"
+  - declined (reason not judged): I can't apply "Baltimore": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
+- **LS-243** (wrong_action; expected clarify, got decline) "Shoplifting in Washington in 2024"
+  - declined (reason not judged): I can't apply "Washington": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
 
 ### Held out
 
-3 cases. Correct 1; unverified 0; wrong answers 1; avoidable declines 1; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 120 (trend only).
+5 cases. Correct 1; unverified 0; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 3; incomplete 0. Severity score 115 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 2 | 0 | 1 | 0 |
+| answer | 2 | 0 | 0 | 0 |
+| clarify | 0 | 0 | 3 | 0 |
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: fail (50% (1/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs count | before 2021 | 1 | not measured | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | 2021 and later | 3 | fail | wrong answers: pass (0); clarifications: fail (0/3 verified correct, 3 failing); initial action: fail (0% (0/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
 - **LS-222** (wrong_answer; expected answer, got answer) "How many shoplifting victims were there in Memphis in 2024?"
   - material measures: expected `shoplifting|offense`, got `shoplifting|victim`
-- **LS-223** (avoidable_decline; expected answer, got decline) "Shoplifting in Baltimore by month from 2022 to 2025"
+- **LS-223** (wrong_action; expected clarify, got decline) "Shoplifting in Baltimore by month from 2022 to 2025"
   - declined (reason not judged): I can't apply "Baltimore": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
+- **LS-244** (wrong_action; expected clarify, got decline) "Shoplifting in Columbus in 2024"
+  - adapter refused (reason not judged): a place did not resolve
+- **LS-245** (wrong_action; expected clarify, got decline) "Shoplifting in New York in 2024"
+  - declined (reason not judged): I can't apply "New York": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
