@@ -9,7 +9,8 @@
  *              that word. A changed letter is never corrected: "sample" is a word, not a misspelled "simple" (Codex
  *              review 2). Two near words, none, or a short word leave it unread.
  *   phrase     inflected or reordered names of crimes the reader knows: "thefts from cars", "vehicle break-ins",
- *              "car jackings". Only onto existing measures.
+ *              "car jackings". Only onto existing measures. A breakdown asked as its categories ("were male or
+ *              female") or with "and" before a time grain ("by race and year") -> the reader's "by sex", "by race by year".
  *   period     "year to date", "so far this year", "this year (so far)", "so far in <year>" -> that year, which the
  *              release clips to its latest month; the answer names the months covered (D06). "next year" -> the year
  *              after this one, a period after the data (P24), when nothing in the question predicts.
@@ -30,6 +31,10 @@ const PHRASES: [RegExp, string][] = [
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],
+  // A breakdown asked as its categories: "were male or female", "men or women" -> by sex.
+  [/\b(?:were\s+)?(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)\b|\b(?:were\s+)?(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men)\b/gi, "by sex"],
+  // A category and a time grain joined by "and": "by race and year" -> "by race by year".
+  [/\bby\s+(race|sex|gender|ethnicity|location(?:\s+type)?)\s+and\s+(year|month)\b/gi, "by $1 by $2"],
 ];
 const YTD = /\b(?:so\s+far\s+this\s+year|this\s+year\s+so\s+far|year\s+to\s+date|ytd|this\s+year)\b|\bso\s+far\s+in\s+(\d{4})\b/gi;
 const NEXT_YEAR = /\bnext\s+year\b/gi;
@@ -67,7 +72,11 @@ export function nearestWord(word: string): string | null {
 export function readQuestion(question: string, currentYear: number): ReadQuestion {
   const readings: Reading[] = [];
   let text = question;
-  for (const [re, to] of PHRASES) text = text.replace(re, (m) => (readings.push({ kind: "phrase", from: m, to }), to));
+  for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
+    const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
+    readings.push({ kind: "phrase", from: m, to: t });
+    return t;
+  });
   text = text.replace(YTD, (m, y) => {
     const to = `in ${y ?? currentYear}`;
     readings.push({ kind: "period", from: m, to });

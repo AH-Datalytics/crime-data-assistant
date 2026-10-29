@@ -8,6 +8,7 @@
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { ANSWER_STATEMENTS, checkEnvelope, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
 import { MEASURE_LABEL } from "../nibrs-question-types";
+import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES } from "../nibrs-codes";
 
 export type Delivered = {
   table: ResultTable;
@@ -58,53 +59,108 @@ const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZER
 export const SOURCE_STATEMENT = (release: string) =>
   `Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release ${release}.`;
 
+/** Category groupings the slice delivers, with their header and their codes' names (lib/nibrs-codes.ts). */
+const CATEGORY: Record<string, { header: string; plural: string; names: Record<string, string> }> = {
+  "victim.race": { header: "Victim race", plural: "race", names: RACE_CODES },
+  "victim.sex": { header: "Victim sex", plural: "sex", names: { F: "Female", M: "Male", U: "Unknown", X: "Non-binary" } },
+  "victim.ethnicity": { header: "Victim ethnicity", plural: "ethnicity", names: ETHNICITY_CODES },
+  "offense.location_type": { header: "Location type", plural: "location type", names: LOCATION_TYPES },
+};
+export const DELIVERED_CATEGORIES = new Set(Object.keys(CATEGORY));
+/** A category's name: the code's name; a blank field is "Not recorded"; a code with no name keeps its code. */
+export function categoryName(dimension: string, code: unknown): string {
+  const c = code === null || code === undefined ? "" : String(code).trim();
+  if (!c) return "Not recorded";
+  return CATEGORY[dimension]?.names[c] ?? `Code ${c}`;
+}
+
 /**
- * rows: the compiled query's rows, in `columns` order (period key first when grouped by time, then per statistic its
- * value and status). Only count statistics reach the slice.
+ * rows: the compiled query's rows, in `columns` order: the period key when grouped by time, each category grouping, then
+ * per statistic its value and status. Statistics: a count, and optionally its share within the time grouping (each
+ * category's part of all units of its own period).
  */
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
   const place = plan.geography.places[0];
   const agency = place.kind === "agency" ? place.label : "the place";
-  const count = plan.statistics[0].as;
+  const [countStat, shareStat] = plan.statistics;
+  const count = countStat.as, share = shareStat?.as;
   const what = measureWords(plan);
   const header = `${what[0].toUpperCase()}${what.slice(1)}`;
+  const time = plan.groupings.find((g) => g.dimension.startsWith("time."))?.dimension;
+  const cats = plan.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension);
   const labels: Record<string, string> = { [`statistic:${count}`]: header };
+  if (share) labels[`statistic:${share}`] = `Share of all ${what} (%)`;
   const tableCols: ResultColumn[] = [];
-  for (const g of plan.groupings) { labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? g.dimension; tableCols.push({ binding: { kind: "grouping", dimension: g.dimension }, header: labels[`grouping:${g.dimension}`] }); }
+  for (const g of plan.groupings) {
+    labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? CATEGORY[g.dimension]?.header ?? g.dimension;
+    tableCols.push({ binding: { kind: "grouping", dimension: g.dimension }, header: labels[`grouping:${g.dimension}`] });
+  }
   tableCols.push({ binding: { kind: "statistic", as: count }, header });
-  const iv = columns.indexOf(count), is = columns.indexOf(`${count}_status`), ip = columns.indexOf("period");
+  if (share) tableCols.push({ binding: { kind: "statistic", as: share }, header: labels[`statistic:${share}`] });
+  const ip = columns.indexOf("period");
+  const at = (name: string) => columns.indexOf(name);
+  // Within each period, categories by count, largest first; blanks last; then by name.
+  if (cats.length) {
+    const n = (r: unknown[]) => (r[at(count)] === null || r[at(count)] === undefined ? -1 : Number(r[at(count)]));
+    rows = [...rows].sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || n(y) - n(x)
+      || categoryName(cats[0], x[at(cats[0])]).localeCompare(categoryName(cats[0], y[at(cats[0])])));
+  }
   const evidence: CellEvidence[] = [];
   const tableRows = rows.map((r, i) => {
-    const status = String(r[is]) as CellStatus;
-    const value = r[iv] === null || r[iv] === undefined ? null : Number(r[iv]);
-    evidence.push({ row: i, statistic: count, status });
-    return [...(ip >= 0 ? [String(r[ip])] : []), value];
+    const out: (string | number | null)[] = [];
+    if (ip >= 0) out.push(String(r[ip]));
+    for (const d of cats) out.push(categoryName(d, r[at(d)]));
+    const cStatus = String(r[at(`${count}_status`)]) as CellStatus;
+    const c = r[at(count)];
+    out.push(c === null || c === undefined ? null : Number(c));
+    evidence.push({ row: i, statistic: count, status: cStatus });
+    if (share) {
+      const sStatus = String(r[at(`${share}_status`)]) as CellStatus;
+      const s = r[at(share)];
+      out.push(s === null || s === undefined ? null : Math.round(Number(s) * 1000) / 10);
+      evidence.push({ row: i, statistic: share, status: sStatus });
+    }
+    return out;
   });
   const table: ResultTable = { columns: tableCols, rows: tableRows };
   const text: string[] = [];
   const when = periodWords(effective.from, effective.to);
-  const grain = plan.groupings[0]?.dimension;
-  if (!grain) {
+  const by = [time === "time.month" ? "month" : time === "time.year" ? "year" : null, ...cats.map((d) => CATEGORY[d]?.plural ?? d)].filter(Boolean).join(" and ");
+  const statusOf = (r: unknown[]) => String(r[at(`${count}_status`)]);
+  if (!time && !cats.length) {
     const v = tableRows[0]?.[0] as number | null | undefined;
     text.push(v === null || v === undefined
       ? `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`
       : `${agency}: ${fmt(v)} ${what} in ${when}.`);
-  } else {
-    text.push(`${agency}: ${what} by ${grain === "time.month" ? "month" : "year"}, ${when}.`);
-    const missing = rows.filter((r) => String(r[is]) === "UNKNOWN" || String(r[is]) === "NOT_REPORTED").map((r) => String(r[ip]));
-    const unevidenced = rows.filter((r) => String(r[is]) === "UNKNOWN_UNEVIDENCED_ZERO").map((r) => String(r[ip]));
+  } else if (!cats.length) {
+    text.push(`${agency}: ${what} by ${by}, ${when}.`);
+    const missing = rows.filter((r) => statusOf(r) === "UNKNOWN" || statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
+    const unevidenced = rows.filter((r) => statusOf(r) === "UNKNOWN_UNEVIDENCED_ZERO").map((r) => String(r[ip]));
     // Only what the status establishes: an unknown month has no known report; a year is known only when all its months are.
-    if (missing.length) text.push(grain === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
+    if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
     if (unevidenced.length) text.push(`No ${what} were recorded for ${runs(unevidenced)}, and no zero report confirms a zero: shown blank.`);
+  } else {
+    text.push(`${agency}: ${what} by ${by}, ${when}.`);
+    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}.`);
+    // A category's total is known only when every month of it is: a month with none recorded and no zero report, or a
+    // month not reported, leaves it unknown. The rolled status does not say which, so the sentence names both.
+    const blank = tableRows.filter((_, i) => evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status)))
+      .map((r) => r.slice(ip >= 0 ? 1 : 0, (ip >= 0 ? 1 : 0) + cats.length).join(", ") + (ip >= 0 ? ` (${r[0]})` : ""));
+    if (blank.length) text.push(`No total is established for ${blank.join("; ")}: some month had none recorded without a zero report, or was not reported. Shown blank, not zero.`);
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   // How a misspelled word was read (reading.ts), then the fixed statements; the source stays last.
   text.push(...readings);
   for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
   text.push(SOURCE_STATEMENT(release));
-  const chart = grain && tableRows.length > 1 ? { kind: grain === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${grain}`], y: [header] } : null;
+  // Charts bind one series per statistic: a time series of a single count only. Category charts wait until a series
+  // can bind to each category (Codex plan review).
+  const chart = time && !cats.length && tableRows.length > 1 ? { kind: time === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${time}`], y: [header] } : null;
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
-  for (const e of evidence) if (BLANK.includes(e.status) !== (table.rows[e.row][table.rows[e.row].length - 1] === null)) contractProblems.push(`row ${e.row}: value and status disagree`);
+  for (const e of evidence) {
+    const col = tableCols.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === e.statistic);
+    if (BLANK.includes(e.status) !== (table.rows[e.row][col] === null)) contractProblems.push(`row ${e.row}, ${e.statistic}: value and status disagree`);
+  }
   return { table, evidence, chart, text, answerStatements: statements, contractProblems };
 }

@@ -73,7 +73,7 @@ function labelFilterKey(f: string): string | null {
 
 const GROUPINGS: Record<string, string> = {
   "time.year": "year", year: "year", "time.month": "month", month: "month", "geo.agency": "agency", agency: "agency", city: "agency", "geo.state": "state", state: "state",
-  "victim.race": "victim race", "victim race": "victim race", "victim.sex": "victim sex", "victim sex": "victim sex", "victim.age": "victim age", "victim age": "victim age",
+  "victim.race": "victim race", "victim race": "victim race", "victim.sex": "victim sex", "victim sex": "victim sex", "victim.ethnicity": "victim ethnicity", "victim ethnicity": "victim ethnicity", "victim.age": "victim age", "victim age": "victim age",
   "offender.race": "offender race", "offender race": "offender race", "offender.sex": "offender sex", "offender sex": "offender sex", "offender.age": "offender age", "offender age": "offender age",
   "offense.location_type": "location type", "location type": "location type", "offense.clearance_type": "clearance type", "clearance type": "clearance type",
   "offense_weapon.weapon": "weapon", weapon: "weapon", "victim_offender.relationship": "relationship", relationship: "relationship", "offense.offense": "offense type", "offense type": "offense type",
@@ -110,7 +110,7 @@ const STATE_CODES = Object.fromEntries(Object.entries(STATE_NAMES).map(([c, n]) 
 function placeKey(p: { kind: string; name: string; state?: string }): string {
   if (p.kind === "national") return "national";
   if (p.kind === "state") return `state:${p.state ?? STATE_CODES[norm(p.name)] ?? norm(p.name)}`;
-  const name = norm(p.name).replace(/\b(police|department|dept|pd|sheriff s|sheriffs|sheriff|office|metropolitan|city of|city|division|agency|bureau)\b/g, " ").replace(/\s+/g, " ").trim();
+  const name = norm(p.name).replace(/\b(police|department|dept|pd|sheriff s|sheriffs|sheriff|office|metropolitan|metro|city of|city|division|agency|bureau)\b/g, " ").replace(/\s+/g, " ").trim();
   return `local:${p.state ?? ""}:${name}`;
 }
 
@@ -158,7 +158,10 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   const untracked = [
     ...plan.transforms.filter((t) => t.kind === "rolling").map((t) => `rolling ${"months" in t ? t.months : ""} months`),
     ...plan.transforms.filter((t) => t.kind === "period_comparison").map((t) => ("earlier" in t ? `comparison ${t.earlier.from}..${t.earlier.to} vs ${t.later.from}..${t.later.to}` : "comparison")),
-    ...plan.statistics.filter((s) => s.kind === "share").map((s) => `share within ${"within" in s ? s.within.join("+") || "all" : "?"}`),
+    // A category breakdown's share of its own period (within exactly the time groupings) is the standard breakdown
+    // share, checked against independent counts; any other share's roles stay unverified.
+    ...plan.statistics.filter((s) => s.kind === "share" && !(s.within.join("+") === plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension).join("+")
+      && plan.groupings.some((g) => !g.dimension.startsWith("time.")) && !s.denominator)).map((s) => `share within ${"within" in s ? s.within.join("+") || "all" : "?"}`),
     ...plan.groupings.filter((g) => g.bins).map((g) => `${g.dimension} bins`),
   ];
   return {

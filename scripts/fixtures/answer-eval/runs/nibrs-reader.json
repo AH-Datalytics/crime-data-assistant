@@ -151,7 +151,20 @@
    "LS-267",
    "LS-268",
    "LS-269",
-   "LS-270"
+   "LS-270",
+   "LS-271",
+   "LS-272",
+   "LS-273",
+   "LS-274",
+   "LS-275",
+   "LS-276",
+   "LS-277",
+   "LS-278",
+   "LS-279",
+   "LS-280",
+   "LS-281",
+   "LS-282",
+   "LS-283"
   ],
   "a follow-up: the reader takes one turn": [
    "LS-004",
@@ -503,7 +516,20 @@
    "LS-267",
    "LS-268",
    "LS-269",
-   "LS-270"
+   "LS-270",
+   "LS-271",
+   "LS-272",
+   "LS-273",
+   "LS-274",
+   "LS-275",
+   "LS-276",
+   "LS-277",
+   "LS-278",
+   "LS-279",
+   "LS-280",
+   "LS-281",
+   "LS-282",
+   "LS-283"
   ],
   "label unresolved": [
    "LS-024",
@@ -781,12 +807,6 @@
      "field": "groupings",
      "expected": "? + year",
      "actual": "clearance type + year",
-     "kind": "unverified"
-    },
-    {
-     "field": "untracked",
-     "expected": "(not in the label schema)",
-     "actual": "share within time.year",
      "kind": "unverified"
     }
    ],
@@ -1181,12 +1201,6 @@
      "field": "groupings",
      "expected": "?",
      "actual": "clearance type",
-     "kind": "unverified"
-    },
-    {
-     "field": "untracked",
-     "expected": "(not in the label schema)",
-     "actual": "share within all",
      "kind": "unverified"
     }
    ],
@@ -2391,6 +2405,169 @@
     "no typed reading: no answer, no reason"
    ],
    "capability": "clarify:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-271",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): the place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-272",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-273",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): the place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-274",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): the place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-275",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): the place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-276",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): the place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-277",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-278",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"or\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-279",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"year,\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-280",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): the place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-281",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-282",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-283",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): the place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
    "era": "2021 and later"
   }
  ],

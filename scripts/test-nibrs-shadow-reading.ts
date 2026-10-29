@@ -27,6 +27,11 @@ assert.equal(read("car jackings in Tulsa in 2022").text, "carjackings in Tulsa i
 assert.equal(read("motor vehicle thefts in Tulsa in 2022").readings.length, 0);
 assert.equal(read("car thefts in Tulsa in 2022").readings.length, 0, "car theft is motor vehicle theft, not theft from a car");
 
+// A breakdown asked as its categories, or with "and" before a time grain (compiler increment 1).
+assert.equal(read("How many robbery victims in Tulsa were women or men in 2022?").text, "How many robbery victims in Tulsa by sex in 2022?");
+assert.equal(read("arsons in Tulsa by location type and month, 2022").text, "arsons in Tulsa by location type by month, 2022");
+assert.equal(read("robberies in Tulsa by weapon and year").readings.length, 0, "only the delivered categories");
+
 // Year to date: the current year (the release clips it and names the months, D06); "last year" is left alone.
 assert.equal(read("robberies in Tulsa year to date").text, "robberies in Tulsa in 2026");
 assert.equal(read("ytd burglaries in Tulsa").text, "in 2026 burglaries in Tulsa");

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { candidateLabel, loadPlaceIndex, resolvePlace } from "../lib/nibrs-shadow/places";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
-import { scoreShadow } from "../lib/answer-eval/shadow";
+import { scoreShadow, sliceValues } from "../lib/answer-eval/shadow";
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 
@@ -17,6 +17,8 @@ const sqls: string[] = [];
 /** Rows for the compiled query: every month (or year) of the period, 7 each, March 2024 unknown. */
 function stub(sql: string): unknown[][] {
   sqls.push(sql);
+  // A one-category breakdown over a period: F 30 (share 0.6), M 20 (0.4), U unknown.
+  if (/cats AS/.test(sql) && !/AS period/.test(sql)) return [["F", 30, "VALUE", 0.6, "VALUE"], ["M", 20, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN"]];
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
   for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
@@ -125,7 +127,15 @@ assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").rea
 
 // Codex review 1: what the slice cannot deliver is declined before anything runs or is asked; P11 covers carjacking;
 // a future month is named as asked; P26 asks city or state for "New York".
-assert.match(as(ask("Simple assault victims in Detroit by sex in 2023"), "decline").explanation, /^Not in the slice yet: breakdowns/);
+assert.match(as(ask("Simple assault victims in Detroit by age in 2023"), "decline").explanation, /^Not in the slice yet: this breakdown/);
+// Compiler increment 1: one delivered category, with counts, each category's share of its period, and blanks named.
+const bySex = as(ask("Simple assault victims in Detroit by sex in 2023"), "answer");
+assert.deepEqual(bySex.delivered.table.columns.map((c) => c.header), ["Victim sex", "Simple assault victims", "Share of all simple assault victims (%)"]);
+assert.deepEqual(bySex.delivered.table.rows, [["Female", 30, 60], ["Male", 20, 40], ["Unknown", null, null]]);
+assert.ok(bySex.delivered.text.includes("Each share is that category's part of all simple assault victims in 2023."));
+assert.match(bySex.delivered.text.find((t) => /^No total is established/.test(t))!, /Unknown/);
+assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], null]);
+for (const q of ["Robberies in Detroit by weapon in 2023", "Simple assault victims in Detroit by race and sex in 2023"]) assert.equal(ask(q).kind === "answer", false, q);
 assert.equal(as(ask("Shoplifting in Kansas City by ZIP code in 2024"), "decline").reason, "below_agency_level");
 const cjv = as(ask("How many carjacking victims were there in Memphis in 2024?"), "answer");
 assert.deepEqual([cjv.plan.measures[0].id, cjv.delivered.answerStatements], ["offenses.carjacking", ["property_counted_by_offense"]]);
@@ -226,5 +236,17 @@ assert.deepEqual([ct.reason, ct.alternative!.label], ["court_outcome", "Arrests 
 const typo = as(ask("Shoplfting in Memphis in 2023"), "answer");
 assert.equal(typo.delivered.text.at(-2), 'Read "Shoplfting" as shoplifting.');
 assert.match(as(ask("Burglaries in Memphis in 2023"), "decline").explanation, /P01/);
+
+// Breakdown scoring: rows keyed by category name, counts and statuses compared, shares checked against the independent
+// count over the independent total; nibrs-model's category rows load under those keys.
+const sexLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2023-01", to: "2023-12" },
+  measures: [{ name: "simple assault", unit: "victim" }], filters: [], groupings: ["victim sex"], statistic: "count" }, values: { status: "pending_build" }, statements: ["names its source at the end"] });
+const sexCells = (male: number) => new Map([["LS-999", [{ key: "Female", value: 30, status: "VALUE", share: 60 }, { key: "Male", value: male, status: "VALUE", share: 40 }, { key: "Unknown", value: null, status: "UNKNOWN", share: null }]]]);
+assert.equal(scoreShadow(sexLabel, bySex, r, ctx, sexCells(20)).result!.outcome, "correct");
+assert.equal(scoreShadow(sexLabel, bySex, r, ctx, sexCells(21)).result!.outcome, "wrong_answer");
+assert.equal(scoreShadow(sexLabel, bySex, r, ctx).result!.outcome, "unverified", "no values: not measured");
+const loaded = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", measures: { sa: "13B" }, totals: { sa: { status: "VALUE", value: 50 } },
+  rows: [{ sex: "F", sa: { status: "VALUE", value: 30 } }, { sex: "M", sa: { status: "VALUE", value: 20 } }, { sex: "U", sa: { status: "UNKNOWN", value: null } }] }) }]);
+assert.deepEqual(loaded.get("LS-999"), sexCells(20).get("LS-999"));
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

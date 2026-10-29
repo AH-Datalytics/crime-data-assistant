@@ -1,19 +1,19 @@
 # Answer evaluation: nibrs-reader
 
-Labeled set: 270 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
+Labeled set: 283 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
 
 **Level: question -> reader only.** An "answer" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).
 
 ## Execution coverage (can this candidate take the case)
 
-- 144: run by this candidate
+- 157: run by this candidate
 - 118: another source: no adapter for it yet
 - 7: a follow-up: the reader takes one turn
 - 1: a button continuation: the reader returns no structured options
 
 ## Label eligibility (can the case be scored)
 
-- 216: scorable (reviewed, decided policy)
+- 229: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Scored (reviewed labels, decided policy)
@@ -93,7 +93,6 @@ Discrepancies and unverified cases:
 - **LS-043** (unverified; expected answer, got answer) "Houston vehicle burglaries by year and clearance status, 2018 to 2026"
   - unverified period: expected `{"rule":"2018-01 through the latest month in the data (requested end 2026)"}`, got `2018-01..2026-10`
   - unverified groupings: expected `? + year`, got `clearance type + year`
-  - unverified untracked: expected `(not in the label schema)`, got `share within time.year`
 - **LS-060** (wrong_answer; expected clarify, got answer) "Homicide rate for top 100 U.S. cities in 2026"
 - **LS-062** (unverified; expected answer, got answer) "Top 10 cities of 250,000 people or more by shoplifting rate in 2025"
   - unverified filters: expected `? + ?`, got `? + population:250000+`
@@ -147,7 +146,6 @@ Discrepancies and unverified cases:
   - material measures: expected `murder|victim`, got `murder|offense`
   - unverified filters: expected `?`, got `clearance:exceptional`
   - unverified groupings: expected `?`, got `clearance type`
-  - unverified untracked: expected `(not in the label schema)`, got `share within all`
 - **LS-146** (avoidable_decline; expected answer, got decline) "Posession or distribution of narcotics arrests in 2025 in Yuma Az"
   - declined (reason not judged): I couldn't interpret "Posession" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession
 - **LS-148** (unverified; expected decline, got decline) "Share of rapes cleared by exception by type and state in 2025"
@@ -247,14 +245,14 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-37 cases. Correct 2; unverified 0; wrong answers 4; avoidable declines 18; unnecessary clarifications 0; wrong actions 5; incomplete 8. Severity score 793 (trend only).
+50 cases. Correct 5; unverified 0; wrong answers 4; avoidable declines 28; unnecessary clarifications 0; wrong actions 5; incomplete 8. Severity score 993 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
 | decline | 0 | 0 | 7 | 1 |
-| answer | 6 | 0 | 15 | 3 |
+| answer | 9 | 0 | 25 | 3 |
 | clarify | 0 | 0 | 3 | 2 |
 
 | Capability | Era | Cases | Gate | Categories |
@@ -262,7 +260,7 @@ Expected (rows) by actual (columns):
 | answer:historical count | 2021 and later | 3 | fail | wrong answers: fail (3); initial action: pass (100% (3/3)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:historical count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs change | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs count | 2021 and later | 17 | fail | wrong answers: fail (1); initial action: fail (12% (2/17)); direct answers: fail (6% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 30 | fail | wrong answers: fail (1); initial action: fail (17% (5/30)); direct answers: fail (13% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs count | before 2021 | 1 | not measured | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -353,6 +351,26 @@ Discrepancies and unverified cases:
   - declined (reason not judged): I couldn't interpret "will" in this question, so I haven't answered it with a number that ignores it.
 - **LS-270** (wrong_action; expected clarify, got no_reading) "Shplftg in Nashville in 2024"
   - no typed reading: no answer, no reason
+- **LS-271** (avoidable_decline; expected answer, got decline) "Simple assault victims in Milwaukee by race in 2024"
+  - adapter refused (reason not judged): the place did not resolve
+- **LS-273** (avoidable_decline; expected answer, got decline) "Simple assault victims in Louisville by ethnicity, 2024"
+  - adapter refused (reason not judged): the place did not resolve
+- **LS-274** (avoidable_decline; expected answer, got decline) "Shoplifting in Tucson by location type in 2024"
+  - adapter refused (reason not judged): the place did not resolve
+- **LS-275** (avoidable_decline; expected answer, got decline) "Theft from motor vehicle offenses in Austin by location in 2023"
+  - adapter refused (reason not judged): the place did not resolve
+- **LS-276** (avoidable_decline; expected answer, got decline) "Murder victims in Kansas City, Missouri by race in 2023"
+  - adapter refused (reason not judged): the place did not resolve
+- **LS-278** (avoidable_decline; expected answer, got decline) "How many murder victims in Austin were male or female in 2023?"
+  - declined (reason not judged): I couldn't interpret "or" in this question, so I haven't answered it with a number that ignores it.
+- **LS-279** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Albuquerque by race and year, 2021 to 2023"
+  - declined (reason not judged): I couldn't interpret "year," in this question, so I haven't answered it with a number that ignores it.
+- **LS-280** (avoidable_decline; expected answer, got decline) "Simple assault victims in Milwaukee by age in 2024"
+  - adapter refused (reason not judged): the place did not resolve
+- **LS-282** (avoidable_decline; expected answer, got decline) "Simple assault victims in Louisville by race and sex in 2024"
+  - declined (reason not judged): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
+- **LS-283** (avoidable_decline; expected answer, got decline) "Carjackings in Kansas City, Missouri by location type in 2024"
+  - adapter refused (reason not judged): the place did not resolve
 
 ## PROVISIONAL: drafted labels (never a gate)
 

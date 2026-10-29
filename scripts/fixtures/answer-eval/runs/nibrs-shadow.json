@@ -279,7 +279,20 @@
    "LS-267",
    "LS-268",
    "LS-269",
-   "LS-270"
+   "LS-270",
+   "LS-271",
+   "LS-272",
+   "LS-273",
+   "LS-274",
+   "LS-275",
+   "LS-276",
+   "LS-277",
+   "LS-278",
+   "LS-279",
+   "LS-280",
+   "LS-281",
+   "LS-282",
+   "LS-283"
   ]
  },
  "eligibility": {
@@ -499,7 +512,20 @@
    "LS-267",
    "LS-268",
    "LS-269",
-   "LS-270"
+   "LS-270",
+   "LS-271",
+   "LS-272",
+   "LS-273",
+   "LS-274",
+   "LS-275",
+   "LS-276",
+   "LS-277",
+   "LS-278",
+   "LS-279",
+   "LS-280",
+   "LS-281",
+   "LS-282",
+   "LS-283"
   ],
   "label unresolved": [
    "LS-024",
@@ -626,7 +652,20 @@
   "LS-267": "designed",
   "LS-268": "designed",
   "LS-269": "designed",
-  "LS-270": "designed"
+  "LS-270": "designed",
+  "LS-271": "designed",
+  "LS-272": "designed",
+  "LS-273": "designed",
+  "LS-274": "designed",
+  "LS-275": "designed",
+  "LS-276": "designed",
+  "LS-277": "designed",
+  "LS-278": "designed",
+  "LS-279": "designed",
+  "LS-280": "designed",
+  "LS-281": "designed",
+  "LS-282": "designed",
+  "LS-283": "designed"
  },
  "scored": [
   {
@@ -689,7 +728,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: breakdowns by category, shares and rates."
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
    ],
    "capability": "answer:nibrs count",
    "era": "period not mapped"
@@ -1630,6 +1669,256 @@
     "declined (reader): The question could not be read: no typed reading."
    ],
    "capability": "clarify:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-271",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Milwaukee city police, WI: simple assault victims by race, 2024. / Each share is that category's part of all simple assault victims in 2024. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: some"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-272",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Albuquerque city police, NM: aggravated assault victims by sex, 2022. / Each share is that category's part of all aggravated assault victims in 2022. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency;"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-273",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Louisville city police, KY: simple assault victims by ethnicity, 2024. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; ca"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-274",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tucson city police, AZ: shoplifting offenses by location type, 2024. / Each share is that category's part of all shoplifting offenses in 2024. / No total is established for Air/Bus/Train Terminal; Amusement Park; Arena/Stadium/Fairgrounds; "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-275",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Austin city police, TX: theft from motor vehicle offenses by location type, 2023. / Each share is that category's part of all theft from motor vehicle offenses in 2023. / No total is established for Abandoned/Condemned Structure; Air/Bus/Tr"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-276",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Kansas City city police, MO: murder victims by race, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: some month had non"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-277",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Albuquerque city police, NM: simple assault victims by race, 2021 to 2023. / Each share is that category's part of all simple assault victims in 2021 to 2023. / No total is established for Asian; Native Hawaiian/Pacific Islander: some month"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-278",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Austin city police, TX: murder victims by sex, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Female: some month had none recorded without a zero report, or was not reported. Shown bl"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-279",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Albuquerque city police, NM: aggravated assault victims by year and race, 2021 to 2023. / Each share is that category's part of all aggravated assault victims in the same year. / No total is established for Asian (2021); Native Hawaiian/Pac"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-280",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-281",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-282",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-283",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+   ],
+   "capability": "answer:nibrs count",
    "era": "2021 and later"
   }
  ],
