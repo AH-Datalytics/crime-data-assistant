@@ -9,6 +9,7 @@ import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-
 import { candidateLabel, loadPlaceIndex, resolvePlace } from "../lib/nibrs-shadow/places";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { scoreShadow } from "../lib/answer-eval/shadow";
+import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 
 const places = loadPlaceIndex();
@@ -166,5 +167,26 @@ assert.deepEqual([score(both(84)).outcome, score(both(84)).values], ["correct", 
 assert.deepEqual([score(both(83)).outcome, score(both(83)).values], ["wrong_answer", "mismatch"]);
 const wrongEntry = periodLabel([...(np as unknown as { options: never[] }).options.slice(0, 2), { label: "Another year", leads_to: "clarify", meaning: null as never, next_about: "which range of years" }]);
 assert.equal(scoreShadow(label(wrongEntry), noPeriod, r, ctx, both(84)).result!.outcome, "incomplete");
+
+// Codex review 2: no button answers "Shoplifting arrests in Washington" (arrests and state totals are not in the slice),
+// so it declines rather than asks; a different question behind a button is a wrong answer; its text is checked; an
+// answer behind a button with no values leaves the zero-wrong-answers gate NOT MEASURED.
+assert.equal(ask("Shoplifting arrests in Washington in 2024").kind, "decline");
+const detroitInstead = periodLabel([
+  { label: "The latest complete year (2025)", leads_to: "answer", meaning: { ...(shopIn({ from: "2025-01", to: "2025-12" }) as object), places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }] } as never },
+  ...(np as unknown as { options: never[] }).options.slice(1)]);
+assert.equal(scoreShadow(label(detroitInstead), noPeriod, r, ctx, both(84)).result!.outcome, "wrong_answer");
+const mute = { ...noPeriod, options: noPeriod.options.map((o, i) => (i ? o : { ...o, continuation: { ...(o.continuation as object), delivered: { ...(o.continuation as { delivered: object }).delivered, text: ["84."] } } as never })) };
+assert.equal(scoreShadow(label(np), mute, r, ctx, both(84)).result!.outcome, "incomplete", "a button's answer must still name its agency and source");
+const unv = scoreShadow(label(np), noPeriod, r, ctx).result!;
+assert.equal(gates([unv])[0].categories.find((x) => x.name === "wrong answers")!.status, "not measured");
+// Answers behind a second question are found and checked by their path of buttons.
+const stlCase = label({ action: "clarify", about: "which St. Louis", options: [
+  { label: "St. Louis city, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" },
+  { label: "St. Louis County, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" }] });
+const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|Every year available", Array.from({ length: 118 }, (_, i) => {
+  const m = `${2017 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`; return { key: m, value: m === "2024-03" ? null : v, status: m === "2024-03" ? "UNKNOWN" : "VALUE" }; })]]);
+assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(7)).result!.values, "not measured", "the county's answers have no values");
+assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(6)).result!.outcome, "wrong_answer");
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

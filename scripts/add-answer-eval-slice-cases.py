@@ -94,7 +94,7 @@ SLICE = [
      choose("which St. Louis",
             ("St. Louis city, Missouri", meaning("stl", {"from": "2021-01", "to": "2025-12"}, CARJACK, ["year"]), None),
             ("St. Louis County, Missouri", meaning("stl_county", {"from": "2021-01", "to": "2025-12"}, CARJACK, ["year"]), None)),
-     "P28: St. Louis names a city and a county of 100,000+ (St. Louis County, Minnesota is under 100,000). Carjacking by offense (D18). [superseded by P28]"),
+     "P28: St. Louis names a city and a county of 100,000+ (the St. Louis County, Minnesota sheriff serves under 100,000). Carjacking by offense (D18). [superseded by P28]"),
     ("slice-memphis-cj", "carjackings in Memphis TN by month in 2025", ["D18", "D30", "P01", "P16"],
      answer(meaning("memphis", year(2025), CARJACK, ["month"]), names("memphis"), MISSING, SOURCE_LAST), "Carjacking by offense (D18)."),
     ("slice-detroit-sa", "How many simple assaults were there in Detroit in 2023?", ["D18", "D30", "P01", "P09", "P16"],

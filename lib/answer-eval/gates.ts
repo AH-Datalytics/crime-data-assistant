@@ -35,6 +35,8 @@ export type CaseResult = {
   diffs: Diff[]; notes: string[]; capability: string; era: string;
   /** Delivered values against independent expected values, for a candidate that delivers them. */
   values?: "match" | "mismatch" | "not measured";
+  /** Answers delivered behind buttons or alternatives, or directly, that could not be fully verified. */
+  unverifiedAnswers?: number;
 };
 
 /**
@@ -83,7 +85,8 @@ export function gates(results: CaseResult[]): GateRow[] {
     const categories: Category[] = [
       // Zero wrong answers is established only when every delivered answer is verified.
       (() => {
-        const unvAnswers = rs.filter((r) => r.actual === "answer" && r.outcome === "unverified").length;
+        // Every delivered answer counts, including those behind a button or an offered alternative.
+        const unvAnswers = rs.filter((r) => (r.actual === "answer" && r.outcome === "unverified") || (r.outcome !== "wrong_answer" && r.unverifiedAnswers)).length;
         return { name: "wrong answers", status: wrong ? "fail" : unvAnswers ? "not measured" : "pass", detail: `${wrong}${unvAnswers ? `, ${unvAnswers} answers unverified` : ""}` } as Category;
       })(),
       cat("clarifications", rs.filter((r) => r.expected === "clarify"), (r) => r.outcome === "correct"),

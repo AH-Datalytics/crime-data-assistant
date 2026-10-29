@@ -118,9 +118,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (ask) {
     const a: { part: Part; name: string; candidates: Candidate[] } = ask;
     const options = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
-    // A question no choice could answer is declined, not asked about (D28): every button would lead to the same refusal.
-    const first = options[0].continuation;
-    if (first.kind === "decline" && options.every((o) => o.continuation.kind === "decline" && o.continuation.explanation === first.explanation)) return first;
+    // A question no choice could answer is declined, not asked about (D28): when no button leads to an answer or a
+    // further question, the most likely reading's refusal is given.
+    if (options.every((o) => o.continuation.kind === "decline")) return options[0].continuation;
     const named = a.candidates.find((c) => c.kind === "agency");
     return { kind: "clarify", about: `which ${named?.kind === "agency" ? named.agency.name.replace(/ County$/, "") : a.name}`, question: ledger0.question, options };
   }

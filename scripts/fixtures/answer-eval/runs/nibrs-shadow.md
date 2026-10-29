@@ -114,7 +114,7 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer:nibrs count | 2021 and later | 10 | fail | wrong answers: pass (0); initial action: fail (60% (6/10)); direct answers: fail (60% (0 unverified)); numeric fixtures: pass (6/6 match) |
 | clarify:historical count | 2021 and later | 1 | not measured | wrong answers: pass (0); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | 2021 and later | 6 | fail | wrong answers: pass (0); clarifications: fail (1/6 verified correct, 4 unverified, 1 failing); initial action: fail (83% (5/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/4 match, 3 not measured) |
+| clarify:nibrs count | 2021 and later | 6 | fail | wrong answers: not measured (0, 3 answers unverified); clarifications: fail (1/6 verified correct, 4 unverified, 1 failing); initial action: fail (83% (5/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/4 match, 3 not measured) |
 | clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: pass (0); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
 | decline:nibrs count | 2021 and later | 2 | fail | wrong answers: pass (0); declines: fail (1/2 verified correct, 1 failing); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
 | decline:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -176,7 +176,7 @@ Expected (rows) by actual (columns):
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
 | answer:nibrs count | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (0/3 verified correct, 3 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/3 match, 3 not measured) |
+| clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: not measured (0, 3 answers unverified); clarifications: not measured (0/3 verified correct, 3 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/3 match, 3 not measured) |
 
 Discrepancies and unverified cases:
 
@@ -196,7 +196,7 @@ Discrepancies and unverified cases:
 
 ### Development
 
-2 cases. Correct 1; unverified 0; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 1; incomplete 0. Severity score 5 (trend only).
+2 cases. Correct 0; unverified 1; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 1; incomplete 0. Severity score 5 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -207,10 +207,15 @@ Expected (rows) by actual (columns):
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
 | clarify:nibrs count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:no meaning | no period | 1 | not measured | wrong answers: pass (0); clarifications: pass (1/1 verified correct); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:no meaning | no period | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
 
 Discrepancies and unverified cases:
 
+- **LS-140** (unverified; expected clarify, got clarify) "St Louis carjackings per month"
+  - unverified option "St. Louis city, Missouri" > "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-10`
+  - unverified option "St. Louis County, Missouri" > "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-10`
+  - unverified option "St. Louis County, Missouri" > "Every year available" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri
 - **LS-151** (wrong_action; expected clarify, got decline) "Shoplfting in baltimore per month, 2021-2025"
   - declined (reader): The question could not be read: no typed reading.
 

@@ -719,13 +719,34 @@
    "split": "dev",
    "expected": "clarify",
    "actual": "clarify",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"St. Louis city, Missouri\" > \"Every year available\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2026-10",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"St. Louis County, Missouri\" > \"Every year available\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2026-10",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"St. Louis County, Missouri\" > \"Every year available\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
     "asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri"
    ],
    "capability": "clarify:no meaning",
-   "era": "no period"
+   "era": "no period",
+   "values": "not measured",
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-151",
@@ -815,7 +836,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-224",
@@ -836,7 +858,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-225",
@@ -1117,7 +1140,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "not measured",
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-243",
@@ -1156,7 +1180,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "not measured",
+   "unverifiedAnswers": 3
   },
   {
    "id": "LS-244",
@@ -1183,7 +1208,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "not measured",
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-245",
@@ -1210,7 +1236,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "not measured"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   }
  ]
 }
