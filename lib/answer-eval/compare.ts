@@ -174,7 +174,11 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
     if (join(e) !== join(a)) add(field, join(e), join(a), "material");
   };
   if (expected.source !== actual.meaning.source) add("source", expected.source, actual.meaning.source, "material");
-  decide("places", expected.places.map(placeKey), actual.meaning.places.map(placeKey));
+  // Places that differ only by the word "county" may be the same agency or a city and a county of one name: unverified.
+  const ePl = expected.places.map(placeKey), aPl = actual.meaning.places.map(placeKey);
+  const noCounty = (xs: string[]) => join(xs.map((x) => x.replace(/\bcounty\b/g, "").replace(/\s+/g, " ").trim()));
+  if (join(ePl) !== join(aPl) && noCounty(ePl) === noCounty(aPl)) add("places", join(ePl), join(aPl), "unverified");
+  else decide("places", ePl, aPl);
   if (expected.places.length > 1 || actual.meaning.places.length > 1) {
     if ((expected.combine ?? "separate") !== actual.meaning.combine) add("combine", expected.combine ?? "separate", actual.meaning.combine ?? "separate", "material");
   }
