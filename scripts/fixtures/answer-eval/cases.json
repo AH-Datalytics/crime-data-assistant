@@ -16807,9 +16807,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: two measures side by side, each with its own status (D6)."
    }
   },
@@ -16865,15 +16865,16 @@
     },
     "statements": [
      "says drug crimes include drug/narcotic and drug equipment violations",
+     "gives the combined drug-crimes total (drug/narcotic plus drug equipment offenses)",
      "names the agency (Wichita Police Department)",
      "names its source at the end"
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
-    "notes": "MUST ANSWER: D19, both parts."
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: D19, the combined total; the two parts may accompany it (Codex label check)."
    }
   },
   {
@@ -16935,9 +16936,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: two measures by month."
    }
   },
@@ -16997,9 +16998,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: weapons are multi-valued per offense."
    }
   },
@@ -17019,7 +17020,8 @@
     "D29",
     "D30",
     "P01",
-    "P16"
+    "P16",
+    "P30"
    ],
    "expected": {
     "action": "answer",
@@ -17052,16 +17054,17 @@
      "status": "pending_build"
     },
     "statements": [
+     "groups ages as Under 18 (01-17 and infants NN, NB, BB), 18-24, 25-34, 35-44, 45-54, 55-64, 65+ (65-99), Unknown (00) and Not recorded (blank)",
      "names the agency (Mesa Police Department)",
      "shows unknown and not-recorded categories as their own rows, never dropped",
      "names its source at the end"
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
-    "notes": "MUST ANSWER: victim age groups (today's groups), unknown ages as their own rows."
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: victim age groups with infants in Under 18 (P30); 00 unknown, 99 'over 98' in 65+ (Jeff confirmed 00 is unknown)."
    }
   },
   {
@@ -17120,9 +17123,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: a victim with several offenders can have several relationships."
    }
   },
@@ -17180,9 +17183,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: P36."
    }
   },
@@ -17241,9 +17244,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: carjacking offenses (D18); one location per offense."
    }
   },
@@ -17305,9 +17308,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: P29 offenders; P49 counts the crimes (victims, D18) by the incident's offender sexes, once in each."
    }
   },
@@ -17367,9 +17370,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: 'offenders' asks for the offenders themselves (P44), counted per offender record."
    }
   },
@@ -17429,9 +17432,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "A two-way breakdown, if the reader reads it."
    }
   },
@@ -17493,15 +17496,16 @@
     },
     "statements": [
      "names the crimes counted (murder, robbery and aggravated assault with a firearm)",
+     "gives the gun-crime total (firearm murder victims plus firearm robbery offenses plus firearm aggravated assault victims)",
      "names the agency (Fort Worth Police Department)",
      "names its source at the end"
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
-    "notes": "MUST ANSWER: P31's gun crime; each crime in its D18 unit."
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: P31's gun crime as a total; each crime in its D18 unit (Codex label check)."
    }
   },
   {
@@ -17548,7 +17552,7 @@
       }
      ],
      "filters": [
-      "weapon: knife"
+      "weapon: knife or cutting instrument"
      ],
      "groupings": [],
      "statistic": "count"
@@ -17557,16 +17561,17 @@
      "status": "pending_build"
     },
     "statements": [
-     "names the crimes counted (murder and aggravated assault with a knife)",
+     "names the crimes counted (murder and aggravated assault with a knife or cutting instrument)",
+     "gives the stabbings total (murder victims plus aggravated assault victims with a knife or cutting instrument)",
      "names the agency (Oklahoma City Police Department)",
      "names its source at the end"
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
-    "notes": "MUST ANSWER: P31's stabbings, victims (D18)."
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: P31's stabbings as a total, victims (D18) (Codex label check)."
    }
   },
   {
@@ -17623,9 +17628,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: arrests made in 2024 (P50)."
    }
   },
@@ -17687,9 +17692,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: by month of arrest."
    }
   },
@@ -17748,9 +17753,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "MUST ANSWER: P48 'were arrested' -> arrests; arrests are NIBRS's detail."
    }
   },
@@ -17798,9 +17803,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "BOUNDARY: P46 charged is declined; offer the arrests (D01)."
    }
   },
@@ -17825,9 +17830,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "BOUNDARY: P45 shooters declined."
    }
   },
@@ -17852,9 +17857,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc2",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc2-labels-1",
     "notes": "BOUNDARY: P31 gun violence declined with the note."
    }
   }
