@@ -153,7 +153,7 @@ ROWS = [
      "Decline: the data records past crime and cannot predict. Offer the recent trend for the same place and measure.",
      "Alternative: last 10 complete years for the place and measure.",
      "A forecast is not in the data; a plain statement beats an improvised answer.",
-     OPEN, NEW),
+     O28 + " (Jeff: yes, decline)", NEW),
     ("P21", "\"What happened in the shooting on Main Street last Friday?\" or a named person",
      "No rule found.",
      "Decline: the data has no names, addresses or case narratives. Offer the count of that offense for the city and month.",
@@ -233,12 +233,11 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P20": "For forecasts, should the app decline and offer the recent trend instead?",
     "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
 }
 TOPIC = {
-    **{p: "4. When to decline, and what to offer instead" for p in ["P20", "P21", "P24"]},
+    **{p: "4. When to decline, and what to offer instead" for p in ["P21", "P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
 ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]
