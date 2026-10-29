@@ -49,11 +49,13 @@ print(json.dumps(con.execute(open(sys.argv[1], encoding="utf-8").read()).fetchal
 
 type Row = { value: number | null; status: string };
 let failed = 0;
-/** Compiles, runs and compares one plan: the exact rows, each value and status, and no refusal status. */
-function check(name: string, plan: NibrsPlan, period: ResolvedPeriod, root: string, built: number[], expected: Map<string, Row | number>) {
-  const c = compilePlan(plan, period, { root, builtYears: built });
-  if (c.kind !== "query") { console.log(`${name}: UNSUPPORTED ${c.reason}`); failed++; return; }
-  const rows = runSql(c.query.sql);
+const BLANK = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "EVIDENCE_CONFLICT"];
+
+/**
+ * Compares result rows with expected rows: the exact row set (no missing, extra or duplicate period), each value and
+ * status, value/status consistency (blank exactly for blank statuses; REPORTED_ZERO exactly 0), and refusal.
+ */
+function compareRows(rows: unknown[][], expected: Map<string, Row | number>, refuseOn: string[]): { problems: string[]; refused: boolean } {
   const got = new Map<string, Row>();
   const problems: string[] = [];
   for (const r of rows) {
@@ -61,18 +63,40 @@ function check(name: string, plan: NibrsPlan, period: ResolvedPeriod, root: stri
     if (got.has(k)) problems.push(`duplicate row ${k}`);
     const value = v === null ? null : Number(v);
     got.set(k, { value, status: s });
-    if ((value === null) !== ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "EVIDENCE_CONFLICT"].includes(s)) problems.push(`${k}: value ${value} disagrees with status ${s}`);
+    if ((value === null) !== BLANK.includes(s)) problems.push(`${k}: value ${value} disagrees with status ${s}`);
+    if (s === "REPORTED_ZERO" && value !== 0) problems.push(`${k}: REPORTED_ZERO with value ${value}`);
   }
-  const refused = [...got.values()].some((r) => c.query.refuseOn.includes(r.status));
+  const refused = [...got.values()].some((r) => refuseOn.includes(r.status));
   for (const [k, e] of expected) {
     const g = got.get(k);
+    // A numeric expectation is a known count: 0 is a reported zero, anything else a VALUE.
     const want: Row = typeof e === "number" ? { value: e, status: e === 0 ? "REPORTED_ZERO" : "VALUE" } : e;
     if (!g) problems.push(`${k}: missing`);
-    else if (g.value !== want.value || (typeof e !== "number" && g.status !== want.status) || (typeof e === "number" && !["VALUE", "REPORTED_ZERO"].includes(g.status))) problems.push(`${k}: expected ${want.value} ${want.status}, got ${g.value} ${g.status}`);
+    else if (g.value !== want.value || g.status !== want.status) problems.push(`${k}: expected ${want.value} ${want.status}, got ${g.value} ${g.status}`);
   }
   for (const k of got.keys()) if (!expected.has(k)) problems.push(`${k}: extra row`);
-  const expectsRefusal = [...expected.values()].some((e) => typeof e !== "number" && c.query.refuseOn.includes(e.status));
+  const expectsRefusal = [...expected.values()].some((e) => typeof e !== "number" && refuseOn.includes(e.status));
   if (refused !== expectsRefusal) problems.push(refused ? "the result holds a refusal status" : "a refusal was expected");
+  return { problems, refused };
+}
+
+// The comparator catches what it claims to (Codex compiler review r2): a positive REPORTED_ZERO, a missing, an extra
+// and a duplicate row, a blank VALUE.
+{
+  const exp = new Map<string, number>([["2025-01", 26]]);
+  const bad = (rows: unknown[][]) => compareRows(rows, exp, ["EVIDENCE_CONFLICT"]).problems.length > 0;
+  if (!bad([["2025-01", 26, "REPORTED_ZERO"]]) || !bad([]) || !bad([["2025-01", 26, "VALUE"], ["2025-02", 1, "VALUE"]])
+    || !bad([["2025-01", 26, "VALUE"], ["2025-01", 26, "VALUE"]]) || !bad([["2025-01", null, "VALUE"]]) || bad([["2025-01", 26, "VALUE"]])) {
+    console.log("comparator self-test FAILED");
+    process.exit(1);
+  }
+}
+
+/** Compiles, runs and compares one plan. */
+function check(name: string, plan: NibrsPlan, period: ResolvedPeriod, root: string, built: number[], expected: Map<string, Row | number>) {
+  const c = compilePlan(plan, period, { root, builtYears: built });
+  if (c.kind !== "query") { console.log(`${name}: UNSUPPORTED ${c.reason}`); failed++; return; }
+  const { problems, refused } = compareRows(runSql(c.query.sql), expected, c.query.refuseOn);
   console.log(`${name}: ${expected.size} rows, ${problems.length ? `${problems.length} PROBLEM(S)` : "all equal"}${refused ? " (refused, as expected)" : ""}`);
   for (const p of problems.slice(0, 12)) console.log(`  ${p}`);
   if (problems.length) failed++;
