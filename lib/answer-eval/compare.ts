@@ -110,7 +110,7 @@ const STATE_CODES = Object.fromEntries(Object.entries(STATE_NAMES).map(([c, n]) 
 function placeKey(p: { kind: string; name: string; state?: string }): string {
   if (p.kind === "national") return "national";
   if (p.kind === "state") return `state:${p.state ?? STATE_CODES[norm(p.name)] ?? norm(p.name)}`;
-  const name = norm(p.name).replace(/\b(police|department|dept|pd|sheriff s|sheriffs|sheriff|office|metropolitan|city of|city|division|agency)\b/g, " ").replace(/\s+/g, " ").trim();
+  const name = norm(p.name).replace(/\b(police|department|dept|pd|sheriff s|sheriffs|sheriff|office|metropolitan|city of|city|division|agency|bureau)\b/g, " ").replace(/\s+/g, " ").trim();
   return `local:${p.state ?? ""}:${name}`;
 }
 

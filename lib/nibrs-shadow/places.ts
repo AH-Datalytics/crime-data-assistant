@@ -29,9 +29,19 @@ const STATE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAMES).filter(([c]
 const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\bsaint\b/g, "st").replace(/\s+/g, " ").trim();
 const base = (s: string) => key(s).replace(/ county$/, "");
 
+/**
+ * City agencies the index names by their department instead of their place (crime_data.db's Historical names), named
+ * here by the place the FBI's Return A header gives for the ORI. A stop-gap until the common agency/place crosswalk
+ * (proposed 2026-10-29) gives Census place names; add only names a labeled case needs, with that evidence.
+ */
+export const PLACE_NAMES: Record<string, string> = {
+  TN0190100: "Nashville",   // Return A: "METROPOLITAN NASHVILLE P"; Historical: "Metropolitan Nashville Police Department"
+  NV0020100: "Las Vegas",   // Return A: "LAS VEGAS METRO PD"; Historical: "Las Vegas Metropolitan Police Department"
+};
+
 export type PlaceIndex = { byName: Map<string, Agency[]> };
 export function loadPlaceIndex(file = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
-  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies;
+  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => (PLACE_NAMES[a.ori] ? { ...a, name: PLACE_NAMES[a.ori] } : a));
   const byName = new Map<string, Agency[]>();
   for (const a of agencies) (byName.get(base(a.name)) ?? byName.set(base(a.name), []).get(base(a.name))!).push(a);
   for (const xs of byName.values()) xs.sort((a, b) => b.population - a.population);
