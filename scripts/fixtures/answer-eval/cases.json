@@ -16010,9 +16010,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER: person-crime victims by race (D18), NIBRS detail (P01)."
    }
   },
@@ -16071,9 +16071,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER: a Part I crime's victim detail is NIBRS's (P01)."
    }
   },
@@ -16132,9 +16132,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER: by ethnicity. Louisville is Louisville Metro (KY)."
    }
   },
@@ -16193,9 +16193,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER: offenses by location type (one location per offense)."
    }
   },
@@ -16254,9 +16254,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER: 'by location' is location type."
    }
   },
@@ -16315,9 +16315,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER: murder victims by race, a NIBRS detail (P01)."
    }
   },
@@ -16376,9 +16376,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER: one total over three years, by race."
    }
   },
@@ -16437,9 +16437,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "MUST ANSWER if read: 'male or female' asks for the sex breakdown."
    }
   },
@@ -16501,9 +16501,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "A breakdown per year, if the reader reads it."
    }
   },
@@ -16562,9 +16562,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "BOUNDARY: age groups are increment 2."
    }
   },
@@ -16623,9 +16623,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "BOUNDARY: weapons are multi-value, increment 2."
    }
   },
@@ -16685,9 +16685,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "BOUNDARY: a two-way breakdown."
    }
   },
@@ -16746,9 +16746,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-breakdown",
-    "reviewed_by": null,
+    "reviewed_by": "codex:breakdown-labels-1",
     "notes": "BOUNDARY: carjacking offenses (D18) by location; an incident-level reading is multi-value."
    }
   }
