@@ -1676,198 +1676,126 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Milwaukee city police, WI: simple assault victims by race, 2024. / Each share is that category's part of all simple assault victims in 2024. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: repo"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-272",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Albuquerque city police, NM: aggravated assault victims by sex, 2022. / Each share is that category's part of all aggravated assault victims in 2022. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency;"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-273",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Louisville city police, KY: simple assault victims by ethnicity, 2024. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; ca"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-274",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Tucson city police, AZ: shoplifting offenses by location type, 2024. / Each share is that category's part of all shoplifting offenses in 2024. / No total is established for Air/Bus/Train Terminal; Amusement Park; Arena/Stadium/Fairgrounds; "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-275",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Austin city police, TX: theft from motor vehicle offenses by location type, 2023. / Each share is that category's part of all theft from motor vehicle offenses in 2023. / No total is established for Abandoned/Condemned Structure; Air/Bus/Tr"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-276",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Kansas City city police, MO: murder victims by race, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: reporting evidence"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-277",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Albuquerque city police, NM: simple assault victims by race, 2021 to 2023. / Each share is that category's part of all simple assault victims in 2021 to 2023. / No total is established for Asian; Native Hawaiian/Pacific Islander: reporting "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-278",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Austin city police, TX: murder victims by sex, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Female: reporting evidence is incomplete, or a month has none recorded without evidence e"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-279",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Albuquerque city police, NM: aggravated assault victims by year and race, 2021 to 2023. / Each share is that category's part of all aggravated assault victims in the same year. / No total is established for Asian (2021); Native Hawaiian/Pac"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-280",

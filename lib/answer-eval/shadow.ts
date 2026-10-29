@@ -55,11 +55,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     const catField = Object.keys(CATEGORY_FIELDS).find((f) => (v.rows ?? []).some((r) => f in r));
     const total = v.totals?.[measures[0]];
     const periodTotal = new Map<string, number | null>();
-    for (const r of v.rows ?? []) {
-      const p = String(r.year ?? r.month ?? ""), c = cell(r[measures[0]]);
-      const sofar = periodTotal.has(p) ? periodTotal.get(p)! : 0;
-      periodTotal.set(p, sofar === null || c.value === null ? null : sofar + c.value);
-    }
+    const add = (p: string, value: number | null) => { const sofar = periodTotal.has(p) ? periodTotal.get(p)! : 0; periodTotal.set(p, sofar === null || value === null ? null : sofar + value); };
+    const measureMonths = (v as { months?: Record<string, Record<string, unknown>> }).months;
+    if (measureMonths) {
+      // The measure's own month cells (independent of the category rows): a year's total when every month is known.
+      for (const [m, c] of Object.entries(measureMonths)) { const x = cell(c[measures[0]]); add(m.slice(0, 4), ["VALUE", "REPORTED_ZERO"].includes(x.status) ? x.value ?? 0 : null); }
+    } else for (const r of v.rows ?? []) add(String(r.year ?? r.month ?? ""), cell(r[measures[0]]).value);
     const cells: ExpectedCell[] = v.grouping === "total" && !catField
       ? measures.map((m) => ({ key: measures.length > 1 ? m : "", ...pick(v.totals[m]) }))
       : (v.rows ?? []).map((r) => {
