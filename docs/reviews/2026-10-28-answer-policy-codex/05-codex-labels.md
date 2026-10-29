@@ -336,7 +336,7 @@
     },
     "LS-184": {
       "issue": "Options omit tie policy and rate scale; murder uses the wrong semantic unit.",
-      "fix": "Apply the corrected LS-183 option semantics, retaining this case's top-1 direction."
+      "fix": "Apply the corrected LS-183 option semantics, retaining this case's top-one direction."
     },
     "LS-185": {
       "issue": "Murder units and required agency naming are incomplete.",
