@@ -22,7 +22,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (c.group.startsWith("designed:slice-")) return "designed";
+  if (c.group.startsWith("designed:slice-") || c.group.startsWith("designed:reader-")) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -79,7 +79,7 @@ const viewOf = (plan: NibrsPlan, p: { from: string; to: string }) => planToMeani
 
 /** The label's agency name as the words an answer must carry (its city), e.g. "St. Louis". */
 function agencyWords(name: string): string {
-  return name.replace(/\b(Metropolitan|Police|Department|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
+  return name.replace(/\b(Metropolitan|Police|Department|Bureau|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {

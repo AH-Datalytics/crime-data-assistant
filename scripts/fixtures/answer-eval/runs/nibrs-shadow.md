@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 245 cases. Release for resolution: 2017-01..2026-10, request date 2026-10-29.
+Labeled set: 270 cases. Release for resolution: 2017-01..2026-10, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 41: run by this candidate
+- 66: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 191: scorable (reviewed, decided policy)
+- 216: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Refused as not built (not scored)
@@ -22,36 +22,30 @@ Labeled set: 245 cases. Release for resolution: 2017-01..2026-10, request date 2
 
 ### Development
 
-22 cases. Correct 11; unverified 4; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 1; incomplete 2. Severity score 87 (trend only).
+22 cases. Correct 14; unverified 6; wrong answers 0; avoidable declines 2; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 40 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 6 | 0 | 4 | 0 |
-| clarify | 0 | 7 | 1 | 0 |
+| answer | 8 | 0 | 2 | 0 |
+| clarify | 0 | 8 | 0 | 0 |
 | decline | 0 | 0 | 4 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 10 | fail | wrong answers: pass (0); initial action: fail (60% (6/10)); direct answers: fail (60% (0 unverified)); numeric fixtures: pass (6/6 match) |
+| answer:nibrs count | 2021 and later | 10 | fail | wrong answers: pass (0); initial action: fail (80% (8/10)); direct answers: fail (80% (0 unverified)); numeric fixtures: pass (8/8 match) |
 | clarify:historical count | 2021 and later | 1 | not measured | wrong answers: pass (0); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | 2021 and later | 6 | fail | wrong answers: pass (0); clarifications: fail (3/6 verified correct, 2 unverified, 1 failing); initial action: fail (83% (5/6)); direct answers: pass (no answerable cases); numeric fixtures: pass (4/4 match) |
+| clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: pass (0); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: pass (5/5 match) |
 | clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: pass (0); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
-| decline:nibrs count | 2021 and later | 2 | fail | wrong answers: pass (0); declines: fail (1/2 verified correct, 1 failing); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
-| decline:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | 2021 and later | 2 | not measured | wrong answers: pass (0); declines: not measured (1/2 verified correct, 1 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
+| decline:nibrs count | spans 2021 | 1 | not measured | wrong answers: pass (0); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:no meaning | no period | 1 | not measured | wrong answers: pass (0); declines: pass (1/1 verified correct); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
-- **LS-228** (avoidable_decline; expected answer, got decline) "Thefts from motor vehicles in Columbus, Ohio in 2022"
-  - declined (reader): I couldn't interpret "from motor vehicles in" in this question, so I haven't answered it with a number that ignores it.
 - **LS-229** (avoidable_decline; expected answer, got decline) "Drug crimes in Detroit in 2024"
   - declined (unsupported_capability): Not in the slice yet: drug crimes are drug/narcotic violations plus drug equipment violations (D19), two measures.
-- **LS-230** (avoidable_decline; expected answer, got decline) "Shoplifting in Memphis so far this year"
-  - declined (reader): I couldn't interpret "so far this year" in this question, so I haven't answered it with a number that ignores it.
-- **LS-231** (wrong_action; expected clarify, got decline) "Thefts from motor vehicles in Kansas City in 2024"
-  - declined (reader): I couldn't interpret "from motor vehicles in" in this question, so I haven't answered it with a number that ignores it.
 - **LS-232** (unverified; expected clarify, got clarify) "How many shoplifting offenses were there in 2024?"
   - unverified option "The United States" : expected `answer`, got `Not in the slice yet: state and national totals come later.`
   - asked which place: The United States | A state | A city or agency
@@ -63,11 +57,12 @@ Discrepancies and unverified cases:
   - unverified option "Property crime" : expected `historical answer`, got `routed to historical: not run by this NIBRS shadow`
   - unverified option "Both" : expected `historical answer`, got `routed to historical: not run by this NIBRS shadow`
   - asked which kind of crime: Violent crime | Property crime | Both
-- **LS-239** (incomplete; expected decline, got decline) "How many shoplifting arrests in Memphis in 2024 led to convictions?"
-  - declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances, so I can't apply "convictions". I haven't 
-- **LS-240** (incomplete; expected decline, got decline) "Will carjackings go up in Memphis next year?"
-  - material reason: expected `forecast: The data records past crime and cannot predict next year.`, got `reader: I couldn't interpret "Will" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret "go up in" in this question, so I hav`
-  - declined (reader): I couldn't interpret "Will" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret "go up in" in this question, so I haven't answered it with a number that igno
+- **LS-239** (unverified; expected decline, got decline) "How many shoplifting arrests in Memphis in 2024 led to convictions?"
+  - unverified alternative : expected `answer`, got `Not in the slice yet: measure "arrests.shoplifting" has no executable definition in v0`
+  - declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.
+- **LS-240** (unverified; expected decline, got decline) "Will carjackings go up in Memphis next year?"
+  - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-241** (avoidable_decline; expected answer, got decline) "Shoplifting arrests in Memphis in 2024"
   - declined (unsupported_capability): Not in the slice yet: measure "arrests.shoplifting" has no executable definition in v0
 - **LS-243** (unverified; expected clarify, got clarify) "Shoplifting in Washington in 2024"
@@ -76,41 +71,76 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-4 cases. Correct 3; unverified 1; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
+29 cases. Correct 17; unverified 7; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 1 | 0 | 0 | 0 |
-| clarify | 0 | 3 | 0 | 0 |
+| answer | 15 | 0 | 3 | 0 |
+| clarify | 0 | 3 | 2 | 0 |
+| decline | 0 | 0 | 6 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs change | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 16 | fail | wrong answers: pass (0); initial action: fail (94% (15/16)); direct answers: fail (94% (0 unverified)); numeric fixtures: pass (15/15 match) |
+| clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
+| clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | 2021 and later | 2 | not measured | wrong answers: pass (0); declines: not measured (0/2 verified correct, 2 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: pass (0); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
 - **LS-245** (unverified; expected clarify, got clarify) "Shoplifting in New York in 2024"
   - unverified option "New York state" : expected `answer`, got `Not in the slice yet: state and national totals come later.`
   - asked which New York: New York City | New York state
+- **LS-260** (unverified; expected decline, got decline) "Will shoplifting rise in Denver next year?"
+  - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - declined (forecast): The data records past crime and cannot predict the future.
+- **LS-261** (unverified; expected decline, got decline) "Can you forecast carjackings in Atlanta for 2027?"
+  - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - declined (forecast): The data records past crime and cannot predict the future.
+- **LS-262** (unverified; expected decline, got decline) "Predict simple assaults in Portland, Oregon next year"
+  - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - declined (forecast): The data records past crime and cannot predict the future.
+- **LS-263** (unverified; expected decline, got decline) "What will carjackings be in Nashville in 2027?"
+  - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - declined (forecast): The data records past crime and cannot predict the future.
+- **LS-264** (unverified; expected decline, got decline) "How many simple assault arrests in Denver in 2023 resulted in a conviction?"
+  - unverified alternative : expected `answer`, got `Not in the slice yet: measure "arrests.simple_assault" has no executable definition in v0`
+  - declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.
+- **LS-265** (unverified; expected decline, got decline) "How many shoplifting cases in Nashville went to trial in 2024?"
+  - unverified alternative : expected `answer`, got `Not in the slice yet: measure "arrests.shoplifting" has no executable definition in v0`
+  - declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.
+- **LS-266** (avoidable_decline; expected answer, got decline) "Motor vehicle thefts in Denver in 2023"
+  - declined (unsupported_capability): Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.
+- **LS-267** (wrong_action; expected clarify, got decline) "Shootings in Nashville in 2024"
+  - declined (reader): NIBRS does not track shootings as a category, so I can't apply "Shootings". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a f
+- **LS-268** (avoidable_decline; expected answer, got decline) "Is shoplifting in Denver up this year compared with last year?"
+  - declined (reader): I can't apply "in 2026": one period per answer. I haven't answered with a number that leaves it out.
+- **LS-269** (avoidable_decline; expected answer, got decline) "How many shoplifting offenses will Denver's 2024 numbers show?"
+  - declined (reader): I couldn't interpret "will" in this question, so I haven't answered it with a number that ignores it.
+- **LS-270** (wrong_action; expected clarify, got decline) "Shplftg in Nashville in 2024"
+  - declined (reader): The question could not be read: no typed reading.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
 ### Development
 
-2 cases. Correct 0; unverified 1; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 1; incomplete 0. Severity score 5 (trend only).
+2 cases. Correct 1; unverified 1; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| clarify | 0 | 1 | 1 | 0 |
+| clarify | 0 | 2 | 0 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
-| clarify:nibrs count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | 2021 and later | 1 | pass | wrong answers: pass (0); clarifications: pass (1/1 verified correct); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
 | clarify:no meaning | no period | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
 
 Discrepancies and unverified cases:
@@ -120,8 +150,6 @@ Discrepancies and unverified cases:
   - unverified option "St. Louis County, Missouri" option "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-10`
   - unverified option "St. Louis County, Missouri" option "Every year available" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri
-- **LS-151** (wrong_action; expected clarify, got decline) "Shoplfting in baltimore per month, 2021-2025"
-  - declined (reader): The question could not be read: no typed reading.
 
 ### Held out
 

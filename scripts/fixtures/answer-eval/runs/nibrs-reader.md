@@ -1,19 +1,19 @@
 # Answer evaluation: nibrs-reader
 
-Labeled set: 245 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
+Labeled set: 270 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
 
 **Level: question -> reader only.** An "answer" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).
 
 ## Execution coverage (can this candidate take the case)
 
-- 119: run by this candidate
+- 144: run by this candidate
 - 118: another source: no adapter for it yet
 - 7: a follow-up: the reader takes one turn
 - 1: a button continuation: the reader returns no structured options
 
 ## Label eligibility (can the case be scored)
 
-- 191: scorable (reviewed, decided policy)
+- 216: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Scored (reviewed labels, decided policy)
@@ -247,25 +247,30 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-12 cases. Correct 1; unverified 0; wrong answers 3; avoidable declines 3; unnecessary clarifications 0; wrong actions 3; incomplete 2. Severity score 377 (trend only).
+37 cases. Correct 2; unverified 0; wrong answers 4; avoidable declines 18; unnecessary clarifications 0; wrong actions 5; incomplete 8. Severity score 793 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| decline | 0 | 0 | 1 | 1 |
-| answer | 4 | 0 | 3 | 0 |
-| clarify | 0 | 0 | 3 | 0 |
+| decline | 0 | 0 | 7 | 1 |
+| answer | 6 | 0 | 15 | 3 |
+| clarify | 0 | 0 | 3 | 2 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
-| answer:historical count | 2021 and later | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical count | 2021 and later | 3 | fail | wrong answers: fail (3); initial action: pass (100% (3/3)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:historical count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: fail (50% (1/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs change | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 17 | fail | wrong answers: fail (1); initial action: fail (12% (2/17)); direct answers: fail (6% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs count | before 2021 | 1 | not measured | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | fail | wrong answers: pass (0); clarifications: fail (0/3 verified correct, 3 failing); initial action: fail (0% (0/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | 2021 and later | 2 | fail | wrong answers: pass (0); declines: fail (0/2 verified correct, 2 failing); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | spans 2021 | 4 | fail | wrong answers: pass (0); declines: fail (0/4 verified correct, 4 failing); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:no meaning | no period | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
@@ -294,6 +299,60 @@ Discrepancies and unverified cases:
   - adapter refused (reason not judged): a place did not resolve
 - **LS-245** (wrong_action; expected clarify, got decline) "Shoplifting in New York in 2024"
   - declined (reason not judged): I can't apply "New York": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
+- **LS-246** (avoidable_decline; expected answer, got no_reading) "Shopliftng in Nashville in 2024"
+  - no typed reading: no answer, no reason
+- **LS-247** (avoidable_decline; expected answer, got no_reading) "How many simple asaults were there in Denver in 2023?"
+  - no typed reading: no answer, no reason
+- **LS-248** (avoidable_decline; expected answer, got no_reading) "carjackngs in Atlanta by month in 2024"
+  - no typed reading: no answer, no reason
+- **LS-249** (avoidable_decline; expected answer, got decline) "Shoplifting in Nashville, Tennesee in 2024"
+  - declined (reason not judged): I couldn't interpret "Tennesee" in this question, so I haven't answered it with a number that ignores it.
+- **LS-250** (avoidable_decline; expected answer, got decline) "Thefts from cars in Portland, Oregon in 2023"
+  - declined (reason not judged): I couldn't interpret "from cars in" in this question, so I haven't answered it with a number that ignores it.
+- **LS-251** (avoidable_decline; expected answer, got decline) "How many thefts from automobiles were there in Atlanta in 2023?"
+  - declined (reason not judged): I couldn't interpret "from automobiles were there in" in this question, so I haven't answered it with a number that ignores it.
+- **LS-252** (avoidable_decline; expected answer, got decline) "Vehicle break-ins in Nashville in 2022"
+  - declined (reason not judged): I couldn't interpret "Vehicle" in this question, so I haven't answered it with a number that ignores it.
+- **LS-254** (avoidable_decline; expected answer, got decline) "Shoplifting in Denver year to date"
+  - declined (reason not judged): I couldn't interpret "year to date" in this question, so I haven't answered it with a number that ignores it.
+- **LS-255** (avoidable_decline; expected answer, got decline) "How much shoplifting has Atlanta had this year?"
+  - declined (reason not judged): I couldn't interpret "had this year" in this question, so I haven't answered it with a number that ignores it.
+- **LS-256** (avoidable_decline; expected answer, got decline) "Carjackings in Nashville so far in 2026"
+  - declined (reason not judged): I couldn't interpret "so far" in this question, so I haven't answered it with a number that ignores it.
+- **LS-257** (avoidable_decline; expected answer, got decline) "Simple assaults in Portland, Oregon this year so far"
+  - declined (reason not judged): I couldn't interpret "this year so far" in this question, so I haven't answered it with a number that ignores it.
+- **LS-258** (avoidable_decline; expected answer, got decline) "Monthly simple assault victims in Portland, Oregon for 2022"
+  - adapter refused (reason not judged): a place did not resolve
+- **LS-259** (avoidable_decline; expected answer, got decline) "carjacking victims in Nashville in 2023"
+  - adapter refused (reason not judged): a place did not resolve
+- **LS-260** (incomplete; expected decline, got decline) "Will shoplifting rise in Denver next year?"
+  - declined (reason not judged): I can't apply "rise": I compare one measure for one place between two named years (for example "from 2023 to 2025"). I haven't answered with a number that leaves it out.
+  - no alternative offered; the label expects one
+- **LS-261** (incomplete; expected decline, got decline) "Can you forecast carjackings in Atlanta for 2027?"
+  - declined (reason not judged): I couldn't interpret "forecast" in this question, so I haven't answered it with a number that ignores it.
+  - no alternative offered; the label expects one
+- **LS-262** (incomplete; expected decline, got decline) "Predict simple assaults in Portland, Oregon next year"
+  - declined (reason not judged): I couldn't interpret "Predict" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret "next year" in this question, so I haven't answered it with a nu
+  - no alternative offered; the label expects one
+- **LS-263** (incomplete; expected decline, got decline) "What will carjackings be in Nashville in 2027?"
+  - declined (reason not judged): I couldn't interpret "will" in this question, so I haven't answered it with a number that ignores it.
+  - no alternative offered; the label expects one
+- **LS-264** (incomplete; expected decline, got decline) "How many simple assault arrests in Denver in 2023 resulted in a conviction?"
+  - declined (reason not judged): I couldn't interpret "resulted in a" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or de
+  - no alternative offered; the label expects one
+- **LS-265** (incomplete; expected decline, got decline) "How many shoplifting cases in Nashville went to trial in 2024?"
+  - declined (reason not judged): I couldn't interpret "went to trial" in this question, so I haven't answered it with a number that ignores it.
+  - no alternative offered; the label expects one
+- **LS-266** (wrong_answer; expected answer, got answer) "Motor vehicle thefts in Denver in 2023"
+  - material source: expected `historical`, got `nibrs`
+- **LS-267** (wrong_action; expected clarify, got no_reading) "Shootings in Nashville in 2024"
+  - no typed reading: no answer, no reason
+- **LS-268** (avoidable_decline; expected answer, got decline) "Is shoplifting in Denver up this year compared with last year?"
+  - declined (reason not judged): I couldn't interpret "up this year" in this question, so I haven't answered it with a number that ignores it. I can't apply "compared with": comparisons are answered as named places side by 
+- **LS-269** (avoidable_decline; expected answer, got decline) "How many shoplifting offenses will Denver's 2024 numbers show?"
+  - declined (reason not judged): I couldn't interpret "will" in this question, so I haven't answered it with a number that ignores it.
+- **LS-270** (wrong_action; expected clarify, got no_reading) "Shplftg in Nashville in 2024"
+  - no typed reading: no answer, no reason
 
 ## PROVISIONAL: drafted labels (never a gate)
 

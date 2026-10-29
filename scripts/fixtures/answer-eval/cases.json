@@ -14454,6 +14454,1506 @@
     "reviewed_by": "codex:slice-1-2",
     "notes": "P26: New York alone asks city or state."
    }
+  },
+  {
+   "id": "LS-246",
+   "group": "designed:reader-spell-shop",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shopliftng in Nashville in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Metropolitan Nashville Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "A misspelled crime with one near word: read as shoplifting."
+   }
+  },
+  {
+   "id": "LS-247",
+   "group": "designed:reader-spell-sa",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many simple asaults were there in Denver in 2023?",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P09",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Misspelled 'assaults'; simple assault named, a person crime by victim (D18)."
+   }
+  },
+  {
+   "id": "LS-248",
+   "group": "designed:reader-spell-cj",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "carjackngs in Atlanta by month in 2024",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Atlanta Police Department",
+       "state": "GA"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Atlanta Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Misspelled carjackings; by offense (D18)."
+   }
+  },
+  {
+   "id": "LS-249",
+   "group": "designed:reader-spell-state",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Nashville, Tennesee in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Metropolitan Nashville Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "A misspelled state, one near state."
+   }
+  },
+  {
+   "id": "LS-250",
+   "group": "designed:reader-phrase-cars",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Thefts from cars in Portland, Oregon in 2023",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Portland Police Bureau",
+       "state": "OR"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Portland Police Bureau)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Theft from a motor vehicle, plural and 'cars'; a NIBRS-only larceny subtype (P01)."
+   }
+  },
+  {
+   "id": "LS-251",
+   "group": "designed:reader-phrase-autos",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many thefts from automobiles were there in Atlanta in 2023?",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Atlanta Police Department",
+       "state": "GA"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Atlanta Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Theft from a motor vehicle, 'automobiles'."
+   }
+  },
+  {
+   "id": "LS-252",
+   "group": "designed:reader-phrase-breakins",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Vehicle break-ins in Nashville in 2022",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2022-01",
+      "to": "2022-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Metropolitan Nashville Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "A vehicle break-in is theft from a motor vehicle, not burglary."
+   }
+  },
+  {
+   "id": "LS-253",
+   "group": "designed:reader-phrase-control",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "theft from a motor vehicle in Denver in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Control: a wording the reader already reads."
+   }
+  },
+  {
+   "id": "LS-254",
+   "group": "designed:reader-ytd-denver",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Denver year to date",
+   "policy": [
+    "D06",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "rule": "year to date through the latest month"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months covered",
+     "names the agency (Denver Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "D06: year to date, the months covered named."
+   }
+  },
+  {
+   "id": "LS-255",
+   "group": "designed:reader-ytd-atlanta",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How much shoplifting has Atlanta had this year?",
+   "policy": [
+    "D06",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Atlanta Police Department",
+       "state": "GA"
+      }
+     ],
+     "period": {
+      "rule": "year to date through the latest month"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months covered",
+     "names the agency (Atlanta Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "'This year': the current year so far (D06)."
+   }
+  },
+  {
+   "id": "LS-256",
+   "group": "designed:reader-ytd-nashville",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Carjackings in Nashville so far in 2026",
+   "policy": [
+    "D06",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "rule": "year to date through the latest month"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months covered",
+     "names the agency (Metropolitan Nashville Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "'So far in 2026' (the current year): through the latest month (D06)."
+   }
+  },
+  {
+   "id": "LS-257",
+   "group": "designed:reader-ytd-portland",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assaults in Portland, Oregon this year so far",
+   "policy": [
+    "D06",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Portland Police Bureau",
+       "state": "OR"
+      }
+     ],
+     "period": {
+      "rule": "year to date through the latest month"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months covered",
+     "names the agency (Portland Police Bureau)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "D06; simple assault by victim (D18)."
+   }
+  },
+  {
+   "id": "LS-258",
+   "group": "designed:reader-month-portland",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Monthly simple assault victims in Portland, Oregon for 2022",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Portland Police Bureau",
+       "state": "OR"
+      }
+     ],
+     "period": {
+      "from": "2022-01",
+      "to": "2022-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Portland Police Bureau)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "'Monthly' is a month grouping."
+   }
+  },
+  {
+   "id": "LS-259",
+   "group": "designed:reader-victims-cj",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "carjacking victims in Nashville in 2023",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P11",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Property crimes are counted by offense, not by victim.",
+     "names the agency (Metropolitan Nashville Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "P11: carjacking is robbery-based, a property crime: offenses, with the sentence."
+   }
+  },
+  {
+   "id": "LS-260",
+   "group": "designed:reader-forecast-denver",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Will shoplifting rise in Denver next year?",
+   "policy": [
+    "D18",
+    "P16",
+    "P20"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data records past crime and cannot predict next year.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "rule": "last 10 complete years"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "P20."
+   }
+  },
+  {
+   "id": "LS-261",
+   "group": "designed:reader-forecast-atlanta",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Can you forecast carjackings in Atlanta for 2027?",
+   "policy": [
+    "D18",
+    "P16",
+    "P20"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data records past crime and cannot predict next year.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Atlanta Police Department",
+       "state": "GA"
+      }
+     ],
+     "period": {
+      "rule": "last 10 complete years"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "P20: a forecast, not merely a year after the data."
+   }
+  },
+  {
+   "id": "LS-262",
+   "group": "designed:reader-forecast-portland",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Predict simple assaults in Portland, Oregon next year",
+   "policy": [
+    "D18",
+    "P16",
+    "P20"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data records past crime and cannot predict next year.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Portland Police Bureau",
+       "state": "OR"
+      }
+     ],
+     "period": {
+      "rule": "last 10 complete years"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "P20."
+   }
+  },
+  {
+   "id": "LS-263",
+   "group": "designed:reader-forecast-nashville",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "What will carjackings be in Nashville in 2027?",
+   "policy": [
+    "D18",
+    "P16",
+    "P20"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data records past crime and cannot predict next year.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "rule": "last 10 complete years"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "P20: 'what will ... be' asks for a prediction."
+   }
+  },
+  {
+   "id": "LS-264",
+   "group": "designed:reader-court-denver",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many simple assault arrests in Denver in 2023 resulted in a conviction?",
+   "policy": [
+    "D01",
+    "P16"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "Court outcomes such as convictions are not in the data; it records police arrests and clearances.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "D01, as LS-201."
+   }
+  },
+  {
+   "id": "LS-265",
+   "group": "designed:reader-court-nashville",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many shoplifting cases in Nashville went to trial in 2024?",
+   "policy": [
+    "D01",
+    "P16"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "Court outcomes such as convictions are not in the data; it records police arrests and clearances.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "D01: trials are court outcomes; offer the arrests."
+   }
+  },
+  {
+   "id": "LS-266",
+   "group": "designed:reader-b-mvt",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Motor vehicle thefts in Denver in 2023",
+   "policy": [
+    "D18",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "motor vehicle theft",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Boundary: motor vehicle theft is not theft from a motor vehicle. A completed-year Part I count: Historical (P01)."
+   }
+  },
+  {
+   "id": "LS-267",
+   "group": "designed:reader-b-shootings",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shootings in Nashville in 2024",
+   "policy": [
+    "D14",
+    "D18",
+    "D28",
+    "P01",
+    "P10",
+    "P16",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "fatal or non-fatal shootings",
+    "options": [
+     {
+      "label": "Fatal shootings",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "shr",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Metropolitan Nashville Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "murder",
+         "unit": "victim"
+        }
+       ],
+       "filters": [
+        "weapon: firearm"
+       ],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Aggravated assaults with a firearm (includes people not hit)",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Metropolitan Nashville Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "aggravated assault",
+         "unit": "victim"
+        }
+       ],
+       "filters": [
+        "weapon: firearm"
+       ],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Boundary: 'shootings' is a real word, never corrected toward shoplifting; D14 asks, as LS-202."
+   }
+  },
+  {
+   "id": "LS-268",
+   "group": "designed:reader-b-ytd-compare",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Is shoplifting in Denver up this year compared with last year?",
+   "policy": [
+    "D06",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2026-10"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "the same months of each year: January through the latest month"
+     ],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "change"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months compared",
+     "compares the same months of each year",
+     "names the agency (Denver Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve."
+   }
+  },
+  {
+   "id": "LS-269",
+   "group": "designed:reader-b-will-past",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many shoplifting offenses will Denver's 2024 numbers show?",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Boundary: 'will' about a past year is not a forecast."
+   }
+  },
+  {
+   "id": "LS-270",
+   "group": "designed:reader-b-nonword",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shplftg in Nashville in 2024",
+   "policy": [
+    "D09",
+    "D18",
+    "D31",
+    "P01",
+    "P16",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which kind of crime",
+    "options": [
+     {
+      "label": "Violent crime",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "historical",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Metropolitan Nashville Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "violent crime",
+         "unit": "victim (robbery by offense)"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Property crime",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "historical",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Metropolitan Nashville Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "property crime",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Both",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "historical",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Metropolitan Nashville Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "violent crime",
+         "unit": "victim (robbery by offense)"
+        },
+        {
+         "name": "property crime",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-reader",
+    "reviewed_by": "codex:reader-labels-1",
+    "notes": "Boundary: a word near no crime is not guessed; the crime is missing, so ask (D31/D09), as LS-235."
+   }
   }
  ]
 }

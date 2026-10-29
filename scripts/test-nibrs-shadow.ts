@@ -120,8 +120,8 @@ assert.equal(future.explanation, "2027 is not in the data; the latest month avai
 assert.deepEqual(as(future.alternative!.continuation!, "answer").period, { from: "2026-01", to: "2026-10" });
 assert.equal(as(ask("Shoplifting in Memphis in 2012"), "decline").notBuilt, true);
 assert.match(as(ask("Drug crimes in Detroit in 2024"), "decline").explanation, /D19/);
-// No question is asked when every choice ends in the same refusal (D28): the reader cannot read "Shoplfting".
-assert.equal(as(ask("Shoplfting in baltimore per month, 2021-2025"), "decline").reason, "reader");
+// No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
+assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
 // Codex review 1: what the slice cannot deliver is declined before anything runs or is asked; P11 covers carjacking;
 // a future month is named as asked; P26 asks city or state for "New York".
@@ -203,5 +203,28 @@ const stripped = { ...victimsNoPeriod, options: victimsNoPeriod.options.map((o, 
 const vLabel: Case = { ...label(np), question: "Shoplifting victims in Memphis" };
 assert.equal(scoreShadow(vLabel, victimsNoPeriod, r, ctx, both(84)).result!.outcome, "correct");
 assert.equal(scoreShadow(vLabel, stripped, r, ctx, both(84)).result!.outcome, "incomplete");
+
+// The reading pre-pass (reader round): forecasts and court outcomes decline with their alternatives (P20, D01); a
+// corrected spelling is disclosed before the source; Part I counts are left to Historical and Current Trends (P01).
+const fc = as(ask("Will shoplifting go up in Memphis next year?"), "decline");
+assert.deepEqual([fc.reason, fc.alternative!.label], ["forecast", "The last 10 complete years, by year"]);
+assert.equal(as(fc.alternative!.continuation!, "decline").notBuilt, true, "2016 is before this build");
+// A forecast verb the reader reads as a change ("increase") is dropped from the alternative too.
+assert.equal(as(as(ask("Will carjackings increase in Memphis in 2027?"), "decline").alternative!.continuation!, "decline").notBuilt, true);
+// Codex review 2: with the years present, the forecast's alternative reaches an annual answer (its two filled parts no
+// longer share a binding); a real word is never corrected into a crime; P01 leaves a crime's details to NIBRS's limits.
+const deeper: ShadowDeps = { ...deps, release: { ...deps.release, firstMonth: "2016-01" }, target: { ...deps.target, builtYears: [2016, ...deps.target.builtYears] } };
+const fcAlt = as(as(shadowAnswer("Will shoplifting rise in Memphis next year?", deeper), "decline").alternative!.continuation!, "answer");
+assert.deepEqual([fcAlt.period, fcAlt.plan.groupings.map((g) => g.dimension)], [{ from: "2016-01", to: "2025-12" }, ["time.year"]]);
+assert.equal(as(shadowAnswer("Will shoplifting near schools rise in Memphis next year?", deeper), "decline").alternative!.continuation!.kind, "decline", "an unread qualifier stays, so the narrower alternative declines");
+assert.notEqual(ask("Sample assaults in Memphis in 2023").kind, "answer");
+for (const q of ["Robberies with a firearm in Memphis in 2023", "Robbery arrests in Memphis in 2023"]) assert.doesNotMatch(as(ask(q), "decline").explanation, /P01/, q);
+assert.equal(as(ask("Shoplifting in Memphis next year"), "decline").reason, "outside_release_coverage", "P24, not a forecast");
+assert.equal(as(ask("Predicting shoplifting in Memphis in 2027"), "decline").reason, "forecast");
+const ct = as(ask("How many shoplifting arrests in Memphis in 2024 led to convictions?"), "decline");
+assert.deepEqual([ct.reason, ct.alternative!.label], ["court_outcome", "Arrests for the same crime, place and period"]);
+const typo = as(ask("Shoplfting in Memphis in 2023"), "answer");
+assert.equal(typo.delivered.text.at(-2), 'Read "Shoplfting" as shoplifting.');
+assert.match(as(ask("Burglaries in Memphis in 2023"), "decline").explanation, /P01/);
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

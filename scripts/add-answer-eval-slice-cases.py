@@ -38,6 +38,10 @@ AG = {
     "washington_md": {"kind": "agency", "name": "Washington County Sheriff's Office", "state": "MD"},
     "columbus_ga": {"kind": "agency", "name": "Columbus Police Department", "state": "GA"},
     "nyc": {"kind": "agency", "name": "New York City Police Department", "state": "NY"},
+    "nashville": {"kind": "agency", "name": "Metropolitan Nashville Police Department", "state": "TN"},
+    "denver": {"kind": "agency", "name": "Denver Police Department", "state": "CO"},
+    "portland": {"kind": "agency", "name": "Portland Police Bureau", "state": "OR"},
+    "atlanta": {"kind": "agency", "name": "Atlanta Police Department", "state": "GA"},
 }
 
 
@@ -186,6 +190,82 @@ SLICE = [
      "P26: New York alone asks city or state."),
 ]
 
+# The reader round's fresh cases (2026-10-29): new wordings, crimes and places, written and labeled from policy BEFORE
+# the reader changes ran, and held out as a whole: the reader is never tuned on them. Each new reading has boundary
+# cases that must still decline, ask, or keep their own meaning.
+READER_DRAFTER = "claude-reader"
+SA = [("simple assault", "victim")]
+YTD = {"rule": "year to date through the latest month"}
+LAST10 = {"rule": "last 10 complete years"}
+FORECAST = "The data records past crime and cannot predict next year."
+COURT = "Court outcomes such as convictions are not in the data; it records police arrests and clearances."
+MONTHS = "names the months covered"
+READER = [
+    ("reader-spell-shop", "Shopliftng in Nashville in 2024", ["D18", "D30", "P01", "P16"],
+     answer(meaning("nashville", year(2024), SHOP), names("nashville"), SOURCE_LAST), "A misspelled crime with one near word: read as shoplifting."),
+    ("reader-spell-sa", "How many simple asaults were there in Denver in 2023?", ["D18", "D30", "P01", "P09", "P16"],
+     answer(meaning("denver", year(2023), SA), names("denver"), SOURCE_LAST), "Misspelled 'assaults'; simple assault named, a person crime by victim (D18)."),
+    ("reader-spell-cj", "carjackngs in Atlanta by month in 2024", ["D04", "D18", "D30", "P01", "P16"],
+     answer(meaning("atlanta", year(2024), CARJACK, ["month"]), names("atlanta"), MISSING, SOURCE_LAST), "Misspelled carjackings; by offense (D18)."),
+    ("reader-spell-state", "Shoplifting in Nashville, Tennesee in 2024", ["D18", "D30", "P01", "P16"],
+     answer(meaning("nashville", year(2024), SHOP), names("nashville"), SOURCE_LAST), "A misspelled state, one near state."),
+    ("reader-phrase-cars", "Thefts from cars in Portland, Oregon in 2023", ["D18", "D30", "P01", "P16"],
+     answer(meaning("portland", year(2023), TFMV), names("portland"), SOURCE_LAST), "Theft from a motor vehicle, plural and 'cars'; a NIBRS-only larceny subtype (P01)."),
+    ("reader-phrase-autos", "How many thefts from automobiles were there in Atlanta in 2023?", ["D18", "D30", "P01", "P16"],
+     answer(meaning("atlanta", year(2023), TFMV), names("atlanta"), SOURCE_LAST), "Theft from a motor vehicle, 'automobiles'."),
+    ("reader-phrase-breakins", "Vehicle break-ins in Nashville in 2022", ["D18", "D30", "P01", "P16"],
+     answer(meaning("nashville", year(2022), TFMV), names("nashville"), SOURCE_LAST), "A vehicle break-in is theft from a motor vehicle, not burglary."),
+    ("reader-phrase-control", "theft from a motor vehicle in Denver in 2024", ["D18", "D30", "P01", "P16"],
+     answer(meaning("denver", year(2024), TFMV), names("denver"), SOURCE_LAST), "Control: a wording the reader already reads."),
+    ("reader-ytd-denver", "Shoplifting in Denver year to date", ["D06", "D18", "D30", "P01", "P16"],
+     answer(meaning("denver", YTD, SHOP), MONTHS, names("denver"), SOURCE_LAST), "D06: year to date, the months covered named."),
+    ("reader-ytd-atlanta", "How much shoplifting has Atlanta had this year?", ["D06", "D18", "D30", "P01", "P16"],
+     answer(meaning("atlanta", YTD, SHOP), MONTHS, names("atlanta"), SOURCE_LAST), "'This year': the current year so far (D06)."),
+    ("reader-ytd-nashville", "Carjackings in Nashville so far in 2026", ["D06", "D18", "D30", "P01", "P16"],
+     answer(meaning("nashville", YTD, CARJACK), MONTHS, names("nashville"), SOURCE_LAST), "'So far in 2026' (the current year): through the latest month (D06)."),
+    ("reader-ytd-portland", "Simple assaults in Portland, Oregon this year so far", ["D06", "D18", "D30", "P01", "P16"],
+     answer(meaning("portland", YTD, SA), MONTHS, names("portland"), SOURCE_LAST), "D06; simple assault by victim (D18)."),
+    ("reader-month-portland", "Monthly simple assault victims in Portland, Oregon for 2022", ["D04", "D18", "D30", "P01", "P16"],
+     answer(meaning("portland", year(2022), SA, ["month"]), names("portland"), MISSING, SOURCE_LAST), "'Monthly' is a month grouping."),
+    ("reader-victims-cj", "carjacking victims in Nashville in 2023", ["D18", "D30", "P01", "P11", "P16"],
+     answer(meaning("nashville", year(2023), CARJACK), "Property crimes are counted by offense, not by victim.", names("nashville"), SOURCE_LAST),
+     "P11: carjacking is robbery-based, a property crime: offenses, with the sentence."),
+    ("reader-forecast-denver", "Will shoplifting rise in Denver next year?", ["D18", "P16", "P20"],
+     {"action": "decline", "reason": FORECAST, "alternative": meaning("denver", LAST10, SHOP, ["year"])}, "P20."),
+    ("reader-forecast-atlanta", "Can you forecast carjackings in Atlanta for 2027?", ["D18", "P16", "P20"],
+     {"action": "decline", "reason": FORECAST, "alternative": meaning("atlanta", LAST10, CARJACK, ["year"])}, "P20: a forecast, not merely a year after the data."),
+    ("reader-forecast-portland", "Predict simple assaults in Portland, Oregon next year", ["D18", "P16", "P20"],
+     {"action": "decline", "reason": FORECAST, "alternative": meaning("portland", LAST10, SA, ["year"])}, "P20."),
+    ("reader-forecast-nashville", "What will carjackings be in Nashville in 2027?", ["D18", "P16", "P20"],
+     {"action": "decline", "reason": FORECAST, "alternative": meaning("nashville", LAST10, CARJACK, ["year"])}, "P20: 'what will ... be' asks for a prediction."),
+    ("reader-court-denver", "How many simple assault arrests in Denver in 2023 resulted in a conviction?", ["D01", "P16"],
+     {"action": "decline", "reason": COURT, "alternative": meaning("denver", year(2023), [("simple assault", "arrest")])}, "D01, as LS-201."),
+    ("reader-court-nashville", "How many shoplifting cases in Nashville went to trial in 2024?", ["D01", "P16"],
+     {"action": "decline", "reason": COURT, "alternative": meaning("nashville", year(2024), [("shoplifting", "arrest")])}, "D01: trials are court outcomes; offer the arrests."),
+    # Boundaries: these must not be read as the new readings above.
+    ("reader-b-mvt", "Motor vehicle thefts in Denver in 2023", ["D18", "P01", "P16"],
+     answer(meaning("denver", year(2023), [("motor vehicle theft", "offense")], source="historical"), names("denver"), SOURCE_LAST),
+     "Boundary: motor vehicle theft is not theft from a motor vehicle. A completed-year Part I count: Historical (P01)."),
+    ("reader-b-shootings", "Shootings in Nashville in 2024", ["D14", "D18", "D28", "P01", "P10", "P16", "P22"],
+     {"action": "clarify", "about": "fatal or non-fatal shootings", "options": [
+         {"label": "Fatal shootings", "leads_to": "answer", "meaning": dict(meaning("nashville", year(2024), [("murder", "victim")], source="shr"), filters=["weapon: firearm"])},
+         {"label": "Aggravated assaults with a firearm (includes people not hit)", "leads_to": "answer", "meaning": dict(meaning("nashville", year(2024), [("aggravated assault", "victim")]), filters=["weapon: firearm"])}]},
+     "Boundary: 'shootings' is a real word, never corrected toward shoplifting; D14 asks, as LS-202."),
+    ("reader-b-ytd-compare", "Is shoplifting in Denver up this year compared with last year?", ["D06", "D18", "D30", "P01", "P16"],
+     {"action": "answer", "meaning": dict(meaning("denver", {"from": "2025-01", "to": "2026-10"}, SHOP, ["year"]), statistic="change",
+                                          filters=["the same months of each year: January through the latest month"]),
+      "values": {"status": "pending_build"}, "statements": ["names the months compared", "compares the same months of each year", names("denver"), SOURCE_LAST]},
+     "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve."),
+    ("reader-b-will-past", "How many shoplifting offenses will Denver's 2024 numbers show?", ["D18", "D30", "P01", "P16"],
+     answer(meaning("denver", year(2024), SHOP), names("denver"), SOURCE_LAST), "Boundary: 'will' about a past year is not a forecast."),
+    ("reader-b-nonword", "Shplftg in Nashville in 2024", ["D09", "D18", "D31", "P01", "P16", "P22"],
+     {"action": "clarify", "about": "which kind of crime", "options": [
+         {"label": "Violent crime", "leads_to": "answer", "meaning": meaning("nashville", year(2024), [("violent crime", "victim (robbery by offense)")], source="historical")},
+         {"label": "Property crime", "leads_to": "answer", "meaning": meaning("nashville", year(2024), [("property crime", "offense")], source="historical")},
+         {"label": "Both", "leads_to": "answer", "meaning": meaning("nashville", year(2024), [("violent crime", "victim (robbery by offense)"), ("property crime", "offense")], source="historical")}]},
+     "Boundary: a word near no crime is not guessed; the crime is missing, so ask (D31/D09), as LS-235."),
+]
+
 # Replay labels P28 changes (reviewed before P28): drafted again, for review.
 RELABEL = {
     "LS-151": (["P22", "P28"], choose("which Baltimore",
@@ -200,6 +280,7 @@ RELABEL = {
 
 args = sys.argv[1:]
 reviewer = args[1] if args[:1] == ["--reviewed-by"] else None
+reader_reviewer = args[1] if args[:1] == ["--reader-reviewed-by"] else None
 data = json.load(open(CASES, encoding="utf-8"))
 have = {(c["group"], c["question"]) for c in data["cases"]}
 added = 0
@@ -222,7 +303,25 @@ for g, q, pol, exp, notes in SLICE:
         "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
         "label": {"status": "drafted", "drafted_by": DRAFTER, "reviewed_by": None, "notes": notes}})
     added += 1
+for g, q, pol, exp, notes in READER:
+    group = f"designed:{g}"
+    if (group, q) in have:
+        old = next(c for c in data["cases"] if (c["group"], c["question"]) == (group, q))
+        if old["label"]["drafted_by"] == READER_DRAFTER and old["label"]["status"] == "drafted":
+            old.update(policy=pol, expected=exp)
+            old["label"]["notes"] = notes
+        continue
+    data["cases"].append({
+        "id": f"LS-{len(data['cases']) + 1:03d}", "group": group, "split": "heldout",
+        "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
+        "label": {"status": "drafted", "drafted_by": READER_DRAFTER, "reviewed_by": None, "notes": notes}})
+    added += 1
 marked = 0
+if reader_reviewer:
+    for c in data["cases"]:
+        if c["label"]["drafted_by"] == READER_DRAFTER and c["label"]["status"] == "drafted":
+            c["label"].update(status="reviewed", reviewed_by=reader_reviewer)
+            marked += 1
 if reviewer:
     for c in data["cases"]:
         if c["label"]["drafted_by"] == DRAFTER and c["label"]["status"] == "drafted":
@@ -231,4 +330,4 @@ if reviewer:
 with open(CASES, "w", encoding="utf-8", newline="\n") as f:
     json.dump(data, f, indent=1, ensure_ascii=False)
     f.write("\n")
-print(f"added {added} slice cases; marked {marked} reviewed; {len(data['cases'])} cases")
+print(f"added {added} cases; marked {marked} reviewed; {len(data['cases'])} cases")

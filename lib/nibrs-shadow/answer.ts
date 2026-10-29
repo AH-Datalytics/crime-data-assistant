@@ -21,7 +21,7 @@
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import type { Part, RequestLedger } from "../request-accounting";
-import { accountNibrsRequest } from "../nibrs-request-accounting";
+import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Reading } from "./reading";
 import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
 import { planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
@@ -66,9 +66,12 @@ const decline = (reason: LimitationReason | "reader", explanation: string, extra
 function withParts(ledger: RequestLedger, parts: Part[]): RequestLedger {
   return Object.assign(Object.create(Object.getPrototypeOf(ledger)), ledger, { parts });
 }
-/** A choice filled in by a button: a part appended to the question's clause 0 (P22: nothing else changes). */
+/**
+ * A choice filled in by a button: a part appended to the question's clause 0 (P22: nothing else changes). Each filled
+ * part gets its own span past the question's end, so two filled parts never share a binding identity.
+ */
 function filled(ledger: RequestLedger, concept: string, value: string, text: string): RequestLedger {
-  const n = ledger.question.length;
+  const n = ledger.question.length + 1 + ledger.parts.filter((p) => p.rule === "shadow:button").length;
   const part = { concept, value, span: [n, n], text, explains: [[n, n]], clause: 0, rule: "shadow:button", state: "recognized", explanation: null } as unknown as Part;
   return withParts(ledger, [...ledger.parts.filter((p) => !(p.clause === 0 && p.concept === concept)), part]);
 }
@@ -83,17 +86,46 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 }
 
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
-  return fromLedger(accountNibrsRequest(question), deps);
+  return fromLedger(readQuestion(question, Number(deps.release.lastMonth.slice(0, 4))).ledger, deps);
 }
+
+/** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */
+type Read = { readings?: Reading[]; forecast?: boolean; court?: boolean };
+const flags = (l: RequestLedger) => l as RequestLedger & Read;
+const unflagged = (l: RequestLedger) => Object.assign(l, { forecast: false, court: false });
+
+/** P20: the same place and crime over the last 10 complete years, by year (the question's own period and words dropped). */
+function trendAlternative(ledger: RequestLedger, deps: ShadowDeps): ShadowOption {
+  // Only the forecast's own words go: its verb ("rise", "go up": a change word, or unread forecast wording) and its period
+  // ("next year", "2027"). Anything else the question asked keeps its part, and the alternative answers it or declines.
+  const keep = ledger.parts.filter((p) => !(p.clause === 0 && ((p.state === "not-interpreted" && FORECAST_TEXT.test(p.text)) || ["period", "grain", "change"].includes(p.concept))));
+  const l = filled(filled(unflagged(withParts(ledger, keep)), "grain", "year", "by year"), "period", "last:10", "the last 10 complete years");
+  return { label: "The last 10 complete years, by year", continuation: fromLedger(l, deps) };
+}
+/** D01: the arrests for the same crime, place and period, which the data does record. */
+function arrestsAlternative(ledger: RequestLedger, deps: ShadowDeps): ShadowOption {
+  // Only the court outcome's own words go ("convictions", "led to", "went to trial"); anything else keeps its part.
+  const keep = ledger.parts.filter((p) => !(p.clause === 0 && ((p.state === "not-recorded" && p.concept === "court") || (p.state === "not-interpreted" && COURT_TEXT.test(p.text))
+    || p.concept === "unit" || (p.concept === "measure" && p.value === "unspecified"))));
+  return { label: "Arrests for the same crime, place and period", continuation: fromLedger(filled(unflagged(withParts(ledger, keep)), "unit", "arrests", "arrests"), deps) };
+}
+const COURT_SENTENCE = "NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.";
+const FORECAST_SENTENCE = "The data records past crime and cannot predict the future.";
+
+/** P01: crimes whose completed years are Historical's and whose current year is Current Trends'; NIBRS answers their details. */
+const PART_ONE = new Set(["murder", "homicide", "rape", "robbery", "aggravated_assault", "burglary", "theft", "motor_vehicle_theft", "arson", "violent_crime", "property_crime"]);
 
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
 function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const { release } = deps;
   const clause0 = (c: string) => ledger0.parts.filter((p) => p.clause === 0 && p.concept === c && p.state !== "context");
 
-  // A part the data does not record (a ZIP code, a conviction) is declined first: asking which place, period or crime
-  // is meant in a question that cannot be answered would be an unnecessary question (D28).
+  // A question about the future, or about court outcomes, is declined first, with the nearest question the data answers
+  // (P20, D01); its leftover words are not reasons. So is any other part the data does not record (a ZIP code): asking
+  // which place, period or crime is meant in a question that cannot be answered would be an unnecessary question (D28).
   const unrecorded = ledger0.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
+  if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
+  if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
   if (unrecorded.length) {
     const why = unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
     return decline(readerReason(why), why);
@@ -140,6 +172,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (d.kind === "none") return decline("reader", "The question could not be read: no typed reading.");
   if (d.kind === "decline") return decline(readerReason(d.explanation), d.explanation);
   if (d.kind === "clarify") return decline("reader", `The reader asked in text only: ${d.explanation}`);
+  // P01: a standard (Part I) crime's count is Historical's (completed years) or Current Trends' (this year), not this
+  // NIBRS shadow's; it is declined rather than answered from the wrong source.
+  // Only a plain count of the crime: its details (a weapon, arrests, clearances, a breakdown) are NIBRS's, and go on to
+  // the slice's own limits.
+  const asked = d.spec.type === "series" && !d.spec.filters.length && (d.spec.unit === null || ["offenses", "victims", "incidents"].includes(d.spec.unit))
+    && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept)) ? d.spec.measures : [];
+  if (asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
+
   // The plan.
   const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v) => resolved.get(v) ?? null });
   if (a.kind === "unmapped") return decline("unsupported_capability", `No plan form for this reading: ${a.reason}`);
@@ -219,7 +259,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const rows = deps.execute(c.query.sql);
   const refused = rows.filter((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i]))));
   if (refused.length) return decline("unsupported_capability", "The records for this agency and period conflict with its monthly reporting status, so no number is given.");
-  const delivered = deliver(checked, period, requestedTo, c.query.columns, rows, [...c.query.statements, ...statements], release.id);
+  const notes = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
+  const delivered = deliver(checked, period, requestedTo, c.query.columns, rows, [...c.query.statements, ...statements], release.id, notes);
   if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
   return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered };
 }
