@@ -2412,6 +2412,15 @@
       "note": "NIBRS engine restructure: today's reader (request ledger + typed spec) adapted to plan-language plans; frozen release questions, forms and refusals; a stand-in place authority, no database, no model, no network"
     },
     {
+      "id": "test-nibrs-compile",
+      "tier": "F",
+      "script": "scripts/test-nibrs-compile.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS engine step 2: the plan -> DuckDB compiler v0 emits SQL for the simplest forms and refuses the rest with a reason; SQL is checked, not run (scripts/nibrs-compile-gate.ts runs it locally against a canonical build)"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",
