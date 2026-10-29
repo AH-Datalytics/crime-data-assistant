@@ -7260,9 +7260,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Period missing: ask (P06), superseding the ten-year span Codex preserved. Carjacking is a robbery-based measure: unit offense (Codex, D18). NIBRS-only detail. The 'Another ...', 'A state' and 'A city or agency' buttons open an entry, so their meaning is null (no fixed question). [superseded by D31] [codex labels-2 fix applied: 'Another range' leads to clarify (which range of years); added D28, P22] [superseded by P28: P28 (Jeff 2026-10-29): ask which St. Louis first; the years are asked next, one part at a time (D31).]"
    }
   },
@@ -7820,9 +7820,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Shoplifting by month is a NIBRS-only detail (P01). Added the source statement (D30). [superseded by P28: P28 (Jeff 2026-10-29): Baltimore names a city and a county of 100,000+, so ask first; each button keeps crime, months and grouping.]"
    }
   },
@@ -12600,9 +12600,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Shoplifting is a NIBRS-only detail (P01). Memphis means the city's principal police agency (P16). Property crime by offense (D18)."
    }
   },
@@ -12657,9 +12657,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Paraphrase of the first case in its group."
    }
   },
@@ -12714,9 +12714,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Paraphrase, state named."
    }
   },
@@ -12773,9 +12773,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P11: victims of a property crime -> offenses, with the fixed sentence."
    }
   },
@@ -12864,9 +12864,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P28: Baltimore names a city and a county of 100,000+, so ask; each button keeps crime, months and grouping (P22). [superseded by P28]"
    }
   },
@@ -12955,9 +12955,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P28: St. Louis names a city and a county of 100,000+ (the St. Louis County, Minnesota sheriff serves under 100,000). Carjacking by offense (D18). [superseded by P28]"
    }
   },
@@ -13015,9 +13015,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Carjacking by offense (D18)."
    }
   },
@@ -13073,9 +13073,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Simple assault asked for by name (P09); a crime against persons, counted by victim (D18). NIBRS-only detail (P01)."
    }
   },
@@ -13133,9 +13133,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Person crime by victim (D18)."
    }
   },
@@ -13190,9 +13190,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Theft from a motor vehicle is a larceny subtype only NIBRS holds (P01); by offense (D18). The agency is the Columbus Division of Police."
    }
   },
@@ -13253,9 +13253,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "D19: drug crimes are drug/narcotic plus drug equipment violations."
    }
   },
@@ -13311,9 +13311,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "D06: year to date through the latest month, months named. Current Trends has no shoplifting, so NIBRS (P01)."
    }
   },
@@ -13395,9 +13395,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Two cities of this name in two states, both large: materially different readings (D28). A button keeps crime and year (P22)."
    }
   },
@@ -13465,9 +13465,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P12/D31: ask for the missing place. Shoplifting stays on NIBRS (P01), counted from reporting agencies."
    }
   },
@@ -13555,9 +13555,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P06 single figure: the latest complete year, named (2025 for this release); this year so far; another year. NIBRS for both (P01: no shoplifting in Current Trends). Codex slice review 1: the year is named."
    }
   },
@@ -13649,9 +13649,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P06 trend: last 10 complete years; every year available; another range. The month breakdown is kept (P22)."
    }
   },
@@ -13766,9 +13766,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "D09 bare 'crime': violent; property; both. Completed-year Part I counts go to Historical (P01), as LS-196."
    }
   },
@@ -13815,9 +13815,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P24: say the year is not in the data, name the latest month, offer the latest year available."
    }
   },
@@ -13873,9 +13873,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "NIBRS holds 2012 for Memphis in the full data. The shadow build starts in 2017, so it may only refuse this one as not built."
    }
   },
@@ -13899,9 +13899,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "D02: say so and stop (as LS-141)."
    }
   },
@@ -13948,9 +13948,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "D01, as LS-201: offer the arrests."
    }
   },
@@ -13999,9 +13999,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P20: decline, offer the last 10 complete years for the same place and measure."
    }
   },
@@ -14056,9 +14056,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "Arrests asked for by name: counted by arrest."
    }
   },
@@ -14140,9 +14140,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P28: a city and a county share the name, both 100,000+."
    }
   },
@@ -14279,9 +14279,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P28: the name is a state, so the state is always offered, beside D.C. and the Washington County agencies of 100,000+ (Oregon, Maryland). Shoplifting stays on NIBRS (P01)."
    }
   },
@@ -14363,9 +14363,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P28: two states have a Columbus of 100,000+."
    }
   },
@@ -14449,9 +14449,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-slice",
-    "reviewed_by": null,
+    "reviewed_by": "codex:slice-1-2",
     "notes": "P26: New York alone asks city or state."
    }
   }
