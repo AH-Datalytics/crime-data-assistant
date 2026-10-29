@@ -90,7 +90,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */
-type Read = { readings?: Reading[]; forecast?: boolean; court?: boolean };
+type Read = { readings?: Reading[]; forecast?: boolean; court?: boolean; offenders?: boolean };
 const flags = (l: RequestLedger) => l as RequestLedger & Read;
 const unflagged = (l: RequestLedger) => Object.assign(l, { forecast: false, court: false });
 
@@ -126,6 +126,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const unrecorded = ledger0.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
+  // P29: "by <group>" asks about offenders. Offender breakdowns are compiler increment 2: declined with that reason,
+  // never answered as victims.
+  if (flags(ledger0).offenders) return decline("unsupported_capability", "Not in the slice yet: \"by\" a group names the offenders (P29), and offender breakdowns are not built yet.");
   if (unrecorded.length) {
     const why = unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
     return decline(readerReason(why), why);

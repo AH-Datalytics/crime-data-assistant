@@ -204,6 +204,13 @@ ROWS = [
      "A city in another state, or a county beside its city, is a different place with a different count; asking costs one click.",
      "Decided 2026-10-29 (Jeff: \"Yes, 100%, same issue with a city/county that share a name (Baltimore, Washington, etc)\")",
      "labeled cases LS-140, LS-151, LS-223, LS-224, LS-231, LS-242, LS-243, LS-244, LS-245"),
+    ("P29", "\"Assaults by men and women in Detroit\" and \"assaults against men and women in Detroit\"",
+     "Read either way, or not read: one shadow rule read \"men and women\" as victims by sex wherever it appeared.",
+     "\"By\" names the offenders: crimes by men and women are broken down by offender sex. \"Against\" names the victims: crimes against men and women are broken down by victim sex. The same holds for other groups (\"by juveniles\", \"against children\"). Both are answered; an offender breakdown the engine cannot compute yet is declined with that reason, never answered as victims.",
+     "\"by <group>\" -> offenders; \"against <group>\" -> victims.",
+     "The two give different counts of different people.",
+     "Decided 2026-10-29 (Jeff: \"by means offenders, we will want that data too, against means victims\")",
+     "shadow reading tests; new cases to write with the offender breakdowns (compiler increment 2)"),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),

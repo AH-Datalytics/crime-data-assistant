@@ -136,6 +136,9 @@ assert.ok(bySex.delivered.text.includes("Each share is that category's part of a
 assert.match(bySex.delivered.text.find((t) => /^No total is established/.test(t))!, /Unknown/);
 assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], null]);
 for (const q of ["Robberies in Detroit by weapon in 2023", "Simple assault victims in Detroit by race and sex in 2023"]) assert.equal(ask(q).kind === "answer", false, q);
+// P29: offenders declined with their reason; "against" answered as victims by sex.
+assert.match(as(ask("Simple assaults by men and women in Detroit in 2023"), "decline").explanation, /P29/);
+assert.equal(as(ask("Simple assaults against men and women in Detroit in 2023"), "answer").plan.groupings[0].dimension, "victim.sex");
 assert.equal(as(ask("Shoplifting in Kansas City by ZIP code in 2024"), "decline").reason, "below_agency_level");
 const cjv = as(ask("How many carjacking victims were there in Memphis in 2024?"), "answer");
 assert.deepEqual([cjv.plan.measures[0].id, cjv.delivered.answerStatements], ["offenses.carjacking", ["property_counted_by_offense"]]);
