@@ -117,7 +117,7 @@ ROWS = [
      "Never join two sources in one series. Answer from the one source that covers the whole span with the same measure and filters (here Historical, for murders) and name it; if none does, answer the covered part and name the missing years (frozen rule 4).",
      "Source: the one covering the whole span; otherwise the covered years, with the gap named.",
      "Sources count differently; a joined series shows jumps that are not real.",
-     OPEN, gc(4)),
+     O28 + " (Jeff: never splice sources)", gc(4)),
     ("P15", "\"Rate of robberies with a firearm in Georgia in 2024\" (a rate of a detail only NIBRS records)",
      "Divides by the population of the agencies that reported (weighted by months reported), not the whole state.",
      "Keep today's rule, and say whose population in one fixed sentence: \"per 100,000 residents of the reporting agencies\".",
@@ -242,7 +242,6 @@ DECISION = {
     "P11": "When someone asks for \"victims\" of a property crime, should the app count victims rather than offenses?",
     "P12": "When no place is named, should the answer be for the whole United States?",
     "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
-    "P14": "When one source covers the whole period and another only part of it, should the app always use the one that covers it all and never splice two sources?",
     "P15": "For rates of details only NIBRS has, should the rate use the population of the reporting agencies only?",
     "P16": "Should a city name mean that city's main police agency, named in the answer?",
     "P17": "When a top-N list has a tie at the cutoff, should it keep exactly N and break the tie alphabetically?",
@@ -258,7 +257,6 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "1. Which source answers" for p in ["P14"]},
     **{p: "2. How a number is counted" for p in ["P03", "P04", "P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
