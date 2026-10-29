@@ -54,10 +54,10 @@ ROWS = [
      O28 + " (Jeff: show everything, with a prominent note offering consistent reporters)", NEW),
     ("P04", "\"Top 20 cities by murder rate in 2024\" where some cities reported only part of the year",
      "Includes them, with their first and last reported month and a caveat that spans differ.",
-     "Leave out agencies that did not report all 12 months, and state how many were left out (rankings of change already do this, frozen rule 7).",
-     "Default: full-year reporters only, with \"N agencies with fewer than 12 months were not ranked\". On request: include them.",
-     "A city with 4 months of data ranks far too low on a count. Frozen rule 5 forbids filters the user did not ask for, so this needs Jeff's explicit decision: completeness is not size.",
-     OPEN, gc(7) + " (rule 7); " + NEW),
+     "For a completed year, leave out agencies that did not report all 12 months, state how many were left out, and offer a button to include them (rankings of change already do this, frozen rule 7). For the current year, where 12 months do not exist yet, rank agencies that reported every month available so far.",
+     "Completed year: full-year reporters only, with \"N agencies with fewer than 12 months were not ranked\" and a button to include them. Current year: every month so far.",
+     "A city with 4 months of data ranks far too low on a count. Completeness is not size, so this is an exception to frozen rule 5 decided by Jeff.",
+     O28 + " (Jeff: yes, except the current year, where 12 months are not available)", gc(7) + " (rule 7); " + NEW),
     ("P05", "\"Which cities had the most murders?\" with no year, when the latest year in the data is incomplete",
      "Uses the latest year with any data, titled \"(Partial)\" when incomplete.",
      "Rank the latest complete year and name it. Rank a partial year only when the user asks for this year or year to date.",
@@ -232,7 +232,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P04": "In a ranking for one year, should agencies that reported fewer than 12 months be left out, with the number left out stated?",
     "P05": "When a ranking names no year, should it use the latest complete year rather than this year so far?",
     "P06": "When no period is given, should a single number use the latest complete year and a trend the last 10 complete years, on every tab?",
     "P07": "Should \"last year\" always mean the calendar year before today?",
@@ -256,7 +255,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P04", "P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
