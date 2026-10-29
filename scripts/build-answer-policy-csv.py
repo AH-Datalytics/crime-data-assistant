@@ -190,7 +190,7 @@ ROWS = [
      "Ask which is meant, with two buttons, unless the wording settles it (\"New York City\", \"NYPD\", \"New York State\", or a statewide measure).",
      "Choices: New York City (NYPD); New York State.",
      "The two answers differ several times over, and both readings are common.",
-     OPEN, "labeled cases LS-159, LS-208"),
+     O28 + " (Jeff: yes)", "labeled cases LS-159, LS-208"),
     ("P27", "\"Where were robberies highest in 2024?\" (\"where\" with no kind of place)",
      "Asks which level is meant (states, cities, or individual agencies) and asks again until answered.",
      "Ask once, with three buttons. A named place or a named level (\"which state\", \"cities\") settles it without asking.",
@@ -238,11 +238,10 @@ DECISION = {
     "P20": "For forecasts, should the app decline and offer the recent trend instead?",
     "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
-    "P26": "Should \"New York\" on its own make the app ask: New York City or New York State?",
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "3. When to ask a question" for p in ["P26", "P27"]},
+    **{p: "3. When to ask a question" for p in ["P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
