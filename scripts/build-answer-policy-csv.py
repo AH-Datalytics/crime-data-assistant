@@ -87,7 +87,7 @@ ROWS = [
      "Count aggravated assault and say so. Count all assaults, or simple assault, only when asked.",
      "Default: aggravated assault. On request: all assaults; simple assault.",
      "Aggravated assault is the FBI's violent-crime measure, and today the same word gives two different counts on two tabs.",
-     OPEN, NEW),
+     O28 + " (Jeff: aggravated assault, stated in the answer)", NEW),
     ("P10", "\"How many homicides in Memphis in 2023?\" (the word \"homicide\")",
      "NIBRS and Current Trends: homicide means murder. Homicide Reports: \"homicide\" means all homicide victims, \"murder\" means murder only.",
      "\"Homicide\" and \"murder\" both mean murder and non-negligent manslaughter on every tab. Negligent manslaughter and justifiable homicide only when asked (\"all homicides\").",
@@ -233,7 +233,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P09": "Should \"assault\" on its own mean aggravated assault?",
     "P10": "Should \"homicide\" mean the same as \"murder\" (murder and non-negligent manslaughter) everywhere?",
     "P11": "When someone asks for \"victims\" of a property crime, should the app count victims rather than offenses?",
     "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
@@ -252,7 +251,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P09", "P10", "P11", "P15", "P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P10", "P11", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
