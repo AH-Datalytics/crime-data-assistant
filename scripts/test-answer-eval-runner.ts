@@ -42,10 +42,22 @@ assert.deepEqual(kinds({ ...label, measures: [{ name: "zorbing", unit: "incident
 // Codex probe: Los Angeles is not Los Banos.
 const la = planToMeaning({ ...X.H2, geography: { places: [{ kind: "agency", ori: "CA0194200", label: "Los Angeles Police Department, CA" }], combine: "separate" } }, year(2025));
 assert.deepEqual(kinds({ ...label, places: [{ kind: "agency", name: "Los Banos Police Department", state: "CA" }] }, la), ["material:places"]);
-// Codex probe: firearm versus knife is a different filter value.
-const gun = planToMeaning({ ...X.H2, filters: [{ kind: "exists", scope: "offense", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["11", "12"] }] }] }, year(2025));
-assert.deepEqual(kinds({ ...label, filters: ["weapon: firearm"] }, gun), []);
-assert.deepEqual(kinds({ ...label, filters: ["weapon: knife"] }, gun), ["material:filters"]);
+// Codex probe: firearm versus knife is a different filter value; only the full firearm set is "firearm".
+const weapon = (values: string[], op: "in" | "not_in" = "in", negate = false) => planToMeaning({ ...X.H2, filters: [{ kind: "exists", scope: "offense", entity: "offense_weapon", ...(negate ? { negate } : {}), where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op, values }] }] }, year(2025));
+const ALL_FIREARMS = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
+assert.deepEqual(kinds({ ...label, filters: ["weapon: firearm"] }, weapon(ALL_FIREARMS)), []);
+assert.deepEqual(kinds({ ...label, filters: ["weapon: knife"] }, weapon(ALL_FIREARMS)), ["material:filters"]);
+assert.deepEqual(kinds({ ...label, filters: ["weapon: firearm"] }, weapon(["12"])), ["unverified:filters"], "handgun only is not all firearms");
+assert.deepEqual(kinds({ ...label, filters: ["weapon: knife"] }, weapon(["20"], "not_in")), ["unverified:filters"], "an exclusion is not the value");
+assert.deepEqual(kinds({ ...label, filters: ["weapon: knife"] }, weapon(["20"], "in", true)), ["unverified:filters"], "a negated existence is not the value");
+// Codex probe: two different unknowns never match.
+assert.deepEqual(kinds({ ...label, filters: ["victim race: White"] }, planToMeaning({ ...X.H2, filters: [{ kind: "exists", scope: "incident", entity: "victim", where: [{ kind: "attribute", dimension: "victim.race", op: "in", values: ["B"] }] }] }, year(2025))), ["unverified:filters"]);
+assert.deepEqual(kinds({ ...label, groupings: ["victim ethnicity"] }, planToMeaning({ ...X.H2, groupings: [{ dimension: "offender.ethnicity", unknown: "visible", absent: "show" }] }, year(2025))), ["unverified:groupings"]);
+// Codex probe: month boundaries hold for a year selection; comparison baselines and native shares are unverified.
+const yrs = planToMeaning({ ...X.SEPARATE_YEARS, period: { kind: "years", years: [2025] } }, { kind: "years", years: [2025] });
+assert.ok(compareMeaning({ ...label, places: yrs.meaning.places, measures: yrs.meaning.measures, groupings: yrs.meaning.groupings, period: { from: "2025-06", to: "2025-08" } }, yrs, r).some((d) => d.kind === "material" && d.field === "period"), "June-August is not 2025");
+const cmp = planToMeaning(X.SAME_AGENCIES_CHANGE, { kind: "absolute", from: "2023-01", to: "2025-12" });
+assert.ok(compareMeaning({ ...label, places: cmp.meaning.places, measures: cmp.meaning.measures, period: { from: "2023-01", to: "2025-12" }, statistic: "change", cohort: "same_agencies" }, cmp, r).some((d) => d.kind === "unverified" && d.field === "untracked"), "comparison baselines are not in the label");
 // Codex probe: combined versus separate places.
 const two = planToMeaning({ ...X.NAMED_PLACES }, year(2024));
 const twoLabel: Meaning = { ...label, places: two.meaning.places, measures: two.meaning.measures.map((m) => ({ name: m.name, unit: m.unit })), period: two.meaning.period, groupings: two.meaning.groupings, statistic: two.meaning.statistic as Meaning["statistic"], combine: two.meaning.combine === "combined" ? "separate" : "combined" };
@@ -85,5 +97,7 @@ assert.equal(status([...res(99, "answer", "answer", "correct"), ...res(1, "answe
 assert.equal(category([...res(19, "decline", "decline", "correct"), ...res(1, "decline", "clarify", "wrong_action")], "declines"), "fail");
 assert.equal(category(res(5, "decline", "decline", "unverified"), "declines"), "not measured");
 assert.equal(category(res(5, "clarify", "clarify", "unverified"), "clarifications"), "not measured");
+// Codex probe: zero wrong answers is not established while answers are unverified.
+assert.equal(category(res(1, "answer", "answer", "unverified"), "wrong answers"), "not measured");
 
 console.log("answer-eval runner: comparison, outcomes and gates as specified");

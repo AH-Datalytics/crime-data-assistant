@@ -44,10 +44,13 @@ export const unitName = (s: string): string | null => UNITS[s] ?? UNITS[singular
 /* ------------------------------------------------------------------ filters ---------------------------------------- */
 
 /** A filter as family and value class ("weapon:firearm"); null when either is unknown. */
-const FIREARM = new Set(["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"]);
+const FIREARM = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
+/** Only an inclusive condition ("in" / "between") on exactly the listed values maps; anything else is unknown. */
 function planFilterKey(dimension: string, values: (string | number)[], op: string): string | null {
   const v = values.map(String);
-  if (dimension.endsWith("weapon")) return v.every((x) => FIREARM.has(x)) ? "weapon:firearm" : v.join("+") === "20" ? "weapon:knife" : null;
+  if (op !== "in" && op !== "between") return null;
+  if (op === "between" && !/\.age$/.test(dimension)) return null;
+  if (dimension.endsWith("weapon")) return [...v].sort().join("+") === [...FIREARM].sort().join("+") ? "weapon:firearm" : v.join("+") === "20" ? "weapon:knife" : null;
   if (dimension === "offense.clearance_method") return v.join("+") === "exceptional" ? "clearance:exceptional" : v.join("+") === "arrest" ? "clearance:arrest" : null;
   if (dimension === "offense.clearance_type") return v.join("+") === "B" ? "clearance:prosecution declined" : null;
   if (dimension === "property.loss_type") return v.join("+") === "7" ? "loss:stolen" : v.join("+") === "6" ? "loss:seized" : null;
@@ -142,12 +145,19 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   const filterKeys: (string | null)[] = [];
   for (const f of [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])]) {
     if (f.kind === "attribute") filterKeys.push(planFilterKey(f.dimension, f.values ?? [], f.op));
+    else if (f.negate) filterKeys.push(null); // a negated existence has no label equivalent here
     else for (const w of f.where) filterKeys.push(w.kind === "attribute" ? planFilterKey(w.dimension, w.values ?? [], w.op) : null);
   }
   for (const m of plan.measures) if (m.id.endsWith("_cleared")) filterKeys.push("clearance:cleared");
   for (const p of plan.geography.places) if (p.kind === "agency_set") for (const w of p.where) filterKeys.push(w.field === "agency.population" && w.op === ">=" ? `population:${w.value}+` : null);
   const rankT = plan.transforms.find((t) => t.kind === "rank");
-  const untracked = [...plan.transforms.filter((t) => t.kind === "rolling").map((t) => `rolling ${"months" in t ? t.months : ""} months`), ...plan.groupings.filter((g) => g.bins).map((g) => `${g.dimension} bins`)];
+  // Plan details the label schema cannot express: compared as unverified, never as matches.
+  const untracked = [
+    ...plan.transforms.filter((t) => t.kind === "rolling").map((t) => `rolling ${"months" in t ? t.months : ""} months`),
+    ...plan.transforms.filter((t) => t.kind === "period_comparison").map((t) => ("earlier" in t ? `comparison ${t.earlier.from}..${t.earlier.to} vs ${t.later.from}..${t.later.to}` : "comparison")),
+    ...plan.statistics.filter((s) => s.kind === "share").map((s) => `share within ${"within" in s ? s.within.join("+") || "all" : "?"}`),
+    ...plan.groupings.filter((g) => g.bins).map((g) => `${g.dimension} bins`),
+  ];
   return {
     meaning: {
       source: plan.source, places, combine: plan.geography.combine, period: months,
@@ -169,8 +179,9 @@ const join = (xs: (string | null)[]) => xs.map((x) => x ?? "?").sort().join(" + 
 export function compareMeaning(expected: Meaning, actual: PlanView, r: Release): Diff[] {
   const out: Diff[] = [];
   const add = (field: string, e: string, a: string, kind: Diff["kind"]) => out.push({ field, expected: e, actual: a, kind });
+  // Any unknown component leaves the field unverified, even when the placeholders look alike.
   const decide = (field: string, e: (string | null)[], a: (string | null)[]) => {
-    if (e.includes(null) || a.includes(null)) { if (join(e) !== join(a)) add(field, join(e), join(a), "unverified"); return; }
+    if (e.includes(null) || a.includes(null)) { add(field, join(e), join(a), "unverified"); return; }
     if (join(e) !== join(a)) add(field, join(e), join(a), "material");
   };
   if (expected.source !== actual.meaning.source) add("source", expected.source, actual.meaning.source, "material");
@@ -188,7 +199,8 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
   else if (actual.years) {
     // A noncontiguous year selection matches only a label range of exactly those years.
     const span = Array.from({ length: Number(ep.to.slice(0, 4)) - Number(ep.from.slice(0, 4)) + 1 }, (_, i) => Number(ep.from.slice(0, 4)) + i);
-    if (span.join(",") !== actual.years.join(",")) add("period", `${ep.from}..${ep.to}`, `years ${actual.years.join(", ")}`, "material");
+    const wholeYears = ep.from.endsWith("-01") && ep.to.endsWith("-12");
+    if (!wholeYears || span.join(",") !== actual.years.join(",")) add("period", `${ep.from}..${ep.to}`, `years ${actual.years.join(", ")}`, "material");
   } else if (`${ep.from}..${ep.to}` !== `${ap.from}..${ap.to}`) add("period", `${ep.from}..${ep.to}`, `${ap.from}..${ap.to}`, "material");
   // Measures with their units, kept together. A share's numerator and denominator roles cannot be read from the label.
   const ratio = actual.measures.some((m) => m.role !== "value");

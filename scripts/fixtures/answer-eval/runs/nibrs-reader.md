@@ -41,11 +41,11 @@ Expected (rows) by actual (columns):
 | answer:historical rate | 2021 and later | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
 | answer:historical share | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: fail (50% (1/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
 | answer:nibrs count | 2021 and later | 8 | fail | wrong answers: fail (3); initial action: fail (38% (3/8)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs count | period not mapped | 1 | not measured | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no compiler yet) |
+| answer:nibrs count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no compiler yet) |
 | answer:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
 | answer:nibrs list | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs rate | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: pass (100% (2/2)); direct answers: fail (0% (1 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs share | 2021 and later | 3 | fail | wrong answers: pass (0); initial action: fail (67% (2/3)); direct answers: fail (0% (2 unverified)); numeric fixtures: not measured (no compiler yet) |
+| answer:nibrs rate | 2021 and later | 2 | fail | wrong answers: fail (1, 1 answers unverified); initial action: pass (100% (2/2)); direct answers: fail (0% (1 unverified)); numeric fixtures: not measured (no compiler yet) |
+| answer:nibrs share | 2021 and later | 3 | fail | wrong answers: not measured (0, 2 answers unverified); initial action: fail (67% (2/3)); direct answers: fail (0% (2 unverified)); numeric fixtures: not measured (no compiler yet) |
 | answer:rtci count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
 | clarify:historical change | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
 | clarify:historical count | 2021 and later | 3 | fail | wrong answers: fail (2); clarifications: fail (0/3 verified correct, 3 failing); initial action: fail (0% (0/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
@@ -92,6 +92,7 @@ Discrepancies and unverified cases:
 - **LS-043** (unverified; expected answer, got answer) "Houston vehicle burglaries by year and clearance status, 2018 to 2026"
   - unverified period: expected `{"rule":"2018-01 through the latest month in the data (requested end 2026)"}`, got `2018-01..2026-10`
   - unverified groupings: expected `? + year`, got `clearance type + year`
+  - unverified untracked: expected `(not in the label schema)`, got `share within time.year`
 - **LS-060** (wrong_answer; expected clarify, got answer) "Homicide rate for top 100 U.S. cities in 2026"
 - **LS-062** (unverified; expected answer, got answer) "Top 10 cities of 250,000 people or more by shoplifting rate in 2025"
   - unverified filters: expected `? + ?`, got `? + population:250000+`
@@ -145,6 +146,7 @@ Discrepancies and unverified cases:
   - material measures: expected `murder|victim`, got `murder|offense`
   - unverified filters: expected `?`, got `clearance:exceptional`
   - unverified groupings: expected `?`, got `clearance type`
+  - unverified untracked: expected `(not in the label schema)`, got `share within all`
 - **LS-146** (avoidable_decline; expected answer, got decline) "Posession or distribution of narcotics arrests in 2025 in Yuma Az"
   - declined (reason not judged): I couldn't interpret "Posession" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record drug distribution or sales as its own measure (drug possession
 - **LS-148** (unverified; expected decline, got decline) "Share of rapes cleared by exception by type and state in 2025"
@@ -169,10 +171,12 @@ Discrepancies and unverified cases:
 - **LS-165** (wrong_answer; expected answer, got answer) "How did aggravated assaults change in Texas from 2018 to 2024?"
   - material source: expected `historical`, got `nibrs`
   - material groupings: expected `year`, got ``
+  - unverified untracked: expected `(not in the label schema)`, got `comparison 2018-01..2018-12 vs 2024-01..2024-12`
 - **LS-166** (wrong_answer; expected answer, got answer) "Burglaries per year in Florida from 2019 to 2024"
   - material source: expected `historical`, got `nibrs`
 - **LS-168** (wrong_answer; expected answer, got answer) "Which cities had the most motor vehicle thefts in 2023?"
   - material source: expected `historical`, got `nibrs`
+  - unverified filters: expected `?`, got `?`
   - material rank limit: expected `20`, got `null`
   - unverified rank by: expected `motor vehicle theft count`, got `(the ranked statistic is not mapped)`
 - **LS-170** (wrong_answer; expected clarify, got answer) "Murders in Houston"

@@ -78,7 +78,11 @@ export function gates(results: CaseResult[]): GateRow[] {
     const direct = answerable.filter((r) => r.outcome === "correct").length;
     const directUnv = answerable.filter((r) => r.outcome === "unverified").length;
     const categories: Category[] = [
-      { name: "wrong answers", status: wrong ? "fail" : "pass", detail: `${wrong}` },
+      // Zero wrong answers is established only when every delivered answer is verified.
+      (() => {
+        const unvAnswers = rs.filter((r) => r.actual === "answer" && r.outcome === "unverified").length;
+        return { name: "wrong answers", status: wrong ? "fail" : unvAnswers ? "not measured" : "pass", detail: `${wrong}${unvAnswers ? `, ${unvAnswers} answers unverified` : ""}` } as Category;
+      })(),
       cat("clarifications", rs.filter((r) => r.expected === "clarify"), (r) => r.outcome === "correct"),
       cat("declines", rs.filter((r) => r.expected === "decline"), (r) => r.outcome === "correct"),
       { name: "initial action", status: action / rs.length >= 0.95 ? "pass" : "fail", detail: `${pct(action, rs.length)} (${action}/${rs.length})` },

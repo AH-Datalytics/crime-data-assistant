@@ -678,6 +678,12 @@
      "expected": "? + year",
      "actual": "clearance type + year",
      "kind": "unverified"
+    },
+    {
+     "field": "untracked",
+     "expected": "(not in the label schema)",
+     "actual": "share within time.year",
+     "kind": "unverified"
     }
    ],
    "notes": [],
@@ -1072,6 +1078,12 @@
      "expected": "?",
      "actual": "clearance type",
      "kind": "unverified"
+    },
+    {
+     "field": "untracked",
+     "expected": "(not in the label schema)",
+     "actual": "share within all",
+     "kind": "unverified"
     }
    ],
    "notes": [],
@@ -1260,6 +1272,12 @@
      "expected": "year",
      "actual": "",
      "kind": "material"
+    },
+    {
+     "field": "untracked",
+     "expected": "(not in the label schema)",
+     "actual": "comparison 2018-01..2018-12 vs 2024-01..2024-12",
+     "kind": "unverified"
     }
    ],
    "notes": [],
@@ -1296,6 +1314,12 @@
      "expected": "historical",
      "actual": "nibrs",
      "kind": "material"
+    },
+    {
+     "field": "filters",
+     "expected": "?",
+     "actual": "?",
+     "kind": "unverified"
     },
     {
      "field": "rank limit",
