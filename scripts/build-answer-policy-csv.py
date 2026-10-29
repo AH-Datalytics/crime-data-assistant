@@ -184,7 +184,7 @@ ROWS = [
      "Where a county has a county police department that polices the county, a county name means that department, named in the answer. Elsewhere it means the sheriff's agency (rule 10).",
      "Default: the county police department where one exists; otherwise the sheriff's agency. Both named.",
      "In those counties the sheriff mainly runs the jail and courts; the county police report the county's crime.",
-     OPEN, gc(10) + "; labeled cases LS-144, LS-149"),
+     O28 + " (Jeff: yes)", gc(10) + "; labeled cases LS-144, LS-149"),
     ("P26", "\"Value of stolen property in New York in 2021\" (\"New York\" alone)",
      "Not settled: some paths read it as the city, others as the state.",
      "Ask which is meant, with two buttons, unless the wording settles it (\"New York City\", \"NYPD\", \"New York State\", or a statewide measure).",
@@ -241,12 +241,10 @@ DECISION = {
     "P22": "When someone clicks a button in a clarifying question, should the app run the whole original question with that choice and never ask the same thing again?",
     "P23": "In a follow-up like \"What about Dallas?\", should everything else from the previous question carry over?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
-    "P25": "In counties with their own county police department (Montgomery County MD, Fairfax County VA), should a county name mean that department instead of the sheriff?",
     "P26": "Should \"New York\" on its own make the app ask: New York City or New York State?",
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
