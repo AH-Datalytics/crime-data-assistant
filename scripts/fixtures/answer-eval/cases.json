@@ -12567,6 +12567,1459 @@
     "reviewed_by": null,
     "notes": "Obsolete under P13: its parent (LS-183, \"safest city\") is declined, so no button exists to click. Kept unscored for the record."
    }
+  },
+  {
+   "id": "LS-219",
+   "group": "designed:slice-memphis-shop",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many shoplifting offenses were there in Memphis in 2024?",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Shoplifting is a NIBRS-only detail (P01). Memphis means the city's principal police agency (P16). Property crime by offense (D18)."
+   }
+  },
+  {
+   "id": "LS-220",
+   "group": "designed:slice-memphis-shop",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Memphis shoplifting 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Paraphrase of the first case in its group."
+   }
+  },
+  {
+   "id": "LS-221",
+   "group": "designed:slice-memphis-shop",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "shoplifting in Memphis, TN in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Paraphrase, state named."
+   }
+  },
+  {
+   "id": "LS-222",
+   "group": "designed:slice-victims",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many shoplifting victims were there in Memphis in 2024?",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P11",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Property crimes are counted by offense, not by victim.",
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P11: victims of a property crime -> offenses, with the fixed sentence."
+   }
+  },
+  {
+   "id": "LS-223",
+   "group": "designed:slice-baltimore-month",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Baltimore by month from 2022 to 2025",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Baltimore Police Department",
+       "state": "MD"
+      }
+     ],
+     "period": {
+      "from": "2022-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Baltimore Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Baltimore means the city's police department (P16), not Baltimore County."
+   }
+  },
+  {
+   "id": "LS-224",
+   "group": "designed:slice-stl-year",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Carjackings in St. Louis by year, 2021 to 2025",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "St. Louis Metropolitan Police Department",
+       "state": "MO"
+      }
+     ],
+     "period": {
+      "from": "2021-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (St. Louis Metropolitan Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Carjacking is robbery-based: unit offense (D18, as LS-140). St. Louis means the city's police department (P16)."
+   }
+  },
+  {
+   "id": "LS-225",
+   "group": "designed:slice-memphis-cj",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "carjackings in Memphis TN by month in 2025",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Carjacking by offense (D18)."
+   }
+  },
+  {
+   "id": "LS-226",
+   "group": "designed:slice-detroit-sa",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many simple assaults were there in Detroit in 2023?",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P09",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Detroit Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Simple assault asked for by name (P09); a crime against persons, counted by victim (D18). NIBRS-only detail (P01)."
+   }
+  },
+  {
+   "id": "LS-227",
+   "group": "designed:slice-detroit-sa-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "simple assault victims in Detroit by month in 2023",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Detroit Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Person crime by victim (D18)."
+   }
+  },
+  {
+   "id": "LS-228",
+   "group": "designed:slice-tfmv",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Thefts from motor vehicles in Columbus, Ohio in 2022",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Columbus Police Department",
+       "state": "OH"
+      }
+     ],
+     "period": {
+      "from": "2022-01",
+      "to": "2022-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Columbus Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Theft from a motor vehicle is a larceny subtype only NIBRS holds (P01); by offense (D18). The agency is the Columbus Division of Police."
+   }
+  },
+  {
+   "id": "LS-229",
+   "group": "designed:slice-drug",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Drug crimes in Detroit in 2024",
+   "policy": [
+    "D18",
+    "D19",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "drug/narcotic violation",
+       "unit": "offense"
+      },
+      {
+       "name": "drug equipment violation",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says drug crimes include drug/narcotic and drug equipment violations",
+     "names the agency (Detroit Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "D19: drug crimes are drug/narcotic plus drug equipment violations."
+   }
+  },
+  {
+   "id": "LS-230",
+   "group": "designed:slice-ytd",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Memphis so far this year",
+   "policy": [
+    "D06",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "rule": "year to date through the latest month"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months covered",
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "D06: year to date through the latest month, months named. Current Trends has no shoplifting, so NIBRS (P01)."
+   }
+  },
+  {
+   "id": "LS-231",
+   "group": "designed:slice-kc",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Thefts from motor vehicles in Kansas City in 2024",
+   "policy": [
+    "D18",
+    "D28",
+    "P01",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which Kansas City",
+    "options": [
+     {
+      "label": "Kansas City, Missouri",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Kansas City Police Department",
+         "state": "MO"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "theft from motor vehicle",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Kansas City, Kansas",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Kansas City Police Department",
+         "state": "KS"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "theft from motor vehicle",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Two cities of this name in two states, both large: materially different readings (D28). A button keeps crime and year (P22)."
+   }
+  },
+  {
+   "id": "LS-232",
+   "group": "designed:slice-noplace",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many shoplifting offenses were there in 2024?",
+   "policy": [
+    "D18",
+    "D31",
+    "P01",
+    "P12",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which place",
+    "options": [
+     {
+      "label": "The United States",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "national",
+         "name": "United States"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count",
+       "cohort": "all_reporting"
+      }
+     },
+     {
+      "label": "A state",
+      "leads_to": "clarify",
+      "meaning": null,
+      "next_about": "which state"
+     },
+     {
+      "label": "A city or agency",
+      "leads_to": "clarify",
+      "meaning": null,
+      "next_about": "which city or agency"
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P12/D31: ask for the missing place. Shoplifting stays on NIBRS (P01), counted from reporting agencies."
+   }
+  },
+  {
+   "id": "LS-233",
+   "group": "designed:slice-noperiod",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Memphis",
+   "policy": [
+    "D18",
+    "D31",
+    "P01",
+    "P06",
+    "P16",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which period",
+    "options": [
+     {
+      "label": "The latest complete year",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Memphis Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "rule": "latest complete year"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "This year so far",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Memphis Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "rule": "year to date through the latest month"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Another year",
+      "leads_to": "clarify",
+      "meaning": null,
+      "next_about": "which year"
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P06 single figure: latest complete year; this year so far; another year. NIBRS for both (P01: no shoplifting in Current Trends)."
+   }
+  },
+  {
+   "id": "LS-234",
+   "group": "designed:slice-noperiod-trend",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Carjackings in Memphis by month",
+   "policy": [
+    "D18",
+    "D31",
+    "P01",
+    "P06",
+    "P16",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which range of years",
+    "options": [
+     {
+      "label": "The last 10 complete years",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Memphis Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "rule": "last 10 complete years"
+       },
+       "measures": [
+        {
+         "name": "carjacking",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "month"
+       ],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Every year available",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Memphis Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "rule": "every year in the data"
+       },
+       "measures": [
+        {
+         "name": "carjacking",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [
+        "month"
+       ],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Another range",
+      "leads_to": "clarify",
+      "meaning": null,
+      "next_about": "which range of years"
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P06 trend: last 10 complete years; every year available; another range. The month breakdown is kept (P22)."
+   }
+  },
+  {
+   "id": "LS-235",
+   "group": "designed:slice-nocrime",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many crimes were there in Detroit in 2024?",
+   "policy": [
+    "D09",
+    "D18",
+    "D31",
+    "P01",
+    "P16",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which kind of crime",
+    "options": [
+     {
+      "label": "Violent crime",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "historical",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Detroit Police Department",
+         "state": "MI"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "violent crime",
+         "unit": "victim (robbery by offense)"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Property crime",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "historical",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Detroit Police Department",
+         "state": "MI"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "property crime",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Both",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "historical",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Detroit Police Department",
+         "state": "MI"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "violent crime",
+         "unit": "victim (robbery by offense)"
+        },
+        {
+         "name": "property crime",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "D09 bare 'crime': violent; property; both. Completed-year Part I counts go to Historical (P01), as LS-196."
+   }
+  },
+  {
+   "id": "LS-236",
+   "group": "designed:slice-future",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Memphis in 2027",
+   "policy": [
+    "D04",
+    "P16",
+    "P24"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "2027 is not in the data; the latest month available is the latest month NIBRS holds for 2026.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "rule": "year to date through the latest month"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P24: say the year is not in the data, name the latest month, offer the latest year available."
+   }
+  },
+  {
+   "id": "LS-237",
+   "group": "designed:slice-early",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Memphis in 2012",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2012-01",
+      "to": "2012-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "NIBRS holds 2012 for Memphis in the full data. The shadow build starts in 2017, so it may only refuse this one as not built."
+   }
+  },
+  {
+   "id": "LS-238",
+   "group": "designed:slice-zip",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Memphis by ZIP code in 2024",
+   "policy": [
+    "D02"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+    "alternative": null
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "D02: say so and stop (as LS-141)."
+   }
+  },
+  {
+   "id": "LS-239",
+   "group": "designed:slice-court",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many shoplifting arrests in Memphis in 2024 led to convictions?",
+   "policy": [
+    "D01",
+    "P16"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "Court outcomes such as convictions are not in the data; it records police arrests and clearances.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "D01, as LS-201: offer the arrests."
+   }
+  },
+  {
+   "id": "LS-240",
+   "group": "designed:slice-forecast",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Will carjackings go up in Memphis next year?",
+   "policy": [
+    "D18",
+    "P16",
+    "P20"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data records past crime and cannot predict next year.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "rule": "last 10 complete years"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "P20: decline, offer the last 10 complete years for the same place and measure."
+   }
+  },
+  {
+   "id": "LS-241",
+   "group": "designed:slice-arrests",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting arrests in Memphis in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-slice",
+    "reviewed_by": null,
+    "notes": "Arrests asked for by name: counted by arrest."
+   }
   }
  ]
 }

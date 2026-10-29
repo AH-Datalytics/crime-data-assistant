@@ -10,7 +10,7 @@
  *     own columns (victim race, sex, ethnicity; offense location type). Every category that occurs in the place and
  *     period is shown in every period row (`absent: "show"`); no bins, no multi-value;
  *   - one measure: offense segments (with their occurrence key) or incidents with given offense codes, victims connected
- *     to person offenses, or carjacking incidents. Group B offenses are not offense segments and are refused;
+ *     to person offenses, or carjacking offenses or incidents. Group B offenses are not offense segments and are refused;
  *   - statistics: `count`, and `share` of that count within the time grouping (each period's own total of the measure);
  *   - filters: an existence over property at incident scope (`attribution: "incident_level_only"`), with `in`
  *     conditions on loss type and description, all on one property segment. The answer then carries the fixed
@@ -69,6 +69,17 @@ type Units = { sql: string; entity: "victim" | "offense" | "incident" };
 /** The units of one measure: one row per counted unit, with its key, ORI, incident month (YYYYMM) and grouping columns. */
 function unitsSql(measureId: string, unit: string, read: (table: string) => string, groupCols: string[], incidentFilter: (alias: string) => string): Units | { error: string } {
   const extra = groupCols.map((c, i) => `, ${c} AS g${i}`).join("");
+  if (measureId === "offenses.carjacking") {
+    // D18: robbery-based, so counted by offense: the 120 segments of carjacking incidents (on 20261028-test5 the same
+    // number as the incidents in every agency-month; the compile gate checks it).
+    if (unit !== "offense") return { error: `offenses.carjacking is counted by offense, not ${unit}` };
+    return { entity: "offense", sql: `SELECT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("offense")} o
+      WHERE o.offense_code = '120' AND EXISTS (
+        SELECT 1 FROM ${read("property")} p
+        WHERE p.data_year = o.data_year AND p.ori = o.ori AND p.incident_num = o.incident_num
+          AND p.loss_type = '7' AND p.property_description IN (${list(CARJACK_VEHICLES)}))${incidentFilter("o")}` };
+  }
   if (measureId === "incidents.carjacking") {
     if (unit !== "incident") return { error: `carjacking is counted by incident, not ${unit}` };
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
@@ -121,7 +132,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
 
   // Groupings: at most one time grouping, first; then attributes of the counted entity.
   const m = plan.measures[0];
-  const entity = m.id === "incidents.carjacking" ? "incident" : ENTITY_OF[m.id.split(".")[0]] ?? "";
+  const entity = ENTITY_OF[m.id.split(".")[0]] ?? "";
   const timeDims = plan.groupings.filter((g) => g.dimension.startsWith("time."));
   const attrDims = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
   if (timeDims.length > 1 || timeDims.some((g) => g.dimension !== "time.month" && g.dimension !== "time.year")) return no("v0 groups time by month or by year, once");

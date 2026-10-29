@@ -20,7 +20,8 @@
  *   declines             every expected decline correct (a truthful reason, verified; the alternative when expected)
  *   initial action       95% or more with the expected action
  *   direct answers       95% or more of answerable cases correct (unverified ones are not counted as correct)
- *   numeric fixtures     every verified value matches (not measured until the compiler exists)
+ *   numeric fixtures     every delivered value matches its independent expected value (not measured for a candidate
+ *                        that delivers no values, or while the expected values are not in)
  * The severity score (100 / 20 / 5 / 1) is for trends only, never a gate.
  */
 import type { Case } from "./case";
@@ -32,6 +33,8 @@ export type Outcome = "correct" | "unverified" | "wrong_answer" | "avoidable_dec
 export type CaseResult = {
   id: string; split: Case["split"]; expected: ExpectedAction; actual: ActualAction; outcome: Outcome;
   diffs: Diff[]; notes: string[]; capability: string; era: string;
+  /** Delivered values against independent expected values, for a candidate that delivers them. */
+  values?: "match" | "mismatch" | "not measured";
 };
 
 /**
@@ -90,7 +93,12 @@ export function gates(results: CaseResult[]): GateRow[] {
         : direct / answerable.length >= 0.95 ? { name: "direct answers", status: "pass", detail: `${pct(direct, answerable.length)}` }
           : (direct + directUnv) / answerable.length >= 0.95 ? { name: "direct answers", status: "not measured", detail: `${pct(direct, answerable.length)} verified, ${directUnv} unverified` }
             : { name: "direct answers", status: "fail", detail: `${pct(direct, answerable.length)} (${directUnv} unverified)` },
-      { name: "numeric fixtures", status: "not measured", detail: "no compiler yet" },
+      (() => {
+        const v = rs.filter((r) => r.values);
+        if (!v.length) return { name: "numeric fixtures", status: "not measured", detail: "no delivered values" } as Category;
+        const bad = v.filter((r) => r.values === "mismatch").length, unm = v.filter((r) => r.values === "not measured").length;
+        return { name: "numeric fixtures", status: bad ? "fail" : unm ? "not measured" : "pass", detail: `${v.length - bad - unm}/${v.length} match${unm ? `, ${unm} not measured` : ""}${bad ? `, ${bad} mismatched` : ""}` } as Category;
+      })(),
     ];
     const status = categories.some((c) => c.status === "fail") ? "fail" : categories.some((c) => c.status === "not measured") ? "not measured" : "pass";
     return { split, capability, era, cases: rs.length, categories, status };

@@ -25,7 +25,7 @@ const MEASURES: Record<string, string> = {
   rape: "rape", robbery: "robbery", "aggravated assault": "aggravated assault", "simple assault": "simple assault", assault: "assault",
   burglary: "burglary", theft: "theft", "larceny theft": "theft", larceny: "theft", "motor vehicle theft": "motor vehicle theft", "auto theft": "motor vehicle theft", "car theft": "motor vehicle theft",
   "theft from motor vehicle": "theft from motor vehicle", "vehicle burglary": "theft from motor vehicle", shoplifting: "shoplifting", arson: "arson",
-  carjacking: "carjacking", "violent crime": "violent crime", "violent crime ucr": "violent crime", "property crime": "property crime", "property crime ucr": "property crime",
+  carjacking: "carjacking", "carjacking robbery in which a motor vehicle was taken": "carjacking", "violent crime": "violent crime", "violent crime ucr": "violent crime", "property crime": "property crime", "property crime ucr": "property crime",
   "sex offense": "sex offense", "drug possession": "drug narcotic violation", "drug narcotic violation": "drug narcotic violation", "drug equipment violation": "drug equipment violation",
   dui: "driving under the influence", "driving under the influence": "driving under the influence", "domestic violence": "domestic violence", "hate crime": "hate crime",
   "all offense": "all offenses", "all offenses": "all offenses", "all crime offenses": "all offenses", "all crime": "all offenses",
@@ -98,6 +98,8 @@ export function labelPeriod(p: Meaning["period"], r: Release): { from: string; t
   if ((m = rule.match(/^year to date(?: (\d{4}))? through the latest month$/))) { const y = Number(m[1] ?? r.lastMonth.slice(0, 4)); return { from: ym(y, 1), to: r.lastMonth }; }
   if ((m = rule.match(/^(\d{4}) through the latest complete year$/))) return { from: ym(Number(m[1]), 1), to: ym(lcy, 12) };
   if ((m = rule.match(/^(\d{4})(?:-(\d{2}))? through the latest (?:month|year) in the data$/))) return { from: ym(Number(m[1]), Number(m[2] ?? 1)), to: r.lastMonth };
+  // The whole release: what "every year available" holds for the release the candidate runs on.
+  if (/^every year (?:in the data|available)$/.test(rule)) return { from: r.firstMonth, to: r.lastMonth };
   return null;
 }
 

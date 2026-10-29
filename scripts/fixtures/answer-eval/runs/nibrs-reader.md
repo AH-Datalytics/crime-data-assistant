@@ -1,13 +1,13 @@
 # Answer evaluation: nibrs-reader
 
-Labeled set: 218 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
+Labeled set: 241 cases. Release for resolution: 1991-01..2026-10, request date 2026-10-28.
 
 **Level: question -> reader only.** An "answer" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).
 
 ## Execution coverage (can this candidate take the case)
 
 - 118: another source: no adapter for it yet
-- 92: run by this candidate
+- 115: run by this candidate
 - 7: a follow-up: the reader takes one turn
 - 1: a button continuation: the reader returns no structured options
 
@@ -15,6 +15,7 @@ Labeled set: 218 cases. Release for resolution: 1991-01..2026-10, request date 2
 
 - 164: scorable (reviewed, decided policy)
 - 54: label unresolved
+- 23: label drafted
 
 ## Scored (reviewed labels, decided policy)
 
@@ -32,35 +33,35 @@ Expected (rows) by actual (columns):
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
-| answer:historical change | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical change | spans 2021 | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical count | 2021 and later | 4 | fail | wrong answers: fail (2); initial action: fail (50% (2/4)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical count | before 2021 | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical count | spans 2021 | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical rank | 2021 and later | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical rate | 2021 and later | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical share | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: fail (50% (1/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs count | 2021 and later | 8 | fail | wrong answers: fail (3); initial action: fail (38% (3/8)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs list | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs rate | 2021 and later | 2 | fail | wrong answers: fail (1, 1 answers unverified); initial action: pass (100% (2/2)); direct answers: fail (0% (1 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs share | 2021 and later | 3 | fail | wrong answers: not measured (0, 2 answers unverified); initial action: fail (67% (2/3)); direct answers: fail (0% (2 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:rtci count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| clarify:historical change | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:historical count | 2021 and later | 3 | fail | wrong answers: fail (2); clarifications: fail (0/3 verified correct, 3 failing); initial action: fail (0% (0/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:historical count | spans 2021 | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:historical rate | 2021 and later | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:historical share | spans 2021 | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1); clarifications: fail (0/2 verified correct, 2 failing); initial action: fail (0% (0/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:nibrs count | spans 2021 | 6 | fail | wrong answers: pass (0); clarifications: fail (0/6 verified correct, 6 failing); initial action: fail (0% (0/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:nibrs share | 2021 and later | 2 | fail | wrong answers: fail (1); clarifications: fail (0/2 verified correct, 2 failing); initial action: fail (0% (0/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| clarify:rtci rate | 2021 and later | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| decline:nibrs count | 2021 and later | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| decline:nibrs count | spans 2021 | 1 | fail | wrong answers: fail (1); declines: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| decline:nibrs share | 2021 and later | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| decline:no meaning | no period | 7 | fail | wrong answers: pass (0); declines: fail (0/7 verified correct, 3 unverified, 4 failing); initial action: fail (43% (3/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| decline:shr count | spans 2021 | 1 | fail | wrong answers: fail (1); declines: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
+| answer:historical change | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical change | spans 2021 | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical count | 2021 and later | 4 | fail | wrong answers: fail (2); initial action: fail (50% (2/4)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical count | before 2021 | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical count | spans 2021 | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical rank | 2021 and later | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical rate | 2021 and later | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical share | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: fail (50% (1/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 8 | fail | wrong answers: fail (3); initial action: fail (38% (3/8)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs list | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs rate | 2021 and later | 2 | fail | wrong answers: fail (1, 1 answers unverified); initial action: pass (100% (2/2)); direct answers: fail (0% (1 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs share | 2021 and later | 3 | fail | wrong answers: not measured (0, 2 answers unverified); initial action: fail (67% (2/3)); direct answers: fail (0% (2 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:rtci count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| clarify:historical change | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:historical count | 2021 and later | 3 | fail | wrong answers: fail (2); clarifications: fail (0/3 verified correct, 3 failing); initial action: fail (0% (0/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:historical count | spans 2021 | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:historical rate | 2021 and later | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:historical share | spans 2021 | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1); clarifications: fail (0/2 verified correct, 2 failing); initial action: fail (0% (0/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | spans 2021 | 6 | fail | wrong answers: pass (0); clarifications: fail (0/6 verified correct, 6 failing); initial action: fail (0% (0/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs share | 2021 and later | 2 | fail | wrong answers: fail (1); clarifications: fail (0/2 verified correct, 2 failing); initial action: fail (0% (0/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:rtci rate | 2021 and later | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | 2021 and later | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | spans 2021 | 1 | fail | wrong answers: fail (1); declines: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs share | 2021 and later | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 7 | fail | wrong answers: pass (0); declines: fail (0/7 verified correct, 3 unverified, 4 failing); initial action: fail (43% (3/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:shr count | spans 2021 | 1 | fail | wrong answers: fail (1); declines: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -99,7 +100,7 @@ Discrepancies and unverified cases:
   - unverified rank by: expected `shoplifting rate`, got `(the ranked statistic is not mapped)`
   - unverified denominator: expected `agency resident population, per 100,000`, got `(not represented in the plan's meaning)`
 - **LS-063** (wrong_answer; expected answer, got answer) "which cities in Texas (min 250k) had the highest rate of carjackings in 2025?"
-  - unverified measures: expected `?`, got `carjacking|incident`
+  - material measures: expected `carjacking|offense`, got `carjacking|incident`
   - unverified filters: expected `? + ?`, got `? + population:250000+`
   - material rank limit: expected `20`, got `null`
   - unverified rank by: expected `carjacking rate`, got `(the ranked statistic is not mapped)`
@@ -221,12 +222,12 @@ Expected (rows) by actual (columns):
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
-| answer:historical count | 2021 and later | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:historical count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| answer:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no compiler yet) |
-| decline:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
-| decline:no meaning | no period | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no compiler yet) |
+| answer:historical count | 2021 and later | 2 | fail | wrong answers: fail (2); initial action: pass (100% (2/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical count | spans 2021 | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -251,8 +252,79 @@ Discrepancies and unverified cases:
 
 ### Development
 
-No cases.
+20 cases. Correct 4; unverified 1; wrong answers 4; avoidable declines 6; unnecessary clarifications 0; wrong actions 2; incomplete 3. Severity score 533 (trend only).
+
+Expected (rows) by actual (columns):
+
+| | answer | clarify | decline | no reading |
+|---|---|---|---|---|
+| answer | 5 | 0 | 6 | 0 |
+| clarify | 3 | 0 | 1 | 1 |
+| decline | 0 | 0 | 4 | 0 |
+
+| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
+|---|---|---|---|---|
+| answer:nibrs count | 2021 and later | 11 | fail | wrong answers: fail (1); initial action: fail (45% (5/11)); direct answers: fail (36% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | 2021 and later | 3 | fail | wrong answers: fail (2); clarifications: fail (0/3 verified correct, 3 failing); initial action: fail (0% (0/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| clarify:nibrs count | spans 2021 | 1 | fail | wrong answers: fail (1); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | 2021 and later | 2 | fail | wrong answers: pass (0); declines: fail (0/2 verified correct, 2 failing); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); declines: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 1 | not measured | wrong answers: pass (0); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+
+Discrepancies and unverified cases:
+
+- **LS-224** (avoidable_decline; expected answer, got decline) "Carjackings in St. Louis by year, 2021 to 2025"
+  - declined (reason not judged): I can't apply "St. Louis": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
+- **LS-225** (wrong_answer; expected answer, got answer) "carjackings in Memphis TN by month in 2025"
+  - material measures: expected `carjacking|offense`, got `carjacking|incident`
+- **LS-226** (avoidable_decline; expected answer, got decline) "How many simple assaults were there in Detroit in 2023?"
+  - adapter refused (reason not judged): a place did not resolve
+- **LS-227** (avoidable_decline; expected answer, got decline) "simple assault victims in Detroit by month in 2023"
+  - adapter refused (reason not judged): a place did not resolve
+- **LS-228** (avoidable_decline; expected answer, got decline) "Thefts from motor vehicles in Columbus, Ohio in 2022"
+  - declined (reason not judged): I couldn't interpret "from motor vehicles in" in this question, so I haven't answered it with a number that ignores it.
+- **LS-229** (avoidable_decline; expected answer, got decline) "Drug crimes in Detroit in 2024"
+  - adapter refused (reason not judged): a place did not resolve
+- **LS-230** (avoidable_decline; expected answer, got decline) "Shoplifting in Memphis so far this year"
+  - declined (reason not judged): I couldn't interpret "so far this year" in this question, so I haven't answered it with a number that ignores it.
+- **LS-231** (wrong_action; expected clarify, got decline) "Thefts from motor vehicles in Kansas City in 2024"
+  - declined (reason not judged): I can't apply "Kansas City": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.
+- **LS-232** (wrong_answer; expected clarify, got answer) "How many shoplifting offenses were there in 2024?"
+- **LS-233** (wrong_answer; expected clarify, got answer) "Shoplifting in Memphis"
+- **LS-234** (wrong_answer; expected clarify, got answer) "Carjackings in Memphis by month"
+- **LS-235** (wrong_action; expected clarify, got no_reading) "How many crimes were there in Detroit in 2024?"
+  - no typed reading: no answer, no reason
+- **LS-236** (incomplete; expected decline, got decline) "Shoplifting in Memphis in 2027"
+  - plan refused (reason not judged): S7
+  - no alternative offered; the label expects one
+- **LS-238** (unverified; expected decline, got decline) "Shoplifting in Memphis by ZIP code in 2024"
+  - declined (reason not judged): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply "ZIP code". I haven't answered with a number that leaves it
+- **LS-239** (incomplete; expected decline, got decline) "How many shoplifting arrests in Memphis in 2024 led to convictions?"
+  - declined (reason not judged): I couldn't interpret "led to" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendant
+  - no alternative offered; the label expects one
+- **LS-240** (incomplete; expected decline, got decline) "Will carjackings go up in Memphis next year?"
+  - declined (reason not judged): I couldn't interpret "Will" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret "go up in" in this question, so I haven't answered it with a number
+  - no alternative offered; the label expects one
 
 ### Held out
 
-No cases.
+3 cases. Correct 1; unverified 0; wrong answers 1; avoidable declines 1; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 120 (trend only).
+
+Expected (rows) by actual (columns):
+
+| | answer | clarify | decline | no reading |
+|---|---|---|---|---|
+| answer | 2 | 0 | 1 | 0 |
+
+| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
+|---|---|---|---|---|
+| answer:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1); initial action: fail (50% (1/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | before 2021 | 1 | not measured | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: not measured (no delivered values) |
+
+Discrepancies and unverified cases:
+
+- **LS-222** (wrong_answer; expected answer, got answer) "How many shoplifting victims were there in Memphis in 2024?"
+  - material measures: expected `shoplifting|offense`, got `shoplifting|victim`
+- **LS-223** (avoidable_decline; expected answer, got decline) "Shoplifting in Baltimore by month from 2022 to 2025"
+  - declined (reason not judged): I can't apply "Baltimore": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out.

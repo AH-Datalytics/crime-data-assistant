@@ -1,0 +1,211 @@
+/**
+ * The shadow slice, question to delivered answer, for single-agency NIBRS counts on a pinned canonical build. SHADOW
+ * ONLY: no route imports it, nothing here is deployed, and it reads the canonical parquet files read-only.
+ *
+ *   typed question -> today's request accounting and reader (unchanged) -> the plan adapter -> the slice's policy
+ *   steps -> plan validation (shape, semantic layer, bindings, release) -> the compiler -> DuckDB -> deliver.ts
+ *
+ * Outcomes follow the plan contract (plan.ts ReaderOutcome): an answer from a validated plan; a clarifying question
+ * whose options are the original question with one choice filled in (P22, run here as continuations); or a limitation
+ * with its reason and, where policy offers one, an alternative. Options that only open an entry ("Another year", "A
+ * state") have no fixed question; ReaderOutcome has no form for them yet, so the slice carries them as `entry`.
+ *
+ * The slice's policy steps, each from a decided row:
+ *   D31/P05/P06/P12/D09  a question missing its crime, place or period is asked about, one part at a time;
+ *   D28                  a city name that is materially ambiguous is asked about (places.ts);
+ *   P16                  a city means its principal police agency (places.ts);
+ *   P11                  victims of a property crime are answered with offenses, with the fixed sentence;
+ *   D18                  carjacking is counted by offense;
+ *   P24/D04              a period after the data says where the data ends and offers this year so far; a period
+ *                        before this build's first month is refused as not built (`notBuilt`).
+ */
+import type { Part, RequestLedger } from "../request-accounting";
+import { accountNibrsRequest } from "../nibrs-request-accounting";
+import { matchNibrsType, PERSON_CODES, MEASURE_CODES } from "../nibrs-question-types";
+import { planFromSpec } from "../nibrs-plan/from-spec";
+import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
+import { compilePlan, type CompileTarget } from "../nibrs-plan/compile";
+import { validateOutcome } from "../nibrs-plan/outcome";
+import type { LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
+import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
+import { validateBindings } from "../nibrs-plan/validate";
+import type { AnswerStatement } from "../nibrs-plan/result";
+import { deliver, monthName, type Delivered } from "./deliver";
+import { resolveCity, stateName, type PlaceIndex } from "./places";
+
+export type ShadowDeps = {
+  places: PlaceIndex;
+  release: ReleaseInfo & { id: string; asOf: string };
+  target: CompileTarget;
+  /** Runs one SQL statement read-only and returns its rows. */
+  execute(sql: string): unknown[][];
+};
+
+export type ShadowOption = {
+  label: string;
+  /** A fixed question: its continuation. An entry ("Another year"): what it asks next. */
+  continuation?: ShadowOutcome;
+  entry?: string;
+  /** A reading answered by another source (P01): this NIBRS shadow does not run it. */
+  otherSource?: string;
+};
+export type ShadowOutcome =
+  | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered }
+  | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
+  | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean };
+
+const decline = (reason: LimitationReason | "reader", explanation: string, extra: { alternative?: ShadowOption | null; notBuilt?: boolean } = {}): ShadowOutcome =>
+  ({ kind: "decline", reason, explanation, alternative: extra.alternative ?? null, ...(extra.notBuilt ? { notBuilt: true } : {}) });
+
+/** A ledger with its parts replaced (the reader and the adapter read `parts` and `question`). */
+function withParts(ledger: RequestLedger, parts: Part[]): RequestLedger {
+  return Object.assign(Object.create(Object.getPrototypeOf(ledger)), ledger, { parts });
+}
+/** A choice filled in by a button: a part appended to the question's clause 0 (P22: nothing else changes). */
+function filled(ledger: RequestLedger, concept: string, value: string, text: string): RequestLedger {
+  const n = ledger.question.length;
+  const part = { concept, value, span: [n, n], text, explains: [[n, n]], clause: 0, rule: "shadow:button", state: "recognized", explanation: null } as unknown as Part;
+  return withParts(ledger, [...ledger.parts.filter((p) => !(p.clause === 0 && p.concept === concept)), part]);
+}
+
+/** The reason a reader decline gives, as a limitation reason; "reader" when its words name none of them. */
+function readerReason(explanation: string): LimitationReason | "reader" {
+  if (/below the level of an agency/.test(explanation)) return "below_agency_level";
+  if (/court outcomes/.test(explanation)) return "court_outcome";
+  if (/can't explain causes/.test(explanation)) return "explanation_requested";
+  if (/couldn't resolve that place/.test(explanation)) return "unresolved_place";
+  return "reader";
+}
+
+export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
+  return fromLedger(accountNibrsRequest(question), deps);
+}
+
+function fromLedger(ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome {
+  const { release } = deps;
+  const clause0 = (c: string) => ledger0.parts.filter((p) => p.clause === 0 && p.concept === c && p.state !== "context");
+
+  // Places first (P16, D28): resolve each city through the build's agencies; the reader then sees a resolved value.
+  const resolved = new Map<string, Place>();
+  let ask: { part: Part; city: string; states: string[] } | null = null;
+  const parts = ledger0.parts.map((p) => {
+    if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|ambiguous):/.test(p.value)) return p;
+    const r = resolveCity(deps.places, p.value, p.text);
+    if (r.kind === "unresolved") return p;
+    if (r.kind === "ask") { ask ??= { part: p, city: r.city, states: r.candidates.map((a) => a.state) }; return p; }
+    const value = `city:${r.agency.city}:${r.agency.state}`;
+    resolved.set(value, r.place);
+    return { ...p, value };
+  });
+  const ledger = withParts(ledger0, parts);
+  if (ask) {
+    const a: { part: Part; city: string; states: string[] } = ask;
+    return {
+      kind: "clarify", about: `which ${a.city}`, question: ledger0.question,
+      options: a.states.map((st) => {
+        const label = `${a.city}, ${stateName(st)}`;
+        const fixed = withParts(ledger, ledger.parts.map((p) => (p === a.part || (p.span[0] === a.part.span[0] && p.concept === "place") ? { ...p, value: `city:${a.city}:${st}`, text: label } : p)));
+        return { label, continuation: fromLedger(fixed, deps) };
+      }),
+    };
+  }
+
+  // A part the data does not record (a ZIP code, a conviction) is declined first: asking about the rest of a question
+  // that cannot be answered would be an unnecessary question (D28).
+  const unrecorded = ledger.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
+  if (unrecorded.length) {
+    const d0 = matchNibrsType(ledger);
+    const why = d0.kind === "decline" ? d0.explanation : unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
+    return decline(readerReason(why), why);
+  }
+
+  // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
+  const named = clause0("measure").some((p) => p.value !== "unspecified");
+  if (!named && clause0("measure").length) {
+    return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: [
+      { label: "Violent crime", otherSource: "historical" }, { label: "Property crime", otherSource: "historical" }, { label: "Both", otherSource: "historical" }] };
+  }
+  if (!clause0("place").length) {
+    return { kind: "clarify", about: "which place", question: ledger0.question, options: [
+      { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps) },
+      { label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }] };
+  }
+  const d = matchNibrsType(ledger);
+  if (d.kind === "none") return decline("reader", "The question could not be read: no typed reading.");
+  if (d.kind === "decline") return decline(readerReason(d.explanation), d.explanation);
+  if (d.kind === "clarify") return decline("reader", `The reader asked in text only: ${d.explanation}`);
+  if (d.spec.type === "series" && d.spec.period.form === "none") {
+    const lcy = Number(release.lastMonth.slice(0, 4)) - (release.lastMonth.endsWith("-12") ? 0 : 1);
+    const thisYear = Number(release.lastMonth.slice(0, 4));
+    const trend = d.spec.grain !== "total";
+    const opts: ShadowOption[] = trend
+      ? [{ label: "The last 10 complete years", continuation: fromLedger(filled(ledger, "period", "last:10", "the last 10 complete years"), deps) },
+         { label: "Every year available", continuation: fromLedger(filled(ledger, "period", `since:${release.firstMonth.slice(0, 4)}`, "every year available"), deps) },
+         { label: "Another range", entry: "which range of years" }]
+      : [{ label: "The latest complete year", continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps) },
+         { label: "This year so far", continuation: fromLedger(filled(ledger, "period", `year:${thisYear}`, "this year so far"), deps) },
+         { label: "Another year", entry: "which year" }];
+    return { kind: "clarify", about: trend ? "which range of years" : "which period", question: ledger0.question, options: opts };
+  }
+
+  // The plan.
+  const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v) => resolved.get(v) ?? null });
+  if (a.kind === "unmapped") return decline("unsupported_capability", `No plan form for this reading: ${a.reason}`);
+  const plan = a.plan;
+  // The slice is one agency: states and the nation need status evidence across agencies (D6) and come later.
+  if (plan.geography.places.some((p) => p.kind !== "agency")) return decline("unsupported_capability", "Not in the slice yet: state and national totals come later.");
+  let parts2 = a.parts;
+  const statements: AnswerStatement[] = [];
+  const m = plan.measures[0];
+  const name = m.id.replace(/^[a-z_]+\./, "");
+  // D19: "drug crimes" are drug/narcotic plus drug equipment violations. Today's reader reads them as drug possession
+  // alone, and the slice compiles one measure, so it declines rather than answer a narrower count.
+  if (name === "drug_possession" && clause0("measure").some((p) => p.value === "drug_possession" && !/possess/i.test(p.text)))
+    return decline("unsupported_capability", "Not in the slice yet: drug crimes are drug/narcotic violations plus drug equipment violations (D19), two measures.");
+  // D18: carjacking by offense.
+  if (m.id === "incidents.carjacking" && !clause0("unit").length) plan.measures[0] = { ...m, id: "offenses.carjacking", unit: "offense" };
+  // P11: victims of a property crime -> offenses, with the fixed sentence. The unit part is answered differently by
+  // decided policy and disclosed by that sentence, so it is not held to the victim unit.
+  const codes = MEASURE_CODES[name];
+  if (m.id.startsWith("victims.") && codes && !codes.every((c) => PERSON_CODES.has(c))) {
+    plan.measures[0] = { ...m, id: `offenses.${name}`, unit: "offense" };
+    plan.defaults.push({ path: "measures[0].unit", value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
+    const unitPart = parts2.filter((p) => p.concept === "unit");
+    parts2 = parts2.filter((p) => p.concept !== "unit");
+    plan.bindings = plan.bindings.filter((b) => !unitPart.some((u) => u.span[0] === b.part.span[0] && u.concept === b.part.concept));
+    statements.push("property_counted_by_offense");
+  }
+
+  // Release: the effective months. After the data: P24. Before this build: not built.
+  let period: { from: string; to: string };
+  try { const r = resolvePeriod(plan.period, release); if (r.kind !== "absolute") return decline("unsupported_capability", "Separate years are not in the slice."); period = { from: r.from, to: r.to }; }
+  catch (e) { return decline("unsupported_capability", String(e)); }
+  if (period.from > release.lastMonth) {
+    const y = release.lastMonth.slice(0, 4);
+    return decline("outside_release_coverage", `${period.from.slice(0, 4)} is not in the data; the latest month available is ${monthName(release.lastMonth)}.`,
+      { alternative: { label: `This year so far (${periodWordsShort(`${y}-01`, release.lastMonth)})`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, "this year so far"), deps) } });
+  }
+  if (period.from < release.firstMonth) {
+    return decline("outside_release_coverage", `This build holds ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}; ${period.from.slice(0, 4)} is not in it.`, { notBuilt: true });
+  }
+  const requestedTo = period.to;
+  // A year still in progress runs through the release's last month (D06: the answer names the months covered). The
+  // release rules check that clipped period; the question's own period part is checked against what it asked for.
+  if (period.to > release.lastMonth) period = { from: period.from, to: release.lastMonth };
+  const checked: NibrsPlan = period.to === requestedTo ? plan : { ...plan, period: { kind: "absolute", ...period } };
+
+  // Validation, as any reader outcome: shape, semantic layer, release; then every part of the question applied.
+  const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : []) };
+  const authority = (v: string) => { const p = resolved.get(v); return p && p.kind === "agency" ? { oris: [p.ori] } : null; };
+  const problems = [...validateOutcome({ kind: "plan", plan: checked }, DRAFT_LAYER, release, geo), ...validateBindings(plan, parts2, authority)];
+  if (problems.length) return decline("unsupported_capability", `The plan did not validate: ${problems.map((p) => `${p.rule} ${p.path}: ${p.message}`).join("; ")}`);
+
+  const c = compilePlan(checked, { kind: "absolute", ...period }, deps.target);
+  if (c.kind === "unsupported") return decline("unsupported_capability", `Not in the slice yet: ${c.reason}`);
+  const rows = deps.execute(c.query.sql);
+  const refused = rows.filter((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i]))));
+  if (refused.length) return decline("unsupported_capability", "The data contradicts itself for this agency and period (a count in a month reported as having none), so no number is given.");
+  return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered: deliver(checked, period, requestedTo, c.query.columns, rows, [...c.query.statements, ...statements], release.id) };
+}
+
+const periodWordsShort = (from: string, to: string) => (from === to ? monthName(to) : `${monthName(from).split(" ")[0]} to ${monthName(to)}`);
