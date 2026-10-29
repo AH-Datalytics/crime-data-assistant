@@ -9,13 +9,13 @@ import { nearestWord, readQuestion } from "../lib/nibrs-shadow/reading";
 
 const read = (q: string) => readQuestion(q, 2026);
 
-// Misspellings: one near word only, never a real word or a non-word.
+// Misspellings: one dropped, added or swapped letter from exactly one crime or state word, 7 letters or more. A changed
+// letter is never corrected, so real words stay what they are (Codex review 2: "Sample assaults" is not simple assault).
 assert.equal(nearestWord("Shoplfting"), "shoplifting");
-assert.equal(nearestWord("robery"), "robbery");
+assert.equal(nearestWord("robbeyr"), "robbery", "a swapped pair");
 assert.equal(nearestWord("Tennesee"), "tennessee");
-assert.equal(nearestWord("arsen"), "arson");
-assert.equal(nearestWord("thefs"), null, "equally near theft and thefts: not guessed");
-for (const w of ["shooting", "shopping", "Shplftg", "rbry", "parking"]) assert.equal(nearestWord(w), null, w);
+assert.equal(nearestWord("viriginia"), "virginia", "an added letter");
+for (const w of ["sample", "violet", "robery", "arsen", "shooting", "shopping", "Shplftg", "parking", "shoplofting"]) assert.equal(nearestWord(w), null, w);
 const sp = read("burglries in Pittsburgh in 2023");
 assert.deepEqual(sp.readings, [{ kind: "spelling", from: "burglries", to: "burglaries" }]);
 assert.equal(read("Robberies in Pittsburgh in 2023").readings.length, 0, "nothing to correct, nothing recorded");
@@ -34,10 +34,13 @@ assert.equal(read("arsons in Tulsa so far in 2026").text, "arsons in Tulsa in 20
 assert.equal(read("robberies in Tulsa last year").readings.length, 0);
 
 // Forecasts (P20): the future, not merely a year the data does not hold yet (P24).
-for (const q of ["Will robberies rise in Tulsa?", "What will arsons be in Tulsa in 2031?", "forecast burglaries in Tulsa", "Are robberies going to increase in Tulsa?", "robberies in Tulsa next year"])
+for (const q of ["Will robberies rise in Tulsa?", "What will arsons be in Tulsa in 2031?", "forecast burglaries in Tulsa", "Are robberies going to increase in Tulsa?",
+  "Predicting burglaries in Tulsa in 2028", "Will burglaries in Tulsa go up next year?", "burglaries in Tulsa are expected to rise"])
   assert.equal(read(q).forecast, true, q);
-for (const q of ["How many arrests will the 2023 numbers show in Tulsa?", "Robberies in Tulsa in 2027", "Robberies in Tulsa this year"])
+for (const q of ["How many arrests will the 2023 numbers show in Tulsa?", "Robberies in Tulsa in 2027", "Robberies in Tulsa this year", "robberies in Tulsa next year"])
   assert.equal(read(q).forecast, false, q);
+// A future year with nothing predicting is a period after the data (P24), not a forecast.
+assert.equal(read("robberies in Tulsa next year").text, "robberies in Tulsa in 2027");
 
 // Court outcomes (D01) the accounting does not name.
 for (const q of ["How many robbery arrests in Tulsa went to trial in 2023?", "robbers sentenced in Tulsa in 2023", "guilty pleas for burglary in Tulsa"]) assert.equal(read(q).court, true, q);

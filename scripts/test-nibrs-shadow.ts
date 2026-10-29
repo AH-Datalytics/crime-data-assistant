@@ -211,6 +211,16 @@ assert.deepEqual([fc.reason, fc.alternative!.label], ["forecast", "The last 10 c
 assert.equal(as(fc.alternative!.continuation!, "decline").notBuilt, true, "2016 is before this build");
 // A forecast verb the reader reads as a change ("increase") is dropped from the alternative too.
 assert.equal(as(as(ask("Will carjackings increase in Memphis in 2027?"), "decline").alternative!.continuation!, "decline").notBuilt, true);
+// Codex review 2: with the years present, the forecast's alternative reaches an annual answer (its two filled parts no
+// longer share a binding); a real word is never corrected into a crime; P01 leaves a crime's details to NIBRS's limits.
+const deeper: ShadowDeps = { ...deps, release: { ...deps.release, firstMonth: "2016-01" }, target: { ...deps.target, builtYears: [2016, ...deps.target.builtYears] } };
+const fcAlt = as(as(shadowAnswer("Will shoplifting rise in Memphis next year?", deeper), "decline").alternative!.continuation!, "answer");
+assert.deepEqual([fcAlt.period, fcAlt.plan.groupings.map((g) => g.dimension)], [{ from: "2016-01", to: "2025-12" }, ["time.year"]]);
+assert.equal(as(shadowAnswer("Will shoplifting near schools rise in Memphis next year?", deeper), "decline").alternative!.continuation!.kind, "decline", "an unread qualifier stays, so the narrower alternative declines");
+assert.notEqual(ask("Sample assaults in Memphis in 2023").kind, "answer");
+for (const q of ["Robberies with a firearm in Memphis in 2023", "Robbery arrests in Memphis in 2023"]) assert.doesNotMatch(as(ask(q), "decline").explanation, /P01/, q);
+assert.equal(as(ask("Shoplifting in Memphis next year"), "decline").reason, "outside_release_coverage", "P24, not a forecast");
+assert.equal(as(ask("Predicting shoplifting in Memphis in 2027"), "decline").reason, "forecast");
 const ct = as(ask("How many shoplifting arrests in Memphis in 2024 led to convictions?"), "decline");
 assert.deepEqual([ct.reason, ct.alternative!.label], ["court_outcome", "Arrests for the same crime, place and period"]);
 const typo = as(ask("Shoplfting in Memphis in 2023"), "answer");
