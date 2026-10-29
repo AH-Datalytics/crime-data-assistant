@@ -34,6 +34,8 @@ for (const c of cases) {
 for (const c of cases.filter((x) => x.button)) {
   const target = cases.find((x) => x.id === c.button!.answers);
   assert.ok(target, `${c.id}: answers an unknown case`);
+  // A button whose parent no longer asks (a policy decision removed the question) is obsolete and must be unresolved.
+  if (target!.expected && target!.expected.action !== "clarify") { assert.equal(c.label.status, "unresolved", `${c.id}: its parent no longer asks, so it is obsolete`); continue; }
   if (target!.expected) {
     assert.equal(target!.expected.action, "clarify", `${c.id}: a button answers a clarifying case`);
     if (target!.expected.action === "clarify") assert.ok(target!.expected.options.some((o) => o.label === c.button!.option), `${c.id}: "${c.button!.option}" is not an option of ${target!.id}`);

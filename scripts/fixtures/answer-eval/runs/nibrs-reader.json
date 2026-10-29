@@ -11,20 +11,13 @@
    "LS-001",
    "LS-002",
    "LS-003",
-   "LS-005",
-   "LS-009",
-   "LS-012",
-   "LS-020",
    "LS-022",
-   "LS-024",
    "LS-025",
    "LS-030",
    "LS-032",
    "LS-036",
-   "LS-037",
    "LS-038",
    "LS-043",
-   "LS-053",
    "LS-060",
    "LS-062",
    "LS-063",
@@ -35,36 +28,24 @@
    "LS-086",
    "LS-096",
    "LS-111",
-   "LS-112",
    "LS-113",
    "LS-114",
    "LS-121",
-   "LS-122",
-   "LS-123",
    "LS-124",
    "LS-125",
    "LS-126",
-   "LS-127",
    "LS-128",
    "LS-129",
-   "LS-130",
    "LS-131",
-   "LS-132",
    "LS-133",
-   "LS-134",
    "LS-135",
-   "LS-136",
    "LS-137",
    "LS-138",
-   "LS-139",
    "LS-140",
    "LS-141",
    "LS-142",
    "LS-143",
-   "LS-144",
-   "LS-145",
    "LS-146",
-   "LS-147",
    "LS-148",
    "LS-149",
    "LS-150",
@@ -81,21 +62,21 @@
    "LS-168",
    "LS-170",
    "LS-171",
+   "LS-174",
    "LS-176",
    "LS-179",
    "LS-180",
    "LS-181",
+   "LS-182",
    "LS-185",
    "LS-186",
    "LS-191",
    "LS-196",
-   "LS-200",
    "LS-201",
    "LS-204",
    "LS-205",
    "LS-206",
    "LS-207",
-   "LS-208",
    "LS-212"
   ],
   "a follow-up: the reader takes one turn": [
@@ -228,51 +209,30 @@
    "LS-218"
   ],
   "label unresolved": [
+   "LS-024",
+   "LS-037",
+   "LS-053",
    "LS-100",
-   "LS-174",
-   "LS-182"
+   "LS-112",
+   "LS-122",
+   "LS-123",
+   "LS-127",
+   "LS-130",
+   "LS-132",
+   "LS-134",
+   "LS-136",
+   "LS-139",
+   "LS-144",
+   "LS-145",
+   "LS-147",
+   "LS-200",
+   "LS-208"
   ],
   "a button: the reader returns no structured options": [
    "LS-216"
   ]
  },
- "scored": [],
- "provisional": [
-  {
-   "id": "LS-001",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [],
-   "capability": "nibrs:share",
-   "era": "2021 and later"
-  },
-  {
-   "id": "LS-002",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [],
-   "capability": "nibrs:share",
-   "era": "2021 and later"
-  },
-  {
-   "id": "LS-003",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "no_reading",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "no typed reading (today's route would hand it to another path)"
-   ],
-   "capability": "nibrs:share",
-   "era": "2021 and later"
-  },
+ "scored": [
   {
    "id": "LS-005",
    "split": "dev",
@@ -324,32 +284,62 @@
    ],
    "capability": "nibrs:decline",
    "era": "relative period"
+  }
+ ],
+ "provisional": [
+  {
+   "id": "LS-001",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "filters",
+     "expected": "cleared by exceptional mean",
+     "actual": "clearance",
+     "kind": "material"
+    }
+   ],
+   "notes": [],
+   "capability": "nibrs:share",
+   "era": "2021 and later"
   },
   {
-   "id": "LS-022",
+   "id": "LS-002",
    "split": "dev",
-   "expected": "decline",
-   "actual": "decline",
-   "outcome": "correct",
+   "expected": "clarify",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [],
+   "notes": [],
+   "capability": "nibrs:clarify",
+   "era": "relative period"
+  },
+  {
+   "id": "LS-003",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "no_reading",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "no typed reading (today's route would hand it to another path)"
    ],
-   "capability": "nibrs:decline",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
-   "id": "LS-024",
+   "id": "LS-022",
    "split": "dev",
-   "expected": "decline",
-   "actual": "decline",
-   "outcome": "incomplete",
+   "expected": "answer",
+   "actual": "no_reading",
+   "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "I couldn't interpret \"'s\" in this question, so I haven't answered it with a number that ignores it.",
-    "no alternative offered; the label expects one"
+    "no typed reading (today's route would hand it to another path)"
    ],
-   "capability": "nibrs:decline",
+   "capability": "nibrs:list",
    "era": "relative period"
   },
   {
@@ -377,14 +367,15 @@
   {
    "id": "LS-032",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "clarify",
-   "outcome": "unnecessary_clarify",
+   "outcome": "incomplete",
    "diffs": [],
    "notes": [
-    "Which part of the total should the share measure? Name it after \"were\" or \"that\" (for example \"what share of robbery offenders were under 18\")."
+    "Which part of the total should the share measure? Name it after \"were\" or \"that\" (for example \"what share of robbery offenders were under 18\").",
+    "options not structured: the label's options cannot be checked"
    ],
-   "capability": "nibrs:share",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -392,22 +383,18 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:rate",
+   "capability": "historical:rate",
    "era": "2021 and later"
-  },
-  {
-   "id": "LS-037",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [],
-   "capability": "nibrs:rate",
-   "era": "relative period"
   },
   {
    "id": "LS-038",
@@ -417,8 +404,14 @@
    "outcome": "wrong_answer",
    "diffs": [
     {
+     "field": "measures",
+     "expected": "sex offenses rape sodomy sexual assault with an object fondling incest statutory rape",
+     "actual": "sex offense",
+     "kind": "material"
+    },
+    {
      "field": "filters",
-     "expected": "",
+     "expected": "cleared by arrest or exceptional mean",
      "actual": "clearance",
      "kind": "material"
     }
@@ -452,25 +445,33 @@
    "era": "relative period"
   },
   {
-   "id": "LS-053",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [],
-   "capability": "nibrs:rate",
-   "era": "relative period"
-  },
-  {
    "id": "LS-060",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "rtci",
+     "actual": "nibrs",
+     "kind": "material"
+    },
+    {
+     "field": "filters",
+     "expected": "city agencies in the current trends sample",
+     "actual": "",
+     "kind": "material"
+    },
+    {
+     "field": "cohort",
+     "expected": "source_sample",
+     "actual": "all_reporting",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:rate",
+   "capability": "rtci:rate",
    "era": "relative period"
   },
   {
@@ -478,8 +479,15 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "filters",
+     "expected": "agencies that reported all 12 months of 2025, population",
+     "actual": "population",
+     "kind": "material"
+    }
+   ],
    "notes": [],
    "capability": "nibrs:rate",
    "era": "2021 and later"
@@ -495,6 +503,12 @@
      "field": "units",
      "expected": "offense",
      "actual": "incident",
+     "kind": "material"
+    },
+    {
+     "field": "filters",
+     "expected": "agencies that reported all 12 months of 2025, population",
+     "actual": "population",
      "kind": "material"
     }
    ],
@@ -512,20 +526,20 @@
    "notes": [
     "no typed reading (today's route would hand it to another path)"
    ],
-   "capability": "nibrs:change",
+   "capability": "historical:change",
    "era": "relative period"
   },
   {
    "id": "LS-075",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "I couldn't interpret \"by vilont\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"vs\": comparisons are answered as named places side by side; ask for the places and the years. I haven't answered with a number that leaves it out. I couldn't interpret \"nonvilont\" in this question, so I haven't answered it with a number that ignores it."
    ],
-   "capability": "nibrs:count",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -533,23 +547,30 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:count",
+   "capability": "historical:count",
    "era": "2021 and later"
   },
   {
    "id": "LS-083",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "no_reading",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "no typed reading (today's route would hand it to another path)"
    ],
-   "capability": "nibrs:count",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -560,25 +581,31 @@
    "outcome": "wrong_answer",
    "diffs": [
     {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    },
+    {
      "field": "filters",
-     "expected": "",
+     "expected": "cleared by arrest or exceptional mean",
      "actual": "clearance",
      "kind": "material"
     }
    ],
    "notes": [],
-   "capability": "nibrs:rate",
+   "capability": "historical:share",
    "era": "2021 and later"
   },
   {
    "id": "LS-096",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "answer",
-   "outcome": "correct",
+   "outcome": "wrong_answer",
    "diffs": [],
    "notes": [],
-   "capability": "nibrs:rate",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -595,81 +622,43 @@
    "era": "2021 and later"
   },
   {
-   "id": "LS-112",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
-  },
-  {
    "id": "LS-113",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "no_reading",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "no typed reading (today's route would hand it to another path)"
    ],
-   "capability": "nibrs:count",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
    "id": "LS-114",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:rate",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
    "id": "LS-121",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "clarify",
-   "outcome": "unnecessary_clarify",
+   "outcome": "incomplete",
    "diffs": [],
    "notes": [
-    "Which part of the total should the share measure? Name it after \"were\" or \"that\" (for example \"what share of robbery offenders were under 18\")."
+    "Which part of the total should the share measure? Name it after \"were\" or \"that\" (for example \"what share of robbery offenders were under 18\").",
+    "options not structured: the label's options cannot be checked"
    ],
-   "capability": "nibrs:share",
-   "era": "relative period"
-  },
-  {
-   "id": "LS-122",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
-  },
-  {
-   "id": "LS-123",
-   "split": "dev",
-   "expected": "decline",
-   "actual": "decline",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"Why\": I report what NIBRS records; I can't explain causes. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:decline",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -688,40 +677,27 @@
   {
    "id": "LS-125",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "I can't apply \"3 agencies of similar size\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:share",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
    "id": "LS-126",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "I can't apply \"state\": I couldn't use it in a supported question type. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:count",
-   "era": "relative period"
-  },
-  {
-   "id": "LS-127",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "I couldn't interpret \"school\" in this question, so I haven't answered it with a number that ignores it."
-   ],
-   "capability": "nibrs:count",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -747,51 +723,20 @@
    "notes": [
     "I can't apply \"Los Angeles\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:share",
+   "capability": "historical:share",
    "era": "2021 and later"
-  },
-  {
-   "id": "LS-130",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "no_reading",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "no typed reading (today's route would hand it to another path)"
-   ],
-   "capability": "nibrs:count",
-   "era": "relative period"
   },
   {
    "id": "LS-131",
    "split": "dev",
-   "expected": "answer",
+   "expected": "decline",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
     "plan refused: A4, A4"
    ],
-   "capability": "nibrs:share",
-   "era": "relative period"
-  },
-  {
-   "id": "LS-132",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "wrong_answer",
-   "diffs": [
-    {
-     "field": "units",
-     "expected": "fbi standard",
-     "actual": "victim",
-     "kind": "material"
-    }
-   ],
-   "notes": [],
-   "capability": "nibrs:count",
+   "capability": "nibrs:decline",
    "era": "relative period"
   },
   {
@@ -809,19 +754,6 @@
    "era": "relative period"
   },
   {
-   "id": "LS-134",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
-  },
-  {
    "id": "LS-135",
    "split": "dev",
    "expected": "answer",
@@ -835,19 +767,6 @@
    "era": "2021 and later"
   },
   {
-   "id": "LS-136",
-   "split": "dev",
-   "expected": "decline",
-   "actual": "decline",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"Increase to 4 comparable agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:decline",
-   "era": "relative period"
-  },
-  {
    "id": "LS-137",
    "split": "dev",
    "expected": "answer",
@@ -857,7 +776,7 @@
    "notes": [
     "I can't apply \"2026\": one period per answer. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:count",
+   "capability": "rtci:count",
    "era": "2021 and later"
   },
   {
@@ -874,29 +793,16 @@
    "era": "relative period"
   },
   {
-   "id": "LS-139",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"decline\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:change",
-   "era": "relative period"
-  },
-  {
    "id": "LS-140",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "I can't apply \"St Louis\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:count",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -934,6 +840,12 @@
    "outcome": "wrong_answer",
    "diffs": [
     {
+     "field": "filters",
+     "expected": "cleared by exceptional mean",
+     "actual": "clearance",
+     "kind": "material"
+    },
+    {
      "field": "groupings",
      "expected": "exceptional clearance type",
      "actual": "clearance type",
@@ -941,32 +853,6 @@
     }
    ],
    "notes": [],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
-  },
-  {
-   "id": "LS-144",
-   "split": "dev",
-   "expected": "clarify",
-   "actual": "decline",
-   "outcome": "wrong_action",
-   "diffs": [],
-   "notes": [
-    "adapter refused: a place did not resolve"
-   ],
-   "capability": "nibrs:clarify",
-   "era": "relative period"
-  },
-  {
-   "id": "LS-145",
-   "split": "heldout",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
-   ],
    "capability": "nibrs:count",
    "era": "2021 and later"
   },
@@ -982,19 +868,6 @@
    ],
    "capability": "nibrs:count",
    "era": "2021 and later"
-  },
-  {
-   "id": "LS-147",
-   "split": "heldout",
-   "expected": "decline",
-   "actual": "decline",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"increase to 8 comparable agencies\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:decline",
-   "era": "relative period"
   },
   {
    "id": "LS-148",
@@ -1019,20 +892,20 @@
    "notes": [
     "I couldn't interpret \"viriginia\" in this question, so I haven't answered it with a number that ignores it."
    ],
-   "capability": "nibrs:count",
+   "capability": "historical:count",
    "era": "2021 and later"
   },
   {
    "id": "LS-150",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "I can't apply \"by month\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:count",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
@@ -1051,52 +924,52 @@
   {
    "id": "LS-152",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "no_reading",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "no typed reading (today's route would hand it to another path)"
    ],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
+   "capability": "nibrs:clarify",
+   "era": "relative period"
   },
   {
    "id": "LS-153",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "answer",
-   "outcome": "correct",
+   "outcome": "wrong_answer",
    "diffs": [],
    "notes": [],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
+   "capability": "nibrs:clarify",
+   "era": "relative period"
   },
   {
    "id": "LS-154",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "adapter refused: a place did not resolve"
    ],
-   "capability": "nibrs:share",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
    "id": "LS-155",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "decline",
-   "outcome": "avoidable_decline",
+   "outcome": "wrong_action",
    "diffs": [],
    "notes": [
     "I can't apply \"for consistent reporters\": that is answered only by its own fixed path, which couldn't answer this request. I haven't answered with a number that leaves it out."
    ],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
+   "capability": "nibrs:clarify",
+   "era": "relative period"
   },
   {
    "id": "LS-156",
@@ -1114,23 +987,37 @@
   {
    "id": "LS-163",
    "split": "dev",
-   "expected": "decline",
+   "expected": "answer",
    "actual": "answer",
    "outcome": "wrong_answer",
-   "diffs": [],
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:decline",
+   "capability": "historical:count",
    "era": "before 2021"
   },
   {
    "id": "LS-164",
    "split": "dev",
-   "expected": "decline",
+   "expected": "answer",
    "actual": "answer",
    "outcome": "wrong_answer",
-   "diffs": [],
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:decline",
+   "capability": "historical:count",
    "era": "before 2021"
   },
   {
@@ -1141,14 +1028,20 @@
    "outcome": "wrong_answer",
    "diffs": [
     {
-     "field": "cohort",
-     "expected": "same_agencies",
-     "actual": "all_reporting",
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    },
+    {
+     "field": "groupings",
+     "expected": "year",
+     "actual": "",
      "kind": "material"
     }
    ],
    "notes": [],
-   "capability": "nibrs:change",
+   "capability": "historical:change",
    "era": "2021 and later"
   },
   {
@@ -1159,14 +1052,14 @@
    "outcome": "wrong_answer",
    "diffs": [
     {
-     "field": "cohort",
-     "expected": "same_agencies",
-     "actual": "all_reporting",
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
      "kind": "material"
     }
    ],
    "notes": [],
-   "capability": "nibrs:count",
+   "capability": "historical:count",
    "era": "2021 and later"
   },
   {
@@ -1177,6 +1070,12 @@
    "outcome": "wrong_answer",
    "diffs": [
     {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    },
+    {
      "field": "filters",
      "expected": "agencies that reported all 12 month",
      "actual": "",
@@ -1184,37 +1083,48 @@
     }
    ],
    "notes": [],
-   "capability": "nibrs:rank",
+   "capability": "historical:rank",
    "era": "2021 and later"
   },
   {
    "id": "LS-170",
    "split": "dev",
-   "expected": "answer",
+   "expected": "clarify",
    "actual": "answer",
-   "outcome": "correct",
+   "outcome": "wrong_answer",
    "diffs": [],
    "notes": [],
-   "capability": "nibrs:count",
+   "capability": "nibrs:clarify",
    "era": "relative period"
   },
   {
    "id": "LS-171",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [],
+   "notes": [],
+   "capability": "nibrs:clarify",
+   "era": "relative period"
+  },
+  {
+   "id": "LS-174",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
    "outcome": "wrong_answer",
    "diffs": [
     {
-     "field": "period",
-     "expected": "2016-01..2025-12",
-     "actual": "2025-01..2025-12",
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
      "kind": "material"
     }
    ],
    "notes": [],
-   "capability": "nibrs:count",
-   "era": "relative period"
+   "capability": "historical:count",
+   "era": "2021 and later"
   },
   {
    "id": "LS-176",
@@ -1226,7 +1136,7 @@
    "notes": [
     "no typed reading (today's route would hand it to another path)"
    ],
-   "capability": "nibrs:count",
+   "capability": "historical:count",
    "era": "2021 and later"
   },
   {
@@ -1234,10 +1144,17 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:count",
+   "capability": "historical:count",
    "era": "2021 and later"
   },
   {
@@ -1245,10 +1162,29 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    },
+    {
+     "field": "measures",
+     "expected": "larceny theft",
+     "actual": "theft",
+     "kind": "material"
+    },
+    {
+     "field": "units",
+     "expected": "offense",
+     "actual": "victim",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:count",
+   "capability": "historical:count",
    "era": "2021 and later"
   },
   {
@@ -1256,11 +1192,35 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    },
+    {
+     "field": "measures",
+     "expected": "larceny theft",
+     "actual": "theft",
+     "kind": "material"
+    }
+   ],
+   "notes": [],
+   "capability": "historical:count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-182",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "answer",
+   "outcome": "wrong_answer",
    "diffs": [],
    "notes": [],
-   "capability": "nibrs:count",
-   "era": "2021 and later"
+   "capability": "nibrs:clarify",
+   "era": "relative period"
   },
   {
    "id": "LS-185",
@@ -1280,10 +1240,17 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    }
+   ],
    "notes": [],
-   "capability": "nibrs:rate",
+   "capability": "historical:rate",
    "era": "2021 and later"
   },
   {
@@ -1311,17 +1278,6 @@
    ],
    "capability": "nibrs:clarify",
    "era": "relative period"
-  },
-  {
-   "id": "LS-200",
-   "split": "dev",
-   "expected": "decline",
-   "actual": "answer",
-   "outcome": "wrong_answer",
-   "diffs": [],
-   "notes": [],
-   "capability": "nibrs:decline",
-   "era": "2021 and later"
   },
   {
    "id": "LS-201",
@@ -1369,6 +1325,12 @@
    "outcome": "wrong_answer",
    "diffs": [
     {
+     "field": "source",
+     "expected": "shr",
+     "actual": "nibrs",
+     "kind": "material"
+    },
+    {
      "field": "measures",
      "expected": "murder",
      "actual": "domestic violence + murder",
@@ -1388,7 +1350,7 @@
     }
    ],
    "notes": [],
-   "capability": "nibrs:count",
+   "capability": "shr:count",
    "era": "2021 and later"
   },
   {
@@ -1418,30 +1380,17 @@
    "era": "2021 and later"
   },
   {
-   "id": "LS-208",
+   "id": "LS-212",
    "split": "dev",
    "expected": "clarify",
    "actual": "decline",
    "outcome": "wrong_action",
    "diffs": [],
    "notes": [
-    "I can't apply \"New York\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
+    "I can't apply \"increase\": I rank places by a level, not by a change, in this version. I haven't answered with a number that leaves it out."
    ],
    "capability": "nibrs:clarify",
    "era": "relative period"
-  },
-  {
-   "id": "LS-212",
-   "split": "dev",
-   "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
-   "notes": [
-    "I can't apply \"increase\": I rank places by a level, not by a change, in this version. I haven't answered with a number that leaves it out."
-   ],
-   "capability": "nibrs:change",
-   "era": "2021 and later"
   }
  ]
 }
