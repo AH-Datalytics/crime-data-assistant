@@ -129,7 +129,7 @@ ROWS = [
      "Keep the city's principal police agency, and name it in the answer as county answers already do (rule 10).",
      "Default: the city's principal police agency, named.",
      "The reader should know whose numbers they are reading.",
-     OPEN, gc(10)),
+     O28 + " (Jeff: yes)", gc(10)),
     ("P17", "\"Top 10 cities by murders\" where the 10th and 11th are tied",
      "Cuts at 10. Some rankings break ties by agency code, others in no fixed order.",
      "Show exactly the number asked for (frozen rule 5). Within a tie, order by agency name, so the same question always gives the same list.",
@@ -234,7 +234,6 @@ ROWS = [
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
     "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
-    "P16": "Should a city name mean that city's main police agency, named in the answer?",
     "P17": "When a top-N list has a tie at the cutoff, should it keep exactly N and break the tie alphabetically?",
     "P18": "For a state clearance rate (not in Historical), should the app decline and offer the national rate or the NIBRS state figure instead?",
     "P19": "For fentanyl, should the app decline and offer \"synthetic narcotics\" (which includes fentanyl) instead?",
@@ -248,7 +247,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
