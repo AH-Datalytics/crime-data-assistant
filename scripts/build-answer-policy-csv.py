@@ -42,10 +42,10 @@ ROWS = [
      OPEN, NEW),
     ("P02", "The source tabs (Current Trends, Historical, NIBRS, Homicide Reports, Hate Crime)",
      "Users choose a tab, or Auto mode.",
-     "Remove the tabs: one question box. A user who wants a particular source says so in words; the answer names its source at the end, and offers another source's figure as a button where that helps.",
-     "No tabs and no source picker. Alternative if you prefer: keep the tabs as an advanced option, off by default.",
-     "The tab choice is what lets a question be answered from the wrong source; with the source named on every answer, a picker adds a way to be wrong and no capability.",
-     OPEN, NEW),
+     "One question box by default: the app picks the source (P01) and names it at the end of the answer. The source tabs stay as an advanced option, off by default; a user who opens it and picks a source gets that source, labelled. A user can also ask for a source in words.",
+     "Default: one box, no tab chosen. Advanced option: the five source tabs.",
+     "Most users cannot know which source answers best; advanced users keep direct control.",
+     O28 + " (Jeff: keep the tabs as an advanced option)", NEW),
     ("P03", "\"How did aggravated assaults with a firearm change in Texas from 2018 to 2024?\" (a detail only NIBRS records, over years when many agencies joined NIBRS)",
      "Counts every agency that reported in each year, so agencies joining looks like crime rising. Consistent reporters only when the user asks.",
      "Count only agencies that reported in every year shown, and say so in one sentence. Count every agency only when the user asks. For a single national or state total of such a detail, say what share of the population the reporting agencies cover.",
@@ -233,7 +233,6 @@ ROWS = [
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
     "P01": "Should the app pick the source for every question by what the question needs (and honor a source the user asks for in words), naming the source at the end of the answer?",
-    "P02": "Should the source tabs be removed, leaving one question box (rather than keeping the tabs as an advanced option)?",
     "P03": "For a detail only NIBRS has, tracked over several years, should the trend count only agencies that reported in every year?",
     "P04": "In a ranking for one year, should agencies that reported fewer than 12 months be left out, with the number left out stated?",
     "P05": "When a ranking names no year, should it use the latest complete year rather than this year so far?",
@@ -261,7 +260,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "1. Which source answers" for p in ["P01", "P02", "P08", "P14"]},
+    **{p: "1. Which source answers" for p in ["P01", "P08", "P14"]},
     **{p: "2. How a number is counted" for p in ["P03", "P04", "P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
