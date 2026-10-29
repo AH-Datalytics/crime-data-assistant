@@ -15954,6 +15954,803 @@
     "reviewed_by": "codex:reader-labels-1",
     "notes": "Boundary: a word near no crime is not guessed; the crime is missing, so ask (D31/D09), as LS-235."
    }
+  },
+  {
+   "id": "LS-271",
+   "group": "designed:breakdown-race-sa",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assault victims in Milwaukee by race in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Milwaukee Police Department",
+       "state": "WI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim race"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Milwaukee Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: person-crime victims by race (D18), NIBRS detail (P01)."
+   }
+  },
+  {
+   "id": "LS-272",
+   "group": "designed:breakdown-sex-aa",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Breakdown of aggravated assault victims by sex in Albuquerque for 2022",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Albuquerque Police Department",
+       "state": "NM"
+      }
+     ],
+     "period": {
+      "from": "2022-01",
+      "to": "2022-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Albuquerque Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: a Part I crime's victim detail is NIBRS's (P01)."
+   }
+  },
+  {
+   "id": "LS-273",
+   "group": "designed:breakdown-eth-sa",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assault victims in Louisville by ethnicity, 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Louisville Metro Police Department",
+       "state": "KY"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim ethnicity"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Louisville Metro Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: by ethnicity. Louisville is Louisville Metro (KY)."
+   }
+  },
+  {
+   "id": "LS-274",
+   "group": "designed:breakdown-loc-shop",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Tucson by location type in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Tucson Police Department",
+       "state": "AZ"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "location type"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Tucson Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: offenses by location type (one location per offense)."
+   }
+  },
+  {
+   "id": "LS-275",
+   "group": "designed:breakdown-loc-tfmv",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Theft from motor vehicle offenses in Austin by location in 2023",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Austin Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "location type"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Austin Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: 'by location' is location type."
+   }
+  },
+  {
+   "id": "LS-276",
+   "group": "designed:breakdown-race-murder",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murder victims in Kansas City, Missouri by race in 2023",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Kansas City Police Department",
+       "state": "MO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim race"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Kansas City Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: murder victims by race, a NIBRS detail (P01)."
+   }
+  },
+  {
+   "id": "LS-277",
+   "group": "designed:breakdown-race-span",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "simple assault victims by race in Albuquerque from 2021 to 2023",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Albuquerque Police Department",
+       "state": "NM"
+      }
+     ],
+     "period": {
+      "from": "2021-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim race"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Albuquerque Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: one total over three years, by race."
+   }
+  },
+  {
+   "id": "LS-278",
+   "group": "designed:breakdown-sex-murder",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many murder victims in Austin were male or female in 2023?",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Austin Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Austin Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER if read: 'male or female' asks for the sex breakdown."
+   }
+  },
+  {
+   "id": "LS-279",
+   "group": "designed:breakdown-year-race",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Albuquerque by race and year, 2021 to 2023",
+   "policy": [
+    "D04",
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Albuquerque Police Department",
+       "state": "NM"
+      }
+     ],
+     "period": {
+      "from": "2021-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year",
+      "victim race"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Albuquerque Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "A breakdown per year, if the reader reads it."
+   }
+  },
+  {
+   "id": "LS-280",
+   "group": "designed:breakdown-b-age",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assault victims in Milwaukee by age in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Milwaukee Police Department",
+       "state": "WI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim age"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Milwaukee Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "BOUNDARY: age groups are increment 2."
+   }
+  },
+  {
+   "id": "LS-281",
+   "group": "designed:breakdown-b-weapon",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robberies in Albuquerque by weapon in 2023",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Albuquerque Police Department",
+       "state": "NM"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "weapon"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Albuquerque Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "BOUNDARY: weapons are multi-value, increment 2."
+   }
+  },
+  {
+   "id": "LS-282",
+   "group": "designed:breakdown-b-twoway",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assault victims in Louisville by race and sex in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Louisville Metro Police Department",
+       "state": "KY"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim race",
+      "victim sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Louisville Metro Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "BOUNDARY: a two-way breakdown."
+   }
+  },
+  {
+   "id": "LS-283",
+   "group": "designed:breakdown-b-carjack-loc",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Carjackings in Kansas City, Missouri by location type in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Kansas City Police Department",
+       "state": "MO"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "location type"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Kansas City Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-breakdown",
+    "reviewed_by": null,
+    "notes": "BOUNDARY: carjacking offenses (D18) by location; an incident-level reading is multi-value."
+   }
   }
  ]
 }

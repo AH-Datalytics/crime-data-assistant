@@ -42,6 +42,11 @@ AG = {
     "denver": {"kind": "agency", "name": "Denver Police Department", "state": "CO"},
     "portland": {"kind": "agency", "name": "Portland Police Bureau", "state": "OR"},
     "atlanta": {"kind": "agency", "name": "Atlanta Police Department", "state": "GA"},
+    "milwaukee": {"kind": "agency", "name": "Milwaukee Police Department", "state": "WI"},
+    "albuquerque": {"kind": "agency", "name": "Albuquerque Police Department", "state": "NM"},
+    "louisville": {"kind": "agency", "name": "Louisville Metro Police Department", "state": "KY"},
+    "tucson": {"kind": "agency", "name": "Tucson Police Department", "state": "AZ"},
+    "austin": {"kind": "agency", "name": "Austin Police Department", "state": "TX"},
 }
 
 
@@ -266,6 +271,44 @@ READER = [
      "Boundary: a word near no crime is not guessed; the crime is missing, so ask (D31/D09), as LS-235."),
 ]
 
+# Compiler increment 1 (2026-10-29): breakdowns the compiler already computes (victim race, sex, ethnicity; offense
+# location type), delivered as category tables. Fresh, held out, labeled from policy before the delivery change runs.
+# MUST ANSWER: the person-crime victim breakdowns and the location-type breakdowns below. MUST STILL REFUSE until
+# increment 2: age groups, weapons, two-way breakdowns (they are boundaries here, labeled with their correct answer).
+BREAKDOWN_DRAFTER = "claude-breakdown"
+AA = [("aggravated assault", "victim")]
+MURDER = [("murder", "victim")]
+CATS = "shows unknown and not-recorded categories as their own rows, never dropped"
+BREAKDOWN = [
+    ("breakdown-race-sa", "Simple assault victims in Milwaukee by race in 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("milwaukee", year(2024), SA, ["victim race"]), names("milwaukee"), CATS, SOURCE_LAST), "MUST ANSWER: person-crime victims by race (D18), NIBRS detail (P01)."),
+    ("breakdown-sex-aa", "Breakdown of aggravated assault victims by sex in Albuquerque for 2022", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("albuquerque", year(2022), AA, ["victim sex"]), names("albuquerque"), CATS, SOURCE_LAST), "MUST ANSWER: a Part I crime's victim detail is NIBRS's (P01)."),
+    ("breakdown-eth-sa", "Simple assault victims in Louisville by ethnicity, 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("louisville", year(2024), SA, ["victim ethnicity"]), names("louisville"), CATS, SOURCE_LAST), "MUST ANSWER: by ethnicity. Louisville is Louisville Metro (KY)."),
+    ("breakdown-loc-shop", "Shoplifting in Tucson by location type in 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("tucson", year(2024), SHOP, ["location type"]), names("tucson"), CATS, SOURCE_LAST), "MUST ANSWER: offenses by location type (one location per offense)."),
+    ("breakdown-loc-tfmv", "Theft from motor vehicle offenses in Austin by location in 2023", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("austin", year(2023), TFMV, ["location type"]), names("austin"), CATS, SOURCE_LAST), "MUST ANSWER: 'by location' is location type."),
+    ("breakdown-race-murder", "Murder victims in Kansas City, Missouri by race in 2023", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("kcmo", year(2023), MURDER, ["victim race"]), names("kcmo"), CATS, SOURCE_LAST), "MUST ANSWER: murder victims by race, a NIBRS detail (P01)."),
+    ("breakdown-race-span", "simple assault victims by race in Albuquerque from 2021 to 2023", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("albuquerque", {"from": "2021-01", "to": "2023-12"}, SA, ["victim race"]), names("albuquerque"), CATS, SOURCE_LAST), "MUST ANSWER: one total over three years, by race."),
+    ("breakdown-sex-murder", "How many murder victims in Austin were male or female in 2023?", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("austin", year(2023), MURDER, ["victim sex"]), names("austin"), CATS, SOURCE_LAST), "MUST ANSWER if read: 'male or female' asks for the sex breakdown."),
+    ("breakdown-year-race", "Aggravated assault victims in Albuquerque by race and year, 2021 to 2023", ["D04", "D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("albuquerque", {"from": "2021-01", "to": "2023-12"}, AA, ["year", "victim race"]), names("albuquerque"), CATS, MISSING, SOURCE_LAST), "A breakdown per year, if the reader reads it."),
+    # Boundaries: correct answers that increment 1 must still refuse (increment 2), never answer wrongly.
+    ("breakdown-b-age", "Simple assault victims in Milwaukee by age in 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("milwaukee", year(2024), SA, ["victim age"]), names("milwaukee"), CATS, SOURCE_LAST), "BOUNDARY: age groups are increment 2."),
+    ("breakdown-b-weapon", "Robberies in Albuquerque by weapon in 2023", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("albuquerque", year(2023), [("robbery", "offense")], ["weapon"]), names("albuquerque"), CATS, SOURCE_LAST), "BOUNDARY: weapons are multi-value, increment 2."),
+    ("breakdown-b-twoway", "Simple assault victims in Louisville by race and sex in 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("louisville", year(2024), SA, ["victim race", "victim sex"]), names("louisville"), CATS, SOURCE_LAST), "BOUNDARY: a two-way breakdown."),
+    ("breakdown-b-carjack-loc", "Carjackings in Kansas City, Missouri by location type in 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("kcmo", year(2024), CARJACK, ["location type"]), names("kcmo"), CATS, SOURCE_LAST), "BOUNDARY: carjacking offenses (D18) by location; an incident-level reading is multi-value."),
+]
+
 # Replay labels P28 changes (reviewed before P28): drafted again, for review.
 RELABEL = {
     "LS-151": (["P22", "P28"], choose("which Baltimore",
@@ -281,6 +324,7 @@ RELABEL = {
 args = sys.argv[1:]
 reviewer = args[1] if args[:1] == ["--reviewed-by"] else None
 reader_reviewer = args[1] if args[:1] == ["--reader-reviewed-by"] else None
+breakdown_reviewer = args[1] if args[:1] == ["--breakdown-reviewed-by"] else None
 data = json.load(open(CASES, encoding="utf-8"))
 have = {(c["group"], c["question"]) for c in data["cases"]}
 added = 0
@@ -316,7 +360,25 @@ for g, q, pol, exp, notes in READER:
         "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
         "label": {"status": "drafted", "drafted_by": READER_DRAFTER, "reviewed_by": None, "notes": notes}})
     added += 1
+for g, q, pol, exp, notes in BREAKDOWN:
+    group = f"designed:{g}"
+    if (group, q) in have:
+        old = next(c for c in data["cases"] if (c["group"], c["question"]) == (group, q))
+        if old["label"]["drafted_by"] == BREAKDOWN_DRAFTER and old["label"]["status"] == "drafted":
+            old.update(policy=pol, expected=exp)
+            old["label"]["notes"] = notes
+        continue
+    data["cases"].append({
+        "id": f"LS-{len(data['cases']) + 1:03d}", "group": group, "split": "heldout",
+        "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
+        "label": {"status": "drafted", "drafted_by": BREAKDOWN_DRAFTER, "reviewed_by": None, "notes": notes}})
+    added += 1
 marked = 0
+if breakdown_reviewer:
+    for c in data["cases"]:
+        if c["label"]["drafted_by"] == BREAKDOWN_DRAFTER and c["label"]["status"] == "drafted":
+            c["label"].update(status="reviewed", reviewed_by=breakdown_reviewer)
+            marked += 1
 if reader_reviewer:
     for c in data["cases"]:
         if c["label"]["drafted_by"] == READER_DRAFTER and c["label"]["status"] == "drafted":

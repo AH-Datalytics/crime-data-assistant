@@ -22,7 +22,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (c.group.startsWith("designed:slice-") || c.group.startsWith("designed:reader-")) return "designed";
+  if (/^designed:(slice|reader|breakdown)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
