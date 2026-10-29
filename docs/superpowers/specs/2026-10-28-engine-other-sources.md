@@ -133,6 +133,12 @@ one layer and one lighter compiler.
   - Reporting evidence: months reported (`historical_core.py:893-896`). Zero months is missing; an all-zero year is
     NULL, so it maps to UNKNOWN. Absence is never 0.
 - **Build.** A **lighter compiler over the existing tables.** They are loaded from the FBI's published annual files.
+- **2025 data (decision D32, owner 2026-10-28).**
+  - Production on 2026-10-28 (read-only check): the agency-level tables hold 2025 (crime, clearance, staffing,
+    population). `historical_state_national` and `national_clearance_rate` end at 2024.
+  - The FBI has published 2025. The owner notes it is already on the crime index. Loading the FBI's 2025 state and
+    national estimates and 2025 national clearance is part of this rebuild step, not a fix to the live site.
+  - From then on, a 2025 state or national figure is answered from Historical.
 - **Conflicts.**
   - State keys: lowercase codes in `historical_agency`, full names including "United States" in
     `historical_state_national`. The layer normalises both to the plan's `state` and `national`.

@@ -285,18 +285,60 @@ export const LimitationReason = z.enum([
   "unsupported_capability",   // a plan form not yet switched on for this era (questions switch by capability)
   "unresolved_place",
   "explanation_requested",    // causes, policy: NIBRSAI reports what the data records, nothing more
+  "below_agency_level",       // neighborhoods, ZIP codes, beats, addresses (frozen rule 2)
+  "rate_by_group",            // per-capita rates by demographic group or age range (frozen rule 3)
+  "court_outcome",            // convictions, sentencing: police clearance is answerable, courts are not (frozen rule 1)
+  "forecast",                 // predictions: the data records past crime
+  "incident_detail",          // a specific incident or a named person
+  "coverage_below_threshold", // a national or state total from too little of the population (policy P02)
+]);
+
+/**
+ * The nearest answerable question a limitation offers (frozen rule 14: only where one genuinely exists). It is a
+ * complete plan that must validate and resolve against the release, so it can run as offered. It is shown as an
+ * option for the user to choose; it is never run in place of the question that was asked.
+ */
+export const Alternative = z.strictObject({
+  label: z.string().min(1),
+  plan: NibrsPlan,
+  /**
+   * The request concepts it deliberately answers differently (ledger concepts: "measure", "statistic", "place",
+   * "period" ...), each disclosed by the label. Every other part of the question keeps its binding (O4), so choosing
+   * the offer never silently moves the place or the period.
+   */
+  changes: z.array(Id).min(1),
+});
+
+export const Limitation = z.strictObject({
+  kind: z.literal("limitation"),
+  parts: z.array(PartRef).min(1),
+  reason: LimitationReason,
+  explanation: z.string().min(1),
+  /** Stated explicitly: the alternative, or null when no genuine nearest measure exists. */
+  alternative: Alternative.nullable(),
+});
+
+/**
+ * A clarifying option: the original question with one choice filled in. It leads to a complete plan, or to a
+ * limitation when that reading cannot be answered (with its own alternative). Either way it never asks again.
+ */
+export const ClarifyOption = z.union([
+  z.strictObject({ label: z.string().min(1), plan: NibrsPlan }),
+  z.strictObject({ label: z.string().min(1), limitation: Limitation.omit({ kind: true, parts: true }) }),
 ]);
 
 export const ReaderOutcome = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("plan"), plan: NibrsPlan }),
-  /** Asked only when the readings give different answers. Each option is a complete plan. */
-  z.strictObject({ kind: z.literal("clarify"), question: z.string().min(1), options: z.array(z.strictObject({ label: z.string().min(1), plan: NibrsPlan })).min(2), parts: z.array(PartRef).min(1) }),
+  /** Asked only when the readings give different answers. Each option leads to a complete plan or a limitation. */
+  z.strictObject({ kind: z.literal("clarify"), question: z.string().min(1), options: z.array(ClarifyOption).min(2), parts: z.array(PartRef).min(1) }),
   /** Every unmet part is named; no number that drops a part is given. */
-  z.strictObject({ kind: z.literal("limitation"), parts: z.array(PartRef).min(1), reason: LimitationReason, explanation: z.string().min(1) }),
+  Limitation,
 ]);
 
 export type NibrsPlan = z.infer<typeof NibrsPlan>;
 export type ReaderOutcome = z.infer<typeof ReaderOutcome>;
+export type ClarifyOption = z.infer<typeof ClarifyOption>;
+export type Alternative = z.infer<typeof Alternative>;
 export type Place = z.infer<typeof Place>;
 export type Period = z.infer<typeof Period>;
 export type AbsolutePeriod = z.infer<typeof AbsolutePeriod>;

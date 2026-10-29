@@ -12,6 +12,7 @@ import * as X from "../lib/nibrs-plan/examples";
 import { checkLayer } from "../lib/nibrs-plan/semantic";
 import { parsePlan, type NibrsPlan, type Place } from "../lib/nibrs-plan/plan";
 import { validateResolved } from "../lib/nibrs-plan/resolve";
+import { validateOutcome } from "../lib/nibrs-plan/outcome";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 
 const ORIS: Record<string, [string, string]> = {
@@ -114,6 +115,19 @@ const byType = planOf("chicago murder clearances by clearance type in 2025");
 assert.deepEqual([byType.measures[0].id, byType.groupings[0].dimension, byType.filters.length], ["offenses.murder", "offense.clearance_type", 0]);
 const exc = planOf("virginia murder clearances by exception by type in 2025");
 assert.deepEqual([exc.measures[0].id, exc.groupings[0].dimension, JSON.stringify(exc.filters)], ["offenses.murder", "offense.clearance_type", JSON.stringify([{ kind: "attribute", dimension: "offense.clearance_method", op: "in", values: ["exceptional"] }])]);
+
+// An alternative keeps the question's parts checked together: a cleared-offense count passes because the clearance
+// part is seen alongside the measure (outcome.ts O4).
+{
+  const q = "How many rapes were cleared in 2025";
+  const ledger = accountNibrsRequest(q);
+  const d = matchNibrsType(ledger);
+  assert(d.kind === "spec");
+  const r = planFromSpec(d.spec, ledger, deps);
+  assert(r.kind === "plan");
+  const lim = { kind: "limitation", reason: "unsupported_capability", parts: r.parts.slice(0, 1), explanation: "x", alternative: { label: "Rapes cleared in 2025", plan: r.plan, changes: ["grain"] } };
+  assert.deepEqual(validateOutcome(lim, DRAFT_LAYER, release, geo, { parts: r.parts, places: authority }).map((p) => p.rule), []);
+}
 
 // ---- refusals ----
 // Today's typed breakdown drops "rate"; the plan refuses rather than answering counts (the live route declines these
