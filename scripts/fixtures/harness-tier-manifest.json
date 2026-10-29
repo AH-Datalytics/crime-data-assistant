@@ -2421,6 +2421,15 @@
       "note": "Answer evaluation: the labeled interaction set (gold, replay and designed cases) is well formed; splits keep groups together; buttons answer clarifying cases; policy rows exist. No database, no model, no network"
     },
     {
+      "id": "test-answer-eval-runner",
+      "tier": "F",
+      "script": "scripts/test-answer-eval-runner.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Answer evaluation: the runner's comparison (material vs naming differences), outcomes and gates judge as specified. No database, no model, no network"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",
