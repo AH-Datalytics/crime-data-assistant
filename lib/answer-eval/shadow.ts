@@ -56,7 +56,11 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     // category's name as NIBRSAI shows it. Each category's share is its count over its own period's independent total:
     // the measure's known total, or the sum of every category of that period when all of them are known (each unit is in
     // exactly one category). No independent total: the share is undefined (unverified), never an expected blank.
-    const catField = Object.keys(CATEGORY_FIELDS).find((f) => (v.rows ?? []).some((r) => f in r));
+    // The file names its category field ("category"); older files are found by the field in their rows.
+    const named = (v as { category?: string }).category;
+    const catField = named && CATEGORY_FIELDS[named] ? named : Object.keys(CATEGORY_FIELDS).find((f) => (v.rows ?? []).some((r) => f in r));
+    // A multi-valued field's categories overlap: their sum is never the period's total.
+    const multi = !!catField && MULTI_FIELDS.has(catField);
     const total = v.totals?.[measures[0]];
     const periodTotal = new Map<string, number | null>();
     const add = (p: string, value: number | null) => { const sofar = periodTotal.has(p) ? periodTotal.get(p)! : 0; periodTotal.set(p, sofar === null || value === null ? null : sofar + value); };
@@ -64,7 +68,7 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     if (measureMonths) {
       // The measure's own month cells (independent of the category rows): a year's total when every month is known.
       for (const [m, c] of Object.entries(measureMonths)) { const x = cell(c[measures[0]]); add(m.slice(0, 4), ["VALUE", "REPORTED_ZERO"].includes(x.status) ? x.value ?? 0 : null); }
-    } else for (const r of v.rows ?? []) add(String(r.year ?? r.month ?? ""), cell(r[measures[0]]).value);
+    } else if (!multi) for (const r of v.rows ?? []) add(String(r.year ?? r.month ?? ""), cell(r[measures[0]]).value);
     const definition = (m: string) => (measures.length > 1 ? { measure: `${m}: ${v.measures[m]}` } : {});
     const cells: ExpectedCell[] = v.grouping === "total" && !catField
       ? measures.map((m) => ({ key: "", ...pick(v.totals[m]), ...definition(m) }))
@@ -72,7 +76,8 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       ? (v.rows ?? []).flatMap((r) => measures.map((m) => ({ key: String(r.year ?? r.month ?? ""), ...pick(cell(r[m])), ...definition(m) })))
       : (v.rows ?? []).map((r) => {
         const c = pick(cell(r[measures[0]]));
-        const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], r[catField]) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
+        const code = catField ? (CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
+        const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], code) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
         const p = String(r.year ?? r.month ?? "");
         const den = !p && total?.value ? total.value : periodTotal.get(p) || undefined;
         const share = c.value === null ? null : den === undefined ? undefined : Math.round((1000 * c.value) / den) / 10;
@@ -87,7 +92,14 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
 /** nibrs-model's breakdown field names -> the plan's grouping dimensions. */
-const CATEGORY_FIELDS: Record<string, string> = { race: "victim.race", sex: "victim.sex", ethnicity: "victim.ethnicity", location_type: "offense.location_type" };
+const CATEGORY_FIELDS: Record<string, string> = { race: "victim.race", sex: "victim.sex", ethnicity: "victim.ethnicity", location_type: "offense.location_type",
+  weapon: "offense_weapon.weapon", relationship: "victim_offender.relationship", age_group: "victim.age", offender_sex: "offender.sex", offender_segment_sex: "offender.sex" };
+const MULTI_FIELDS = new Set(["weapon", "relationship", "offender_sex"]);
+/** nibrs-model's category codes that NIBRSAI labels differently (batch 5). */
+const CODE_ALIASES: Record<string, Record<string, string>> = {
+  age_group: { under_18: "Under 18", "00": "Unknown" },
+  offender_sex: { "00": "unknown_offender" },
+};
 /**
  * Values requested before a label changed: P28 made these questions ask city or county first, so the city's values serve
  * the city button; P06's button now names its year. (nibrs-model's files name the cases as they were requested.)
