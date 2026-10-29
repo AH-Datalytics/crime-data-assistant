@@ -96,10 +96,10 @@ ROWS = [
      O28 + " (Jeff: homicide means murder and non-negligent manslaughter everywhere)", NEW),
     ("P11", "\"How many theft victims in Ohio in 2024?\" and \"How many thefts in Ohio in 2024?\"",
      "NIBRS answers \"thefts\" by offense, and declines \"theft victims\" when no table counts that crime by victim. Current Trends declines any \"victims\" question.",
-     "When the user says \"victims\", count victims (NIBRS records victims of property crimes too). When no unit is named, use the standard unit: victims for crimes against persons, offenses for property crimes.",
-     "\"Victims\" -> victims. No unit named -> the standard unit.",
-     "The user named the unit; answering in another unit answers a different question.",
-     OPEN, NEW),
+     "Property crimes are always counted by offense. When the user asks for victims of a property crime, answer with offenses and state plainly that property crimes are counted by offense, not by victim. Crimes against persons are counted by victim.",
+     "\"Theft victims\" -> theft offenses, with the sentence \"Property crimes are counted by offense, not by victim.\"",
+     "One counting unit per kind of crime, as the FBI counts them, stated plainly when the question asked for another.",
+     O28 + " (Jeff: give offenses and state plainly that property crimes are not counted by victim)", NEW),
     ("P12", "\"How many murders were there in 2024?\" (no place named)",
      "The NIBRS instructions treat no place as national; other tabs vary.",
      "Ask which place, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed).",
@@ -233,7 +233,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P11": "When someone asks for \"victims\" of a property crime, should the app count victims rather than offenses?",
     "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
     "P15": "For rates of details only NIBRS has, should the rate use the population of the reporting agencies only?",
     "P16": "Should a city name mean that city's main police agency, named in the answer?",
@@ -250,7 +249,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P11", "P15", "P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
