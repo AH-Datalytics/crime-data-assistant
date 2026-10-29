@@ -75,7 +75,7 @@ ROWS = [
      "Always the calendar year before today. If that year is not in the source yet, say so and offer the latest year it has as a button; never answer another year silently.",
      "In October 2026: 2025. Offer: the same question for the latest year available.",
      "\"Last year\" has one everyday meaning; answering another year without saying so is a wrong answer.",
-     OPEN, "engine check: \"burglaries in Texas last year\"; " + NEW),
+     O28 + " (Jeff: always the last calendar year)", "engine check: \"burglaries in Texas last year\"; " + NEW),
     ("P08", "\"Which large US city had the highest violent crime rate in 2023?\"",
      "Answered by whichever tab is open. Current Trends covers about 700 agencies; NIBRS its reporters; Historical (FBI annual data) the most.",
      "\"Large\" or \"big\" city means 250,000 residents or more, stated in the answer. The source follows P01 (completed years: Historical; the current year: Current Trends, naming its sample).",
@@ -233,7 +233,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P07": "Should \"last year\" always mean the calendar year before today?",
     "P09": "Should \"assault\" on its own mean aggravated assault?",
     "P10": "Should \"homicide\" mean the same as \"murder\" (murder and non-negligent manslaughter) everywhere?",
     "P11": "When someone asks for \"victims\" of a property crime, should the app count victims rather than offenses?",
@@ -253,7 +252,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P07", "P09", "P10", "P11", "P15", "P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P09", "P10", "P11", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
