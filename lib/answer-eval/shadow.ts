@@ -79,7 +79,7 @@ const viewOf = (plan: NibrsPlan, p: { from: string; to: string }) => planToMeani
 
 /** The label's agency name as the words an answer must carry (its city), e.g. "St. Louis". */
 function agencyWords(name: string): string {
-  return name.replace(/\b(Metropolitan|Police|Department|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
+  return name.replace(/\b(Metropolitan|Police|Department|Bureau|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {

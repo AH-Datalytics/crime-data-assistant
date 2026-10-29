@@ -254,7 +254,32 @@
    "LS-242",
    "LS-243",
    "LS-244",
-   "LS-245"
+   "LS-245",
+   "LS-246",
+   "LS-247",
+   "LS-248",
+   "LS-249",
+   "LS-250",
+   "LS-251",
+   "LS-252",
+   "LS-253",
+   "LS-254",
+   "LS-255",
+   "LS-256",
+   "LS-257",
+   "LS-258",
+   "LS-259",
+   "LS-260",
+   "LS-261",
+   "LS-262",
+   "LS-263",
+   "LS-264",
+   "LS-265",
+   "LS-266",
+   "LS-267",
+   "LS-268",
+   "LS-269",
+   "LS-270"
   ]
  },
  "eligibility": {
@@ -449,7 +474,32 @@
    "LS-242",
    "LS-243",
    "LS-244",
-   "LS-245"
+   "LS-245",
+   "LS-246",
+   "LS-247",
+   "LS-248",
+   "LS-249",
+   "LS-250",
+   "LS-251",
+   "LS-252",
+   "LS-253",
+   "LS-254",
+   "LS-255",
+   "LS-256",
+   "LS-257",
+   "LS-258",
+   "LS-259",
+   "LS-260",
+   "LS-261",
+   "LS-262",
+   "LS-263",
+   "LS-264",
+   "LS-265",
+   "LS-266",
+   "LS-267",
+   "LS-268",
+   "LS-269",
+   "LS-270"
   ],
   "label unresolved": [
    "LS-024",
@@ -551,7 +601,32 @@
   "LS-242": "designed",
   "LS-243": "designed",
   "LS-244": "designed",
-  "LS-245": "designed"
+  "LS-245": "designed",
+  "LS-246": "designed",
+  "LS-247": "designed",
+  "LS-248": "designed",
+  "LS-249": "designed",
+  "LS-250": "designed",
+  "LS-251": "designed",
+  "LS-252": "designed",
+  "LS-253": "designed",
+  "LS-254": "designed",
+  "LS-255": "designed",
+  "LS-256": "designed",
+  "LS-257": "designed",
+  "LS-258": "designed",
+  "LS-259": "designed",
+  "LS-260": "designed",
+  "LS-261": "designed",
+  "LS-262": "designed",
+  "LS-263": "designed",
+  "LS-264": "designed",
+  "LS-265": "designed",
+  "LS-266": "designed",
+  "LS-267": "designed",
+  "LS-268": "designed",
+  "LS-269": "designed",
+  "LS-270": "designed"
  },
  "scored": [
   {
@@ -562,7 +637,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances, so I can't apply \"prosecutions\". I haven't answe"
+    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -575,7 +650,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances, so I can't apply \"defendants\". I haven't answere"
+    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -722,14 +797,15 @@
    "id": "LS-151",
    "split": "dev",
    "expected": "clarify",
-   "actual": "decline",
-   "outcome": "wrong_action",
+   "actual": "clarify",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (reader): The question could not be read: no typed reading."
+    "asked which Baltimore: Baltimore city, Maryland | Baltimore County, Maryland"
    ],
    "capability": "clarify:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-156",
@@ -887,14 +963,15 @@
    "id": "LS-228",
    "split": "dev",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
+   "actual": "answer",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"from motor vehicles in\" in this question, so I haven't answered it with a number that ignores it."
+    "delivered: Columbus city police, OH: 9,439 theft from motor vehicle offenses in 2022. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-229",
@@ -913,27 +990,29 @@
    "id": "LS-230",
    "split": "dev",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
+   "actual": "answer",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"so far this year\" in this question, so I haven't answered it with a number that ignores it."
+    "delivered: Memphis city police, TN: 4,035 shoplifting offenses in January through October 2026. / The data runs through October 2026: this covers January through October 2026. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-231",
    "split": "dev",
    "expected": "clarify",
-   "actual": "decline",
-   "outcome": "wrong_action",
+   "actual": "clarify",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"from motor vehicles in\" in this question, so I haven't answered it with a number that ignores it."
+    "asked which Kansas City: Kansas City, Missouri | Kansas City, Kansas"
    ],
    "capability": "clarify:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-232",
@@ -1054,10 +1133,17 @@
    "split": "dev",
    "expected": "decline",
    "actual": "decline",
-   "outcome": "incomplete",
-   "diffs": [],
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "Not in the slice yet: measure \"arrests.shoplifting\" has no executable definition in v0",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances, so I can't apply \"convictions\". I haven't answer"
+    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later"
@@ -1067,17 +1153,17 @@
    "split": "dev",
    "expected": "decline",
    "actual": "decline",
-   "outcome": "incomplete",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "reason",
-     "expected": "forecast: The data records past crime and cannot predict next year.",
-     "actual": "reader: I couldn't interpret \"Will\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"go up in\" in this question, so I hav",
-     "kind": "material"
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
     }
    ],
    "notes": [
-    "declined (reader): I couldn't interpret \"Will\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"go up in\" in this question, so I haven't answered it with a number that igno"
+    "declined (forecast): The data records past crime and cannot predict the future."
    ],
    "capability": "decline:nibrs count",
    "era": "spans 2021"
@@ -1164,6 +1250,387 @@
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
    "values": "match"
+  },
+  {
+   "id": "LS-246",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville city police, TN: 6,533 shoplifting offenses in 2024. / Read \"Shopliftng\" as shoplifting. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-247",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver city police, CO: 6,211 simple assault victims in 2023. / Read \"asaults\" as assaults. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-248",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Atlanta city police, GA: carjacking offenses by month, 2024. / Read \"carjackngs\" as carjackings. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-249",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville city police, TN: 6,533 shoplifting offenses in 2024. / Read \"Tennesee\" as tennessee. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-250",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Portland city police, OR: 7,951 theft from motor vehicle offenses in 2023. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-251",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Atlanta city police, GA: 7,104 theft from motor vehicle offenses in 2023. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-252",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville city police, TN: 7,793 theft from motor vehicle offenses in 2022. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-253",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver city police, CO: 6,383 theft from motor vehicle offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-254",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver city police, CO: the available evidence does not establish the number of shoplifting offenses in January through October 2026, so no number is given. / The data runs through October 2026: this covers January through October 2026. / S"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-255",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Atlanta city police, GA: 1,701 shoplifting offenses in January through October 2026. / The data runs through October 2026: this covers January through October 2026. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-256",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville city police, TN: the available evidence does not establish the number of carjacking offenses in January through October 2026, so no number is given. / The data runs through October 2026: this covers January through October 2026. /"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-257",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Portland city police, OR: the available evidence does not establish the number of simple assault victims in January through October 2026, so no number is given. / The data runs through October 2026: this covers January through October 2026."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-258",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Portland city police, OR: simple assault victims by month, 2022. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-259",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville city police, TN: 234 carjacking offenses in 2023. / Property crimes are counted by offense, not by victim. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-260",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-261",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-262",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-263",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-264",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "Not in the slice yet: measure \"arrests.simple_assault\" has no executable definition in v0",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-265",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "Not in the slice yet: measure \"arrests.shoplifting\" has no executable definition in v0",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-266",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-267",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reader): NIBRS does not track shootings as a category, so I can't apply \"Shootings\". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a f"
+   ],
+   "capability": "clarify:shr count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-268",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"in 2026\": one period per answer. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-269",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I couldn't interpret \"will\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-270",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reader): The question could not be read: no typed reading."
+   ],
+   "capability": "clarify:historical count",
+   "era": "2021 and later"
   }
  ],
  "provisional": []

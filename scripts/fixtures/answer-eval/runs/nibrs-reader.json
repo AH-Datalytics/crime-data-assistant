@@ -126,7 +126,32 @@
    "LS-242",
    "LS-243",
    "LS-244",
-   "LS-245"
+   "LS-245",
+   "LS-246",
+   "LS-247",
+   "LS-248",
+   "LS-249",
+   "LS-250",
+   "LS-251",
+   "LS-252",
+   "LS-253",
+   "LS-254",
+   "LS-255",
+   "LS-256",
+   "LS-257",
+   "LS-258",
+   "LS-259",
+   "LS-260",
+   "LS-261",
+   "LS-262",
+   "LS-263",
+   "LS-264",
+   "LS-265",
+   "LS-266",
+   "LS-267",
+   "LS-268",
+   "LS-269",
+   "LS-270"
   ],
   "a follow-up: the reader takes one turn": [
    "LS-004",
@@ -453,7 +478,32 @@
    "LS-242",
    "LS-243",
    "LS-244",
-   "LS-245"
+   "LS-245",
+   "LS-246",
+   "LS-247",
+   "LS-248",
+   "LS-249",
+   "LS-250",
+   "LS-251",
+   "LS-252",
+   "LS-253",
+   "LS-254",
+   "LS-255",
+   "LS-256",
+   "LS-257",
+   "LS-258",
+   "LS-259",
+   "LS-260",
+   "LS-261",
+   "LS-262",
+   "LS-263",
+   "LS-264",
+   "LS-265",
+   "LS-266",
+   "LS-267",
+   "LS-268",
+   "LS-269",
+   "LS-270"
   ],
   "label unresolved": [
    "LS-024",
@@ -2007,6 +2057,340 @@
     "declined (reason not judged): I can't apply \"New York\": I couldn't resolve that place to one NIBRS agency, a state or the nation. I haven't answered with a number that leaves it out."
    ],
    "capability": "clarify:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-246",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "no_reading",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "no typed reading: no answer, no reason"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-247",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "no_reading",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "no typed reading: no answer, no reason"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-248",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "no_reading",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "no typed reading: no answer, no reason"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-249",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"Tennesee\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-250",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"from cars in\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-251",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"from automobiles were there in\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-252",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"Vehicle\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-253",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-254",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"year to date\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-255",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"had this year\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-256",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"so far\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-257",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"this year so far\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-258",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): a place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-259",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "adapter refused (reason not judged): a place did not resolve"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-260",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I can't apply \"rise\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-261",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"forecast\" in this question, so I haven't answered it with a number that ignores it.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-262",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"Predict\" in this question, so I haven't answered it with a number that ignores it. I couldn't interpret \"next year\" in this question, so I haven't answered it with a number that ignores it.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-263",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"will\" in this question, so I haven't answered it with a number that ignores it.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-264",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"resulted in a\" in this question, so I haven't answered it with a number that ignores it. NIBRS doesn't record court outcomes (prosecutions, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances, so I can't apply \"conviction\". I haven't answered with a number that leaves it out.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-265",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "incomplete",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"went to trial\" in this question, so I haven't answered it with a number that ignores it.",
+    "no alternative offered; the label expects one"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-266",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "source",
+     "expected": "historical",
+     "actual": "nibrs",
+     "kind": "material"
+    }
+   ],
+   "notes": [],
+   "capability": "answer:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-267",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "no_reading",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "no typed reading: no answer, no reason"
+   ],
+   "capability": "clarify:shr count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-268",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"up this year\" in this question, so I haven't answered it with a number that ignores it. I can't apply \"compared with\": comparisons are answered as named places side by side; ask for the places and the years. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-269",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reason not judged): I couldn't interpret \"will\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-270",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "no_reading",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "no typed reading: no answer, no reason"
+   ],
+   "capability": "clarify:historical count",
    "era": "2021 and later"
   }
  ],

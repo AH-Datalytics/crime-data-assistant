@@ -63,7 +63,7 @@ export const SOURCE_STATEMENT = (release: string) =>
  * value and status). Only count statistics reach the slice.
  */
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
-  statements: AnswerStatement[], release: string): Delivered {
+  statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
   const place = plan.geography.places[0];
   const agency = place.kind === "agency" ? place.label : "the place";
   const count = plan.statistics[0].as;
@@ -99,6 +99,8 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (unevidenced.length) text.push(`No ${what} were recorded for ${runs(unevidenced)}, and no zero report confirms a zero: shown blank.`);
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
+  // How a misspelled word was read (reading.ts), then the fixed statements; the source stays last.
+  text.push(...readings);
   for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
   text.push(SOURCE_STATEMENT(release));
   const chart = grain && tableRows.length > 1 ? { kind: grain === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${grain}`], y: [header] } : null;
