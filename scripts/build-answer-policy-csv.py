@@ -39,7 +39,7 @@ ROWS = [
      "The app picks the source for every question: it works out what the question needs (the crime, any detail, the period, the place) and uses the source that actually holds it most completely for that place and period. A source the user asks for in words (\"according to NIBRS\") is used and labelled, never silently replaced. Where it helps, a button offers the other source's figure.",
      "Completed years of the standard (Part I) crimes, clearance and police staffing -> Historical (FBI annual figures; FBI estimates for states and the nation). This year or recent months -> Current Trends. Homicide victim and offender details -> Homicide Reports. Hate crimes -> the Hate Crime file. Details only NIBRS records (victims, offenders, weapons, relationships, locations, property, clearance types) -> NIBRS. An agency missing from Historical, or months no other source holds -> NIBRS, labelled as reporting agencies, never as an estimate.",
      "Users cannot be expected to know which source answers a question best; a wrong choice gives a wrong number with the right label. Choosing by what the question needs, and naming the source at the end of the answer, makes answers repeatable and checkable.",
-     OPEN, NEW),
+     O28 + " (Jeff: the app picks the source from a single starting page, as the current site does)", NEW),
     ("P02", "The source tabs (Current Trends, Historical, NIBRS, Homicide Reports, Hate Crime)",
      "Users choose a tab, or Auto mode.",
      "One question box by default: the app picks the source (P01) and names it at the end of the answer. The source tabs stay as an advanced option, off by default; a user who opens it and picks a source gets that source, labelled. A user can also ask for a source in words.",
@@ -232,7 +232,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P01": "Should the app pick the source for every question by what the question needs (and honor a source the user asks for in words), naming the source at the end of the answer?",
     "P03": "For a detail only NIBRS has, tracked over several years, should the trend count only agencies that reported in every year?",
     "P04": "In a ranking for one year, should agencies that reported fewer than 12 months be left out, with the number left out stated?",
     "P05": "When a ranking names no year, should it use the latest complete year rather than this year so far?",
@@ -260,7 +259,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "1. Which source answers" for p in ["P01", "P08", "P14"]},
+    **{p: "1. Which source answers" for p in ["P08", "P14"]},
     **{p: "2. How a number is counted" for p in ["P03", "P04", "P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
