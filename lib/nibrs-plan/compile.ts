@@ -217,7 +217,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     const rolled = (c: string) => `CASE WHEN bool_or(${c} = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN bool_and(${known(c)}) THEN CASE WHEN sum(n) = 0 AND bool_or(month_cell = 'VALUE') THEN 'UNKNOWN_UNEVIDENCED_ZERO' WHEN sum(n) = 0 THEN 'REPORTED_ZERO' ELSE 'VALUE' END ELSE 'UNKNOWN' END`;
     const shareCols = share ? `,
       CASE WHEN bool_and(${known("cell")}) AND sum(n) > 0 THEN sum(n)::DOUBLE / sum(den) END AS ${shareName},
-      CASE WHEN bool_and(${known("cell")}) AND sum(n) > 0 THEN 'VALUE' ELSE ${rolled("cell")} END AS ${ident(`${share.as}_status`)}` : "";
+      CASE WHEN bool_or(cell = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN NOT bool_and(${known("cell")}) THEN 'UNKNOWN'
+           WHEN sum(den) = 0 THEN 'UNAVAILABLE' WHEN sum(n) = 0 THEN 'UNKNOWN_UNEVIDENCED_ZERO' ELSE 'VALUE' END AS ${ident(`${share.as}_status`)}` : "";
     body = `SELECT ${pk}${g.join(", ")}${g.length ? ", " : ""}
       CASE WHEN bool_and(${known("cell")}) AND NOT (sum(n) = 0 AND bool_or(month_cell = 'VALUE')) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${shareCols}
       FROM cells${grain === "year" || g.length ? ` GROUP BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")}` : ""}`;

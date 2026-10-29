@@ -130,15 +130,18 @@ def write(table, year, cols, rows):
     values = ", ".join("(" + ", ".join(repr(v) for v in r) + ")" for r in rows)
     sel = f"SELECT * FROM (VALUES {values}) t({', '.join(cols)})"
     con.execute(f"COPY ({sel}) TO '{d}/data.parquet' (FORMAT parquet)")
-O = ["ori", "incident_num", "incident_date", "offense_code", "key_occurrence"]
+O = ["ori", "incident_num", "incident_date", "offense_code", "key_occurrence", "location_type"]
+write("offense", 2024, O, [("YY0000000", "Y-1", "20240110", "240", 1, "20")])  # YY: one 2024 theft at a residence
 write("offense", 2025, O, [
-    ("XX0000000", "FEB-OTHER", "20250210", "13B", 1),   # February: crimes reported, none of this kind
-    ("XX0000000", "MAR-1", "20250305", "240", 1),       # March: one incident, two 240 segments
-    ("XX0000000", "MAR-1", "20250305", "240", 2),
+    ("XX0000000", "FEB-OTHER", "20250210", "13B", 1, "20"),   # February: crimes reported, none of this kind
+    ("XX0000000", "MAR-1", "20250305", "240", 1, "20"),       # March: one incident, two 240 segments
+    ("XX0000000", "MAR-1", "20250305", "240", 2, "20"),
 ])
-write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1)])  # a January 2025 incident in the 2026 file
+write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1, "20")])  # a January 2025 incident in the 2026 file
 S = ["ori", "month", "status"]
-write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")])
+write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)])
+write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
+    + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)])  # YY: all of 2025 reported zero
 write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
@@ -147,6 +150,12 @@ const synExpected = (march: number) => new Map<string, Cell[]>([
   ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(null, "UNKNOWN_UNEVIDENCED_ZERO")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
+// Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
+const by = (dimension: string) => ({ dimension, unknown: "visible" as const, absent: "show" as const });
+check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offense"), geography: { places: [{ kind: "agency", ori: "YY0000000", label: "Synthetic, YY" }], combine: "separate" },
+  groupings: [by("time.year"), by("offense.location_type")], statistics: [{ kind: "count", as: "count", measure: "n" }, { kind: "share", as: "share", measure: "n", within: ["time.year"] }] },
+  { kind: "absolute", from: "2024-01", to: "2025-12" }, SYN, [2024, 2025, 2026], new Map<string, Cell[]>([
+    ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(0, "REPORTED_ZERO"), C(null, "UNAVAILABLE")]]]));
 
 // ---- 2. correctness cases against the canonical build ----
 const load = (c: string) => JSON.parse(fs.readFileSync(path.join(CASES, c, "expected.json"), "utf8"));
