@@ -722,19 +722,19 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "option \"St. Louis city, Missouri\" > \"Every year available\" meaning",
+     "field": "option \"St. Louis city, Missouri\" option \"Every year available\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.carjacking 2017-01..2026-10",
      "kind": "unverified"
     },
     {
-     "field": "option \"St. Louis County, Missouri\" > \"Every year available\" meaning",
+     "field": "option \"St. Louis County, Missouri\" option \"Every year available\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.carjacking 2017-01..2026-10",
      "kind": "unverified"
     },
     {
-     "field": "option \"St. Louis County, Missouri\" > \"Every year available\" values",
+     "field": "option \"St. Louis County, Missouri\" option \"Every year available\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"

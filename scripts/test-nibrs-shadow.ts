@@ -189,4 +189,19 @@ const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|Every yea
 assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(7)).result!.values, "not measured", "the county's answers have no values");
 assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(6)).result!.outcome, "wrong_answer");
 
+// Codex review 3: every delivered answer is checked, expected by the label or not, and fixed sentences are checked on
+// button answers (P11 behind a period button).
+const zipLabel = label({ action: "decline", reason: "The data stops at the agency level; no source here has counts by ZIP code.", alternative: null });
+const zipWithAlt = { ...as(ask("crime by ZIP code in Chicago"), "decline"), alternative: { label: "this year", continuation: a } };
+const zipScore = scoreShadow(zipLabel, zipWithAlt, r, ctx).result!;
+assert.equal(zipScore.outcome, "unverified");
+assert.equal(gates([zipScore])[0].categories.find((x) => x.name === "wrong answers")!.status, "not measured");
+const victimsNoPeriod = as(ask("Shoplifting victims in Memphis"), "clarify");
+const latest = as(victimsNoPeriod.options[0].continuation!, "answer");
+assert.equal(latest.delivered.text.at(-2), "Property crimes are counted by offense, not by victim.");
+const stripped = { ...victimsNoPeriod, options: victimsNoPeriod.options.map((o, i) => (i ? o : { ...o, continuation: { ...latest, delivered: { ...latest.delivered, text: latest.delivered.text.filter((t) => !/^Property crimes/.test(t)) } } })) };
+const vLabel: Case = { ...label(np), question: "Shoplifting victims in Memphis" };
+assert.equal(scoreShadow(vLabel, victimsNoPeriod, r, ctx, both(84)).result!.outcome, "correct");
+assert.equal(scoreShadow(vLabel, stripped, r, ctx, both(84)).result!.outcome, "incomplete");
+
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

@@ -212,9 +212,9 @@ Expected (rows) by actual (columns):
 Discrepancies and unverified cases:
 
 - **LS-140** (unverified; expected clarify, got clarify) "St Louis carjackings per month"
-  - unverified option "St. Louis city, Missouri" > "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-10`
-  - unverified option "St. Louis County, Missouri" > "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-10`
-  - unverified option "St. Louis County, Missouri" > "Every year available" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "St. Louis city, Missouri" option "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-10`
+  - unverified option "St. Louis County, Missouri" option "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-10`
+  - unverified option "St. Louis County, Missouri" option "Every year available" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri
 - **LS-151** (wrong_action; expected clarify, got decline) "Shoplfting in baltimore per month, 2021-2025"
   - declined (reader): The question could not be read: no typed reading.

@@ -12,6 +12,7 @@
  */
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
+import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
 import { periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
 import { compareMeaning, planToMeaning, type Diff, type Release } from "./compare";
@@ -129,24 +130,47 @@ const merge = (a: Check, b: Check): Check => ({ diffs: [...a.diffs, ...b.diffs],
  * (the agency named, months with no data named, the source last). A wrong meaning, value or contract is a wrong
  * answer; anything that cannot be checked leaves the answer unverified.
  */
-function deliveredCheck(prefix: string, key: string, c: Extract<ShadowOutcome, { kind: "answer" }>, want: Meaning | null, r: Release, ev?: ExpectedValues): Check {
+function deliveredCheck(prefix: string, key: string, c: Extract<ShadowOutcome, { kind: "answer" }>, want: Meaning | null, r: Release, ev: ExpectedValues | undefined, ctx: Walk): Check {
+  ctx.checked.add(c);
   const meaning = want ? compareMeaning(want, viewOf(c.plan, c.period), r).map((x) => ({ ...x, field: `${prefix}${x.field}` }))
     : [{ field: `${prefix}meaning`, expected: "(the label gives no meaning past this button)", actual: `${c.plan.measures[0].id} ${c.period.from}..${c.period.to}`, kind: "unverified" as const }];
   const v = valueDiffs(prefix, c, ev?.get(key));
   const contract: Diff[] = c.delivered.contractProblems.length ? [{ field: `${prefix}answer contract`, expected: "no problems", actual: c.delivered.contractProblems.join("; "), kind: "material" }] : [];
   const place = want?.places[0];
   const required = [...(place && place.kind !== "national" && place.kind !== "state" ? [`names the agency (${place.name})`] : []), "names any months with no data as missing, not zero", "names its source at the end"];
-  const text = statementDiffs({ statements: required } as never, c).map((x) => ({ ...x, field: `${prefix}${x.field}` }));
+  const text = [...statementDiffs({ statements: required } as never, c), ...fixedStatementDiffs(ctx.question, c)].map((x) => ({ ...x, field: `${prefix}${x.field}` }));
   const diffs = [...meaning, ...v.diffs, ...contract, ...text];
   const wrong = [...meaning, ...v.diffs, ...contract].some((x) => x.kind === "material");
   return { diffs, values: [v.values], wrong, unverifiedAnswers: !wrong && diffs.some((x) => x.kind === "unverified") ? 1 : 0 };
 }
 
-/** Every answer a clarifying question's buttons deliver, however deep, checked without a label meaning (unverified). */
-function descendantsCheck(prefix: string, key: string, o: ShadowOutcome, r: Release, ev?: ExpectedValues): Check {
-  if (o.kind === "answer") return deliveredCheck(prefix, key, o, null, r, ev);
-  if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, descendantsCheck(`${prefix}> "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev)) : acc), none());
-  return none();
+/** The question and the answers already checked against a label, shared by one case's checks. */
+type Walk = { question: string; checked: Set<object> };
+
+/**
+ * The fixed sentences an answer must carry where they apply (result.ts ANSWER_STATEMENTS), checked on its text:
+ * property_counted_by_offense when the question asks for victims and the answer counts offenses (P11);
+ * property_not_attributed for an incident-level property filter; reported_nibrs_counts for the nation.
+ */
+function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
+  const plan = c.plan;
+  const want: AnswerStatement[] = [];
+  if (/\bvictims?\b/i.test(question) && plan.measures.every((m) => m.unit === "offense")) want.push("property_counted_by_offense");
+  if ([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "property")) want.push("property_not_attributed");
+  if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
+  return want.filter((s) => !c.delivered.text.includes(ANSWER_STATEMENTS[s]))
+    .map((s) => ({ field: "statement", expected: ANSWER_STATEMENTS[s], actual: c.delivered.text.join(" / ").slice(0, 200), kind: "material" as const }));
+}
+
+/**
+ * Every answer the outcome delivers, wherever it sits (the answer itself, any button however deep, any offered
+ * alternative, expected by the label or not), visited once. One not already checked against the label is checked
+ * without a meaning: its values where given, its contract and its text, and it stays unverified.
+ */
+function walkAnswers(prefix: string, key: string, o: ShadowOutcome, r: Release, ev: ExpectedValues | undefined, ctx: Walk): Check {
+  if (o.kind === "answer") return ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
+  if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}option "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev, ctx)) : acc), none());
+  return o.alternative?.continuation ? walkAnswers(`${prefix}alternative `, `${key}|alternative`, o.alternative.continuation, r, ev, ctx) : none();
 }
 
 /**
@@ -154,14 +178,13 @@ function descendantsCheck(prefix: string, key: string, o: ShadowOutcome, r: Rele
  * delivered answer must satisfy (deliveredCheck). An option that asks the next part must ask the part the label names,
  * and the answers behind that next question are checked too.
  */
-function continuationCheck(prefix: string, key: string, want: Meaning | null, wantLeads: string, nextAbout: string | undefined, got: ShadowOption, r: Release, ev?: ExpectedValues): Check {
+function continuationCheck(prefix: string, key: string, want: Meaning | null, wantLeads: string, nextAbout: string | undefined, got: ShadowOption, r: Release, ev: ExpectedValues | undefined, ctx: Walk): Check {
   const d = (field: string, e: string, a: string, kind: Diff["kind"]): Diff => ({ field: `${prefix}${field}`, expected: e, actual: a, kind });
   const one = (x: Diff): Check => ({ ...none(), diffs: [x] });
   if (wantLeads === "clarify") {
     const asked = got.entry ?? (got.continuation?.kind === "clarify" ? got.continuation.about : null);
     if (asked === null) return one(d("", `asks ${nextAbout ?? "the next part"}`, got.continuation?.kind ?? got.otherSource ?? "?", "material"));
-    const next: Check = { ...none(), diffs: nextAbout && !sameAbout(asked, nextAbout) ? [d("next part", nextAbout, asked, "material")] : [] };
-    return got.continuation ? merge(next, descendantsCheck(prefix, key, got.continuation, r, ev)) : next;
+    return { ...none(), diffs: nextAbout && !sameAbout(asked, nextAbout) ? [d("next part", nextAbout, asked, "material")] : [] };
   }
   if (got.entry) return one(d("", wantLeads, `opens an entry (${got.entry})`, "material"));
   if (got.otherSource) return one(want && want.source === got.otherSource ? d("", `${want.source} answer`, `routed to ${got.otherSource}: not run by this NIBRS shadow`, "unverified") : d("source", want?.source ?? wantLeads, got.otherSource, "material"));
@@ -170,7 +193,7 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   if (c.kind === "decline" && /^Not in the slice yet/.test(c.explanation)) return one(d("", wantLeads, c.explanation, "unverified"));
   if (wantLeads === "answer") {
     if (c.kind !== "answer") return one(d("", "answer", `${c.kind}: ${c.kind === "decline" ? c.explanation.slice(0, 160) : c.about}`, "material"));
-    return deliveredCheck(prefix, key, c, want, r, ev);
+    return deliveredCheck(prefix, key, c, want, r, ev, ctx);
   }
   return { ...none(), diffs: c.kind === wantLeads ? [] : [d("", wantLeads, c.kind, "material")] };
 }
@@ -185,12 +208,14 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
   const vals: Values[] = [];
   let wrongBehindButton = false, unverifiedAnswers = 0;
   const take = (k: Check) => { diffs.push(...k.diffs); vals.push(...k.values); wrongBehindButton ||= k.wrong; unverifiedAnswers += k.unverifiedAnswers; };
+  const walk: Walk = { question: c.question, checked: new Set() };
   if (o.kind === "decline" && o.notBuilt) return { result: null, excluded: `refused as not built: ${o.explanation}` };
   if (o.kind === "decline") notes.push(`declined (${o.reason}): ${o.explanation.slice(0, 200)}`);
   if (o.kind === "clarify") notes.push(`asked ${o.about}: ${o.options.map((x) => x.label).join(" | ")}`);
   let structured = true, alternativeMissing = false;
   if (e.action === "answer" && o.kind === "answer") {
-    diffs = [...compareMeaning(e.meaning, viewOf(o.plan, o.period), r), ...statementDiffs(e, o)];
+    walk.checked.add(o);
+    diffs = [...compareMeaning(e.meaning, viewOf(o.plan, o.period), r), ...statementDiffs(e, o), ...fixedStatementDiffs(c.question, o)];
     const v = valueDiffs("", o, expectedValues?.get(c.id));
     diffs.push(...v.diffs); vals.push(v.values);
     if (v.diffs.some((x) => x.kind === "unverified")) unverifiedAnswers++;
@@ -201,7 +226,7 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
     for (const want of e.options) {
       const got = o.options.find((x) => normLabel(x.label) === normLabel(want.label));
       if (!got) { diffs.push({ field: `option "${want.label}"`, expected: "offered", actual: "missing", kind: "material" }); continue; }
-      take(continuationCheck(`option "${want.label}" `, `${c.id}|${want.label}`, want.meaning, want.leads_to, want.next_about, got, r, expectedValues));
+      take(continuationCheck(`option "${want.label}" `, `${c.id}|${want.label}`, want.meaning, want.leads_to, want.next_about, got, r, expectedValues, walk));
     }
     for (const got of o.options) if (!e.options.some((w) => normLabel(w.label) === normLabel(got.label))) diffs.push({ field: `option "${got.label}"`, expected: "not offered", actual: "offered", kind: "material" });
     structured = !diffs.some((x) => x.kind === "unverified");
@@ -213,11 +238,15 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
     if (e.alternative) {
       if (!o.alternative) alternativeMissing = true;
       else {
-        take(continuationCheck("alternative ", `${c.id}|alternative`, e.alternative, "answer", undefined, o.alternative, r, expectedValues));
+        take(continuationCheck("alternative ", `${c.id}|alternative`, e.alternative, "answer", undefined, o.alternative, r, expectedValues, walk));
       }
     }
     structured = !diffs.some((x) => x.kind === "unverified");
   }
+  // Then every other answer the outcome delivers, whatever the label expected.
+  const rest = walkAnswers("", c.id, o, r, expectedValues, walk);
+  take(rest);
+  if (rest.diffs.length) structured = false;
   const material = diffs.filter((x) => x.kind === "material").length;
   const unverified = diffs.filter((x) => x.kind === "unverified").length;
   let outcome: Outcome = outcomeOf(e.action, actual, { material, unverified, structured, alternativeMissing });
