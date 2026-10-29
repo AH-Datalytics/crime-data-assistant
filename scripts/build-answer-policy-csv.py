@@ -93,7 +93,7 @@ ROWS = [
      "\"Homicide\" and \"murder\" both mean murder and non-negligent manslaughter on every tab. Negligent manslaughter and justifiable homicide only when asked (\"all homicides\").",
      "Default: murder and non-negligent manslaughter. On request: all homicide types.",
      "One word should mean the same count on every tab.",
-     OPEN, NEW),
+     O28 + " (Jeff: homicide means murder and non-negligent manslaughter everywhere)", NEW),
     ("P11", "\"How many theft victims in Ohio in 2024?\" and \"How many thefts in Ohio in 2024?\"",
      "NIBRS answers \"thefts\" by offense, and declines \"theft victims\" when no table counts that crime by victim. Current Trends declines any \"victims\" question.",
      "When the user says \"victims\", count victims (NIBRS records victims of property crimes too). When no unit is named, use the standard unit: victims for crimes against persons, offenses for property crimes.",
@@ -233,7 +233,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P10": "Should \"homicide\" mean the same as \"murder\" (murder and non-negligent manslaughter) everywhere?",
     "P11": "When someone asks for \"victims\" of a property crime, should the app count victims rather than offenses?",
     "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
     "P15": "For rates of details only NIBRS has, should the rate use the population of the reporting agencies only?",
@@ -251,7 +250,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P10", "P11", "P15", "P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P11", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
