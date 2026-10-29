@@ -196,7 +196,7 @@ ROWS = [
      "Ask once, with three buttons. A named place or a named level (\"which state\", \"cities\") settles it without asking.",
      "Choices: states; cities; individual agencies.",
      "Each level gives a different ranking with a different winner.",
-     OPEN, "GC-003; labeled cases with \"where\""),
+     O28 + " (Jeff: yes)", "GC-003; labeled cases with \"where\""),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
@@ -238,10 +238,8 @@ DECISION = {
     "P20": "For forecasts, should the app decline and offer the recent trend instead?",
     "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
-    "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "3. When to ask a question" for p in ["P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
