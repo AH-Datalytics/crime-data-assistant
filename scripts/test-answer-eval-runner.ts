@@ -1,8 +1,9 @@
 /**
- * The runner's comparison and gates (lib/answer-eval/{compare,gates}.ts) judge correctly: a plan with the label's
- * meaning compares equal; a different place, period, measure, unit, filter or cohort is a material difference;
- * an unknown period wording is a naming difference, never a wrong answer; outcomes and gates follow their rules.
- * Offline: no database, no model, no network.
+ * The runner's comparison and gates (lib/answer-eval/{compare,gates}.ts) judge correctly. A plan with the label's
+ * meaning matches. A different place, period, measure, unit, filter value, combination, rank or cohort is material.
+ * An unknown word or a detail the label cannot express is unverified: never correct, never wrong. Outcomes keep the
+ * observed action, and gates report every mandatory category, with "not measured" where it cannot be checked.
+ * Includes the probes from Codex's runner review (r1). Offline: no database, no model, no network.
  */
 import assert from "node:assert/strict";
 import { compareMeaning, labelPeriod, planToMeaning, type Release } from "../lib/answer-eval/compare";
@@ -11,6 +12,7 @@ import type { Meaning } from "../lib/answer-eval/case";
 import * as X from "../lib/nibrs-plan/examples";
 
 const r: Release = { firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
+const year = (y: number) => ({ kind: "absolute" as const, from: `${y}-01`, to: `${y}-12` });
 
 // Label periods resolve against the release.
 assert.deepEqual(labelPeriod({ rule: "latest complete year" }, r), { from: "2025-01", to: "2025-12" });
@@ -20,39 +22,68 @@ assert.deepEqual(labelPeriod({ rule: "year to date through the latest month" }, 
 assert.equal(labelPeriod({ rule: "something new" }, r), null);
 
 // H2: Memphis carjackings in 2025, the frozen release question.
-const { meaning: h2, statistics } = planToMeaning(X.H2, { kind: "absolute", from: "2025-01", to: "2025-12" });
+const h2 = planToMeaning(X.H2, year(2025));
 const label: Meaning = {
-  source: "nibrs", places: [{ kind: "agency", name: "Memphis Police Department", state: "TN" }], period: { from: "2025-01", to: "2025-12" },
+  source: "nibrs", places: [{ kind: "city", name: "Memphis", state: "TN" }], period: { from: "2025-01", to: "2025-12" },
   measures: [{ name: "carjacking", unit: "incident" }], filters: [], groupings: [], statistic: "count",
 };
-assert.deepEqual(compareMeaning(label, h2, r, statistics), [], "the same meaning");
-const fields = (e: Meaning) => compareMeaning(e, h2, r, statistics).filter((d) => d.kind === "material").map((d) => d.field);
-assert.deepEqual(fields({ ...label, places: [{ kind: "agency", name: "Nashville Police Department", state: "TN" }] }), ["places"]);
-assert.deepEqual(fields({ ...label, period: { from: "2024-01", to: "2024-12" } }), ["period"]);
-assert.deepEqual(fields({ ...label, measures: [{ name: "robbery", unit: "incident" }] }), ["measures"]);
-assert.deepEqual(fields({ ...label, measures: [{ name: "carjacking", unit: "victim" }] }), ["units"]);
-assert.deepEqual(fields({ ...label, filters: ["weapon: firearm"] }), ["filters"]);
-assert.deepEqual(fields({ ...label, cohort: "same_agencies" }), ["cohort"]);
-assert.deepEqual(fields({ ...label, statistic: "rate" }), ["statistic"]);
-assert.deepEqual(compareMeaning({ ...label, period: { rule: "the summer" } }, h2, r, statistics).map((d) => d.kind), ["naming"], "an unknown period wording is naming, not wrong");
-assert.deepEqual(fields({ ...label, period: { rule: "latest complete year" } }), [], "a relative label period resolves");
+const kinds = (e: Meaning, v = h2) => compareMeaning(e, v, r).map((d) => `${d.kind}:${d.field}`);
+assert.deepEqual(kinds(label), [], "the same meaning (a city and its police department are one place)");
+assert.deepEqual(kinds({ ...label, places: [{ kind: "agency", name: "Nashville Police Department", state: "TN" }] }), ["material:places"]);
+assert.deepEqual(kinds({ ...label, period: { from: "2024-01", to: "2024-12" } }), ["material:period"]);
+assert.deepEqual(kinds({ ...label, measures: [{ name: "robbery", unit: "incident" }] }), ["material:measures"]);
+assert.deepEqual(kinds({ ...label, measures: [{ name: "carjacking", unit: "victim" }] }), ["material:measures"]);
+assert.deepEqual(kinds({ ...label, cohort: "same_agencies" }), ["material:cohort"]);
+assert.deepEqual(kinds({ ...label, statistic: "rate" }), ["material:statistic"]);
+assert.deepEqual(kinds({ ...label, period: { rule: "latest complete year" } }), [], "a relative label period resolves");
+assert.deepEqual(kinds({ ...label, period: { rule: "the summer" } }), ["unverified:period"], "an unknown period wording is unverified");
+assert.deepEqual(kinds({ ...label, measures: [{ name: "zorbing", unit: "incident" }] }), ["unverified:measures"], "an unknown measure word is unverified");
 
-// Outcomes.
-assert.equal(outcomeOf("answer", "answer", 0, true), "correct");
-assert.equal(outcomeOf("answer", "answer", 2, true), "wrong_answer");
-assert.equal(outcomeOf("answer", "decline", 0, true), "avoidable_decline");
-assert.equal(outcomeOf("answer", "no_reading", 0, true), "avoidable_decline");
-assert.equal(outcomeOf("answer", "clarify", 0, true), "unnecessary_clarify");
-assert.equal(outcomeOf("decline", "answer", 0, true), "wrong_answer", "a number where the label declines is a wrong answer");
-assert.equal(outcomeOf("clarify", "answer", 0, true), "wrong_answer", "a number where the label asks is a wrong answer");
-assert.equal(outcomeOf("decline", "decline", 0, false), "incomplete");
-assert.equal(outcomeOf("clarify", "decline", 0, true), "wrong_action");
+// Codex probe: Los Angeles is not Los Banos.
+const la = planToMeaning({ ...X.H2, geography: { places: [{ kind: "agency", ori: "CA0194200", label: "Los Angeles Police Department, CA" }], combine: "separate" } }, year(2025));
+assert.deepEqual(kinds({ ...label, places: [{ kind: "agency", name: "Los Banos Police Department", state: "CA" }] }, la), ["material:places"]);
+// Codex probe: firearm versus knife is a different filter value.
+const gun = planToMeaning({ ...X.H2, filters: [{ kind: "exists", scope: "offense", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["11", "12"] }] }] }, year(2025));
+assert.deepEqual(kinds({ ...label, filters: ["weapon: firearm"] }, gun), []);
+assert.deepEqual(kinds({ ...label, filters: ["weapon: knife"] }, gun), ["material:filters"]);
+// Codex probe: combined versus separate places.
+const two = planToMeaning({ ...X.NAMED_PLACES }, year(2024));
+const twoLabel: Meaning = { ...label, places: two.meaning.places, measures: two.meaning.measures.map((m) => ({ name: m.name, unit: m.unit })), period: two.meaning.period, groupings: two.meaning.groupings, statistic: two.meaning.statistic as Meaning["statistic"], combine: two.meaning.combine === "combined" ? "separate" : "combined" };
+assert.ok(kinds(twoLabel, two).includes("material:combine"), "combined vs separate places");
+// Codex probe: a share's roles cannot be read from the label, so a share is never credited as correct.
+const share = planToMeaning(X.SUBSET_SHARE, year(2025));
+assert.ok(compareMeaning({ ...label, places: share.meaning.places, measures: [{ name: share.measures[0].name, unit: share.measures[0].unit }], statistic: "share", period: share.meaning.period }, share, r).some((d) => d.kind === "unverified" && d.field === "share roles"));
+// Codex probe: units stay with their measures.
+assert.deepEqual(kinds({ ...label, measures: [{ name: "carjacking", unit: "offense" }] }), ["material:measures"]);
 
-// Gates: one wrong answer fails; 19 of 20 correct passes the 95% bars.
-const res = (n: number, outcome: CaseResult["outcome"], actual: CaseResult["actual"] = "answer"): CaseResult[] =>
-  Array.from({ length: n }, (_, i) => ({ id: `LS-${i}`, split: "dev", expected: "answer", actual, outcome, diffs: [], notes: [], capability: "nibrs:count", era: "2021 and later" }));
-assert.equal(gates([...res(19, "correct"), ...res(1, "avoidable_decline", "decline")])[0].pass, true, "95% passes");
-assert.equal(gates([...res(18, "correct"), ...res(2, "avoidable_decline", "decline")])[0].pass, false, "90% fails");
-assert.equal(gates([...res(99, "correct"), ...res(1, "wrong_answer")])[0].pass, false, "any wrong answer fails");
+// Outcomes keep the observed action.
+assert.equal(outcomeOf("answer", "answer", { material: 0 }), "correct");
+assert.equal(outcomeOf("answer", "answer", { unverified: 1 }), "unverified");
+assert.equal(outcomeOf("answer", "answer", { material: 2 }), "wrong_answer");
+assert.equal(outcomeOf("answer", "decline"), "avoidable_decline");
+assert.equal(outcomeOf("answer", "no_reading"), "avoidable_decline");
+assert.equal(outcomeOf("answer", "clarify"), "unnecessary_clarify");
+assert.equal(outcomeOf("decline", "answer"), "wrong_answer");
+assert.equal(outcomeOf("clarify", "answer"), "wrong_answer");
+assert.equal(outcomeOf("decline", "no_reading"), "incomplete", "no reading is not a decline: no reason was given");
+assert.equal(outcomeOf("decline", "decline", { structured: false }), "unverified", "an unjudged reason is not credited");
+assert.equal(outcomeOf("decline", "decline", { structured: true }), "correct");
+assert.equal(outcomeOf("decline", "decline", { structured: true, alternativeMissing: true }), "incomplete");
+assert.equal(outcomeOf("clarify", "decline"), "wrong_action");
+assert.equal(outcomeOf("clarify", "clarify", { structured: false }), "unverified");
+
+// Gates.
+const res = (n: number, expected: CaseResult["expected"], actual: CaseResult["actual"], outcome: CaseResult["outcome"]): CaseResult[] =>
+  Array.from({ length: n }, (_, i) => ({ id: `LS-${i}`, split: "dev", expected, actual, outcome, diffs: [], notes: [], capability: "x", era: "2021 and later" }));
+const status = (rs: CaseResult[]) => gates(rs)[0].status;
+const category = (rs: CaseResult[], name: string) => gates(rs)[0].categories.find((c) => c.name === name)!.status;
+assert.equal(status([...res(19, "answer", "answer", "correct"), ...res(1, "answer", "decline", "avoidable_decline")]), "not measured", "95% direct answers, numeric fixtures not measured");
+assert.equal(category([...res(19, "answer", "answer", "correct"), ...res(1, "answer", "decline", "avoidable_decline")], "direct answers"), "pass");
+assert.equal(category([...res(18, "answer", "answer", "correct"), ...res(2, "answer", "decline", "avoidable_decline")], "direct answers"), "fail");
+assert.equal(status([...res(99, "answer", "answer", "correct"), ...res(1, "answer", "answer", "wrong_answer")]), "fail", "any wrong answer fails");
+// Codex probe: 19 correct declines and one clarification where a decline was expected must not pass.
+assert.equal(category([...res(19, "decline", "decline", "correct"), ...res(1, "decline", "clarify", "wrong_action")], "declines"), "fail");
+assert.equal(category(res(5, "decline", "decline", "unverified"), "declines"), "not measured");
+assert.equal(category(res(5, "clarify", "clarify", "unverified"), "clarifications"), "not measured");
 
 console.log("answer-eval runner: comparison, outcomes and gates as specified");

@@ -4,19 +4,20 @@
  *   npx tsx scripts/run-answer-eval.ts            # writes scripts/fixtures/answer-eval/runs/nibrs-reader.{json,md}
  *
  * Candidate "nibrs-reader": today's NIBRS reader (request ledger + typed matcher) -> the plan adapter -> every plan
- * validation and release resolution. It is the question -> reader level. Values need the compiler (phase 1 steps
- * 2-3) and are reported as not measured. Cases the candidate cannot take are reported as not run, with the reason:
- * another tab (no adapter yet), a follow-up (the reader takes one turn), a button (the reader returns no
- * structured options).
+ * validation and release resolution. This is the question -> reader level ONLY. Not executed, and reported as not
+ * measured: known plan -> compiled result (no compiler yet), numeric values, routing between sources, the delivered
+ * answer and its statements, follow-up turns and button continuations. An "answer" here is a plan-level semantic
+ * assessment, not a delivered number.
  *
- * Scored: only cases whose label is reviewed and whose policy rows are all decided (scorable()). Drafted labels are
- * also compared, in a separate PROVISIONAL section that is never a gate. Offline: no database, no model, no network.
+ * Scored: cases whose label is reviewed and whose policy rows are all decided (scorable()). Drafted labels are also
+ * compared, in a separate PROVISIONAL section that is never a gate. Development and held-out cases are reported
+ * separately. Offline: no database, no model, no network.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { Case, scorable } from "../lib/answer-eval/case";
-import { compareMeaning, planToMeaning, type Diff, type Release } from "../lib/answer-eval/compare";
-import { confusion, gates, outcomeOf, pct, severity, type ActualAction, type CaseResult } from "../lib/answer-eval/gates";
+import { compareMeaning, labelPeriod, planToMeaning, type Diff, type Release } from "../lib/answer-eval/compare";
+import { confusion, gates, outcomeOf, severity, type ActualAction, type CaseResult } from "../lib/answer-eval/gates";
 import { planFromSpec } from "../lib/nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../lib/nibrs-plan/draft-layer";
 import { parsePlan, type Place } from "../lib/nibrs-plan/plan";
@@ -39,71 +40,82 @@ const policyCsv = fs.readFileSync(path.join(ROOT, "docs/policy/nibrsai-answer-po
 const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2}),.*Needs Jeff/gm)].map((m) => m[1]));
 
 type Run = { actual: ActualAction; diffs: Diff[]; notes: string[] };
+/** Why the candidate cannot take a case at all (execution coverage, separate from label eligibility). */
 function notRun(c: Case): string | null {
-  if (c.tab !== "nibrs") return `tab ${c.tab}: no adapter for this source yet`;
+  if (c.tab !== "nibrs") return "another source: no adapter for it yet";
   if (c.setup.length) return "a follow-up: the reader takes one turn";
-  if (c.button) return "a button: the reader returns no structured options";
+  if (c.button) return "a button continuation: the reader returns no structured options";
   return null;
 }
 function run(c: Case): Run {
   const ledger = accountNibrsRequest(c.question);
   const d = matchNibrsType(ledger);
-  if (d.kind === "none") return { actual: "no_reading", diffs: [], notes: ["no typed reading (today's route would hand it to another path)"] };
-  if (d.kind === "clarify") return { actual: "clarify", diffs: [], notes: [d.explanation] };
-  if (d.kind === "decline") return { actual: "decline", diffs: [], notes: [d.explanation] };
+  if (d.kind === "none") return { actual: "no_reading", diffs: [], notes: ["no typed reading: no answer, no reason"] };
+  if (d.kind === "clarify") return { actual: "clarify", diffs: [], notes: [`asked (text only, no structured options): ${d.explanation}`] };
+  if (d.kind === "decline") return { actual: "decline", diffs: [], notes: [`declined (reason not judged): ${d.explanation}`] };
   const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace });
-  if (a.kind === "unmapped") return { actual: "decline", diffs: [], notes: [`adapter refused: ${a.reason}`] };
+  if (a.kind === "unmapped") return { actual: "decline", diffs: [], notes: [`adapter refused (reason not judged): ${a.reason}`] };
   const problems = [...parsePlan(a.plan).problems, ...validatePlanShape(a.plan), ...validatePlanSemantics(a.plan, DRAFT_LAYER), ...validateBindings(a.plan, a.parts, authority)];
   const resolved = problems.length ? null : validateResolved(a.plan, release, DRAFT_LAYER, geo);
   const all = [...problems, ...(resolved?.problems ?? [])];
-  if (all.length) return { actual: "decline", diffs: [], notes: [`plan refused: ${all.map((p) => p.rule).join(", ")}`] };
-  const { meaning, statistics } = planToMeaning(a.plan, resolved!.period);
-  const diffs = c.expected?.action === "answer" ? compareMeaning(c.expected.meaning, meaning, release, statistics) : [];
-  return { actual: "answer", diffs, notes: [] };
+  if (all.length) return { actual: "decline", diffs: [], notes: [`plan refused (reason not judged): ${all.map((p) => p.rule).join(", ")}`] };
+  const view = planToMeaning(a.plan, resolved!.period);
+  return { actual: "answer", diffs: c.expected?.action === "answer" ? compareMeaning(c.expected.meaning, view, release) : [], notes: [] };
+}
+
+/** Era from the whole period the label expects: before 2021, from 2021 on, or spanning both. */
+function era(c: Case): string {
+  const e = c.expected!;
+  const m = e.action === "answer" ? e.meaning : e.action === "decline" ? e.alternative : e.options.find((o) => o.meaning)?.meaning ?? null;
+  if (!m) return "no period";
+  const p = labelPeriod(m.period, release);
+  if (!p) return "period not mapped";
+  const [a, b] = [Number(p.from.slice(0, 4)), Number(p.to.slice(0, 4))];
+  return b < 2021 ? "before 2021" : a >= 2021 ? "2021 and later" : "spans 2021";
+}
+function capability(c: Case): string {
+  const e = c.expected!;
+  const m = e.action === "answer" ? e.meaning : e.action === "decline" ? e.alternative : e.options.find((o) => o.meaning)?.meaning ?? null;
+  return `${e.action}:${m ? `${m.source} ${m.statistic}` : "no meaning"}`;
 }
 
 function score(c: Case, r: Run): CaseResult {
   const e = c.expected!;
   const material = r.diffs.filter((d) => d.kind === "material").length;
+  const unverified = r.diffs.filter((d) => d.kind === "unverified").length;
   const notes = [...r.notes];
-  // The reader returns text, not structured options or alternatives: a clarification or decline is complete only
-  // when the label expects nothing structured from it.
-  let complete = true;
-  if (e.action === "clarify" && r.actual === "clarify") { complete = false; notes.push("options not structured: the label's options cannot be checked"); }
-  if (e.action === "decline" && r.actual === "decline" && e.alternative) { complete = false; notes.push("no alternative offered; the label expects one"); }
-  const actual: ActualAction = r.actual === "no_reading" && e.action === "decline" ? "decline" : r.actual;
-  const period = e.action === "answer" ? e.meaning.period : e.action === "decline" && e.alternative ? e.alternative.period : null;
-  const end = period && "to" in period ? Number(period.to.slice(0, 4)) : null;
-  const meaning = e.action === "answer" ? e.meaning : null;
-  return {
-    id: c.id, split: c.split, expected: e.action, actual, outcome: outcomeOf(e.action, actual, material, complete), diffs: r.diffs, notes,
-    capability: meaning ? `${meaning.source}:${meaning.statistic}` : `nibrs:${e.action}`, era: end === null ? "relative period" : end < 2021 ? "before 2021" : "2021 and later",
-  };
+  // Today's reader gives text: a decline's reason is not judged, a clarification's options are not structured.
+  const structured = false;
+  const alternativeMissing = e.action === "decline" && !!e.alternative && r.actual === "decline";
+  if (alternativeMissing) notes.push("no alternative offered; the label expects one");
+  return { id: c.id, split: c.split, expected: e.action, actual: r.actual, outcome: outcomeOf(e.action, r.actual, { material, unverified, structured, alternativeMissing }), diffs: r.diffs, notes, capability: capability(c), era: era(c) };
 }
 
-const unscored: Record<string, string[]> = {};
+const coverage: Record<string, string[]> = {};
+const eligibility: Record<string, string[]> = {};
 const scored: CaseResult[] = [];
 const provisional: CaseResult[] = [];
 for (const c of cases) {
-  const nr = notRun(c);
   const s = scorable(c, openPolicy);
-  const why = nr ?? (s.scored ? null : s.why!);
-  if (why) (unscored[why.replace(/ P\d.*$/, " (open rows)").replace(/^tab \w+/, "another tab")] ??= []).push(c.id);
+  (eligibility[s.scored ? "scorable (reviewed, decided policy)" : s.why!.replace(/ P\d.*$/, " (open rows)")] ??= []).push(c.id);
+  const nr = notRun(c);
+  (coverage[nr ?? "run by this candidate"] ??= []).push(c.id);
   if (nr || !c.expected) continue;
-  const r = score(c, run(c));
-  (s.scored ? scored : provisional).push(r);
+  const res = score(c, run(c));
+  (s.scored ? scored : provisional).push(res);
 }
 
-const section = (title: string, rs: CaseResult[]) => {
-  const L: string[] = [`## ${title}`, ""];
+const list = (m: Record<string, string[]>) => Object.entries(m).sort((a, b) => b[1].length - a[1].length).map(([why, ids]) => `- ${ids.length}: ${why}`);
+const section = (title: string, rs: CaseResult[], gate: boolean) => {
+  const L: string[] = [`### ${title}`, ""];
   if (!rs.length) return [...L, "No cases.", ""].join("\n");
   const n = (o: string) => rs.filter((r) => r.outcome === o).length;
-  L.push(`${rs.length} cases (dev ${rs.filter((r) => r.split === "dev").length}, held out ${rs.filter((r) => r.split === "heldout").length}). Correct ${n("correct")}; wrong answers ${n("wrong_answer")}; avoidable declines ${n("avoidable_decline")}; unnecessary clarifications ${n("unnecessary_clarify")}; wrong actions ${n("wrong_action")}; incomplete ${n("incomplete")}. Severity score ${severity(rs)} (trend only).`, "");
+  L.push(`${rs.length} cases. Correct ${n("correct")}; unverified ${n("unverified")}; wrong answers ${n("wrong_answer")}; avoidable declines ${n("avoidable_decline")}; unnecessary clarifications ${n("unnecessary_clarify")}; wrong actions ${n("wrong_action")}; incomplete ${n("incomplete")}. Severity score ${severity(rs)} (trend only).`, "");
   L.push("Expected (rows) by actual (columns):", "", "| | answer | clarify | decline | no reading |", "|---|---|---|---|---|");
   for (const [e, row] of Object.entries(confusion(rs))) L.push(`| ${e} | ${row.answer} | ${row.clarify} | ${row.decline} | ${row.no_reading} |`);
-  L.push("", "| Capability | Era | Cases | Wrong | Incomplete | Initial action | Direct answers | Gate |", "|---|---|---|---|---|---|---|---|");
-  for (const g of gates(rs)) L.push(`| ${g.capability} | ${g.era} | ${g.cases} | ${g.wrong} | ${g.incomplete} | ${pct(g.action, g.cases)} | ${g.answerable ? pct(g.direct, g.answerable) : "n/a"} | ${g.pass ? "pass" : `fail: ${g.why.join("; ")}`} |`);
-  L.push("", "Numeric fixtures: not measured (no compiler yet; values are pending the canonical build).", "", "### Discrepancies", "");
+  L.push("", `| Capability | Era | Cases | ${gate ? "Gate" : "Would-be gate (not a gate)"} | Categories |`, "|---|---|---|---|---|");
+  for (const g of gates(rs)) L.push(`| ${g.capability} | ${g.era} | ${g.cases} | ${g.status} | ${g.categories.filter((x) => x.detail !== "no cases").map((x) => `${x.name}: ${x.status} (${x.detail})`).join("; ")} |`);
+  L.push("", "Discrepancies and unverified cases:", "");
   for (const r of rs.filter((x) => x.outcome !== "correct")) {
     const c = cases.find((x) => x.id === r.id)!;
     L.push(`- **${r.id}** (${r.outcome}; expected ${r.expected}, got ${r.actual}) "${c.question.slice(0, 140)}"`);
@@ -112,20 +124,28 @@ const section = (title: string, rs: CaseResult[]) => {
   }
   return [...L, ""].join("\n");
 };
+const bySplit = (title: string, rs: CaseResult[], gate: boolean) =>
+  [`## ${title}`, "", section("Development", rs.filter((r) => r.split === "dev"), gate), section("Held out", rs.filter((r) => r.split === "heldout"), gate)].join("\n");
 
 const md = [
   `# Answer evaluation: ${CANDIDATE}`,
   "",
-  `Labeled set: ${cases.length} cases. Release for resolution: ${release.firstMonth}..${release.lastMonth}, request date ${release.asOf}. Level: question -> reader (values not measured).`,
+  `Labeled set: ${cases.length} cases. Release for resolution: ${release.firstMonth}..${release.lastMonth}, request date ${release.asOf}.`,
   "",
-  "## Not scored",
+  "**Level: question -> reader only.** An \"answer\" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).",
   "",
-  ...Object.entries(unscored).sort((a, b) => b[1].length - a[1].length).map(([why, ids]) => `- ${ids.length}: ${why}`),
+  "## Execution coverage (can this candidate take the case)",
   "",
-  section("Scored (reviewed labels, decided policy)", scored),
-  section("PROVISIONAL: drafted or open-policy labels (never a gate)", provisional),
+  ...list(coverage),
+  "",
+  "## Label eligibility (can the case be scored)",
+  "",
+  ...list(eligibility),
+  "",
+  bySplit("Scored (reviewed labels, decided policy)", scored, true),
+  bySplit("PROVISIONAL: drafted labels (never a gate)", provisional, false),
 ].join("\n");
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, `${CANDIDATE}.md`), md);
-fs.writeFileSync(path.join(OUT, `${CANDIDATE}.json`), JSON.stringify({ candidate: CANDIDATE, release, unscored, scored, provisional }, null, 1) + "\n");
-console.log(`${CANDIDATE}: scored ${scored.length}, provisional ${provisional.length}, not scored ${Object.values(unscored).reduce((s, x) => s + x.length, 0)}`);
+fs.writeFileSync(path.join(OUT, `${CANDIDATE}.json`), JSON.stringify({ candidate: CANDIDATE, release, coverage, eligibility, scored, provisional }, null, 1) + "\n");
+console.log(`${CANDIDATE}: scored ${scored.length}, provisional ${provisional.length}; run ${coverage["run by this candidate"]?.length ?? 0} of ${cases.length}`);
