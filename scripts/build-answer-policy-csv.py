@@ -159,7 +159,7 @@ ROWS = [
      "Decline: the data has no names, addresses or case narratives. Offer the count of that offense for the city and month.",
      "Alternative: offense count, same city and month.",
      "Incident details are in no source.",
-     OPEN, NEW),
+     O28 + " (Jeff: yes, decline)", NEW),
     ("P22", "The user clicks a button in a clarifying question",
      "The button rewrites the word in question and keeps the rest. Some questions are asked once only; the place-level question repeats until answered.",
      "A button runs the original question with only that choice changed (place, period and filters kept). A choice already made is not asked again for that question or its follow-ups; a later question with a new ambiguity can still be asked about.",
@@ -233,11 +233,10 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
 }
 TOPIC = {
-    **{p: "4. When to decline, and what to offer instead" for p in ["P21", "P24"]},
+    **{p: "4. When to decline, and what to offer instead" for p in ["P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
 ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]
