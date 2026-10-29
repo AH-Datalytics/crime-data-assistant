@@ -48,17 +48,27 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
-    // A breakdown's rows carry a category field (race, sex, ethnicity, location_type): keyed by year (if any) and the
-    // category's name as NIBRSAI shows it; each category's share is its count over the measure's known total.
+    // A breakdown's rows carry a category field (race, sex, ethnicity, location_type): keyed by period (if any) and the
+    // category's name as NIBRSAI shows it. Each category's share is its count over its own period's independent total:
+    // the measure's known total, or the sum of every category of that period when all of them are known (each unit is in
+    // exactly one category). No independent total: the share is undefined (unverified), never an expected blank.
     const catField = Object.keys(CATEGORY_FIELDS).find((f) => (v.rows ?? []).some((r) => f in r));
     const total = v.totals?.[measures[0]];
+    const periodTotal = new Map<string, number | null>();
+    for (const r of v.rows ?? []) {
+      const p = String(r.year ?? r.month ?? ""), c = cell(r[measures[0]]);
+      const sofar = periodTotal.has(p) ? periodTotal.get(p)! : 0;
+      periodTotal.set(p, sofar === null || c.value === null ? null : sofar + c.value);
+    }
     const cells: ExpectedCell[] = v.grouping === "total" && !catField
       ? measures.map((m) => ({ key: measures.length > 1 ? m : "", ...pick(v.totals[m]) }))
       : (v.rows ?? []).map((r) => {
         const c = pick(cell(r[measures[0]]));
         const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], r[catField]) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
-        const den = catField && !r.year && !r.month && total?.value ? total.value : null;
-        return { key, ...c, ...(catField ? { share: den && c.value !== null ? Math.round((1000 * c.value) / den) / 10 : null } : {}) };
+        const p = String(r.year ?? r.month ?? "");
+        const den = !p && total?.value ? total.value : periodTotal.get(p) || undefined;
+        const share = c.value === null ? null : den === undefined ? undefined : Math.round((1000 * c.value) / den) / 10;
+        return { key, ...c, ...(catField ? { share } : {}) };
       });
     for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g)) {
       const k = m[3] ? `${m[1]}|alternative` : m[2] ? `${m[1]}|${m[2]}` : m[1];
@@ -129,19 +139,25 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   const statCol = (n: number) => columns.findIndex((c, i) => c.binding.kind === "statistic" && columns.slice(0, i).filter((x) => x.binding.kind === "statistic").length === n);
   const [ci, si] = [statCol(0), statCol(1)];
   const countAs = (columns[ci].binding as { as: string }).as;
-  const got = new Map(rows.map((r, i) => [groupCols.map((j) => String(r[j])).join("|"),
+  const keys = rows.map((r) => groupCols.map((j) => String(r[j])).join("|"));
+  const got = new Map(rows.map((r, i) => [keys[i],
     { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
   const diffs: Diff[] = [];
+  // A key delivered twice could hide a wrong row behind a right one: never compared, always wrong.
+  const twice = keys.filter((k, i) => keys.indexOf(k) !== i);
+  if (twice.length) diffs.push({ field: `${prefix}rows`, expected: "each grouping once", actual: `repeated: ${[...new Set(twice)].join(", ")}`, kind: "material" });
   if (got.size !== expected.length) diffs.push({ field: `${prefix}values`, expected: `${expected.length} cells`, actual: `${got.size} cells`, kind: "material" });
+  // A breakdown promises each category's share (increment 1): a table without it is incomplete.
+  if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });
   for (const x of expected) {
     const g = got.get(x.key);
     if (!g || g.value !== x.value || g.status !== x.status) diffs.push({ field: `${prefix}value ${x.key || "total"}`, expected: `${x.value} ${x.status}`, actual: g ? `${g.value} ${g.status}` : "missing", kind: "material" });
-    else if (g.share !== undefined && x.share !== undefined && g.share !== x.share)
+    else if (g.share !== undefined && x.share !== undefined && g.share !== x.share)   // null against a number included
       diffs.push({ field: `${prefix}share ${x.key}`, expected: String(x.share), actual: String(g.share), kind: "material" });
     else if (g.share !== undefined && x.share === undefined)
       diffs.push({ field: `${prefix}share ${x.key}`, expected: "(no independent share)", actual: String(g.share), kind: "unverified" });
   }
-  return { diffs, values: diffs.length ? "mismatch" : "match" };
+  return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }
 const worst = (vs: Values[]): Values | undefined => (vs.includes("mismatch") ? "mismatch" : vs.includes("not measured") ? "not measured" : vs.length ? "match" : undefined);
 const sameAbout = (a: string, b: string) => normLabel(a) === normLabel(b);

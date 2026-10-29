@@ -148,7 +148,7 @@ Discrepancies and unverified cases:
   - delivered: Albuquerque city police, NM: simple assault victims by race, 2021 to 2023. / Each share is that category's part of all simple assault victims in 2021 to 2023. / No total is established for Asian; Native Hawaii
 - **LS-278** (unverified; expected answer, got answer) "How many murder victims in Austin were male or female in 2023?"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Austin city police, TX: murder victims by sex, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Female: some month had none recorded without a zero report
+  - delivered: Austin city police, TX: murder victims by sex, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Female: reporting evidence is incomplete, or a month has n
 - **LS-279** (unverified; expected answer, got answer) "Aggravated assault victims in Albuquerque by race and year, 2021 to 2023"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Albuquerque city police, NM: aggravated assault victims by year and race, 2021 to 2023. / Each share is that category's part of all aggravated assault victims in the same year. / No total is established for As

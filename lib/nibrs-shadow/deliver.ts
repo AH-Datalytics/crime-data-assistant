@@ -147,7 +147,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     // month not reported, leaves it unknown. The rolled status does not say which, so the sentence names both.
     const blank = tableRows.filter((_, i) => evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status)))
       .map((r) => r.slice(ip >= 0 ? 1 : 0, (ip >= 0 ? 1 : 0) + cats.length).join(", ") + (ip >= 0 ? ` (${r[0]})` : ""));
-    if (blank.length) text.push(`No total is established for ${blank.join("; ")}: some month had none recorded without a zero report, or was not reported. Shown blank, not zero.`);
+    if (blank.length) text.push(`No total is established for ${blank.join("; ")}: reporting evidence is incomplete, or a month has none recorded without evidence establishing zero. Shown blank, not zero.`);
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   // How a misspelled word was read (reading.ts), then the fixed statements; the source stays last.

@@ -248,5 +248,16 @@ assert.equal(scoreShadow(sexLabel, bySex, r, ctx).result!.outcome, "unverified",
 const loaded = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", measures: { sa: "13B" }, totals: { sa: { status: "VALUE", value: 50 } },
   rows: [{ sex: "F", sa: { status: "VALUE", value: 30 } }, { sex: "M", sa: { status: "VALUE", value: 20 } }, { sex: "U", sa: { status: "UNKNOWN", value: null } }] }) }]);
 assert.deepEqual(loaded.get("LS-999"), sexCells(20).get("LS-999"));
+// Codex increment-1 review: a repeated category row, or a missing share column, never scores correct; a share within a
+// year is checked against that year's own independent total, and with none it is unverified, not an expected blank.
+const dup = { ...bySex, delivered: { ...bySex.delivered, table: { ...bySex.delivered.table, rows: [["Male", 999, 99], ...bySex.delivered.table.rows] },
+  evidence: [{ row: 0, statistic: bySex.plan.statistics[0].as, status: "VALUE" as const }, ...bySex.delivered.evidence.map((e) => ({ ...e, row: e.row + 1 }))] } };
+assert.equal(scoreShadow(sexLabel, dup, r, ctx, sexCells(20)).result!.outcome, "wrong_answer");
+const countOnly = { ...bySex, delivered: { ...bySex.delivered, table: { columns: bySex.delivered.table.columns.slice(0, 2), rows: bySex.delivered.table.rows.map((x) => x.slice(0, 2)) } } };
+assert.notEqual(scoreShadow(sexLabel, countOnly, r, ctx, sexCells(20)).result!.outcome, "correct");
+const yearly = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-998", grouping: "year", measures: { sa: "13B" }, totals: { sa: { status: "UNKNOWN", value: null } },
+  rows: [{ year: "2021", sex: "F", sa: { status: "VALUE", value: 3 } }, { year: "2021", sex: "M", sa: { status: "VALUE", value: 1 } },
+    { year: "2022", sex: "F", sa: { status: "VALUE", value: 5 } }, { year: "2022", sex: "M", sa: { status: "UNKNOWN", value: null } }] }) }]).get("LS-998")!;
+assert.deepEqual(yearly.map((x) => [x.key, x.share]), [["2021|Female", 75], ["2021|Male", 25], ["2022|Female", undefined], ["2022|Male", null]]);
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

@@ -31,6 +31,8 @@ assert.equal(read("car thefts in Tulsa in 2022").readings.length, 0, "car theft 
 assert.equal(read("How many robbery victims in Tulsa were women or men in 2022?").text, "How many robbery victims in Tulsa by sex in 2022?");
 assert.equal(read("arsons in Tulsa by location type and month, 2022").text, "arsons in Tulsa by location type by month, 2022");
 assert.equal(read("robberies in Tulsa by weapon and year").readings.length, 0, "only the delivered categories");
+assert.equal(read("Simple assaults committed by men and women in Tulsa in 2023").readings.length, 0, "offenders, not victims: left alone");
+assert.equal(read("Were male or female victims assaulted more in Tulsa?").readings.length, 0, "no 'victims ... were' form");
 
 // Year to date: the current year (the release clips it and names the months, D06); "last year" is left alone.
 assert.equal(read("robberies in Tulsa year to date").text, "robberies in Tulsa in 2026");

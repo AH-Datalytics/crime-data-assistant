@@ -1686,7 +1686,7 @@
     }
    ],
    "notes": [
-    "delivered: Milwaukee city police, WI: simple assault victims by race, 2024. / Each share is that category's part of all simple assault victims in 2024. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: some"
+    "delivered: Milwaukee city police, WI: simple assault victims by race, 2024. / Each share is that category's part of all simple assault victims in 2024. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: repo"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1796,7 +1796,7 @@
     }
    ],
    "notes": [
-    "delivered: Kansas City city police, MO: murder victims by race, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: some month had non"
+    "delivered: Kansas City city police, MO: murder victims by race, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for American Indian/Alaska Native; Native Hawaiian/Pacific Islander: reporting evidence"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1818,7 +1818,7 @@
     }
    ],
    "notes": [
-    "delivered: Albuquerque city police, NM: simple assault victims by race, 2021 to 2023. / Each share is that category's part of all simple assault victims in 2021 to 2023. / No total is established for Asian; Native Hawaiian/Pacific Islander: some month"
+    "delivered: Albuquerque city police, NM: simple assault victims by race, 2021 to 2023. / Each share is that category's part of all simple assault victims in 2021 to 2023. / No total is established for Asian; Native Hawaiian/Pacific Islander: reporting "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1840,7 +1840,7 @@
     }
    ],
    "notes": [
-    "delivered: Austin city police, TX: murder victims by sex, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Female: some month had none recorded without a zero report, or was not reported. Shown bl"
+    "delivered: Austin city police, TX: murder victims by sex, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Female: reporting evidence is incomplete, or a month has none recorded without evidence e"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
