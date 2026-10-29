@@ -138,10 +138,10 @@ ROWS = [
      O28 + " (Jeff: exactly N, alphabetical within ties)", NEW),
     ("P18", "\"Burglary clearance rate in Ohio in 2023\" (Historical has agency and national clearance, not state)",
      "Declined when the request is clearly a state.",
-     "Decline the state figure and offer two buttons: the national clearance rate (Historical), or Ohio's cleared offenses from its NIBRS agencies.",
-     "Alternatives: national figure; NIBRS figure for Ohio's reporting agencies.",
-     "Frozen rule 14: offer the nearest measure that genuinely exists.",
-     OPEN, gc(14)),
+     "Answer from NIBRS: Ohio's burglary clearance rate for its NIBRS-reporting agencies, labelled as reporting agencies only, with the share of the state's population they cover. The source statement ends the answer.",
+     "Source: NIBRS (reporting agencies only), coverage stated.",
+     "NIBRS is the source that holds state clearance (Historical has agency and national clearance only), so under the source rule (P01) it answers.",
+     O28 + " (Jeff: state clearance rates use NIBRS)", gc(14)),
     ("P19", "\"Fentanyl seizures in Ohio\"",
      "NIBRS declines (\"falls under broader narcotic categories\") with no alternative.",
      "Decline and offer the category that contains it: synthetic narcotics (fentanyl and other synthetic opioids).",
@@ -233,14 +233,13 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P18": "For a state clearance rate (not in Historical), should the app decline and offer the national rate or the NIBRS state figure instead?",
     "P19": "For fentanyl, should the app decline and offer \"synthetic narcotics\" (which includes fentanyl) instead?",
     "P20": "For forecasts, should the app decline and offer the recent trend instead?",
     "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
 }
 TOPIC = {
-    **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
+    **{p: "4. When to decline, and what to offer instead" for p in ["P19", "P20", "P21", "P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
 ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]
