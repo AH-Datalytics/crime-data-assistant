@@ -336,8 +336,8 @@ export const G2: ReaderOutcome = {
 };
 export const G3: ReaderOutcome = { kind: "plan", plan: { ...N2, question: "thefts from cars where a firearm was stolen in Memphis in 2024", groupings: [] } };
 export const G4: ReaderOutcome = { kind: "plan", plan: N3 };
-export const G5: ReaderOutcome = { kind: "limitation", reason: "not_recorded_in_nibrs", parts: [g("filter", null, "undocumented immigrants", [52, 75])], explanation: "NIBRS does not record immigration status." };
-export const G6: ReaderOutcome = { kind: "limitation", reason: "explanation_requested", parts: [g("explain", null, "why", [0, 3])], explanation: "NIBRS records reported offenses, not their causes." };
+export const G5: ReaderOutcome = { kind: "limitation", reason: "not_recorded_in_nibrs", parts: [g("filter", null, "undocumented immigrants", [52, 75])], explanation: "NIBRS does not record immigration status.", alternative: null };
+export const G6: ReaderOutcome = { kind: "limitation", reason: "explanation_requested", parts: [g("explain", null, "why", [0, 3])], explanation: "NIBRS records reported offenses, not their causes.", alternative: null };
 
 export const EXAMPLES: Record<string, NibrsPlan> = {
   N1, N2, N3, H1, H2, H3, Z, D_WITHIN_MONTH, D_WITHIN_PERIOD, D_WITHIN_RACE, R, S1, S2, S3, S4_AGENCIES, S4_STATE, S5,

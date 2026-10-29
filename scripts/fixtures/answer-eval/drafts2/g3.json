@@ -1,0 +1,1928 @@
+{
+  "LS-081": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which crime the clearance rates are for",
+      "options": [
+        {
+          "label": "Violent crime",
+          "leads_to": "answer",
+          "meaning": null
+        },
+        {
+          "label": "Property crime",
+          "leads_to": "answer",
+          "meaning": null
+        },
+        {
+          "label": "Both",
+          "leads_to": "answer",
+          "meaning": null
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "D09",
+      "D28",
+      "D10",
+      "P06",
+      "P01",
+      "P22"
+    ],
+    "notes": "No crime and no year: D31 asks, one question at a time (D28); the crime first, with D09's buttons. Each button then needs the year question (P06), which the schema cannot express as an option meaning, so meanings are null. The eventual answer is Historical county sheriff rows (D10), disclosed (gold); whether MA sheriffs report clearances is unverified. Gold county-row expectations move to the answering turn.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "D31"
+    ]
+  },
+  "LS-082": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Albuquerque Police Department",
+            "state": "NM"
+          },
+          {
+            "kind": "agency",
+            "name": "Bernalillo County Sheriff's Office",
+            "state": "NM"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "from": "2020-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          },
+          {
+            "name": "robbery",
+            "unit": "offense"
+          },
+          {
+            "name": "aggravated assault",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "shows the two agencies separately",
+        "names the Bernalillo County Sheriff's Office as the county agency",
+        "names any requested year an agency did not report as missing, not zero",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D10",
+      "D18",
+      "D04",
+      "P01",
+      "P14",
+      "D30",
+      "D32"
+    ],
+    "notes": "Completed years of Part I crimes: Historical (P01), not the NIBRS tab. Units per D18. D32: Historical holds 2025, so 2020-2025 is one source; the 2025-missing doubt is gone.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-083": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which period",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Worcester County Sheriff's Office",
+                "state": "MD"
+              },
+              {
+                "kind": "agency",
+                "name": "Pocomoke City Police Department",
+                "state": "MD"
+              }
+            ],
+            "combine": "separate",
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "FBI composite"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "offender age (crimes grouped by linked offenders' ages; a crime with offenders in several age groups counts once in each)"
+            ],
+            "statistic": "count"
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Worcester County Sheriff's Office",
+                "state": "MD"
+              },
+              {
+                "kind": "agency",
+                "name": "Pocomoke City Police Department",
+                "state": "MD"
+              }
+            ],
+            "combine": "separate",
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "FBI composite"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "offender age (crimes grouped by linked offenders' ages; a crime with offenders in several age groups counts once in each)"
+            ],
+            "statistic": "count"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D10",
+      "D18",
+      "D31",
+      "P06",
+      "P01",
+      "P22",
+      "D28",
+      "D30"
+    ],
+    "notes": "Offender age is a NIBRS-only detail (P01). No period: ask (D31, P06 single-figure buttons; 'another year' has no fixed meaning and is not encoded). Codex fix: crimes (FBI composite) grouped by offender age, not offenders; the answer must say multi-offender crimes appear in each age group. Gold 'both agencies separately' kept in both options. Doubt: NIBRS 2026 months for these agencies unverified.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-084": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2010-01",
+          "to": "2024-12"
+        },
+        "measures": [
+          {
+            "name": "rape",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says sexual assault is answered with rape, the measure the source holds",
+        "notes the FBI broadened the rape definition in 2013",
+        "names the national figure as the FBI estimate",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D11",
+      "D18",
+      "P01",
+      "D30"
+    ],
+    "notes": "Historical (completed Part I years, national estimate). Rape unit victim (D18). Series crosses 2013: definition-change note required (gold, D11).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-085": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which place",
+      "options": [
+        {
+          "label": "The United States",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "from": "2020-01",
+              "to": "2025-12"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "FBI composite"
+              },
+              {
+                "name": "murder",
+                "unit": "victim"
+              },
+              {
+                "name": "rape",
+                "unit": "victim"
+              },
+              {
+                "name": "robbery",
+                "unit": "offense"
+              },
+              {
+                "name": "aggravated assault",
+                "unit": "victim"
+              },
+              {
+                "name": "property crime",
+                "unit": "offense"
+              },
+              {
+                "name": "burglary",
+                "unit": "offense"
+              },
+              {
+                "name": "larceny-theft",
+                "unit": "offense"
+              },
+              {
+                "name": "motor vehicle theft",
+                "unit": "offense"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "count"
+          }
+        },
+        {
+          "label": "A state",
+          "leads_to": "answer",
+          "meaning": null
+        },
+        {
+          "label": "A city or agency",
+          "leads_to": "answer",
+          "meaning": null
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P12",
+      "D18",
+      "D04",
+      "D11",
+      "P01",
+      "P22",
+      "D28",
+      "D30",
+      "D32"
+    ],
+    "notes": "No place: ask (D31, P12 buttons, United States first). 'A state' and 'A city or agency' need the user to name one, so their meanings are null. US option: Historical estimates, D18 units. Historical holds 2025 (D32); the answer must not mention the 2013 rape change (gold).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31",
+      "P12"
+    ]
+  },
+  "LS-086": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "rape",
+            "unit": "offense"
+          }
+        ],
+        "filters": [
+          "cleared (by arrest or exceptional means)"
+        ],
+        "groupings": [],
+        "statistic": "share",
+        "denominator": "all reported rapes, United States, 2025"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "gives the share as a percentage of reported rapes cleared",
+        "names 2025",
+        "does not note the 2013 rape definition change",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "D25",
+      "D11",
+      "P24",
+      "D30",
+      "D32",
+      "D18"
+    ],
+    "notes": "P01 routes completed-year clearance to Historical (national clearance, D25), not the NIBRS tab. Whether Historical holds 2025 decides the source: if it does, Historical answers (cleared rapes over reported rapes, share); if not, P01 sends months no other source holds to NIBRS, labelled reporting agencies. No deployment-aligned evidence of Historical's 2025 coverage. Gold: no 2013 note either way. D32: Historical holds national clearance for 2025, so Historical answers (Codex's cleared-over-reported share; unit offense per the cross-case clearance rule).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-087": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "1960 through the latest complete year"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "FBI composite"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "state",
+          "year"
+        ],
+        "statistic": "rate",
+        "denominator": "state population (FBI estimates), per 100,000"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "states where the state data starts and ends",
+        "if 1960 falls before the start of the state series, says the requested start is outside coverage",
+        "names interior missing state-years as missing, not zero",
+        "does not mention the 2013 rape definition change",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D04",
+      "D11",
+      "D18",
+      "P01",
+      "D30"
+    ],
+    "notes": "Every state, every year from 1960, Historical. Codex fix: an out-of-coverage start is named explicitly, as well as interior gaps (D04).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-088": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D31",
+      "P12",
+      "P22",
+      "P23",
+      "D12"
+    ],
+    "notes": "No turn of the conversation names a place. Under D31/P12 the first setup turn would have been a place question the user never answered, so this turn still lacks its place and D31 asks; the gold case requires an answer about the data on this turn. The two cannot both hold, and the setup's state under the new policy cannot be established.",
+    "codex": "change",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-089": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D12",
+      "D31"
+    ],
+    "notes": "Kept unresolved (Codex): the explanation depends on the unseen chart from the setup. Under D31 the setup ('trends', no crime or period) would itself have been a clarify, so the chart may never exist.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-090": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D12",
+      "D13",
+      "D31"
+    ],
+    "notes": "Kept unresolved (Codex): the setup's top-ten measure is unspecified and equal figures do not prove an error; the substantive answer depends on the setup's unseen output.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-091": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "not applicable: definitional answer"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "FBI composite"
+          },
+          {
+            "name": "property crime",
+            "unit": "offense"
+          }
+        ],
+        "filters": [],
+        "groupings": [],
+        "statistic": "list"
+      },
+      "values": {
+        "status": "not_checkable"
+      },
+      "statements": [
+        "says 'crime' here means the FBI's violent and property crime offenses",
+        "says no source here records cybercrime as a category",
+        "does not present any available measure as cybercrime",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D12",
+      "D14",
+      "D30"
+    ],
+    "notes": "Accepted label; D30 source statement added and violent crime unit set to the FBI composite (D18).",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-092": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data records reported crime, not its causes, so it cannot test theories of why crime fell.",
+      "alternative": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "FBI composite"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count"
+      }
+    },
+    "policy_add": [
+      "D12",
+      "D18",
+      "P01"
+    ],
+    "notes": "Accepted label; alternative's violent crime unit set to the FBI composite (D18). Completed years: Historical (P01).",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-093": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data records reported crime, not why people commit it.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D12"
+    ],
+    "notes": "Causes declined (D12); no place or measure named, so no genuine alternative.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-094": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data counts Chicago's police staffing each year but does not record why it changed.",
+      "alternative": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          }
+        ],
+        "period": {
+          "from": "1930-01",
+          "to": "2026-12"
+        },
+        "measures": [
+          {
+            "name": "sworn officers",
+            "unit": "officer"
+          },
+          {
+            "name": "total employees (years with no officer count)",
+            "unit": "employee"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count"
+      }
+    },
+    "policy_add": [
+      "D12",
+      "D25",
+      "D26",
+      "D04",
+      "P16",
+      "P23"
+    ],
+    "notes": "Follow-up keeps Chicago and the setup's 1930-2026 bounds (P23). Alternative re-offers the staffing trend: officers, employees only where no officer count exists, marked (D26); missing years named, including 2026 if not held (D04).",
+    "codex": "change",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-095": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data records reported crime, not the causes of an increase.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D12"
+    ],
+    "notes": "Causes declined (D12). No place or measure, so no alternative.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-096": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which year",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "state"
+            ],
+            "statistic": "rate",
+            "denominator": "state population (FBI estimates), per 100,000",
+            "rank": {
+              "by": "murder rate",
+              "direction": "top",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "state"
+            ],
+            "statistic": "rate",
+            "denominator": "population of each state's Current Trends sample agencies, per 100,000",
+            "rank": {
+              "by": "murder rate",
+              "direction": "top",
+              "limit": 20
+            },
+            "cohort": "source_sample"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P05",
+      "D05",
+      "P17",
+      "D13",
+      "D18",
+      "D27",
+      "P01",
+      "P22",
+      "D28",
+      "D30"
+    ],
+    "notes": "No year: ask (D31, P05), overriding the gold answer-on-this-turn expectation. Options keep the gold limit of 20, no eligibility filter, ties alphabetical (P17); the answer must state the limit and describe any internal failure as an app failure. Latest complete year: Historical; this year: Current Trends state samples (D27).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31",
+      "P05"
+    ]
+  },
+  "LS-097": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Baltimore Police Department",
+            "state": "MD"
+          },
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the agencies",
+        "names the years covered",
+        "says homicide means murder and non-negligent manslaughter",
+        "names any missing year as missing",
+        "if the request fails internally, says the site could not complete it, never no data, missing data or a true zero",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D13",
+      "D18",
+      "P10",
+      "P16",
+      "P01",
+      "D04",
+      "D30"
+    ],
+    "notes": "Historical for completed years (P01). Murder unit victim (D18). 'Past 10 years' = last 10 complete years.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-098": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Metropolitan Police Department",
+            "state": "DC"
+          }
+        ],
+        "period": {
+          "rule": "2025 compared with 2024"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "FBI composite"
+          }
+        ],
+        "filters": [],
+        "groupings": [],
+        "statistic": "change"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says 'the last year' means 2025 compared with 2024",
+        "shows the change in count and in percent",
+        "names the Metropolitan Police Department as the agency counted",
+        "if the request fails internally, says the site could not complete it, never that data are missing or zero",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P07",
+      "P01",
+      "P16",
+      "D13",
+      "D30",
+      "D32",
+      "D18"
+    ],
+    "notes": "Codex fix: 'the last year' is 2025 compared with 2024 (P07), from Historical (P01). The action depends on whether Historical holds 2025 for DC: an answer if it does, P07's say-so-and-offer if not. No deployment-aligned evidence, so unresolved (coverage rule). D32: Historical holds 2025 for DC, so P07's answer branch applies; Codex's gold app-failure statement added.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-099": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which period",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Chicago Police Department",
+                "state": "IL"
+              },
+              {
+                "kind": "state",
+                "name": "Illinois",
+                "state": "IL"
+              }
+            ],
+            "combine": "separate",
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [],
+            "groupings": [],
+            "statistic": "count"
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Chicago Police Department",
+                "state": "IL"
+              },
+              {
+                "kind": "state",
+                "name": "Illinois",
+                "state": "IL"
+              }
+            ],
+            "combine": "separate",
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [],
+            "groupings": [],
+            "statistic": "count",
+            "cohort": "source_sample"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P06",
+      "D13",
+      "D18",
+      "D27",
+      "P16",
+      "P01",
+      "P22",
+      "D28",
+      "D30"
+    ],
+    "notes": "No period: ask (D31, P06), overriding the gold answer-on-this-turn expectation. Latest complete year: Historical (Illinois is the FBI state estimate). This year: Current Trends, Illinois as its sample agencies over the same months (D27). The answer carries the app-failure wording (gold).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-100": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D13",
+      "D31",
+      "D28"
+    ],
+    "notes": "Kept unresolved (Codex). D31 now says ask, but crime, place and age role are all missing; one question at a time leaves every option's meaning incomplete, and no measure may be manufactured.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-101": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "No dataset here records immigration or citizenship status of victims.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D13",
+      "D14"
+    ],
+    "notes": "Not collected (D13); no genuine nearest measure (D14).",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-102": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D14",
+      "P01",
+      "P06",
+      "D31",
+      "P16"
+    ],
+    "notes": "Kept unresolved (Codex). The decline and its proxy (aggravated assault with a firearm) are certain, but the alternative's runnable span depends on Baltimore's NIBRS coverage, unverified; the period is also missing (D31/P06).",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-103": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D14",
+      "P01",
+      "P15",
+      "P16"
+    ],
+    "notes": "Kept unresolved (Codex). Decline with the firearm aggravated-assault proxy is certain; Baltimore's NIBRS coverage for 2022-2025 is unverified, so the alternative's runnable span cannot be set.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-104": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D14",
+      "P16",
+      "P24"
+    ],
+    "notes": "Kept unresolved (Codex). Whether the weapon-recording source holds Aurora 2026 months is unproved, so the alternative's period cannot be set.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-105": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "No dataset here records overdose deaths.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D14"
+    ],
+    "notes": "D14 refuse_only.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-106": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which period",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "shr",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Memphis Police Department",
+                "state": "TN"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "weapon: firearm"
+            ],
+            "groupings": [],
+            "statistic": "count"
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Memphis Police Department",
+                "state": "TN"
+              }
+            ],
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "weapon: firearm"
+            ],
+            "groupings": [],
+            "statistic": "count"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P06",
+      "D14",
+      "P10",
+      "P16",
+      "P01",
+      "P22",
+      "D28"
+    ],
+    "notes": "Codex accepted an answer, but no period is named: D31/P06 ask, overriding the gold answer-on-this-turn expectation. Fatal shootings = firearm murder victims (D14), never refused. Latest year: Homicide Reports (P01). This year: no other source holds weapon detail, so NIBRS (P01). Doubt: Memphis NIBRS 2026 months unverified.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-107": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which years",
+      "options": [
+        {
+          "label": "Last 10 complete years",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "shr",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Birmingham Police Department",
+                "state": "AL"
+              }
+            ],
+            "period": {
+              "rule": "last 10 complete years"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "weapon: firearm",
+              "months: January through July"
+            ],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "count"
+          }
+        },
+        {
+          "label": "Every year available",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "shr",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Birmingham Police Department",
+                "state": "AL"
+              }
+            ],
+            "period": {
+              "rule": "every year available"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "weapon: firearm",
+              "months: January through July"
+            ],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "count"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P06",
+      "D06",
+      "D14",
+      "P10",
+      "P16",
+      "P01",
+      "P22",
+      "D28"
+    ],
+    "notes": "'Each year' gives no range: D31/P06 trend buttons (another range not encoded), overriding the gold answer-on-this-turn expectation. Both options keep the January-July basis (D06) and firearm homicide victims from Homicide Reports. Doubt: 'each year' could be read as every year, which would make this an answer.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-108": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D31",
+      "P12",
+      "P06",
+      "D03",
+      "D14",
+      "P10"
+    ],
+    "notes": "No place and no year range: D31 asks both, one at a time, and no rule says which first, so the first question and its option meanings cannot be set. When answered: Homicide Reports, firearm murder victims, measure 'murder victim age', unit 'years of age', median, unknown ages excluded (Codex fix), not refused (D03).",
+    "codex": "change",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-109": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "fatal or non-fatal shootings",
+      "options": [
+        {
+          "label": "Fatal shootings",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "shr",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Chicago Police Department",
+                "state": "IL"
+              }
+            ],
+            "period": {
+              "rule": "2015 through the latest year in the data"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "weapon: firearm"
+            ],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "count"
+          }
+        },
+        {
+          "label": "Aggravated assaults with a firearm (includes people not hit)",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Chicago Police Department",
+                "state": "IL"
+              }
+            ],
+            "period": {
+              "rule": "2015 through the latest year in the data"
+            },
+            "measures": [
+              {
+                "name": "aggravated assault",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "weapon: firearm"
+            ],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "count"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D14",
+      "P01",
+      "P22",
+      "D04",
+      "P10",
+      "P16",
+      "D28"
+    ],
+    "notes": "D14 asks. Fatal: Homicide Reports; firearm assault is a NIBRS-only detail (P01), labelled as a proxy that includes people not hit. Both keep Chicago, 2015 on, firearm. The assault answer must name Chicago's missing NIBRS years (D04).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-110": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "fatal or non-fatal shootings",
+      "options": [
+        {
+          "label": "Fatal shootings",
+          "leads_to": "answer",
+          "meaning": null
+        },
+        {
+          "label": "Aggravated assaults with a firearm (includes people not hit)",
+          "leads_to": "answer",
+          "meaning": null
+        }
+      ]
+    },
+    "policy_add": [
+      "D14",
+      "D31",
+      "P06",
+      "P01",
+      "P22",
+      "D28",
+      "P10",
+      "P16"
+    ],
+    "notes": "D14 asks fatal or non-fatal first (gold). No period either (D31/P06), so each button leads to a period question, which the schema cannot express; meanings null. Eventually: fatal from Homicide Reports, firearm assault (a proxy including people not hit) from NIBRS, Dallas Police Department.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-111": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2018-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "FBI composite"
+          }
+        ],
+        "filters": [
+          "weapon: firearm"
+        ],
+        "groupings": [
+          "offender age (crimes grouped by linked offenders' ages; a crime with offenders in several age groups counts once in each)",
+          "year"
+        ],
+        "statistic": "count",
+        "cohort": "same_agencies"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says only agencies reporting every year 2018-2025 are counted, and how many",
+        "says a crime with offenders in several age groups appears in each",
+        "names any requested year not held as missing",
+        "if it fails on size or the time limit, says so and names a specific narrower version (fewer years, one state, one offense)",
+        "if the request fails internally, says the site could not complete it, never no data, missing data or a true zero",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D13",
+      "D15",
+      "D18",
+      "D04",
+      "P01",
+      "D30"
+    ],
+    "notes": "Offender age is NIBRS-only (P01). Codex fix: FBI-composite crimes grouped by offender age, not offenders. Consistent reporters were asked for, so same_agencies (P03 default not applied).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-112": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D31",
+      "P12",
+      "D13",
+      "D15"
+    ],
+    "notes": "Kept unresolved (Codex): 'gun crimes' has no approved meaning (violent crime with a firearm, any offense with a firearm, or weapons-law violations; LS-145 shares the wording). No place either (D31/P12), so the first question and its options cannot be set.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-113": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which years",
+      "options": [
+        {
+          "label": "Last 10 complete years",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "last 10 complete years"
+            },
+            "measures": [
+              {
+                "name": "Group A arrests",
+                "unit": "arrest"
+              },
+              {
+                "name": "Group B arrests",
+                "unit": "group B arrest"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "count",
+            "cohort": "all_reporting"
+          }
+        },
+        {
+          "label": "Every year available",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "every year available"
+            },
+            "measures": [
+              {
+                "name": "Group A arrests",
+                "unit": "arrest"
+              },
+              {
+                "name": "Group B arrests",
+                "unit": "group B arrest"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "count",
+            "cohort": "all_reporting"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P06",
+      "P01",
+      "P03",
+      "D13",
+      "D15",
+      "P22",
+      "D28"
+    ],
+    "notes": "'Each year' gives no range: D31/P06 trend buttons, overriding the gold answer-on-this-turn expectation. Arrests are in NIBRS only (Historical holds crime, clearance, staffing: D25). P03: all reporting agencies, with the consistent-reporters offer and coverage stated. Both arrest groups shown separately.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-114": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which period",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "San Francisco Police Department",
+                "state": "CA"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "rape",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "numerator: offenses cleared (by arrest or exceptional means)"
+            ],
+            "groupings": [
+              "agency (San Francisco Police Department plus 3 peers selected by population alone)"
+            ],
+            "statistic": "share",
+            "denominator": "rape offenses reported by the same agency in the same period"
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "San Francisco Police Department",
+                "state": "CA"
+              }
+            ],
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "rape",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "numerator: offenses cleared (by arrest or exceptional means)"
+            ],
+            "groupings": [
+              "agency (San Francisco Police Department plus 3 peers selected by population alone)"
+            ],
+            "statistic": "share",
+            "denominator": "rape offenses reported by the same agency in the same period"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D16",
+      "D31",
+      "P06",
+      "P01",
+      "D25",
+      "P22",
+      "D28"
+    ],
+    "notes": "No period: ask (D31/P06), overriding the gold answer-on-this-turn expectation. Codex fix: cleared over reported, share. Completed-year clearance: Historical (P01, D25); this year: NIBRS (no other source holds it), doubt on coverage. Exactly SFPD plus 3 population-only peers, named with the band (gold).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-115": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which period",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "San Francisco Police Department",
+                "state": "CA"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "rape",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "numerator: offenses cleared (by arrest or exceptional means)"
+            ],
+            "groupings": [
+              "agency (San Francisco Police Department plus 8 peers selected by population alone)"
+            ],
+            "statistic": "share",
+            "denominator": "rape offenses reported by the same agency in the same period"
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "San Francisco Police Department",
+                "state": "CA"
+              }
+            ],
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "rape",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "numerator: offenses cleared (by arrest or exceptional means)"
+            ],
+            "groupings": [
+              "agency (San Francisco Police Department plus 8 peers selected by population alone)"
+            ],
+            "statistic": "share",
+            "denominator": "rape offenses reported by the same agency in the same period"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D16",
+      "D08",
+      "D31",
+      "P06",
+      "P01",
+      "D25",
+      "P22",
+      "P23",
+      "D28"
+    ],
+    "notes": "Under D31 the setup turn was itself a period question, so no period was chosen and this turn still asks (P22: only a made choice is not re-asked). Options: SFPD plus 8 peers (9 agencies, gold), cleared-over-reported share. The answer repeats any caveat in full (D08).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-116": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "violent crime, property crime, or both",
+      "options": [
+        {
+          "label": "Violent crime",
+          "leads_to": "answer",
+          "meaning": null
+        },
+        {
+          "label": "Property crime",
+          "leads_to": "answer",
+          "meaning": null
+        },
+        {
+          "label": "Both",
+          "leads_to": "answer",
+          "meaning": null
+        }
+      ]
+    },
+    "policy_add": [
+      "D09",
+      "D31",
+      "P06",
+      "D16",
+      "P01",
+      "P22",
+      "D28",
+      "P16"
+    ],
+    "notes": "Bare 'crime' asks first (D09, gold: no rows). No period either (D31/P06), so each button leads to a trend-period question, which the schema cannot express; meanings null. Eventually: SFPD and peers selected by population alone (D16), per 100,000, naming unavailable years.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-117": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D07",
+      "D16",
+      "D31",
+      "P06",
+      "P10",
+      "P16"
+    ],
+    "notes": "Kept unresolved (Codex): the comparison years, absolute or percentage decline, and how the national and peer averages are weighted are unspecified. D31 would ask the period, but the remaining parts still leave the options' meanings open.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-118": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which period",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Albuquerque Police Department",
+                "state": "NM"
+              },
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "combine": "separate",
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "numerator: offenses cleared (by arrest or exceptional means)"
+            ],
+            "groupings": [
+              "agency (Albuquerque, the nation, and each peer selected by population alone as its own row)"
+            ],
+            "statistic": "share",
+            "denominator": "violent crime offenses reported by the same agency (or the nation) in the same period"
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Albuquerque Police Department",
+                "state": "NM"
+              },
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "combine": "separate",
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "numerator: offenses cleared (by arrest or exceptional means)"
+            ],
+            "groupings": [
+              "agency (Albuquerque, the nation, and each peer selected by population alone as its own row)"
+            ],
+            "statistic": "share",
+            "denominator": "violent crime offenses reported by the same agency (or the nation) in the same period"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D16",
+      "D25",
+      "D31",
+      "P06",
+      "P01",
+      "P22",
+      "D28",
+      "P16"
+    ],
+    "notes": "No period: ask (D31/P06), overriding the gold answer-on-this-turn expectation. Codex fix: violent crimes cleared over violent crimes known, share; national and peer rows separate. Doubt: the this-year option's national NIBRS figure is reporting agencies only, and its coverage is unverified.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31",
+      "P06"
+    ]
+  },
+  "LS-119": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Washington, D.C. or Washington State",
+      "options": [
+        {
+          "label": "Washington, D.C.",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "agency",
+                "name": "Metropolitan Police Department",
+                "state": "DC"
+              }
+            ],
+            "period": {
+              "rule": "2010 through the latest complete year"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "rate",
+            "denominator": "District population, per 100,000"
+          }
+        },
+        {
+          "label": "Washington State",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "state",
+                "name": "Washington",
+                "state": "WA"
+              }
+            ],
+            "period": {
+              "rule": "2010 through the latest complete year"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "filters": [],
+            "groupings": [
+              "year"
+            ],
+            "statistic": "rate",
+            "denominator": "state population (FBI estimates), per 100,000"
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "D28",
+      "P22",
+      "P16",
+      "D18",
+      "P01"
+    ],
+    "notes": "Geographic ambiguity guard (gold). Murder unit victim (D18); 2010 on, Historical.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-120": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D13",
+      "P16",
+      "P24"
+    ],
+    "notes": "Kept unresolved, as LS-045: whether Flagstaff's May 2026 is held decides answer vs decline-and-offer (P24), and the gold coverage rule rejects the local artifact as evidence.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  }
+}

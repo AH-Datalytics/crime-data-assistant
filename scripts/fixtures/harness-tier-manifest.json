@@ -2421,6 +2421,24 @@
       "note": "NIBRS engine step 2: the plan -> DuckDB compiler v0 emits SQL for the simplest forms and refuses the rest with a reason; SQL is checked, not run (scripts/nibrs-compile-gate.ts runs it locally against a canonical build)"
     },
     {
+      "id": "test-answer-eval-cases",
+      "tier": "F",
+      "script": "scripts/test-answer-eval-cases.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Answer evaluation: the labeled interaction set (gold, replay and designed cases) is well formed; splits keep groups together; buttons answer clarifying cases; policy rows exist. No database, no model, no network"
+    },
+    {
+      "id": "test-answer-eval-runner",
+      "tier": "F",
+      "script": "scripts/test-answer-eval-runner.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Answer evaluation: the runner's comparison (material vs naming differences), outcomes and gates judge as specified. No database, no model, no network"
+    },
+    {
       "id": "test-request-accounting",
       "tier": "F",
       "script": "scripts/test-request-accounting.ts",

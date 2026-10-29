@@ -1,0 +1,2144 @@
+{
+  "LS-041": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "month"
+        ],
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "New York City Police Department",
+            "state": "NY"
+          }
+        ],
+        "period": {
+          "rule": "2020-01 through the latest month in the data"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+        "Names any missing years or months inside the span as missing, not zero",
+        "Names the months the partial 2026 figure covers",
+        "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+        "Names the New York City Police Department as the agency counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P14",
+      "P16",
+      "D18",
+      "D30"
+    ],
+    "notes": "Monthly 2020-2026: only Current Trends holds months for the whole span (P01 recent months; P14 one source). NYPD named (P16). Assumes NYPD is in the Current Trends sample.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-042": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Milwaukee Police Department",
+            "state": "WI"
+          },
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "rule": "2022-01 through the latest month in the data"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+        "Names any missing years or months inside the span as missing, not zero",
+        "Names the months the partial 2026 figure covers",
+        "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+        "Makes no increase/decrease claim between the partial 2026 figure and a full year unless the same months are compared and that basis is stated",
+        "Names the Milwaukee Police Department and the Chicago Police Department as the agencies counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P14",
+      "P16",
+      "D18",
+      "D30"
+    ],
+    "notes": "Separate annual figures; 2026 year to date. Current Trends is the one source covering 2022 through 2026 (P01, P14). Grouping by year assumed (no grain named).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-043": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "year",
+          "clearance status"
+        ],
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Houston Police Department",
+            "state": "TX"
+          }
+        ],
+        "period": {
+          "rule": "2018-01 through the latest month in the data (requested end 2026)"
+        },
+        "measures": [
+          {
+            "name": "theft from motor vehicle",
+            "unit": "offense"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+        "Names any missing years or months inside the span as missing, not zero",
+        "Names the months the partial 2026 figure covers",
+        "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+        "Names the Houston Police Department as the agency counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P16",
+      "D18",
+      "D30"
+    ],
+    "notes": "'Vehicle burglaries' = NIBRS theft from motor vehicle (23F); that offense and clearance status are details only NIBRS records (P01). Houston's NIBRS start may fall after 2018; the boundary statement covers it.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-044": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "month"
+        ],
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Boston Police Department",
+            "state": "MA"
+          }
+        ],
+        "period": {
+          "rule": "2022-01 through the latest month in the data"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+        "Names any missing years or months inside the span as missing, not zero",
+        "Names the months the partial 2026 figure covers",
+        "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+        "Names the Boston Police Department as the agency counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P02",
+      "P14",
+      "P16",
+      "D18",
+      "D30"
+    ],
+    "notes": "GC-044's expectations do not require the SHR tab, so P01 routes monthly 2022-2026 murders (no victim detail) to Current Trends, the one source holding the span monthly (P14). That removes Codex's SHR-2026 coverage doubt. Assumes Boston is in the Current Trends sample.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-045": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P16",
+      "P24",
+      "D13"
+    ],
+    "notes": "Still depends on deployment-aligned coverage of the Kalamazoo city agency for May 2026 (gold coverage_evidence_rule). Under P01 a missing month in Current Trends may also send it to NIBRS (months no other source holds), so answer, NIBRS answer and P24 decline all remain possible.",
+    "codex": "unresolved",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-046": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "New York City Police Department",
+            "state": "NY"
+          },
+          {
+            "kind": "agency",
+            "name": "Los Angeles Police Department",
+            "state": "CA"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "rule": "1930 through the latest year in the data"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offense"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+        "Names any missing years or months inside the span as missing, not zero",
+        "Does not mention the 2013 rape definition change",
+        "Names the New York City Police Department and the Los Angeles Police Department as the agencies counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P14",
+      "P16",
+      "D04",
+      "D30"
+    ],
+    "notes": "Completed years of a Part I crime: Historical (P01). No source covers 1930 to this year, so Historical's covered years are answered and the uncovered start/end named (P14, D04). Violent crime is the FBI composite.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-047": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "1930 through the latest year in the data"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offense"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+        "Names any missing years or months inside the span as missing, not zero",
+        "Does not mention the 2013 rape definition change",
+        "Says the national figures are FBI estimates",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P14",
+      "D04",
+      "D30"
+    ],
+    "notes": "Accepted label kept; added the FBI-estimate statement (P01: estimates for the nation) and the source statement (D30). The national series starts after 1930 and ends before 2026; both named.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-048": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "St. Louis Metropolitan Police Department",
+            "state": "MO"
+          },
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "rule": "1950 through the latest year in the data"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+        "Names any missing years or months inside the span as missing, not zero",
+        "Names the St. Louis Metropolitan Police Department (the city, not St. Louis County) and the Chicago Police Department as the agencies counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P14",
+      "P16",
+      "D18",
+      "D30"
+    ],
+    "notes": "Separate annual murder rates from 1950, Historical (P01). 'St. Louis city' is the city agency.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-049": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P06",
+      "P23",
+      "D31"
+    ],
+    "notes": "Two reasons. NYPD's NIBRS coverage for the span and 2026 is unestablished (shoplifting is NIBRS-only). And under D31/P06 the setup 'NYPD shoplifting per month' has no period, so the setup itself is a clarify; what 'Add 2026' then extends is undefined.",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-050": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P04",
+      "P08",
+      "P17",
+      "P23",
+      "P24"
+    ],
+    "notes": "Firearm share of murders is a victim detail (SHR, P01). Whether SHR holds any 2026 months is unestablished (draft claims conflict); if not, P24 decline or P01's NIBRS route applies. When answered: P08 250,000+, P04 every month so far, P17 ties.",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-051": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "month"
+        ],
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2026-01",
+          "to": "2026-12"
+        },
+        "measures": [
+          {
+            "name": "data coverage",
+            "unit": "month"
+          }
+        ],
+        "statistic": "list"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "States the first and last month of 2026 in Current Trends",
+        "Answers as a statement about the data itself",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P02",
+      "D12",
+      "D30"
+    ],
+    "notes": "Coverage differs by source, and GC-051 requires one month range, so the Current Trends tab is treated as the advanced source choice (P02). Source statement added (D30).",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-052": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [],
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Seattle Police Department",
+            "state": "WA"
+          }
+        ],
+        "period": {
+          "rule": "year to date 2026 through the latest month"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Names the months the partial 2026 figure covers",
+        "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+        "Names the Seattle Police Department as the agency counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P16",
+      "D18",
+      "D30"
+    ],
+    "notes": "This year comes from Current Trends by P01's decision, not by inference from Historical's last year, which meets Codex's condition. The Historical tab is not required by GC-052. Assumes Seattle is in the Current Trends sample.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-053": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P15",
+      "P16"
+    ],
+    "notes": "P01 sends 2026 to Current Trends; Allentown's membership there is unestablished, and if absent NIBRS answers only if Allentown reported 2026 months (unverified). The source and action depend on that coverage.",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-054": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "city agencies in the Current Trends sample"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "year to date 2026 through the latest month"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000",
+        "cohort": "source_sample",
+        "rank": {
+          "by": "population",
+          "direction": "top",
+          "limit": 20
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Names the months the partial 2026 figure covers",
+        "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+        "Selects the 20 most populous cities in the Current Trends sample first, then sorts that list by 2026 murder rate",
+        "Names the Current Trends sample as the set the cities come from",
+        "Says 'homicide' is counted as murder and non-negligent manslaughter",
+        "Orders ties alphabetically by agency name",
+        "Ranks only agencies that reported every month of 2026 so far, says how many were left out, and offers a button to include them",
+        "Adds no other eligibility filter",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P10",
+      "P17",
+      "D05",
+      "D30"
+    ],
+    "notes": "Codex's two-stage ordering, sample scope and ties applied. P04 (current year: every month so far) overrides GC-054's no-extra-filter expectation for completeness only.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-055": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which place: the question names none",
+      "options": [
+        {
+          "label": "The United States",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [],
+            "groupings": [
+              "year"
+            ],
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "2023-01 through the latest month in the data"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "offense"
+              }
+            ],
+            "statistic": "change",
+            "cohort": "same_agencies"
+          }
+        },
+        {
+          "label": "A state",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which state"
+        },
+        {
+          "label": "A city or agency",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which city or agency"
+        }
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P12",
+      "P14",
+      "D06",
+      "D17",
+      "D30",
+      "D31"
+    ],
+    "notes": "No place: ask (P12, D31), overriding GC-055's answer expectations. The US option carries Codex's fix: Current Trends national sample, same agencies (P14: the one source covering 2023-2026). 'A state' and 'A city or agency' need a further pick, so their meaning is null.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P12",
+      "D31"
+    ]
+  },
+  "LS-056": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which crime: violent crime, property crime, or both",
+      "options": [
+        {
+          "label": "Violent crime",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which year (P05 buttons: the latest complete year; this year so far; another year)"
+        },
+        {
+          "label": "Property crime",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which year (P05 buttons: the latest complete year; this year so far; another year)"
+        },
+        {
+          "label": "Both",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which year (P05 buttons: the latest complete year; this year so far; another year)"
+        }
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P05",
+      "P17",
+      "P22",
+      "D09",
+      "D28",
+      "D30",
+      "D31"
+    ],
+    "notes": "Crime asked first (D09, gold). The year is also missing, so each option leads to the year question (P05, one part at a time, D28) instead of Codex's preserved latest complete year. After the year: Historical for a completed year, Current Trends sample for this year (P01); P04 completeness, P17 ties, Both = combined violent-plus-property rate (Codex).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P05"
+    ]
+  },
+  "LS-057": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "agencies that reported all 12 months of 2024"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2024-01",
+          "to": "2024-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000",
+        "rank": {
+          "by": "murder rate",
+          "direction": "top",
+          "limit": 20
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "States it shows 20 rows",
+        "Applies no population or count minimum",
+        "Leaves out agencies with fewer than 12 months, says how many, and offers a button to include them",
+        "Orders ties alphabetically by agency name",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P17",
+      "D05",
+      "D30"
+    ],
+    "notes": "Jeff decided the P04/gold conflict: full-year reporters only, count stated, button to include. Overrides GC-057's no-extra-filter expectation for completeness only. Completed year: Historical (P01), not the Current Trends tab.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-058": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "city agencies",
+          "agencies that reported all 12 months of 2023"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Louisiana",
+            "state": "LA"
+          }
+        ],
+        "period": {
+          "from": "2023-01",
+          "to": "2023-12"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offense"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000",
+        "rank": {
+          "by": "violent crime rate",
+          "direction": "top",
+          "limit": 20
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "States it shows 20 rows",
+        "Applies no population or count minimum",
+        "Leaves out agencies with fewer than 12 months, says how many, and offers a button to include them",
+        "Orders ties alphabetically by agency name",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P17",
+      "D05",
+      "D30"
+    ],
+    "notes": "P04 decided by Jeff resolves the conflict Codex left open; overrides GC-058's no-extra-filter expectation for completeness only.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-059": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "city agencies",
+          "agencies that reported all 12 months of 2021"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2021-01",
+          "to": "2021-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000",
+        "rank": {
+          "by": "murder rate",
+          "direction": "top",
+          "limit": 10
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Shows 10 cities and adds no population or count minimum",
+        "Says 'homicide' is counted as murder and non-negligent manslaughter",
+        "Leaves out agencies with fewer than 12 months, says how many, and offers a button to include them",
+        "Orders ties alphabetically by agency name",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P10",
+      "P17",
+      "D05",
+      "D18",
+      "D30"
+    ],
+    "notes": "P04 overrides GC-059's no-extra-filter expectation for completeness only; 2021 (NIBRS transition) leaves many cities out, and the count is stated. Homicide = murder (P10).",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-060": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "city agencies in the Current Trends sample"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "year to date 2026 through the latest month"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000",
+        "cohort": "source_sample",
+        "rank": {
+          "by": "population",
+          "direction": "top",
+          "limit": 100
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Names the months the partial 2026 figure covers",
+        "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+        "Reads 'top 100 U.S. cities' as the 100 most populous, says so, and sorts them by 2026 murder rate",
+        "Names the Current Trends sample as the set the cities come from",
+        "Says 'homicide' is counted as murder and non-negligent manslaughter",
+        "Ranks only agencies that reported every month of 2026 so far, says how many were left out, and offers a button to include them",
+        "Orders ties alphabetically by agency name",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P10",
+      "P17",
+      "D05",
+      "D30"
+    ],
+    "notes": "'Top 100 U.S. cities' read as the 100 largest (the usual sense of the phrase), stated in the answer; limit 100 either way. 2026 goes to Current Trends (P01), so P15 does not apply. P04 overrides the no-extra-filter expectation for completeness only. Doubt: the rate-ranking reading.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-061": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "city agencies",
+          "at least 30 murder victims in 2025",
+          "weapon: firearm",
+          "agencies that reported all 12 months of 2025"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "shr",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "share",
+        "denominator": "all murder victims in the city",
+        "rank": {
+          "by": "share of murder victims killed with a firearm",
+          "direction": "top",
+          "limit": 10
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Applies the 30-murder minimum the user asked for",
+        "Shows 10 cities",
+        "Leaves out agencies with fewer than 12 months, says how many, and offers a button to include them",
+        "Orders ties alphabetically by agency name",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P10",
+      "P17",
+      "D05",
+      "D18",
+      "D30"
+    ],
+    "notes": "Weapon is a homicide victim detail: Homicide Reports (P01). P04 overrides the no-extra-filter expectation for completeness only. Assumes SHR holds 2025, which no deployment-aligned artifact confirms.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-062": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "city agencies of 250,000 residents or more",
+          "agencies that reported all 12 months of 2025"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "shoplifting",
+            "unit": "offense"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000",
+        "cohort": "all_reporting",
+        "rank": {
+          "by": "shoplifting rate",
+          "direction": "top",
+          "limit": 10
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Applies the 250,000 minimum the user asked for",
+        "Shows 10 cities",
+        "Says only agencies reporting to NIBRS are ranked",
+        "Leaves out agencies with fewer than 12 months, says how many, and offers a button to include them",
+        "Orders ties alphabetically by agency name",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P15",
+      "P17",
+      "D05",
+      "D30"
+    ],
+    "notes": "Shoplifting is NIBRS-only (P01); reporting agencies labelled. P04 overrides the no-extra-filter expectation for completeness only.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-063": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "city agencies of 250,000 residents or more",
+          "agencies that reported all 12 months of 2025"
+        ],
+        "groupings": [
+          "agency"
+        ],
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Texas",
+            "state": "TX"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "carjacking",
+            "unit": "offense"
+          }
+        ],
+        "statistic": "rate",
+        "denominator": "agency resident population, per 100,000",
+        "cohort": "all_reporting",
+        "rank": {
+          "by": "carjacking rate",
+          "direction": "top",
+          "limit": 20
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Applies the 250,000 minimum the user asked for",
+        "States the number of rows shown",
+        "Says only agencies reporting to NIBRS are ranked",
+        "Leaves out agencies with fewer than 12 months, says how many, and offers a button to include them",
+        "Orders ties alphabetically by agency name",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P15",
+      "P17",
+      "D05",
+      "D18",
+      "D30"
+    ],
+    "notes": "Carjacking is a robbery-based NIBRS measure counted by offense (D18, same as LS-140). D05's 20-row default; fewer Texas cities qualify. P04 overrides the no-extra-filter expectation for completeness only.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P04"
+    ]
+  },
+  "LS-064": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which period 'currently' means",
+      "options": [
+        {
+          "label": "The latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [
+              "city agencies of more than 100,000 residents",
+              "agencies that reported all 12 months"
+            ],
+            "groupings": [
+              "agency"
+            ],
+            "source": "historical",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "statistic": "rate",
+            "denominator": "agency resident population, per 100,000",
+            "rank": {
+              "by": "murder rate",
+              "direction": "top",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [
+              "city agencies of more than 100,000 residents",
+              "agencies that reported every month of this year so far"
+            ],
+            "groupings": [
+              "agency"
+            ],
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "statistic": "rate",
+            "denominator": "agency resident population, per 100,000",
+            "cohort": "source_sample",
+            "rank": {
+              "by": "murder rate",
+              "direction": "top",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "Another year",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which year"
+        }
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P04",
+      "P05",
+      "P10",
+      "P17",
+      "D05",
+      "D28",
+      "D30",
+      "D31"
+    ],
+    "notes": "'Currently' can mean the latest complete year or this year so far; D31/P05 ask with P05's buttons, overriding GC-064's answer. Options keep the strict 'over 100k' threshold, P04 completeness, 20 rows, homicide = murder (P10). Sources by P01.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "D31",
+      "P05"
+    ]
+  },
+  "LS-065": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "offense type"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          }
+        ],
+        "period": {
+          "rule": "2025 compared with 2024"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          },
+          {
+            "name": "rape",
+            "unit": "victim"
+          },
+          {
+            "name": "robbery",
+            "unit": "offense"
+          },
+          {
+            "name": "aggravated assault",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "change"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Shows the change in count and in percent for murder, rape, robbery and aggravated assault",
+        "Names the offense with the greatest decrease by count and by percent, and says so when they differ",
+        "States whether Chicago reported all 12 months in both years, and that an incomplete year would be excluded from the comparison",
+        "Names the Chicago Police Department as the agency counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P16",
+      "D07",
+      "D17",
+      "D18",
+      "D30",
+      "D32"
+    ],
+    "notes": "Completed years of Part I crimes: Historical (P01). Count vs percent ambiguity resolved by showing both and naming both winners, so neither reading is assumed. Historical holds 2025 (D32).",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-066": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which crime to compare (none named)",
+      "options": [
+        {
+          "label": "Murder",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [
+              "state totals from each state's Current Trends sample agencies",
+              "agencies that reported every month of both 12-month windows"
+            ],
+            "groupings": [
+              "state"
+            ],
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "12 months ending June 2019 compared with 12 months ending June 2026"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "statistic": "change",
+            "cohort": "same_agencies",
+            "rank": {
+              "by": "percent change",
+              "direction": "bottom",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "Violent crime",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [
+              "state totals from each state's Current Trends sample agencies",
+              "agencies that reported every month of both 12-month windows"
+            ],
+            "groupings": [
+              "state"
+            ],
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "12 months ending June 2019 compared with 12 months ending June 2026"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "offense"
+              }
+            ],
+            "statistic": "change",
+            "cohort": "same_agencies",
+            "rank": {
+              "by": "percent change",
+              "direction": "bottom",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "Property crime",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [
+              "state totals from each state's Current Trends sample agencies",
+              "agencies that reported every month of both 12-month windows"
+            ],
+            "groupings": [
+              "state"
+            ],
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "12 months ending June 2019 compared with 12 months ending June 2026"
+            },
+            "measures": [
+              {
+                "name": "property crime",
+                "unit": "offense"
+              }
+            ],
+            "statistic": "change",
+            "cohort": "same_agencies",
+            "rank": {
+              "by": "percent change",
+              "direction": "bottom",
+              "limit": 20
+            }
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P17",
+      "P22",
+      "D05",
+      "D07",
+      "D17",
+      "D27",
+      "D28",
+      "D30",
+      "D31"
+    ],
+    "notes": "No crime named: D31 asks, overriding GC-066's requirement to rank on the scored turn. Each option keeps the gold rules (same agencies across both windows, exclusions counted, D07/D17), state totals from sample agencies (D27), percent change, 20 rows, ties alphabetical.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "D31"
+    ]
+  },
+  "LS-067": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P08",
+      "D07",
+      "D28"
+    ],
+    "notes": "'Early 2020s' has no defined span and 'did not increase' can be an endpoint or every-year test; different choices select different cities. No policy row settles it, and GC-067 requires an answer, so neither a guess nor a clarify can be labeled. When settled: Historical (P01), 250,000+ (P08), D07 exclusions.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-068": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which place: the question names none",
+      "options": [
+        {
+          "label": "The United States",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [],
+            "groupings": [],
+            "source": "historical",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "2020 compared with 2019"
+            },
+            "measures": [
+              {
+                "name": "murder",
+                "unit": "victim"
+              }
+            ],
+            "statistic": "change"
+          }
+        },
+        {
+          "label": "A state",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which state"
+        },
+        {
+          "label": "A city or agency",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which city or agency"
+        }
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P12",
+      "D07",
+      "D30",
+      "D31"
+    ],
+    "notes": "No place: ask (P12, D31), overriding GC-068's answer. The US option uses Historical's FBI national estimates for completed years (P01), superseding Codex's Current Trends consistent-reporter fix.",
+    "codex": "change",
+    "applied": "decisions only",
+    "superseded": [
+      "P01",
+      "P12",
+      "D31"
+    ]
+  },
+  "LS-069": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which place: the question names none",
+      "options": [
+        {
+          "label": "The United States",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [
+              "incidents counted for agencies that reported in every year; participation counted for all agencies each year"
+            ],
+            "groupings": [
+              "year"
+            ],
+            "source": "hate_crime",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "2015 through the latest year in the data"
+            },
+            "measures": [
+              {
+                "name": "hate crime",
+                "unit": "incident"
+              },
+              {
+                "name": "agencies reporting hate crime data",
+                "unit": "agency"
+              }
+            ],
+            "statistic": "count",
+            "cohort": "same_agencies"
+          }
+        },
+        {
+          "label": "A state",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which state"
+        }
+      ]
+    },
+    "policy_add": [
+      "P02",
+      "P12",
+      "D07",
+      "D12",
+      "D24",
+      "D30",
+      "D31"
+    ],
+    "notes": "The Hate Crime tab is kept as the advanced choice because 'the increase' only means hate crimes there (P02). No place: ask (P12, D31), overriding GC-069's answer. The US option carries Codex's fix: participation from all agencies, incidents for the fixed cohort.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P12",
+      "D31"
+    ]
+  },
+  "LS-070": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P16",
+      "P23",
+      "D08"
+    ],
+    "notes": "The setup changes the year to '20206' and then says only 'range'; nothing establishes the period Detroit inherits. Place (Detroit Police Department) and the rolling murder rate are clear.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-071": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Dallas Police Department",
+            "state": "TX"
+          }
+        ],
+        "period": {
+          "rule": "2010 through the latest year in the data"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Repeats the caveats that apply to this answer in full, not as a reference to an earlier turn",
+        "States the years covered and names any year after the last Historical year as not covered",
+        "Names the Dallas Police Department as the agency counted",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P14",
+      "P16",
+      "P23",
+      "D04",
+      "D18",
+      "D30"
+    ],
+    "notes": "Follow-up swaps Houston for Dallas (P23). Historical holds completed years; no source covers 2010 to this year, so the covered years are answered and the gap named (P14).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-072": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P14",
+      "P16",
+      "P23",
+      "D08"
+    ],
+    "notes": "Codex kept a decline with the annual alternative. Under P01 a quarterly need routes to a monthly source (Current Trends or NIBRS); whether either covers the Santa Clara County cities over the decade decides between a partial answer with gaps named (P14) and a decline. That coverage is unestablished.",
+    "codex": "change",
+    "applied": "decisions only",
+    "superseded": [
+      "P01"
+    ]
+  },
+  "LS-073": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [
+          "cleared"
+        ],
+        "groupings": [
+          "agency",
+          "clearance type"
+        ],
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Chicago Police Department",
+            "state": "IL"
+          },
+          {
+            "kind": "agency",
+            "name": "New York City Police Department",
+            "state": "NY"
+          },
+          {
+            "kind": "agency",
+            "name": "Houston Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Los Angeles Police Department",
+            "state": "CA"
+          },
+          {
+            "kind": "agency",
+            "name": "Philadelphia Police Department",
+            "state": "PA"
+          },
+          {
+            "kind": "agency",
+            "name": "Memphis Police Department",
+            "state": "TN"
+          },
+          {
+            "kind": "agency",
+            "name": "Detroit Police Department",
+            "state": "MI"
+          },
+          {
+            "kind": "agency",
+            "name": "Baltimore Police Department",
+            "state": "MD"
+          },
+          {
+            "kind": "agency",
+            "name": "Dallas Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Metropolitan Police Department",
+            "state": "DC"
+          },
+          {
+            "kind": "agency",
+            "name": "Indianapolis Metropolitan Police Department",
+            "state": "IN"
+          },
+          {
+            "kind": "agency",
+            "name": "St. Louis Metropolitan Police Department",
+            "state": "MO"
+          },
+          {
+            "kind": "agency",
+            "name": "Louisville Metro Police Department",
+            "state": "KY"
+          },
+          {
+            "kind": "agency",
+            "name": "Kansas City Police Department",
+            "state": "MO"
+          },
+          {
+            "kind": "agency",
+            "name": "Phoenix Police Department",
+            "state": "AZ"
+          },
+          {
+            "kind": "agency",
+            "name": "Milwaukee Police Department",
+            "state": "WI"
+          },
+          {
+            "kind": "agency",
+            "name": "San Antonio Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Birmingham Police Department",
+            "state": "AL"
+          },
+          {
+            "kind": "agency",
+            "name": "Columbus Division of Police",
+            "state": "OH"
+          },
+          {
+            "kind": "agency",
+            "name": "Charlotte-Mecklenburg Police Department",
+            "state": "NC"
+          },
+          {
+            "kind": "agency",
+            "name": "Cleveland Division of Police",
+            "state": "OH"
+          },
+          {
+            "kind": "agency",
+            "name": "Las Vegas Metropolitan Police Department",
+            "state": "NV"
+          },
+          {
+            "kind": "agency",
+            "name": "Albuquerque Police Department",
+            "state": "NM"
+          },
+          {
+            "kind": "agency",
+            "name": "Metropolitan Nashville Police Department",
+            "state": "TN"
+          },
+          {
+            "kind": "agency",
+            "name": "Atlanta Police Department",
+            "state": "GA"
+          },
+          {
+            "kind": "agency",
+            "name": "Oakland Police Department",
+            "state": "CA"
+          },
+          {
+            "kind": "agency",
+            "name": "Minneapolis Police Department",
+            "state": "MN"
+          },
+          {
+            "kind": "agency",
+            "name": "Fort Worth Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Oklahoma City Police Department",
+            "state": "OK"
+          },
+          {
+            "kind": "agency",
+            "name": "Denver Police Department",
+            "state": "CO"
+          },
+          {
+            "kind": "agency",
+            "name": "Cincinnati Police Department",
+            "state": "OH"
+          },
+          {
+            "kind": "agency",
+            "name": "Portland Police Bureau",
+            "state": "OR"
+          },
+          {
+            "kind": "agency",
+            "name": "Austin Police Department",
+            "state": "TX"
+          },
+          {
+            "kind": "agency",
+            "name": "Richmond Police Department",
+            "state": "VA"
+          },
+          {
+            "kind": "agency",
+            "name": "Seattle Police Department",
+            "state": "WA"
+          },
+          {
+            "kind": "agency",
+            "name": "Stockton Police Department",
+            "state": "CA"
+          }
+        ],
+        "combine": "separate",
+        "period": {
+          "from": "2024-01",
+          "to": "2024-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Repeats the caveats that apply to this answer in full, not as a reference to an earlier turn",
+        "Names each of the 36 agencies counted",
+        "Counts murder victims whose offense was cleared, by type of clearance (arrest or each exceptional means)",
+        "Names any listed city with no 2024 NIBRS data as missing, not zero",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P16",
+      "P23",
+      "D01",
+      "D04",
+      "D18",
+      "D30"
+    ],
+    "notes": "Clearance types are NIBRS-only (P01). Same 36 agencies and breakdown as the setup, year swapped (P23). Cleared murders counted on the victim base (D18), per Codex.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-074": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P06",
+      "P25",
+      "D10",
+      "D31"
+    ],
+    "notes": "No period: D31/P06 now ask (latest complete year; this year so far; another year), overriding GC-075's direct answer. The options' sources depend on unestablished coverage of the Lewis County Sheriff's Office (Historical for the completed year; for this year Current Trends membership or NIBRS).",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "D31"
+    ]
+  },
+  "LS-075": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which place: the question names none",
+      "options": [
+        {
+          "label": "The United States",
+          "leads_to": "answer",
+          "meaning": {
+            "filters": [],
+            "groupings": [
+              "year",
+              "violent vs nonviolent"
+            ],
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "last 10 complete years"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "offense"
+              },
+              {
+                "name": "all other Group A offenses (nonviolent: every offense not in violent crime, each counted once)",
+                "unit": "offense"
+              }
+            ],
+            "statistic": "count",
+            "cohort": "all_reporting"
+          }
+        },
+        {
+          "label": "A state",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which state"
+        },
+        {
+          "label": "A city or agency",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which city or agency"
+        }
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P03",
+      "P12",
+      "D18",
+      "D30",
+      "D31"
+    ],
+    "notes": "No place: ask (P12, D31), overriding GC-076's direct answer. Total crime incl. non-Part I offenses is NIBRS-only (P01); per P03 all reporting agencies, with the consistent-reporter button. Nonviolent = every remaining offense, no double count. Doubt: units of the nonviolent person offenses.",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P12",
+      "D31"
+    ]
+  },
+  "LS-076": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "Which crime: violent crime, property crime, or both",
+      "options": [
+        {
+          "label": "Violent crime",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which year (P06 buttons: the latest complete year; this year so far; another year)"
+        },
+        {
+          "label": "Property crime",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which year (P06 buttons: the latest complete year; this year so far; another year)"
+        },
+        {
+          "label": "Both",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which year (P06 buttons: the latest complete year; this year so far; another year)"
+        }
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P06",
+      "P22",
+      "P25",
+      "D09",
+      "D10",
+      "D28",
+      "D30",
+      "D31"
+    ],
+    "notes": "Crime asked first (D09). The year is missing too, so each option leads to the year question (P06) instead of Codex's preserved latest complete year. The eventual place is the Cook County Sheriff's Office typed as an agency (Codex; D10, P25: no separate county police).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P06"
+    ]
+  },
+  "LS-077": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P14",
+      "P16",
+      "D09"
+    ],
+    "notes": "The action is a crime clarify (D09). Each option's source is unsettled: P14 wants the one source covering 2017 to now (Current Trends, if Mesa is in its sample, unverified); otherwise Historical through its last year with the gap named.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-078": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data has no figures for areas inside an agency's jurisdiction, such as neighborhoods, ZIP codes or beats; it is reported by agency. Areas within Westmoreland County cannot be ranked.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Gold GC-079: refuse below agency level, no countywide substitute, before any crime question (D02). Reason reworded per Codex so it does not deny data for the separate agencies in the county.",
+    "codex": "change",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-079": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "filters": [],
+        "groupings": [],
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Baldwin County Sheriff's Office",
+            "state": "AL"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "Names the Baldwin County Sheriff's Office as the county figure, so the reader can ask for the wider county",
+        "Counts murder and non-negligent manslaughter victims",
+        "Names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P01",
+      "P10",
+      "P25",
+      "D10",
+      "D18",
+      "D30",
+      "D32"
+    ],
+    "notes": "Sheriff typed as an agency (Codex; no county police in Baldwin, P25). A plain count of a Part I crime in a completed year goes to Historical (P01); the SHR tab is not required by GC-080. Historical holds 2025 (D32).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-080": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "P01",
+      "P25",
+      "D10",
+      "D13"
+    ],
+    "notes": "Clearance comes from Historical (P01). Read as the motor vehicle theft clearance share (cleared offenses over reported offenses, unit offense, statistic share) of the Essex County Sheriff's Office (P25: county police merged into the sheriff). Whether that agency has a 2022 figure is unestablished, and it decides answer versus D13.",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  }
+}

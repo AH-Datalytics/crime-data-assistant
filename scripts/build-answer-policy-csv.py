@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+"""Writes docs/policy/nibrsai-answer-policy.csv: the owner's review table of answer policies, in plain English.
+
+    python scripts/build-answer-policy-csv.py
+
+The frozen correctness gold set (docs/superpowers/2026-09-06-correctness-gold-set-v7.json, committed byte-exact; its
+sha256 is checked below) supplies the existing test case IDs for each frozen rule. Rows "P.." need the owner; rows
+"D.." are already decided and are carried forward without re-asking. Open rows are sorted most consequential first.
+"""
+import collections
+import csv
+import json
+import os
+import sys
+
+import hashlib
+
+GOLD = os.path.join(os.path.dirname(__file__), "..", "docs", "superpowers", "2026-09-06-correctness-gold-set-v7.json")
+GOLD_SHA256 = "24e4d15068a343a0436995261937050e9324dece4cf140aa3274dd1f01f80c3b"  # docs/roadmap/correctness-backlog.md
+raw = open(GOLD, "rb").read()
+if hashlib.sha256(raw).hexdigest() != GOLD_SHA256:
+    sys.exit(f"{GOLD}: sha256 differs from the frozen gold set's")
+gold = json.loads(raw.decode("utf-8"))
+bydec = collections.defaultdict(list)
+for c in gold["cases"]:
+    for e in c.get("expectations", []):
+        if e.get("decision") and c["id"] not in bydec[str(e["decision"])]:
+            bydec[str(e["decision"])].append(c["id"])
+gc = lambda n: ", ".join(sorted(bydec[str(n)]))
+NEW = "new cases to write"
+OPEN = "Needs Jeff"
+F = "Decided 2026-09-06 (frozen rule {})"
+O28 = "Decided 2026-10-28"
+
+ROWS = [
+    # ---------------- needs Jeff, most consequential first ----------------
+    ("P01", "\"How many robberies were there in the US in 2015?\", \"Murders in Chicago this year\", \"Robberies with a gun in Atlanta by victim race\": any question, typed into one box",
+     "The user picks a source tab (or Auto mode, which guesses and asks when unsure); the chosen tab answers even when another source answers better, e.g. NIBRS summing only its reporting agencies for US robberies in 2015.",
+     "The app picks the source for every question: it works out what the question needs (the crime, any detail, the period, the place) and uses the source that actually holds it most completely for that place and period. A source the user asks for in words (\"according to NIBRS\") is used and labelled, never silently replaced. Where it helps, a button offers the other source's figure.",
+     "Completed years of the standard (Part I) crimes, clearance and police staffing -> Historical (FBI annual figures; FBI estimates for states and the nation). This year or recent months -> Current Trends. Homicide victim and offender details -> Homicide Reports. Hate crimes -> the Hate Crime file. Details only NIBRS records (victims, offenders, weapons, relationships, locations, property, clearance types) -> NIBRS. An agency missing from Historical, or months no other source holds -> NIBRS, labelled as reporting agencies, never as an estimate.",
+     "Users cannot be expected to know which source answers a question best; a wrong choice gives a wrong number with the right label. Choosing by what the question needs, and naming the source at the end of the answer, makes answers repeatable and checkable.",
+     O28 + " (Jeff: the app picks the source from a single starting page, as the current site does)", NEW),
+    ("P02", "The source tabs (Current Trends, Historical, NIBRS, Homicide Reports, Hate Crime)",
+     "Users choose a tab, or Auto mode.",
+     "One question box by default: the app picks the source (P01) and names it at the end of the answer. The source tabs stay as an advanced option, off by default; a user who opens it and picks a source gets that source, labelled. A user can also ask for a source in words.",
+     "Default: one box, no tab chosen. Advanced option: the five source tabs.",
+     "Most users cannot know which source answers best; advanced users keep direct control.",
+     O28 + " (Jeff: keep the tabs as an advanced option)", NEW),
+    ("P03", "\"How did aggravated assaults with a firearm change in Texas from 2018 to 2024?\" (a detail only NIBRS records, over years when many agencies joined NIBRS)",
+     "Counts every agency that reported in each year, so agencies joining looks like crime rising. Consistent reporters only when the user asks.",
+     "Count every agency that reported in each year (keep today's default), with a prominently displayed note that the trend can be shown for consistently reporting agencies only, offered as a button. For a single national or state total of such a detail, say what share of the population the reporting agencies cover.",
+     "Default: all reporting agencies. Prominent note and button: \"Show only agencies that reported in every year\".",
+     "The full count is what was reported; the note makes clear that participation changed and offers the consistent view.",
+     O28 + " (Jeff: show everything, with a prominent note offering consistent reporters)", NEW),
+    ("P04", "\"Top 20 cities by murder rate in 2024\" where some cities reported only part of the year",
+     "Includes them, with their first and last reported month and a caveat that spans differ.",
+     "For a completed year, leave out agencies that did not report all 12 months, state how many were left out, and offer a button to include them (rankings of change already do this, frozen rule 7). For the current year, where 12 months do not exist yet, rank agencies that reported every month available so far.",
+     "Completed year: full-year reporters only, with \"N agencies with fewer than 12 months were not ranked\" and a button to include them. Current year: every month so far.",
+     "A city with 4 months of data ranks far too low on a count. Completeness is not size, so this is an exception to frozen rule 5 decided by Jeff.",
+     O28 + " (Jeff: yes, except the current year, where 12 months are not available)", gc(7) + " (rule 7); " + NEW),
+    ("P05", "\"Which cities had the most murders?\" with no year, when the latest year in the data is incomplete",
+     "Uses the latest year with any data, titled \"(Partial)\" when incomplete.",
+     "Ask which year, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed).",
+     "Buttons, most likely first: the latest complete year (named); this year so far (months named); another year.",
+     "The year changes the ranking; asking costs one click and assumes nothing.",
+     O28 + " (Jeff: ask, as for any missing part; general rule)", NEW),
+    ("P06", "\"Murders in Houston\" (one figure, no period) and \"murders in Houston over time\" (a trend, no period)",
+     "Differs by tab: Current Trends uses every month it has; Historical every year; NIBRS the latest complete year (another NIBRS path uses the last 5 years); Homicide Reports every year since 1976; Hate Crime the last 10 years.",
+     "Ask which period, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed).",
+     "Single figure, buttons: the latest complete year (named); this year so far; another year. Trend, buttons: the last 10 complete years; every year available; another range.",
+     "The period changes the answer; one rule on every source, and nothing assumed.",
+     O28 + " (Jeff: ask, as for any missing part; general rule)", NEW),
+    ("P07", "\"Burglaries in Texas last year\"",
+     "Current Trends: the latest full year in its data. NIBRS and Historical: the calendar year before today, declined if not in the data yet.",
+     "Always the calendar year before today. If that year is not in the source yet, say so and offer the latest year it has as a button; never answer another year silently.",
+     "In October 2026: 2025. Offer: the same question for the latest year available.",
+     "\"Last year\" has one everyday meaning; answering another year without saying so is a wrong answer.",
+     O28 + " (Jeff: always the last calendar year)", "engine check: \"burglaries in Texas last year\"; " + NEW),
+    ("P08", "\"Which large US city had the highest violent crime rate in 2023?\"",
+     "Answered by whichever tab is open. Current Trends covers about 700 agencies; NIBRS its reporters; Historical (FBI annual data) the most.",
+     "\"Large\" or \"big\" city means 250,000 residents or more, stated in the answer. The source follows P01 (completed years: Historical; the current year: Current Trends, naming its sample).",
+     "\"Large\" or \"big\" city: 250,000 residents or more.",
+     "The cutoff decides which cities are compared, so it has one fixed meaning, named in the answer.",
+     O28 + " (Jeff: large or big means 250,000+)", NEW),
+    ("P09", "\"How many assaults in Phoenix in 2024?\" (the word \"assault\" alone)",
+     "Current Trends counts aggravated assault only. NIBRS counts all assaults (aggravated, simple, intimidation). The pre-submit helper offers a choice.",
+     "Count aggravated assault and say so. Count all assaults, or simple assault, only when asked.",
+     "Default: aggravated assault. On request: all assaults; simple assault.",
+     "Aggravated assault is the FBI's violent-crime measure, and today the same word gives two different counts on two tabs.",
+     O28 + " (Jeff: aggravated assault, stated in the answer)", NEW),
+    ("P10", "\"How many homicides in Memphis in 2023?\" (the word \"homicide\")",
+     "NIBRS and Current Trends: homicide means murder. Homicide Reports: \"homicide\" means all homicide victims, \"murder\" means murder only.",
+     "\"Homicide\" and \"murder\" both mean murder and non-negligent manslaughter on every tab. Negligent manslaughter and justifiable homicide only when asked (\"all homicides\").",
+     "Default: murder and non-negligent manslaughter. On request: all homicide types.",
+     "One word should mean the same count on every tab.",
+     O28 + " (Jeff: homicide means murder and non-negligent manslaughter everywhere)", NEW),
+    ("P11", "\"How many theft victims in Ohio in 2024?\" and \"How many thefts in Ohio in 2024?\"",
+     "NIBRS answers \"thefts\" by offense, and declines \"theft victims\" when no table counts that crime by victim. Current Trends declines any \"victims\" question.",
+     "Property crimes are always counted by offense. When the user asks for victims of a property crime, answer with offenses and state plainly that property crimes are counted by offense, not by victim. Crimes against persons are counted by victim.",
+     "\"Theft victims\" -> theft offenses, with the sentence \"Property crimes are counted by offense, not by victim.\"",
+     "One counting unit per kind of crime, as the FBI counts them, stated plainly when the question asked for another.",
+     O28 + " (Jeff: give offenses and state plainly that property crimes are not counted by victim)", NEW),
+    ("P12", "\"How many murders were there in 2024?\" (no place named)",
+     "The NIBRS instructions treat no place as national; other tabs vary.",
+     "Ask which place, with buttons (general rule: a question missing its year, place or crime is asked about, never assumed).",
+     "Buttons: the United States (first); a state; a city or agency.",
+     "The place changes the population counted; nothing is assumed.",
+     O28 + " (Jeff: ask, as for any missing part; general rule)", NEW),
+    ("P13", "\"What is the safest city in America?\" / \"most dangerous city\"",
+     "Declines: no agreed definition; asks the user to name an offense and a count or rate.",
+     "Decline, with today's note: there is no agreed definition of safest or most dangerous, so ask about a specific offense and a count or rate. No ranking is offered in its place.",
+     "Not applicable: a decline with the note.",
+     "\"Safe\" and \"dangerous\" are judgements the data cannot make; the app reports counts and rates without editorializing.",
+     O28 + " (Jeff: decline, with the note about safe and dangerous)", NEW),
+    ("P14", "\"Murders in Chicago from 1990 to 2024\" (a span one source covers and another covers only in part)",
+     "Each tab reads only its own data; no rule for a span only another source covers.",
+     "Never join two sources in one series. Answer from the one source that covers the whole span with the same measure and filters (here Historical, for murders) and name it; if none does, answer the covered part and name the missing years (frozen rule 4).",
+     "Source: the one covering the whole span; otherwise the covered years, with the gap named.",
+     "Sources count differently; a joined series shows jumps that are not real.",
+     O28 + " (Jeff: never splice sources)", gc(4)),
+    ("P15", "\"Rate of robberies with a firearm in Georgia in 2024\" (a rate of a detail only NIBRS records)",
+     "Divides by the population of the agencies that reported (weighted by months reported), not the whole state.",
+     "Keep today's rule, and say whose population in one fixed sentence: \"per 100,000 residents of the reporting agencies\".",
+     "Denominator: population of the agencies counted.",
+     "Dividing partial counts by the whole state understates the rate.",
+     O28 + " (Jeff: yes)", "correctness case: Houston murder victims by race and sex; " + NEW),
+    ("P16", "\"Crime in Las Vegas\", where the city is policed by a combined city-county agency or by several agencies",
+     "A city name means that city's police department, without saying which agency.",
+     "Keep the city's principal police agency, and name it in the answer as county answers already do (rule 10).",
+     "Default: the city's principal police agency, named.",
+     "The reader should know whose numbers they are reading.",
+     O28 + " (Jeff: yes)", gc(10)),
+    ("P17", "\"Top 10 cities by murders\" where the 10th and 11th are tied",
+     "Cuts at 10. Some rankings break ties by agency code, others in no fixed order.",
+     "Show exactly the number asked for (frozen rule 5). Within a tie, order by agency name, so the same question always gives the same list.",
+     "Ties: alphabetical by agency name.",
+     "An unordered tie can change between runs.",
+     O28 + " (Jeff: exactly N, alphabetical within ties)", NEW),
+    ("P18", "\"Burglary clearance rate in Ohio in 2023\" (Historical has agency and national clearance, not state)",
+     "Declined when the request is clearly a state.",
+     "Decline: there is no state clearance rate in the data (the FBI publishes clearance for agencies and the nation, not states), and a figure from reporting agencies is not a state rate.",
+     "Not applicable: a decline.",
+     "A state clearance rate built from the agencies that report would be read as the state's rate.",
+     O28 + " (Jeff, on reflection: decline)", gc(14)),
+    ("P19", "\"Fentanyl seizures in Ohio\"",
+     "NIBRS declines (\"falls under broader narcotic categories\") with no alternative.",
+     "Decline and offer the category that contains it: synthetic narcotics (fentanyl and other synthetic opioids).",
+     "Alternative: synthetic narcotics, same place and period.",
+     "Frozen rule 14: a nearest measure exists here.",
+     O28 + " (Jeff: yes)", gc(14)),
+    ("P20", "\"Will crime go up next year?\" or any forecast",
+     "No rule found.",
+     "Decline: the data records past crime and cannot predict. Offer the recent trend for the same place and measure.",
+     "Alternative: last 10 complete years for the place and measure.",
+     "A forecast is not in the data; a plain statement beats an improvised answer.",
+     O28 + " (Jeff: yes, decline)", NEW),
+    ("P21", "\"What happened in the shooting on Main Street last Friday?\" or a named person",
+     "No rule found.",
+     "Decline: the data has no names, addresses or case narratives. Offer the count of that offense for the city and month.",
+     "Alternative: offense count, same city and month.",
+     "Incident details are in no source.",
+     O28 + " (Jeff: yes, decline)", NEW),
+    ("P22", "The user clicks a button in a clarifying question",
+     "The button rewrites the word in question and keeps the rest. Some questions are asked once only; the place-level question repeats until answered.",
+     "A button runs the original question with only that choice changed (place, period and filters kept). A choice already made is not asked again for that question or its follow-ups; a later question with a new ambiguity can still be asked about.",
+     "Not applicable.",
+     "Re-asking, or dropping parts of the question after the user answered, feels broken.",
+     O28 + " (Jeff: yes)", "GC-003; " + NEW),
+    ("P23", "Follow-up \"What about Dallas?\" after a Houston question",
+     "Replaces the place; keeps the source, offense, filters, measure, grouping and period.",
+     "Keep today's behavior.",
+     "Not applicable.",
+     "It is what users expect.",
+     O28 + " (Jeff: yes)", NEW),
+    ("P24", "\"Burglaries in Denver in 2027\" (a year not yet in the data)",
+     "Declines and states the covered range; some tabs point to another source.",
+     "Decline, state the latest month or year available, and offer it as a button. Never answer another year silently.",
+     "Offer: the same question for the latest year available.",
+     "Rule 4 already requires stating the range; the button saves a retype.",
+     O28 + " (Jeff: yes)", gc(4)),
+    # Added after drafting the labeled set (drafters' doubts), numbered last so existing case references stay valid.
+    ("P25", "\"Crime in Montgomery County, Maryland\" or \"Fairfax County, Virginia\", where the county has its own county police department",
+     "Frozen rule 10: a county name means the sheriff's agency, named in the answer.",
+     "Where a county has a county police department that polices the county, a county name means that department, named in the answer. Elsewhere it means the sheriff's agency (rule 10).",
+     "Default: the county police department where one exists; otherwise the sheriff's agency. Both named.",
+     "In those counties the sheriff mainly runs the jail and courts; the county police report the county's crime.",
+     O28 + " (Jeff: yes)", gc(10) + "; labeled cases LS-144, LS-149"),
+    ("P26", "\"Value of stolen property in New York in 2021\" (\"New York\" alone)",
+     "Not settled: some paths read it as the city, others as the state.",
+     "Ask which is meant, with two buttons, unless the wording settles it (\"New York City\", \"NYPD\", \"New York State\", or a statewide measure).",
+     "Choices: New York City (NYPD); New York State.",
+     "The two answers differ several times over, and both readings are common.",
+     O28 + " (Jeff: yes)", "labeled cases LS-159, LS-208"),
+    ("P27", "\"Where were robberies highest in 2024?\" (\"where\" with no kind of place)",
+     "Asks which level is meant (states, cities, or individual agencies) and asks again until answered.",
+     "Ask once, with three buttons. A named place or a named level (\"which state\", \"cities\") settles it without asking.",
+     "Choices: states; cities; individual agencies.",
+     "Each level gives a different ranking with a different winner.",
+     O28 + " (Jeff: yes)", "GC-003; labeled cases with \"where\""),
+    # ---------------- already decided, carried forward ----------------
+    ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
+    ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
+    ("D03", "\"Murder rate for Black victims\" or rates by age group", "Declined; offers counts or shares.", "Rates only for places (city, state, nation); offer counts or shares by group.", "Alternative: counts and shares by group.", "No population figures by group at these levels.", F.format(3), gc(3)),
+    ("D04", "A series with missing years, or a period outside the data", "Names gaps and states coverage on most paths.", "Name missing years as missing, and state where the data starts and ends.", "Not applicable.", "A gap must never read as zero.", F.format(4), gc(4)),
+    ("D05", "\"Top 20 cities by murder rate\" and \"cities with the most officers per resident\"", "No population minimum unless the user gives one; the active Historical ranking follows this, though an old staffing instruction still mentions 50,000.", "No filter the user did not ask for: no population or count minimum. The number of rows is stated.", "Default: 20 rows.", "Unrequested filters change who appears. Codex suggested revisiting the minimum; the rule stands unless Jeff changes it.", F.format(5), gc(5)),
+    ("D06", "\"Murders this year\" or any partial year", "Year to date through the latest month, months named.", "Keep.", "The months covered are named.", "A partial year must not read as a full one.", F.format(6), gc(6)),
+    ("D07", "\"Which cities saw the biggest rise in murders?\"", "Leaves out incomplete reporters and says how many.", "Keep.", "Not applicable.", "Change between incomplete years is not real change.", F.format(7), gc(7)),
+    ("D08", "Caveats", "Given with every answer.", "Keep: explanation sentences (coverage, sample, partial year) come with every answer they apply to. They are text, never table columns.", "Not applicable.", "", F.format(8), gc(8)),
+    ("D09", "\"Crime in Chicago in 2024\" (the bare word \"crime\")", "Asks once: violent, property or both. The Hate Crime tab is exempt.", "Keep.", "Choices: violent crime; property crime; both.", "\"Crime\" alone has no single count.", F.format(9), gc(9)),
+    ("D10", "\"Crime in Cook County\"", "The sheriff's agency, named in the answer.", "Keep. Two named agencies give two answers.", "Default: the sheriff's agency, named.", "", F.format(10), gc(10)),
+    ("D11", "Rape counts across 2013, when the FBI broadened the definition", "Not consistently implemented.", "Mention the 2013 change only when asked directly and the period crosses 2013.", "Not applicable.", "", F.format(11), gc(11)),
+    ("D12", "\"Why did murders rise in 2020?\"", "Declines causes.", "Answer \"why\" about the data itself; decline \"why\" about real-world causes, and offer the trend.", "Alternative: the trend for the place and measure.", "The data cannot show causes, and the app does not editorialize.", F.format(12), gc(12)),
+    ("D13", "An empty answer", "Names one of four cases on most paths.", "Keep: say which case it is - a true zero; something no dataset collects; a place or period outside what is held; or an app failure. A verified zero is shown as 0, never blank, and a failure is never presented as missing data.", "Not applicable.", "", F.format(13), gc(13)),
+    ("D14", "\"Shootings in Chicago\"", "Asks fatal or non-fatal before answering.", "Keep. Offer a nearest measure only where one genuinely exists.", "Choices: fatal shootings (homicides with a firearm); aggravated assaults with a firearm.", "", F.format(14), gc(14)),
+    ("D15", "A question too large or too slow to run", "Suggests a narrower question.", "Keep: name a specific narrower question.", "Not applicable.", "", F.format(15), gc(15)),
+    ("D16", "\"How does Austin compare with similar cities?\"", "Peers chosen by population; the band and the cities are named.", "Keep.", "Peers: cities in a stated population band.", "", F.format(16), gc(16)),
+    ("D17", "\"Did murders go up this year?\" when the periods do not match", "Shows both figures; withholds an unverified change.", "Keep: no change claim or ranking across mismatched periods.", "Not applicable.", "", F.format(17), gc(17)),
+    ("D18", "Counting units", "Crimes against persons are counted by victim, property crimes by offense, violent crime as the FBI counts it.", "Keep.", "Not applicable.", "Counting person crimes by offense undercounts by about a fifth.", "Decided (standing project rule, in force before 2026-10-28)", "correctness cases: Houston murder victims; Memphis carjackings"),
+    ("D19", "\"Drug crimes\"", "Drug/narcotic violations only.", "Drug/narcotic violations plus drug equipment violations.", "Not applicable.", "", O28, "definition check: drug crimes"),
+    ("D20", "\"Domestic violence\" and \"domestic violence murders\"", "Relationship lists without stepsiblings, foster relations or cohabitants.", "Add stepsiblings and foster parents and children (family) and cohabitants; domestic violence murders stay defined by relationship.", "Not applicable.", "", O28, "definition check: domestic violence"),
+    ("D21", "\"Flash mob shoplifting\"", "Not answered by the active paths; an old model instruction defined it as shoplifting with six or more offenders at a store.", "Shoplifting with six or more offenders at a business location (bank, bar or nightclub, office building, convenience store, department or discount store, drug store or hospital, grocery, hotel, liquor store, rental storage, restaurant, gas station, specialty store, ATM, auto dealership, casino, shopping mall), with at most one business victim.", "Not applicable.", "", O28, "definition check: flash mob"),
+    ("D22", "\"What share of Florida is covered by NIBRS?\"", "Share of agency population reporting 6 or more months.", "Share of residents covered by reporting agencies, month by month, as the FBI computes it.", "Not applicable.", "", O28, "coverage comparison with FBI figures, 10 states"),
+    ("D23", "\"Value of stolen property in New York in 2021\"", "Every value kept, except summary rows averaging $1M or more, which are zeroed.", "Leave out the placeholder values $999,999,999; $999,999,998; $99,999,999; $9,999,999; $7,777,777; $1,111,111; $19,999,998; $10,000,000; $100,000,000. Counts unchanged; nothing about it in the answer.", "Not applicable.", "These placeholders inflate totals many times over.", O28, "definition check: property value"),
+    ("D24", "\"Hate crimes in Texas in 2023\"", "The Hate Crime tab uses the FBI file; the NIBRS tab uses NIBRS.", "The FBI Hate Crime file answers; NIBRS only for details only NIBRS records.", "Not applicable.", "", O28, NEW),
+    ("D25", "Historical questions", "Crime, clearance and staffing on one tab.", "One source: crime, clearance (agency and national) and police staffing.", "Not applicable.", "", O28, NEW),
+    ("D26", "\"How many officers does Baltimore have?\"", "Officers, or total employees when no officer count exists, marked \"Officers\" or \"Employees\".", "Keep. This marker is the only text column allowed in an answer.", "Not applicable.", "", O28, NEW),
+    ("D27", "\"Robberies in Ohio this year\" on Current Trends", "The active answer path already uses the state's sample agencies; the stored state table sums all agencies.", "State totals use the state's agencies from the national sample, built the same way; in the rebuild only.", "Not applicable.", "", O28 + " (rebuild only)", NEW),
+    ("D28", "General rule: when does the app ask a clarifying question?", "Several separate rules (bare \"crime\", shootings, place level, ambiguous place names), each with its own trigger.", "Ask only when materially different readings remain after the explicit wording, the conversation so far and the approved defaults in this table; one question at a time, with buttons that run the whole original question with the choice filled in.", "Not applicable.", "Professional apps ask rarely and for a reason.", O28 + " (plan approved by Jeff)", gc(9) + "; GC-003, GC-110"),
+    ("D29", "Commentary in answers", "The instructions ban causal commentary.", "No editorializing. Tables carry groupings and numbers only (no note or status columns); explanation sentences and chart notes stay.", "Not applicable.", "", O28, "answer-format tests"),
+    ("D31", "A question that leaves out its year, place or crime", "Some paths assume a default (latest year, the nation, all years); bare \"crime\" is asked about (rule 9).", "Ask, with buttons, most likely choice first; never assume. Each button runs the whole question with that part filled in.", "See P05, P06 and P12 for the buttons offered.", "A missing part changes the answer; one click is cheaper than a wrong assumption.", O28 + " (Jeff: general rule)", NEW),
+    ("D30", "Naming the source", "Some answers name their source, in different places.", "Every answer ends with a statement of its source (and, where it applies, its coverage): the source statement comes last.", "Not applicable.", "The reader should always know whose numbers they are reading, and where to find it.", O28 + " (Jeff, in this review)", NEW),
+    ("D32", "\"How many murders in the US in 2025?\" (a national or state figure for 2025)", "Production Historical holds 2025 for agencies, but the FBI's state and national estimates and national clearance stop at 2024.", "Answer from Historical, using the FBI's published 2025 state and national figures. Loading them is part of building Historical for the rebuilt app, not a fix to the live site.", "Not applicable.", "The FBI has published 2025; the rebuilt Historical carries it at every level.", O28 + " (Jeff: use Historical; load the 2025 data with the Historical rebuild)", NEW),
+]
+
+# The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
+DECISION = {
+}
+TOPIC = {
+}
+assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
+ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]
+
+out = os.path.join(os.path.dirname(__file__), "..", "docs", "policy", "nibrsai-answer-policy.csv")
+os.makedirs(os.path.dirname(out), exist_ok=True)
+with open(out, "w", encoding="utf-8-sig", newline="") as f:
+    w = csv.writer(f, lineterminator="\n")  # LF: the repo's checkout gate rejects CRLF
+    w.writerow(["id", "topic", "decision needed", "situation (example wording)", "what the app does today", "proposed behavior", "exact default or choices offered", "why", "status", "test cases"])
+    for r in ordered:
+        w.writerow([r[0], TOPIC.get(r[0], "Already decided"), DECISION.get(r[0], "None: already decided"), *r[1:]])
+print(len(ROWS), "rows,", sum(1 for r in ROWS if r[6] == OPEN), "need Jeff")

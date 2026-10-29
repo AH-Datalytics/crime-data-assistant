@@ -1,0 +1,1539 @@
+{
+  "LS-001": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "rape",
+            "unit": "offense"
+          }
+        ],
+        "filters": [
+          "cleared by exceptional means: prosecution declined"
+        ],
+        "groupings": [
+          "state"
+        ],
+        "statistic": "share",
+        "denominator": "all cleared rape offenses (by arrest or exceptional means), same state and year",
+        "cohort": "all_reporting"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says prosecution declined is a police exceptional-clearance reason recorded by the agency",
+        "says each state's figure comes from its NIBRS-reporting agencies and what share of the state's population they cover",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D01",
+      "P01",
+      "P03",
+      "P12",
+      "P18",
+      "D18",
+      "D30"
+    ],
+    "notes": "Clearance type is NIBRS-only (P01). 'By state' names the level, so P12 does not ask (Codex: P12 listed). A share of clearances by type, not cleared over reported, so not a state clearance rate (P18 does not decline it). P18-scope (coordinator): P18 covers state clearance rates only; a by-type share of clearances from NIBRS stays answerable by state.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-002": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which place",
+      "options": [
+        {
+          "label": "The United States",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "from": "2025-01",
+              "to": "2025-12"
+            },
+            "measures": [
+              {
+                "name": "rape",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "cleared by exceptional means: prosecution declined"
+            ],
+            "groupings": [],
+            "statistic": "share",
+            "denominator": "all cleared rape offenses (by arrest or exceptional means), same year",
+            "cohort": "all_reporting"
+          }
+        },
+        {
+          "label": "A state",
+          "leads_to": "answer",
+          "meaning": null
+        },
+        {
+          "label": "A city or agency",
+          "leads_to": "answer",
+          "meaning": null
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P12",
+      "D01",
+      "P01",
+      "P03",
+      "D18"
+    ],
+    "notes": "No place: ask (P12/D31), superseding Codex's accepted national default and GC-002's answer stance (a clarify is not a court-outcome refusal). US option: NIBRS-only clearance type (P01), reporting agencies with coverage share (P03). 'A state' and 'A city or agency' open an entry, so meaning null.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": [
+      "P12",
+      "D31"
+    ]
+  },
+  "LS-003": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which kind of place 'where' means",
+      "options": [
+        {
+          "label": "States",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "from": "2025-01",
+              "to": "2025-12"
+            },
+            "measures": [
+              {
+                "name": "all Group A offenses",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "cleared by exceptional means: prosecution declined"
+            ],
+            "groupings": [
+              "offense type",
+              "state"
+            ],
+            "statistic": "share",
+            "denominator": "all reported offenses of that type, same state and year",
+            "cohort": "all_reporting",
+            "rank": {
+              "by": "share of offenses cleared as prosecution declined",
+              "direction": "top",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "Cities",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "from": "2025-01",
+              "to": "2025-12"
+            },
+            "measures": [
+              {
+                "name": "all Group A offenses",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "cleared by exceptional means: prosecution declined",
+              "agencies that reported all 12 months of 2025"
+            ],
+            "groupings": [
+              "offense type",
+              "city (principal police agency)"
+            ],
+            "statistic": "share",
+            "denominator": "all reported offenses of that type, same agency and year",
+            "rank": {
+              "by": "share of offenses cleared as prosecution declined",
+              "direction": "top",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "Individual agencies",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "from": "2025-01",
+              "to": "2025-12"
+            },
+            "measures": [
+              {
+                "name": "all Group A offenses",
+                "unit": "offense"
+              }
+            ],
+            "filters": [
+              "cleared by exceptional means: prosecution declined",
+              "agencies that reported all 12 months of 2025"
+            ],
+            "groupings": [
+              "offense type",
+              "agency"
+            ],
+            "statistic": "share",
+            "denominator": "all reported offenses of that type, same agency and year",
+            "rank": {
+              "by": "share of offenses cleared as prosecution declined",
+              "direction": "top",
+              "limit": 20
+            }
+          }
+        }
+      ]
+    },
+    "policy_add": [
+      "P27",
+      "D28",
+      "D01",
+      "D05",
+      "P04",
+      "P17",
+      "P16",
+      "P01",
+      "P18",
+      "D18",
+      "P03",
+      "D30"
+    ],
+    "notes": "'Where' with no level: ask with P27's three buttons (P27 lists GC-003), resolving Codex's unresolved and overriding GC-003's answer stance. Share = offenses cleared as prosecution declined over reported offenses (cross-case clearance rule). City/agency options: top 20 (D05), ties alphabetical (P17); P04 drops agencies with under 12 months (stated, with an include button), overriding GC-003's no-unrequested-filter expectation for completeness only. P18-scope (coordinator): a by-exception share is a NIBRS-only detail, not a state clearance rate, so the States option answers from NIBRS reporting agencies (all_reporting, P03), top 20, no completeness filter for states.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P27",
+      "P04"
+    ]
+  },
+  "LS-004": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "rape",
+            "unit": "offense"
+          }
+        ],
+        "filters": [
+          "cleared by exceptional means: prosecution declined"
+        ],
+        "groupings": [
+          "state"
+        ],
+        "statistic": "share",
+        "denominator": "all reported rapes, same state and year",
+        "cohort": "all_reporting",
+        "rank": {
+          "by": "share of reported rapes cleared as prosecution declined",
+          "direction": "top",
+          "limit": 20
+        }
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "ranks states by the share of reported rapes cleared as prosecution declined",
+        "says prosecution declined is a police exceptional-clearance reason recorded by the agency",
+        "states the number of rows shown (20) and orders ties alphabetically",
+        "says each state's figure comes from its NIBRS-reporting agencies and what share of the state's population they cover",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "P18",
+      "D01",
+      "P23",
+      "D05",
+      "P17",
+      "P01",
+      "P03",
+      "D18",
+      "D30"
+    ],
+    "notes": "Follow-up keeps the setup's 2025 state ranking, narrowed to prosecution declined (P23). P18-scope (coordinator): a by-exception share is a NIBRS-only detail, not a state clearance rate, so it answers; replaces the earlier P18 decline. Codex fix: all reported rapes as denominator, numerator prosecution-declined clearances, D05 20 rows, P17 alphabetical ties. Matches LS-128/LS-148.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-005": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Prosecution, conviction and sentencing are court outcomes; no dataset here records them. The data covers crimes reported to police, arrests and police clearances.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D01",
+      "D14"
+    ],
+    "notes": "D01 refuse; no genuine nearest police measure (D14).",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-006": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Prosecution, conviction and sentencing are court outcomes; no dataset here records them. The data covers crimes reported to police, arrests and police clearances. Murder clearance for the Houston Police Department is available.",
+      "alternative": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Houston Police Department",
+            "state": "TX"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "offense"
+          }
+        ],
+        "filters": [
+          "cleared (by arrest or exceptional means)"
+        ],
+        "groupings": [],
+        "statistic": "share",
+        "denominator": "all reported murder offenses, same agency and year"
+      }
+    },
+    "policy_add": [
+      "D01",
+      "D14",
+      "D25",
+      "P01",
+      "P16",
+      "P06"
+    ],
+    "notes": "D01 refuse; nearest police measure is Houston PD murder clearance (cleared over reported, unit offense, share), from Historical (P01/D25). The offered button uses P06's first choice, the latest complete year.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-007": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Prosecution, conviction and sentencing are court outcomes; no dataset here records them. The data covers crimes reported to police, arrests and police clearances.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D01",
+      "D14"
+    ],
+    "notes": "D01 refuse; no place, offense or nearest measure.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-008": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "No dataset here records convictions, or crimes by police officers as offenders. Court outcomes are not in the data.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D01",
+      "D14"
+    ],
+    "notes": "D01 refuse; no genuine nearest measure.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-009": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Defendants are a court-stage group; no dataset here records them. NIBRS records arrestees and offenders as reported by police.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D01",
+      "D14"
+    ],
+    "notes": "D01 refuse; no cities, offense or period given, so no runnable alternative.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-010": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "1930 (or the first year available) through the latest complete year"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "FBI composite: victims of murder, rape and aggravated assault plus robbery offenses"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "rate",
+        "denominator": "U.S. residents (per 100,000)"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "says prison population is not in any dataset here and is not shown",
+        "states the year the national violent crime series starts, if after 1930",
+        "names the last year shown",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D01",
+      "D04",
+      "P01",
+      "P14",
+      "D18",
+      "D30"
+    ],
+    "notes": "Partial (D01): violent crime half from Historical national series (P01, one source P14); prison half declined in a statement. D04 boundary statement only if 1930 is outside coverage. D30 added.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-011": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-012": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-013": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-014": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-015": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-016": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-017": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-018": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Follow-up asks for a neighborhood: D02 decline, no Menlo Park city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-019": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Bare ZIP code: D02 decline.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-020": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data stops at the agency level; no source here has counts by ZIP code, neighborhood, ward, precinct or beat.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D02"
+    ],
+    "notes": "Below-agency geography (D02): say so and stop; no city-wide substitute.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-021": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Ward Police Department",
+            "state": "AR"
+          }
+        ],
+        "period": {
+          "from": "2022-01",
+          "to": "2022-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names Ward Police Department, Arkansas",
+        "if the agency reported zero murders, shows 0, not blank",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D02",
+      "P01",
+      "P16",
+      "D18",
+      "D13",
+      "D30"
+    ],
+    "notes": "Ward is a city, not a ward (D02 answer). Completed Part I year -> Historical (P01), murder by victim (D18). Ward's presence in Historical 2022 is not independently verified; if absent, P01 sends it to NIBRS. Zero is conditional on rows. The current tab is not an advanced choice here.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-022": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "not applicable: definitional answer"
+        },
+        "measures": [
+          {
+            "name": "available geographic detail",
+            "unit": "geographic level"
+          }
+        ],
+        "filters": [],
+        "groupings": [],
+        "statistic": "list"
+      },
+      "values": {
+        "status": "not_checkable"
+      },
+      "statements": [
+        "answers the question about the data: no national source records the ZIP code where a crime occurred",
+        "says the data stops at the reporting agency",
+        "returns no data rows and no city-wide substitute",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D02",
+      "D12",
+      "D30"
+    ],
+    "notes": "Codex fix: GC-022 requires answering a question about the data (D12) while meeting D02's no-rows, no-substitute checks. Encoded as a definitional answer.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-023": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Rates by race need a population count for that group, which the data does not have; rates are given only for places. The count of Black murder victims is available.",
+      "alternative": {
+        "source": "shr",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Detroit Police Department",
+            "state": "MI"
+          }
+        ],
+        "period": {
+          "from": "2023-01",
+          "to": "2023-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [
+          "victim race: Black"
+        ],
+        "groupings": [],
+        "statistic": "count"
+      }
+    },
+    "policy_add": [
+      "D03",
+      "D14",
+      "P01",
+      "P16",
+      "D18"
+    ],
+    "notes": "D03 refuse; alternative keeps the Black-victim restriction (Codex). Homicide victim detail -> Homicide Reports (P01). Read as victims.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-024": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D03",
+      "D14",
+      "P01",
+      "P11",
+      "D18",
+      "P16",
+      "P06"
+    ],
+    "notes": "D03 decline is certain. Intended alternative: Chicago PD robbery offenses with a female victim (robbery by offense, D18/P11, not Codex's 'robbery victims'), NIBRS (victim sex, P01), latest complete year. Whether Chicago has NIBRS data for that year has no deployment-aligned evidence, so the alternative's runnability is not established; same standard as LS-026.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-025": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Rates by sex need a population count for that group, which the data does not have; rates are given only for places. Counts of female murder victims by year are available.",
+      "alternative": {
+        "source": "shr",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [
+          "victim sex: female"
+        ],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count"
+      }
+    },
+    "policy_add": [
+      "D03",
+      "D14",
+      "P01",
+      "P10",
+      "P12",
+      "P06",
+      "D18"
+    ],
+    "notes": "D03 decline. Alternative keeps women (Codex); homicide victim detail -> Homicide Reports (P01), so Codex's P03 cohort concern is moot. Homicide = murder and non-negligent manslaughter (P10). The offered button names the US and last 10 complete years (first choices of P12/P06).",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P01"
+    ]
+  },
+  "LS-026": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D03",
+      "D14",
+      "P01",
+      "P16",
+      "P06"
+    ],
+    "notes": "D03 decline is certain. Intended alternative: Chicago PD robbery arrests by arrestee race, NIBRS (P01), latest complete year. Chicago NIBRS arrest coverage for that year has no deployment-aligned evidence, so the alternative's runnability is not established (Codex).",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-027": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Rates by race and sex need population counts for those groups, which the data does not have. Counts and shares by race and sex are available.",
+      "alternative": {
+        "source": "shr",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "latest complete year"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "victim race",
+          "victim sex"
+        ],
+        "statistic": "count"
+      }
+    },
+    "policy_add": [
+      "D03",
+      "D14",
+      "P01",
+      "P12",
+      "P06",
+      "D18"
+    ],
+    "notes": "D03 decline; missing place and year do not matter for a decline. The offered button names the US and latest complete year (first choices). Victims, not offenders.",
+    "codex": "accept",
+    "applied": "unchanged",
+    "superseded": []
+  },
+  "LS-028": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "The data holds no population counts by race or sex, so rates for those groups cannot be computed. Counts and shares by race and sex are available for a named crime.",
+      "alternative": null
+    },
+    "policy_add": [
+      "D03",
+      "D14"
+    ],
+    "notes": "Codex fix: no measure named, so no alternative is invented.",
+    "codex": "change",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-029": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D03",
+      "D14",
+      "P01"
+    ],
+    "notes": "D03 decline is certain. 'Juvenile crime' has no settled nearest measure (crimes with an offender under 18 vs arrests under 18), and Minneapolis NIBRS coverage for 2020-2025 has no deployment-aligned evidence (Codex).",
+    "codex": "unresolved",
+    "applied": "codex fix",
+    "superseded": []
+  },
+  "LS-030": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Rates for an age group need a population count for that group, which the data does not have. Counts of violent crime offenders under 18 by year are available.",
+      "alternative": {
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "rule": "last 10 complete years"
+        },
+        "measures": [
+          {
+            "name": "violent crime",
+            "unit": "offender"
+          }
+        ],
+        "filters": [
+          "offender age: under 18"
+        ],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "count",
+        "cohort": "all_reporting"
+      }
+    },
+    "policy_add": [
+      "D03",
+      "D14",
+      "P01",
+      "P03",
+      "P12",
+      "P06"
+    ],
+    "notes": "D03 decline. Offender age is NIBRS-only (P01); P03 decides the cohort (all reporting agencies), resolving Codex's concern. The question asks about juvenile offenders, so offenders are counted. Button names US and last 10 complete years.",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-031": {
+    "status": "drafted",
+    "expected": {
+      "action": "decline",
+      "reason": "Per capita rates by race and sex need population counts for those groups, which the data does not have. Counts of murder offenders by race, Hispanic ethnicity and sex are available; offender race, ethnicity and sex are often recorded as unknown.",
+      "alternative": {
+        "source": "shr",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2000-01",
+          "to": "2026-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "offender"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "offender race (Black, Asian, White)",
+          "offender ethnicity (Hispanic)",
+          "offender sex"
+        ],
+        "statistic": "count"
+      }
+    },
+    "policy_add": [
+      "D03",
+      "D08",
+      "D14",
+      "P23",
+      "D04",
+      "P01"
+    ],
+    "notes": "Setup: murder offenders, US, 2000-2026. Codex fix: keep race categories and Hispanic ethnicity distinct, offender sex, 2000-2026 bounds (unavailable years named, D04), and repeat the unknown-demographics caveat in full (D08).",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-032": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which year",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "state",
+                "name": "California",
+                "state": "CA"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "FBI composite: victims of murder, rape and aggravated assault plus robbery offenses"
+              }
+            ],
+            "filters": [
+              "at least one linked offender under 18"
+            ],
+            "groupings": [],
+            "statistic": "share",
+            "denominator": "violent crimes in California with at least one offender of known age",
+            "cohort": "all_reporting"
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "nibrs",
+            "places": [
+              {
+                "kind": "state",
+                "name": "California",
+                "state": "CA"
+              }
+            ],
+            "period": {
+              "rule": "this year so far: January through the latest month held"
+            },
+            "measures": [
+              {
+                "name": "violent crime",
+                "unit": "FBI composite: victims of murder, rape and aggravated assault plus robbery offenses"
+              }
+            ],
+            "filters": [
+              "at least one linked offender under 18"
+            ],
+            "groupings": [],
+            "statistic": "share",
+            "denominator": "violent crimes in California with at least one offender of known age",
+            "cohort": "all_reporting"
+          }
+        },
+        {
+          "label": "Another year",
+          "leads_to": "answer",
+          "meaning": null
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P06",
+      "P01",
+      "D18",
+      "D03",
+      "P03",
+      "D06"
+    ],
+    "notes": "Year missing: ask (P06/D31), superseding GC-032's answer stance. Identical to LS-121 (same wording): crimes, not offenders; a crime counts as 'by youth' if any linked offender is under 18; denominator excludes crimes with no offender of known age, stated.",
+    "codex": "unresolved",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P06",
+      "D31"
+    ]
+  },
+  "LS-033": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "shr",
+        "places": [
+          {
+            "kind": "state",
+            "name": "Texas",
+            "state": "TX"
+          }
+        ],
+        "period": {
+          "from": "2023-01",
+          "to": "2023-12"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [
+          "victim sex: male"
+        ],
+        "groupings": [],
+        "statistic": "share",
+        "denominator": "murder victims in Texas, same year"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names Texas and 2023",
+        "states that Homicide Reports cover the agencies that submitted them",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D03",
+      "P01",
+      "D18",
+      "D30"
+    ],
+    "notes": "D03 answer: a share, not a rate. Victim detail -> Homicide Reports (P01). D30 added.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-034": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which place",
+      "options": [
+        {
+          "label": "The United States",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which years"
+        },
+        {
+          "label": "A state",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which state, then which years"
+        },
+        {
+          "label": "A city or agency",
+          "leads_to": "clarify",
+          "meaning": null,
+          "next_about": "which city or agency, then which years"
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P12",
+      "P06",
+      "P01",
+      "D03",
+      "D18"
+    ],
+    "notes": "Place and years both missing: ask the place first (P12), each button then asks the years (P06), one part at a time (D31); uses the chained-ask option fields now in case.ts. Supersedes Codex's accepted national/10-year default and GC-034's answer stance. Final meaning: Homicide Reports (P01) murder victims with relationship unknown, share by sex and year.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": [
+      "D31",
+      "P12",
+      "P06"
+    ]
+  },
+  "LS-035": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "shr",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Philadelphia Police Department",
+            "state": "PA"
+          }
+        ],
+        "period": {
+          "rule": "2010 through the latest complete year"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "ratio",
+        "denominator": "female murder victims (male victims per female victim)"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names Philadelphia Police Department",
+        "names the years covered and any missing years as missing",
+        "says homicide means murder and non-negligent manslaughter",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D03",
+      "P01",
+      "P10",
+      "P16",
+      "D04",
+      "D30"
+    ],
+    "notes": "D03 answer. Victim detail -> Homicide Reports (P01); homicide = murder and non-negligent manslaughter (P10); city = principal agency (P16). D30 added.",
+    "codex": "accept",
+    "applied": "decisions only",
+    "superseded": []
+  },
+  "LS-036": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "historical",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "White Plains Police Department",
+            "state": "NY"
+          }
+        ],
+        "period": {
+          "from": "2021-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "aggravated assault",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "year"
+        ],
+        "statistic": "rate",
+        "denominator": "residents of the White Plains Police Department's jurisdiction, per 100,000"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "gives the rate per 100,000 residents of the area the White Plains Police Department serves",
+        "names any year from 2021 to 2025 the agency did not report as missing, not zero",
+        "does not refuse on demographic-denominator grounds",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D03",
+      "P01",
+      "P14",
+      "P15",
+      "P16",
+      "D04",
+      "D18",
+      "D32",
+      "D30"
+    ],
+    "notes": "Completed years of a Part I crime -> Historical (P01), but P14 needs one source covering 2021-2025, and Historical's 2025 coverage has no deployment-aligned evidence (as LS-134/LS-129). Otherwise: White Plains PD aggravated assault victims per 100,000 residents of the agency (Codex's P15 wording), by year, missing years named. D32: Historical holds 2025, so Historical covers 2021-2025 whole (P14) and answers. Codex's P15 wording applies as the agency's own residents, since P15's reporting-agency denominator is for NIBRS-only details.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P01"
+    ]
+  },
+  "LS-037": {
+    "status": "unresolved",
+    "expected": null,
+    "policy_add": [
+      "D31",
+      "P06",
+      "P01",
+      "P15",
+      "P16",
+      "D03"
+    ],
+    "notes": "No period: ask (P06), superseding GC-037's answer stance. Options: latest complete year (Historical, P01), this year so far, another year. The 'this year so far' source (Current Trends if White Plains is in its sample, otherwise NIBRS) has no deployment-aligned evidence, so that option's meaning is not established.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": [
+      "P06",
+      "D31"
+    ]
+  },
+  "LS-038": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "nibrs",
+        "places": [
+          {
+            "kind": "national",
+            "name": "United States"
+          }
+        ],
+        "period": {
+          "from": "2025-01",
+          "to": "2025-12"
+        },
+        "measures": [
+          {
+            "name": "sex offenses (rape, sodomy, sexual assault with an object, fondling, incest, statutory rape)",
+            "unit": "offense"
+          }
+        ],
+        "filters": [
+          "cleared (by arrest or exceptional means)"
+        ],
+        "groupings": [],
+        "statistic": "share",
+        "denominator": "all reported sex offenses of the same six types, same agencies and year",
+        "cohort": "all_reporting"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names the six offenses counted as sex crimes",
+        "says the figure comes from NIBRS-reporting agencies and what share of the U.S. population they cover",
+        "names 2025",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D03",
+      "P01",
+      "P03",
+      "D18",
+      "D30"
+    ],
+    "notes": "Codex fix: cleared over reported, the same six offenses in both. 'Sex crimes' beyond rape are only in NIBRS (P01); national clearance is not P18. D30 added.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  },
+  "LS-039": {
+    "status": "drafted",
+    "expected": {
+      "action": "clarify",
+      "about": "which year",
+      "options": [
+        {
+          "label": "Latest complete year",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "historical",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "latest complete year"
+            },
+            "measures": [
+              {
+                "name": "rape",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "agencies that reported all 12 months of the year"
+            ],
+            "groupings": [
+              "city (principal police agency)"
+            ],
+            "statistic": "rate",
+            "denominator": "city residents (per 100,000)",
+            "rank": {
+              "by": "rape rate per 100,000",
+              "direction": "top",
+              "limit": 20
+            }
+          }
+        },
+        {
+          "label": "This year so far",
+          "leads_to": "answer",
+          "meaning": {
+            "source": "rtci",
+            "places": [
+              {
+                "kind": "national",
+                "name": "United States"
+              }
+            ],
+            "period": {
+              "rule": "year to date through the latest month"
+            },
+            "measures": [
+              {
+                "name": "rape",
+                "unit": "victim"
+              }
+            ],
+            "filters": [
+              "agencies that reported every month so far"
+            ],
+            "groupings": [
+              "city (principal police agency)"
+            ],
+            "statistic": "rate",
+            "denominator": "city residents (per 100,000)",
+            "rank": {
+              "by": "rape rate per 100,000",
+              "direction": "top",
+              "limit": 20
+            },
+            "cohort": "source_sample"
+          }
+        },
+        {
+          "label": "Another year",
+          "leads_to": "answer",
+          "meaning": null
+        }
+      ]
+    },
+    "policy_add": [
+      "D31",
+      "P05",
+      "P01",
+      "P04",
+      "D03",
+      "D05",
+      "P17",
+      "P16",
+      "D18",
+      "D11"
+    ],
+    "notes": "No year: ask (P05), superseding GC-039's answer stance. P04 (decided) leaves out part-year reporters, stated with an include button, overriding GC-039's no-unrequested-filter expectation for completeness only. 'Sexual assault' read as rape under the FBI's revised definition (includes sodomy and sexual assault with an object; fondling not), the measure both sources hold; doubt (Codex). Top 20, ties alphabetical (P17).",
+    "codex": "unresolved",
+    "applied": "decisions only",
+    "superseded": [
+      "P05",
+      "D31",
+      "P04"
+    ]
+  },
+  "LS-040": {
+    "status": "drafted",
+    "expected": {
+      "action": "answer",
+      "meaning": {
+        "source": "rtci",
+        "places": [
+          {
+            "kind": "agency",
+            "name": "Philadelphia Police Department",
+            "state": "PA"
+          }
+        ],
+        "period": {
+          "rule": "2017-01 through the latest month in the data"
+        },
+        "measures": [
+          {
+            "name": "murder",
+            "unit": "victim"
+          }
+        ],
+        "filters": [],
+        "groupings": [
+          "month"
+        ],
+        "statistic": "count"
+      },
+      "values": {
+        "status": "pending_build"
+      },
+      "statements": [
+        "names Philadelphia Police Department",
+        "names the months of 2026 covered (year to date)",
+        "states that the data ends before December 2026",
+        "does not annualize or project 2026, and does not re-cut earlier years to match",
+        "names any missing months as missing",
+        "names its source at the end"
+      ]
+    },
+    "policy_add": [
+      "D04",
+      "D06",
+      "P01",
+      "P14",
+      "P16",
+      "D18",
+      "D30"
+    ],
+    "notes": "Monthly series to the present -> Current Trends, the one source covering 2017-2026 (P01/P14). Codex fix: murder by victim, PPD named, no silent re-cut. D30 added.",
+    "codex": "change",
+    "applied": "codex fix + decisions",
+    "superseded": []
+  }
+}
