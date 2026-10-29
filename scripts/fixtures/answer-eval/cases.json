@@ -14506,9 +14506,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "A misspelled crime with one near word: read as shoplifting."
    }
   },
@@ -14564,9 +14564,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Misspelled 'assaults'; simple assault named, a person crime by victim (D18)."
    }
   },
@@ -14625,9 +14625,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Misspelled carjackings; by offense (D18)."
    }
   },
@@ -14682,9 +14682,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "A misspelled state, one near state."
    }
   },
@@ -14739,9 +14739,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Theft from a motor vehicle, plural and 'cars'; a NIBRS-only larceny subtype (P01)."
    }
   },
@@ -14796,9 +14796,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Theft from a motor vehicle, 'automobiles'."
    }
   },
@@ -14853,9 +14853,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "A vehicle break-in is theft from a motor vehicle, not burglary."
    }
   },
@@ -14910,9 +14910,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Control: a wording the reader already reads."
    }
   },
@@ -14968,9 +14968,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "D06: year to date, the months covered named."
    }
   },
@@ -15026,9 +15026,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "'This year': the current year so far (D06)."
    }
   },
@@ -15084,9 +15084,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "'So far in 2026' (the current year): through the latest month (D06)."
    }
   },
@@ -15142,9 +15142,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "D06; simple assault by victim (D18)."
    }
   },
@@ -15203,9 +15203,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "'Monthly' is a month grouping."
    }
   },
@@ -15262,9 +15262,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "P11: carjacking is robbery-based, a property crime: offenses, with the sentence."
    }
   },
@@ -15313,9 +15313,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "P20."
    }
   },
@@ -15364,9 +15364,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "P20: a forecast, not merely a year after the data."
    }
   },
@@ -15415,9 +15415,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "P20."
    }
   },
@@ -15466,9 +15466,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "P20: 'what will ... be' asks for a prediction."
    }
   },
@@ -15515,9 +15515,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "D01, as LS-201."
    }
   },
@@ -15564,9 +15564,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "D01: trials are court outcomes; offer the arrests."
    }
   },
@@ -15620,9 +15620,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Boundary: motor vehicle theft is not theft from a motor vehicle. A completed-year Part I count: Historical (P01)."
    }
   },
@@ -15711,9 +15711,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Boundary: 'shootings' is a real word, never corrected toward shoplifting; D14 asks, as LS-202."
    }
   },
@@ -15775,9 +15775,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve."
    }
   },
@@ -15832,9 +15832,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Boundary: 'will' about a past year is not a forecast."
    }
   },
@@ -15949,9 +15949,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-reader",
-    "reviewed_by": null,
+    "reviewed_by": "codex:reader-labels-1",
     "notes": "Boundary: a word near no crime is not guessed; the crime is missing, so ask (D31/D09), as LS-235."
    }
   }
