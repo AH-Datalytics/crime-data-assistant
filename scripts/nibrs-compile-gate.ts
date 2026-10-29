@@ -3,10 +3,11 @@
  *   1. synthetic: a tiny canonical build written to a temporary directory exercises the rules no real case happens
  *      to hit (an incident in a later year's file under a REPORTED_ZERO month, an unevidenced zero, two offense
  *      segments of one code in one incident, UNKNOWN and REPORTED_ZERO months);
- *   2. correctness cases: the plans X.H1-H3 and X.N3, run read-only against a canonical build and compared cell by
- *      cell with the hand-traced expected values.
- * Every comparison checks the exact set of rows (no missing, extra or duplicate period), the value and the status of
- * each, and that no status the compiler marks for refusal appears.
+ *   2. correctness cases: the plans X.H1-H3, X.N1, X.N2 and X.N3, run read-only against a canonical build and compared
+ *      cell by cell with the hand-traced expected values (nibrs-model's correctness cases).
+ * Every comparison checks the exact set of rows (no missing, extra or duplicate key), the value and status of every
+ * statistic in every row, value/status consistency, the fixed answer statements, and that no status the compiler
+ * marks for refusal appears.
  *
  *   npx tsx scripts/nibrs-compile-gate.ts [--root <canonical dir>] [--python <python with duckdb>] [--expected <cases dir>]
  *
@@ -29,11 +30,11 @@ const ROOT = arg("--root", "C:/Users/jeffm/nibrs-model/work/build/20261028-test5
 const PY = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe");
 const CASES = arg("--expected", "C:/Users/jeffm/nibrs-model-correctness/correctness/cases");
 const BUILT = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
-const release = { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" };
+const release = { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" };
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-compile-gate-")).replace(/\\/g, "/");
 
 function python(code: string, args: string[]): string {
-  const r = spawnSync(PY, ["-I", "-c", code, ...args], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync(PY, ["-I", "-c", code, ...args], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
   if (r.status !== 0) throw new Error(`python failed: ${r.stderr.slice(-2000)}`);
   return r.stdout;
 }
@@ -47,56 +48,71 @@ con.execute("SET temp_directory = ?", [sys.argv[2]])
 print(json.dumps(con.execute(open(sys.argv[1], encoding="utf-8").read()).fetchall(), default=str))`, [file, TMP]));
 }
 
-type Row = { value: number | null; status: string };
+/** One statistic in one row: its value and status. `pct1`: compare the value as a percentage rounded half up to one decimal. */
+type Cell = { value: number | null; status: string; pct1?: boolean };
+const C = (value: number | null, status: string, pct1 = false): Cell => ({ value, status, ...(pct1 ? { pct1 } : {}) });
+/** A known count: 0 is a reported zero, anything else a VALUE. */
+const known = (n: number): Cell => C(n, n === 0 ? "REPORTED_ZERO" : "VALUE");
+const BLANK = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "UNAVAILABLE", "EVIDENCE_CONFLICT"];
+const pct1 = (x: number) => Math.floor(x * 1000 + 0.5 + 1e-9) / 10;
 let failed = 0;
-const BLANK = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "EVIDENCE_CONFLICT"];
 
 /**
- * Compares result rows with expected rows: the exact row set (no missing, extra or duplicate period), each value and
- * status, value/status consistency (blank exactly for blank statuses; REPORTED_ZERO exactly 0), and refusal.
+ * Compares result rows with expected rows. Keys are the columns before the first statistic, joined with "|" ("total"
+ * when there are none). Checks the exact key set (no missing, extra or duplicate), every statistic's value and status,
+ * consistency (blank exactly for blank statuses; a REPORTED_ZERO count exactly 0), and refusal.
  */
-function compareRows(rows: unknown[][], expected: Map<string, Row | number>, refuseOn: string[]): { problems: string[]; refused: boolean } {
-  const got = new Map<string, Row>();
+function compareRows(rows: unknown[][], columns: string[], stats: string[], expected: Map<string, Cell[]>, refuseOn: string[]): { problems: string[]; refused: boolean } {
+  const keyCols = columns.indexOf(stats[0]);
+  const got = new Map<string, Cell[]>();
   const problems: string[] = [];
+  let refused = false;
   for (const r of rows) {
-    const [k, v, s] = r.length === 3 ? [String(r[0]), r[1], String(r[2])] : ["total", r[0], String(r[1])];
+    const k = keyCols ? r.slice(0, keyCols).map(String).join("|") : "total";
     if (got.has(k)) problems.push(`duplicate row ${k}`);
-    const value = v === null ? null : Number(v);
-    got.set(k, { value, status: s });
-    if ((value === null) !== BLANK.includes(s)) problems.push(`${k}: value ${value} disagrees with status ${s}`);
-    if (s === "REPORTED_ZERO" && value !== 0) problems.push(`${k}: REPORTED_ZERO with value ${value}`);
+    const cells = stats.map((_, i) => C(r[keyCols + 2 * i] === null ? null : Number(r[keyCols + 2 * i]), String(r[keyCols + 2 * i + 1])));
+    got.set(k, cells);
+    cells.forEach((c, i) => {
+      if ((c.value === null) !== BLANK.includes(c.status)) problems.push(`${k} ${stats[i]}: value ${c.value} disagrees with status ${c.status}`);
+      if (c.status === "REPORTED_ZERO" && c.value !== 0) problems.push(`${k} ${stats[i]}: REPORTED_ZERO with value ${c.value}`);
+      if (refuseOn.includes(c.status)) refused = true;
+    });
   }
-  const refused = [...got.values()].some((r) => refuseOn.includes(r.status));
-  for (const [k, e] of expected) {
+  for (const [k, want] of expected) {
     const g = got.get(k);
-    // A numeric expectation is a known count: 0 is a reported zero, anything else a VALUE.
-    const want: Row = typeof e === "number" ? { value: e, status: e === 0 ? "REPORTED_ZERO" : "VALUE" } : e;
-    if (!g) problems.push(`${k}: missing`);
-    else if (g.value !== want.value || g.status !== want.status) problems.push(`${k}: expected ${want.value} ${want.status}, got ${g.value} ${g.status}`);
+    if (!g) { problems.push(`${k}: missing`); continue; }
+    want.forEach((w, i) => {
+      const v = w.pct1 && g[i].value !== null ? pct1(g[i].value!) : g[i].value;
+      if (v !== w.value || g[i].status !== w.status) problems.push(`${k} ${stats[i]}: expected ${w.value} ${w.status}, got ${v} ${g[i].status}`);
+    });
   }
   for (const k of got.keys()) if (!expected.has(k)) problems.push(`${k}: extra row`);
-  const expectsRefusal = [...expected.values()].some((e) => typeof e !== "number" && refuseOn.includes(e.status));
+  const expectsRefusal = [...expected.values()].some((cs) => cs.some((c) => refuseOn.includes(c.status)));
   if (refused !== expectsRefusal) problems.push(refused ? "the result holds a refusal status" : "a refusal was expected");
   return { problems, refused };
 }
 
 // The comparator catches what it claims to (Codex compiler review r2): a positive REPORTED_ZERO, a missing, an extra
-// and a duplicate row, a blank VALUE.
+// and a duplicate row, a blank VALUE, a wrong share.
 {
-  const exp = new Map<string, number>([["2025-01", 26]]);
-  const bad = (rows: unknown[][]) => compareRows(rows, exp, ["EVIDENCE_CONFLICT"]).problems.length > 0;
+  const exp = new Map<string, Cell[]>([["2025-01", [known(26)]]]);
+  const bad = (rows: unknown[][]) => compareRows(rows, ["period", "n", "n_status"], ["n"], exp, ["EVIDENCE_CONFLICT"]).problems.length > 0;
+  const share = (v: number) => compareRows([["2025-01", 3, "VALUE", v, "VALUE"]], ["period", "n", "n_status", "s", "s_status"], ["n", "s"], new Map([["2025-01", [known(3), C(6.5, "VALUE", true)]]]), []).problems.length > 0;
   if (!bad([["2025-01", 26, "REPORTED_ZERO"]]) || !bad([]) || !bad([["2025-01", 26, "VALUE"], ["2025-02", 1, "VALUE"]])
-    || !bad([["2025-01", 26, "VALUE"], ["2025-01", 26, "VALUE"]]) || !bad([["2025-01", null, "VALUE"]]) || bad([["2025-01", 26, "VALUE"]])) {
+    || !bad([["2025-01", 26, "VALUE"], ["2025-01", 26, "VALUE"]]) || !bad([["2025-01", null, "VALUE"]]) || bad([["2025-01", 26, "VALUE"]])
+    || share(2 / 31) || !share(2 / 30)) {
     console.log("comparator self-test FAILED");
     process.exit(1);
   }
 }
 
 /** Compiles, runs and compares one plan. */
-function check(name: string, plan: NibrsPlan, period: ResolvedPeriod, root: string, built: number[], expected: Map<string, Row | number>) {
+function check(name: string, plan: NibrsPlan, period: ResolvedPeriod, root: string, built: number[], expected: Map<string, Cell[]>, statements: string[] = []) {
   const c = compilePlan(plan, period, { root, builtYears: built });
   if (c.kind !== "query") { console.log(`${name}: UNSUPPORTED ${c.reason}`); failed++; return; }
-  const { problems, refused } = compareRows(runSql(c.query.sql), expected, c.query.refuseOn);
+  const stats = plan.statistics.map((s) => s.as);
+  const { problems, refused } = compareRows(runSql(c.query.sql), c.query.columns, stats, expected, c.query.refuseOn);
+  if (JSON.stringify(c.query.statements) !== JSON.stringify(statements)) problems.push(`statements ${JSON.stringify(c.query.statements)}, expected ${JSON.stringify(statements)}`);
   console.log(`${name}: ${expected.size} rows, ${problems.length ? `${problems.length} PROBLEM(S)` : "all equal"}${refused ? " (refused, as expected)" : ""}`);
   for (const p of problems.slice(0, 12)) console.log(`  ${p}`);
   if (problems.length) failed++;
@@ -111,41 +127,66 @@ def write(table, year, cols, rows):
     import os
     d = f"{root}/{table}/data_year={year}"
     os.makedirs(d, exist_ok=True)
-    values = ", ".join("(" + ", ".join(repr(v) for v in r) + ")" for r in rows) or None
+    values = ", ".join("(" + ", ".join(repr(v) for v in r) + ")" for r in rows)
     sel = f"SELECT * FROM (VALUES {values}) t({', '.join(cols)})"
     con.execute(f"COPY ({sel}) TO '{d}/data.parquet' (FORMAT parquet)")
-O = ["ori", "incident_num", "incident_date", "offense_code", "key_occurrence"]
+O = ["ori", "incident_num", "incident_date", "offense_code", "key_occurrence", "location_type"]
+write("offense", 2024, O, [("YY0000000", "Y-1", "20240110", "240", 1, "20")])  # YY: one 2024 theft at a residence
 write("offense", 2025, O, [
-    ("XX0000000", "FEB-OTHER", "20250210", "13B", 1),   # February: crimes reported, none of this kind
-    ("XX0000000", "MAR-1", "20250305", "240", 1),       # March: one incident, two 240 segments
-    ("XX0000000", "MAR-1", "20250305", "240", 2),
+    ("XX0000000", "FEB-OTHER", "20250210", "13B", 1, "20"),   # February: crimes reported, none of this kind
+    ("XX0000000", "MAR-1", "20250305", "240", 1, "20"),       # March: one incident, two 240 segments
+    ("XX0000000", "MAR-1", "20250305", "240", 2, "20"),
 ])
-write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1)])  # a January 2025 incident in the 2026 file
+write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1, "20")])  # a January 2025 incident in the 2026 file
 S = ["ori", "month", "status"]
-write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")])
+write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)])
+write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
+    + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)])  # YY: all of 2025 reported zero
 write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
-const R = (value: number | null, status: string): Row => ({ value, status });
-check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], new Map<string, Row>([
-  ["2025-01", R(null, "EVIDENCE_CONFLICT")], ["2025-02", R(null, "UNKNOWN_UNEVIDENCED_ZERO")], ["2025-03", R(2, "VALUE")], ["2025-04", R(null, "UNKNOWN")], ["2025-05", R(0, "REPORTED_ZERO")]]));
-check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], new Map<string, Row>([
-  ["2025-01", R(null, "EVIDENCE_CONFLICT")], ["2025-02", R(null, "UNKNOWN_UNEVIDENCED_ZERO")], ["2025-03", R(1, "VALUE")], ["2025-04", R(null, "UNKNOWN")], ["2025-05", R(0, "REPORTED_ZERO")]]));
+const synExpected = (march: number) => new Map<string, Cell[]>([
+  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(null, "UNKNOWN_UNEVIDENCED_ZERO")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
+check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
+check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
+// Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
+const by = (dimension: string) => ({ dimension, unknown: "visible" as const, absent: "show" as const });
+check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offense"), geography: { places: [{ kind: "agency", ori: "YY0000000", label: "Synthetic, YY" }], combine: "separate" },
+  groupings: [by("time.year"), by("offense.location_type")], statistics: [{ kind: "count", as: "count", measure: "n" }, { kind: "share", as: "share", measure: "n", within: ["time.year"] }] },
+  { kind: "absolute", from: "2024-01", to: "2025-12" }, SYN, [2024, 2025, 2026], new Map<string, Cell[]>([
+    ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(0, "REPORTED_ZERO"), C(null, "UNAVAILABLE")]]]));
 
 // ---- 2. correctness cases against the canonical build ----
-const n4 = JSON.parse(fs.readFileSync(path.join(CASES, "N4", "expected.json"), "utf8"));
-const n3 = JSON.parse(fs.readFileSync(path.join(CASES, "N3", "expected.json"), "utf8"));
+const load = (c: string) => JSON.parse(fs.readFileSync(path.join(CASES, c, "expected.json"), "utf8"));
+const [n1, n2, n3, n4] = ["N1", "N2", "N3", "N4"].map(load);
+// N1: every race-sex category that occurs, in every month; an UNKNOWN month is blank in every category.
+type N1Cell = { race: string; sex: string; num: number | null; pct_1dp: number | null; status?: string };
+type N1Row = { month: string; status: string; cells: N1Cell[] | null };
+const n1Cats = [...new Set((n1.rows as N1Row[]).flatMap((r) => (r.cells ?? []).map((c) => `${c.race}|${c.sex}`)))];
+const n1Expected = new Map<string, Cell[]>();
+for (const r of n1.rows as N1Row[]) {
+  for (const cat of n1Cats) {
+    const cell = r.cells?.find((c) => `${c.race}|${c.sex}` === cat);
+    n1Expected.set(`${r.month}|${cat}`, !r.cells ? [C(null, r.status), C(null, r.status)]
+      : !cell ? [C(null, "MISSING-IN-EXPECTED"), C(null, "MISSING-IN-EXPECTED")]
+        : cell.num === null ? [C(null, cell.status ?? "?"), C(null, cell.status ?? "?")]
+          : [C(cell.num, "VALUE"), C(cell.pct_1dp, "VALUE", true)]);
+  }
+}
 const geo = { members: (p: { kind: string }) => (p.kind === "agency" ? ["(agency)"] : ["(any)"]) };
-for (const [name, plan, expected] of [
-  ["H1", X.H1, new Map((n4.H1.rows as { month: string; carjackings: number }[]).map((r) => [r.month, r.carjackings]))],
-  ["H2", X.H2, new Map([["total", (n4.H2.rows as { carjackings: number }[])[0].carjackings]])],
-  ["H3", X.H3, new Map((n4.H3.rows as { year: number; carjackings: number }[]).map((r) => [String(r.year), r.carjackings]))],
-  ["N3", X.N3, new Map((n3.rows as { month: string; motor_vehicle_theft_offenses: number }[]).map((r) => [r.month, r.motor_vehicle_theft_offenses]))],
-] as const) {
+const cases: [string, NibrsPlan, Map<string, Cell[]>, string[]][] = [
+  ["H1", X.H1, new Map((n4.H1.rows as { month: string; carjackings: number }[]).map((r) => [r.month, [known(r.carjackings)]])), []],
+  ["H2", X.H2, new Map([["total", [known((n4.H2.rows as { carjackings: number }[])[0].carjackings)]]]), []],
+  ["H3", X.H3, new Map((n4.H3.rows as { year: number; carjackings: number }[]).map((r) => [String(r.year), [known(r.carjackings)]])), []],
+  ["N3", X.N3, new Map((n3.rows as { month: string; motor_vehicle_theft_offenses: number }[]).map((r) => [r.month, [known(r.motor_vehicle_theft_offenses)]])), []],
+  ["N2", X.N2, new Map((n2.rows as { month: string; theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm: number }[]).map((r) => [r.month, [known(r.theft_from_motor_vehicle_offenses_in_incidents_with_stolen_firearm)]])), ["property_not_attributed"]],
+  ["N1", X.N1, n1Expected, []],
+];
+for (const [name, plan, expected, statements] of cases) {
   const resolved = validateResolved(plan, release, DRAFT_LAYER, geo);
-  if (resolved.problems.length) { console.log(`${name}: RESOLUTION FAILED ${resolved.problems.map((p) => p.rule).join(", ")}`); failed++; continue; }
-  check(name, plan, resolved.period, ROOT, BUILT, expected as Map<string, number>);
+  if (resolved.problems.length) { console.log(`${name}: RESOLUTION FAILED ${resolved.problems.map((p) => `${p.rule} ${p.message}`).join("; ")}`); failed++; continue; }
+  check(name, plan, resolved.period, ROOT, BUILT, expected, statements);
 }
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log(failed ? `compile gate: ${failed} check(s) failed` : "compile gate: every check passed");
