@@ -5,21 +5,32 @@
  *
  * v0 covers:
  *   - one agency (ORI). States and the nation need status evidence across their agencies (D6) and come later;
- *   - an absolute period (resolve.ts gives it) with incident-date time basis;
- *   - groupings: at most one time grouping (time.month or time.year), plus attribute groupings on the counted entity's
- *     own columns (victim race, sex, ethnicity; offense location type). Every category that occurs in the place and
- *     period is shown in every period row (`absent: "show"`); no bins, no multi-value;
+ *   - an absolute period (resolve.ts gives it) with incident-date time basis, or arrest date for arrests (P50);
+ *   - groupings: at most one time grouping (time.month or time.year), plus attribute groupings (`absent: "show"`: every
+ *     category that occurs in the place and period is shown in every period row):
+ *       - the counted entity's own columns (victim, offender or arrestee race, sex, ethnicity; offense location type);
+ *       - age, in the plan's bins (P30: NN, NB and BB are under one year, in the bin holding 1; 99 is "over 98", a
+ *         number; 00 is "Unknown"; blank is not recorded);
+ *       - multi-valued (`multiValue: "each_value"`, required exactly for these): the weapons of an offense, the
+ *         relationships of a victim, and the sexes of the incident's offenders for a crime (P49; offender 00, none
+ *         known, is "unknown_offender"). A unit counts once under each value, so the answer carries the fixed
+ *         statement `categories_overlap`; at most one grouping from another table;
  *   - one measure: offense segments (with their occurrence key) or incidents with given offense codes, victims connected
- *     to person offenses, or carjacking offenses or incidents. Group B offenses are not offense segments and are refused;
+ *     to person offenses, carjacking offenses or incidents, offender segments of incidents with the codes (P44), or
+ *     arrestee segments by arrest offense (P46: each arrest once, statement `arrests_counted_once`). Group B offenses
+ *     are not offense segments and are refused;
  *   - statistics: `count`, and `share` of that count within the time grouping (each period's own total of the measure);
- *   - filters: an existence over property at incident scope (`attribution: "incident_level_only"`), with `in`
- *     conditions on loss type and description, all on one property segment. The answer then carries the fixed
- *     statement `property_not_attributed`;
+ *   - filters, each an existence:
+ *       - over property at incident scope (`attribution: "incident_level_only"`), with `in` conditions on loss type and
+ *         description, all on one property segment. The answer then carries the fixed statement `property_not_attributed`;
+ *       - over the weapons of the counted offense, or of the offense connecting a counted victim (P31);
+ *       - over a counted victim's relationships to its offenders (P36);
  *   - no transforms; cohort all_reporting.
- * A unit is placed in time by its incident date (the incident month). Every data year from the period's first year on
- * is scanned, because an incident can arrive in a later year's file.
+ * A unit is placed in time by its incident date (the incident month), an arrest by its arrest date. Every data year
+ * from the period's first year on is scanned, because an incident can arrive in a later year's file; for arrests every
+ * built year, because an arrest sits in its incident's file.
  *
- * Status (D6), per month, from the agency-month status of the incident month's own data year:
+ * Status (D6), per month, from the agency-month status of the month's own data year (an arrest's: its arrest month):
  *   - REPORTED_CRIMES: the count; a category or measure with no units there is UNKNOWN_UNEVIDENCED_ZERO (blank);
  *   - REPORTED_ZERO: 0 (a share of an empty month is UNAVAILABLE);
  *   - UNKNOWN: blank;
@@ -56,25 +67,68 @@ const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const list = (xs: string[]) => xs.map(q).join(", ");
 const ident = (s: string) => `"${s.replace(/"/g, '""')}"`;
 
-/** Attribute groupings v0 can read, by the counted entity: dimension -> column of that entity's table alias. */
-const GROUPABLE: Record<string, Record<string, string>> = {
-  victim: { "victim.race": "v.race", "victim.sex": "v.sex", "victim.ethnicity": "v.ethnicity" },
-  offense: { "offense.location_type": "o.location_type" },
+type Entity = "victim" | "offense" | "incident" | "offender" | "arrestee";
+type Read = (table: string) => string;
+/** The keys of one incident occurrence: a segment joins its incident's other segments on these. */
+const sameIncident = (x: string, y: string) => `${x}.data_year = ${y}.data_year AND ${x}.ori = ${y}.ori AND ${x}.incident_num = ${y}.incident_num AND ${x}.key_occurrence = ${y}.key_occurrence`;
+const sameVictim = (x: string, y: string) => `${sameIncident(x, y)} AND ${x}.victim_seq = ${y}.victim_seq`;
+const sameOffense = (x: string, y: string) => `${sameIncident(x, y)} AND ${x}.offense_code = ${y}.offense_code`;
+
+/**
+ * A grouping v0 can read: the column (an expression over the units query's aliases: o, v, f, a), and for a dimension on
+ * another table the LEFT JOIN that brings it (a unit with no such row falls in the not-recorded category, NULL).
+ * `multi` marks a dimension with several values per unit; `age` one read in bins.
+ */
+type Groupable = { col: string; join?: (read: Read) => string; multi?: true; age?: true };
+const own = (col: string): Groupable => ({ col });
+const age = (a: string): Groupable => ({ col: `${a}.age`, age: true });
+/** P49: a crime by the sexes of its incident's offenders; offender 00 (none known) is its own category. */
+const offenderSex = (a: string): Groupable => ({ col: `CASE WHEN f2.offender_seq = '00' THEN 'unknown_offender' ELSE f2.sex END`, multi: true,
+  join: (read) => `LEFT JOIN ${read("offender")} f2 ON ${sameIncident("f2", a)}` });
+const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
+  victim: { "victim.race": own("v.race"), "victim.sex": own("v.sex"), "victim.ethnicity": own("v.ethnicity"), "victim.age": age("v"),
+    "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
+    "offender.sex": offenderSex("v") },
+  offense: { "offense.location_type": own("o.location_type"),
+    "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
+    "offender.sex": offenderSex("o") },
   incident: {},
+  offender: { "offender.race": own("f.race"), "offender.sex": own("f.sex"), "offender.ethnicity": own("f.ethnicity"), "offender.age": age("f") },
+  arrestee: { "arrestee.race": own("a.race"), "arrestee.sex": own("a.sex"), "arrestee.ethnicity": own("a.ethnicity"), "arrestee.age": age("a") },
 };
+
+/** Age in bins (P30): infants in the bin holding 1, "00" Unknown, blank not recorded (NULL), 01-99 as numbers. */
+function ageBins(col: string, bins: { label: string; from: number; to: number }[]): string {
+  const infant = bins.find((b) => b.from <= 1 && 1 <= b.to)?.label;
+  const n = `TRY_CAST(${col} AS INTEGER)`;
+  return `CASE WHEN ${col} IS NULL OR trim(${col}) = '' THEN NULL WHEN ${col} = '00' THEN 'Unknown'
+      WHEN ${col} IN ('NN', 'NB', 'BB') THEN ${infant ? q(infant) : "'Outside the groups'"}
+      ${bins.map((b) => `WHEN ${n} BETWEEN ${b.from} AND ${b.to} THEN ${q(b.label)}`).join(" ")} ELSE 'Outside the groups' END`;
+}
+
+/** Weapon codes as the reader writes them: two characters (any automatic flag), or three (that code, automatic). */
+function weaponIn(w: string, values: string[]): string {
+  const two = values.filter((v) => v.length === 2), three = values.filter((v) => v.length === 3);
+  const conds = [...(two.length ? [`${w}.weapon IN (${list(two)})`] : []), ...(three.length ? [`${w}.weapon || ${w}.weapon_automatic IN (${list(three)})`] : [])];
+  return `(${conds.join(" OR ") || "FALSE"})`;
+}
 /** Property conditions v0 can apply: dimension -> property column. */
 const PROPERTY_COLUMNS: Record<string, string> = { "property.loss_type": "loss_type", "property.description": "property_description" };
 
-type Units = { sql: string; entity: "victim" | "offense" | "incident" };
-/** The units of one measure: one row per counted unit, with its key, ORI, incident month (YYYYMM) and grouping columns. */
-function unitsSql(measureId: string, unit: string, read: (table: string) => string, groupCols: string[], incidentFilter: (alias: string) => string): Units | { error: string } {
+type Units = { sql: string; entity: Entity };
+/**
+ * The units of one measure: one row per counted unit and category, with its key, ORI, month (YYYYMM) and grouping
+ * columns. `joins` bring groupings from other tables; `incidentFilter` adds the conditions on the counted unit (its
+ * alias: o; v with its connecting victim_offense vo; f; a) and its incident.
+ */
+function unitsSql(measureId: string, unit: string, read: Read, groupCols: string[], joins: string, incidentFilter: (alias: string) => string): Units | { error: string } {
   const extra = groupCols.map((c, i) => `, ${c} AS g${i}`).join("");
   if (measureId === "offenses.carjacking") {
     // D18: robbery-based, so counted by offense: the 120 segments of carjacking incidents (on 20261028-test5 the same
     // number as the incidents in every agency-month; the compile gate checks it).
     if (unit !== "offense") return { error: `offenses.carjacking is counted by offense, not ${unit}` };
-    return { entity: "offense", sql: `SELECT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o
+    return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("offense")} o ${joins}
       WHERE o.offense_code = '120' AND EXISTS (
         SELECT 1 FROM ${read("property")} p
         WHERE p.data_year = o.data_year AND p.ori = o.ori AND p.incident_num = o.incident_num
@@ -90,15 +144,15 @@ function unitsSql(measureId: string, unit: string, read: (table: string) => stri
           AND p.loss_type = '7' AND p.property_description IN (${list(CARJACK_VEHICLES)}))${incidentFilter("o")}` };
   }
   // Exactly <kind>.<measure>, with a measure whose codes are known.
-  const m = measureId.match(/^(offenses|incidents|victims)\.([a-z_]+)$/);
-  const codes = m ? MEASURE_CODES[m[2]] : undefined;
+  const m = measureId.match(/^(offenses|incidents|victims|offenders|arrests)\.([a-z_]+)$/);
+  const codes = m ? MEASURE_CODES[m[2]] ?? EXTRA_CODES[m[2]] : undefined;
   if (!m || !codes) return { error: `measure "${measureId}" has no executable definition in v0` };
   if (codes.some((c) => GROUP_B.has(c))) return { error: `"${measureId}" is a Group B offense: Group B arrests are not offense segments` };
   const kind = m[1];
   if (kind === "offenses" && unit === "offense") {
     // An offense segment's identity includes its occurrence key (a code repeated within an incident).
-    return { entity: "offense", sql: `SELECT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
+    return { entity: "offense", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
   }
   if (kind === "incidents" && unit === "incident") {
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
@@ -109,40 +163,64 @@ function unitsSql(measureId: string, unit: string, read: (table: string) => stri
     return { entity: "victim", sql: `SELECT DISTINCT v.data_year, v.ori, v.incident_num, v.victim_seq || ':' || v.key_occurrence AS sub, substr(v.incident_date, 1, 6) AS ym${extra}
       FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
         ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num
-       AND vo.victim_seq = v.victim_seq AND vo.key_occurrence = v.key_occurrence
+       AND vo.victim_seq = v.victim_seq AND vo.key_occurrence = v.key_occurrence ${joins}
       WHERE vo.connected_offense IN (${list(codes)})${incidentFilter("v")}` };
+  }
+  if (kind === "offenders" && unit === "offender") {
+    // P44: the offender segments of incidents with the codes, one per segment (segment 00, no offender known, as recorded).
+    return { entity: "offender", sql: `SELECT DISTINCT f.data_year, f.ori, f.incident_num, f.offender_seq || ':' || f.key_occurrence AS sub, substr(f.incident_date, 1, 6) AS ym${extra}
+      FROM ${read("offender")} f ${joins}
+      WHERE EXISTS (SELECT 1 FROM ${read("offense")} o WHERE ${sameIncident("o", "f")} AND o.offense_code IN (${list(codes)}))${incidentFilter("f")}` };
+  }
+  if (kind === "arrests" && (unit === "arrest" || unit === "arrestee")) {
+    // P46, P50: Group A arrestee segments by arrest offense, each once, placed by arrest date.
+    return { entity: "arrestee", sql: `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("arrestee")} a ${joins} WHERE a.arrest_offense IN (${list(codes)})${incidentFilter("a")}` };
   }
   return { error: `measure "${measureId}" counted by ${unit} has no executable definition in v0` };
 }
 
-const ENTITY_OF: Record<string, string> = { offenses: "offense", incidents: "incident", victims: "victim" };
+const ENTITY_OF: Record<string, Entity> = { offenses: "offense", incidents: "incident", victims: "victim", offenders: "offender", arrests: "arrestee" };
+/** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
+const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"] };
 
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
   if (period.kind !== "absolute") return no("v0 compiles absolute periods only (year lists come later)");
-  if (plan.timeBasis !== "incident_date") return no(`v0 places units by incident date, not ${plan.timeBasis}`);
   if (plan.measures.length !== 1) return no("v0 compiles one measure");
+  const isArrest = plan.measures[0].id.startsWith("arrests.");
+  if (plan.timeBasis !== (isArrest ? "arrest_date" : "incident_date"))
+    return no(isArrest ? "v0 places arrests by arrest date (P50)" : `v0 places units by incident date, not ${plan.timeBasis}`);
   if (plan.measures[0].filters?.length) return no("v0 compiles plan-level filters only");
   if (plan.transforms.length) return no("v0 compiles plans without transforms");
   if (plan.coverage.cohort !== "all_reporting") return no("v0 compiles the all-reporting cohort only");
   if (plan.geography.places.length !== 1) return no("v0 compiles one place");
   const place = plan.geography.places[0];
   if (place.kind !== "agency") return no(`v0 compiles one agency; ${place.kind} totals need status evidence across their agencies (D6) and come later`);
-  if (plan.groupings.some((g) => g.absent !== "show" || g.bins || g.multiValue)) return no("v0 shows every category, without bins or multi-value groupings");
+  if (plan.groupings.some((g) => g.absent !== "show")) return no("v0 shows every category");
 
   // Groupings: at most one time grouping, first; then attributes of the counted entity.
   const m = plan.measures[0];
-  const entity = ENTITY_OF[m.id.split(".")[0]] ?? "";
+  const entity = ENTITY_OF[m.id.split(".")[0]];
+  if (!entity) return no(`measure "${m.id}" has no executable definition in v0`);
   const timeDims = plan.groupings.filter((g) => g.dimension.startsWith("time."));
   const attrDims = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
   if (timeDims.length > 1 || timeDims.some((g) => g.dimension !== "time.month" && g.dimension !== "time.year")) return no("v0 groups time by month or by year, once");
+  if (timeDims.some((g) => g.bins || g.multiValue)) return no("v0 groups time without bins");
   if (timeDims.length && plan.groupings[0] !== timeDims[0]) return no("v0 puts the time grouping first");
   const groupCols: string[] = [];
+  const joins: ((read: Read) => string)[] = [];
   for (const g of attrDims) {
-    const col = GROUPABLE[entity]?.[g.dimension];
-    if (!col) return no(`v0 cannot group ${entity || m.id} by ${g.dimension}`);
-    groupCols.push(col);
+    const d = GROUPABLE[entity][g.dimension];
+    if (!d) return no(`v0 cannot group ${entity} by ${g.dimension}`);
+    if (!!d.multi !== !!g.multiValue) return no(`${g.dimension} ${d.multi ? "has several values per unit: group it as multi-valued" : "has one value per unit, not several"}`);
+    if (!!d.age !== !!g.bins) return no(d.age ? `v0 groups ${g.dimension} in bins` : `v0 bins ages only, not ${g.dimension}`);
+    const bins = g.bins ?? [];
+    if (bins.some((b, i) => b.from > b.to || bins.some((c, j) => j !== i && b.from <= c.to && c.from <= b.to))) return no("age bins must not overlap (P5)");
+    groupCols.push(g.bins ? ageBins(d.col, g.bins) : d.col);
+    if (d.join) joins.push(d.join);
   }
+  if (joins.length > 1) return no("v0 groups by one dimension from another table at a time");
 
   // Statistics: a count, and optionally its share within the time grouping.
   const [count, ...rest] = plan.statistics;
@@ -152,12 +230,27 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (share && (share.kind !== "share" || share.measure !== m.as || share.denominator || JSON.stringify(share.within) !== JSON.stringify(timeDims.map((g) => g.dimension)) || !attrDims.length))
     return no("v0 compiles a share only of the counted measure, within the time grouping, over attribute categories");
 
-  // Filters: incident-scoped existence over property only.
+  // Filters: existences over incident property, the counted unit's weapons, or a victim's relationships.
   const statements: AnswerStatement[] = [];
   const incidentConds: string[] = [];
+  const unitConds: ((read: Read) => string)[] = [];
   for (const f of plan.filters) {
+    if (f.kind === "exists" && !f.negate && f.entity !== "property") {
+      const w = f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].op === "in" && f.where[0].values?.length ? f.where[0] : null;
+      const values = (w?.values ?? []).map(String);
+      const on = `${f.entity} ${w?.dimension} ${f.scope} ${entity}`;
+      if (on === "offense_weapon offense_weapon.weapon offense offense")
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameOffense("w2", "o")} AND ${weaponIn("w2", values)})`);
+      else if (on === "offense_weapon offense_weapon.weapon victim victim")
+        // P31: the weapon of the offense connecting the victim (one of the measure's codes), in the same incident occurrence.
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "vo")} AND w2.offense_code = vo.connected_offense AND ${weaponIn("w2", values)})`);
+      else if (on === "victim_offender victim_offender.relationship victim victim")
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
+      else return no(`v0 cannot apply an existence over ${f.entity} at ${f.scope} scope to ${entity} counts`);
+      continue;
+    }
     if (f.kind !== "exists" || f.entity !== "property" || f.scope !== "incident" || f.attribution !== "incident_level_only" || f.negate)
-      return no("v0 compiles filters that are incident-level existences over property only");
+      return no("v0 compiles filters that are existences over incident property, weapons or relationships only");
     const conds: string[] = [];
     for (const w of f.where) {
       const col = w.kind === "attribute" ? PROPERTY_COLUMNS[w.dimension] : undefined;
@@ -170,13 +263,16 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
 
   const from = period.from.replace("-", ""), to = period.to.replace("-", "");
   const firstYear = Number(period.from.slice(0, 4));
-  const years = t.builtYears.filter((y) => y >= firstYear);
+  const years = isArrest ? t.builtYears : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   const read = (table: string) => `read_parquet([${years.map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
-  const incidentFilter = (a: string) => incidentConds.map((c) => `
-      AND EXISTS (SELECT 1 FROM ${read("property")} p WHERE p.data_year = ${a}.data_year AND p.ori = ${a}.ori AND p.incident_num = ${a}.incident_num AND ${c})`).join("");
-  const units = unitsSql(m.id, m.unit, read, groupCols, incidentFilter);
+  const incidentFilter = (a: string) => [...incidentConds.map((c) => `EXISTS (SELECT 1 FROM ${read("property")} p WHERE p.data_year = ${a}.data_year AND p.ori = ${a}.ori AND p.incident_num = ${a}.incident_num AND ${c})`),
+    ...unitConds.map((c) => c(read))].map((c) => `
+      AND ${c}`).join("");
+  const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter);
   if ("error" in units) return no(units.error);
+  if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
+  if (units.entity === "arrestee") statements.push("arrests_counted_once");
 
   const g = groupCols.map((_, i) => `g${i}`);
   const gSel = g.map((x) => `, ${x}`).join("");

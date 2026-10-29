@@ -60,15 +60,19 @@ export type CellEvidence = {
  * - reported_nibrs_counts: a plan whose geography is the nation;
  * - property_counted_by_offense: a question that asked for victims of a property crime, answered with offenses (P11).
  *   It depends on the question's words, not the plan, so checkEnvelope authorizes it but cannot require it.
+ * - categories_overlap: a plan with a multi-valued grouping (the weapons of an offense, the relationships of a victim);
+ * - arrests_counted_once: a plan that counts arrests (P46).
  */
 export const ANSWER_STATEMENTS = {
   property_not_attributed: "NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offense.",
   reported_nibrs_counts: "These are reported NIBRS counts.",
   property_counted_by_offense: "Property crimes are counted by offense, not by victim.",
+  categories_overlap: "A crime with several of these categories counts once under each, so the categories can add up to more than the total.",
+  arrests_counted_once: "Each arrest counts once; NIBRS cannot tell when one person was arrested more than once.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */
-export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs" };
+export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs", categories_overlap: "nibrs", arrests_counted_once: "nibrs" };
 
 export type ResultEnvelope = {
   plan: NibrsPlan;
@@ -181,5 +185,9 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
   const national = plan.geography.places.some((p) => p.kind === "national");
   if (plan.source === "nibrs" && hasPropertyExists !== env.answerStatements.includes("property_not_attributed")) out.push("property_not_attributed is required exactly when the plan filters on incident property");
   if (plan.source === "nibrs" && national !== env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts is required exactly when the geography is the nation");
+  const multi = plan.groupings.some((g) => g.multiValue);
+  if (plan.source === "nibrs" && multi !== env.answerStatements.includes("categories_overlap")) out.push("categories_overlap is required exactly when a grouping is multi-valued");
+  const arrests = plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee");
+  if (plan.source === "nibrs" && arrests !== env.answerStatements.includes("arrests_counted_once")) out.push("arrests_counted_once is required exactly when the plan counts arrests");
   return out;
 }

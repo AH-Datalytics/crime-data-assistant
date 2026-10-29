@@ -733,7 +733,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -746,7 +746,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -785,7 +785,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
    ],
    "capability": "answer:nibrs count",
    "era": "period not mapped"
@@ -1073,14 +1073,15 @@
    "id": "LS-229",
    "split": "dev",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
+   "actual": "answer",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: drug crimes are drug/narcotic violations plus drug equipment violations (D19), two measures."
+    "delivered: Drug crimes are drug/narcotic violations plus drug equipment violations. / Detroit city police, MI, 2024: 746 drug/narcotic violation offenses; 75 drug equipment violation offenses. / Together: 821 drug crimes in 2024. / Source: FBI Nationa"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-230",
@@ -1232,17 +1233,19 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "alternative ",
-     "expected": "answer",
-     "actual": "Not in the slice yet: measure \"arrests.shoplifting\" has no executable definition in v0",
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-240",
@@ -1268,14 +1271,23 @@
    "id": "LS-241",
    "split": "dev",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: measure \"arrests.shoplifting\" has no executable definition in v0"
+    "delivered: Memphis city police, TN: 2,087 shoplifting arrests in 2024. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency;"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-242",
@@ -1631,17 +1643,19 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "alternative ",
-     "expected": "answer",
-     "actual": "Not in the slice yet: measure \"arrests.simple_assault\" has no executable definition in v0",
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-265",
@@ -1651,17 +1665,19 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "alternative ",
-     "expected": "answer",
-     "actual": "Not in the slice yet: measure \"arrests.shoplifting\" has no executable definition in v0",
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-266",
@@ -1858,27 +1874,45 @@
    "id": "LS-280",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Milwaukee city police, WI: simple assault victims by age group, 2024. / Each share is that category's part of all simple assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under one year), 18-24, 25-34, 35-44, 45-54, 55-"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-281",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Albuquerque city police, NM: robbery offenses by weapon, 2023. / Each share is that category's part of all robbery offenses in 2023. / No total is established for Asphyxiation; Blunt Object; Explosives; Fire/Incendiary Device; Motor Vehicle"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-282",
@@ -1897,144 +1931,243 @@
    "id": "LS-283",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Kansas City city police, MO: carjacking offenses by location type, 2024. / Each share is that category's part of all carjacking offenses in 2024. / No total is established for Bar/Nightclub; Camp/Campground; Church/Synagogue/Temple; Commerc"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-284",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Oklahoma City city police, OK, 2024: 3,972 theft from motor vehicle offenses; 4,375 shoplifting offenses. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-285",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: drug crimes are drug/narcotic violations plus drug equipment violations (D19), two measures."
+    "delivered: Drug crimes are drug/narcotic violations plus drug equipment violations. / Wichita city police, KS, 2023: 2,797 drug/narcotic violation offenses; 2,213 drug equipment violation offenses. / Together: 5,010 drug crimes in 2023. / Source: FBI "
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-286",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Raleigh city police, NC: carjacking offenses and shoplifting offenses by month, 2024. / No carjacking offenses were recorded for April 2024, November 2024, and no zero report confirms a zero: shown blank. / Source: FBI National Incident-Bas"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-287",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Fort Worth city police, TX: robbery offenses by weapon, 2023. / Each share is that category's part of all robbery offenses in 2023. / No total is established for Motor Vehicle; Other Firearm; Rifle; Shotgun; Unknown: reporting evidence is i"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-288",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Mesa city police, AZ: aggravated assault victims by age group, 2024. / Each share is that category's part of all aggravated assault victims in 2024. / No total is established for 65+; Unknown: reporting evidence is incomplete, or a month ha"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-289",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Colorado Springs city police, CO: murder victims by relationship to the offender, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Acquaintance; Boyfriend/Girlfriend; Child; Otherwise K"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-290",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: v0 compiles filters that are incident-level existences over property only"
+    "delivered: Virginia Beach city police, VA: the available evidence does not establish the number of murder victims by a stranger in 2024, so no number is given. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; "
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-291",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Wichita city police, KS: carjacking offenses by location type, 2024. / Each share is that category's part of all carjacking offenses in 2024. / No total is established for Bar/Nightclub; Camp/Campground; Convenience Store; Department/Discou"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-292",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: \"by\" a group names the offenders (P29), and offender breakdowns are not built yet."
+    "delivered: Oklahoma City city police, OK: simple assault victims by offender sex, 2024. / Each share is that category's part of all simple assault victims in 2024. / No total is established for Unknown: reporting evidence is incomplete, or a month has"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-293",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares."
+    "delivered: Raleigh city police, NC: robbery offenders by offender sex, 2024. / Each share is that category's part of all robbery offenders in 2024. / No total is established for Unknown: reporting evidence is incomplete, or a month has none recorded w"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-294",
@@ -2053,103 +2186,143 @@
    "id": "LS-295",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "asked which kind of crime: Violent crime | Property crime | Both"
+    "delivered: Gun crime here is murder victims, robbery offenses and aggravated assault victims with a firearm. / Fort Worth city police, TX, 2023: 75 murder victims with a firearm; 362 robbery offenses with a firearm; 1,826 aggravated assault victims wi"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-296",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (reader): The question could not be read: no typed reading."
+    "delivered: Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument. / Oklahoma City city police, OK, 2024: the number of murder victims with a knife or cutting instrument is not established; 606 aggravated a"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-297",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: measure \"arrests.shoplifting\" has no executable definition in v0"
+    "delivered: Colorado Springs city police, CO: 1,288 shoplifting arrests in 2024. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by th"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-298",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: measure \"arrests.robbery\" has no executable definition in v0"
+    "delivered: Wichita city police, KS: robbery arrests by month, 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; ca"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-299",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (reader): I couldn't interpret \"people were\" in this question, so I haven't answered it with a number that ignores it."
+    "delivered: Raleigh city police, NC: 161 burglary arrests in 2024. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; cano"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-300",
    "split": "heldout",
    "expected": "decline",
    "actual": "decline",
-   "outcome": "incomplete",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "reason",
-     "expected": "Charging records are not in the data; it records police arrests and clearances.",
-     "actual": "reader",
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "declined (reader): I couldn't interpret \"were charged in\" in this question, so I haven't answered it with a number that ignores it."
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-301",
    "split": "heldout",
    "expected": "decline",
    "actual": "decline",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "reason",
-     "expected": "\"Shooters\" is not a term the data defines.",
-     "actual": "reader",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "declined (reader): The question could not be read: no typed reading."
+    "declined (not_recorded_in_nibrs): \"Shooters\" is not a term the data defines: it records offenders and the weapons used, not who fired a gun."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -2159,17 +2332,10 @@
    "split": "heldout",
    "expected": "decline",
    "actual": "decline",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "reason",
-     "expected": "The data has no counts of non-fatal shootings, so gun violence cannot be counted.",
-     "actual": "reader",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "declined (reader): The question could not be read: no typed reading."
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
    ],
    "capability": "decline:no meaning",
    "era": "no period"

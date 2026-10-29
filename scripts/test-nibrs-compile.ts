@@ -61,8 +61,55 @@ assert.match(refuse({ ...X.H2, measures: [{ ...X.H2.measures[0], id: "offenses.c
 // non-property existence; a property condition v0 cannot apply.
 assert.match(refuse({ ...X.N1, groupings: [X.N1.groupings[0], { ...X.N1.groupings[1], dimension: "offender.race" }] }), /cannot group victim by offender.race/);
 assert.match(refuse({ ...X.N1, groupings: [X.N1.groupings[0]] }), /share only/);
-assert.match(refuse({ ...X.N2, filters: [{ ...X.N2.filters[0], negate: true } as never] }), /existences over property/);
-assert.match(refuse({ ...X.N2, filters: [{ kind: "exists", scope: "offense", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["12"] }] }] }), /existences over property/);
+assert.match(refuse({ ...X.N2, filters: [{ ...X.N2.filters[0], negate: true } as never] }), /existences over incident property/);
 assert.match(refuse({ ...X.N2, filters: [{ ...X.N2.filters[0], where: [{ kind: "attribute", dimension: "property.value", op: "in", values: [1] }] } as never] }), /property condition/);
+
+// Increment 2. A plan of one measure, grouped as given, with the filters given.
+type Plan = Parameters<typeof compilePlan>[0];
+type G = Plan["groupings"][number];
+const by = (dimension: string, more: Partial<G> = {}): G => ({ dimension, absent: "show", ...more } as G);
+const plan = (id: string, unit: string, groupings: G[] = [], filters: unknown[] = [], timeBasis = "incident_date") =>
+  ({ ...X.H2, timeBasis, measures: [{ id, unit, as: "x" }], statistics: [{ kind: "count", as: "c", measure: "x" }], groupings, filters } as Plan);
+const firearm = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
+const weapon = (scope: string, values: string[]) => ({ kind: "exists", scope, entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values }] });
+
+// Weapons of an offense: multi-valued, by LEFT JOIN on the offense's own keys, and the overlap statement.
+const byWeapon = ok(compilePlan(plan("offenses.robbery", "offense", [by("offense_weapon.weapon", { multiValue: "each_value" })]), year(2023), t));
+for (const s of ["LEFT JOIN read_parquet", "w.offense_code = o.offense_code", "w.key_occurrence = o.key_occurrence", "w.weapon AS g0", "COUNT(DISTINCT (u.data_year, u.ori, u.incident_num, u.sub))"]) assert.ok(byWeapon.sql.includes(s), s);
+assert.deepEqual(byWeapon.statements, ["categories_overlap"]);
+assert.match(refuse(plan("offenses.robbery", "offense", [by("offense_weapon.weapon")])), /multi-valued/);
+assert.match(refuse(plan("offenses.robbery", "offense", [by("offense.location_type", { multiValue: "each_value" })])), /one value per unit/);
+// Relationships of a victim; the incident's offender sexes for a crime (P49), offender 00 its own category.
+assert.ok(ok(compilePlan(plan("victims.murder", "victim", [by("victim_offender.relationship", { multiValue: "each_value" })]), year(2023), t)).sql.includes("r.victim_seq = v.victim_seq"));
+const p49 = ok(compilePlan(plan("victims.simple_assault", "victim", [by("offender.sex", { multiValue: "each_value" })]), year(2024), t));
+assert.ok(p49.sql.includes("WHEN f2.offender_seq = '00' THEN 'unknown_offender'") && p49.sql.includes("f2.key_occurrence = v.key_occurrence"));
+// Age in bins (P30): infants under 18, 00 Unknown, blank not recorded; bins required, and never overlapping.
+const bins = [{ label: "Under 18", from: 1, to: 17 }, { label: "18-24", from: 18, to: 24 }, { label: "65+", from: 65, to: 99 }];
+const byAge = ok(compilePlan(plan("victims.aggravated_assault", "victim", [by("victim.age", { bins })]), year(2024), t));
+for (const s of ["WHEN v.age IN ('NN', 'NB', 'BB') THEN 'Under 18'", "WHEN v.age = '00' THEN 'Unknown'", "trim(v.age) = '' THEN NULL", "BETWEEN 65 AND 99 THEN '65+'"]) assert.ok(byAge.sql.includes(s), s);
+assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.age")])), /in bins/);
+assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.age", { bins: [...bins, { label: "x", from: 20, to: 30 }] })])), /overlap/);
+assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.sex", { bins })])), /bins ages only/);
+// Offenders (P44): offender segments of incidents with the codes, by their own sex.
+const offenders = ok(compilePlan(plan("offenders.robbery", "offender", [by("offender.sex")]), year(2024), t));
+assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS sub") && offenders.sql.includes("o.offense_code IN ('120')") && offenders.sql.includes("f.sex AS g0"));
+// Arrests (P46, P50): by arrest date only, every built year scanned, and the once-each statement.
+const arrests = ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), year(2024), t));
+assert.ok(arrests.sql.includes("substr(a.arrest_date, 1, 6) AS ym") && arrests.sql.includes("a.arrest_offense IN ('23C')"));
+assert.deepEqual(arrests.scanYears, t.builtYears);
+assert.deepEqual(arrests.statements, ["arrests_counted_once"]);
+assert.match(refuse(plan("arrests.shoplifting", "arrest")), /arrest date/);
+assert.match(refuse(plan("arrests.dui", "arrest", [], [], "arrest_date")), /Group B/);
+// Filters: a firearm on the offense (robbery), on the offense connecting a victim (P31), a stranger (P36).
+const gunRobbery = ok(compilePlan(plan("offenses.robbery", "offense", [], [weapon("offense", firearm)]), year(2023), t));
+assert.ok(gunRobbery.sql.includes("w2.weapon IN ('11', '12', '13', '14', '15') OR w2.weapon || w2.weapon_automatic IN ('11A', '12A', '13A', '14A', '15A')"));
+assert.deepEqual(gunRobbery.statements, []);
+const knifeVictims = ok(compilePlan(plan("victims.murder", "victim", [], [weapon("victim", ["20"])]), year(2024), t));
+assert.ok(knifeVictims.sql.includes("w2.offense_code = vo.connected_offense AND (w2.weapon IN ('20'))"));
+const strangers = ok(compilePlan(plan("victims.murder", "victim", [], [{ kind: "exists", scope: "victim", entity: "victim_offender", where: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["ST"] }] }]), year(2024), t));
+assert.ok(strangers.sql.includes("r2.offender_relationship IN ('ST')"));
+assert.match(refuse(plan("offenses.robbery", "offense", [], [weapon("victim", firearm)])), /cannot apply an existence over offense_weapon at victim scope to offense/);
+// 35B (D19's second drug part) has a definition.
+assert.ok(ok(compilePlan(plan("offenses.drug_equipment", "offense"), year(2023), t)).sql.includes("o.offense_code IN ('35B')"));
 
 console.log("nibrs compile v0: agency-level forms compile; the rest refuse with a reason");

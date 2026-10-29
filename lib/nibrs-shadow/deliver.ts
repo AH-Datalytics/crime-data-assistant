@@ -2,13 +2,16 @@
  * The delivered answer of the shadow slice: the compiled rows become the user-facing table (groupings and numbers only,
  * result.ts), its server-side evidence, a chart description, and the answer text. The text is built from fixed
  * templates and the authorized statements only: a headline that restates the table, the months with no data (D04), the
- * months covered when the period ends early (D06), the fixed statements, and the source statement last (D30). No
- * commentary, no causes, no comparisons the question did not ask for.
+ * months covered when the period ends early (D06), the fixed statements, and the source statement last (D30). Several
+ * measures are columns side by side; a combined total (D19, P31) is a sentence that adds the table's own cells, given only
+ * when every part is known. No commentary, no causes, no comparisons the question did not ask for.
  */
 import type { NibrsPlan } from "../nibrs-plan/plan";
+type Measure = NibrsPlan["measures"][number];
 import { ANSWER_STATEMENTS, checkEnvelope, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
 import { MEASURE_LABEL } from "../nibrs-question-types";
-import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES } from "../nibrs-codes";
+import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
+import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
 
 export type Delivered = {
   table: ResultTable;
@@ -32,13 +35,24 @@ export function periodWords(from: string, to: string): string {
   return `${monthName(from)} through ${monthName(to)}`;
 }
 
-const UNIT_PLURAL: Record<string, string> = { offense: "offenses", incident: "incidents", victim: "victims" };
-/** "shoplifting offenses", "simple assault victims". */
-export function measureWords(plan: NibrsPlan): string {
-  const m = plan.measures[0];
-  const name = m.id.replace(/^[a-z_]+\./, "");
-  return `${MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`;
+const UNIT_PLURAL: Record<string, string> = { offense: "offenses", incident: "incidents", victim: "victims", offender: "offenders", arrest: "arrests", arrestee: "arrests" };
+const MEASURE_WORDS: Record<string, string> = { drug_possession: "drug/narcotic violation", drug_equipment: "drug equipment violation" };
+/** A filter on weapons or relationships, in words ("with a firearm", "by a stranger"); null for any other. */
+function filterWords(f: NonNullable<Measure["filters"]>[number]): string | null {
+  if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute") return null;
+  const v = (f.where[0].values ?? []).map(String).sort().join(",");
+  if (f.where[0].dimension === "offense_weapon.weapon") return v === "11,11A,12,12A,13,13A,14,14A,15,15A" ? "with a firearm" : v === "20" ? "with a knife or cutting instrument" : null;
+  if (f.where[0].dimension === "victim_offender.relationship") return v === "ST" ? "by a stranger" : null;
+  return null;
 }
+/** "shoplifting offenses", "simple assault victims", "murder victims with a firearm". */
+export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): string {
+  const name = m.id.replace(/^[a-z_]+\./, "");
+  const filters = [...plan.filters, ...(m.filters ?? [])].map(filterWords).filter(Boolean);
+  return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
+}
+/** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
+export type Combined = { label: string; definition: string };
 /** Consecutive periods as ranges: "January 2017 to June 2020, March 2021", "2017 to 2019". */
 function runs(periods: string[]): string {
   const idx = (p: string) => (p.length === 7 ? Number(p.slice(0, 4)) * 12 + Number(p.slice(5)) - 1 : Number(p));
@@ -59,19 +73,34 @@ const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZER
 export const SOURCE_STATEMENT = (release: string) =>
   `Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release ${release}.`;
 
-/** Category groupings the slice delivers, with their header and their codes' names (lib/nibrs-codes.ts). */
-const CATEGORY: Record<string, { header: string; plural: string; names: Record<string, string> }> = {
+const SEX = { F: "Female", M: "Male", U: "Unknown", X: "Non-binary" };
+/**
+ * Category groupings the slice delivers, with their header and their codes' names (lib/nibrs-codes.ts). Age groups are
+ * named by their bins (names null: the compiled label is the name).
+ */
+export const CATEGORY: Record<string, { header: string; plural: string; names: Record<string, string> | null }> = {
   "victim.race": { header: "Victim race", plural: "race", names: RACE_CODES },
-  "victim.sex": { header: "Victim sex", plural: "sex", names: { F: "Female", M: "Male", U: "Unknown", X: "Non-binary" } },
+  "victim.sex": { header: "Victim sex", plural: "sex", names: SEX },
   "victim.ethnicity": { header: "Victim ethnicity", plural: "ethnicity", names: ETHNICITY_CODES },
+  "victim.age": { header: "Victim age", plural: "age group", names: null },
   "offense.location_type": { header: "Location type", plural: "location type", names: LOCATION_TYPES },
+  "offense_weapon.weapon": { header: "Weapon", plural: "weapon", names: WEAPON_TYPES },
+  "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
+  // A crime by its offenders' sexes (P49), or offenders by their own sex (P44).
+  "offender.sex": { header: "Offender sex", plural: "offender sex", names: { ...SEX, unknown_offender: "Unknown offender" } },
 };
-export const DELIVERED_CATEGORIES = new Set(Object.keys(CATEGORY));
 /** A category's name: the code's name; a blank field is "Not recorded"; a code with no name keeps its code. */
 export function categoryName(dimension: string, code: unknown): string {
   const c = code === null || code === undefined ? "" : String(code).trim();
   if (!c) return "Not recorded";
-  return CATEGORY[dimension]?.names[c] ?? `Code ${c}`;
+  const names = CATEGORY[dimension]?.names;
+  return names === null ? c : names?.[c] ?? `Code ${c}`;
+}
+/** The age groups in words (P30): what each holds, unknown and not-recorded ages named. */
+function ageSentence(bins: { label: string; from: number; to: number }[]): string {
+  const one = (b: { label: string; from: number; to: number }) =>
+    b.from <= 1 && 1 <= b.to ? `${b.label} (ages ${b.from}-${b.to} and infants under one year)` : b.to === 99 ? `${b.label} (${b.from} and over)` : b.label;
+  return `Age groups: ${bins.map(one).join(", ")}; Unknown is an age recorded as unknown, and Not recorded is no age recorded.`;
 }
 
 /**
@@ -80,9 +109,11 @@ export function categoryName(dimension: string, code: unknown): string {
  * category's part of all units of its own period).
  */
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
-  statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
+  statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null): Delivered {
   const place = plan.geography.places[0];
   const agency = place.kind === "agency" ? place.label : "the place";
+  // Several measures: a count each, side by side (no categories, no shares). One measure: a count and optionally its share.
+  if (plan.measures.length > 1) return deliverSeveral(plan, effective, requestedTo, columns, rows, statements, release, readings, combined);
   const [countStat, shareStat] = plan.statistics;
   const count = countStat.as, share = shareStat?.as;
   const what = measureWords(plan);
@@ -148,6 +179,8 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const blank = tableRows.filter((_, i) => evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status)))
       .map((r) => r.slice(ip >= 0 ? 1 : 0, (ip >= 0 ? 1 : 0) + cats.length).join(", ") + (ip >= 0 ? ` (${r[0]})` : ""));
     if (blank.length) text.push(`No total is established for ${blank.join("; ")}: reporting evidence is incomplete, or a month has none recorded without evidence establishing zero. Shown blank, not zero.`);
+    const binned = plan.groupings.find((g) => g.bins);
+    if (binned?.bins) text.push(ageSentence(binned.bins));
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   // How a misspelled word was read (reading.ts), then the fixed statements; the source stays last.
@@ -157,6 +190,69 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   // Charts bind one series per statistic: a time series of a single count only. Category charts wait until a series
   // can bind to each category (Codex plan review).
   const chart = time && !cats.length && tableRows.length > 1 ? { kind: time === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${time}`], y: [header] } : null;
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  for (const e of evidence) {
+    const col = tableCols.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === e.statistic);
+    if (BLANK.includes(e.status) !== (table.rows[e.row][col] === null)) contractProblems.push(`row ${e.row}, ${e.statistic}: value and status disagree`);
+  }
+  return { table, evidence, chart, text, answerStatements: statements, contractProblems };
+}
+
+/** Several measures (no categories): a column per measure; a combined total (D19, P31) as a sentence, totals only. */
+function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
+  statements: AnswerStatement[], release: string, readings: string[], combined: Combined | null): Delivered {
+  const place = plan.geography.places[0];
+  const agency = place.kind === "agency" ? place.label : "the place";
+  const time = plan.groupings.find((g) => g.dimension.startsWith("time."))?.dimension;
+  const at = (name: string) => columns.indexOf(name);
+  const ip = at("period");
+  const stats = plan.measures.map((m) => ({ as: plan.statistics.find((s) => "measure" in s && s.measure === m.as)!.as, what: measureWords(plan, m) }));
+  const labels: Record<string, string> = {};
+  const tableCols: ResultColumn[] = [];
+  for (const g of plan.groupings) {
+    labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? g.dimension;
+    tableCols.push({ binding: { kind: "grouping", dimension: g.dimension }, header: labels[`grouping:${g.dimension}`] });
+  }
+  for (const s of stats) {
+    labels[`statistic:${s.as}`] = `${s.what[0].toUpperCase()}${s.what.slice(1)}`;
+    tableCols.push({ binding: { kind: "statistic", as: s.as }, header: labels[`statistic:${s.as}`] });
+  }
+  const evidence: CellEvidence[] = [];
+  const tableRows = rows.map((r, i) => [...(ip >= 0 ? [String(r[ip])] : []), ...stats.map((s) => {
+    evidence.push({ row: i, statistic: s.as, status: String(r[at(`${s.as}_status`)]) as CellStatus });
+    const v = r[at(s.as)];
+    return v === null || v === undefined ? null : Number(v);
+  })]);
+  const table: ResultTable = { columns: tableCols, rows: tableRows };
+  const when = periodWords(effective.from, effective.to);
+  const names = stats.map((s) => s.what);
+  const list = names.length > 2 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join(" and ");
+  const text: string[] = [];
+  if (combined) text.push(combined.definition);
+  if (!time) {
+    const v = tableRows[0] ?? [];
+    text.push(`${agency}, ${when}: ${stats.map((s, i) => (v[i] === null || v[i] === undefined ? `the number of ${s.what} is not established` : `${fmt(v[i] as number)} ${s.what}`)).join("; ")}.`);
+    if (combined) {
+      const known = v.length === stats.length && v.every((x) => x !== null && x !== undefined);
+      text.push(known ? `Together: ${fmt((v as number[]).reduce((a, b) => a + b, 0))} ${combined.label} in ${when}.`
+        : `No combined total of ${combined.label} is given: the available evidence does not establish every part.`);
+    }
+    if (v.some((x) => x === null || x === undefined)) text.push("A number not established is shown blank, not zero: reporting evidence is incomplete, or none were recorded without evidence establishing zero.");
+  } else {
+    text.push(`${agency}: ${list} by ${time === "time.month" ? "month" : "year"}, ${when}.`);
+    // As for one measure (the same sentences), the missing periods first, then each measure's unevidenced ones.
+    const missing = rows.filter((r) => stats.some((s) => ["UNKNOWN", "NOT_REPORTED"].includes(String(r[at(`${s.as}_status`)])))).map((r) => String(r[ip]));
+    if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
+    for (const s of stats) {
+      const unevidenced = rows.filter((r) => String(r[at(`${s.as}_status`)]) === "UNKNOWN_UNEVIDENCED_ZERO").map((r) => String(r[ip]));
+      if (unevidenced.length) text.push(`No ${s.what} were recorded for ${runs(unevidenced)}, and no zero report confirms a zero: shown blank.`);
+    }
+  }
+  if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
+  text.push(...readings);
+  for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
+  text.push(SOURCE_STATEMENT(release));
+  const chart = time && tableRows.length > 1 ? { kind: time === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${time}`], y: stats.map((s) => labels[`statistic:${s.as}`]) } : null;
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   for (const e of evidence) {
     const col = tableCols.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === e.statistic);
