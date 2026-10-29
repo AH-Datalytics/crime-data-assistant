@@ -1,5 +1,0 @@
-import { shadowAnswer } from "../lib/nibrs-shadow/answer";
-import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
-import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
-const deps = { places: loadPlaceIndex(), release: { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" }, target: { root: "C:/Users/jeffm/nibrs-model/work/build/20261028-test5/canonical", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute: duckdbExecutor("C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe") };
-for (const q of process.argv.slice(2).join(" ").split("|")) { const o: any = shadowAnswer(q.trim(), deps as never); console.log("\n### " + q.trim(), o.kind, o.kind === "decline" ? o.explanation.slice(0, 160) : ""); if (o.kind === "answer") { console.log(o.delivered.table.columns.map((c: any) => c.header).join(" | ")); for (const r of o.delivered.table.rows.slice(0, 9)) console.log("  ", JSON.stringify(r)); for (const t of o.delivered.text) console.log("  > " + t); console.log("  problems", o.delivered.contractProblems, "chart", JSON.stringify(o.delivered.chart)); } }
