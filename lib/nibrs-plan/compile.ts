@@ -4,22 +4,28 @@
  * approximated.
  *
  * v0 covers:
- *   - one place: an agency (ORI), a state (the ORI's two-letter prefix) or the nation;
- *   - an absolute period (resolve.ts gives it), by month (time.month), by year (time.year) or as one total;
- *   - one measure with the `count` statistic: offenses or incidents with given offense codes, victims connected to
- *     them, and carjacking incidents;
+ *   - one agency (ORI). States and the nation need status evidence across their agencies (D6) and come next;
+ *   - an absolute period (resolve.ts gives it), by month (time.month), by year (time.year) or as one total, with every
+ *     row shown (`absent: "show"`), no bins;
+ *   - incident-date time basis;
+ *   - one measure with the `count` statistic: offenses (segments) or incidents with given offense codes, victims
+ *     connected to person offenses, and carjacking incidents. Group B offenses are not offense segments and are refused;
  *   - no filters, no transforms, cohort all_reporting.
  * A unit is placed in time by its incident date (the incident month). Every data year from the period's first year on
  * is scanned, because an incident can arrive in a later year's file.
  *
- * Status (D6), for an agency by month: the agency-month status of the incident month's data year decides the cell.
- * REPORTED_CRIMES gives the count, and a zero count there is UNKNOWN_UNEVIDENCED_ZERO (blank). REPORTED_ZERO gives 0.
- * UNKNOWN gives blank. States and the nation return reported sums (VALUE), with no status, in v0.
+ * Status (D6), per month: the agency-month status of the incident month's own data year.
+ *   REPORTED_CRIMES gives the count; a zero count there is UNKNOWN_UNEVIDENCED_ZERO (blank).
+ *   REPORTED_ZERO gives 0; UNKNOWN gives blank.
+ *   Rows counted for a month whose status is not REPORTED_CRIMES (an incident from a later year's file, say) contradict
+ *   that status: the cell is EVIDENCE_CONFLICT, and a result holding one must be refused, never shown
+ *   (`CompiledQuery.refuseOn`).
+ * A year or a total is known only when every month in it is.
  *
  * Measure definitions are an executable draft for the canonical tables, until the shared semantic layer (nibrs-model
- * D7/D8) lands; each is listed in MEASURE_SQL below.
+ * D7/D8) lands; each is in `unitsSql` below.
  */
-import { MEASURE_CODES } from "../nibrs-question-types";
+import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import type { NibrsPlan } from "./plan";
 import type { ResolvedPeriod } from "./resolve";
 
@@ -28,6 +34,8 @@ export type CompiledQuery = {
   /** Output columns in order: the grouping (period key) when there is one, then value and status. */
   columns: string[];
   scanYears: number[];
+  /** Statuses that make the whole result unusable: the caller refuses it. */
+  refuseOn: string[];
   notes: string[];
 };
 export type CompileResult = { kind: "query"; query: CompiledQuery } | { kind: "unsupported"; reason: string };
@@ -42,8 +50,8 @@ const list = (xs: string[]) => xs.map(q).join(", ");
 /** The units of one measure: one row per counted unit, with its key, ORI and incident month (YYYYMM). */
 function unitsSql(measureId: string, unit: string, t: CompileTarget, years: number[]): string | { error: string } {
   const read = (table: string) => `read_parquet([${years.map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
-  const [kind, name] = measureId.split(".");
-  if (measureId === "incidents.carjacking" && unit === "incident") {
+  if (measureId === "incidents.carjacking") {
+    if (unit !== "incident") return { error: `carjacking is counted by incident, not ${unit}` };
     return `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym
       FROM ${read("offense")} o
       WHERE o.offense_code = '120' AND EXISTS (
@@ -51,10 +59,15 @@ function unitsSql(measureId: string, unit: string, t: CompileTarget, years: numb
         WHERE p.data_year = o.data_year AND p.ori = o.ori AND p.incident_num = o.incident_num
           AND p.loss_type = '7' AND p.property_description IN (${list(CARJACK_VEHICLES)}))`;
   }
-  const codes = MEASURE_CODES[name];
-  if (!codes) return { error: `measure "${measureId}" has no executable definition in v0` };
+  // Exactly <kind>.<measure>, with a measure whose codes are known.
+  const m = measureId.match(/^(offenses|incidents|victims)\.([a-z_]+)$/);
+  const codes = m ? MEASURE_CODES[m[2]] : undefined;
+  if (!m || !codes) return { error: `measure "${measureId}" has no executable definition in v0` };
+  if (codes.some((c) => GROUP_B.has(c))) return { error: `"${measureId}" is a Group B offense: Group B arrests are not offense segments` };
+  const kind = m[1];
   if (kind === "offenses" && unit === "offense") {
-    return `SELECT o.data_year, o.ori, o.incident_num, o.offense_code AS sub, substr(o.incident_date, 1, 6) AS ym
+    // An offense segment's identity includes its occurrence key (a code repeated within an incident).
+    return `SELECT o.data_year, o.ori, o.incident_num, o.offense_code || ':' || o.key_occurrence AS sub, substr(o.incident_date, 1, 6) AS ym
       FROM ${read("offense")} o WHERE o.offense_code IN (${list(codes)})`;
   }
   if (kind === "incidents" && unit === "incident") {
@@ -62,6 +75,7 @@ function unitsSql(measureId: string, unit: string, t: CompileTarget, years: numb
       FROM ${read("offense")} o WHERE o.offense_code IN (${list(codes)})`;
   }
   if (kind === "victims" && unit === "victim") {
+    if (!codes.every((c) => PERSON_CODES.has(c))) return { error: `"${measureId}" counts victims of offenses that are not crimes against persons; not in v0` };
     return `SELECT DISTINCT v.data_year, v.ori, v.incident_num, v.victim_seq || ':' || v.key_occurrence AS sub, substr(v.incident_date, 1, 6) AS ym
       FROM ${read("victim")} v JOIN ${read("victim_offense")} vo
         ON vo.data_year = v.data_year AND vo.ori = v.ori AND vo.incident_num = v.incident_num
@@ -74,6 +88,7 @@ function unitsSql(measureId: string, unit: string, t: CompileTarget, years: numb
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
   if (period.kind !== "absolute") return no("v0 compiles absolute periods only (year lists come later)");
+  if (plan.timeBasis !== "incident_date") return no(`v0 places units by incident date, not ${plan.timeBasis}`);
   if (plan.measures.length !== 1) return no("v0 compiles one measure");
   if (plan.statistics.length !== 1 || plan.statistics[0].kind !== "count") return no("v0 compiles the count statistic only");
   if (plan.filters.length || plan.measures[0].filters?.length) return no("v0 compiles plans without filters");
@@ -82,9 +97,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (plan.geography.places.length !== 1) return no("v0 compiles one place");
   const dims = plan.groupings.map((g) => g.dimension);
   if (dims.some((d) => d !== "time.month" && d !== "time.year") || dims.length > 1) return no("v0 groups by month or by year only");
+  if (plan.groupings.some((g) => g.absent !== "show" || g.bins || g.multiValue)) return no("v0 shows every period row, without bins");
   const place = plan.geography.places[0];
-  const where = place.kind === "agency" ? `u.ori = ${q(place.ori)}` : place.kind === "state" ? `substr(u.ori, 1, 2) = ${q(place.code)}` : place.kind === "national" ? "TRUE" : null;
-  if (!where) return no(`v0 compiles agencies, states and the nation, not ${place.kind}`);
+  if (place.kind !== "agency") return no(`v0 compiles one agency; ${place.kind} totals need status evidence across their agencies (D6) and come next`);
 
   const from = period.from.replace("-", ""), to = period.to.replace("-", "");
   const firstYear = Number(period.from.slice(0, 4));
@@ -95,38 +110,27 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (typeof units !== "string") return no(units.error);
 
   const grain = dims[0] === "time.month" ? "month" : dims[0] === "time.year" ? "year" : "total";
-  const monthly = `counted AS (SELECT u.ym, COUNT(DISTINCT (u.data_year, u.ori, u.incident_num, u.sub)) AS n
-      FROM units u WHERE ${where} AND u.ym BETWEEN ${q(from)} AND ${q(to)} GROUP BY u.ym)`;
+  const counted = `counted AS (SELECT u.ym, COUNT(DISTINCT (u.data_year, u.ori, u.incident_num, u.sub)) AS n
+      FROM units u WHERE u.ori = ${q(place.ori)} AND u.ym BETWEEN ${q(from)} AND ${q(to)} GROUP BY u.ym)`;
   // Every month of the period, so a month with no rows still gets a status.
   const spine = `spine AS (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${period.from}-01`)}, DATE ${q(`${period.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))`;
-  const notes: string[] = [];
-  let body: string;
-  if (place.kind === "agency") {
-    const status = `status AS (SELECT CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
-        FROM read_parquet([${years.map((y) => q(`${t.root}/agency_month_status/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)
-        WHERE ori = ${q(place.ori)})`;
-    const cells = `cells AS (SELECT s.ym, coalesce(st.status, 'UNKNOWN') AS month_status, coalesce(c.n, 0) AS n,
-        CASE WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
-             WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
-             WHEN coalesce(c.n, 0) = 0 THEN 'UNKNOWN_UNEVIDENCED_ZERO' ELSE 'VALUE' END AS cell
-        FROM spine s LEFT JOIN status st USING (ym) LEFT JOIN counted c USING (ym))`;
-    const value = `CASE WHEN cell IN ('VALUE', 'REPORTED_ZERO') THEN n END`;
-    body = `${status}, ${cells}\n` + (grain === "month"
-      ? `SELECT substr(ym, 1, 4) || '-' || substr(ym, 5, 2) AS period, ${value} AS value, cell AS status FROM cells ORDER BY ym`
-      : grain === "year"
-        // A year is a sum of its months; it is known only when every month of it in the period is known.
-        ? `SELECT substr(ym, 1, 4) AS period, CASE WHEN bool_and(cell IN ('VALUE', 'REPORTED_ZERO')) THEN sum(n) END AS value,
-             CASE WHEN bool_and(cell IN ('VALUE', 'REPORTED_ZERO')) THEN 'VALUE' ELSE 'UNKNOWN' END AS status FROM cells GROUP BY 1 ORDER BY 1`
-        : `SELECT CASE WHEN bool_and(cell IN ('VALUE', 'REPORTED_ZERO')) THEN sum(n) END AS value,
-             CASE WHEN bool_and(cell IN ('VALUE', 'REPORTED_ZERO')) THEN 'VALUE' ELSE 'UNKNOWN' END AS status FROM cells`);
-  } else {
-    notes.push("a state or national value is the reported sum over agencies; no status in v0");
-    body = grain === "month"
-      ? `SELECT substr(s.ym, 1, 4) || '-' || substr(s.ym, 5, 2) AS period, coalesce(c.n, 0) AS value, 'VALUE' AS status FROM spine s LEFT JOIN counted c USING (ym) ORDER BY s.ym`
-      : grain === "year"
-        ? `SELECT substr(s.ym, 1, 4) AS period, sum(coalesce(c.n, 0)) AS value, 'VALUE' AS status FROM spine s LEFT JOIN counted c USING (ym) GROUP BY 1 ORDER BY 1`
-        : `SELECT sum(coalesce(c.n, 0)) AS value, 'VALUE' AS status FROM spine s LEFT JOIN counted c USING (ym)`;
-  }
-  const sql = `WITH units AS (${units}),\n${monthly},\n${spine},\n${body}`;
-  return { kind: "query", query: { sql, columns: grain === "total" ? ["value", "status"] : ["period", "value", "status"], scanYears: years, notes } };
+  const status = `status AS (SELECT CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
+      FROM read_parquet([${years.map((y) => q(`${t.root}/agency_month_status/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)
+      WHERE ori = ${q(place.ori)})`;
+  const cells = `cells AS (SELECT s.ym, coalesce(c.n, 0) AS n,
+      CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(c.n, 0) > 0 THEN 'EVIDENCE_CONFLICT'
+           WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
+           WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
+           WHEN coalesce(c.n, 0) = 0 THEN 'UNKNOWN_UNEVIDENCED_ZERO' ELSE 'VALUE' END AS cell
+      FROM spine s LEFT JOIN status st USING (ym) LEFT JOIN counted c USING (ym))`;
+  const known = `bool_and(cell IN ('VALUE', 'REPORTED_ZERO'))`;
+  const rolled = `CASE WHEN bool_or(cell = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN ${known} THEN 'VALUE' ELSE 'UNKNOWN' END`;
+  const body = grain === "month"
+    ? `SELECT substr(ym, 1, 4) || '-' || substr(ym, 5, 2) AS period, CASE WHEN cell IN ('VALUE', 'REPORTED_ZERO') THEN n END AS value, cell AS status FROM cells ORDER BY ym`
+    : grain === "year"
+      // A year is a sum of its months; it is known only when every month of it in the period is known.
+      ? `SELECT substr(ym, 1, 4) AS period, CASE WHEN ${known} THEN sum(n) END AS value, ${rolled} AS status FROM cells GROUP BY 1 ORDER BY 1`
+      : `SELECT CASE WHEN ${known} THEN sum(n) END AS value, ${rolled} AS status FROM cells`;
+  const sql = `WITH units AS (${units}),\n${counted},\n${spine},\n${status},\n${cells}\n${body}`;
+  return { kind: "query", query: { sql, columns: grain === "total" ? ["value", "status"] : ["period", "value", "status"], scanYears: years, refuseOn: ["EVIDENCE_CONFLICT"], notes: [] } };
 }

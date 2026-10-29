@@ -31,11 +31,10 @@ const n3 = compilePlan(X.N3, { kind: "absolute", from: "2022-01", to: "2026-06" 
 assert(n3.kind === "query");
 assert.ok(n3.query.sql.includes("o.offense_code IN ('240')"));
 
-// A state is a reported sum, without status.
-const tx = compilePlan({ ...X.H2, geography: { places: [{ kind: "state", code: "TX" }], combine: "separate" } }, year(2025), t);
-assert(tx.kind === "query");
-assert.ok(tx.query.sql.includes("substr(u.ori, 1, 2) = 'TX'") && !tx.query.sql.includes("agency_month_status"));
-assert.equal(tx.query.notes.length, 1);
+// Offense segments keep their occurrence key; a result with conflicting evidence is refused by the caller.
+assert.ok(n3.query.sql.includes("o.offense_code || ':' || o.key_occurrence"));
+assert.deepEqual(n3.query.refuseOn, ["EVIDENCE_CONFLICT"]);
+assert.ok(n3.query.sql.includes("EVIDENCE_CONFLICT"));
 
 // Everything outside v0 is refused, with its reason.
 const refuse = (p: Parameters<typeof compilePlan>[0], period: Parameters<typeof compilePlan>[1] = year(2025)) => { const r = compilePlan(p, period, t); assert.equal(r.kind, "unsupported"); return r.kind === "unsupported" ? r.reason : ""; };
@@ -46,5 +45,13 @@ assert.match(refuse(X.ROLLING), /transforms|month or by year|one place/);
 assert.match(refuse(X.SAME_AGENCIES_CHANGE), /transforms|cohort/);
 assert.match(refuse({ ...X.H2, measures: [{ id: "incidents.nope", unit: "incident", as: "x" }], statistics: [{ kind: "count", as: "c", measure: "x" }] }), /no executable definition/);
 assert.match(refuse(X.H2, year(2027)), /no built data year/, "a period after every built year");
+// Codex review r1: states, other time bases, hidden rows, malformed or Group B measures are refused.
+assert.match(refuse({ ...X.H2, geography: { places: [{ kind: "state", code: "TX" }], combine: "separate" } }), /status evidence/);
+assert.match(refuse({ ...X.H2, timeBasis: "arrest_date" }), /incident date/);
+assert.match(refuse({ ...X.H1, groupings: [{ ...X.H1.groupings[0], absent: "omit" }] }), /every period row/);
+const withMeasure = (id: string, unit: "offense" | "incident" | "victim") => ({ ...X.H2, measures: [{ id, unit, as: "x" }], statistics: [{ kind: "count" as const, as: "c", measure: "x" }] });
+assert.match(refuse(withMeasure("offenses.motor_vehicle_theft.typo", "offense")), /no executable definition/);
+assert.match(refuse(withMeasure("offenses.dui", "offense")), /Group B/);
+assert.match(refuse(withMeasure("victims.burglary", "victim")), /not crimes against persons/);
 
 console.log("nibrs compile v0: simple forms compile; the rest refuse with a reason");
