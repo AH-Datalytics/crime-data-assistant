@@ -177,7 +177,7 @@ ROWS = [
      "Decline, state the latest month or year available, and offer it as a button. Never answer another year silently.",
      "Offer: the same question for the latest year available.",
      "Rule 4 already requires stating the range; the button saves a retype.",
-     OPEN, gc(4)),
+     O28 + " (Jeff: yes)", gc(4)),
     # Added after drafting the labeled set (drafters' doubts), numbered last so existing case references stay valid.
     ("P25", "\"Crime in Montgomery County, Maryland\" or \"Fairfax County, Virginia\", where the county has its own county police department",
      "Frozen rule 10: a county name means the sheriff's agency, named in the answer.",
@@ -233,10 +233,8 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
 }
 TOPIC = {
-    **{p: "4. When to decline, and what to offer instead" for p in ["P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
 ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]
