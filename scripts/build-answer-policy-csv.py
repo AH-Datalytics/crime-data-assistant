@@ -34,17 +34,17 @@ O28 = "Decided 2026-10-28"
 
 ROWS = [
     # ---------------- needs Jeff, most consequential first ----------------
-    ("P01", "\"How many murders were there in Chicago in 2024?\" asked without choosing a data source",
-     "Auto mode guesses a source; when it is not confident it shows a list of sources to pick from. On a chosen tab, that tab's data answers, with a banner when another source fits much better.",
-     "The best source for the measure answers, whichever tab is open, and the answer names it. A source the user names explicitly is used when it can answer. A source is used only if it can answer the same measure, filters and period.",
-     "Order: hate crimes -> FBI Hate Crime file; homicide victim or offender details (any year) -> Homicide Reports; details only NIBRS records (victims, offenders, weapons, relationships, locations, property, clearance types) -> NIBRS; this year or recent months -> Current Trends; counts and rates of the standard crimes for completed years, at any level, plus clearance and police staffing -> Historical (FBI annual figures, with FBI estimates for states and the nation).",
-     "The same question can return different numbers from different sources. The best source is the most complete one for that measure, and naming it lets the reader check it.",
+    ("P01", "\"How many robberies were there in the US in 2015?\", \"Murders in Chicago this year\", \"Robberies with a gun in Atlanta by victim race\": any question, typed into one box",
+     "The user picks a source tab (or Auto mode, which guesses and asks when unsure); the chosen tab answers even when another source answers better, e.g. NIBRS summing only its reporting agencies for US robberies in 2015.",
+     "The app picks the source for every question: it works out what the question needs (the crime, any detail, the period, the place) and uses the source that actually holds it most completely for that place and period. A source the user asks for in words (\"according to NIBRS\") is used and labelled, never silently replaced. Where it helps, a button offers the other source's figure.",
+     "Completed years of the standard (Part I) crimes, clearance and police staffing -> Historical (FBI annual figures; FBI estimates for states and the nation). This year or recent months -> Current Trends. Homicide victim and offender details -> Homicide Reports. Hate crimes -> the Hate Crime file. Details only NIBRS records (victims, offenders, weapons, relationships, locations, property, clearance types) -> NIBRS. An agency missing from Historical, or months no other source holds -> NIBRS, labelled as reporting agencies, never as an estimate.",
+     "Users cannot be expected to know which source answers a question best; a wrong choice gives a wrong number with the right label. Choosing by what the question needs, and naming the source at the end of the answer, makes answers repeatable and checkable.",
      OPEN, NEW),
-    ("P02", "\"How many robberies were there in the US in 2015?\" or \"How did aggravated assaults change in Texas from 2018 to 2024?\" asked while the NIBRS tab is open",
-     "Answers from NIBRS: it adds up the agencies that reported to NIBRS (a fraction of the country in 2015; many Texas agencies joined over those years), with a sentence on how many agencies and how much population they cover.",
-     "Answer from Historical (FBI annual figures, complete coverage, FBI estimates for the state and nation), name the source, and offer the NIBRS figure for reporting agencies as a button.",
-     "Answer: Historical. Button: \"the same question from NIBRS (reporting agencies only)\".",
-     "For standard crime counts and rates, NIBRS covers only the agencies that report to it, so its totals and trends mostly measure participation; Historical covers everyone.",
+    ("P02", "The source tabs (Current Trends, Historical, NIBRS, Homicide Reports, Hate Crime)",
+     "Users choose a tab, or Auto mode.",
+     "Remove the tabs: one question box. A user who wants a particular source says so in words; the answer names its source at the end, and offers another source's figure as a button where that helps.",
+     "No tabs and no source picker. Alternative if you prefer: keep the tabs as an advanced option, off by default.",
+     "The tab choice is what lets a question be answered from the wrong source; with the source named on every answer, a picker adds a way to be wrong and no capability.",
      OPEN, NEW),
     ("P03", "\"How did aggravated assaults with a firearm change in Texas from 2018 to 2024?\" (a detail only NIBRS records, over years when many agencies joined NIBRS)",
      "Counts every agency that reported in each year, so agencies joining looks like crime rising. Consistent reporters only when the user asks.",
@@ -227,12 +227,13 @@ ROWS = [
     ("D27", "\"Robberies in Ohio this year\" on Current Trends", "The active answer path already uses the state's sample agencies; the stored state table sums all agencies.", "State totals use the state's agencies from the national sample, built the same way; in the rebuild only.", "Not applicable.", "", O28 + " (rebuild only)", NEW),
     ("D28", "General rule: when does the app ask a clarifying question?", "Several separate rules (bare \"crime\", shootings, place level, ambiguous place names), each with its own trigger.", "Ask only when materially different readings remain after the explicit wording, the conversation so far and the approved defaults in this table; one question at a time, with buttons that run the whole original question with the choice filled in.", "Not applicable.", "Professional apps ask rarely and for a reason.", O28 + " (plan approved by Jeff)", gc(9) + "; GC-003, GC-110"),
     ("D29", "Commentary in answers", "The instructions ban causal commentary.", "No editorializing. Tables carry groupings and numbers only (no note or status columns); explanation sentences and chart notes stay.", "Not applicable.", "", O28, "answer-format tests"),
+    ("D30", "Naming the source", "Some answers name their source, in different places.", "Every answer ends with a statement of its source (and, where it applies, its coverage): the source statement comes last.", "Not applicable.", "The reader should always know whose numbers they are reading, and where to find it.", O28 + " (Jeff, in this review)", NEW),
 ]
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P01": "Should the app always answer from the most complete source for what was asked, and name that source, whichever tab is open?",
-    "P02": "When someone on the NIBRS tab asks for an ordinary crime count, rate or trend (like US robberies in 2015), should the answer come from Historical instead, with a button for the NIBRS figure?",
+    "P01": "Should the app pick the source for every question by what the question needs (and honor a source the user asks for in words), naming the source at the end of the answer?",
+    "P02": "Should the source tabs be removed, leaving one question box (rather than keeping the tabs as an advanced option)?",
     "P03": "For a detail only NIBRS has, tracked over several years, should the trend count only agencies that reported in every year?",
     "P04": "In a ranking for one year, should agencies that reported fewer than 12 months be left out, with the number left out stated?",
     "P05": "When a ranking names no year, should it use the latest complete year rather than this year so far?",
