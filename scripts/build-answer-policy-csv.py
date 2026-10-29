@@ -243,7 +243,7 @@ ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], 
 out = os.path.join(os.path.dirname(__file__), "..", "docs", "policy", "nibrsai-answer-policy.csv")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 with open(out, "w", encoding="utf-8-sig", newline="") as f:
-    w = csv.writer(f)
+    w = csv.writer(f, lineterminator="\n")  # LF: the repo's checkout gate rejects CRLF
     w.writerow(["id", "topic", "decision needed", "situation (example wording)", "what the app does today", "proposed behavior", "exact default or choices offered", "why", "status", "test cases"])
     for r in ordered:
         w.writerow([r[0], TOPIC.get(r[0], "Already decided"), DECISION.get(r[0], "None: already decided"), *r[1:]])
