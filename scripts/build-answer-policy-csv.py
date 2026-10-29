@@ -165,7 +165,7 @@ ROWS = [
      "A button runs the original question with only that choice changed (place, period and filters kept). A choice already made is not asked again for that question or its follow-ups; a later question with a new ambiguity can still be asked about.",
      "Not applicable.",
      "Re-asking, or dropping parts of the question after the user answered, feels broken.",
-     OPEN, "GC-003; " + NEW),
+     O28 + " (Jeff: yes)", "GC-003; " + NEW),
     ("P23", "Follow-up \"What about Dallas?\" after a Houston question",
      "Replaces the place; keeps the source, offense, filters, measure, grouping and period.",
      "Keep today's behavior.",
@@ -237,14 +237,13 @@ DECISION = {
     "P19": "For fentanyl, should the app decline and offer \"synthetic narcotics\" (which includes fentanyl) instead?",
     "P20": "For forecasts, should the app decline and offer the recent trend instead?",
     "P21": "For a specific incident or named person, should the app decline and offer that offense's count for the city and month?",
-    "P22": "When someone clicks a button in a clarifying question, should the app run the whole original question with that choice and never ask the same thing again?",
     "P23": "In a follow-up like \"What about Dallas?\", should everything else from the previous question carry over?",
     "P24": "For a year not yet in the data, should the app decline, name the latest year available, and offer it as a button?",
     "P26": "Should \"New York\" on its own make the app ask: New York City or New York State?",
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "3. When to ask a question" for p in ["P22", "P23", "P26", "P27"]},
+    **{p: "3. When to ask a question" for p in ["P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
