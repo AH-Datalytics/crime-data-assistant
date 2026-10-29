@@ -32,9 +32,14 @@ export const Meaning = z.strictObject({
 
 const Option = z.strictObject({
   label: z.string().min(1),
-  /** What clicking it must do: the original question with this choice filled in (never asked again). */
-  leads_to: z.enum(["answer", "decline"]),
+  /**
+   * What clicking it must do: the original question with this choice filled in (never asked again). "clarify" when
+   * the question is still missing another part (D31 asks one part at a time): `next_about` names that part, and
+   * `meaning` is null until it is answered.
+   */
+  leads_to: z.enum(["answer", "decline", "clarify"]),
   meaning: Meaning.nullable(),
+  next_about: z.string().min(1).optional(),
 });
 
 export const Expected = z.discriminatedUnion("action", [
