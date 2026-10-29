@@ -123,7 +123,7 @@ ROWS = [
      "Keep today's rule, and say whose population in one fixed sentence: \"per 100,000 residents of the reporting agencies\".",
      "Denominator: population of the agencies counted.",
      "Dividing partial counts by the whole state understates the rate.",
-     OPEN, "correctness case: Houston murder victims by race and sex; " + NEW),
+     O28 + " (Jeff: yes)", "correctness case: Houston murder victims by race and sex; " + NEW),
     ("P16", "\"Crime in Las Vegas\", where the city is policed by a combined city-county agency or by several agencies",
      "A city name means that city's police department, without saying which agency.",
      "Keep the city's principal police agency, and name it in the answer as county answers already do (rule 10).",
@@ -234,7 +234,6 @@ ROWS = [
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
     "P13": "For \"safest\" or \"most dangerous\" city, should the app ask which measure to rank by instead of declining?",
-    "P15": "For rates of details only NIBRS has, should the rate use the population of the reporting agencies only?",
     "P16": "Should a city name mean that city's main police agency, named in the answer?",
     "P17": "When a top-N list has a tie at the cutoff, should it keep exactly N and break the tie alphabetically?",
     "P18": "For a state clearance rate (not in Historical), should the app decline and offer the national rate or the NIBRS state figure instead?",
@@ -249,7 +248,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P15", "P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
