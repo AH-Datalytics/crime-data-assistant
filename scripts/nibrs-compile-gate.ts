@@ -132,7 +132,8 @@ def write(table, year, cols, rows):
     sel = f"SELECT * FROM (VALUES {values}) t({', '.join(cols)})"
     con.execute(f"COPY ({sel}) TO '{d}/data.parquet' (FORMAT parquet)")
 O = ["ori", "incident_num", "incident_date", "offense_code", "key_occurrence", "location_type"]
-write("offense", 2024, O, [("YY0000000", "Y-1", "20240110", "240", 1, "20")])  # YY: one 2024 theft at a residence
+write("offense", 2024, O, [("YY0000000", "Y-1", "20240110", "240", 1, "20"),  # YY: one 2024 theft at a residence
+    ("ZZ0000000", "Z-1", "20240105", "120", 1, "13"), ("ZZ0000000", "Z-2", "20240106", "13A", 1, "20")])  # ZZ: below
 write("offense", 2025, O, [
     ("XX0000000", "FEB-OTHER", "20250210", "13B", 1, "20"),   # February: crimes reported, none of this kind
     ("XX0000000", "MAR-1", "20250305", "240", 1, "20"),       # March: one incident, two 240 segments
@@ -140,10 +141,18 @@ write("offense", 2025, O, [
 ])
 write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1, "20")])  # a January 2025 incident in the 2026 file
 S = ["ori", "month", "status"]
-write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)])
+write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)] + [("ZZ0000000", 1, "REPORTED_CRIMES")])
 write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
     + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)])  # YY: all of 2025 reported zero
 write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
+# ZZ, January 2024 (Codex review 02): key_occurrence numbers lines within one segment family, so it never links families.
+# One robbery (occurrence 1) with two offender lines sharing sequence "##" (occurrences 1 and 2, M and F); one aggravated
+# assault (occurrence 1, handgun) whose victim line is occurrence 2 of its sequence.
+F = ["ori", "incident_num", "incident_date", "offender_seq", "key_occurrence", "sex"]
+write("offender", 2024, F, [("ZZ0000000", "Z-1", "20240105", "##", 1, "M"), ("ZZ0000000", "Z-1", "20240105", "##", 2, "F"), ("ZZ0000000", "Z-2", "20240106", "01", 1, "M")])
+write("victim", 2024, ["ori", "incident_num", "incident_date", "victim_seq", "key_occurrence"], [("ZZ0000000", "Z-2", "20240106", "001", 2)])
+write("victim_offense", 2024, ["ori", "incident_num", "victim_seq", "key_occurrence", "connected_offense"], [("ZZ0000000", "Z-2", "001", 2, "13A")])
+write("offense_weapon", 2024, ["ori", "incident_num", "offense_code", "key_occurrence", "weapon", "weapon_automatic"], [("ZZ0000000", "Z-2", "13A", 1, "12", " ")])
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
@@ -157,6 +166,15 @@ check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offen
   groupings: [by("time.year"), by("offense.location_type")], statistics: [{ kind: "count", as: "count", measure: "n" }, { kind: "share", as: "share", measure: "n", within: ["time.year"] }] },
   { kind: "absolute", from: "2024-01", to: "2025-12" }, SYN, [2024, 2025, 2026], new Map<string, Cell[]>([
     ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(0, "REPORTED_ZERO"), C(null, "UNAVAILABLE")]]]));
+
+const zz = (measures: NibrsPlan["measures"], groupings: NibrsPlan["groupings"] = [], filters: NibrsPlan["filters"] = []): NibrsPlan =>
+  ({ ...syn("offenses.robbery", "offense"), geography: { places: [{ kind: "agency", ori: "ZZ0000000", label: "Synthetic, ZZ" }], combine: "separate" }, measures, groupings, filters });
+const JAN24: ResolvedPeriod = { kind: "absolute", from: "2024-01", to: "2024-01" };
+check("synthetic offenders sharing a sequence", zz([{ id: "offenders.robbery", unit: "offender", as: "n" }]), JAN24, SYN, [2024], new Map([["total", [known(2)]]]));
+check("synthetic robbery by its offenders' sexes", zz([{ id: "offenses.robbery", unit: "offense", as: "n" }], [{ ...by("offender.sex"), multiValue: "each_value" }]), JAN24, SYN, [2024],
+  new Map([["M", [known(1)]], ["F", [known(1)]]]), ["categories_overlap"]);
+check("synthetic victim with a handgun on its connecting offense", zz([{ id: "victims.aggravated_assault", unit: "victim", as: "n" }], [],
+  [{ kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["12"] }] }]), JAN24, SYN, [2024], new Map([["total", [known(1)]]]));
 
 // ---- 2. correctness cases against the canonical build ----
 const load = (c: string) => JSON.parse(fs.readFileSync(path.join(CASES, c, "expected.json"), "utf8"));

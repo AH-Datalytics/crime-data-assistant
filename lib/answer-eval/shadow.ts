@@ -145,8 +145,13 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       // The combined total: a "Together:" sentence whose number is the sum of the table's counts (all of them known).
       const cells = o.delivered.table.rows[0]?.filter((x) => typeof x === "number" || x === null) ?? [];
       const sum = cells.every((x) => typeof x === "number") ? (cells as number[]).reduce((a, b) => a + b, 0) : null;
-      const line = text.find((t) => /^Together: /.test(t));
-      ok = o.delivered.table.rows.length === 1 && (sum === null ? !line && /No combined total/.test(all) : !!line && line.includes(sum.toLocaleString("en-US")));
+      // Exactly that number, under the total's own name ("gun-crime" -> gun crime), never a number merely containing it
+      // (Codex review 02).
+      const lines = text.filter((t) => /^Together: /.test(t));
+      const m = lines.length === 1 ? /^Together: ([\d,]+) (.+) in .+\.$/.exec(lines[0]) : null;
+      const name = (/^gives the (?:combined )?(.+?) total \(/.exec(s)?.[1] ?? "").replace(/-/g, " ").replace(/s$/, "");
+      ok = o.delivered.table.rows.length === 1 && (sum === null ? !lines.length && /No combined total/.test(all)
+        : !!m && Number(m[1].replace(/,/g, "")) === sum && m[2].replace(/s$/, "").includes(name));
     } else if (/^names the crimes counted \((.+)\)$/.test(s)) {
       // Each crime named, and the weapon.
       const inner = /^names the crimes counted \((.+)\)$/.exec(s)![1];
@@ -177,9 +182,14 @@ type Values = "match" | "mismatch" | "not measured";
 function matchMeasure(m: NibrsPlan["measures"][number], defs: string[]): string | null {
   const name = m.id.replace(/^[a-z_]+\./, "");
   const codes = MEASURE_CODES[name] ?? ({ drug_equipment: ["35B"] } as Record<string, string[]>)[name];
-  if (!codes) return null;
+  if (!codes && name !== "carjacking") return null;
   const unit = { victim: /victim/i, offense: /offense/i, offender: /offender/i, arrest: /arrest/i, arrestee: /arrest/i }[m.unit as string];
   const named = (d: string) => new Set(d.match(/\b(?:\d{2}[A-Z]|\d{3})\b/g) ?? []);
+  // Carjacking (D18) is robbery (120) with a motor vehicle taken: its definition names 120 and loss type 7.
+  if (name === "carjacking") {
+    const cj = defs.filter((d) => named(d).has("120") && /loss type 7/i.test(d) && !!unit?.test(d));
+    return cj.length === 1 ? cj[0] : null;
+  }
   const hits = defs.filter((d) => { const n = named(d); return n.size === codes.length && codes.every((c) => n.has(c)) && !!unit?.test(d); });
   return hits.length === 1 ? hits[0] : null;
 }

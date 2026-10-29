@@ -70,7 +70,7 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-61 cases. Correct 28; unverified 26; wrong answers 0; avoidable declines 5; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 110 (trend only).
+61 cases. Correct 47; unverified 7; wrong answers 0; avoidable declines 5; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 110 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -84,11 +84,11 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs change | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs count | 2021 and later | 45 | fail | wrong answers: not measured (0, 18 answers unverified); initial action: fail (93% (42/45)); direct answers: fail (53% (18 unverified)); numeric fixtures: not measured (24/42 match, 18 not measured) |
+| answer:nibrs count | 2021 and later | 45 | fail | wrong answers: pass (0); initial action: fail (93% (42/45)); direct answers: fail (93% (0 unverified)); numeric fixtures: pass (42/42 match) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| decline:nibrs count | 2021 and later | 3 | not measured | wrong answers: not measured (0, 3 answers unverified); declines: not measured (0/3 verified correct, 3 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/3 match, 3 not measured) |
+| decline:nibrs count | 2021 and later | 3 | not measured | wrong answers: not measured (0, 2 answers unverified); declines: not measured (1/3 verified correct, 2 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/3 match, 2 not measured) |
 | decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: pass (0); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:no meaning | no period | 2 | not measured | wrong answers: pass (0); declines: pass (2/2 verified correct); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
@@ -125,67 +125,10 @@ Discrepancies and unverified cases:
   - declined (reader): I couldn't interpret "will" in this question, so I haven't answered it with a number that ignores it.
 - **LS-270** (wrong_action; expected clarify, got decline) "Shplftg in Nashville in 2024"
   - declined (reader): The question could not be read: no typed reading.
-- **LS-280** (unverified; expected answer, got answer) "Simple assault victims in Milwaukee by age in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Milwaukee city police, WI: simple assault victims by age group, 2024. / Each share is that category's part of all simple assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under one year), 
-- **LS-281** (unverified; expected answer, got answer) "Robberies in Albuquerque by weapon in 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Albuquerque city police, NM: robbery offenses by weapon, 2023. / Each share is that category's part of all robbery offenses in 2023. / No total is established for Asphyxiation; Blunt Object; Explosives; Fire/I
 - **LS-282** (avoidable_decline; expected answer, got decline) "Simple assault victims in Louisville by race and sex in 2024"
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
-- **LS-283** (unverified; expected answer, got answer) "Carjackings in Kansas City, Missouri by location type in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Kansas City city police, MO: carjacking offenses by location type, 2024. / Each share is that category's part of all carjacking offenses in 2024. / No total is established for Bar/Nightclub; Camp/Campground; C
-- **LS-284** (unverified; expected answer, got answer) "Shoplifting and theft from motor vehicle offenses in Oklahoma City in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Oklahoma City city police, OK, 2024: 3,972 theft from motor vehicle offenses; 4,375 shoplifting offenses. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical re
-- **LS-285** (unverified; expected answer, got answer) "Drug crimes in Wichita in 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Drug crimes are drug/narcotic violations plus drug equipment violations. / Wichita city police, KS, 2023: 2,797 drug/narcotic violation offenses; 2,213 drug equipment violation offenses. / Together: 5,010 drug
-- **LS-286** (unverified; expected answer, got answer) "Carjackings and shoplifting in Raleigh by month in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Raleigh city police, NC: carjacking offenses and shoplifting offenses by month, 2024. / No carjacking offenses were recorded for April 2024, November 2024, and no zero report confirms a zero: shown blank. / So
-- **LS-287** (unverified; expected answer, got answer) "Robberies in Fort Worth by weapon in 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Fort Worth city police, TX: robbery offenses by weapon, 2023. / Each share is that category's part of all robbery offenses in 2023. / No total is established for Motor Vehicle; Other Firearm; Rifle; Shotgun; U
-- **LS-288** (unverified; expected answer, got answer) "Aggravated assault victims in Mesa by age in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Mesa city police, AZ: aggravated assault victims by age group, 2024. / Each share is that category's part of all aggravated assault victims in 2024. / No total is established for 65+; Unknown: reporting eviden
-- **LS-289** (unverified; expected answer, got answer) "Murder victims in Colorado Springs by relationship to the offender in 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Colorado Springs city police, CO: murder victims by relationship to the offender, 2023. / Each share is that category's part of all murder victims in 2023. / No total is established for Acquaintance; Boyfriend
-- **LS-290** (unverified; expected answer, got answer) "Murders by strangers in Virginia Beach in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Virginia Beach city police, VA: the available evidence does not establish the number of murder victims by a stranger in 2024, so no number is given. / Source: FBI National Incident-Based Reporting System (NIBR
-- **LS-291** (unverified; expected answer, got answer) "Carjackings in Wichita by location type in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Wichita city police, KS: carjacking offenses by location type, 2024. / Each share is that category's part of all carjacking offenses in 2024. / No total is established for Bar/Nightclub; Camp/Campground; Conve
-- **LS-292** (unverified; expected answer, got answer) "Simple assaults by men and women in Oklahoma City in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Oklahoma City city police, OK: simple assault victims by offender sex, 2024. / Each share is that category's part of all simple assault victims in 2024. / No total is established for Unknown: reporting evidenc
-- **LS-293** (unverified; expected answer, got answer) "Robbery offenders in Raleigh by sex in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Raleigh city police, NC: robbery offenders by offender sex, 2024. / Each share is that category's part of all robbery offenders in 2024. / No total is established for Unknown: reporting evidence is incomplete,
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
-- **LS-295** (unverified; expected answer, got answer) "Gun crime in Fort Worth in 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Gun crime here is murder victims, robbery offenses and aggravated assault victims with a firearm. / Fort Worth city police, TX, 2023: 75 murder victims with a firearm; 362 robbery offenses with a firearm; 1,82
-- **LS-296** (unverified; expected answer, got answer) "Stabbings in Oklahoma City in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument. / Oklahoma City city police, OK, 2024: the number of murder victims with a knife or cutting instrument is no
-- **LS-297** (unverified; expected answer, got answer) "Shoplifting arrests in Colorado Springs in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Colorado Springs city police, CO: 1,288 shoplifting arrests in 2024. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting Sy
-- **LS-298** (unverified; expected answer, got answer) "Robbery arrests in Wichita by month in 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Wichita city police, KS: robbery arrests by month, 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIBRS)
-- **LS-299** (unverified; expected answer, got answer) "How many people were arrested for burglary in Raleigh in 2024?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Raleigh city police, NC: 161 burglary arrests in 2024. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIBRS), 
-- **LS-300** (unverified; expected decline, got decline) "How many robbery suspects were charged in Wichita in 2024?"
-  - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 

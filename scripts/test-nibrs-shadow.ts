@@ -334,6 +334,22 @@ const monthly = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: 
   totals: {}, rows: [{ month: "2024-01", cj: { status: "VALUE", value: 2 }, sh: { status: "VALUE", value: 9 } }] }) }]).get("LS-999")!;
 assert.deepEqual(monthly.map((x) => [x.key, x.value, x.measure]), [["2024-01", 2, "cj: carjacking offenses (120, motor vehicle taken)"], ["2024-01", 9, "sh: offense segments with code 23C"]]);
 
+// Codex review 02: compositions that would silently change what was asked are declined or kept whole.
+assert.match(as(ask("Female simple assault victims by men and women in Detroit in 2023"), "decline").explanation, /victims restricted by sex/);
+assert.match(as(ask("Drug crimes and shoplifting in Detroit in 2024"), "decline").explanation, /D19/);
+for (const q of ["Gun crimes and murders in Detroit in 2024", "Stabbings and murders in Detroit in 2024"]) assert.match(as(ask(q), "decline").explanation, /beside other crimes/, q);
+assert.match(as(ask("Robberies with a handgun in Detroit in 2023"), "answer").delivered.text[0], /robbery offenses with a weapon recorded as Handgun/);
+assert.equal(ask("Simple assaults by men and men in Detroit in 2023").kind, "decline");
+const chargedFor = as(ask("How many people were charged for shoplifting in Detroit in 2024?"), "decline");
+assert.equal(as(chargedFor.alternative!.continuation!, "answer").plan.measures[0].id, "arrests.shoplifting");
+// The combined total is checked exactly: 2520 is not 252 (gun crime stub: 84 each).
+const gunLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2023-01", to: "2023-12" },
+  measures: [{ name: "murder", unit: "victim" }, { name: "robbery", unit: "offense" }, { name: "aggravated assault", unit: "victim" }], filters: ["weapon: firearm"], groupings: [], statistic: "count" },
+  values: { status: "pending_build" }, statements: ["gives the gun-crime total (firearm murder victims plus firearm robbery offenses plus firearm aggravated assault victims)"] });
+const gunDiffs = (g: typeof gun) => scoreShadow(gunLabel, g, r, ctx).result!.diffs.filter((d) => d.field === "statement" && d.kind === "material");
+assert.equal(gunDiffs(gun).length, 0);
+assert.equal(gunDiffs({ ...gun, delivered: { ...gun.delivered, text: gun.delivered.text.map((t) => t.replace("252", "2520")) } }).length, 1);
+
 // Batch 5's category fields and codes: the file names its field; age and unknown-offender codes map to NIBRSAI's labels;
 // a multi-valued field's categories are never summed into a share's denominator.
 const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", category,

@@ -137,7 +137,7 @@ export function readQuestion(question: string, currentYear: number): ReadQuestio
 
 /** Words of the question that only carry a forecast or a court outcome: an alternative drops these and nothing else. */
 export const FORECAST_TEXT = /^(?:\s|\b(?:will|would|can|could|you|please|what|be|is|are|it|the|in|for|of|to|forecast\w*|predict\w*|projection\w*|projected|expected|going|go|up|down|rise|rising|increase|increasing|fall|falling|drop|decrease|decline|happen|look|next|year)\b)+$/i;
-export const COURT_TEXT = /^(?:\s|\b(?:led|lead|leads|resulted|result|results|went|go|goes|going|gone|sent|were|was|to|in|a|an|the|trial|trials|sentenc\w*|acquit\w*|plea\w*|guilty|conviction\w*|convicted|charged|charges|filed|brought)\b)+$/i;
+export const COURT_TEXT = /^(?:\s|\b(?:led|lead|leads|resulted|result|results|went|go|goes|going|gone|sent|were|was|to|in|a|an|the|trial|trials|sentenc\w*|acquit\w*|plea\w*|guilty|conviction\w*|convicted|charged|charges|filed|brought|people|for)\b)+$/i;
 
 /** How a rewrite is disclosed in an answer: only spellings change what the user typed into another word. */
 export const readingSentence = (r: Reading) => `Read "${r.from}" as ${r.to}.`;

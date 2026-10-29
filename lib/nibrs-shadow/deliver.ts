@@ -37,12 +37,27 @@ export function periodWords(from: string, to: string): string {
 
 const UNIT_PLURAL: Record<string, string> = { offense: "offenses", incident: "incidents", victim: "victims", offender: "offenders", arrest: "arrests", arrestee: "arrests" };
 const MEASURE_WORDS: Record<string, string> = { drug_possession: "drug/narcotic violation", drug_equipment: "drug equipment violation" };
-/** A filter on weapons or relationships, in words ("with a firearm", "by a stranger"); null for any other. */
-function filterWords(f: NonNullable<Measure["filters"]>[number]): string | null {
-  if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute") return null;
-  const v = (f.where[0].values ?? []).map(String).sort().join(",");
-  if (f.where[0].dimension === "offense_weapon.weapon") return v === "11,11A,12,12A,13,13A,14,14A,15,15A" ? "with a firearm" : v === "20" ? "with a knife or cutting instrument" : null;
-  if (f.where[0].dimension === "victim_offender.relationship") return v === "ST" ? "by a stranger" : null;
+/**
+ * A filter on weapons or relationships, in words ("with a firearm", "by a stranger", "with a weapon recorded as
+ * Handgun"); null for any other, or for a code with no name. The shadow declines a weapon or relationship filter this
+ * cannot name, so no restricted count is shown under an unrestricted name (Codex review 02).
+ */
+export function filterWords(f: NonNullable<Measure["filters"]>[number]): string | null {
+  if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute" || f.where[0].op !== "in") return null;
+  const codes = (f.where[0].values ?? []).map(String);
+  const v = [...codes].sort().join(",");
+  const named = (names: Record<string, string>) => (codes.length && codes.every((c) => names[c]) ? codes.map((c) => names[c]).join(" or ") : null);
+  if (f.where[0].dimension === "offense_weapon.weapon") {
+    if (v === "11,11A,12,12A,13,13A,14,14A,15,15A") return "with a firearm";
+    if (v === "20") return "with a knife or cutting instrument";
+    const n = named(WEAPON_TYPES);
+    return n && `with a weapon recorded as ${n}`;
+  }
+  if (f.where[0].dimension === "victim_offender.relationship") {
+    if (v === "ST") return "by a stranger";
+    const n = named(RELATIONSHIP_LABEL);
+    return n && `with an offender relationship recorded as ${n}`;
+  }
   return null;
 }
 /** "shoplifting offenses", "simple assault victims", "murder victims with a firearm". */

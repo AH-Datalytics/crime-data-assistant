@@ -69,10 +69,15 @@ const ident = (s: string) => `"${s.replace(/"/g, '""')}"`;
 
 type Entity = "victim" | "offense" | "incident" | "offender" | "arrestee";
 type Read = (table: string) => string;
-/** The keys of one incident occurrence: a segment joins its incident's other segments on these. */
-const sameIncident = (x: string, y: string) => `${x}.data_year = ${y}.data_year AND ${x}.ori = ${y}.ori AND ${x}.incident_num = ${y}.incident_num AND ${x}.key_occurrence = ${y}.key_occurrence`;
-const sameVictim = (x: string, y: string) => `${sameIncident(x, y)} AND ${x}.victim_seq = ${y}.victim_seq`;
-const sameOffense = (x: string, y: string) => `${sameIncident(x, y)} AND ${x}.offense_code = ${y}.offense_code`;
+/**
+ * Joins. A segment reaches its incident's other segments by the incident's keys alone. `key_occurrence` is NOT an
+ * incident key: the canonical build numbers lines that share one segment's sequence (or code) within an incident, per
+ * segment family (nibrs-model BUILD-RULES T1), so it joins only a parent segment to its own child rows (an offense to
+ * its weapons; a victim to its connected offenses and offender relationships), never one family to another.
+ */
+const sameIncident = (x: string, y: string) => `${x}.data_year = ${y}.data_year AND ${x}.ori = ${y}.ori AND ${x}.incident_num = ${y}.incident_num`;
+const sameVictim = (x: string, y: string) => `${sameIncident(x, y)} AND ${x}.victim_seq = ${y}.victim_seq AND ${x}.key_occurrence = ${y}.key_occurrence`;
+const sameOffense = (x: string, y: string) => `${sameIncident(x, y)} AND ${x}.offense_code = ${y}.offense_code AND ${x}.key_occurrence = ${y}.key_occurrence`;
 
 /**
  * A grouping v0 can read: the column (an expression over the units query's aliases: o, v, f, a), and for a dimension on
@@ -242,7 +247,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       if (on === "offense_weapon offense_weapon.weapon offense offense")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameOffense("w2", "o")} AND ${weaponIn("w2", values)})`);
       else if (on === "offense_weapon offense_weapon.weapon victim victim")
-        // P31: the weapon of the offense connecting the victim (one of the measure's codes), in the same incident occurrence.
+        // P31: a weapon on the incident's offense segment with the code that connects the victim (one of the measure's
+        // codes). A victim names its connected offense by code only, so any segment of that code in the incident counts.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "vo")} AND w2.offense_code = vo.connected_offense AND ${weaponIn("w2", values)})`);
       else if (on === "victim_offender victim_offender.relationship victim victim")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
