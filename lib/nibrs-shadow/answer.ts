@@ -31,7 +31,7 @@ import type { LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { deliver, monthName, periodWords, type Delivered } from "./deliver";
+import { DELIVERED_CATEGORIES, deliver, monthName, periodWords, type Delivered } from "./deliver";
 import { agencyLabel, candidateLabel, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 
 export type ShadowDeps = {
@@ -90,7 +90,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */
-type Read = { readings?: Reading[]; forecast?: boolean; court?: boolean };
+type Read = { readings?: Reading[]; forecast?: boolean; court?: boolean; offenders?: boolean };
 const flags = (l: RequestLedger) => l as RequestLedger & Read;
 const unflagged = (l: RequestLedger) => Object.assign(l, { forecast: false, court: false });
 
@@ -126,6 +126,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const unrecorded = ledger0.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
+  // P29: "by <group>" asks about offenders. Offender breakdowns are compiler increment 2: declined with that reason,
+  // never answered as victims.
+  if (flags(ledger0).offenders) return decline("unsupported_capability", "Not in the slice yet: \"by\" a group names the offenders (P29), and offender breakdowns are not built yet.");
   if (unrecorded.length) {
     const why = unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
     return decline(readerReason(why), why);
@@ -209,10 +212,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     statements.push("property_counted_by_offense");
   }
 
-  // The slice delivers one count, as a total or by month or year. Breakdowns by category, shares and rates are not
-  // delivered yet, so they are declined before anything is asked or run.
-  if (plan.groupings.some((g) => !g.dimension.startsWith("time.")) || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count")
-    return decline("unsupported_capability", "Not in the slice yet: breakdowns by category, shares and rates.");
+  // The slice delivers one count, as a total or by month or year, optionally broken down by ONE delivered category
+  // (victim race, sex, ethnicity; offense location type) with each category's share of its period (compiler increment
+  // 1). Age groups, weapons, two-way breakdowns, rates and other shares are declined before anything is asked or run.
+  const timeG = plan.groupings.filter((g) => g.dimension.startsWith("time."));
+  const catG = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
+  const [first, second, ...more] = plan.statistics;
+  const shareOk = !second || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
+    && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
+  if (catG.length > 1 || catG.some((g) => !DELIVERED_CATEGORIES.has(g.dimension) || g.bins || g.multiValue) || first.kind !== "count" || more.length || !shareOk)
+    return decline("unsupported_capability", "Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.");
 
   // D31/P06: a missing period is asked about, for any reader form, once the question is known to be in the slice.
   const spec = d.spec as { period?: { form: string }; grain?: string };

@@ -9,7 +9,9 @@
  *              that word. A changed letter is never corrected: "sample" is a word, not a misspelled "simple" (Codex
  *              review 2). Two near words, none, or a short word leave it unread.
  *   phrase     inflected or reordered names of crimes the reader knows: "thefts from cars", "vehicle break-ins",
- *              "car jackings". Only onto existing measures.
+ *              "car jackings". Only onto existing measures. A victim breakdown asked as its categories ("victims ...
+ *              were male or female") or with "and" before a time grain ("by race and year") -> the reader's "by sex",
+ *              "by race by year".
  *   period     "year to date", "so far this year", "this year (so far)", "so far in <year>" -> that year, which the
  *              release clips to its latest month; the answer names the months covered (D06). "next year" -> the year
  *              after this one, a period after the data (P24), when nothing in the question predicts.
@@ -24,17 +26,27 @@ import { accountNibrsRequest } from "../nibrs-request-accounting";
 import { MEASURE_LABEL, STATE_NAME_BY_CODE } from "../nibrs-question-types";
 
 export type Reading = { kind: "spelling" | "phrase" | "period"; from: string; to: string };
-export type ReadQuestion = { question: string; text: string; readings: Reading[]; forecast: boolean; court: boolean; ledger: RequestLedger & { readings: Reading[]; forecast: boolean; court: boolean } };
+export type ReadQuestion = { question: string; text: string; readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean;
+  ledger: RequestLedger & { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean } };
 
 const PHRASES: [RegExp, string][] = [
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],
+  // A victim breakdown asked as its categories: "victims ... were male or female" -> "victims ... by sex". Only victims,
+  // and only "were": "committed by men and women" is about offenders and is left alone (Codex increment-1 review).
+  [/\b(victims?\b[^?.!]*?\s)were\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "$1by sex"],
+  // P29: "against men and women" names the victims -> by (victim) sex.
+  [/\bagainst\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "by sex"],
+  // A category and a time grain joined by "and": "by race and year" -> "by race by year".
+  [/\bby\s+(race|sex|gender|ethnicity|location(?:\s+type)?)\s+and\s+(year|month)\b/gi, "by $1 by $2"],
 ];
 const YTD = /\b(?:so\s+far\s+this\s+year|this\s+year\s+so\s+far|year\s+to\s+date|ytd|this\s+year)\b|\bso\s+far\s+in\s+(\d{4})\b/gi;
 const NEXT_YEAR = /\bnext\s+year\b/gi;
 const FORECAST_WORDS = /\b(?:forecast\w*|predict\w*|projection\w*|projected|expected\s+to)\b|\bgoing\s+to\s+(?:go\s+up|go\s+down|rise|increase|fall|drop|decrease|decline)\b/i;
 const WILL = /\bwill\b[^?.!]*\b(?:go\s+up|go\s+down|rise|increase|fall|drop|decrease|decline|be|happen|look)\b/i;
+/** P29: "by <group>" names the offenders ("assaults by men and women", "committed by juveniles"). */
+const BY_GROUP = /\b(?:committed\s+|perpetrated\s+)?by\s+(?:(?:males?|men|females?|women)(?:\s+(?:or|and|vs\.?|versus)\s+(?:males?|men|females?|women))?|juveniles?|adults?|minors?|teens?|teenagers?|youths?)\b/i;
 const COURT = /\b(?:(?:went|go|goes|going|gone|sent)\s+to\s+trial|trials?|sentenc(?:ed|es|ing)|acquit(?:ted|tals?)|plea(?:ded|d)?\s+guilty|guilty\s+pleas?)\b/i;
 
 /** The words a misspelling may be read as: the reader's crime words and state names. */
@@ -67,7 +79,11 @@ export function nearestWord(word: string): string | null {
 export function readQuestion(question: string, currentYear: number): ReadQuestion {
   const readings: Reading[] = [];
   let text = question;
-  for (const [re, to] of PHRASES) text = text.replace(re, (m) => (readings.push({ kind: "phrase", from: m, to }), to));
+  for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
+    const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
+    readings.push({ kind: "phrase", from: m, to: t });
+    return t;
+  });
   text = text.replace(YTD, (m, y) => {
     const to = `in ${y ?? currentYear}`;
     readings.push({ kind: "period", from: m, to });
@@ -88,10 +104,11 @@ export function readQuestion(question: string, currentYear: number): ReadQuestio
   const futureYear = years.some((y) => y > currentYear) || /\bnext\s+year\b/i.test(own);
   const forecast = FORECAST_WORDS.test(own) || (WILL.test(own) && (!years.length || futureYear));
   const court = COURT.test(own);
+  const offenders = BY_GROUP.test(own);
   // A future year with nothing predicting is a period after the data (P24), read as that year.
   if (!forecast) text = text.replace(NEXT_YEAR, (m) => (readings.push({ kind: "period", from: m, to: `in ${currentYear + 1}` }), `in ${currentYear + 1}`));
-  const ledger = Object.assign(readings.length ? accountNibrsRequest(text) : first, { readings, forecast, court });
-  return { question, text, readings, forecast, court, ledger };
+  const ledger = Object.assign(readings.length ? accountNibrsRequest(text) : first, { readings, forecast, court, offenders });
+  return { question, text, readings, forecast, court, offenders, ledger };
 }
 
 /** Words of the question that only carry a forecast or a court outcome: an alternative drops these and nothing else. */

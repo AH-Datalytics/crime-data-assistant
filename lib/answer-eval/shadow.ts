@@ -13,7 +13,7 @@
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
 import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
-import { periodWords } from "../nibrs-shadow/deliver";
+import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
 import { compareMeaning, planToMeaning, type Diff, type Release } from "./compare";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
@@ -22,7 +22,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (c.group.startsWith("designed:slice-") || c.group.startsWith("designed:reader-")) return "designed";
+  if (/^designed:(slice|reader|breakdown)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -33,7 +33,7 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  * cell's status. The map's keys: a case id ("LS-219"), a case and one of its options ("LS-231|Kansas City, Missouri"),
  * or a case's alternative ("LS-236|alternative").
  */
-export type ExpectedCell = { key: string; value: number | null; status: string };
+export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null };
 export type ExpectedValues = Map<string, ExpectedCell[]>;
 
 /**
@@ -48,9 +48,29 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
-    const cells: ExpectedCell[] = v.grouping === "total"
+    // A breakdown's rows carry a category field (race, sex, ethnicity, location_type): keyed by period (if any) and the
+    // category's name as NIBRSAI shows it. Each category's share is its count over its own period's independent total:
+    // the measure's known total, or the sum of every category of that period when all of them are known (each unit is in
+    // exactly one category). No independent total: the share is undefined (unverified), never an expected blank.
+    const catField = Object.keys(CATEGORY_FIELDS).find((f) => (v.rows ?? []).some((r) => f in r));
+    const total = v.totals?.[measures[0]];
+    const periodTotal = new Map<string, number | null>();
+    const add = (p: string, value: number | null) => { const sofar = periodTotal.has(p) ? periodTotal.get(p)! : 0; periodTotal.set(p, sofar === null || value === null ? null : sofar + value); };
+    const measureMonths = (v as { months?: Record<string, Record<string, unknown>> }).months;
+    if (measureMonths) {
+      // The measure's own month cells (independent of the category rows): a year's total when every month is known.
+      for (const [m, c] of Object.entries(measureMonths)) { const x = cell(c[measures[0]]); add(m.slice(0, 4), ["VALUE", "REPORTED_ZERO"].includes(x.status) ? x.value ?? 0 : null); }
+    } else for (const r of v.rows ?? []) add(String(r.year ?? r.month ?? ""), cell(r[measures[0]]).value);
+    const cells: ExpectedCell[] = v.grouping === "total" && !catField
       ? measures.map((m) => ({ key: measures.length > 1 ? m : "", ...pick(v.totals[m]) }))
-      : (v.rows ?? []).map((r) => ({ key: String(r.month ?? r.year), ...pick(cell(r[measures[0]])) }));
+      : (v.rows ?? []).map((r) => {
+        const c = pick(cell(r[measures[0]]));
+        const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], r[catField]) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
+        const p = String(r.year ?? r.month ?? "");
+        const den = !p && total?.value ? total.value : periodTotal.get(p) || undefined;
+        const share = c.value === null ? null : den === undefined ? undefined : Math.round((1000 * c.value) / den) / 10;
+        return { key, ...c, ...(catField ? { share } : {}) };
+      });
     for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g)) {
       const k = m[3] ? `${m[1]}|alternative` : m[2] ? `${m[1]}|${m[2]}` : m[1];
       out.set(P28_VALUE_KEYS[k] ?? k, cells);
@@ -59,6 +79,8 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+/** nibrs-model's breakdown field names -> the plan's grouping dimensions. */
+const CATEGORY_FIELDS: Record<string, string> = { race: "victim.race", sex: "victim.sex", ethnicity: "victim.ethnicity", location_type: "offense.location_type" };
 /**
  * Values requested before a label changed: P28 made these questions ask city or county first, so the city's values serve
  * the city button; P06's button now names its year. (nibrs-model's files name the cases as they were requested.)
@@ -79,7 +101,7 @@ const viewOf = (plan: NibrsPlan, p: { from: string; to: string }) => planToMeani
 
 /** The label's agency name as the words an answer must carry (its city), e.g. "St. Louis". */
 function agencyWords(name: string): string {
-  return name.replace(/\b(Metropolitan|Police|Department|Bureau|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
+  return name.replace(/\b(Metropolitan|Metro|Police|Department|Bureau|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
@@ -93,9 +115,14 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     if (ag) ok = all.toLowerCase().includes(agencyWords(ag[1]).toLowerCase());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
     else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
-    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish/.test(all);
+    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|No total is established for/.test(all);
     else if (s === "names the months covered") ok = all.includes(periodWords(o.period.from, o.period.to));
     else if (/^says drug crimes include/.test(s)) ok = /drug equipment/i.test(all);
+    else if (/^shows unknown and not-recorded categories as their own rows/.test(s)) {
+      // Every row names its category (unknown and not-recorded are named categories); only number cells may be blank.
+      const cols = o.delivered.table.columns.map((c, i) => (c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") ? i : -1)).filter((i) => i >= 0);
+      ok = cols.length > 0 && o.delivered.table.rows.every((r) => cols.every((i) => typeof r[i] === "string" && r[i] !== ""));
+    }
     if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
     else if (!ok) out.push({ field: "statement", expected: s, actual: text.join(" / ").slice(0, 200), kind: "material" });
   }
@@ -106,15 +133,32 @@ type Values = "match" | "mismatch" | "not measured";
 /** Delivered cells (value and status) against independent expected cells; none given is NOT MEASURED, never a match. */
 function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
   if (!expected) return { values: "not measured", diffs: [{ field: `${prefix}values`, expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
-  const rows = o.delivered.table.rows;
-  const got = new Map(rows.map((r, i) => [r.length > 1 ? String(r[0]) : "", { value: r[r.length - 1] as number | null, status: o.delivered.evidence.find((e) => e.row === i)?.status ?? "?" }]));
+  // Each row by its grouping values (period, category), its count by the first statistic's column, its share (if any)
+  // by the second's.
+  const { columns, rows } = o.delivered.table;
+  const groupCols = columns.map((c, i) => (c.binding.kind === "grouping" ? i : -1)).filter((i) => i >= 0);
+  const statCol = (n: number) => columns.findIndex((c, i) => c.binding.kind === "statistic" && columns.slice(0, i).filter((x) => x.binding.kind === "statistic").length === n);
+  const [ci, si] = [statCol(0), statCol(1)];
+  const countAs = (columns[ci].binding as { as: string }).as;
+  const keys = rows.map((r) => groupCols.map((j) => String(r[j])).join("|"));
+  const got = new Map(rows.map((r, i) => [keys[i],
+    { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
   const diffs: Diff[] = [];
+  // A key delivered twice could hide a wrong row behind a right one: never compared, always wrong.
+  const twice = keys.filter((k, i) => keys.indexOf(k) !== i);
+  if (twice.length) diffs.push({ field: `${prefix}rows`, expected: "each grouping once", actual: `repeated: ${[...new Set(twice)].join(", ")}`, kind: "material" });
   if (got.size !== expected.length) diffs.push({ field: `${prefix}values`, expected: `${expected.length} cells`, actual: `${got.size} cells`, kind: "material" });
+  // A breakdown promises each category's share (increment 1): a table without it is incomplete.
+  if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });
   for (const x of expected) {
     const g = got.get(x.key);
     if (!g || g.value !== x.value || g.status !== x.status) diffs.push({ field: `${prefix}value ${x.key || "total"}`, expected: `${x.value} ${x.status}`, actual: g ? `${g.value} ${g.status}` : "missing", kind: "material" });
+    else if (g.share !== undefined && x.share !== undefined && g.share !== x.share)   // null against a number included
+      diffs.push({ field: `${prefix}share ${x.key}`, expected: String(x.share), actual: String(g.share), kind: "material" });
+    else if (g.share !== undefined && x.share === undefined)
+      diffs.push({ field: `${prefix}share ${x.key}`, expected: "(no independent share)", actual: String(g.share), kind: "unverified" });
   }
-  return { diffs, values: diffs.length ? "mismatch" : "match" };
+  return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }
 const worst = (vs: Values[]): Values | undefined => (vs.includes("mismatch") ? "mismatch" : vs.includes("not measured") ? "not measured" : vs.length ? "match" : undefined);
 const sameAbout = (a: string, b: string) => normLabel(a) === normLabel(b);

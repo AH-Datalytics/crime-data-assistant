@@ -27,6 +27,17 @@ assert.equal(read("car jackings in Tulsa in 2022").text, "carjackings in Tulsa i
 assert.equal(read("motor vehicle thefts in Tulsa in 2022").readings.length, 0);
 assert.equal(read("car thefts in Tulsa in 2022").readings.length, 0, "car theft is motor vehicle theft, not theft from a car");
 
+// A breakdown asked as its categories, or with "and" before a time grain (compiler increment 1).
+assert.equal(read("How many robbery victims in Tulsa were women or men in 2022?").text, "How many robbery victims in Tulsa by sex in 2022?");
+assert.equal(read("arsons in Tulsa by location type and month, 2022").text, "arsons in Tulsa by location type by month, 2022");
+assert.equal(read("robberies in Tulsa by weapon and year").readings.length, 0, "only the delivered categories");
+assert.equal(read("Simple assaults committed by men and women in Tulsa in 2023").readings.length, 0, "offenders, not victims: left alone");
+// P29 (Jeff): "by" names the offenders, "against" names the victims.
+assert.equal(read("robberies against men and women in Tulsa in 2022").text, "robberies by sex in Tulsa in 2022");
+for (const q of ["assaults by men and women in Tulsa", "burglaries committed by juveniles in Tulsa", "robberies by women in Tulsa"]) assert.equal(read(q).offenders, true, q);
+for (const q of ["robberies by sex in Tulsa", "assaults against women in Tulsa", "robberies by month in Tulsa"]) assert.equal(read(q).offenders, false, q);
+assert.equal(read("Were male or female victims assaulted more in Tulsa?").readings.length, 0, "no 'victims ... were' form");
+
 // Year to date: the current year (the release clips it and names the months, D06); "last year" is left alone.
 assert.equal(read("robberies in Tulsa year to date").text, "robberies in Tulsa in 2026");
 assert.equal(read("ytd burglaries in Tulsa").text, "in 2026 burglaries in Tulsa");

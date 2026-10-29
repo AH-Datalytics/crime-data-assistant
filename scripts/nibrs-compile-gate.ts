@@ -45,6 +45,7 @@ function runSql(sql: string): unknown[][] {
   return JSON.parse(python(`import duckdb, json, sys
 con = duckdb.connect()
 con.execute("SET temp_directory = ?", [sys.argv[2]])
+con.execute("SET enable_progress_bar = false")
 print(json.dumps(con.execute(open(sys.argv[1], encoding="utf-8").read()).fetchall(), default=str))`, [file, TMP]));
 }
 
