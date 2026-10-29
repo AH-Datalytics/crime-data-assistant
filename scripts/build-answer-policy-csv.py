@@ -48,10 +48,10 @@ ROWS = [
      O28 + " (Jeff: keep the tabs as an advanced option)", NEW),
     ("P03", "\"How did aggravated assaults with a firearm change in Texas from 2018 to 2024?\" (a detail only NIBRS records, over years when many agencies joined NIBRS)",
      "Counts every agency that reported in each year, so agencies joining looks like crime rising. Consistent reporters only when the user asks.",
-     "Count only agencies that reported in every year shown, and say so in one sentence. Count every agency only when the user asks. For a single national or state total of such a detail, say what share of the population the reporting agencies cover.",
-     "Default: agencies that reported in every year shown. On request: all reporting agencies.",
-     "Without it, a NIBRS trend mostly measures agencies joining. Current Trends already works this way.",
-     OPEN, NEW),
+     "Count every agency that reported in each year (keep today's default), with a prominently displayed note that the trend can be shown for consistently reporting agencies only, offered as a button. For a single national or state total of such a detail, say what share of the population the reporting agencies cover.",
+     "Default: all reporting agencies. Prominent note and button: \"Show only agencies that reported in every year\".",
+     "The full count is what was reported; the note makes clear that participation changed and offers the consistent view.",
+     O28 + " (Jeff: show everything, with a prominent note offering consistent reporters)", NEW),
     ("P04", "\"Top 20 cities by murder rate in 2024\" where some cities reported only part of the year",
      "Includes them, with their first and last reported month and a caveat that spans differ.",
      "Leave out agencies that did not report all 12 months, and state how many were left out (rankings of change already do this, frozen rule 7).",
@@ -232,7 +232,6 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P03": "For a detail only NIBRS has, tracked over several years, should the trend count only agencies that reported in every year?",
     "P04": "In a ranking for one year, should agencies that reported fewer than 12 months be left out, with the number left out stated?",
     "P05": "When a ranking names no year, should it use the latest complete year rather than this year so far?",
     "P06": "When no period is given, should a single number use the latest complete year and a trend the last 10 complete years, on every tab?",
@@ -257,7 +256,7 @@ DECISION = {
     "P27": "Should \"where\" with no kind of place make the app ask once: states, cities, or individual agencies?",
 }
 TOPIC = {
-    **{p: "2. How a number is counted" for p in ["P03", "P04", "P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
+    **{p: "2. How a number is counted" for p in ["P04", "P05", "P06", "P07", "P09", "P10", "P11", "P12", "P15", "P16", "P17", "P25"]},
     **{p: "3. When to ask a question" for p in ["P13", "P22", "P23", "P26", "P27"]},
     **{p: "4. When to decline, and what to offer instead" for p in ["P18", "P19", "P20", "P21", "P24"]},
 }
