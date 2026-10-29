@@ -31,12 +31,14 @@
  * built year, because an arrest sits in its incident's file.
  *
  * Status (D6), per month, from the agency-month status of the month's own data year (an arrest's: its arrest month):
- *   - REPORTED_CRIMES: the count; a category or measure with no units there is UNKNOWN_UNEVIDENCED_ZERO (blank);
- *   - REPORTED_ZERO: 0 (a share of an empty month is UNAVAILABLE);
+ *   - REPORTED_CRIMES: the count; a category or measure with no units there is a known 0, VALUE (P51, Jeff 2026-10-29:
+ *     "if the reporting shows crimes for that agency that month but a filter comes up empty then it should be 0");
+ *   - REPORTED_ZERO: 0;
+ *   - a share whose denominator is 0 is UNAVAILABLE;
  *   - UNKNOWN: blank;
  *   - rows counted under a month whose status is not REPORTED_CRIMES (an incident from a later year's file, say)
  *     contradict that status: EVIDENCE_CONFLICT, and a result holding one must be refused (`CompiledQuery.refuseOn`).
- * A year or a total is known only when every month in it is. A share is computed from its own month's units, never
+ * A year or a total is known only when every month in it is; it is REPORTED_ZERO only when every month is. A share is computed from its own month's units, never
  * from the cells shown.
  *
  * Measure definitions are an executable draft for the canonical tables, until the shared semantic layer (nibrs-model
@@ -297,7 +299,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN 'EVIDENCE_CONFLICT'
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
-           WHEN coalesce(t.n, 0) = 0 THEN 'UNKNOWN_UNEVIDENCED_ZERO' ELSE 'VALUE' END AS month_cell
+           ELSE 'VALUE' END AS month_cell
       FROM spine s LEFT JOIN status st USING (ym) LEFT JOIN month_total t USING (ym))`,
   ];
   if (g.length) {
@@ -305,7 +307,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped)`);
     parts.push(`counted AS (SELECT u.ym${g.map((x) => `, u.${x}`).join("")}, COUNT(DISTINCT ${key}) AS n FROM scoped u GROUP BY ALL)`);
     parts.push(`cells AS (SELECT mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n,
-      CASE WHEN mc.month_cell = 'VALUE' AND coalesce(k.n, 0) = 0 THEN 'UNKNOWN_UNEVIDENCED_ZERO' ELSE mc.month_cell END AS cell
+      mc.month_cell AS cell
       FROM month_cells mc CROSS JOIN cats c
       LEFT JOIN counted k ON k.ym = mc.ym${g.map((x) => ` AND k.${x} IS NOT DISTINCT FROM c.${x}`).join("")})`);
   } else {
@@ -319,7 +321,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (grain === "month") {
     const shareCols = share ? `,
       CASE WHEN cell = 'VALUE' AND den > 0 THEN n::DOUBLE / den END AS ${shareName},
-      CASE WHEN cell = 'VALUE' AND den > 0 THEN 'VALUE' WHEN cell = 'REPORTED_ZERO' THEN 'UNAVAILABLE' ELSE cell END AS ${ident(`${share.as}_status`)}` : "";
+      CASE WHEN ${known("cell")} AND den = 0 THEN 'UNAVAILABLE' ELSE cell END AS ${ident(`${share.as}_status`)}` : "";
     body = `SELECT substr(ym, 1, 4) || '-' || substr(ym, 5, 2) AS period${gSel},
       CASE WHEN ${known("cell")} THEN n END AS ${countName}, cell AS ${ident(`${count.as}_status`)}${shareCols}
       FROM cells ORDER BY ym${gSel}`;
@@ -327,13 +329,13 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     // A year or total is a sum of months: known only when every month of it is. A share of a year divides by the year's
     // own units, which (one unit, one category) is the sum of its months' totals.
     const pk = grain === "year" ? `substr(ym, 1, 4) AS period, ` : "";
-    const rolled = (c: string) => `CASE WHEN bool_or(${c} = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN bool_and(${known(c)}) THEN CASE WHEN sum(n) = 0 AND bool_or(month_cell = 'VALUE') THEN 'UNKNOWN_UNEVIDENCED_ZERO' WHEN sum(n) = 0 THEN 'REPORTED_ZERO' ELSE 'VALUE' END ELSE 'UNKNOWN' END`;
+    const rolled = (c: string) => `CASE WHEN bool_or(${c} = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN bool_and(${known(c)}) THEN CASE WHEN bool_and(${c} = 'REPORTED_ZERO') THEN 'REPORTED_ZERO' ELSE 'VALUE' END ELSE 'UNKNOWN' END`;
     const shareCols = share ? `,
-      CASE WHEN bool_and(${known("cell")}) AND sum(n) > 0 THEN sum(n)::DOUBLE / sum(den) END AS ${shareName},
+      CASE WHEN bool_and(${known("cell")}) AND sum(den) > 0 THEN sum(n)::DOUBLE / sum(den) END AS ${shareName},
       CASE WHEN bool_or(cell = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN NOT bool_and(${known("cell")}) THEN 'UNKNOWN'
-           WHEN sum(den) = 0 THEN 'UNAVAILABLE' WHEN sum(n) = 0 THEN 'UNKNOWN_UNEVIDENCED_ZERO' ELSE 'VALUE' END AS ${ident(`${share.as}_status`)}` : "";
+           WHEN sum(den) = 0 THEN 'UNAVAILABLE' ELSE 'VALUE' END AS ${ident(`${share.as}_status`)}` : "";
     body = `SELECT ${pk}${g.join(", ")}${g.length ? ", " : ""}
-      CASE WHEN bool_and(${known("cell")}) AND NOT (sum(n) = 0 AND bool_or(month_cell = 'VALUE')) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${shareCols}
+      CASE WHEN bool_and(${known("cell")}) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${shareCols}
       FROM cells${grain === "year" || g.length ? ` GROUP BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")}` : ""}`;
   }
   const columns = [...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(share ? [share.as, `${share.as}_status`] : [])];

@@ -1,7 +1,7 @@
 /**
  * The compiler's correctness gate (engine phase 1, step 2). Two parts:
  *   1. synthetic: a tiny canonical build written to a temporary directory exercises the rules no real case happens
- *      to hit (an incident in a later year's file under a REPORTED_ZERO month, an unevidenced zero, two offense
+ *      to hit (an incident in a later year's file under a REPORTED_ZERO month, a known zero in a month with crimes reported (P51), two offense
  *      segments of one code in one incident, UNKNOWN and REPORTED_ZERO months);
  *   2. correctness cases: the plans X.H1-H3, X.N1, X.N2 and X.N3, run read-only against a canonical build and compared
  *      cell by cell with the hand-traced expected values (nibrs-model's correctness cases).
@@ -9,13 +9,16 @@
  * statistic in every row, value/status consistency, the fixed answer statements, and that no status the compiler
  * marks for refusal appears.
  *
- *   npx tsx scripts/nibrs-compile-gate.ts [--root <canonical dir>] [--python <python with duckdb>] [--expected <cases dir>]
+ *   npx tsx scripts/nibrs-compile-gate.ts [--root <canonical dir>] [--python <python with duckdb>] [--values-repo <nibrs-model checkout>]
+ *
+ * The expected cases are read from nibrs-model's main branch with `git show` (correctness/cases/<case>/expected.json), never
+ * from a work tree.
  *
  * LOCAL ONLY: it needs Python with duckdb and the canonical build, which are not in this repository, so it is not part
  * of the CI harness. Read-only against the build: DuckDB runs in memory with its temporary directory elsewhere.
  * Exit 1 on any failure.
  */
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -28,9 +31,10 @@ import { validateResolved, type ResolvedPeriod } from "../lib/nibrs-plan/resolve
 const arg = (name: string, dflt: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const ROOT = arg("--root", "C:/Users/jeffm/nibrs-model/work/build/20261028-test5/canonical").replace(/\\/g, "/");
 const PY = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe");
-const CASES = arg("--expected", "C:/Users/jeffm/nibrs-model-correctness/correctness/cases");
+const VALUES_REPO = arg("--values-repo", "C:/Users/jeffm/nibrs-model");
 const BUILT = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
-const release = { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" };
+// P52: the upload month (2026-10) is not reported.
+const release = { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" };
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-compile-gate-")).replace(/\\/g, "/");
 
 function python(code: string, args: string[]): string {
@@ -156,8 +160,9 @@ write("offense_weapon", 2024, ["ori", "incident_num", "offense_code", "key_occur
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
+// February: crimes reported, none of this kind: a known 0 (P51).
 const synExpected = (march: number) => new Map<string, Cell[]>([
-  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(null, "UNKNOWN_UNEVIDENCED_ZERO")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
+  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
 // Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
@@ -177,7 +182,7 @@ check("synthetic victim with a handgun on its connecting offense", zz([{ id: "vi
   [{ kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["12"] }] }]), JAN24, SYN, [2024], new Map([["total", [known(1)]]]));
 
 // ---- 2. correctness cases against the canonical build ----
-const load = (c: string) => JSON.parse(fs.readFileSync(path.join(CASES, c, "expected.json"), "utf8"));
+const load = (c: string) => JSON.parse(execFileSync("git", ["-C", VALUES_REPO, "show", `main:correctness/cases/${c}/expected.json`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }));
 const [n1, n2, n3, n4] = ["N1", "N2", "N3", "N4"].map(load);
 // N1: every race-sex category that occurs, in every month; an UNKNOWN month is blank in every category.
 type N1Cell = { race: string; sex: string; num: number | null; pct_1dp: number | null; status?: string };

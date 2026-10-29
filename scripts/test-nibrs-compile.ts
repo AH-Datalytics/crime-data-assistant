@@ -15,7 +15,8 @@ const ok = (r: ReturnType<typeof compilePlan>) => { assert(r.kind === "query", r
 const h1 = ok(compilePlan(X.H1, year(2025), t));
 assert.deepEqual(h1.columns, ["period", X.H1.statistics[0].as, `${X.H1.statistics[0].as}_status`]);
 assert.deepEqual(h1.scanYears, [2025, 2026], "a later year's file can hold the period's incidents");
-for (const s of ["offense_code = '120'", "p.loss_type = '7'", "'03', '05', '24', '28', '37'", "u.ori = 'TNMPD0000'", "agency_month_status", "UNKNOWN_UNEVIDENCED_ZERO", "BETWEEN '202501' AND '202512'", "EVIDENCE_CONFLICT"]) assert.ok(h1.sql.includes(s), s);
+for (const s of ["offense_code = '120'", "p.loss_type = '7'", "'03', '05', '24', '28', '37'", "u.ori = 'TNMPD0000'", "agency_month_status", "BETWEEN '202501' AND '202512'", "EVIDENCE_CONFLICT"]) assert.ok(h1.sql.includes(s), s);
+assert.ok(!h1.sql.includes("UNKNOWN_UNEVIDENCED_ZERO"), "P51: a month with crimes reported and none of these is a known 0");
 assert.ok(!h1.sql.includes("data_year=2024"), "no year before the period is scanned");
 assert.deepEqual(h1.refuseOn, ["EVIDENCE_CONFLICT"]);
 assert.deepEqual(h1.statements, []);

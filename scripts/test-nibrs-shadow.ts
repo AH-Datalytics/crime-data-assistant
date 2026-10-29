@@ -31,7 +31,7 @@ function stub(sql: string): unknown[][] {
   return months.some((m) => cell(m)[0] === null) ? [[null, "UNKNOWN"]] : [[7 * months.length, "VALUE"]];
 }
 const deps: ShadowDeps = {
-  places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" },
+  places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
   target: { root: "/build", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute: stub,
 };
 const ask = (q: string) => shadowAnswer(q, deps);
@@ -91,12 +91,12 @@ const noPeriod = as(ask("Shoplifting in Memphis"), "clarify");
 assert.deepEqual(noPeriod.options.map((o) => o.label), ["The latest complete year (2025)", "This year so far", "Another year"]);
 assert.deepEqual(as(noPeriod.options[0].continuation!, "answer").period, { from: "2025-01", to: "2025-12" });
 const ytd = as(noPeriod.options[1].continuation!, "answer");
-assert.deepEqual(ytd.period, { from: "2026-01", to: "2026-10" });
-assert.ok(ytd.delivered.text.includes("The data runs through October 2026: this covers January through October 2026."), "D06: the months covered are named");
+assert.deepEqual(ytd.period, { from: "2026-01", to: "2026-09" });
+assert.ok(ytd.delivered.text.includes("The data runs through September 2026: this covers January through September 2026."), "D06: the months covered are named");
 const trend = as(ask("Carjackings in Memphis by month"), "clarify");
 assert.deepEqual(trend.options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
 assert.equal(as(trend.options[0].continuation!, "decline").notBuilt, true, "2016 is before this build");
-assert.deepEqual(as(trend.options[1].continuation!, "answer").period, { from: "2017-01", to: "2026-10" });
+assert.deepEqual(as(trend.options[1].continuation!, "answer").period, { from: "2017-01", to: "2026-09" });
 assert.deepEqual(as(ask("How many crimes were there in Detroit in 2024?"), "clarify").options.map((o) => o.otherSource), ["historical", "historical", "historical"]);
 const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
 assert.deepEqual(kc.options.map((o) => o.label), ["Kansas City, Missouri", "Kansas City, Kansas"]);
@@ -118,8 +118,8 @@ assert.match(as(wa.options[1].continuation!, "decline").explanation, /^Not in th
 // not built; drug crimes (D19) are not one measure.
 assert.equal(as(ask("crime by ZIP code in Chicago"), "decline").reason, "below_agency_level");
 const future = as(ask("Shoplifting in Memphis in 2027"), "decline");
-assert.equal(future.explanation, "2027 is not in the data; the latest month available is October 2026.");
-assert.deepEqual(as(future.alternative!.continuation!, "answer").period, { from: "2026-01", to: "2026-10" });
+assert.equal(future.explanation, "2027 is not in the data; the latest month available is September 2026.");
+assert.deepEqual(as(future.alternative!.continuation!, "answer").period, { from: "2026-01", to: "2026-09" });
 assert.equal(as(ask("Shoplifting in Memphis in 2012"), "decline").notBuilt, true);
 // D19: drug crimes are both drug measures, side by side, with their combined total (both known: 84 + 84).
 const drugs = as(ask("Drug crimes in Detroit in 2023"), "answer");
@@ -193,7 +193,9 @@ assert.equal(as(ask("Simple assaults against men and women in Detroit in 2023"),
 assert.equal(as(ask("Shoplifting in Kansas City by ZIP code in 2024"), "decline").reason, "below_agency_level");
 const cjv = as(ask("How many carjacking victims were there in Memphis in 2024?"), "answer");
 assert.deepEqual([cjv.plan.measures[0].id, cjv.delivered.answerStatements], ["offenses.carjacking", ["property_counted_by_offense"]]);
-assert.equal(as(ask("Shoplifting in Memphis in November 2026"), "decline").explanation, "November 2026 is not in the data; the latest month available is October 2026.");
+assert.equal(as(ask("Shoplifting in Memphis in November 2026"), "decline").explanation, "November 2026 is not in the data; the latest month available is September 2026.");
+// P52: the upload month itself is not reported.
+assert.equal(as(ask("Shoplifting in Memphis in October 2026"), "decline").explanation, "October 2026 is not in the data; the latest month available is September 2026.");
 assert.deepEqual(as(ask("Shoplifting in New York in 2024"), "clarify").options.map((o) => o.label), ["New York City", "New York state"]);
 assert.deepEqual(as(ask("Shoplifting in Memphis by month"), "clarify").options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
 
@@ -202,7 +204,7 @@ assert.equal(periodWords("2021-03", "2025-06"), "March 2021 through June 2025");
 
 // Scoring: a matching answer is unverified until independent values are given, then correct; a wrong value is a wrong
 // answer; a not-built refusal is never scored.
-const r = { firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" };
+const r = { firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" };
 const ctx = { capability: "answer:nibrs count", era: "2021 and later" };
 const label = (expected: Case["expected"]): Case => ({ id: "LS-999", group: "designed:slice-test", split: "dev", origin: { kind: "designed", ref: null }, tab: "nibrs", setup: [], question: "q", policy: [], expected, label: { status: "reviewed", drafted_by: "a", reviewed_by: "b", notes: "" } });
 const shop: Case["expected"] = { action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Memphis Police Department", state: "TN" }], period: { from: "2023-01", to: "2023-12" }, measures: [{ name: "shoplifting", unit: "offense" }], filters: [], groupings: [], statistic: "count" }, values: { status: "pending_build" }, statements: ["names the agency (Memphis Police Department)", "names its source at the end"] };
@@ -222,11 +224,11 @@ const periodLabel = (opts: { label: string; leads_to: "answer" | "clarify"; mean
 const shopIn = (period: { from: string; to: string }) => ({ ...(shop as { meaning: object }).meaning, period }) as never;
 const np = periodLabel([
   { label: "The latest complete year (2025)", leads_to: "answer", meaning: shopIn({ from: "2025-01", to: "2025-12" }) },
-  { label: "This year so far", leads_to: "answer", meaning: shopIn({ from: "2026-01", to: "2026-10" }) },
+  { label: "This year so far", leads_to: "answer", meaning: shopIn({ from: "2026-01", to: "2026-09" }) },
   { label: "Another year", leads_to: "clarify", meaning: null as never, next_about: "which year" }]);
 const score = (vals?: Map<string, { key: string; value: number | null; status: string }[]>) => scoreShadow(label(np), noPeriod, r, ctx, vals).result!;
 assert.deepEqual([score().outcome, score().values], ["unverified", "not measured"]);
-const both = (a1: number) => new Map([["LS-999|The latest complete year (2025)", [{ key: "", value: a1, status: "VALUE" }]], ["LS-999|This year so far", [{ key: "", value: 70, status: "VALUE" }]]]);
+const both = (a1: number) => new Map([["LS-999|The latest complete year (2025)", [{ key: "", value: a1, status: "VALUE" }]], ["LS-999|This year so far", [{ key: "", value: 63, status: "VALUE" }]]]);
 assert.deepEqual([score(both(84)).outcome, score(both(84)).values], ["correct", "match"]);
 assert.deepEqual([score(both(83)).outcome, score(both(83)).values], ["wrong_answer", "mismatch"]);
 const wrongEntry = periodLabel([...(np as unknown as { options: never[] }).options.slice(0, 2), { label: "Another year", leads_to: "clarify", meaning: null as never, next_about: "which range of years" }]);
@@ -250,7 +252,7 @@ assert.equal(gates([unv])[0].categories.find((x) => x.name === "wrong answers")!
 const stlCase = label({ action: "clarify", about: "which St. Louis", options: [
   { label: "St. Louis city, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" },
   { label: "St. Louis County, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" }] });
-const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|Every year available", Array.from({ length: 118 }, (_, i) => {
+const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|Every year available", Array.from({ length: 117 }, (_, i) => {
   const m = `${2017 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`; return { key: m, value: m === "2024-03" ? null : v, status: m === "2024-03" ? "UNKNOWN" : "VALUE" }; })]]);
 assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(7)).result!.values, "not measured", "the county's answers have no values");
 assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(6)).result!.outcome, "wrong_answer");

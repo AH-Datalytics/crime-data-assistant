@@ -15747,8 +15747,7 @@
       }
      ],
      "period": {
-      "from": "2025-01",
-      "to": "2026-10"
+      "rule": "2025 through the latest month in the data"
      },
      "measures": [
       {
@@ -15778,7 +15777,7 @@
     "status": "reviewed",
     "drafted_by": "claude-reader",
     "reviewed_by": "codex:reader-labels-1",
-    "notes": "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve."
+    "notes": "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve. [P52 (Jeff 2026-10-29): the period ends at the latest reported month, a rule, not a fixed month]"
    }
   },
   {

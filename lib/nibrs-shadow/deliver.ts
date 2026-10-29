@@ -182,18 +182,16 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   } else if (!cats.length) {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
     const missing = rows.filter((r) => statusOf(r) === "UNKNOWN" || statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
-    const unevidenced = rows.filter((r) => statusOf(r) === "UNKNOWN_UNEVIDENCED_ZERO").map((r) => String(r[ip]));
     // Only what the status establishes: an unknown month has no known report; a year is known only when all its months are.
+    // (A month with crimes reported and none of these is a known 0, P51.)
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
-    if (unevidenced.length) text.push(`No ${what} were recorded for ${runs(unevidenced)}, and no zero report confirms a zero: shown blank.`);
   } else {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
     if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}.`);
-    // A category's total is known only when every month of it is: a month with none recorded and no zero report, or a
-    // month not reported, leaves it unknown. The rolled status does not say which, so the sentence names both.
+    // A category's total is known only when every month of it is: a month without reporting evidence leaves it unknown.
     const blank = tableRows.filter((_, i) => evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status)))
       .map((r) => r.slice(ip >= 0 ? 1 : 0, (ip >= 0 ? 1 : 0) + cats.length).join(", ") + (ip >= 0 ? ` (${r[0]})` : ""));
-    if (blank.length) text.push(`No total is established for ${blank.join("; ")}: reporting evidence is incomplete, or a month has none recorded without evidence establishing zero. Shown blank, not zero.`);
+    if (blank.length) text.push(`No total is established for ${blank.join("; ")}: reporting evidence is incomplete. Shown blank, not zero.`);
     const binned = plan.groupings.find((g) => g.bins);
     if (binned?.bins) text.push(ageSentence(binned.bins));
   }
@@ -252,16 +250,12 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
       text.push(known ? `Together: ${fmt((v as number[]).reduce((a, b) => a + b, 0))} ${combined.label} in ${when}.`
         : `No combined total of ${combined.label} is given: the available evidence does not establish every part.`);
     }
-    if (v.some((x) => x === null || x === undefined)) text.push("A number not established is shown blank, not zero: reporting evidence is incomplete, or none were recorded without evidence establishing zero.");
+    if (v.some((x) => x === null || x === undefined)) text.push("A number not established is shown blank, not zero: reporting evidence is incomplete.");
   } else {
     text.push(`${agency}: ${list} by ${time === "time.month" ? "month" : "year"}, ${when}.`);
-    // As for one measure (the same sentences), the missing periods first, then each measure's unevidenced ones.
+    // As for one measure (the same sentence): the periods without reporting evidence.
     const missing = rows.filter((r) => stats.some((s) => ["UNKNOWN", "NOT_REPORTED"].includes(String(r[at(`${s.as}_status`)])))).map((r) => String(r[ip]));
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
-    for (const s of stats) {
-      const unevidenced = rows.filter((r) => String(r[at(`${s.as}_status`)]) === "UNKNOWN_UNEVIDENCED_ZERO").map((r) => String(r[ip]));
-      if (unevidenced.length) text.push(`No ${s.what} were recorded for ${runs(unevidenced)}, and no zero report confirms a zero: shown blank.`);
-    }
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
