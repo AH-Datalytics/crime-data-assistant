@@ -311,7 +311,21 @@
    "LS-299",
    "LS-300",
    "LS-301",
-   "LS-302"
+   "LS-302",
+   "LS-303",
+   "LS-304",
+   "LS-305",
+   "LS-306",
+   "LS-307",
+   "LS-308",
+   "LS-309",
+   "LS-310",
+   "LS-311",
+   "LS-312",
+   "LS-313",
+   "LS-314",
+   "LS-315",
+   "LS-316"
   ]
  },
  "eligibility": {
@@ -563,7 +577,21 @@
    "LS-299",
    "LS-300",
    "LS-301",
-   "LS-302"
+   "LS-302",
+   "LS-303",
+   "LS-304",
+   "LS-305",
+   "LS-306",
+   "LS-307",
+   "LS-308",
+   "LS-309",
+   "LS-310",
+   "LS-311",
+   "LS-312",
+   "LS-313",
+   "LS-314",
+   "LS-315",
+   "LS-316"
   ],
   "label unresolved": [
    "LS-024",
@@ -722,7 +750,21 @@
   "LS-299": "designed",
   "LS-300": "designed",
   "LS-301": "designed",
-  "LS-302": "designed"
+  "LS-302": "designed",
+  "LS-303": "designed",
+  "LS-304": "designed",
+  "LS-305": "designed",
+  "LS-306": "designed",
+  "LS-307": "designed",
+  "LS-308": "designed",
+  "LS-309": "designed",
+  "LS-310": "designed",
+  "LS-311": "designed",
+  "LS-312": "designed",
+  "LS-313": "designed",
+  "LS-314": "designed",
+  "LS-315": "designed",
+  "LS-316": "designed"
  },
  "scored": [
   {
@@ -2187,6 +2229,188 @@
    ],
    "capability": "decline:no meaning",
    "era": "no period"
+  },
+  {
+   "id": "LS-303",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Separate years are not in the slice."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "period not mapped"
+  },
+  {
+   "id": "LS-304",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-305",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"2023\": one period per answer. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-306",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I couldn't interpret \"go up in\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-307",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"in 2026\": one period per answer. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-308",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"change\": I compare one measure for one place between two named years (for example \"from 2023 to 2025\"). I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-309",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"June 2023\": one period per answer. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-310",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-311",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I couldn't interpret \"go up in\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-312",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"in 2026\": one period per answer. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-313",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-314",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I couldn't interpret \"over the last 12 months\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "period not mapped"
+  },
+  {
+   "id": "LS-315",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-316",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
   }
  ],
  "provisional": []

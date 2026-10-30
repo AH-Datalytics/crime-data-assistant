@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 302 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 316 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 98: run by this candidate
+- 112: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 248: scorable (reviewed, decided policy)
+- 262: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Refused as not built (not scored)
@@ -70,21 +70,22 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-61 cases. Correct 47; unverified 7; wrong answers 0; avoidable declines 5; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 110 (trend only).
+75 cases. Correct 47; unverified 7; wrong answers 0; avoidable declines 19; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 390 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 42 | 0 | 5 | 0 |
+| answer | 42 | 0 | 19 | 0 |
 | clarify | 0 | 3 | 2 | 0 |
 | decline | 0 | 0 | 9 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs change | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs count | 2021 and later | 45 | fail | wrong answers: pass (0); initial action: fail (93% (42/45)); direct answers: fail (93% (0 unverified)); numeric fixtures: pass (42/42 match) |
+| answer:nibrs change | 2021 and later | 10 | fail | wrong answers: pass (0); initial action: fail (0% (0/10)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 48 | fail | wrong answers: pass (0); initial action: fail (88% (42/48)); direct answers: fail (88% (0 unverified)); numeric fixtures: pass (42/42 match) |
+| answer:nibrs count | period not mapped | 2 | fail | wrong answers: pass (0); initial action: fail (0% (0/2)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -129,6 +130,34 @@ Discrepancies and unverified cases:
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
+- **LS-303** (avoidable_decline; expected answer, got decline) "Shoplifting in Columbus, Ohio in 2019 and 2024"
+  - declined (unsupported_capability): Separate years are not in the slice.
+- **LS-304** (avoidable_decline; expected answer, got decline) "Change in simple assaults in Austin from 2022 to 2024"
+  - declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms
+- **LS-305** (avoidable_decline; expected answer, got decline) "Theft from motor vehicle in Minneapolis in 2024 compared with 2023"
+  - declined (reader): I can't apply "2023": one period per answer. I haven't answered with a number that leaves it out.
+- **LS-306** (avoidable_decline; expected answer, got decline) "Did drug possession offenses go up in Aurora, Colorado in 2025?"
+  - declined (reader): I couldn't interpret "go up in" in this question, so I haven't answered it with a number that ignores it.
+- **LS-307** (avoidable_decline; expected answer, got decline) "Are carjackings in Dallas up this year compared with last year?"
+  - declined (reader): I can't apply "in 2026": one period per answer. I haven't answered with a number that leaves it out.
+- **LS-308** (avoidable_decline; expected answer, got decline) "Percent change in robberies with a firearm in Charlotte from 2021 to 2025"
+  - declined (reader): I can't apply "change": I compare one measure for one place between two named years (for example "from 2023 to 2025"). I haven't answered with a number that leaves it out.
+- **LS-309** (avoidable_decline; expected answer, got decline) "Shoplifting in Austin January through June 2024 compared with January through June 2023"
+  - declined (reader): I can't apply "June 2023": one period per answer. I haven't answered with a number that leaves it out.
+- **LS-310** (avoidable_decline; expected answer, got decline) "Change in carjackings in Frisco, Texas from 2022 to 2023"
+  - declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms
+- **LS-311** (avoidable_decline; expected answer, got decline) "Did shoplifting go up in Greensboro in 2025?"
+  - declined (reader): I couldn't interpret "go up in" in this question, so I haven't answered it with a number that ignores it.
+- **LS-312** (avoidable_decline; expected answer, got decline) "Is shoplifting in Seattle up this year compared with last year?"
+  - declined (reader): I can't apply "in 2026": one period per answer. I haven't answered with a number that leaves it out.
+- **LS-313** (avoidable_decline; expected answer, got decline) "Rolling 12-month carjackings in Arlington, Texas since 2023"
+  - declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms
+- **LS-314** (avoidable_decline; expected answer, got decline) "Carjackings in Arlington, Texas over the last 12 months"
+  - declined (reader): I couldn't interpret "over the last 12 months" in this question, so I haven't answered it with a number that ignores it.
+- **LS-315** (avoidable_decline; expected answer, got decline) "Rolling 12-month shoplifting in Greensboro since 2025"
+  - declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms
+- **LS-316** (avoidable_decline; expected answer, got decline) "Rolling 12-month shoplifting in Greensboro since 2026"
+  - declined (unsupported_capability): Not in the slice yet: v0 compiles plans without transforms
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
