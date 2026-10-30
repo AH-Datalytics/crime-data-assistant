@@ -66,6 +66,9 @@ function labelFilterKey(f: string): string | null {
   if (family === "weapon") return /firearm|gun/.test(value) ? "weapon:firearm" : /knife/.test(value) ? "weapon:knife" : null;
   if (family === "clearance") return /prosecution declined/.test(value) ? "clearance:prosecution declined" : /exceptional/.test(value) ? "clearance:exceptional" : /arrest/.test(value) ? "clearance:arrest" : null;
   if (family === "relationship") return /stranger/.test(value) ? "relationship:stranger" : null;
+  // Increment 3: a comparison of the same months of each year; rolling windows counted only when complete.
+  if (family === "the same months of each year") return "same-months";
+  if (/requires all twelve source months/.test(norm(f))) return "rolling:complete windows";
   if (family === "loss") return /stolen/.test(value) ? "loss:stolen" : /seized/.test(value) ? "loss:seized" : null;
   if (/^(victim|offender|arrestee) age$/.test(family)) return /under 18/.test(value) ? `${family}:under 18` : null;
   if (/^(victim|offender|arrestee) sex$/.test(family)) return /female/.test(value) ? `${family.split(" ")[0]} sex:female` : /\bmale/.test(value) ? `${family.split(" ")[0]} sex:male` : null;
@@ -80,6 +83,8 @@ const GROUPINGS: Record<string, string> = {
   "offender.race": "offender race", "offender race": "offender race", "offender.sex": "offender sex", "offender sex": "offender sex", "offender.age": "offender age", "offender age": "offender age",
   "offense.location_type": "location type", "location type": "location type", "offense.clearance_type": "clearance type", "clearance type": "clearance type",
   "offense_weapon.weapon": "weapon", weapon: "weapon", "victim_offender.relationship": "relationship", relationship: "relationship", "offense.offense": "offense type", "offense type": "offense type",
+  // Increment 3: a monthly series of rolling 12-month windows.
+  "rolling 12-month": "rolling 12-month", "month (rolling 12-month total ending that month)": "rolling 12-month",
 };
 const groupingName = (s: string): string | null => GROUPINGS[s] ?? GROUPINGS[norm(s)] ?? null;
 
@@ -90,7 +95,7 @@ const ym = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
 const latestCompleteYear = (r: Release) => (r.lastMonth.endsWith("-12") ? Number(r.lastMonth.slice(0, 4)) : Number(r.lastMonth.slice(0, 4)) - 1);
 
 /** A label's period as months against a release; null when the rule wording is not known (unverified). */
-export function labelPeriod(p: Meaning["period"], r: Release): { from: string; to: string } | null {
+export function labelPeriod(p: Meaning["period"], r: Release): { from: string; to: string; years?: number[] } | null {
   if ("from" in p) return p;
   const rule = p.rule.toLowerCase();
   const lcy = latestCompleteYear(r);
@@ -101,6 +106,16 @@ export function labelPeriod(p: Meaning["period"], r: Release): { from: string; t
   if ((m = rule.match(/^year to date(?: (\d{4}))? through the latest month$/))) { const y = Number(m[1] ?? r.lastMonth.slice(0, 4)); return { from: ym(y, 1), to: r.lastMonth }; }
   if ((m = rule.match(/^(\d{4}) through the latest complete year$/))) return { from: ym(Number(m[1]), 1), to: ym(lcy, 12) };
   if ((m = rule.match(/^(\d{4})(?:-(\d{2}))? through the latest (?:month|year) in the data$/))) return { from: ym(Number(m[1]), Number(m[2] ?? 1)), to: r.lastMonth };
+  // Increment 3: a set of years ("the years 2019 and 2024"), and the 12 months ending at the latest month (P56).
+  if ((m = rule.match(/^the years? (\d{4}(?:(?:, | and |, and )\d{4})*)$/))) {
+    const years = [...m[1].matchAll(/\d{4}/g)].map((x) => Number(x[0])).sort((a, b) => a - b);
+    const last = years[years.length - 1];
+    return { from: ym(years[0], 1), to: ym(last, 12) > r.lastMonth ? r.lastMonth : ym(last, 12), years };
+  }
+  if (/^the 12 months ending at the latest month in the data$/.test(rule)) {
+    const k = Number(r.lastMonth.slice(0, 4)) * 12 + Number(r.lastMonth.slice(5, 7)) - 1 - 11;
+    return { from: ym(Math.floor(k / 12), (k % 12) + 1), to: r.lastMonth };
+  }
   // The whole release: what "every year available" holds for the release the candidate runs on.
   if (/^every year (?:in the data|available)$/.test(rule)) return { from: r.firstMonth, to: r.lastMonth };
   return null;
@@ -129,6 +144,8 @@ export type PlanView = {
   years: number[] | null;          // a year selection, else null
   yearsThrough: string | null;     // the month its last year is clipped to (a year still in progress), else null
   rank: { direction: string; limit: number | null } | null;
+  /** A period comparison's two periods (increment 3), checked against the periods the label implies. */
+  comparison: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null;
   untracked: string[];             // plan features the label schema cannot express (transform parameters, bins)
 };
 
@@ -162,10 +179,20 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   for (const m of plan.measures) if (m.id.endsWith("_cleared")) filterKeys.push("clearance:cleared");
   for (const p of plan.geography.places) if (p.kind === "agency_set") for (const w of p.where) filterKeys.push(w.field === "agency.population" && w.op === ">=" ? `population:${w.value}+` : null);
   const rankT = plan.transforms.find((t) => t.kind === "rank");
+  // Increment 3: a comparison of the same months of each year (not whole years) and rolling 12-month windows are label
+  // terms: a filter key and a grouping. Comparisons of whole years read as a change by year.
+  const cmpT = plan.transforms.find((t) => t.kind === "period_comparison");
+  const rollT = plan.transforms.find((t) => t.kind === "rolling");
+  // "The same months of each year": both periods the same months of the year, and not whole years.
+  const moy = (p: { from: string; to: string }) => `${p.from.slice(5)}..${p.to.slice(5)}`;
+  if (cmpT && cmpT.kind === "period_comparison" && moy(cmpT.earlier) === moy(cmpT.later) && moy(cmpT.earlier) !== "01..12"
+    && cmpT.earlier.from.slice(0, 4) === cmpT.earlier.to.slice(0, 4) && cmpT.later.from.slice(0, 4) === cmpT.later.to.slice(0, 4)) filterKeys.push("same-months");
+  if (rollT) filterKeys.push("rolling:complete windows");
+  const groupings = [...plan.groupings.map((g) => (rollT && rollT.kind === "rolling" && g.dimension === "time.month" ? `rolling ${rollT.months}-month` : g.dimension)),
+    ...(cmpT && !plan.groupings.some((g) => g.dimension === "time.year") ? ["time.year"] : [])];
   // Plan details the label schema cannot express: compared as unverified, never as matches.
   const untracked = [
-    ...plan.transforms.filter((t) => t.kind === "rolling").map((t) => `rolling ${"months" in t ? t.months : ""} months`),
-    ...plan.transforms.filter((t) => t.kind === "period_comparison").map((t) => ("earlier" in t ? `comparison ${t.earlier.from}..${t.earlier.to} vs ${t.later.from}..${t.later.to}` : "comparison")),
+    ...plan.transforms.filter((t) => t.kind === "rolling" && t.months !== 12).map((t) => `rolling ${"months" in t ? t.months : ""} months`),
     // A category breakdown's share of its own period (within exactly the time groupings) is the standard breakdown
     // share, checked against independent counts; any other share's roles stay unverified.
     ...plan.statistics.filter((s) => s.kind === "share" && !(s.within.join("+") === plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension).join("+")
@@ -176,12 +203,13 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   return {
     meaning: {
       source: plan.source, places, combine: plan.geography.combine, period: months,
-      measures: plan.measures.map((m) => ({ name: m.id, unit: m.unit })), filters: [], groupings: plan.groupings.map((g) => g.dimension).filter((g) => g !== "geo.place"),
+      measures: plan.measures.map((m) => ({ name: m.id, unit: m.unit })), filters: [], groupings: groupings.filter((g) => g !== "geo.place"),
       statistic: headline as Meaning["statistic"], cohort: plan.coverage.cohort,
     },
     measures: plan.measures.map((m) => ({ name: m.id, unit: m.unit, role: roles.get(m.as) ?? "value" })),
     filterKeys, statistics: [...new Set([headline, ...statistics])], years, yearsThrough: period.kind === "years" ? period.through ?? null : null,
     rank: rankT && rankT.kind === "rank" ? { direction: rankT.direction, limit: rankT.limit } : null,
+    comparison: cmpT && cmpT.kind === "period_comparison" ? { earlier: { from: cmpT.earlier.from, to: cmpT.earlier.to }, later: { from: cmpT.later.from, to: cmpT.later.to } } : null,
     untracked,
   };
 }
@@ -211,7 +239,12 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
   const ep = labelPeriod(expected.period, r);
   const ap = actual.meaning.period as { from: string; to: string };
   if (!ep) add("period", JSON.stringify(expected.period), `${ap.from}..${ap.to}`, "unverified");
-  else if (actual.years) {
+  else if (ep.years) {
+    // A label's set of years matches exactly that set, through the label's end.
+    const end = actual.yearsThrough ?? (actual.years ? `${actual.years[actual.years.length - 1]}-12` : "");
+    if (!actual.years || actual.years.join(",") !== ep.years.join(",") || end !== ep.to)
+      add("period", `years ${ep.years.join(", ")} through ${ep.to}`, actual.years ? `years ${actual.years.join(", ")} through ${end}` : `${ap.from}..${ap.to}`, "material");
+  } else if (actual.years) {
     // A year selection matches only a label range of exactly those years, from January through the effective end: December,
     // or the month its last year is clipped to.
     const span = Array.from({ length: Number(ep.to.slice(0, 4)) - Number(ep.from.slice(0, 4)) + 1 }, (_, i) => Number(ep.from.slice(0, 4)) + i);
@@ -239,6 +272,26 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
       add("rank by", expected.rank.by, "(the ranked statistic is not mapped)", "unverified");
     }
   }
+  // Increment 3: a change's two periods, as the label implies them. Its period runs from the earlier period's start to
+  // the later period's end. Whole years compare the first year with the last (the last through the label's end). "The
+  // same months of each year: A through B" compares those months of both years ("through the latest month": through
+  // the label's end month). Labels that say neither stay unverified.
+  if (expected.statistic === "change" && ep && !ep.years) {
+    const sm = expected.filters.find((f) => /^the same months of each year:/i.test(f));
+    const fy = ep.from.slice(0, 4), ty = ep.to.slice(0, 4);
+    const monthNo = (w: string) => ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"].indexOf(w.toLowerCase()) + 1;
+    let want: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null = null;
+    if (!sm) want = { earlier: { from: `${fy}-01`, to: `${fy}-12` }, later: { from: `${ty}-01`, to: ep.to } };
+    else {
+      const m = /:\s*([a-z]+) through (?:the latest month|([a-z]+))\s*$/i.exec(sm);
+      const a = m ? monthNo(m[1]) : 0, b = m ? (m[2] ? monthNo(m[2]) : Number(ep.to.slice(5))) : 0;
+      if (a > 0 && b > 0) { const mm = (n: number) => String(n).padStart(2, "0"); want = { earlier: { from: `${fy}-${mm(a)}`, to: `${fy}-${mm(b)}` }, later: { from: `${ty}-${mm(a)}`, to: `${ty}-${mm(b)}` } }; }
+    }
+    const show = (c: NonNullable<typeof want>) => `${c.earlier.from}..${c.earlier.to} vs ${c.later.from}..${c.later.to}`;
+    if (!actual.comparison) add("comparison", want ? show(want) : "a change", "no period comparison", "material");
+    else if (!want) add("comparison", sm ?? "(label gives no periods)", show(actual.comparison), "unverified");
+    else if (show(want) !== show(actual.comparison)) add("comparison", show(want), show(actual.comparison), "material");
+  } else if (actual.comparison) add("comparison", "(label states no change)", `${actual.comparison.earlier.from}..${actual.comparison.later.to}`, expected.statistic === "change" ? "unverified" : "material");
   if (expected.cohort && expected.cohort !== (actual.meaning.cohort ?? "all_reporting")) add("cohort", expected.cohort, actual.meaning.cohort ?? "all_reporting", "material");
   if (expected.denominator && !ratio) add("denominator", expected.denominator, "(not represented in the plan's meaning)", "unverified");
   for (const u of actual.untracked) add("untracked", "(not in the label schema)", u, "unverified");

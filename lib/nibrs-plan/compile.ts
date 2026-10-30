@@ -5,7 +5,8 @@
  *
  * v0 covers:
  *   - one agency (ORI). States and the nation need status evidence across their agencies (D6) and come later;
- *   - an absolute period (resolve.ts gives it) with incident-date time basis, or arrest date for arrests (P50);
+ *   - an absolute period (resolve.ts gives it), or a set of years grouped by year ("in 2019 and 2024": each year's
+ *     months only), with incident-date time basis, or arrest date for arrests (P50);
  *   - groupings: at most one time grouping (time.month or time.year), plus attribute groupings (`absent: "show"`: every
  *     category that occurs in the place and period is shown in every period row):
  *       - the counted entity's own columns (victim, offender or arrestee race, sex, ethnicity; offense location type);
@@ -193,7 +194,9 @@ const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"] };
 
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
-  if (period.kind !== "absolute") return no("v0 compiles absolute periods only (year lists come later)");
+  // A set of years ("in 2019 and 2024"): each year's months only, the last clipped to `through`, grouped by year.
+  const yearSet = period.kind === "years" ? [...period.years].sort((a, b) => a - b) : null;
+  if (yearSet && !plan.groupings.some((g) => g.dimension === "time.year")) return no("v0 compiles a set of years grouped by year");
   if (plan.measures.length !== 1) return no("v0 compiles one measure");
   const isArrest = plan.measures[0].id.startsWith("arrests.");
   if (plan.timeBasis !== (isArrest ? "arrest_date" : "incident_date"))
@@ -269,8 +272,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     if (!statements.includes("property_not_attributed")) statements.push("property_not_attributed");
   }
 
-  const from = period.from.replace("-", ""), to = period.to.replace("-", "");
-  const firstYear = Number(period.from.slice(0, 4));
+  const span = period.kind === "years"
+    ? { from: `${yearSet![0]}-01`, to: period.through ?? `${yearSet![yearSet!.length - 1]}-12` }
+    : { from: period.from, to: period.to };
+  const inYears = (col: string) => (yearSet ? ` AND substr(${col}, 1, 4) IN (${list(yearSet.map(String))})` : "");
+  const from = span.from.replace("-", ""), to = span.to.replace("-", "");
+  const firstYear = Number(span.from.slice(0, 4));
   const years = isArrest ? t.builtYears : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   const read = (table: string) => `read_parquet([${years.map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
@@ -285,12 +292,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const g = groupCols.map((_, i) => `g${i}`);
   const gSel = g.map((x) => `, ${x}`).join("");
   const key = `(u.data_year, u.ori, u.incident_num, u.sub)`;
-  const inScope = `u.ori = ${q(place.ori)} AND u.ym BETWEEN ${q(from)} AND ${q(to)}`;
+  const inScope = `u.ori = ${q(place.ori)} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
   const parts = [
     `units AS (${units.sql})`,
     `scoped AS (SELECT * FROM units u WHERE ${inScope})`,
     // Every month of the period, so a month with no rows still gets a status.
-    `spine AS (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${period.from}-01`)}, DATE ${q(`${period.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))`,
+    `spine AS (SELECT ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d)) WHERE TRUE${inYears("ym")})`,
     `status AS (SELECT CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
       FROM ${read("agency_month_status")} WHERE ori = ${q(place.ori)})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.

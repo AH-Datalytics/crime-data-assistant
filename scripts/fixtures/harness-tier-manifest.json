@@ -2430,6 +2430,15 @@
       "note": "NIBRS shadow reader round: the reading pre-pass (spellings, crime phrases, year to date, forecasts, court outcomes) and its boundaries; offline"
     },
     {
+      "id": "test-nibrs-transforms",
+      "tier": "F",
+      "script": "scripts/test-nibrs-transforms.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS compiler increment 3: time transforms (period totals, two-period changes, rolling windows) from monthly cells under D6, P51, D17 and P55; pure, offline"
+    },
+    {
       "id": "test-nibrs-shadow",
       "tier": "F",
       "script": "scripts/test-nibrs-shadow.ts",

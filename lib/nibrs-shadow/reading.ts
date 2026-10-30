@@ -26,6 +26,17 @@
  *   arrested   P48: "people (were) arrested for <crime>" -> "<crime> arrests".
  *   undefined  terms the data does not define, declined by decided policy: "shooters" (P45), "gun violence" (P31: the
  *              data has no counts of non-fatal shootings).
+ *   comparison a change between two periods, asked in any of these forms, is recorded as `comparison` (its earlier and
+ *              later periods), and the question is passed on as the same count over the whole span; the shadow
+ *              attaches the comparison:
+ *                "(percent) change in X from 2022 to 2024";
+ *                "X in 2024 compared with (to, vs) 2023";
+ *                "X January through June 2024 compared with January through June 2023" (the same months each year);
+ *                "did X go up (rise, fall ...) ... in 2025" -> 2024 against 2025 (P54: the year before);
+ *                "is X up this year compared with last year" -> last year against this year, `matched` (the same
+ *                months, D06/D17, through the latest reported month).
+ *   last 12    "over (in, during) the last (past) 12 months" -> the 12 months ending at the release's latest month (P56),
+ *              `last12`: one total.
  */
 import type { RequestLedger } from "../request-accounting";
 import { accountNibrsRequest } from "../nibrs-request-accounting";
@@ -33,7 +44,11 @@ import { MEASURE_LABEL, STATE_NAME_BY_CODE } from "../nibrs-question-types";
 
 export type Reading = { kind: "spelling" | "phrase" | "period"; from: string; to: string };
 export type Composite = "firearm" | "knife";
-export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null; undefinedTerm: "shooters" | "gun violence" | null };
+export type Span = { from: string; to: string };
+/** A change between two periods (the shadow attaches it as a period_comparison). `matched`: the same months each year. */
+export type Comparison = { earlier: Span; later: Span; matched: boolean };
+export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
+  undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 const PHRASES: [RegExp, string][] = [
@@ -55,6 +70,14 @@ const COMPOSITES: [RegExp, string, Composite][] = [
   [/\bgun\s+crimes?\b/gi, "murders, robberies and aggravated assaults", "firearm"],
   [/\bstabbings?\b/gi, "murders and aggravated assaults", "knife"],
 ];
+const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const MON = `(${MONTH_NAMES.join("|")})`;
+const VS = String.raw`(?:compared\s+(?:with|to)|vs\.?|versus|against)`;
+const RISE = String.raw`(?:go(?:ne)?\s+up|go(?:ne)?\s+down|rise|risen|increase|increased|decrease|decreased|fall|fallen|drop|dropped|climb|climbed|decline|declined)`;
+const two = (n: number) => String(n).padStart(2, "0");
+const yearSpan = (y: number): Span => ({ from: `${y}-01`, to: `${y}-12` });
+/** "Theft ..." from "theft ..." after a removed lead. */
+const lead = (t: string) => t.replace(/^\s*([a-z])/, (_, c: string) => c.toUpperCase());
 const SHOOTERS = /\bshooters?\b/i;
 const GUN_VIOLENCE = /\bgun\s+violence\b/i;
 const YTD = /\b(?:so\s+far\s+this\s+year|this\s+year\s+so\s+far|year\s+to\s+date|ytd|this\s+year)\b|\bso\s+far\s+in\s+(\d{4})\b/gi;
@@ -92,9 +115,53 @@ export function nearestWord(word: string): string | null {
   return at.length === 1 ? at[0] : null;
 }
 
-export function readQuestion(question: string, currentYear: number): ReadQuestion {
+/** A comparison asked in one of the forms above: its periods, and the question as a count over the whole span. */
+function readComparison(text: string, currentYear: number): { comparison: Comparison; text: string; from: string } | null {
+  let m: RegExpExecArray | null;
+  // "(percent) change in X from 2022 to 2024"
+  if ((m = new RegExp(String.raw`\b(?:percent(?:age)?\s+)?change\s+in\s+(.+?)\s+from\s+(\d{4})\s+(?:to|through)\s+(\d{4})\b`, "i").exec(text)) && Number(m[2]) < Number(m[3]))
+    return { comparison: { earlier: yearSpan(Number(m[2])), later: yearSpan(Number(m[3])), matched: false }, from: m[0], text: text.replace(m[0], lead(`${m[1]} from ${m[2]} to ${m[3]}`)) };
+  // "X January through June 2024 compared with January through June 2023"
+  if ((m = new RegExp(String.raw`\b(?:in\s+|from\s+)?${MON}\s+(?:through|to|-)\s+${MON}\s+(\d{4})\s+${VS}\s+(?:the\s+same\s+months\s+(?:of|in)\s+|${MON}\s+(?:through|to|-)\s+${MON}\s+)?(\d{4})\b`, "i").exec(text))) {
+    const [a, b] = [MONTH_NAMES.indexOf(m[1].toLowerCase()) + 1, MONTH_NAMES.indexOf(m[2].toLowerCase()) + 1];
+    const same = !m[4] || (m[4].toLowerCase() === m[1].toLowerCase() && m[5].toLowerCase() === m[2].toLowerCase());
+    const [later, earlier] = [Number(m[3]), Number(m[6])];
+    if (!same || a > b || earlier >= later) return null;
+    return { comparison: { earlier: { from: `${earlier}-${two(a)}`, to: `${earlier}-${two(b)}` }, later: { from: `${later}-${two(a)}`, to: `${later}-${two(b)}` }, matched: true },
+      from: m[0], text: text.replace(m[0], `from ${earlier} to ${later}`) };
+  }
+  // "X in 2024 compared with 2023"
+  if ((m = new RegExp(String.raw`\bin\s+(\d{4})\s+${VS}\s+(?:in\s+)?(\d{4})\b`, "i").exec(text)) && Number(m[2]) < Number(m[1]))
+    return { comparison: { earlier: yearSpan(Number(m[2])), later: yearSpan(Number(m[1])), matched: false }, from: m[0], text: text.replace(m[0], `from ${m[2]} to ${m[1]}`) };
+  // "is X up this year compared with last year" (P54/D06: the same months, through the latest reported month)
+  if ((m = new RegExp(String.raw`^\s*(?:is|are|has|have)\s+(.+?)\s+(?:been\s+)?(?:up|down|higher|lower|rising|falling)\s+this\s+year\s+(?:${VS}|than)\s+last\s+year\s*\??\s*$`, "i").exec(text)))
+    return { comparison: { earlier: yearSpan(currentYear - 1), later: yearSpan(currentYear), matched: true }, from: m[0], text: lead(`${m[1]} from ${currentYear - 1} to ${currentYear}`) };
+  // "did X go up ... in 2025" (P54: against the year before)
+  if ((m = new RegExp(String.raw`^\s*(?:did|has|have)\s+(.+?)\s+${RISE}\b\s*(.*?)\s*\bin\s+(\d{4})\s*\??\s*$`, "i").exec(text))) {
+    const y = Number(m[3]);
+    return { comparison: { earlier: yearSpan(y - 1), later: yearSpan(y), matched: false }, from: m[0], text: lead(`${m[1]}${m[2] ? ` ${m[2]}` : ""} from ${y - 1} to ${y}`) };
+  }
+  return null;
+}
+
+/**
+ * `lastMonth`: the release's latest reported month (P52), for "the last 12 months" (P56); without it that wording is
+ * left to the accounting.
+ */
+export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
   const readings: Reading[] = [];
   let text = question;
+  const cmp = readComparison(text, currentYear);
+  if (cmp) { readings.push({ kind: "period", from: cmp.from, to: cmp.text }); text = cmp.text; }
+  let last12 = false;
+  const L12 = /\b(?:over|in|during|for)\s+the\s+(?:last|past|previous)\s+(?:12|twelve)\s+months\b/i;
+  if (lastMonth && L12.test(text)) {
+    const k = Number(lastMonth.slice(0, 4)) * 12 + Number(lastMonth.slice(5, 7)) - 1 - 11;
+    const first = `${MONTH_NAMES[k % 12][0].toUpperCase()}${MONTH_NAMES[k % 12].slice(1)} ${Math.floor(k / 12)}`;
+    const lastName = `${MONTH_NAMES[Number(lastMonth.slice(5, 7)) - 1][0].toUpperCase()}${MONTH_NAMES[Number(lastMonth.slice(5, 7)) - 1].slice(1)} ${lastMonth.slice(0, 4)}`;
+    text = text.replace(L12, (m) => { const to = `from ${first} to ${lastName}`; readings.push({ kind: "period", from: m, to }); return to; });
+    last12 = true;
+  }
   for (const [re, to] of PHRASES) text = text.replace(re, (m) => {
     const t = m.replace(new RegExp(re.source, "i"), to);   // capture groups ("by $1 by $2") filled in
     readings.push({ kind: "phrase", from: m, to: t });
@@ -130,7 +197,7 @@ export function readQuestion(question: string, currentYear: number): ReadQuestio
   const undefinedTerm = SHOOTERS.test(own) ? "shooters" : GUN_VIOLENCE.test(own) ? "gun violence" : null;
   // A future year with nothing predicting is a period after the data (P24), read as that year.
   if (!forecast) text = text.replace(NEXT_YEAR, (m) => (readings.push({ kind: "period", from: m, to: `in ${currentYear + 1}` }), `in ${currentYear + 1}`));
-  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm };
+  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12 };
   const ledger = Object.assign(readings.length ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
