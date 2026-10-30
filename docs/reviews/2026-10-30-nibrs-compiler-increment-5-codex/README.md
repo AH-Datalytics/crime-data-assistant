@@ -6,3 +6,4 @@
 | 01b | LS-355 (state NIBRS rate), after the P62 clarification | b76169b | ACCEPT | 22 frozen |
 | 02 | Full review of the build | 2c9b92c | REVISE (9) | applied, next commit |
 | 03 | Re-check of 02 | 3b10310 | REVISE (2 + 1 minor) | next commit |
+| 04 | Re-check of 03 | b948535 | ACCEPT | - |
