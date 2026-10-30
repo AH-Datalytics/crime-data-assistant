@@ -62,6 +62,7 @@ AG = {
     "greensboro": {"kind": "agency", "name": "Greensboro Police Department", "state": "NC"},
     "seattle": {"kind": "agency", "name": "Seattle Police Department", "state": "WA"},
     "arlington": {"kind": "agency", "name": "Arlington Police Department", "state": "TX"},
+    "tulsa": {"kind": "agency", "name": "Tulsa Police Department", "state": "OK"},
 }
 
 
@@ -466,6 +467,83 @@ INC3 = [
      "MUST ANSWER (all windows missing): the missing months fall before the period start, inside the first windows."),
 ]
 
+# Compiler increment 4 (2026-10-30): several places, rates, rankings. Fresh, held out, labeled from policy before the build.
+# NIBRS measures only (P01). Populations: the FBI's agency population for the data year. Every agency here reported every
+# month of its period except Greensboro (no data Nov-Dec 2025), chosen for that gap. City agencies: FBI agency indicator 1.
+INC4_DRAFTER = "claude-inc4"
+TEXAS = {"kind": "state", "name": "Texas", "state": "TX"}
+OHIO = {"kind": "state", "name": "Ohio", "state": "OH"}
+COLORADO = {"kind": "state", "name": "Colorado", "state": "CO"}
+RANKED = "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them"
+TIES = "orders ties alphabetically by agency name"
+NO_FILTER = "adds no other eligibility filter"
+
+
+def places(*keys, combine="separate"):
+    m = meaning(keys[0], year(2024), SHOP)
+    m["places"] = [AG[k] for k in keys]
+    m["combine"] = combine
+    return m
+
+
+def rate(place, period, measures, groupings=(), denominator=None):
+    m = meaning(place, period, measures, groupings)
+    m["statistic"] = "rate"
+    m["denominator"] = denominator or f"residents of the {AG[place]['name']}'s jurisdiction (the FBI's agency population), per 100,000"
+    return m
+
+
+def ranking(state, measures, by, direction, limit, filters, denominator=None):
+    m = meaning(state, year(2024), measures, ["agency"])
+    m["filters"] = filters
+    m["statistic"] = "rate" if by == "rate" else "count"
+    m["rank"] = {"by": by, "direction": direction, "limit": limit}
+    if denominator:
+        m["denominator"] = denominator
+    return m
+
+
+INC4 = [
+    ("inc4-places", "Shoplifting in Tulsa and Oklahoma City in 2024", ["D18", "D30", "P01", "P16"],
+     answer(places("tulsa", "okc"), names("tulsa"), names("okc"), SOURCE_LAST), "MUST ANSWER: a count per agency."),
+    ("inc4-combined", "Shoplifting in Tulsa and Oklahoma City combined in 2024", ["D18", "D30", "P01", "P16"],
+     answer(places("tulsa", "okc", combine="combined"), "gives one total of both agencies", names("tulsa"), names("okc"), SOURCE_LAST),
+     "MUST ANSWER: 'combined' is one total of both agencies' offenses."),
+    ("inc4-places-gap", "Shoplifting in Greensboro and Raleigh in 2025", ["D04", "D18", "D30", "P01", "P16"],
+     answer(dict(places("greensboro", "raleigh"), period=year(2025)), "names November and December 2025 as having no data", names("greensboro"), names("raleigh"), SOURCE_LAST),
+     "MUST ANSWER: Raleigh's count; Greensboro's total not established (D6), its missing months named."),
+    ("inc4-rate", "Shoplifting rate in Wichita in 2024", ["D18", "D30", "P01", "P15", "P16", "P58"],
+     answer(rate("wichita", year(2024), SHOP), "gives the rate per 100,000 residents and names the population and its year", names("wichita"), SOURCE_LAST),
+     "MUST ANSWER: the year's count over the FBI's 2024 population for the agency."),
+    ("inc4-rate-years", "Shoplifting rate in Memphis by year from 2021 to 2024", ["D18", "D30", "P01", "P15", "P16", "P58"],
+     answer(rate("memphis", {"from": "2021-01", "to": "2024-12"}, SHOP, ["year"]), "gives each year's rate over that year's population", names("memphis"), SOURCE_LAST),
+     "MUST ANSWER: each year over its own population."),
+    ("inc4-rate-part-year", "Carjackings per 100,000 residents in Dallas this year", ["D06", "D18", "D30", "P01", "P15", "P16", "P52", "P58", "P59"],
+     answer(rate("dallas", {"rule": "2026 through the latest month in the data"}, CARJACK), "names the months covered",
+            "says the rate is for those months and is not annualized", names("dallas"), SOURCE_LAST),
+     "MUST ANSWER: P59, January-September 2026, the FBI population carried forward."),
+    ("inc4-rate-gap", "Shoplifting rate in Greensboro in 2025", ["D04", "D18", "D30", "P01", "P15", "P16", "P58"],
+     answer(rate("greensboro", year(2025), SHOP), "gives no rate, because not every month of 2025 is known", "names November and December 2025 as having no data",
+            names("greensboro"), SOURCE_LAST),
+     "MUST ANSWER (no rate): P58."),
+    ("inc4-rank", "Which Texas cities had the most carjackings in 2024?", ["D05", "D18", "D30", "P01", "P04", "P16", "P17"],
+     answer(ranking(TEXAS, CARJACK, "count", "top", 20, ["city agencies", "agencies that reported every month of 2024"]),
+            "shows 20 agencies (D05)", RANKED, TIES, NO_FILTER, SOURCE_LAST),
+     "MUST ANSWER: Texas city agencies (indicator 1), full-year reporters (P04), 20 rows (D05), ties alphabetical (P17)."),
+    ("inc4-rank-rate", "Top 10 cities by shoplifting rate in Ohio in 2024", ["D05", "D18", "D30", "P01", "P04", "P15", "P16", "P17", "P58"],
+     answer(ranking(OHIO, SHOP, "rate", "top", 10, ["city agencies", "agencies that reported every month of 2024"], "each agency's residents (the FBI's agency population), per 100,000"),
+            "shows exactly 10 agencies", RANKED, TIES, NO_FILTER, SOURCE_LAST),
+     "MUST ANSWER: each city's own rate; exactly 10 (P17)."),
+    ("inc4-rank-large", "Which large Texas cities had the highest shoplifting rate in 2024?", ["D05", "D18", "D30", "P01", "P04", "P08", "P15", "P16", "P17", "P58"],
+     answer(ranking(TEXAS, SHOP, "rate", "top", 20, ["city agencies", "250,000 residents or more", "agencies that reported every month of 2024"], "each agency's residents (the FBI's agency population), per 100,000"),
+            "says large means 250,000 residents or more", RANKED, TIES, SOURCE_LAST),
+     "MUST ANSWER: P08 (large = 250,000+); at most 20 rows (D05)."),
+    ("inc4-rank-bottom", "Which Colorado cities had the fewest carjackings in 2024?", ["D05", "D18", "D30", "P01", "P04", "P16", "P17", "P51"],
+     answer(ranking(COLORADO, CARJACK, "count", "bottom", 20, ["city agencies", "agencies that reported every month of 2024"]),
+            "shows 20 agencies (D05)", RANKED, TIES, NO_FILTER, SOURCE_LAST),
+     "MUST ANSWER: many known zeros (P51); the cut falls inside a tie, ordered alphabetically (P17)."),
+]
+
 # Replay labels P28 changes (reviewed before P28): drafted again, for review.
 RELABEL = {
     "LS-151": (["P22", "P28"], choose("which Baltimore",
@@ -484,6 +562,7 @@ reader_reviewer = args[1] if args[:1] == ["--reader-reviewed-by"] else None
 breakdown_reviewer = args[1] if args[:1] == ["--breakdown-reviewed-by"] else None
 inc2_reviewer = args[1] if args[:1] == ["--inc2-reviewed-by"] else None
 inc3_reviewer = args[1] if args[:1] == ["--inc3-reviewed-by"] else None
+inc4_reviewer = args[1] if args[:1] == ["--inc4-reviewed-by"] else None
 data = json.load(open(CASES, encoding="utf-8"))
 have = {(c["group"], c["question"]) for c in data["cases"]}
 added = 0
@@ -558,7 +637,25 @@ for g, q, pol, exp, notes in INC3:
         "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
         "label": {"status": "drafted", "drafted_by": INC3_DRAFTER, "reviewed_by": None, "notes": notes}})
     added += 1
+for g, q, pol, exp, notes in INC4:
+    group = f"designed:{g}"
+    if (group, q) in have:
+        old = next(c for c in data["cases"] if (c["group"], c["question"]) == (group, q))
+        if old["label"]["drafted_by"] == INC4_DRAFTER and old["label"]["status"] == "drafted":
+            old.update(policy=pol, expected=exp)
+            old["label"]["notes"] = notes
+        continue
+    data["cases"].append({
+        "id": f"LS-{len(data['cases']) + 1:03d}", "group": group, "split": "heldout",
+        "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
+        "label": {"status": "drafted", "drafted_by": INC4_DRAFTER, "reviewed_by": None, "notes": notes}})
+    added += 1
 marked = 0
+if inc4_reviewer:
+    for c in data["cases"]:
+        if c["label"]["drafted_by"] == INC4_DRAFTER and c["label"]["status"] == "drafted":
+            c["label"].update(status="reviewed", reviewed_by=inc4_reviewer)
+            marked += 1
 if inc3_reviewer:
     for c in data["cases"]:
         if c["label"]["drafted_by"] == INC3_DRAFTER and c["label"]["status"] == "drafted":

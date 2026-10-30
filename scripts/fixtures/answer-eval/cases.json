@@ -18750,6 +18750,752 @@
     "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER (all windows missing): the missing months fall before the period start, inside the first windows."
    }
+  },
+  {
+   "id": "LS-317",
+   "group": "designed:inc4-places",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Tulsa and Oklahoma City in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Tulsa Police Department",
+       "state": "OK"
+      },
+      {
+       "kind": "agency",
+       "name": "Oklahoma City Police Department",
+       "state": "OK"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "combine": "separate"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Tulsa Police Department)",
+     "names the agency (Oklahoma City Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: a count per agency."
+   }
+  },
+  {
+   "id": "LS-318",
+   "group": "designed:inc4-combined",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Tulsa and Oklahoma City combined in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Tulsa Police Department",
+       "state": "OK"
+      },
+      {
+       "kind": "agency",
+       "name": "Oklahoma City Police Department",
+       "state": "OK"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "combine": "combined"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives one total of both agencies",
+     "names the agency (Tulsa Police Department)",
+     "names the agency (Oklahoma City Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: 'combined' is one total of both agencies' offenses."
+   }
+  },
+  {
+   "id": "LS-319",
+   "group": "designed:inc4-places-gap",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting in Greensboro and Raleigh in 2025",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Greensboro Police Department",
+       "state": "NC"
+      },
+      {
+       "kind": "agency",
+       "name": "Raleigh Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "combine": "separate"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names November and December 2025 as having no data",
+     "names the agency (Greensboro Police Department)",
+     "names the agency (Raleigh Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: Raleigh's count; Greensboro's total not established (D6), its missing months named."
+   }
+  },
+  {
+   "id": "LS-320",
+   "group": "designed:inc4-rate",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting rate in Wichita in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "residents of the Wichita Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the rate per 100,000 residents and names the population and its year",
+     "names the agency (Wichita Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the year's count over the FBI's 2024 population for the agency."
+   }
+  },
+  {
+   "id": "LS-321",
+   "group": "designed:inc4-rate-years",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting rate in Memphis by year from 2021 to 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2021-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "rate",
+     "denominator": "residents of the Memphis Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives each year's rate over that year's population",
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: each year over its own population."
+   }
+  },
+  {
+   "id": "LS-322",
+   "group": "designed:inc4-rate-part-year",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Carjackings per 100,000 residents in Dallas this year",
+   "policy": [
+    "D06",
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P52",
+    "P58",
+    "P59"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Dallas Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "rule": "2026 through the latest month in the data"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "residents of the Dallas Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months covered",
+     "says the rate is for those months and is not annualized",
+     "names the agency (Dallas Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: P59, January-September 2026, the FBI population carried forward."
+   }
+  },
+  {
+   "id": "LS-323",
+   "group": "designed:inc4-rate-gap",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting rate in Greensboro in 2025",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Greensboro Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "residents of the Greensboro Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives no rate, because not every month of 2025 is known",
+     "names November and December 2025 as having no data",
+     "names the agency (Greensboro Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER (no rate): P58."
+   }
+  },
+  {
+   "id": "LS-324",
+   "group": "designed:inc4-rank",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Which Texas cities had the most carjackings in 2024?",
+   "policy": [
+    "D05",
+    "D18",
+    "D30",
+    "P01",
+    "P04",
+    "P16",
+    "P17"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "city agencies",
+      "agencies that reported every month of 2024"
+     ],
+     "groupings": [
+      "agency"
+     ],
+     "statistic": "count",
+     "rank": {
+      "by": "count",
+      "direction": "top",
+      "limit": 20
+     }
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "shows 20 agencies (D05)",
+     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "orders ties alphabetically by agency name",
+     "adds no other eligibility filter",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: Texas city agencies (indicator 1), full-year reporters (P04), 20 rows (D05), ties alphabetical (P17)."
+   }
+  },
+  {
+   "id": "LS-325",
+   "group": "designed:inc4-rank-rate",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Top 10 cities by shoplifting rate in Ohio in 2024",
+   "policy": [
+    "D05",
+    "D18",
+    "D30",
+    "P01",
+    "P04",
+    "P15",
+    "P16",
+    "P17",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Ohio",
+       "state": "OH"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "city agencies",
+      "agencies that reported every month of 2024"
+     ],
+     "groupings": [
+      "agency"
+     ],
+     "statistic": "rate",
+     "rank": {
+      "by": "rate",
+      "direction": "top",
+      "limit": 10
+     },
+     "denominator": "each agency's residents (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "shows exactly 10 agencies",
+     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "orders ties alphabetically by agency name",
+     "adds no other eligibility filter",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: each city's own rate; exactly 10 (P17)."
+   }
+  },
+  {
+   "id": "LS-326",
+   "group": "designed:inc4-rank-large",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Which large Texas cities had the highest shoplifting rate in 2024?",
+   "policy": [
+    "D05",
+    "D18",
+    "D30",
+    "P01",
+    "P04",
+    "P08",
+    "P15",
+    "P16",
+    "P17",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "city agencies",
+      "250,000 residents or more",
+      "agencies that reported every month of 2024"
+     ],
+     "groupings": [
+      "agency"
+     ],
+     "statistic": "rate",
+     "rank": {
+      "by": "rate",
+      "direction": "top",
+      "limit": 20
+     },
+     "denominator": "each agency's residents (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says large means 250,000 residents or more",
+     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "orders ties alphabetically by agency name",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: P08 (large = 250,000+); at most 20 rows (D05)."
+   }
+  },
+  {
+   "id": "LS-327",
+   "group": "designed:inc4-rank-bottom",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Which Colorado cities had the fewest carjackings in 2024?",
+   "policy": [
+    "D05",
+    "D18",
+    "D30",
+    "P01",
+    "P04",
+    "P16",
+    "P17",
+    "P51"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Colorado",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "city agencies",
+      "agencies that reported every month of 2024"
+     ],
+     "groupings": [
+      "agency"
+     ],
+     "statistic": "count",
+     "rank": {
+      "by": "count",
+      "direction": "bottom",
+      "limit": 20
+     }
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "shows 20 agencies (D05)",
+     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "orders ties alphabetically by agency name",
+     "adds no other eligibility filter",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc4",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: many known zeros (P51); the cut falls inside a tie, ordered alphabetically (P17)."
+   }
   }
  ]
 }
