@@ -160,7 +160,12 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const r = rows[0];
     lines.push(r.value !== null ? `${r.key}: ${isRate ? `${r.value} ${what} per 100,000 residents` : `${fmt(r.value)} ${what}`} in ${when}.`
       : `${r.key}: no ${isRate ? "rate" : "number"} is given for ${when}, because not every month is known.`);
-  } else lines.push(`${what[0].toUpperCase()}${what.slice(1)}${isRate ? " per 100,000 residents" : ""} by agency, ${when}.`);
+  } else {
+    // The agencies are named in the text, not only in the table.
+    const names = agencies.map((a) => a.label);
+    const listed = names.length > 2 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join(" and ");
+    lines.push(`${what[0].toUpperCase()}${what.slice(1)}${isRate ? " per 100,000 residents" : ""} by agency, ${when}: ${listed}.`);
+  }
   if (isRate) lines.push(popLine(year, agencies));
   for (const r of rows) if (r.missing.length) lines.push(`No report is known for ${runs(r.missing)} for ${r.key}, so its ${isRate ? "rate" : `${when} total`} is not given.`);
   partLine();

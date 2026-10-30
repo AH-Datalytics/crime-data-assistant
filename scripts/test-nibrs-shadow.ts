@@ -492,6 +492,7 @@ assert.deepEqual(weaponYear.map((x) => [x.key, x.share]), [["2023|Handgun", unde
 const ok4 = (q: string) => { const o = as(ask(q), "answer"); assert.deepEqual(o.delivered.contractProblems, [], q); return o; };
 const tulsaOkc = ok4("Shoplifting in Tulsa and Oklahoma City in 2024");
 assert.deepEqual(tulsaOkc.delivered.table.rows, [["Tulsa city police, OK", 60], ["Oklahoma City city police, OK", 60]]);
+assert.equal(tulsaOkc.delivered.text[0], "Shoplifting offenses by agency, 2024: Tulsa city police, OK and Oklahoma City city police, OK.");
 assert.ok(sqls.some((s) => s.includes("unnest(['OK0550600', 'OK0720500']) AS ori")), "one grid query for both agencies");
 const combinedTotal = ok4("Shoplifting in Tulsa and Oklahoma City combined in 2024");
 assert.deepEqual(combinedTotal.delivered.table.rows, [[120]]);
@@ -521,5 +522,29 @@ const txRate = ok4("Which Texas cities had the highest shoplifting rate in 2024?
 assert.deepEqual(txRate.delivered.table.rows, [["Dallas", 6.5], ["Houston", 4.7]]);
 assert.ok(txRate.delivered.text.includes("Not ranked because the FBI gives no population: Smallville."));
 assert.equal(as(ask("Which large Texas cities had the most shoplifting in 2024?"), "answer").delivered.table.rows.length, 2, "P08: 250,000 or more");
+// Scoring increment 4: a ranking's filters, ranked statistic and P60 statements; a rate's denominator.
+const year24 = { from: "2024-01", to: "2024-12" };
+const txLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "state", name: "Texas", state: "TX" }], period: year24, measures: [{ name: "shoplifting", unit: "offense" }],
+  filters: ["city agencies", "agencies that reported every month of 2024"], groupings: ["agency"], statistic: "count", rank: { by: "count", direction: "top", limit: 20 } }, values: { status: "pending_build" },
+  statements: ["shows exactly 3 agencies", "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
+    "orders ties alphabetically by agency name", "adds no other eligibility filter", "names its source at the end"] });
+assert.deepEqual(material(tx, txLabel), []);
+assert.ok(material({ ...tx, delivered: { ...tx.delivered, text: tx.delivered.text.filter((t) => !t.startsWith("Ranked:")) } }, txLabel).includes("statement"), "the P60 rule must be said");
+assert.ok(material({ ...tx, delivered: { ...tx.delivered, table: { ...tx.delivered.table, rows: [["Houston", 108], ["Dallas", 84]] } } }, txLabel).includes("statement"), "the row count is checked");
+assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, rank: { by: "rate", direction: "top", limit: 20 } } } as Case["expected"])).includes("rank by"));
+assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, filters: ["city agencies"] } } as Case["expected"])).includes("filters"), "the reporters rule is a filter of every ranking");
+const okRates = ok4("Shoplifting rates in Tulsa and Oklahoma City in 2024");
+const ratesLabel = (denominator: string) => label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Tulsa Police Department", state: "OK" }, { kind: "agency", name: "Oklahoma City Police Department", state: "OK" }],
+  period: year24, measures: [{ name: "shoplifting", unit: "offense" }], filters: [], groupings: [], statistic: "rate", combine: "separate", denominator }, values: { status: "pending_build" },
+  statements: ["gives each agency's rate over its own population", "names the agency (Tulsa Police Department)", "names the agency (Oklahoma City Police Department)", "names its source at the end"] });
+assert.deepEqual(material(okRates, ratesLabel("each agency's residents (the FBI's agency population), per 100,000")), []);
+assert.ok(material(okRates, ratesLabel("the two agencies' residents together (the FBI's agency populations), per 100,000")).includes("denominator"));
+
+const wichita = ok4("Shoplifting rate in Wichita in 2024");
+const wichitaLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Wichita Police Department", state: "KS" }], period: year24, measures: [{ name: "shoplifting", unit: "offense" }], filters: [], groupings: [], statistic: "rate",
+  denominator: "residents of the Wichita Police Department's jurisdiction (the FBI's agency population), per 100,000" }, values: { status: "pending_build" },
+  statements: ["gives the rate per 100,000 residents and names the population and its year", "names the agency (Wichita Police Department)", "names its source at the end"] });
+assert.deepEqual(material(wichita, wichitaLabel), [], "the population sentence is any line, not the last");
+assert.ok(material({ ...wichita, delivered: { ...wichita.delivered, text: wichita.delivered.text.filter((t) => !t.startsWith("Rates are")) } }, wichitaLabel).includes("statement"));
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

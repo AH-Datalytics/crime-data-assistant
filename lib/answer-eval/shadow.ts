@@ -198,6 +198,10 @@ function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<
  * header line; the same-months line; the change line, rebuilt from the cells; the zero-base line; a known period's count;
  * a period not established; then readings, fixed statements and the source.
  */
+/** A rate's column says per 100,000 residents. */
+const rateHeader = (o: Extract<ShadowOutcome, { kind: "answer" }>) =>
+  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000 residents$/.test(c.header));
+
 function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean {
   const cols = comparisonCells(o);
   const t = o.plan.transforms.find((x) => x.kind === "period_comparison");
@@ -295,6 +299,47 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const cols = o.delivered.table.columns.map((c, i) => (c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") ? i : -1)).filter((i) => i >= 0);
       ok = cols.length > 0 && o.delivered.table.rows.every((r) => cols.every((i) => typeof r[i] === "string" && r[i] !== ""));
     }
+    // Increment 4: several agencies, combined totals, rates and rankings.
+    else if (/^gives one total of both agencies/.test(s)) {
+      // One known number of the plan's distinct agencies, said as combined.
+      const oris = o.plan.geography.places.map((p) => (p.kind === "agency" ? p.ori : ""));
+      ok = o.plan.geography.combine === "combined" && new Set(oris).size === 2 && oris.every(Boolean) && o.delivered.table.rows.length === 1
+        && typeof o.delivered.table.rows[0][0] === "number" && /, combined: [\d,]+ /.test(text[0] ?? "");
+    } else if (/^gives no (?:combined total|rate), because not every month|^gives no combined total, because/.test(s)) {
+      // Blank, with a reason, never a part-sum.
+      ok = o.delivered.table.rows.length === 1 && o.delivered.table.rows[0].every((x) => typeof x === "string" || x === null)
+        && o.delivered.evidence.every((x) => x.status !== "VALUE") && /no (?:total|rate) is given .*because not every month is known/.test(text[0] ?? "");
+    } else if (s === "gives the rate per 100,000 residents and names the population and its year") {
+      const y = o.period.to.slice(0, 4);
+      ok = rateHeader(o) && text.some((t) => new RegExp(`the FBI's ${y} population of the agency: .+ [\\d,]+\\.$`).test(t));
+    } else if (s === "gives each year's rate over that year's population") {
+      const line = text.find((t) => /^Each year's rate uses the FBI's population for that year: /.test(t)) ?? "";
+      ok = rateHeader(o) && o.plan.groupings.some((g) => g.dimension === "time.year") && o.delivered.table.rows.length > 0
+        && o.delivered.table.rows.every((r) => new RegExp(`\\b${r[0]} [\\d,]+`).test(line));
+    } else if (s === "gives each agency's rate over its own population") {
+      const line = text.find((t) => /population of each agency: /.test(t)) ?? "";
+      ok = rateHeader(o) && o.plan.geography.combine !== "combined" && o.delivered.table.rows.length > 1
+        && o.delivered.table.rows.every((r) => line.includes(`${r[0]} `));
+    } else if (/^gives one rate: both agencies' offenses over both agencies' populations/.test(s)) {
+      ok = rateHeader(o) && o.plan.geography.combine === "combined" && o.delivered.table.rows.length === 1
+        && text.some((t) => /^The rate is both agencies' offenses over both agencies' populations /.test(t));
+    } else if (s === "says the rate is for those months and is not annualized") ok = text.some((t) => /the rate is for those months and is not annualized\.$/.test(t));
+    else if (/^shows (?:exactly )?(\d+) agencies/.test(s)) ok = o.delivered.table.rows.length === Number(/(\d+)/.exec(s)![1]);
+    else if (/^ranks only agencies that reported (?:all 12 months of (\d{4})|every month of (\d{4}) so far)/.test(s)) {
+      // The rule said, every ranked agency known, the left-out named with their months, and no button to include them.
+      const when = periodWords(o.period.from, o.period.to);
+      const full = o.period.from.slice(5) === "01" && o.period.to.slice(5) === "12" ? `all 12 months of ${when}` : `every month of ${when}`;
+      ok = text.includes(`Ranked: agencies that reported ${full}; ties are ordered by agency name.`)
+        && o.delivered.evidence.every((x) => x.status === "VALUE" || x.status === "REPORTED_ZERO")
+        && text.filter((t) => t.startsWith("Not ranked because they didn't report")).every((t) => /\(\d+ months?\)/.test(t))
+        && !("alternative" in o && (o as { alternative?: unknown }).alternative);
+    } else if (s === "orders ties alphabetically by agency name") {
+      const rows = o.delivered.table.rows;
+      ok = text.some((t) => /ties are ordered by agency name/.test(t)) && rows.every((r, i) => i === 0 || r[1] !== rows[i - 1][1] || String(rows[i - 1][0]).localeCompare(String(r[0])) <= 0);
+    } else if (s === "adds no other eligibility filter") {
+      const p = o.plan.geography.places[0];
+      ok = p.kind === "agency_set" && p.where.every((w) => w.field === "agency.type") && o.plan.filters.length === 0;
+    } else if (s === "says large means 250,000 residents or more") ok = text.includes("Large means 250,000 residents or more (the FBI's agency population).");
     if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
     else if (!ok) out.push({ field: "statement", expected: s, actual: text.join(" / ").slice(0, 200), kind: "material" });
   }
