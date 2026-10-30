@@ -54,6 +54,14 @@ AG = {
     "raleigh": {"kind": "agency", "name": "Raleigh Police Department", "state": "NC"},
     "vabeach": {"kind": "agency", "name": "Virginia Beach Police Department", "state": "VA"},
     "mesa": {"kind": "agency", "name": "Mesa Police Department", "state": "AZ"},
+    "minneapolis": {"kind": "agency", "name": "Minneapolis Police Department", "state": "MN"},
+    "aurora": {"kind": "agency", "name": "Aurora Police Department", "state": "CO"},
+    "dallas": {"kind": "agency", "name": "Dallas Police Department", "state": "TX"},
+    "charlotte": {"kind": "agency", "name": "Charlotte-Mecklenburg Police Department", "state": "NC"},
+    "frisco": {"kind": "agency", "name": "Frisco Police Department", "state": "TX"},
+    "greensboro": {"kind": "agency", "name": "Greensboro Police Department", "state": "NC"},
+    "seattle": {"kind": "agency", "name": "Seattle Police Department", "state": "WA"},
+    "arlington": {"kind": "agency", "name": "Arlington Police Department", "state": "TX"},
 }
 
 
@@ -380,6 +388,71 @@ INC2 = [
      {"action": "decline", "reason": "The data has no counts of non-fatal shootings, so gun violence cannot be counted.", "alternative": None}, "BOUNDARY: P31 gun violence declined with the note."),
 ]
 
+# Compiler increment 3 (2026-10-29): time. Separate years, changes between two periods (P54 implied year, P55 zero base,
+# D17 matched months), the last 12 months (P56), rolling windows. Fresh, held out, labeled from policy before the build.
+# NIBRS measures only: a Part I crime's plain count or change is Historical's (P01). Agencies reported every month of
+# 2019-2026-09 except Greensboro (no data Nov-Dec 2025) and Seattle (none for Sep 2026), chosen for those gaps.
+INC3_DRAFTER = "claude-inc3"
+ROBBERY_GUN = [("robbery", "offense")]
+CHANGE = "gives both counts, the change and the percent change, with no adjectives"
+WINDOWS = "defines each point as the sum of the 12 months ending that month"
+
+
+def change(place, earlier, later, measures, filters=()):
+    m = meaning(place, {"from": earlier["from"], "to": later["to"]}, measures, ["year"])
+    m["statistic"] = "change"
+    m["filters"] = list(filters)
+    return m
+
+
+INC3 = [
+    ("inc3-separate-years", "Shoplifting in Columbus, Ohio in 2019 and 2024", ["D04", "D18", "D30", "P01", "P16"],
+     answer(meaning("columbus", {"rule": "the years 2019 and 2024"}, SHOP, ["year"]), names("columbus"), SOURCE_LAST),
+     "MUST ANSWER: one row per year asked, no change computed (none asked)."),
+    ("inc3-change", "Change in simple assaults in Austin from 2022 to 2024", ["D17", "D18", "D30", "P01", "P16", "P54"],
+     answer(change("austin", year(2022), year(2024), [("simple assault", "victim")]), CHANGE, names("austin"), SOURCE_LAST),
+     "MUST ANSWER: 2022 against 2024, whole years; victims (D18)."),
+    ("inc3-compared-with", "Theft from motor vehicle in Minneapolis in 2024 compared with 2023", ["D17", "D18", "D30", "P01", "P16", "P54"],
+     answer(change("minneapolis", year(2023), year(2024), TFMV), CHANGE, names("minneapolis"), SOURCE_LAST),
+     "MUST ANSWER: 'compared with' names the earlier year."),
+    ("inc3-go-up", "Did drug possession offenses go up in Aurora, Colorado in 2025?", ["D17", "D18", "D30", "P01", "P16", "P54"],
+     answer(change("aurora", year(2024), year(2025), [("drug possession", "offense")]), CHANGE, "names the comparison year (2024)", names("aurora"), SOURCE_LAST),
+     "MUST ANSWER: P54, no comparison year named -> the year before, same months."),
+    ("inc3-this-year", "Are carjackings in Dallas up this year compared with last year?", ["D06", "D17", "D18", "D30", "P01", "P16", "P52", "P54"],
+     answer(dict(change("dallas", {"from": "2025-01"}, {"to": "2026-09"}, CARJACK), period={"rule": "2025 through the latest month in the data"},
+                 filters=["the same months of each year: January through the latest month"]),
+            "names the months compared", "compares the same months of each year", CHANGE, names("dallas"), SOURCE_LAST),
+     "MUST ANSWER: January-September 2026 against January-September 2025 (P52: September is the latest month); as LS-268."),
+    ("inc3-percent", "Percent change in robberies with a firearm in Charlotte from 2021 to 2025", ["D17", "D18", "D30", "P01", "P16", "P31", "P54"],
+     answer(change("charlotte", year(2021), year(2025), ROBBERY_GUN, ["weapon: firearm"]), CHANGE, names("charlotte"), SOURCE_LAST),
+     "MUST ANSWER: a Part I crime with a NIBRS detail (the weapon) is NIBRS's (P01)."),
+    ("inc3-matched-months", "Shoplifting in Austin January through June 2024 compared with January through June 2023", ["D17", "D18", "D30", "P01", "P16", "P54"],
+     answer(change("austin", {"from": "2023-01"}, {"to": "2024-06"}, SHOP, ["the same months of each year: January through June"]),
+            "names the months compared", CHANGE, names("austin"), SOURCE_LAST),
+     "MUST ANSWER: matched months as asked."),
+    ("inc3-zero-base", "Change in carjackings in Frisco, Texas from 2022 to 2023", ["D17", "D18", "D30", "P01", "P16", "P51", "P55"],
+     answer(change("frisco", year(2022), year(2023), CARJACK), "gives both counts and the change", "says the percent change cannot be computed from a zero base",
+            names("frisco"), SOURCE_LAST),
+     "MUST ANSWER: P55; 2022 is a known 0 (P51: every month reported)."),
+    ("inc3-missing-months", "Did shoplifting go up in Greensboro in 2025?", ["D04", "D17", "D18", "D30", "P01", "P16", "P54"],
+     answer(change("greensboro", year(2024), year(2025), SHOP), "names November and December 2025 as having no data",
+            "makes no change claim: the 2025 total is not established", names("greensboro"), SOURCE_LAST),
+     "MUST ANSWER (no change): D17 and D04; the comparison is not made across a year with missing months."),
+    ("inc3-missing-month-ytd", "Is shoplifting in Seattle up this year compared with last year?", ["D04", "D06", "D17", "D18", "D30", "P01", "P16", "P52", "P54"],
+     answer(dict(change("seattle", {"from": "2025-01"}, {"to": "2026-09"}, SHOP), period={"rule": "2025 through the latest month in the data"},
+                 filters=["the same months of each year: January through the latest month"]),
+            "names September 2026 as having no data", "makes no change claim: the 2026 months are not all established", names("seattle"), SOURCE_LAST),
+     "MUST ANSWER (no change): D17, D04; never a shorter period substituted silently."),
+    ("inc3-rolling", "Rolling 12-month carjackings in Arlington, Texas since 2023", ["D04", "D18", "D30", "P01", "P16"],
+     answer(dict(meaning("arlington", {"rule": "2023 through the latest month in the data"}, CARJACK, ["month (rolling 12-month total ending that month)"]),
+                 filters=["Each displayed month requires all twelve source months; January 2023 uses February 2022 through January 2023; never sum an incomplete window"]),
+            WINDOWS, "shows any window lacking a month as missing, not zero or a shorter-window total", names("arlington"), SOURCE_LAST),
+     "MUST ANSWER: windows use months before the period start when the build holds them (as LS-137)."),
+    ("inc3-last-12", "Carjackings in Arlington, Texas over the last 12 months", ["D06", "D18", "D30", "P01", "P16", "P52", "P56"],
+     answer(meaning("arlington", {"rule": "the 12 months ending at the latest month in the data"}, CARJACK), "names the months covered", names("arlington"), SOURCE_LAST),
+     "MUST ANSWER: P56, October 2025 through September 2026, one total."),
+]
+
 # Replay labels P28 changes (reviewed before P28): drafted again, for review.
 RELABEL = {
     "LS-151": (["P22", "P28"], choose("which Baltimore",
@@ -397,6 +470,7 @@ reviewer = args[1] if args[:1] == ["--reviewed-by"] else None
 reader_reviewer = args[1] if args[:1] == ["--reader-reviewed-by"] else None
 breakdown_reviewer = args[1] if args[:1] == ["--breakdown-reviewed-by"] else None
 inc2_reviewer = args[1] if args[:1] == ["--inc2-reviewed-by"] else None
+inc3_reviewer = args[1] if args[:1] == ["--inc3-reviewed-by"] else None
 data = json.load(open(CASES, encoding="utf-8"))
 have = {(c["group"], c["question"]) for c in data["cases"]}
 added = 0
@@ -458,7 +532,25 @@ for g, q, pol, exp, notes in INC2:
         "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
         "label": {"status": "drafted", "drafted_by": INC2_DRAFTER, "reviewed_by": None, "notes": notes}})
     added += 1
+for g, q, pol, exp, notes in INC3:
+    group = f"designed:{g}"
+    if (group, q) in have:
+        old = next(c for c in data["cases"] if (c["group"], c["question"]) == (group, q))
+        if old["label"]["drafted_by"] == INC3_DRAFTER and old["label"]["status"] == "drafted":
+            old.update(policy=pol, expected=exp)
+            old["label"]["notes"] = notes
+        continue
+    data["cases"].append({
+        "id": f"LS-{len(data['cases']) + 1:03d}", "group": group, "split": "heldout",
+        "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
+        "label": {"status": "drafted", "drafted_by": INC3_DRAFTER, "reviewed_by": None, "notes": notes}})
+    added += 1
 marked = 0
+if inc3_reviewer:
+    for c in data["cases"]:
+        if c["label"]["drafted_by"] == INC3_DRAFTER and c["label"]["status"] == "drafted":
+            c["label"].update(status="reviewed", reviewed_by=inc3_reviewer)
+            marked += 1
 if inc2_reviewer:
     for c in data["cases"]:
         if c["label"]["drafted_by"] == INC2_DRAFTER and c["label"]["status"] == "drafted":
