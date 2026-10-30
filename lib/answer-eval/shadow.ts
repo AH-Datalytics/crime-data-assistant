@@ -353,6 +353,8 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   if (cmpCells) {
     const as = o.plan.statistics[0].as;
     const diffs: Diff[] = [];
+    // A change is one row: any other row is a number no expected cell vouches for (Codex value-loading review).
+    if (o.delivered.table.rows.length !== 1) diffs.push({ field: `${prefix}rows`, expected: "one comparison row", actual: `${o.delivered.table.rows.length} rows`, kind: "material" });
     for (const k of ["earlier", "later", "change", "pct_change"]) {
       const x = expected.find((e) => e.key === k);
       const status = o.delivered.evidence.find((e) => e.statistic === `${as}.${k}`)?.status ?? "?";

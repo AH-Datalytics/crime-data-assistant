@@ -442,6 +442,10 @@ const chgCells = v6({ grouping: "change", periods: [{ from: "2022-01", to: "2022
 assert.equal(scoreShadow(lab304, whole, r, ctx, new Map([["LS-999", chgCells]])).result!.values, "match");
 const wrongChg = chgCells.map((c) => (c.key === "change" ? { ...c, value: 1 } : c));
 assert.equal(scoreShadow(lab304, whole, r, ctx, new Map([["LS-999", wrongChg]])).result!.outcome, "wrong_answer");
+// A second, wrong comparison row with valid-looking evidence never scores correct.
+const extraRow = { ...whole, delivered: { ...whole.delivered, table: { ...whole.delivered.table, rows: [...whole.delivered.table.rows, [999, 1, -998, -99.9]] },
+  evidence: [...whole.delivered.evidence, ...whole.delivered.evidence.map((e) => ({ ...e, row: 1 }))] } };
+assert.equal(scoreShadow(lab304, extraRow, r, ctx, new Map([["LS-999", chgCells]])).result!.outcome, "wrong_answer");
 assert.deepEqual(v6({ grouping: "change", periods: [{ from: "2022-01", to: "2022-12", total: { status: "VALUE", value: 0 } }, { from: "2023-01", to: "2023-12", total: { status: "VALUE", value: 6 } }],
   change: { change: 6, percent_change: null, percent_reason: "zero base (P55)" } }).at(-1), { key: "pct_change", value: null, status: "UNAVAILABLE" });
 assert.deepEqual(v6({ grouping: "rolling", periods: [], rolling: [{ month: "2024-02", total: { status: "VALUE", value: 84 } }, { month: "2024-03", total: { status: "UNKNOWN", value: null, observed: 77 } }] }),
