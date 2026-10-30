@@ -100,9 +100,11 @@ export function rate(count: Cell, population: number | null | undefined, per = 1
  * ascending for "bottom"), ties by name alphabetically; cut at `limit`. The others are left out, never ranked or listed
  * among the ranked.
  */
-export function rankAgencies<T extends { name: string; value: number | null; known: boolean }>(xs: T[], direction: "top" | "bottom", limit: number | null): { ranked: T[]; leftOut: T[] } {
+export function rankAgencies<T extends { name: string; value: number | null; known: boolean; ori?: string }>(xs: T[], direction: "top" | "bottom", limit: number | null): { ranked: T[]; leftOut: T[] } {
   const ok = xs.filter((x) => x.known && x.value !== null);
   const sign = direction === "top" ? -1 : 1;
-  ok.sort((a, b) => sign * (a.value! - b.value!) || a.name.localeCompare(b.name));
+  // P17: ties by name, case-insensitive, then ORI (as nibrs-model orders them).
+  const lower = (x: T) => x.name.toLowerCase();
+  ok.sort((a, b) => sign * (a.value! - b.value!) || (lower(a) < lower(b) ? -1 : lower(a) > lower(b) ? 1 : 0) || (a.ori ?? "").localeCompare(b.ori ?? ""));
   return { ranked: limit === null ? ok : ok.slice(0, limit), leftOut: xs.filter((x) => !(x.known && x.value !== null)) };
 }

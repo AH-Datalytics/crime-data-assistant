@@ -43,7 +43,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, monthName, periodWords, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, candidateLabel, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 
 export type ShadowDeps = {
@@ -439,6 +439,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (unnamed) return decline("unsupported_capability", "Not in the slice yet: this weapon or relationship selection.");
   const notes0 = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
   if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why) => decline("unsupported_capability", why));
+  // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).
+  const reported = (d: Delivered): Delivered => {
+    const p = checked.geography.places[0];
+    if (p.kind !== "agency") return d;
+    // After the title: the first line naming the place (a definition may come before it).
+    const at = d.text.findIndex((t) => t.startsWith(p.label)) + 1 || 1;
+    return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]), ...d.text.slice(at)] };
+  };
   // Changes and rolling windows: one monthly query of the measure over every month they reach; the transforms roll it.
   if (cmpPeriods || rollingT) {
     const m = checked.measures[0];
@@ -458,7 +466,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (cmpPeriods) {
       const delivered = deliverComparison(checked, cmpPeriods, compare(inSpan(cmpPeriods.earlier), inSpan(cmpPeriods.later)), statements, release.id, notes0);
       if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
-      return { kind: "answer", plan: checked, period: { from: cmpPeriods.earlier.from, to: cmpPeriods.later.to }, sql: c.query.sql, delivered };
+      return { kind: "answer", plan: checked, period: { from: cmpPeriods.earlier.from, to: cmpPeriods.later.to }, sql: c.query.sql, delivered: reported(delivered) };
     }
     const displayed = cells.filter((x) => x.ym >= period.from && x.ym <= period.to).map((x) => x.ym);
     const windows = rolling(cells, months, displayed);
@@ -466,7 +474,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const delivered = deliver(checked, period, requestedTo, ["period", as, `${as}_status`], windows.map((w) => [w.ym, w.value, w.status]), statements, release.id, notes0, null,
       { rolling: { months, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO").map((x) => x.ym) } });
     if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
-    return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered };
+    return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered: reported(delivered) };
   }
   // One compiled query per measure (its own filters as the query's), its rows joined on the period key.
   const sqls: string[] = [];
@@ -492,7 +500,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   const delivered = deliver(checked, period, requestedTo, columns, rows, statements, release.id, notes0, combined, yearSet ? { years: yearSet } : {});
   if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
-  return { kind: "answer", plan: checked, period, sql: sqls.join(";\n"), delivered };
+  return { kind: "answer", plan: checked, period, sql: sqls.join(";\n"), delivered: reported(delivered) };
 }
 
 const monthIndex = (ym: string) => Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7)) - 1;

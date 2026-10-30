@@ -84,7 +84,7 @@ assert.deepEqual(a.period, { from: "2023-01", to: "2023-12" });
 assert.equal(a.plan.measures[0].id, "offenses.shoplifting");
 assert.ok(sqls.at(-1)!.includes("'TNMPD0000'") && sqls.at(-1)!.includes("'23C'"));
 assert.deepEqual(a.delivered.table.rows, [[84]]);
-assert.equal(a.delivered.text[0], "Memphis city police, TN: 84 shoplifting offenses in 2023.");
+assert.equal(a.delivered.text[0], "Memphis, Tennessee: 84 shoplifting offenses in 2023.");
 assert.match(a.delivered.text.at(-1)!, /^Source: FBI National Incident-Based Reporting System \(NIBRS\)/);
 assert.deepEqual(a.delivered.contractProblems, []);
 assert.equal(a.delivered.chart, null);
@@ -125,11 +125,11 @@ assert.deepEqual(as(ask("How many crimes were there in Detroit in 2024?"), "clar
 const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
 assert.deepEqual(kc.options.map((o) => o.label), ["Kansas City, Missouri", "Kansas City, Kansas"]);
 assert.deepEqual(kc.options.map((o) => as(o.continuation!, "answer").plan.geography.places[0]), [
-  { kind: "agency", ori: "MOKPD0000", label: "Kansas City city police, MO" }, { kind: "agency", ori: "KS1050200", label: "Kansas City city police, KS" }]);
+  { kind: "agency", ori: "MOKPD0000", label: "Kansas City, Missouri" }, { kind: "agency", ori: "KS1050200", label: "Kansas City, Kansas" }]);
 // A city and a county of one name: a button each, and a choice is not asked again in a later question (P22).
 const balt = as(ask("Shoplifting in Baltimore by month from 2022 to 2025"), "clarify");
 assert.deepEqual(balt.options.map((o) => as(o.continuation!, "answer").plan.geography.places[0]), [
-  { kind: "agency", ori: "MDBPD0000", label: "Baltimore city police, MD" }, { kind: "agency", ori: "MD0030100", label: "Baltimore County agency, MD" }]);
+  { kind: "agency", ori: "MDBPD0000", label: "Baltimore, Maryland" }, { kind: "agency", ori: "MD0030100", label: "Baltimore County, Maryland" }]);
 const stl = as(ask("St Louis carjackings per month"), "clarify");
 assert.equal(stl.about, "which St. Louis");
 const stlCity = as(stl.options[0].continuation!, "clarify");
@@ -150,8 +150,8 @@ const drugs = as(ask("Drug crimes in Detroit in 2023"), "answer");
 assert.deepEqual(drugs.plan.measures.map((m) => m.id), ["offenses.drug_possession", "offenses.drug_equipment"]);
 assert.deepEqual(drugs.delivered.table.columns.map((c) => c.header), ["Drug/narcotic violation offenses", "Drug equipment violation offenses"]);
 assert.deepEqual(drugs.delivered.table.rows, [[84, 84]]);
-assert.deepEqual(drugs.delivered.text.slice(0, 3), ["Drug crimes are drug/narcotic violations plus drug equipment violations.",
-  "Detroit city police, MI, 2023: 84 drug/narcotic violation offenses; 84 drug equipment violation offenses.", "Together: 168 drug crimes in 2023."]);
+assert.deepEqual(drugs.delivered.text.slice(0, 4), ["Drug crimes are drug/narcotic violations plus drug equipment violations.",
+  "Detroit, Michigan, 2023: 84 drug/narcotic violation offenses; 84 drug equipment violation offenses.", "Reported by the Detroit Police Department.", "Together: 168 drug crimes in 2023."]);
 assert.deepEqual(drugs.delivered.contractProblems, []);
 assert.equal(as(ask("Drug possession in Detroit in 2023"), "answer").plan.measures.length, 1, "drug possession itself is one measure");
 // A combined total is given only when every part is known (March 2024 is unknown in the stub).
@@ -408,7 +408,7 @@ for (const q of ["Shoplifting in Detroit in 2023 compared with 2022", "Percent c
 assert.equal(ask("Change in shoplifting and burglary in Detroit from 2022 to 2023").kind, "decline");
 // A set of years: only those years, grouped by year.
 const sepYears = as(ask("Shoplifting in Detroit in 2019 and 2023"), "answer");
-assert.deepEqual([sepYears.plan.period, sepYears.delivered.text[0]], [{ kind: "years", years: [2019, 2023] }, "Detroit city police, MI: shoplifting offenses by year, 2019 and 2023."]);
+assert.deepEqual([sepYears.plan.period, sepYears.delivered.text[0]], [{ kind: "years", years: [2019, 2023] }, "Detroit, Michigan: shoplifting offenses by year, 2019 and 2023."]);
 assert.ok(sqls.at(-1)!.includes("IN ('2019', '2023')"));
 // Rolling windows reach back before the period; a window holding March 2024 is blank, never a shorter sum.
 const roll = as(ask("Rolling 12-month shoplifting in Detroit since 2024"), "answer");
@@ -418,9 +418,9 @@ assert.ok(roll.delivered.text.includes("Each month's figure is the total of that
 assert.ok(roll.delivered.text.some((t) => /^No report is known for March 2024: every window containing one of those months is shown blank/.test(t)));
 // P56: the last 12 months, one total, months named.
 const last12 = as(ask("Shoplifting in Detroit over the last 12 months"), "answer");
-assert.deepEqual([last12.period, last12.plan.groupings, last12.delivered.text[0]], [{ from: "2025-10", to: "2026-09" }, [], "Detroit city police, MI: 84 shoplifting offenses in October 2025 through September 2026."]);
+assert.deepEqual([last12.period, last12.plan.groupings, last12.delivered.text[0]], [{ from: "2025-10", to: "2026-09" }, [], "Detroit, Michigan: 84 shoplifting offenses in October 2025 through September 2026."]);
 // Charlotte: found by its place name, named as its agency; a bare "Charlotte" is a city and a county (P28).
-assert.match(as(ask("Shoplifting in Charlotte, North Carolina in 2023"), "answer").delivered.text[0], /^Charlotte-Mecklenburg city police, NC/);
+assert.match(as(ask("Shoplifting in Charlotte, North Carolina in 2023"), "answer").delivered.text[0], /^Charlotte, North Carolina/);
 assert.equal(ask("Shoplifting in Charlotte in 2023").kind, "clarify");
 
 // Codex increment-3 review. A future comparison declines with an alternative that answers its label (no recursion); a
@@ -491,17 +491,17 @@ assert.deepEqual(weaponYear.map((x) => [x.key, x.share]), [["2023|Handgun", unde
 // Increment 4: several agencies, combined totals, rates (P58, P59) and rankings (P60), on the grid and population stubs.
 const ok4 = (q: string) => { const o = as(ask(q), "answer"); assert.deepEqual(o.delivered.contractProblems, [], q); return o; };
 const tulsaOkc = ok4("Shoplifting in Tulsa and Oklahoma City in 2024");
-assert.deepEqual(tulsaOkc.delivered.table.rows, [["Tulsa city police, OK", 60], ["Oklahoma City city police, OK", 60]]);
-assert.equal(tulsaOkc.delivered.text[0], "Shoplifting offenses by agency, 2024: Tulsa city police, OK and Oklahoma City city police, OK.");
+assert.deepEqual(tulsaOkc.delivered.table.rows, [["Tulsa Police Department", 60], ["Oklahoma City Police Department", 60]]);
+assert.equal(tulsaOkc.delivered.text[0], "Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses by agency, 2024.");
 assert.ok(sqls.some((s) => s.includes("unnest(['OK0550600', 'OK0720500']) AS ori")), "one grid query for both agencies");
 const combinedTotal = ok4("Shoplifting in Tulsa and Oklahoma City combined in 2024");
 assert.deepEqual(combinedTotal.delivered.table.rows, [[120]]);
-assert.equal(combinedTotal.delivered.text[0], "Tulsa city police, OK and Oklahoma City city police, OK, combined: 120 shoplifting offenses in 2024.");
+assert.equal(combinedTotal.delivered.text[0], "Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 120 shoplifting offenses in 2024.");
 assert.deepEqual(ok4("Shoplifting in Tulsa Police Department, Tulsa, and Oklahoma City combined in 2024").delivered.table.rows, [[120]], "an agency named twice is counted once");
 // A combined total needs every month of every agency (D6): Greensboro's unknown months blank the total, never a part-sum.
 const gr = ok4("Shoplifting in Greensboro and Raleigh combined in 2025");
 assert.deepEqual(gr.delivered.table.rows, [[null]]);
-assert.ok(gr.delivered.text.includes("No report is known for November 2025 to December 2025 for Greensboro city police, NC."));
+assert.ok(gr.delivered.text.includes("No report is known for November 2025 to December 2025 for Greensboro, North Carolina."));
 // Rates: count over the FBI population, per 100,000; none from a missing or zero population (never 0 or infinite).
 assert.deepEqual(ok4("Shoplifting rate in Wichita in 2024").delivered.table.rows, [[15]]);
 const raleigh = ok4("Shoplifting rate in Raleigh in 2024");
@@ -516,10 +516,10 @@ assert.deepEqual(partYearRate.delivered.table.rows, [[11.3]], "45 offenses in Ja
 assert.ok(partYearRate.delivered.text.some((t) => t.includes("not annualized")));
 // P60: only full-year reporters are ranked; the rest are named with their months; no population is not ranked by rate.
 const tx = ok4("Which Texas cities had the most shoplifting in 2024?");
-assert.deepEqual(tx.delivered.table.rows, [["Houston", 108], ["Dallas", 84], ["Smallville", 60]]);
-assert.ok(tx.delivered.text.includes("Not ranked because they didn't report all 12 months of 2024: Austin (11 months)."));
+assert.deepEqual(tx.delivered.table.rows, [["Houston Police Department", 108], ["Dallas Police Department", 84], ["Smallville", 60]]);
+assert.ok(tx.delivered.text.includes("Not ranked because they didn't report all 12 months of 2024: Austin Police Department (11 months)."));
 const txRate = ok4("Which Texas cities had the highest shoplifting rate in 2024?");
-assert.deepEqual(txRate.delivered.table.rows, [["Dallas", 6.5], ["Houston", 4.7]]);
+assert.deepEqual(txRate.delivered.table.rows, [["Dallas Police Department", 6.5], ["Houston Police Department", 4.7]]);
 assert.ok(txRate.delivered.text.includes("Not ranked because the FBI gives no population: Smallville."));
 assert.equal(as(ask("Which large Texas cities had the most shoplifting in 2024?"), "answer").delivered.table.rows.length, 2, "P08: 250,000 or more");
 // Scoring increment 4: a ranking's filters, ranked statistic and P60 statements; a rate's denominator.
@@ -530,7 +530,7 @@ const txLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{
     "orders ties alphabetically by agency name", "adds no other eligibility filter", "names its source at the end"] });
 assert.deepEqual(material(tx, txLabel), []);
 assert.ok(material({ ...tx, delivered: { ...tx.delivered, text: tx.delivered.text.filter((t) => !t.startsWith("Ranked:")) } }, txLabel).includes("statement"), "the P60 rule must be said");
-assert.ok(material({ ...tx, delivered: { ...tx.delivered, table: { ...tx.delivered.table, rows: [["Houston", 108], ["Dallas", 84]] } } }, txLabel).includes("statement"), "the row count is checked");
+assert.ok(material({ ...tx, delivered: { ...tx.delivered, table: { ...tx.delivered.table, rows: [["Houston Police Department", 108], ["Dallas Police Department", 84]] } } }, txLabel).includes("statement"), "the row count is checked");
 assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, rank: { by: "rate", direction: "top", limit: 20 } } } as Case["expected"])).includes("rank by"));
 assert.ok(material(tx, label({ ...txLabel.expected!, meaning: { ...(txLabel.expected as { meaning: object }).meaning, filters: ["city agencies"] } } as Case["expected"])).includes("filters"), "the reporters rule is a filter of every ranking");
 const okRates = ok4("Shoplifting rates in Tulsa and Oklahoma City in 2024");

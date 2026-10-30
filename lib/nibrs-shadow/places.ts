@@ -47,18 +47,34 @@ export const PLACE_ALIASES: Record<string, string> = {
   NC0600100: "Charlotte",   // Historical: "Charlotte-Mecklenburg Police Department" (else "Charlotte, North Carolina" finds no agency)
 };
 
-export type PlaceIndex = { byName: Map<string, Agency[]> };
+/** `names`: each ORI's FBI name (the CDE agency directory, scripts/fixtures/nibrs-shadow/agency-names.json). */
+export type PlaceIndex = { byName: Map<string, Agency[]>; names: Map<string, string> };
+const NAMES_FILE = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agency-names.json");
 export function loadPlaceIndex(file = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
+  const names = new Map<string, string>(Object.entries(JSON.parse(fs.readFileSync(NAMES_FILE, "utf8")).names as Record<string, string>));
   const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => (PLACE_NAMES[a.ori] ? { ...a, name: PLACE_NAMES[a.ori] } : a));
   const byName = new Map<string, Agency[]>();
   const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
   for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }
   for (const xs of byName.values()) xs.sort((a, b) => b.population - a.population);
-  return { byName };
+  return { byName, names };
 }
 
-/** The build names no agency, so the label says what is known: the city's police or the county's agency, and the state. */
-export const agencyLabel = (a: Agency) => (a.kind === "city" ? `${a.name} city police, ${a.state}` : `${a.name} agency, ${a.state}`);
+/**
+ * Who reported the figures: the agency's FBI name (Jeff 2026-10-30: "Reported by the Denver Police Department"), never
+ * one built from a city and a type. Without one, the build's city (nibrs-model's fallback), else the ORI.
+ */
+export function agencyName(idx: PlaceIndex, ori: string, city?: string | null): string {
+  return idx.names.get(ori) ?? (city ? city.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase()) : ori);
+}
+/** "Reported by the Denver Police Department." / "... the Tulsa Police Department and the Oklahoma City Police Department." */
+export function reportedBy(names: string[]): string {
+  const the = names.map((n) => (/^[A-Z]{2}[A-Z0-9]{7}$/.test(n) ? `agency ${n} (the FBI publishes no name for it)` : `the ${n}`));
+  return `Reported by ${the.length > 2 ? `${the.slice(0, -1).join(", ")} and ${the[the.length - 1]}` : the.join(" and ")}.`;
+}
+
+/** A place's name in an answer (Jeff 2026-10-30): "Denver, Colorado", "Baltimore County, Maryland", "Washington, D.C."; the agency is named on the next line (reportedBy). */
+export const agencyLabel = (a: Agency) => `${PLACE_ALIASES[a.ori] ?? a.name}, ${a.state === "DC" ? "D.C." : stateName(a.state)}`;
 const asPlace = (a: Agency): PlaceResolution => ({ kind: "agency", place: { kind: "agency", ori: a.ori, label: agencyLabel(a) }, agency: a });
 /** A button's label for a candidate: "Kansas City, Missouri"; "Baltimore city, Maryland" beside "Baltimore County, Maryland"; "Washington state". */
 export function candidateLabel(c: Candidate, all: Candidate[]): string {

@@ -12,6 +12,12 @@ import { AGE_BINS } from "../nibrs-plan/from-spec";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ResolvedPeriod } from "../nibrs-plan/resolve";
 import type { Meaning } from "./case";
+import fs from "node:fs";
+import path from "node:path";
+
+/** The agencies' FBI names (scripts/fixtures/nibrs-shadow/agency-names.json), read once. */
+let NAMES: Map<string, string> | null = null;
+const fbiNames = () => (NAMES ??= new Map(Object.entries(JSON.parse(fs.readFileSync(path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agency-names.json"), "utf8")).names as Record<string, string>)));
 
 export type Diff = { field: string; expected: string; actual: string; kind: "material" | "unverified" };
 
@@ -160,7 +166,12 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
     const at = p.kind === "agency_set" ? p.within : p;
     if (at.kind === "national") return { kind: "national" as const, name: "United States" };
     if (at.kind === "state") return { kind: "state" as const, name: STATE_NAMES[at.code] ?? at.code, state: at.code };
-    if (at.kind === "agency") { const st = at.label.match(/,\s*([A-Z]{2})$/)?.[1]; return { kind: "agency" as const, name: at.label.replace(/,\s*[A-Z]{2}$/, ""), ...(st ? { state: st } : {}) }; }
+    // An agency by its FBI name (the name a label gives), its state from the place label ("Denver, Colorado").
+    if (at.kind === "agency") {
+      const tail = at.label.replace(/^.*,\s*/, "");
+      const st = /, D\.C\.$/.test(at.label) ? "DC" : /^[A-Z]{2}$/.test(tail) ? tail : STATE_CODES[norm(tail)];
+      return { kind: "agency" as const, name: fbiNames().get(at.ori) ?? at.label.replace(/,[^,]*$/, ""), ...(st ? { state: st } : {}) };
+    }
     return { kind: "county" as const, name: at.label };
   });
   const months = period.kind === "absolute" ? { from: period.from, to: period.to } : { from: ym(Math.min(...period.years), 1), to: period.through ?? ym(Math.max(...period.years), 12) };

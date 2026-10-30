@@ -18,12 +18,11 @@ import type { NibrsPlan } from "../nibrs-plan/plan";
 import { agencyPopulationSql, compilePlan } from "../nibrs-plan/compile";
 import { combineMonths, rankAgencies, rate, rollup, type Cell, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
+import { agencyName, reportedBy, stateName } from "./places";
 import { deliverTable, fmt, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 
 type Decline = (explanation: string) => ShadowOutcome;
-const STATE: Record<string, string> = { TX: "Texas", OH: "Ohio", CO: "Colorado" };
-const title = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
 const knownMonths = (cells: MonthCell[]) => cells.filter((c) => c.status === "VALUE" || c.status === "REPORTED_ZERO").length;
 
 export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string }, deps: ShadowDeps, statements: AnswerStatement[], readings: string[], decline: Decline): ShadowOutcome {
@@ -40,20 +39,18 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const set = plan.geography.places[0].kind === "agency_set" ? plan.geography.places[0] : null;
   const root = deps.target.root;
 
-  // The agencies: the named ones, or the state's city agencies (with P08's floor), named by the place index when it
-  // has them.
-  let agencies: { ori: string; label: string; population: number | null }[];
+  // The agencies: the named ones (label: the place; name: the FBI's), or the state's city agencies (with P08's floor),
+  // each by its FBI name (a ranking lists agencies).
+  let agencies: { ori: string; label: string; name: string; population: number | null }[];
   if (set) {
     if (set.within.kind !== "state") return decline("Not in the slice yet: this set of agencies.");
     const floor = set.where.find((w) => w.field === "agency.population" && w.op === ">=");
     const lastYear = years[years.length - 1];
     const rows = deps.execute(agencyPopulationSql(root, { state: set.within.code, city: true }, [lastYear]));
-    const names = new Map<string, string>();
-    for (const xs of deps.places.byName.values()) for (const a of xs) names.set(a.ori, a.name);
-    agencies = rows.map((r) => ({ ori: String(r[0]), label: names.get(String(r[0])) ?? (r[3] ? title(String(r[3])) : String(r[0])), population: r[2] === null ? null : Number(r[2]) }))
+    agencies = rows.map((r) => { const name = agencyName(deps.places, String(r[0]), r[3] ? String(r[3]) : null); return { ori: String(r[0]), label: name, name, population: r[2] === null ? null : Number(r[2]) }; })
       .filter((a) => !floor || (a.population ?? 0) >= Number(floor.value));
   } else {
-    agencies = plan.geography.places.map((p) => (p.kind === "agency" ? { ori: p.ori, label: p.label, population: null } : { ori: "", label: "", population: null }));
+    agencies = plan.geography.places.map((p) => (p.kind === "agency" ? { ori: p.ori, label: p.label, name: agencyName(deps.places, p.ori), population: null } : { ori: "", label: "", name: "", population: null }));
   }
   if (!agencies.length) return decline("No city agency in this place meets the conditions.");
   const oris = agencies.map((a) => a.ori);
@@ -85,21 +82,22 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     return { ...rate(total, pop), missing: total.missing };
   };
   const lines: string[] = [];
-  const popLine = (year: number, list: { ori: string; label: string }[]) =>
-    `Rates are per 100,000 residents, using the FBI's ${year} population of ${list.length > 1 ? "each agency" : "the agency"}: ${list.map((a) => `${a.label} ${pops.get(`${a.ori}|${year}`) ? fmt(pops.get(`${a.ori}|${year}`)!) : "(none)"}`).join("; ")}.`;
+  const popLine = (year: number, list: { ori: string; name: string }[]) =>
+    `Rates are per 100,000 residents, using the FBI's ${year} population of ${list.length > 1 ? "each agency" : "the agency"}: ${list.map((a) => `${a.name} ${pops.get(`${a.ori}|${year}`) ? fmt(pops.get(`${a.ori}|${year}`)!) : "(none)"}`).join("; ")}.`;
   const partLine = () => { if (partYear) lines.push(`This covers ${when}${isRate ? "; the rate is for those months and is not annualized" : ""}.`); };
   const year = years[years.length - 1];
+  const reporter = reportedBy(agencies.map((a) => a.name));
 
   // A ranking of a state's city agencies (P60).
   if (set && rankT && rankT.kind === "rank") {
     const entries = agencies.map((a) => {
       const cells = byOri.get(a.ori) ?? [];
       const v = valueOf(cells, a.ori, year);
-      return { ...a, name: a.label, value: v.value, known: v.status === "VALUE" || v.status === "REPORTED_ZERO", monthsKnown: knownMonths(cells), months: cells.length };
+      return { ...a, value: v.value, known: v.status === "VALUE" || v.status === "REPORTED_ZERO", monthsKnown: knownMonths(cells), months: cells.length };
     });
     const { ranked, leftOut } = rankAgencies(entries, rankT.direction, rankT.limit);
     const code = set.within.kind === "state" ? set.within.code : "";
-    const where = STATE[code] ?? code;
+    const where = stateName(code);
     const floor = set.where.find((w) => w.field === "agency.population");
     lines.push(`${where} city agencies${floor ? " of 250,000 residents or more" : ""}: the ${ranked.length} with the ${rankT.direction === "top" ? (isRate ? "highest" : "most") : (isRate ? "lowest" : "fewest")} ${what}${isRate ? " per 100,000 residents" : ""}, ${when}.`);
     if (floor) lines.push("Large means 250,000 residents or more (the FBI's agency population).");
@@ -129,7 +127,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
       const v = valueOf(cells.filter((x) => x.ym.startsWith(`${y}-`)), a.ori, y);
       return { key: String(y), value: v.value, status: v.status, missing: v.missing };
     });
-    lines.push(`${a.label}: ${isRate ? `${what} per 100,000 residents` : what} by year, ${when}.`);
+    lines.push(`${a.label}: ${isRate ? `${what} per 100,000 residents` : what} by year, ${when}.`, reporter);
     if (isRate) lines.push(`Each year's rate uses the FBI's population for that year: ${years.map((y) => `${y} ${pops.get(`${a.ori}|${y}`) ? fmt(pops.get(`${a.ori}|${y}`)!) : "(none)"}`).join("; ")}.`);
     const missing = rows.flatMap((r) => r.missing);
     if (missing.length) lines.push(`No report is known for ${runs(missing)}: that year's ${isRate ? "rate" : "total"} is not given.`);
@@ -144,10 +142,10 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const popSum = agencies.every((a) => pops.get(`${a.ori}|${year}`)) ? agencies.reduce((s, a) => s + pops.get(`${a.ori}|${year}`)!, 0) : null;
     const v: Cell = isRate ? rate(total, popSum) : total;
     const names = agencies.map((a) => a.label);
-    const together = names.length > 2 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join(" and ");
+    const together = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
     lines.push(v.value !== null ? `${together}, combined: ${isRate ? `${v.value} ${what} per 100,000 residents` : `${fmt(v.value)} ${what}`} in ${when}.`
-      : `${together}, combined: no ${isRate ? "rate" : "total"} is given for ${when}, because not every month is known for every agency counted.`);
-    if (isRate && v.value !== null) lines.push(`The rate is both agencies' offenses over both agencies' populations (the FBI's ${year} figures: ${agencies.map((a) => `${a.label} ${fmt(pops.get(`${a.ori}|${year}`)!)}`).join("; ")}).`);
+      : `${together}, combined: no ${isRate ? "rate" : "total"} is given for ${when}, because not every month is known for every agency counted.`, reporter);
+    if (isRate && v.value !== null) lines.push(`The rate is both agencies' offenses over both agencies' populations (the FBI's ${year} figures: ${agencies.map((a) => `${a.name} ${fmt(pops.get(`${a.ori}|${year}`)!)}`).join("; ")}).`);
     for (const a of agencies) { const miss = rollup(byOri.get(a.ori) ?? []).missing; if (miss.length) lines.push(`No report is known for ${runs(miss)} for ${a.label}.`); }
     partLine();
     const delivered = deliverTable(plan, null, { as: st.as, header: statHeader }, [{ key: null, value: v.value, status: v.status }], lines, statements, deps.release.id, readings);
@@ -155,19 +153,19 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   }
 
   // Separate: a row per agency (or one agency's single value).
-  const rows = agencies.map((a) => { const v = valueOf(byOri.get(a.ori) ?? [], a.ori, year); return { key: a.label, value: v.value, status: v.status, missing: v.missing, a }; });
+  // A row per agency, by its FBI name (the places are named in the title).
+  const rows = agencies.map((a) => { const v = valueOf(byOri.get(a.ori) ?? [], a.ori, year); return { key: a.name, value: v.value, status: v.status, missing: v.missing, a }; });
   if (agencies.length === 1) {
     const r = rows[0];
-    lines.push(r.value !== null ? `${r.key}: ${isRate ? `${r.value} ${what} per 100,000 residents` : `${fmt(r.value)} ${what}`} in ${when}.`
-      : `${r.key}: no ${isRate ? "rate" : "number"} is given for ${when}, because not every month is known.`);
+    lines.push(r.value !== null ? `${r.a.label}: ${isRate ? `${r.value} ${what} per 100,000 residents` : `${fmt(r.value)} ${what}`} in ${when}.`
+      : `${r.a.label}: no ${isRate ? "rate" : "number"} is given for ${when}, because not every month is known.`, reporter);
   } else {
-    // The agencies are named in the text, not only in the table.
-    const names = agencies.map((a) => a.label);
-    const listed = names.length > 2 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join(" and ");
-    lines.push(`${what[0].toUpperCase()}${what.slice(1)}${isRate ? " per 100,000 residents" : ""} by agency, ${when}: ${listed}.`);
+    const places = agencies.map((a) => a.label);
+    const listed = places.length > 2 ? `${places.slice(0, -1).join("; ")} and ${places[places.length - 1]}` : places.join(" and ");
+    lines.push(`${listed}: ${what}${isRate ? " per 100,000 residents" : ""} by agency, ${when}.`, reporter);
   }
   if (isRate) lines.push(popLine(year, agencies));
-  for (const r of rows) if (r.missing.length) lines.push(`No report is known for ${runs(r.missing)} for ${r.key}, so its ${isRate ? "rate" : `${when} total`} is not given.`);
+  for (const r of rows) if (r.missing.length) lines.push(`No report is known for ${runs(r.missing)} for the ${r.key}, so its ${isRate ? "rate" : `${when} total`} is not given.`);
   partLine();
   const delivered = deliverTable(plan, geoG ? { dimension: geoG.dimension, header: "Agency" } : null, { as: st.as, header: statHeader },
     rows.map((r) => ({ key: r.key, value: r.value, status: r.status })), lines, statements, deps.release.id, readings);

@@ -181,10 +181,6 @@ function monthsReported(text: string[]): Set<string> {
 /** Words that characterize a change instead of reporting it (P54: no adjectives). */
 const ADJECTIVES = /\b(?:sharply|slightly|significantly|dramatically|substantially|modestly|markedly|considerably|steeply|notably|alarming(?:ly)?|huge|massive|small|large)\b/i;
 
-/** The label's agency name as the words an answer must carry (its city), e.g. "St. Louis". */
-function agencyWords(name: string): string {
-  return name.replace(/\b(Metropolitan|Metro|Police|Department|Bureau|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
-}
 
 /** A comparison answer's cells by output ("earlier", "later", "change", "pct_change"), or null for any other answer. */
 function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<string, number | null> | null {
@@ -210,7 +206,7 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
   const f = (n: number) => n.toLocaleString("en-US");
   const signed = (n: number) => (n > 0 ? `+${f(n)}` : n < 0 ? `-${f(-n)}` : "0");
   const changeLine = cols.change === null ? null : `${f(cols.earlier!)} in ${E} and ${f(cols.later!)} in ${L}: a change of ${signed(cols.change)}${cols.pct_change !== null ? ` (${cols.pct_change > 0 ? "+" : ""}${cols.pct_change}%)` : ""}.`;
-  const allowed = (line: string) => line === changeLine || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line)
+  const allowed = (line: string) => line === changeLine || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line) || /^Reported by .+\.$/.test(line)
     || (Object.values(ANSWER_STATEMENTS) as string[]).includes(line) || /^Compares the same months of each year: [A-Za-z ]+\.$/.test(line)
     || line.endsWith(`, ${E} against ${L}.`)
     || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
@@ -228,7 +224,8 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
   for (const s of e.statements) {
     let ok: boolean | null = null;
     const ag = /^names the agency \((.+)\)$/.exec(s);
-    if (ag) ok = all.toLowerCase().includes(agencyWords(ag[1]).toLowerCase());
+    // The agency by its FBI name, as the answer's "Reported by" line gives it (Jeff 2026-10-30).
+    if (ag) ok = all.includes(ag[1]);
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
     else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
     else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|No total is established for/.test(all);
