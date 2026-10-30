@@ -75,13 +75,13 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-132 cases. Correct 113; unverified 9; wrong answers 0; avoidable declines 8; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 170 (trend only).
+132 cases. Correct 116; unverified 10; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 106 | 0 | 8 | 0 |
+| answer | 110 | 0 | 4 | 0 |
 | clarify | 0 | 3 | 2 | 0 |
 | decline | 0 | 0 | 13 | 0 |
 
@@ -91,12 +91,12 @@ Expected (rows) by actual (columns):
 | answer:historical count | 2021 and later | 5 | fail | wrong answers: pass (0); initial action: fail (80% (4/5)); direct answers: fail (80% (0 unverified)); numeric fixtures: pass (4/4 match) |
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:historical rate | 2021 and later | 3 | fail | wrong answers: pass (0); initial action: fail (67% (2/3)); direct answers: fail (67% (0 unverified)); numeric fixtures: pass (2/2 match) |
+| answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: pass (2/2 match) |
 | answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
-| answer:nibrs count | 2021 and later | 78 | fail | wrong answers: pass (0); initial action: fail (94% (73/78)); direct answers: fail (94% (0 unverified)); numeric fixtures: pass (73/73 match) |
+| answer:nibrs count | 2021 and later | 78 | pass | wrong answers: pass (0); initial action: pass (96% (75/78)); direct answers: pass (96%); numeric fixtures: pass (75/75 match) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
-| answer:nibrs share | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -149,14 +149,9 @@ Discrepancies and unverified cases:
 - **LS-349** (unverified; expected answer, got answer) "Murders in the US by victim-offender relationship in 2023"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run H
-- **LS-359** (avoidable_decline; expected answer, got decline) "What share of shoplifting offenses in Memphis in 2024 were cleared?"
-  - declined (unsupported_capability): Not in the slice yet: the share cleared; ask how many were cleared, or by clearance status.
-- **LS-363** (avoidable_decline; expected answer, got decline) "Robbery clearance rate in Atlanta in 2023"
-  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
-- **LS-367** (avoidable_decline; expected answer, got decline) "Arrests in Memphis in 2024 for incidents where a firearm was stolen"
-  - declined (reader): I can't apply "Arrests": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply "incidents": one
-- **LS-372** (avoidable_decline; expected answer, got decline) "Arrests in Memphis in 2024 for incidents that included a robbery"
-  - declined (reader): I can't apply "Arrests": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply "incidents": one
+- **LS-363** (unverified; expected answer, got answer) "Robbery clearance rate in Atlanta in 2023"
+  - unverified route: expected `historical answer`, got `routed to historical: not run by this NIBRS shadow`
+  - routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Hi
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 

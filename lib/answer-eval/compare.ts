@@ -8,6 +8,7 @@
  *               the label cannot express (a share's numerator and denominator roles, transform parameters).
  * An unverified field never earns correctness credit and never proves a wrong answer (Codex runner review r1).
  */
+import { MEASURE_CODES } from "../nibrs-question-types";
 import { AGE_BINS } from "../nibrs-plan/from-spec";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ResolvedPeriod } from "../nibrs-plan/resolve";
@@ -62,6 +63,8 @@ function planFilterKey(dimension: string, values: (string | number)[], op: strin
   if (dimension.endsWith("weapon")) return [...v].sort().join("+") === [...FIREARM].sort().join("+") ? "weapon:firearm" : v.join("+") === "20" ? "weapon:knife" : null;
   if (dimension === "offense.clearance_method") return v.join("+") === "exceptional" ? "clearance:exceptional" : v.join("+") === "arrest" ? "clearance:arrest" : null;
   if (dimension === "offense.clearance_type") return v.join("+") === "B" ? "clearance:prosecution declined" : null;
+  // Increment 6: an offense of the incident (arrests reached through it), by the crime with exactly those codes.
+  if (dimension === "offense.offense") { const name = Object.keys(MEASURE_CODES).find((k) => [...MEASURE_CODES[k]].sort().join("+") === [...v].sort().join("+")); return name ? `incident offense:${name.replace(/_/g, " ")}` : null; }
   // Increment 6: a clearance status selection (P66).
   if (dimension === "offense.clearance_status") return v.join("+") === "cleared" ? "clearance:cleared" : v.join("+") === "none" ? "clearance:uncleared" : null;
   if (dimension === "victim_offender.relationship") return v.join("+") === "ST" ? "relationship:stranger" : null;
@@ -89,6 +92,7 @@ function labelFilterKey(f: string): string | null {
     if (/^cleared by exceptional means$/.test(family)) return "clearance:exceptional";
     if (/^cleared\b/.test(family)) return "clearance:cleared";
   }
+  if (family === "incident offense") return value ? `incident offense:${value}` : null;
   if (family === "property") { const m = /^(firearm|vehicle) (stolen|recovered|seized|damaged|burned)$/.exec(value); return m ? `property:${m[1]} ${m[2]}` : null; }
   if (family === "weapon") return /firearm|gun/.test(value) ? "weapon:firearm" : /knife/.test(value) ? "weapon:knife" : null;
   if (family === "clearance") return /prosecution declined/.test(value) ? "clearance:prosecution declined" : /exceptional/.test(value) ? "clearance:exceptional" : /arrest/.test(value) ? "clearance:arrest" : null;
@@ -192,6 +196,11 @@ export type PlanView = {
   /** A period comparison's two periods (increment 3), checked against the periods the label implies. */
   comparison: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null;
   untracked: string[];             // plan features the label schema cannot express (transform parameters, bins)
+  /**
+   * Increment 6: a share of a measure in its own units (the share cleared): the ratio's numerator is the denominator's
+   * measure with filters of its own, the denominator has none. Its roles are then read from the plan.
+   */
+  subsetShare?: boolean;
 };
 
 export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView {
@@ -212,7 +221,11 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   const byAs = new Map(plan.measures.map((m) => [m.as, m]));
   const roles = new Map<string, "numerator" | "denominator">();
   for (const s of plan.statistics) if (s.kind === "ratio") { roles.set(s.numerator, "numerator"); roles.set(s.denominator, "denominator"); }
-  const statistics = plan.statistics.map((s) => s.kind);
+  // The incidents beside a count (P66) are supporting numbers, not the question's statistic.
+  const statistics = plan.statistics.filter((s) => s.kind !== "incidents").map((s) => s.kind);
+  const ratioStat = plan.statistics.find((s) => s.kind === "ratio");
+  const num = ratioStat && ratioStat.kind === "ratio" ? byAs.get(ratioStat.numerator) : undefined, den = ratioStat && ratioStat.kind === "ratio" ? byAs.get(ratioStat.denominator) : undefined;
+  const subsetShare = !!num && !!den && num.id === den.id && num.unit === den.unit && !!num.filters?.length && !den.filters?.length;
   const transforms = plan.transforms.map((t) => t.kind);
   const headline = transforms.includes("rank") ? "rank" : transforms.includes("period_comparison") ? "change" : statistics[statistics.length - 1];
   const filterKeys: (string | null)[] = [];
@@ -264,7 +277,7 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
       statistic: headline as Meaning["statistic"], cohort: plan.coverage.cohort,
     },
     measures: plan.measures.map((m) => ({ name: m.id, unit: m.unit, role: roles.get(m.as) ?? "value" })),
-    filterKeys, statistics: [...new Set([headline, ...statistics])], years, yearsThrough: period.kind === "years" ? period.through ?? null : null,
+    filterKeys, statistics: [...new Set([headline, ...statistics])], subsetShare, years, yearsThrough: period.kind === "years" ? period.through ?? null : null,
     rank: rankT && rankT.kind === "rank" ? { direction: rankT.direction, limit: rankT.limit, by: plan.statistics.find((x) => x.as === rankT.by)?.kind ?? null } : null,
     denominator: denominatorOf(plan),
     comparison: cmpT && cmpT.kind === "period_comparison" ? { earlier: { from: cmpT.earlier.from, to: cmpT.earlier.to }, later: { from: cmpT.later.from, to: cmpT.later.to } } : null,
@@ -334,13 +347,16 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
   const aPairs = ratio ? [...new Set(actual.measures.map((m) => `${measureName(m.name) ?? "?"}|${unitName(m.unit) ?? "?"}`))] : actual.measures.map((m) => `${measureName(m.name) ?? "?"}|${unitName(m.unit) ?? "?"}`);
   const ePairs = expected.measures.map((m) => `${measureName(m.name) ?? "?"}|${unitName(m.unit) ?? "?"}`);
   decide("measures", ePairs.map((x) => (x.includes("?") ? null : x)), aPairs.map((x) => (x.includes("?") ? null : x)));
-  if (ratio) add("share roles", expected.denominator ?? "(label gives no roles)", actual.measures.map((m) => `${m.role}:${m.name}`).join(", "), "unverified");
+  // A share of a measure in its own units (the share cleared) reads its roles from the plan, against a label whose
+  // denominator is all of that measure.
+  const ownShare = !!actual.subsetShare && expected.statistic === "share" && /^all\b/i.test(expected.denominator ?? "");
+  if (ratio && !ownShare) add("share roles", expected.denominator ?? "(label gives no roles)", actual.measures.map((m) => `${m.role}:${m.name}`).join(", "), "unverified");
   decide("filters", expected.filters.map(labelFilterKey), actual.filterKeys);
   decide("groupings", [...new Set(expected.groupings.map(groupingName))], [...new Set(actual.meaning.groupings.map(groupingName))]);
   // Statistic: the label's headline must be among the plan's statistics. A ratio of a measure to itself reads as a share
   // only when the roles are verified, so share-versus-ratio stays unverified.
   const eStat = expected.rank ? "rank" : expected.statistic;
-  if (!actual.statistics.includes(eStat)) add("statistic", eStat, actual.statistics.join(" + "), eStat === "share" && actual.statistics.includes("ratio") ? "unverified" : "material");
+  if (!actual.statistics.includes(eStat) && !(ownShare && actual.statistics.includes("ratio"))) add("statistic", eStat, actual.statistics.join(" + "), eStat === "share" && actual.statistics.includes("ratio") ? "unverified" : "material");
   if (expected.rank) {
     if (!actual.rank) add("rank", JSON.stringify(expected.rank), "none", "material");
     else {

@@ -642,6 +642,19 @@ assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").ex
 // Routes (P53): the current year to Current Trends, murders by relationship to Homicide Reports; named, not run.
 assert.deepEqual([ask("Robberies in Texas this year").kind, (ask("Robberies in Texas this year") as { source: string }).source], ["route", "rtci"]);
 assert.equal((ask("Murders in the US by victim-offender relationship in 2023") as { source?: string }).source, "shr");
+// Increment 6 (P57): a Part I clearance rate for an agency in a completed year is Historical's, named, not run.
+assert.equal((ask("Robbery clearance rate in Atlanta in 2023") as { source?: string }).source, "historical");
+// Increment 6: plans. A clearance breakdown in a list with a period; the share cleared as the cleared units (with their
+// incidents) over all units; arrests through the incident as every arrest on an incident with the condition. The plans
+// only: the stub returns no rows.
+const planOf = (q: string) => { const o = shadowAnswer(q, { ...deps, execute: () => [] }); return o.kind === "answer" ? o.plan : (assert.fail(`${q}: ${JSON.stringify(o).slice(0, 300)}`) as never); };
+assert.deepEqual(planOf("Memphis shoplifting by year and clearance status, 2023 to 2024").groupings.map((g) => g.dimension), ["time.year", "offense.clearance_status"]);
+assert.deepEqual(planOf("Memphis shoplifting by clearance type and year, 2023 to 2024").groupings.map((g) => g.dimension), ["time.year", "offense.clearance_type"]);
+assert.deepEqual(planOf("What share of shoplifting offenses in Memphis in 2024 were cleared?").statistics.map((s) => s.kind), ["count", "incidents", "count", "ratio"]);
+const through = planOf("Arrests in Memphis in 2024 for incidents that included a robbery");
+assert.deepEqual([through.measures[0].id, through.timeBasis, JSON.stringify(through.filters[0])], ["arrests.all_crime", "arrest_date",
+  JSON.stringify({ kind: "exists", scope: "incident", entity: "offense", where: [{ kind: "attribute", dimension: "offense.offense", op: "in", values: ["120"] }] })]);
+assert.equal(planOf("Arrests in Memphis in 2024 for incidents where a firearm was stolen").measures[0].id, "arrests.all_crime");
 // A NIBRS-only crime for a state (P61), on the stub: every reported month summed (Austin's 11 months included), the
 // disclaimer, and the button's fixed every-month set; the rate over the agencies counted (P62); "according to NIBRS".
 const txCj = as(ask("Carjackings in Texas in 2024"), "answer");

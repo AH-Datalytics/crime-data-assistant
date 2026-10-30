@@ -72,7 +72,7 @@ export type ShadowOutcome =
   /** A Part I figure for a state or the nation, read from the historical file (P53; srs.ts). */
   | SrsAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
-  | { kind: "route"; source: "rtci" | "shr"; explanation: string }
+  | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
   | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean };
 
@@ -250,6 +250,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
     }
   }
+  // P57 (increment 6): a Part I offense's clearance rate for an agency in a completed year is the historical
+  // clearances' (FBI SRS, Return A), not computed from NIBRS. The shadow's historical file has states and the nation
+  // only, so it names the route.
+  if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && !flags(ledger0).nibrsAsked && d.spec.places.length === 1 && d.spec.places[0].kind === "agency"
+    && d.spec.measures.length === 1 && isSrsMeasure(d.spec.measures[0]) && !d.spec.filters.length) {
+    const p = d.spec.period, last = p.form === "year" ? p.year : p.form === "range" ? p.to : null;
+    if (last !== null && last < Number(release.lastMonth.slice(0, 4)))
+      return { kind: "route", source: "historical", explanation: `The ${d.spec.measures[0].replace(/_/g, " ")} clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Historical.` };
+  }
   // A clearance rate for a state or the nation that is not a Part I offense's (P57): a state has none (P18); the method
   // for a NIBRS-only offense is not decided (P57).
   if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && d.spec.places.length === 1 && (d.spec.places[0].kind === "state" || d.spec.places[0].kind === "national"))
@@ -281,11 +290,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     plan.filters.push({ kind: "exists", scope: "incident", entity: "property", attribution: "incident_level_only",
       where: [{ kind: "attribute", dimension: "property.loss_type", op: "in", values: [loss] }, { kind: "attribute", dimension: "property.description", op: "in", values: d.codes }] });
   }
+  // Increment 6: arrests reached through the incident (P50, P68): every arrest on an incident with the condition (a
+  // property selection, or an offense of the incident), whatever its arrest offense; never all arrests.
+  const thr = flags(ledger0).arrestsThrough;
+  if (thr) {
+    if (plan.measures.length !== 1 || plan.measures[0].id !== "arrests.all_crime") return decline("unsupported_capability", "Not in the slice yet: arrests for incidents of this kind.");
+    if (thr.offense) {
+      const codes = MEASURE_CODES[thr.offense];
+      if (!codes) return decline("unsupported_capability", `Not in the slice yet: arrests for incidents with ${thr.offense.replace(/_/g, " ")}.`);
+      plan.filters.push({ kind: "exists", scope: "incident", entity: "offense", where: [{ kind: "attribute", dimension: "offense.offense", op: "in", values: codes }] });
+    }
+    if (!plan.filters.some((f) => f.kind === "exists")) return decline("unsupported_capability", "Not in the slice yet: arrests for incidents with no condition.");
+  }
   // Increment 6: clearance (P64, P66, P67), each unit taking its incident's status as of the file: a breakdown by
   // status or type, or a selection.
   const clr = flags(ledger0).clearance;
   if (clr) {
-    if (clr.share) return decline("unsupported_capability", "Not in the slice yet: the share cleared; ask how many were cleared, or by clearance status.");
     if (clr.by) plan.groupings.push({ dimension: clr.by === "type" ? "offense.clearance_type" : "offense.clearance_status", unknown: "visible", absent: "show" });
     if (clr.only) plan.filters.push({ kind: "attribute", op: "in",
       dimension: clr.only === "arrest" || clr.only === "exceptional" ? "offense.clearance_method" : "offense.clearance_status",
@@ -466,6 +486,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (stateMode || placesMode || cmpFlag || rollingT || several)
       return decline("unsupported_capability", "Not in the slice yet: clearance for a state, the nation or several agencies, for several crimes, or as a change or rolling windows.");
     plan.statistics.splice(1, 0, { kind: "incidents", as: `${plan.measures[0].as}_incidents`, measure: plan.measures[0].as });
+  }
+  // Increment 6: the share cleared (P64, P66): the cleared units (with their incidents) over all units of the period,
+  // each counted independently, for one total.
+  if (clr?.share) {
+    if (timeG.length || catG.length || clr.by) return decline("unsupported_capability", "Not in the slice yet: the share cleared by period or by category; ask for one period.");
+    const m = plan.measures[0], i = plan.filters.findIndex((f) => f.kind === "attribute" && f.dimension === "offense.clearance_status");
+    const cleared = { ...m, as: `${m.as}_cleared`, filters: [...(m.filters ?? []), plan.filters[i]] };
+    plan.filters.splice(i, 1);
+    plan.measures = [cleared, m];
+    plan.statistics = [{ kind: "count", as: `${cleared.as}_count`, measure: cleared.as }, { kind: "incidents", as: `${cleared.as}_incidents`, measure: cleared.as },
+      { kind: "count", as: `${m.as}_count`, measure: m.as }, { kind: "ratio", as: "share_cleared", numerator: cleared.as, denominator: m.as }];
   }
 
   // D31/P06: a missing period is asked about, for any reader form, once the question is known to be in the slice.

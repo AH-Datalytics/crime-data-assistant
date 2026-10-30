@@ -144,6 +144,10 @@ const CLEARANCE_CODE: Record<string, string> = { arrest: "arrest", uncleared: "n
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
   const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
     ({ key: dim ? categoryName(dim, CLEARANCE_CODE[key] ?? key.replace(/^exceptional_/, "")) : "", value: x.units, status: "VALUE", incidents: x.incidents });
+  // The share cleared (V116): the cleared count with its incidents, the total, and the share.
+  if (lsCase === "LS-359" && typeof v.share_cleared_percent === "number" && v.cleared)
+    return [{ key: "cleared", value: (v.cleared as UnitsIncidents).units, status: "VALUE", incidents: (v.cleared as UnitsIncidents).incidents },
+      { key: "total", value: v.total_offenses as number, status: "VALUE" }, { key: "share", value: v.share_cleared_percent, status: "VALUE" }];
   const part = CLEARANCE_PART[lsCase];
   if (part) return v[part] ? [ui(v[part] as UnitsIncidents, part)] : null;
   if (v.by_status) return Object.entries(v.by_status).map(([k, x]) => ui(x, k, "offense.clearance_status"));
@@ -369,6 +373,8 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (/^counts victims, each taking its incident's clearance status/.test(s)) ok = o.plan.measures[0].unit === "victim" && clearanceDims(o.plan).length > 0;
     else if (/^says property belongs to the incident, not to one offense/.test(s)) ok = text.includes(ANSWER_STATEMENTS.property_not_attributed);
     else if (/^counts arrests by arrest date/.test(s)) ok = o.plan.timeBasis === "arrest_date";
+    else if (/^says arrests with no incident \(standalone Group B arrests\) are not included/.test(s)) ok = text.includes(ANSWER_STATEMENTS.arrests_through_incident);
+    else if (/^gives the cleared count, the total and the share$/.test(s)) ok = o.plan.statistics.map((x) => x.kind).join(",") === "count,incidents,count,ratio" && o.delivered.table.columns.length === 4;
     else if (/^says it counts the period's .* still uncleared as of the file date/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_as_of_file);
     else if (/^gives the .* total \(/.test(s)) {
       // The combined total: a "Together:" sentence whose number is the sum of the table's counts (all of them known).
@@ -532,6 +538,20 @@ function matchMeasure(m: NibrsPlan["measures"][number], defs: string[]): string 
   const hits = defs.filter((d) => { const n = named(d); return n.size === codes.length && codes.every((c) => n.has(c)) && !!unit?.test(d); });
   return hits.length === 1 ? hits[0] : null;
 }
+/** Increment 6, the share cleared: its cleared count (and incidents), total and share against the expected cells. */
+function shareDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[]): { diffs: Diff[]; values: Values } {
+  const [cCount, cInc, aCount, ratio] = o.plan.statistics.map((x) => x.as);
+  const { columns, rows } = o.delivered.table;
+  const at = (as: string) => rows[0]?.[columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === as)] ?? null;
+  const got: Record<string, unknown> = { cleared: at(cCount), total: at(aCount), share: at(ratio) };
+  const diffs: Diff[] = [];
+  if (rows.length !== 1) diffs.push({ field: `${prefix}rows`, expected: "one row", actual: `${rows.length} rows`, kind: "material" });
+  for (const x of expected) {
+    if (got[x.key] !== x.value) diffs.push({ field: `${prefix}value ${x.key}`, expected: String(x.value), actual: String(got[x.key]), kind: "material" });
+    if (x.incidents !== undefined && at(cInc) !== x.incidents) diffs.push({ field: `${prefix}incidents ${x.key}`, expected: String(x.incidents), actual: String(at(cInc)), kind: "material" });
+  }
+  return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : "match" };
+}
 /** Several measures side by side (no categories): each measure's column against its own expected cells. */
 function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[]): { diffs: Diff[]; values: Values } {
   const { columns, rows } = o.delivered.table;
@@ -579,6 +599,7 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
     }
     return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
   }
+  if (o.plan.statistics.some((x) => x.kind === "ratio") && expected.some((x) => x.key === "share")) return shareDiffs(prefix, o, expected);
   if (o.plan.measures.length > 1 || expected.some((x) => x.measure)) {
     if (o.plan.measures.length > 1 && expected.every((x) => x.measure)) return severalDiffs(prefix, o, expected);
     return { values: "mismatch", diffs: [{ field: `${prefix}measures`, expected: `${new Set(expected.map((x) => x.measure)).size} measures`, actual: `${o.plan.measures.length} measures`, kind: "material" }] };
@@ -685,6 +706,7 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
   if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
+  if (plan.measures.some((m) => m.id === "arrests.all_crime")) want.push("arrests_through_incident");
   const clr = clearanceDims(plan);
   if (clr.length) want.push("clearance_as_of_file");
   if (clr.some((d) => d !== "offense.clearance_status")) want.push("clearance_arrest_first");

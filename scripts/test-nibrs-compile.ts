@@ -54,6 +54,16 @@ assert.deepEqual(sel("offense.clearance_status", "cleared"), ["property_not_attr
 assert.deepEqual(sel("offense.clearance_method", "arrest"), ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
 // The incidents come right after the count of the counted measure.
 assert.equal(compilePlan({ ...X.N2, statistics: [{ kind: "incidents", as: "inc", measure: n2m }, X.N2.statistics[0]] }, year(2024), t).kind, "unsupported");
+// Increment 6: every arrest on an incident with a condition (P50, P68): any arrest offense, M left out, by arrest date,
+// with its statement; an incident's offense as the condition; never every arrest.
+const allArrests = { ...X.N2, timeBasis: "arrest_date" as const, measures: [{ id: "arrests.all_crime", unit: "arrest" as const, as: "arrests" }], statistics: [{ kind: "count" as const, as: "n", measure: "arrests" }] };
+const onStolen = ok(compilePlan(allArrests, year(2024), t));
+for (const s of ["FROM read_parquet", "multiple_arrestee_indicator, '') <> 'M'", "p.loss_type IN ('7')"]) assert.ok(onStolen.sql.includes(s), s);
+assert.ok(!onStolen.sql.includes("a.arrest_offense IN"), "any arrest offense");
+assert.deepEqual(onStolen.statements, ["property_not_attributed", "arrests_counted_once", "arrests_through_incident"]);
+const onRobbery = ok(compilePlan({ ...allArrests, filters: [{ kind: "exists", scope: "incident", entity: "offense", where: [{ kind: "attribute", dimension: "offense.offense", op: "in", values: ["120"] }] }] }, year(2024), t));
+assert.ok(onRobbery.sql.includes("o2.offense_code IN ('120')"));
+assert.equal(compilePlan({ ...allArrests, filters: [] }, year(2024), t).kind, "unsupported");
 
 // Everything outside v0 is refused, with its reason.
 const refuse = (p: Parameters<typeof compilePlan>[0], period: Parameters<typeof compilePlan>[1] = year(2025)) => { const r = compilePlan(p, period, t); assert.equal(r.kind, "unsupported"); return r.kind === "unsupported" ? r.reason : ""; };

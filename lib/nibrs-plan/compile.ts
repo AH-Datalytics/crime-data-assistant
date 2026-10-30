@@ -181,6 +181,15 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
         WHERE p.data_year = o.data_year AND p.ori = o.ori AND p.incident_num = o.incident_num
           AND p.loss_type = '7' AND p.property_description IN (${list(CARJACK_VEHICLES)}))${incidentFilter("o")}` };
   }
+  // Increment 6: every arrest on an incident (any arrest offense, Group B included), M left out (P68), by arrest date;
+  // only through a condition on the incident (standalone Group B arrests have none and are not read).
+  if (measureId === "arrests.all_crime") {
+    if (unit !== "arrest") return { error: `"${measureId}" counts arrests` };
+    const cond = incidentFilter("a");
+    if (!cond) return { error: "v0 counts every arrest only through a condition on the incident" };
+    return { entity: "arrestee", sql: `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
+      FROM ${read("arrestee")} a ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${cond}` };
+  }
   // Exactly <kind>.<measure>, with a measure whose codes are known.
   const m = measureId.match(/^(offenses|incidents|victims|offenders|arrests)\.([a-z_]+)$/);
   const codes = m ? MEASURE_CODES[m[2]] ?? EXTRA_CODES[m[2]] : undefined;
@@ -312,6 +321,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         // P31: a weapon on the incident's offense segment with the code that connects the victim (one of the measure's
         // codes). A victim names its connected offense by code only, so any segment of that code in the incident counts.
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense_weapon")} w2 WHERE ${sameIncident("w2", "vo")} AND w2.offense_code = vo.connected_offense AND ${weaponIn("w2", values)})`);
+      else if (on === "offense offense.offense incident arrestee")
+        // Increment 6: an arrest on an incident that has an offense with one of the codes.
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense")} o2 WHERE ${sameIncident("o2", "a")} AND o2.offense_code IN (${list(values)}))`);
       else if (on === "victim_offender victim_offender.relationship victim victim")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
       else return no(`v0 cannot apply an existence over ${f.entity} at ${f.scope} scope to ${entity} counts`);
@@ -345,6 +357,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if ("error" in units) return no(units.error);
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   if (units.entity === "arrestee") statements.push("arrests_counted_once");
+  if (m.id === "arrests.all_crime") statements.push("arrests_through_incident");
   // P64 for any clearance grouping or selection; P67 where arrests and exceptional clearances are told apart.
   const clr = clearanceDims(plan);
   if (clr.length) statements.push("clearance_as_of_file");

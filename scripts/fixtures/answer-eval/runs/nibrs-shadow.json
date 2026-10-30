@@ -3315,14 +3315,15 @@
    "id": "LS-359",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
+   "actual": "answer",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: the share cleared; ask how many were cleared, or by clearance status."
+    "delivered: Memphis, Tennessee: 2,065 of the 10,149 shoplifting offenses in 2024 were cleared (20.3%); the cleared shoplifting offenses were in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared "
    ],
    "capability": "answer:nibrs share",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-360",
@@ -3370,11 +3371,18 @@
    "id": "LS-363",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "historical answer",
+     "actual": "routed to historical: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Hist"
    ],
    "capability": "answer:historical rate",
    "era": "2021 and later"
@@ -3425,14 +3433,15 @@
    "id": "LS-367",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
+   "actual": "answer",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (reader): I can't apply \"Arrests\": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply \"incidents\": one"
+    "delivered: Memphis, Tennessee: 112 arrests on incidents where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offe"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-368",
@@ -3494,14 +3503,15 @@
    "id": "LS-372",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
+   "actual": "answer",
+   "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (reader): I can't apply \"Arrests\": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply \"incidents\": one"
+    "delivered: Memphis, Tennessee: 351 arrests on incidents that included a robbery in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Arrests with no incident "
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-373",

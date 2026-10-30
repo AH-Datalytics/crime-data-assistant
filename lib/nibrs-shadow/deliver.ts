@@ -10,7 +10,7 @@ import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
 import type { Comparison } from "../nibrs-plan/transforms";
 import { ANSWER_STATEMENTS, checkEnvelope, finalStatistics, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
-import { MEASURE_LABEL } from "../nibrs-question-types";
+import { MEASURE_CODES, MEASURE_LABEL } from "../nibrs-question-types";
 import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
 import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
 
@@ -66,6 +66,13 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     if (f.dimension === "offense.clearance_method") return v === "arrest" ? "cleared by arrest" : v === "exceptional" ? "cleared by exceptional means" : null;
   }
   if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute" || f.where[0].op !== "in") return null;
+  // Increment 6: an offense of the incident ("that included a robbery"), named by the crime with exactly those codes.
+  if (f.entity === "offense" && f.where[0].dimension === "offense.offense") {
+    const v = (f.where[0].values ?? []).map(String).sort().join(",");
+    const name = Object.keys(MEASURE_CODES).find((k) => [...MEASURE_CODES[k]].sort().join(",") === v);
+    const words = name && (MEASURE_LABEL[name] ?? name.replace(/_/g, " "));
+    return words ? `that included ${/^[aeiou]/i.test(words) ? "an" : "a"} ${words}` : null;
+  }
   const codes = (f.where[0].values ?? []).map(String);
   const v = [...codes].sort().join(",");
   const named = (names: Record<string, string>) => (codes.length && codes.every((c) => names[c]) ? codes.map((c) => names[c]).join(" or ") : null);
@@ -86,6 +93,8 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
 export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): string {
   const name = m.id.replace(/^[a-z_]+\./, "");
   const filters = [...plan.filters, ...(m.filters ?? [])].map(filterWords).filter(Boolean);
+  // Increment 6: every arrest on an incident with the condition ("arrests on incidents where a firearm was stolen").
+  if (m.id === "arrests.all_crime") return ["arrests on incidents", ...filters].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }
 /** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
@@ -167,6 +176,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const agency = place.kind === "agency" ? place.label : "the place";
   // Several measures: a count each, side by side (no categories, no shares). One measure: a count and optionally its share.
   const beside = incidentsBeside(plan);
+  if (plan.statistics.some((x) => x.kind === "ratio")) return deliverShare(plan, effective, requestedTo, columns, rows, statements, release, readings);
   if (plan.measures.length > 1) return deliverSeveral(plan, effective, requestedTo, columns, rows, statements, release, readings, combined);
   const [countStat, shareStat] = plan.statistics.filter((x) => x.as !== beside);
   const count = countStat.as, share = shareStat?.as;
@@ -262,6 +272,43 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (BLANK.includes(e.status) !== (table.rows[e.row][col] === null)) contractProblems.push(`row ${e.row}, ${e.statistic}: value and status disagree`);
   }
   return { table, evidence, chart, text, answerStatements: statements, contractProblems };
+}
+
+/**
+ * Increment 6: the share cleared, one total: the cleared count and its incidents (P66), the total, and the share in
+ * percent to one decimal, known only when both counts are (no total is UNAVAILABLE).
+ */
+function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
+  statements: AnswerStatement[], release: string, readings: string[]): Delivered {
+  const place = plan.geography.places[0];
+  const agency = place.kind === "agency" ? place.label : "the place";
+  const [cleared, all] = plan.measures;
+  const [cCount, cInc, aCount, ratio] = plan.statistics.map((s) => s.as);
+  const r = rows[0] ?? [];
+  const num = (as: string) => { const v = r[columns.indexOf(as)]; return v === null || v === undefined ? null : Number(v); };
+  // No row (never from a total's query) is unknown, never blank without a status.
+  const st = (as: string) => (rows.length ? String(r[columns.indexOf(`${as}_status`)]) : "UNKNOWN") as CellStatus;
+  const c = num(cCount), inc = num(cInc), t = num(aCount);
+  const known = (s: CellStatus) => s === "VALUE" || s === "REPORTED_ZERO";
+  const share = c !== null && t !== null && t > 0 ? Math.round((1000 * c) / t) / 10 : null;
+  const shareStatus: CellStatus = !known(st(cCount)) ? st(cCount) : !known(st(aCount)) ? st(aCount) : t === 0 ? "UNAVAILABLE" : "VALUE";
+  const what = measureWords(plan, cleared), whatAll = measureWords(plan, all);
+  const labels: Record<string, string> = { [`statistic:${cCount}`]: `${what[0].toUpperCase()}${what.slice(1)}`, [`statistic:${cInc}`]: "Incidents",
+    [`statistic:${aCount}`]: `All ${whatAll}`, [`statistic:${ratio}`]: "Share cleared (%)" };
+  const order = [cCount, cInc, aCount, ratio];
+  const table: ResultTable = { columns: order.map((as) => ({ binding: { kind: "statistic", as }, header: labels[`statistic:${as}`] })), rows: [[c, inc, t, share]] };
+  const evidence: CellEvidence[] = [{ row: 0, statistic: cCount, status: st(cCount) }, { row: 0, statistic: cInc, status: st(cInc) }, { row: 0, statistic: aCount, status: st(aCount) },
+    { row: 0, statistic: ratio, status: shareStatus }];
+  const when = periodWords(effective.from, effective.to);
+  const text = [share !== null && inc !== null
+    ? `${agency}: ${fmt(c!)} of the ${fmt(t!)} ${whatAll} in ${when} were cleared (${share}%); the cleared ${whatAll} were in ${fmt(inc)} ${one(inc, "incidents")}.`
+    : `${agency}: the available evidence does not establish the share of ${whatAll} cleared in ${when}, so no share is given.`];
+  if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
+  text.push(...readings);
+  for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
+  text.push(SOURCE_STATEMENT(release));
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
 }
 
 /** Several measures (no categories): a column per measure; a combined total (D19, P31) as a sentence, totals only. */

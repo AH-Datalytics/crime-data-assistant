@@ -105,6 +105,9 @@ for (const [name, units] of Object.entries({
 }
 MEASURES.push({ ...measure("violent_crime.ucr", "fbi_standard"), aggregation: { kind: "composite", components: ["victims.murder", "victims.rape", "offenses.robbery", "victims.aggravated_assault"] } });
 MEASURES.push(measure("property_crime.ucr", "offense"), measure("all_crime.offenses", "offense"));
+// Increment 6: every arrest on an incident (Group A arrestee segments, any arrest offense), reached through a condition
+// on the incident (P50, P68).
+MEASURES.push(measure("arrests.all_crime", "arrest", ["incident_date", "arrest_date"]));
 MEASURES.push(measure("property.motor_vehicle_property", "dollars"), measure("property.property_value", "dollars"),
   measure("property.motor_vehicle_property_segments", "property_segment"), measure("property.property_value_segments", "property_segment"));
 
