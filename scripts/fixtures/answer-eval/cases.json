@@ -21078,6 +21078,806 @@
     "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the all-months sum over the summed populations of every reporting agency, partial reporters included and disclosed (Jeff 2026-10-30)."
    }
+  },
+  {
+   "id": "LS-356",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Memphis vehicle burglaries where a firearm was stolen, by clearance status, in 2024",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "property: firearm stolen"
+     ],
+     "groupings": [
+      "clearance status"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "breaks down into cleared and uncleared (P66)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "says property belongs to the incident, not to one offense (N2)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER (Jeff): property on one segment (loss stolen + firearm) and the incident's clearance status, offense unit."
+   }
+  },
+  {
+   "id": "LS-357",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Memphis vehicle burglaries where a firearm was stolen, by clearance type, in 2024",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "property: firearm stolen"
+     ],
+     "groupings": [
+      "clearance type"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared (P66)",
+     "counts an incident with both an arrest and an exceptional clearance as cleared by arrest (P67)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "says property belongs to the incident, not to one offense (N2)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the type level of P66."
+   }
+  },
+  {
+   "id": "LS-358",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "How many shoplifting offenses in Memphis in 2024 were cleared?",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "cleared (by arrest or exceptional means)"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: a cleared count of a NIBRS-only offense."
+   }
+  },
+  {
+   "id": "LS-359",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "What share of shoplifting offenses in Memphis in 2024 were cleared?",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [],
+     "statistic": "share",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "denominator": "all shoplifting offenses in the period"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "gives the cleared count, the total and the share",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the share cleared (method A), never the FBI's annual rate."
+   }
+  },
+  {
+   "id": "LS-360",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Carjackings in Dallas in 2024 by clearance type",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "clearance type"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Dallas Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Dallas Police Department)",
+     "breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared (P66)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: offense unit, type level."
+   }
+  },
+  {
+   "id": "LS-361",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults with a firearm in Denver in 2023 by clearance status",
+   "policy": [
+    "D18",
+    "P01",
+    "P31",
+    "P64",
+    "P66",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "weapon: firearm"
+     ],
+     "groupings": [
+      "clearance status"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "breaks down into cleared and uncleared (P66)",
+     "counts victims, each taking its incident's clearance status (D18, P66)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: victim unit (D18) with a weapon filter: a NIBRS detail of a Part I crime (P01)."
+   }
+  },
+  {
+   "id": "LS-362",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Shoplifting offenses in Memphis in 2024 cleared by arrest",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "cleared by arrest"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: cleared by arrest as a filter."
+   }
+  },
+  {
+   "id": "LS-363",
+   "group": "designed:inc6-clearance-route",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robbery clearance rate in Atlanta in 2023",
+   "policy": [
+    "P01",
+    "P57",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Atlanta Police Department",
+       "state": "GA"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "robbery cleared",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "robberies, per 100"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "ROUTE: a Part I offense's clearance rate for a completed year is the historical clearances' (P57), not computed from NIBRS; the NIBRS shadow names the route."
+   }
+  },
+  {
+   "id": "LS-364",
+   "group": "designed:inc6-property",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Vehicle burglaries in Memphis in 2024 where a firearm was stolen",
+   "policy": [
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "property: firearm stolen"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "says property belongs to the incident, not to one offense (N2)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: a property filter (trap: incident-level property; a stolen television with a recovered firearm does not match)."
+   }
+  },
+  {
+   "id": "LS-365",
+   "group": "designed:inc6-property",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Burglaries in Memphis in 2024 where a firearm was recovered",
+   "policy": [
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "property: firearm recovered"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "burglary",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "says property belongs to the incident, not to one offense (N2)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the recovered loss type; NIBRS detail of a Part I crime (P01)."
+   }
+  },
+  {
+   "id": "LS-366",
+   "group": "designed:inc6-property",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Motor vehicle thefts in Dallas in 2024 where the vehicle was recovered",
+   "policy": [
+    "D18",
+    "P01",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "property: vehicle recovered"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Dallas Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "motor vehicle theft",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Dallas Police Department)",
+     "says property belongs to the incident, not to one offense (N2)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: vehicle descriptions with the recovered loss type."
+   }
+  },
+  {
+   "id": "LS-367",
+   "group": "designed:inc6-arrests",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Arrests in Memphis in 2024 for incidents where a firearm was stolen",
+   "policy": [
+    "D18",
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "property: firearm stolen"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "all offenses",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts arrests by arrest date (P50)",
+     "counts each apprehension once (P68)",
+     "says arrests without an incident (Group B) are not included",
+     "says property belongs to the incident, not to one offense (N2)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: arrestee unit reached through the incident (never by matching the arrest offense); Group B excluded and said."
+   }
+  },
+  {
+   "id": "LS-368",
+   "group": "designed:inc6-arrests",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Shoplifting arrests in Memphis in 2024",
+   "policy": [
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts arrests by arrest date (P50)",
+     "counts each apprehension once (P68)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: re-scored under P68 (segments marked M are not counted)."
+   }
   }
  ]
 }
