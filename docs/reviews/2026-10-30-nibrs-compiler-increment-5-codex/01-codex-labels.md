@@ -19,3 +19,8 @@ Scorer caveats for later: "not a re-added sum" needs source provenance, not equa
 (month by month); routing cases (LS-348, LS-349) verify the route only.
 
 21 labels frozen (LS-334..LS-354). The state NIBRS rate case is held for Jeff's decision on P62 and gets its own check.
+
+Pass 3 (b76169b): LS-355, "Carjacking rate in Texas in 2024", after Jeff clarified P62 ("state rates in nibrs are
+relative to the sum of reporting agencies"): ACCEPT. The all-months sum over the summed FBI populations of every
+reporting agency, partial reporters disclosed (P61), the every-month button, P63's source line; P58 is for agency rates.
+22 labels frozen (LS-334..LS-355).

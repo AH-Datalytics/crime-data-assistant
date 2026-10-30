@@ -21073,9 +21073,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the all-months sum over the summed populations of every reporting agency, partial reporters included and disclosed (Jeff 2026-10-30)."
    }
   }
