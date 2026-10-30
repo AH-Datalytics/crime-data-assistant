@@ -17,7 +17,22 @@ export function previewEnabled(env: Record<string, string | undefined> = process
   return env.NODE_ENV !== "production" && !!env.NIBRS_SHADOW_ROOT;
 }
 
-export type PreviewButton = { label: string; path: string[]; kind: "continuation" | "entry" | "other-source"; note?: string };
+/**
+ * A request's question and button path, or why it is refused. A question is never shortened: one over the limit is
+ * refused, so an answer is always to the question shown (Codex preview review).
+ */
+export const MAX_QUESTION = 500;
+export function parseRequest(body: unknown): { question: string; path: string[] } | { error: string } {
+  const b = (body ?? {}) as { question?: unknown; path?: unknown };
+  const question = typeof b.question === "string" ? b.question.trim() : "";
+  if (!question) return { error: "Ask a question." };
+  if (question.length > MAX_QUESTION) return { error: `The question is longer than ${MAX_QUESTION} characters; shorten it.` };
+  const path = b.path === undefined ? [] : b.path;
+  if (!Array.isArray(path) || path.length > 10 || !path.every((x) => typeof x === "string" && x.length <= 200)) return { error: "The button path is not valid." };
+  return { question, path: path as string[] };
+}
+
+export type PreviewButton ={ label: string; path: string[]; kind: "continuation" | "entry" | "other-source"; note?: string };
 export type PreviewResponse =
   | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string } }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }

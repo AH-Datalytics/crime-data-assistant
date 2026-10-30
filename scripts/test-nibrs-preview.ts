@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
-import { follow, previewEnabled, toPreview } from "../lib/nibrs-shadow/preview";
+import { follow, parseRequest, previewEnabled, toPreview } from "../lib/nibrs-shadow/preview";
 
 // The gate: off in production whatever else is set; off without a build; on only for local development with a build.
 assert.equal(previewEnabled({ NODE_ENV: "production", NIBRS_SHADOW_ROOT: "/build" }), false);
@@ -59,5 +59,11 @@ if (decP.kind === "decline") assert.equal(follow(dec, decP.buttons[0].path)?.kin
 // A button to another source is shown but not run.
 const other = toPreview(shadowAnswer("How many crimes were there in Detroit in 2024?", deps));
 assert.ok(other.kind === "clarify" && other.buttons.every((b) => b.kind === "other-source" && /does not run/.test(b.note ?? "")));
+
+// Requests: a question is never shortened; one over the limit, an empty one or a malformed path is refused before the engine.
+assert.deepEqual(parseRequest({ question: "  Shoplifting in Memphis in 2024 " }), { question: "Shoplifting in Memphis in 2024", path: [] });
+assert.ok("error" in parseRequest({ question: "x".repeat(501) }) && /longer than 500/.test((parseRequest({ question: "x".repeat(501) }) as { error: string }).error));
+assert.deepEqual(parseRequest({ question: "x".repeat(500) }), { question: "x".repeat(500), path: [] });
+for (const bad of [null, {}, { question: "  " }, { question: "q", path: "a" }, { question: "q", path: [1] }, { question: "q", path: Array(11).fill("a") }]) assert.ok("error" in parseRequest(bad), JSON.stringify(bad));
 
 console.log("nibrs preview: gated off in production; outcomes adapted for the UI; buttons followed by path");

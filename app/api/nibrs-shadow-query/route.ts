@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 import { shadowAnswer, type ShadowDeps } from "@/lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "@/lib/nibrs-shadow/places";
 import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
-import { follow, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
+import { follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
 
 export const dynamic = "force-dynamic";
 const notFound = () => new NextResponse("Not Found", { status: 404 });
@@ -33,10 +33,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   if (!previewEnabled()) return notFound();
-  const body = (await req.json().catch(() => null)) as { question?: unknown; path?: unknown } | null;
-  const question = typeof body?.question === "string" ? body.question.trim().slice(0, 500) : "";
-  const path = Array.isArray(body?.path) && body.path.every((x) => typeof x === "string") ? (body.path as string[]) : [];
-  if (!question) return NextResponse.json({ error: "Ask a question." }, { status: 400 });
+  const parsed = parseRequest(await req.json().catch(() => null));
+  if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const { question, path } = parsed;
   try {
     const at = follow(shadowAnswer(question, shadowDeps()), path);
     if (!at) return NextResponse.json({ error: "That button is no longer offered for this question." }, { status: 409 });
