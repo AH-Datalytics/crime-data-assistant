@@ -56,7 +56,9 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
   /** "Only agencies that reported every month": P61's consistent-reporters view. */
   consistent: boolean;
   /** Murders by a Homicide Report detail (the victim-offender relationship): Homicide Reports' (P53). */
-  shrDetail: boolean };
+  shrDetail: boolean;
+  /** "Where a firearm was stolen": property on one segment, its description and loss type (increment 6). */
+  property: { what: string; loss: string } | null };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 const PHRASES: [RegExp, string][] = [
@@ -219,8 +221,14 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const consistent = CONSISTENT.test(own);
   if (consistent) text = text.replace(CONSISTENT, "");
   const shrDetail = /\b(?:murders?|homicides?)\b/i.test(own) && /\bvictim[-\s]offender\s+relationships?\b/i.test(own);
-  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail };
-  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent ? accountNibrsRequest(text) : first, flags);
+  // Increment 6: "where a firearm was stolen", "where the vehicle was recovered": one property segment's description
+  // and loss type. The reader is not asked to apply them.
+  const PROPERTY = /,?\s*\b(?:where|in\s+which|with)\s+(?:a|an|the)?\s*(firearms?|guns?|vehicles?|cars?)\s+(?:was|were|being)\s+(stolen|recovered|seized|damaged)\b/i;
+  const pm = PROPERTY.exec(own);
+  const property = pm ? { what: /fire|gun/i.test(pm[1]) ? "firearm" : "vehicle", loss: pm[2].toLowerCase() } : null;
+  if (property) text = text.replace(PROPERTY, "");
+  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property };
+  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 

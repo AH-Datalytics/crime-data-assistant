@@ -43,7 +43,22 @@ const MEASURE_WORDS: Record<string, string> = { drug_possession: "drug/narcotic 
  * Handgun"); null for any other, or for a code with no name. The shadow declines a weapon or relationship filter this
  * cannot name, so no restricted count is shown under an unrestricted name (Codex review 02).
  */
+/** Property descriptions and loss types an answer can name (NIBRS data elements 15 and 14). */
+export const PROPERTY_CODES: Record<string, { codes: string[]; words: string }> = {
+  firearm: { codes: ["13"], words: "a firearm" },
+  vehicle: { codes: ["03", "05", "24", "28", "37"], words: "the vehicle" },
+};
+const PROPERTY_WORDS: Record<string, string> = Object.fromEntries(Object.values(PROPERTY_CODES).map((x) => [[...x.codes].sort().join(","), x.words]));
+export const LOSS_CODES: Record<string, string> = { stolen: "7", recovered: "5", seized: "6", damaged: "4", burned: "2" };
+const LOSS_WORDS: Record<string, string> = Object.fromEntries(Object.entries(LOSS_CODES).map(([w, c]) => [c, w]));
 export function filterWords(f: NonNullable<Measure["filters"]>[number]): string | null {
+  // Increment 6: property on one segment, its description and loss type together ("where a firearm was stolen").
+  if (f.kind === "exists" && !f.negate && f.entity === "property") {
+    const at = (d: string) => f.where.find((w) => w.kind === "attribute" && w.dimension === d) as { values?: (string | number)[] } | undefined;
+    const loss = at("property.loss_type")?.values?.map(String), desc = at("property.description")?.values?.map(String);
+    const what = desc && PROPERTY_WORDS[[...desc].sort().join(",")], how = loss && loss.length === 1 ? LOSS_WORDS[loss[0]] : undefined;
+    return what && how && f.where.length === 2 ? `where ${what} was ${how}` : null;
+  }
   if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute" || f.where[0].op !== "in") return null;
   const codes = (f.where[0].values ?? []).map(String);
   const v = [...codes].sort().join(",");
