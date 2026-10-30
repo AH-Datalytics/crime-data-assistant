@@ -17915,9 +17915,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: one row per year asked, no change computed (none asked)."
    }
   },
@@ -17977,9 +17977,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: 2022 against 2024, whole years; victims (D18)."
    }
   },
@@ -18039,9 +18039,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: 'compared with' names the earlier year."
    }
   },
@@ -18102,9 +18102,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: P54, no comparison year named -> the year before, same months."
    }
   },
@@ -18169,9 +18169,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: January-September 2026 against January-September 2025 (P52: September is the latest month); as LS-268."
    }
   },
@@ -18234,9 +18234,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: a Part I crime with a NIBRS detail (the weapon) is NIBRS's (P01)."
    }
   },
@@ -18299,9 +18299,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: matched months as asked."
    }
   },
@@ -18363,9 +18363,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: P55; 2022 is a known 0 (P51: every month reported)."
    }
   },
@@ -18427,9 +18427,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER (no change): D17 and D04; the comparison is not made across a year with missing months."
    }
   },
@@ -18494,9 +18494,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER (no change): D17, D04; never a shorter period substituted silently."
    }
   },
@@ -18557,9 +18557,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: windows use months before the period start when the build holds them (as LS-137)."
    }
   },
@@ -18617,9 +18617,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: P56, October 2025 through September 2026, one total."
    }
   },
@@ -18681,9 +18681,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER: windows ending January-October 2025 are complete; every later window contains a missing month."
    }
   },
@@ -18745,9 +18745,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc3",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc3-labels-1",
     "notes": "MUST ANSWER (all windows missing): the missing months fall before the period start, inside the first windows."
    }
   }
