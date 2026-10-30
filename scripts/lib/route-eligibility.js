@@ -945,6 +945,19 @@ const EXCLUSIONS = [
       "answer, this exclusion must be revisited and the route sealed.",
     claims: { readsCrimeDb: true, returnsRows: true, invokesModel: false, requiresCredential: true },
   },
+  {
+    route: "app/api/nibrs-shadow-query/route.ts",
+    reason:
+      "The owner-only LOCAL preview of the NIBRS shadow engine (coordinator, 2026-10-29), excluded " +
+      "deliberately. On a production build it is unreachable: every handler returns 404 unless " +
+      "previewEnabled() (NODE_ENV not production AND NIBRS_SHADOW_ROOT set), the same gate as the " +
+      "/preview page, proven by scripts/test-nibrs-preview-production.sh. On a developer's machine " +
+      "it does return crime counts, read from nibrs-model's canonical parquet through a local " +
+      "DuckDB subprocess, never through the app's crime databases, and it invokes no model. It is " +
+      "not part of the public question flow. If it is ever enabled in production or wired into a " +
+      "user-facing page, this exclusion must be revisited and the route sealed.",
+    claims: { readsCrimeDb: false, returnsRows: false, invokesModel: false },
+  },
 ];
 
 function routeFiles(root) {
