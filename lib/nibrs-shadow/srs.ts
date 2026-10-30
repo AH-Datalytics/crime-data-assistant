@@ -139,3 +139,9 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
     read,
   };
 }
+
+/** The Crime Index population of a state or the nation for a year (coverage's denominator, P61's note); null when absent. */
+export function srsPopulation(p: SrsPlace, year: number): number | null {
+  const r = rowFor(crime(), p, year);
+  return r && r.population !== "" ? Number(r.population) : null;
+}

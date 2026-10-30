@@ -40,6 +40,14 @@ const POP: Record<string, number | null> = { OK0720500: 400_000, OK0550600: 700_
 const TX = { TXHPD0000: "HOUSTON", TXDPD0000: "DALLAS", TX2270100: "AUSTIN", TX9999900: "SMALLVILLE" } as Record<string, string>;
 function popRows(sql: string): unknown[][] {
   const years = /data_year IN \(([\d, ]+)\)/.exec(sql)![1].split(", ").map(Number);
+  // Increment 5's header universe (a state or the nation): Texas's agencies above, and two agencies of 100,000 in
+  // each other state asked (SS0000001, SS0000002).
+  const hdr = /u\.state_abbr IN \(([^)]*)\)/.exec(sql);
+  if (hdr) {
+    const states = hdr[1].split(", ").map((x) => x.slice(1, -1));
+    const oris = states.flatMap((s) => (s === "TX" ? Object.keys(TX) : [`${s}0000001`, `${s}0000002`]));
+    return oris.flatMap((o) => years.map((y) => [o, y, POP[o] === undefined ? 100_000 : POP[o], o.slice(0, 2)]));
+  }
   const oris = sql.includes("u.state_abbr = 'TX'") ? Object.keys(TX) : [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
   return oris.flatMap((o) => years.map((y) => [o, y, POP[o] ?? null, TX[o] ?? "", o.slice(0, 2)]));
 }
@@ -113,7 +121,9 @@ assert.deepEqual([cj.plan.measures[0].id, cj.plan.measures[0].unit], ["offenses.
 // D31: a missing place, period or crime is asked about; each fixed option runs the question with that choice filled in.
 const noPlace = as(ask("How many shoplifting offenses were there in 2024?"), "clarify");
 assert.deepEqual(noPlace.options.map((o) => o.label), ["The United States", "A state", "A city or agency"]);
-assert.match(as(noPlace.options[0].continuation!, "decline").explanation, /^Not in the slice yet: state and national/);
+// Increment 5: the nation's shoplifting is summed over the agencies that reported (P61), with the button.
+const usShop = as(noPlace.options[0].continuation!, "answer");
+assert.ok(usShop.stateSum && usShop.buttons?.length === 1 && usShop.delivered.text.includes("The nation here is the 50 states and D.C.; territories and federal agencies are not included."));
 assert.equal(noPlace.options[1].entry, "which state");
 const noPeriod = as(ask("Shoplifting in Memphis"), "clarify");
 assert.deepEqual(noPeriod.options.map((o) => o.label), ["The latest complete year (2025)", "This year so far", "Another year"]);
@@ -140,7 +150,7 @@ const stlCity = as(stl.options[0].continuation!, "clarify");
 assert.equal(stlCity.about, "which range of years", "the place is chosen; the period is asked next");
 assert.equal(as(stlCity.options[1].continuation!, "answer").plan.geography.places[0].kind === "agency" && (as(stlCity.options[1].continuation!, "answer").plan.geography.places[0] as { ori: string }).ori, "MOSPD0000");
 const wa = as(ask("Shoplifting in Washington in 2024"), "clarify");
-assert.match(as(wa.options[1].continuation!, "decline").explanation, /^Not in the slice yet: state and national/);
+assert.equal(as(wa.options[1].continuation!, "answer").plan.geography.places[0].kind, "state", "Washington state: a state sum (increment 5)");
 
 // Declines: what the data does not record is declined before anything is asked; after the data, P24; before this build,
 // not built; drug crimes (D19) are not one measure.
@@ -265,9 +275,9 @@ assert.equal(scoreShadow(label(wrongEntry), noPeriod, r, ctx, both(84)).result!.
 // Codex review 2: no button answers "Shoplifting arrests in Washington" (arrests and state totals are not in the slice),
 // so it declines rather than asks; a different question behind a button is a wrong answer; its text is checked; an
 // answer behind a button with no values leaves the zero-wrong-answers gate NOT MEASURED.
-// (Increment 2: arrests are built, so the city button answers and the state button declines.)
+// (Increment 2: arrests are built, so the city button answers; increment 5: the state button is a state sum.)
 const waArrests = as(ask("Shoplifting arrests in Washington in 2024"), "clarify");
-assert.deepEqual([waArrests.options[0].continuation?.kind, waArrests.options.find((o) => / state$/.test(o.label))?.continuation?.kind], ["answer", "decline"]);
+assert.deepEqual([waArrests.options[0].continuation?.kind, waArrests.options.find((o) => / state$/.test(o.label))?.continuation?.kind], ["answer", "answer"], "increment 5: the state button is a state sum (P61)");
 const detroitInstead = periodLabel([
   { label: "The latest complete year (2025)", leads_to: "answer", meaning: { ...(shopIn({ from: "2025-01", to: "2025-12" }) as object), places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }] } as never },
   ...(np as unknown as { options: never[] }).options.slice(1)]);
@@ -612,5 +622,54 @@ const twoOut = six.slice(0, 2);
 assert.equal(withLine(`Not ranked because they didn't report all 12 months of 2024: A Police Department (1 month), A Police Department (1 month).`, twoOut), "mismatch", "names are distinct");
 // 8. A blank rate says why: no population is not months unknown.
 assert.match(raleigh.delivered.text[0], /because the FBI gives no 2024 population for the /);
+
+// Increment 5. A Part I offense for a state or the nation, completed years: the historical file (P53), "Source: FBI SRS."
+// (P63), with what it read; the covered part of a span with the rest named (D04, P14); a change (P54).
+const srs = (q: string) => { const o = ask(q); assert.equal(o.kind, "srs", `${q}: ${JSON.stringify(o).slice(0, 200)}`); return o as Extract<ShadowOutcome, { kind: "srs" }>; };
+const txRob = srs("Robberies in Texas in 2024");
+assert.deepEqual([txRob.delivered.table.rows, txRob.delivered.text, txRob.read.column, txRob.read.uids], [[[19935]], ["Texas: 19,935 robberies in 2024.", "Source: FBI SRS."], "robbery_total", ["tx_2024"]]);
+assert.deepEqual(srs("Burglary rate in Ohio in 2022").delivered.table.rows, [[259.5]]);
+assert.equal(srs("Violent crime in California in 2024").read.column, "violent_total", "the file's own sum, never re-added");
+assert.deepEqual(srs("Did robberies go up in Georgia in 2025?").delivered.table.rows, [[4426, 3799, -627, -14.2]]);
+assert.deepEqual(srs("Murder clearance rate in the US in 2023").delivered.table.rows, [[57.8]]);
+const span = srs("Robberies in Texas by year from 1955 to 1965");
+assert.deepEqual(span.delivered.table.rows.map((x) => x[0]), ["1960", "1961", "1962", "1963", "1964", "1965"]);
+assert.ok(span.delivered.text.includes("State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them."));
+assert.equal(as(ask("Robberies in Texas in 1955"), "decline").reason, "outside_release_coverage");
+assert.equal(as(ask("Aggravated assault clearance rate in Ohio in 2023"), "decline").reason, "not_recorded_in_nibrs", "P18");
+assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").explanation, /no state clearance rate.*not yet decided/);
+// Routes (P53): the current year to Current Trends, murders by relationship to Homicide Reports; named, not run.
+assert.deepEqual([ask("Robberies in Texas this year").kind, (ask("Robberies in Texas this year") as { source: string }).source], ["route", "rtci"]);
+assert.equal((ask("Murders in the US by victim-offender relationship in 2023") as { source?: string }).source, "shr");
+// A NIBRS-only crime for a state (P61), on the stub: every reported month summed (Austin's 11 months included), the
+// disclaimer, and the button's fixed every-month set; the rate over the agencies counted (P62); "according to NIBRS".
+const txCj = as(ask("Carjackings in Texas in 2024"), "answer");
+assert.deepEqual(txCj.delivered.table.rows, [[307]], "Houston 108 + Dallas 84 + Austin 55 (11 months) + 60");
+assert.deepEqual(txCj.stateSum!.years.map((y) => [y.agencies, y.partial, y.every.agencies, y.every.sum]), [[4, 1, 3, 252]]);
+assert.match(txCj.delivered.text[1], /^4 agencies reported at least one month of 2024, covering \d+\.\d% of the state's residents; 1 of them reported only some months and are included\. 3 reported every month/);
+const txEvery = txCj.buttons![0].continuation as Extract<ShadowOutcome, { kind: "answer" }>;
+assert.deepEqual([txEvery.plan.coverage.cohort, txEvery.delivered.table.rows], ["same_agencies", [[252]]]);
+assert.deepEqual(as(ask("Carjackings in Texas in 2024, only agencies that reported every month"), "answer").delivered.table.rows, [[252]], "the button's question, typed");
+assert.deepEqual(as(ask("Carjacking rate in Texas in 2024"), "answer").delivered.table.rows, [[6.7]], "307 per 4,570,000 residents of the agencies counted");
+assert.equal(as(ask("Robberies in Texas in 2024 according to NIBRS"), "answer").plan.source, "nibrs", "P01: the source asked for in words");
+// Scoring increment 5: the historical file's values with their column and row; a route verifies routing only; a state
+// sum's view, rows and disclaimer figures.
+const year24b = { from: "2024-01", to: "2024-12" };
+const srsLabel = label({ action: "answer", meaning: { source: "historical", places: [{ kind: "state", name: "Texas", state: "TX" }], period: year24b, measures: [{ name: "robbery", unit: "offense" }], filters: [], groupings: [], statistic: "count" },
+  values: { status: "pending_build" }, statements: ["names the state (Texas)", "ends with the source line \"Source: FBI SRS.\" (P63)"] });
+const srsV = (value: number, column = "robbery_total") => sliceValues([{ name: "V", json: JSON.stringify({ basis: "crime_index_snapshot", nibrsai_cases: "LS-999", values: [{ uid: "tx_2024", year: 2024, column, value: String(value) }] }) }]);
+assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19935)).result!.outcome, "correct");
+assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19936)).result!.outcome, "wrong_answer");
+assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19935, "robbery_capita")).result!.outcome, "wrong_answer", "provenance: the column read");
+const routeLabel = label({ action: "answer", meaning: { source: "rtci", places: [{ kind: "state", name: "Texas", state: "TX" }], period: { rule: "year to date through the latest reported month" }, measures: [{ name: "robbery", unit: "offense" }], filters: [], groupings: [], statistic: "count" }, values: { status: "pending_build" }, statements: [] });
+assert.equal(scoreShadow(routeLabel, ask("Robberies in Texas this year"), r, ctx).result!.outcome, "unverified", "a route verifies the routing only");
+const sumV = (sum: number, agencies = 4) => sliceValues([{ name: "V", json: JSON.stringify({ basis: "raw", nibrsai_cases: "LS-999", by_year: [{ year: 2024, agencies_counted: agencies, partial_reporters: 1, all_months_sum: sum, every_month_agencies_sum: 252,
+  coverage: { any_month: { agencies, share: txCj.stateSum!.years[0].share }, every_month: { agencies: 3, share: txCj.stateSum!.years[0].every.share } } }] }) }]);
+const sumLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "state", name: "Texas", state: "TX" }], period: year24b, measures: [{ name: "carjacking", unit: "offense" }], filters: [], groupings: [], statistic: "count", cohort: "all_reporting" }, values: { status: "pending_build" },
+  statements: ["states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)", "offers a button to show only agencies that reported every month of the period; clicking it keeps Texas, carjackings and 2024 and counts only the agencies that reported all 12 months (P61)", "ends with the source line \"Source: FBI NIBRS.\" (P63)"] });
+assert.equal(scoreShadow(sumLabel, txCj, r, ctx, sumV(307)).result!.outcome, "correct");
+assert.equal(scoreShadow(sumLabel, txCj, r, ctx, sumV(306)).result!.values, "mismatch");
+assert.equal(scoreShadow(sumLabel, txCj, r, ctx, sumV(307, 5)).result!.values, "mismatch", "the disclaimer's agencies are checked");
+assert.ok(material({ ...txCj, buttons: [] }, sumLabel).includes("statement"), "the button must be there");
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

@@ -168,7 +168,7 @@ export type PlanView = {
   yearsThrough: string | null;     // the month its last year is clipped to (a year still in progress), else null
   rank: { direction: string; limit: number | null; by: string | null } | null;
   /** A rate's population (increment 4): one agency's, each agency's own, or the agencies' summed; null otherwise. */
-  denominator: "agency" | "each agency" | "summed agencies" | null;
+  denominator: "agency" | "each agency" | "summed agencies" | "reporting agencies" | null;
   /** A period comparison's two periods (increment 3), checked against the periods the label implies. */
   comparison: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null;
   untracked: string[];             // plan features the label schema cannot express (transform parameters, bins)
@@ -213,7 +213,8 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   const rankT = plan.transforms.find((t) => t.kind === "rank");
   // Increment 4: a ranking ranks only agencies that reported every month of its period (P60), the engine's rule for
   // every ranking.
-  if (rankT) filterKeys.push("reporters:every month");
+  // Increment 5: a state or national sum over the every-month set (P61's button) is the same filter.
+  if (rankT || (plan.coverage.cohort === "same_agencies" && plan.geography.places.some((p) => p.kind === "state" || p.kind === "national"))) filterKeys.push("reporters:every month");
   // Increment 3: a comparison of the same months of each year (not whole years) and rolling 12-month windows are label
   // terms: a filter key and a grouping. Comparisons of whole years read as a change by year.
   const cmpT = plan.transforms.find((t) => t.kind === "period_comparison");
@@ -256,10 +257,13 @@ function denominatorOf(plan: NibrsPlan): PlanView["denominator"] {
   if (!r || r.kind !== "rate" || r.per !== 100000) return null;
   const ps = plan.geography.places;
   if (ps.length === 1 && ps[0].kind === "agency") return "agency";
+  // Increment 5 (P62): a state or national sum's rate is over the reporting agencies' summed populations.
+  if (ps.length === 1 && (ps[0].kind === "state" || ps[0].kind === "national")) return "reporting agencies";
   if (ps.every((p) => p.kind === "agency") && plan.geography.combine === "combined") return "summed agencies";
   return "each agency";
 }
 function labelDenominator(d: string): PlanView["denominator"] {
+  if (/^residents of the reporting agencies \(the sum of their FBI agency populations\), per 100,000$/.test(d)) return "reporting agencies";
   if (/^residents of .+'s jurisdiction \(the FBI's agency population\), per 100,000$/.test(d)) return "agency";
   if (/^each agency's residents \(the FBI's agency population\), per 100,000$/.test(d)) return "each agency";
   if (/^the two agencies' residents together \(the FBI's agency populations\), per 100,000$/.test(d)) return "summed agencies";

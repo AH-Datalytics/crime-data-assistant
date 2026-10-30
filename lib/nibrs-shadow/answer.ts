@@ -46,6 +46,7 @@ import { CATEGORY, deliver, deliverComparison, filterWords, monthName, periodWor
 import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
+import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -65,7 +66,9 @@ export type ShadowOption = {
 };
 export type ShadowOutcome =
   /** `buttons`: continuations offered beside the answer (P61's consistent-reporters view). */
-  | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered; buttons?: ShadowOption[] }
+  | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered; buttons?: ShadowOption[];
+    /** A state or national sum (P61): agencies counted, coverage and the every-month view, per year (state-sum.ts). */
+    stateSum?: StateSumMeta }
   /** A Part I figure for a state or the nation, read from the historical file (P53; srs.ts). */
   | SrsAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
@@ -232,6 +235,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
     }
   }
+  // A clearance rate for a state or the nation that is not a Part I offense's (P57): a state has none (P18); the method
+  // for a NIBRS-only offense is not decided (P57).
+  if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && d.spec.places.length === 1 && (d.spec.places[0].kind === "state" || d.spec.places[0].kind === "national"))
+    return decline("not_recorded_in_nibrs", d.spec.places[0].kind === "state"
+      ? "There is no state clearance rate in the data (the FBI publishes clearance for agencies and the nation, not states), and how to compute a clearance rate for a NIBRS-only offense is not yet decided."
+      : "How to compute a national clearance rate for a NIBRS-only offense is not yet decided.");
   // P01: a standard (Part I) crime's count is Historical's (completed years) or Current Trends' (this year), not this
   // NIBRS shadow's; it is declined rather than answered from the wrong source.
   // Only a plain count of the crime: its details (a weapon, arrests, clearances, a breakdown) are NIBRS's, and go on to
@@ -242,7 +251,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const asked = flags(ledger0).composite || !noDetail ? []
     : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
     : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
-  if (asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
+  if (!flags(ledger0).nibrsAsked && asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
 
   // The plan.
   const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v) => resolved.get(v) ?? null });
@@ -252,8 +261,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // national totals are increment 5.
   const citySet = (p: Place) => p.kind === "agency_set" && p.within.kind === "state"
     && p.where.every((w) => (w.field === "agency.type" && JSON.stringify(w.value) === '["city"]') || w.field === "agency.population");
-  if (plan.geography.places.some((p) => p.kind !== "agency" && !citySet(p)) || (plan.geography.places.some(citySet) && plan.geography.places.length > 1))
-    return decline("unsupported_capability", "Not in the slice yet: state and national totals come later.");
+  // Increment 5: one state or the nation, summed over the agencies that reported (P61).
+  const geoPlace = (p: Place) => p.kind === "state" || p.kind === "national";
+  if (plan.geography.places.some((p) => p.kind !== "agency" && !citySet(p) && !geoPlace(p)) || ((plan.geography.places.some(citySet) || plan.geography.places.some(geoPlace)) && plan.geography.places.length > 1))
+    return decline("unsupported_capability", "Not in the slice yet: a state or the nation together with other places.");
   // The same agency named twice is one member (never counted twice).
   const namedPlaces = plan.geography.places.filter((p): p is Extract<Place, { kind: "agency" }> => p.kind === "agency");
   if (namedPlaces.length > 1) {
@@ -400,7 +411,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const timeG = plan.groupings.filter((g) => g.dimension.startsWith("time."));
   const catG = plan.groupings.filter((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo."));
   // Several agencies, rates and rankings take the places path (increment 4).
-  const placesMode = plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate");
+  const stateMode = plan.geography.places[0].kind === "state" || plan.geography.places[0].kind === "national";
+  if (stateMode && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
+    return decline("unsupported_capability", "Not in the slice yet: a state or national sum of several crimes, a breakdown, a change or a ranking.");
+  const placesMode = !stateMode && (plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate"));
   if (placesMode && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
     return decline("unsupported_capability", "Not in the slice yet: several agencies or rates with several crimes, a breakdown, a change or rolling windows.");
   const [first, second, ...more] = plan.statistics;
@@ -408,7 +422,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const several = plan.measures.length > 1;
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
-  if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !(placesMode && first.kind === "rate")) || (!several && more.length) || !shareOk
+  if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !((placesMode || stateMode) && first.kind === "rate")) || (!several && more.length) || !shareOk
     || (several && (catG.length || !counts)) || (combined && timeG.length))
     return decline("unsupported_capability", "Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.");
 
@@ -468,6 +482,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const cityMembers = new Map<string, string[]>();
   const geo = { members: (p: Place, y: number) => {
     if (p.kind === "agency") return [p.ori];
+    // A state or the nation: the agencies with a header for that year (P61).
+    if (p.kind === "state" || p.kind === "national") {
+      const key = `${p.kind === "state" ? p.code : "US"}|${y}`;
+      if (!cityMembers.has(key)) cityMembers.set(key, deps.execute(agencyHeaderSql(deps.target.root, universeStates(p), [y])).map((r) => String(r[0])));
+      return cityMembers.get(key)!;
+    }
     if (p.kind !== "agency_set" || p.within.kind !== "state") return [];
     const min = p.where.find((w) => w.field === "agency.population");
     const key = `${p.within.code}|${y}|${min ? min.value : ""}`;
@@ -483,6 +503,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "Not in the slice yet: this weapon or relationship selection.");
   const notes0 = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
+  if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why) => decline("unsupported_capability", why));
   if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why) => decline("unsupported_capability", why));
   // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).
   const reported = (d: Delivered): Delivered => {
