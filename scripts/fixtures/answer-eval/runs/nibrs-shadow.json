@@ -342,7 +342,29 @@
    "LS-330",
    "LS-331",
    "LS-332",
-   "LS-333"
+   "LS-333",
+   "LS-334",
+   "LS-335",
+   "LS-336",
+   "LS-337",
+   "LS-338",
+   "LS-339",
+   "LS-340",
+   "LS-341",
+   "LS-342",
+   "LS-343",
+   "LS-344",
+   "LS-345",
+   "LS-346",
+   "LS-347",
+   "LS-348",
+   "LS-349",
+   "LS-350",
+   "LS-351",
+   "LS-352",
+   "LS-353",
+   "LS-354",
+   "LS-355"
   ]
  },
  "eligibility": {
@@ -625,7 +647,29 @@
    "LS-330",
    "LS-331",
    "LS-332",
-   "LS-333"
+   "LS-333",
+   "LS-334",
+   "LS-335",
+   "LS-336",
+   "LS-337",
+   "LS-338",
+   "LS-339",
+   "LS-340",
+   "LS-341",
+   "LS-342",
+   "LS-343",
+   "LS-344",
+   "LS-345",
+   "LS-346",
+   "LS-347",
+   "LS-348",
+   "LS-349",
+   "LS-350",
+   "LS-351",
+   "LS-352",
+   "LS-353",
+   "LS-354",
+   "LS-355"
   ],
   "label unresolved": [
    "LS-024",
@@ -815,7 +859,29 @@
   "LS-330": "designed",
   "LS-331": "designed",
   "LS-332": "designed",
-  "LS-333": "designed"
+  "LS-333": "designed",
+  "LS-334": "designed",
+  "LS-335": "designed",
+  "LS-336": "designed",
+  "LS-337": "designed",
+  "LS-338": "designed",
+  "LS-339": "designed",
+  "LS-340": "designed",
+  "LS-341": "designed",
+  "LS-342": "designed",
+  "LS-343": "designed",
+  "LS-344": "designed",
+  "LS-345": "designed",
+  "LS-346": "designed",
+  "LS-347": "designed",
+  "LS-348": "designed",
+  "LS-349": "designed",
+  "LS-350": "designed",
+  "LS-351": "designed",
+  "LS-352": "designed",
+  "LS-353": "designed",
+  "LS-354": "designed",
+  "LS-355": "designed"
  },
  "scored": [
   {
@@ -1030,7 +1096,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1044,7 +1110,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1058,7 +1124,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1072,7 +1138,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Property crimes are counted by offense, not by victim. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by th"
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Property crimes are counted by offense, not by victim. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1114,7 +1180,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: carjacking offenses by month, 2025. / Reported by the Memphis Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Memphis, Tennessee: carjacking offenses by month, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1128,7 +1194,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: 16,163 simple assault victims in 2023. / Reported by the Detroit Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Detroit, Michigan: 16,163 simple assault victims in 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1142,7 +1208,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1156,7 +1222,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Columbus, Ohio: 9,439 theft from motor vehicle offenses in 2022. / Reported by the Columbus Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Columbus, Ohio: 9,439 theft from motor vehicle offenses in 2022. / Reported by the Columbus Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1184,7 +1250,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 3,916 shoplifting offenses in January through September 2026. / Reported by the Memphis Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI National Incide"
+    "delivered: Memphis, Tennessee: 3,916 shoplifting offenses in January through September 2026. / Reported by the Memphis Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1212,9 +1278,21 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "option \"The United States\" ",
-     "expected": "answer",
-     "actual": "Not in the slice yet: state and national totals come later.",
+     "field": "option \"The United States\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"The United States\" button \"Show only agencies that reported every month\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2024-01..2024-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"The United States\" button \"Show only agencies that reported every month\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
@@ -1222,7 +1300,9 @@
     "asked which place: The United States | A state | A city or agency"
    ],
    "capability": "clarify:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-233",
@@ -1375,7 +1455,7 @@
     }
    ],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting Sy"
+    "delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1404,9 +1484,21 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "option \"Washington state\" ",
-     "expected": "answer",
-     "actual": "Not in the slice yet: state and national totals come later.",
+     "field": "option \"Washington state\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2024-01..2024-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
@@ -1415,7 +1507,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "not measured",
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-244",
@@ -1439,9 +1532,21 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "option \"New York state\" ",
-     "expected": "answer",
-     "actual": "Not in the slice yet: state and national totals come later.",
+     "field": "option \"New York state\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"New York state\" button \"Show only agencies that reported every month\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2024-01..2024-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"New York state\" button \"Show only agencies that reported every month\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
@@ -1450,7 +1555,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "not measured",
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-246",
@@ -1460,7 +1566,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Nashville, Tennessee: 6,533 shoplifting offenses in 2024. / Reported by the Metropolitan Nashville Police Department. / Read \"Shopliftng\" as shoplifting. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the age"
+    "delivered: Nashville, Tennessee: 6,533 shoplifting offenses in 2024. / Reported by the Metropolitan Nashville Police Department. / Read \"Shopliftng\" as shoplifting. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1474,7 +1580,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 6,211 simple assault victims in 2023. / Reported by the Denver Police Department. / Read \"asaults\" as assaults. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 2"
+    "delivered: Denver, Colorado: 6,211 simple assault victims in 2023. / Reported by the Denver Police Department. / Read \"asaults\" as assaults. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1488,7 +1594,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Atlanta, Georgia: carjacking offenses by month, 2024. / Reported by the Atlanta Police Department. / Read \"carjackngs\" as carjackings. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical rele"
+    "delivered: Atlanta, Georgia: carjacking offenses by month, 2024. / Reported by the Atlanta Police Department. / Read \"carjackngs\" as carjackings. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1502,7 +1608,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Nashville, Tennessee: 6,533 shoplifting offenses in 2024. / Reported by the Metropolitan Nashville Police Department. / Read \"Tennesee\" as tennessee. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency;"
+    "delivered: Nashville, Tennessee: 6,533 shoplifting offenses in 2024. / Reported by the Metropolitan Nashville Police Department. / Read \"Tennesee\" as tennessee. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1516,7 +1622,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Portland, Oregon: 7,951 theft from motor vehicle offenses in 2023. / Reported by the Portland Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Portland, Oregon: 7,951 theft from motor vehicle offenses in 2023. / Reported by the Portland Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1530,7 +1636,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Atlanta, Georgia: 7,104 theft from motor vehicle offenses in 2023. / Reported by the Atlanta Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Atlanta, Georgia: 7,104 theft from motor vehicle offenses in 2023. / Reported by the Atlanta Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1544,7 +1650,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Nashville, Tennessee: 7,793 theft from motor vehicle offenses in 2022. / Reported by the Metropolitan Nashville Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release "
+    "delivered: Nashville, Tennessee: 7,793 theft from motor vehicle offenses in 2022. / Reported by the Metropolitan Nashville Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1558,7 +1664,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 6,383 theft from motor vehicle offenses in 2024. / Reported by the Denver Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Denver, Colorado: 6,383 theft from motor vehicle offenses in 2024. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1572,7 +1678,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 2,501 shoplifting offenses in January through September 2026. / Reported by the Denver Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI National Incident-"
+    "delivered: Denver, Colorado: 2,501 shoplifting offenses in January through September 2026. / Reported by the Denver Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1586,7 +1692,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Atlanta, Georgia: 1,650 shoplifting offenses in January through September 2026. / Reported by the Atlanta Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI National Incident"
+    "delivered: Atlanta, Georgia: 1,650 shoplifting offenses in January through September 2026. / Reported by the Atlanta Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1600,7 +1706,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Nashville, Tennessee: 29 carjacking offenses in January through September 2026. / Reported by the Metropolitan Nashville Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI Na"
+    "delivered: Nashville, Tennessee: 29 carjacking offenses in January through September 2026. / Reported by the Metropolitan Nashville Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NI"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1628,7 +1734,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Portland, Oregon: simple assault victims by month, 2022. / Reported by the Portland Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Portland, Oregon: simple assault victims by month, 2022. / Reported by the Portland Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1642,7 +1748,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Nashville, Tennessee: 234 carjacking offenses in 2023. / Reported by the Metropolitan Nashville Police Department. / Property crimes are counted by offense, not by victim. / Source: FBI National Incident-Based Reporting System (NIBRS), as r"
+    "delivered: Nashville, Tennessee: 234 carjacking offenses in 2023. / Reported by the Metropolitan Nashville Police Department. / Property crimes are counted by offense, not by victim. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1846,7 +1952,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by race, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI National Incident-Based Reporting System (N"
+    "delivered: Milwaukee, Wisconsin: simple assault victims by race, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1860,7 +1966,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: aggravated assault victims by sex, 2022. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in 2022. / Source: FBI National Incident-Based Reporti"
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by sex, 2022. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in 2022. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1874,7 +1980,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Louisville, Kentucky: simple assault victims by ethnicity, 2024. / Reported by the Louisville Metro Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI National Incident-Based Reporti"
+    "delivered: Louisville, Kentucky: simple assault victims by ethnicity, 2024. / Reported by the Louisville Metro Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1888,7 +1994,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tucson, Arizona: shoplifting offenses by location type, 2024. / Reported by the Tucson Police Department. / Each share is that category's part of all shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBR"
+    "delivered: Tucson, Arizona: shoplifting offenses by location type, 2024. / Reported by the Tucson Police Department. / Each share is that category's part of all shoplifting offenses in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1902,7 +2008,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Austin, Texas: theft from motor vehicle offenses by location type, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all theft from motor vehicle offenses in 2023. / Source: FBI National Incident-Base"
+    "delivered: Austin, Texas: theft from motor vehicle offenses by location type, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all theft from motor vehicle offenses in 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1916,7 +2022,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Kansas City, Missouri: murder victims by race, 2023. / Reported by the Kansas City Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI National Incident-Based Reporting System (NIBRS), as rep"
+    "delivered: Kansas City, Missouri: murder victims by race, 2023. / Reported by the Kansas City Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1930,7 +2036,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: simple assault victims by race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all simple assault victims in 2021 to 2023. / Source: FBI National Incident-Base"
+    "delivered: Albuquerque, New Mexico: simple assault victims by race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all simple assault victims in 2021 to 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1944,7 +2050,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Austin, Texas: murder victims by sex, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the a"
+    "delivered: Austin, Texas: murder victims by sex, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -1958,7 +2064,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: aggravated assault victims by year and race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in the same year. / Source: FBI Nati"
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by year and race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in the same year. / Source: FBI NIBR"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2013,7 +2119,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Kansas City, Missouri: carjacking offenses by location type, 2024. / Reported by the Kansas City Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI National Incident-Based Reporting Sys"
+    "delivered: Kansas City, Missouri: carjacking offenses by location type, 2024. / Reported by the Kansas City Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2027,7 +2133,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Oklahoma City, Oklahoma, 2024: 3,972 theft from motor vehicle offenses; 4,375 shoplifting offenses. / Reported by the Oklahoma City Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency"
+    "delivered: Oklahoma City, Oklahoma, 2024: 3,972 theft from motor vehicle offenses; 4,375 shoplifting offenses. / Reported by the Oklahoma City Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2055,7 +2161,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: carjacking offenses and shoplifting offenses by month, 2024. / Reported by the Raleigh Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release "
+    "delivered: Raleigh, North Carolina: carjacking offenses and shoplifting offenses by month, 2024. / Reported by the Raleigh Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2111,7 +2217,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Virginia Beach, Virginia: 4 murder victims by a stranger in 2024. / Reported by the Virginia Beach Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test"
+    "delivered: Virginia Beach, Virginia: 4 murder victims by a stranger in 2024. / Reported by the Virginia Beach Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2125,7 +2231,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: carjacking offenses by location type, 2024. / Reported by the Wichita Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS"
+    "delivered: Wichita, Kansas: carjacking offenses by location type, 2024. / Reported by the Wichita Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2153,7 +2259,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024. / Source: FBI National Incident-Based Reporting System (NI"
+    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2208,7 +2314,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Colorado Springs, Colorado: 1,288 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-B"
+    "delivered: Colorado Springs, Colorado: 1,288 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2222,7 +2328,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: robbery arrests by month, 2023. / Reported by the Wichita Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System ("
+    "delivered: Wichita, Kansas: robbery arrests by month, 2023. / Reported by the Wichita Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2236,7 +2342,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: 161 burglary arrests in 2024. / Reported by the Raleigh Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting Sy"
+    "delivered: Raleigh, North Carolina: 161 burglary arrests in 2024. / Reported by the Raleigh Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2290,7 +2396,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Columbus, Ohio: shoplifting offenses by year, 2019 and 2024. / Reported by the Columbus Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
+    "delivered: Columbus, Ohio: shoplifting offenses by year, 2019 and 2024. / Reported by the Columbus Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "spans 2021",
@@ -2304,7 +2410,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Austin, Texas: simple assault victims, 2022 against 2024. / Reported by the Austin Police Department. / 10,045 in 2022 and 9,688 in 2024: a change of -357 (-3.6%). / Source: FBI National Incident-Based Reporting System (NIBRS), as reported "
+    "delivered: Austin, Texas: simple assault victims, 2022 against 2024. / Reported by the Austin Police Department. / 10,045 in 2022 and 9,688 in 2024: a change of -357 (-3.6%). / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
@@ -2318,7 +2424,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Minneapolis, Minnesota: theft from motor vehicle offenses, 2023 against 2024. / Reported by the Minneapolis Police Department. / 3,755 in 2023 and 4,240 in 2024: a change of +485 (+12.9%). / Source: FBI National Incident-Based Reporting Sys"
+    "delivered: Minneapolis, Minnesota: theft from motor vehicle offenses, 2023 against 2024. / Reported by the Minneapolis Police Department. / 3,755 in 2023 and 4,240 in 2024: a change of +485 (+12.9%). / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
@@ -2332,7 +2438,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Aurora, Colorado: drug/narcotic violation offenses, 2024 against 2025. / Reported by the Aurora Police Department. / 578 in 2024 and 718 in 2025: a change of +140 (+24.2%). / Source: FBI National Incident-Based Reporting System (NIBRS), as "
+    "delivered: Aurora, Colorado: drug/narcotic violation offenses, 2024 against 2025. / Reported by the Aurora Police Department. / 578 in 2024 and 718 in 2025: a change of +140 (+24.2%). / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
@@ -2360,7 +2466,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Charlotte, North Carolina: robbery offenses with a firearm, 2021 against 2025. / Reported by the Charlotte-Mecklenburg Police Department. / 739 in 2021 and 440 in 2025: a change of -299 (-40.5%). / Source: FBI National Incident-Based Report"
+    "delivered: Charlotte, North Carolina: robbery offenses with a firearm, 2021 against 2025. / Reported by the Charlotte-Mecklenburg Police Department. / 739 in 2021 and 440 in 2025: a change of -299 (-40.5%). / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
@@ -2388,7 +2494,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Frisco, Texas: carjacking offenses, 2022 against 2023. / Reported by the Frisco Police Department. / 0 in 2022 and 6 in 2023: a change of +6. / The percent change cannot be computed from a zero base. / Source: FBI National Incident-Based Re"
+    "delivered: Frisco, Texas: carjacking offenses, 2022 against 2023. / Reported by the Frisco Police Department. / 0 in 2022 and 6 in 2023: a change of +6. / The percent change cannot be computed from a zero base. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
@@ -2444,7 +2550,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Arlington, Texas: 11 carjacking offenses in October 2025 through September 2026. / Reported by the Arlington Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 202"
+    "delivered: Arlington, Texas: 11 carjacking offenses in October 2025 through September 2026. / Reported by the Arlington Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2486,7 +2592,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses by agency, 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as reporte"
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses by agency, 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2500,7 +2606,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 7,779 shoplifting offenses in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as"
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 7,779 shoplifting offenses in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2640,7 +2746,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 7,779 shoplifting offenses in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI National Incident-Based Reporting System (NIBRS), as"
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 7,779 shoplifting offenses in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2713,6 +2819,322 @@
     "delivered: Texas city agencies: the 20 with the most carjacking offenses, January through September 2026. / This covers January through September 2026. / Ranked: agencies that reported every month of January through September 2026; ties are ordered by"
    ],
    "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-334",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 19,935 robberies in 2024. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-335",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: United States: 19,935 murders in 2023. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-336",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Ohio: 259.5 burglaries per 100,000 residents in 2022. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-337",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Florida: motor vehicle thefts by year, 2015 to 2024. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-338",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: California: 187,414 violent crimes in 2024. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-339",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Georgia: robberies, 2024 against 2025. / 4,426 in 2024 and 3,799 in 2025: a change of -627 (-14.2%). / Source: FBI SRS."
+   ],
+   "capability": "answer:historical change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-340",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: United States: 57.8% of murders were cleared in 2023. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-341",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 re"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-342",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the 1,439 agencies that reported every month (99.1% of the state's residents). / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-343",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / 441 agencies reported at least one month of 2024, covering 93.4% of the state's residents; 63 of them reported only some months and are includ"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-344",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / 14,945 agencies reported at least one month of 2024, covering 89.0% of the nation's residents; 1,933 of "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-345",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Agencies counted and share of the state's residents covered: 2018 561 (86.8%, 167 reporting only some months); 2019 578 (88.6%, 178 report"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "spans 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-346",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 repo"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-347",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-348",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "rtci answer",
+     "actual": "routed to rtci: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends."
+   ],
+   "capability": "answer:rtci count",
+   "era": "period not mapped"
+  },
+  {
+   "id": "LS-349",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "shr answer",
+     "actual": "routed to shr: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run H"
+   ],
+   "capability": "answer:shr count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-350",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): There is no state clearance rate in the data (the FBI publishes clearance for agencies and the nation, not states), and how to compute a clearance rate for a NIBRS-only offense is not yet decided."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-351",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (outside_release_coverage): State figures in the data cover 1960 through 2025, so 1955 is outside them."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-352",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: robberies by year, 1960 to 1965. / State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "before 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-353",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Arizona: 143,974 property crimes in 2023. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-354",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-355",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 6.3 carjacking offenses per 100,000 residents of the reporting agencies in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them report"
+   ],
+   "capability": "answer:nibrs rate",
    "era": "2021 and later",
    "values": "match"
   }
