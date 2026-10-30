@@ -435,6 +435,19 @@ const omitted = { ...roll, delivered: { ...roll.delivered, table: { ...roll.deli
   evidence: kept.map(([, i], j) => ({ ...roll.delivered.evidence[i], row: j })) } };
 assert.ok(material(omitted, rollLabel).includes("statement"), "leaving the missing windows out does not pass");
 
+// Batch 6 (time): a change's cells, a rolling series and a set of years load from their files and score the answers.
+const v6 = (j: object) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", measures: { m: "x" }, rows: null, ...j }) }]).get("LS-999")!;
+const chgCells = v6({ grouping: "change", periods: [{ from: "2022-01", to: "2022-12", total: { status: "VALUE", value: 84 } }, { from: "2023-01", to: "2023-12", total: { status: "VALUE", value: 84 } }],
+  change: { change: 0, percent_change: 0 } });
+assert.equal(scoreShadow(lab304, whole, r, ctx, new Map([["LS-999", chgCells]])).result!.values, "match");
+const wrongChg = chgCells.map((c) => (c.key === "change" ? { ...c, value: 1 } : c));
+assert.equal(scoreShadow(lab304, whole, r, ctx, new Map([["LS-999", wrongChg]])).result!.outcome, "wrong_answer");
+assert.deepEqual(v6({ grouping: "change", periods: [{ from: "2022-01", to: "2022-12", total: { status: "VALUE", value: 0 } }, { from: "2023-01", to: "2023-12", total: { status: "VALUE", value: 6 } }],
+  change: { change: 6, percent_change: null, percent_reason: "zero base (P55)" } }).at(-1), { key: "pct_change", value: null, status: "UNAVAILABLE" });
+assert.deepEqual(v6({ grouping: "rolling", periods: [], rolling: [{ month: "2024-02", total: { status: "VALUE", value: 84 } }, { month: "2024-03", total: { status: "UNKNOWN", value: null, observed: 77 } }] }),
+  [{ key: "2024-02", value: 84, status: "VALUE" }, { key: "2024-03", value: null, status: "UNKNOWN" }]);
+assert.deepEqual(v6({ grouping: "years", periods: [{ from: "2019-01", to: "2019-12", total: { status: "VALUE", value: 1 } }, { from: "2024-01", to: "2024-12", total: { status: "VALUE", value: 2 } }] }).map((c) => c.key), ["2019", "2024"]);
+
 // Batch 5's category fields and codes: the file names its field; age and unknown-offender codes map to NIBRSAI's labels;
 // a multi-valued field's categories are never summed into a share's denominator.
 const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", category,

@@ -70,7 +70,7 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-75 cases. Correct 47; unverified 22; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+75 cases. Correct 61; unverified 8; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -83,9 +83,9 @@ Expected (rows) by actual (columns):
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs change | 2021 and later | 10 | not measured | wrong answers: not measured (0, 10 answers unverified); initial action: pass (100% (10/10)); direct answers: not measured (0% verified, 10 unverified); numeric fixtures: not measured (0/10 match, 10 not measured) |
-| answer:nibrs count | 2021 and later | 49 | fail | wrong answers: not measured (0, 4 answers unverified); initial action: fail (94% (46/49)); direct answers: fail (86% (4 unverified)); numeric fixtures: not measured (42/46 match, 4 not measured) |
-| answer:nibrs count | spans 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
+| answer:nibrs change | 2021 and later | 10 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (10/10)); direct answers: not measured (90% verified, 1 unverified); numeric fixtures: not measured (9/10 match, 1 not measured) |
+| answer:nibrs count | 2021 and later | 49 | fail | wrong answers: pass (0); initial action: fail (94% (46/49)); direct answers: fail (94% (0 unverified)); numeric fixtures: pass (46/46 match) |
+| answer:nibrs count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -131,48 +131,6 @@ Discrepancies and unverified cases:
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
-- **LS-303** (unverified; expected answer, got answer) "Shoplifting in Columbus, Ohio in 2019 and 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Columbus city police, OH: shoplifting offenses by year, 2019 and 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5.
-- **LS-304** (unverified; expected answer, got answer) "Change in simple assaults in Austin from 2022 to 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Austin city police, TX: simple assault victims, 2022 against 2024. / 10,045 in 2022 and 9,688 in 2024: a change of -357 (-3.6%). / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by t
-- **LS-305** (unverified; expected answer, got answer) "Theft from motor vehicle in Minneapolis in 2024 compared with 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Minneapolis city police, MN: theft from motor vehicle offenses, 2023 against 2024. / 3,755 in 2023 and 4,240 in 2024: a change of +485 (+12.9%). / Source: FBI National Incident-Based Reporting System (NIBRS), 
-- **LS-306** (unverified; expected answer, got answer) "Did drug possession offenses go up in Aurora, Colorado in 2025?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Aurora city police, CO: drug/narcotic violation offenses, 2024 against 2025. / 578 in 2024 and 718 in 2025: a change of +140 (+24.2%). / Source: FBI National Incident-Based Reporting System (NIBRS), as reporte
-- **LS-307** (unverified; expected answer, got answer) "Are carjackings in Dallas up this year compared with last year?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Dallas city police, TX: carjacking offenses, January through September 2025 against January through September 2026. / Compares the same months of each year: January through September. / 207 in January through 
-- **LS-308** (unverified; expected answer, got answer) "Percent change in robberies with a firearm in Charlotte, North Carolina from 2021 to 2025"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Charlotte-Mecklenburg city police, NC: robbery offenses with a firearm, 2021 against 2025. / 739 in 2021 and 440 in 2025: a change of -299 (-40.5%). / Source: FBI National Incident-Based Reporting System (NIBR
-- **LS-309** (unverified; expected answer, got answer) "Shoplifting in Austin January through June 2024 compared with January through June 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Austin city police, TX: shoplifting offenses, January through June 2023 against January through June 2024. / Compares the same months of each year: January through June. / 819 in January through June 2023 and 
-- **LS-310** (unverified; expected answer, got answer) "Change in carjackings in Frisco, Texas from 2022 to 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Frisco city police, TX: carjacking offenses, 2022 against 2023. / 0 in 2022 and 6 in 2023: a change of +6. / The percent change cannot be computed from a zero base. / Source: FBI National Incident-Based Report
-- **LS-311** (unverified; expected answer, got answer) "Did shoplifting go up in Greensboro in 2025?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Greensboro city police, NC: shoplifting offenses, 2024 against 2025. / 2,559 in 2024. / No report is known for November 2025 to December 2025, so the 2025 total is not established and no change is given. / Sou
-- **LS-312** (unverified; expected answer, got answer) "Is shoplifting in Seattle up this year compared with last year?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Seattle city police, WA: shoplifting offenses, January through September 2025 against January through September 2026. / Compares the same months of each year: January through September. / 2,254 in January thro
-- **LS-313** (unverified; expected answer, got answer) "Rolling 12-month carjackings in Arlington, Texas since 2023"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Arlington city police, TX: carjacking offenses, rolling 12-month totals by month, January 2023 through September 2026. / Each month's figure is the total of that month and the 11 months before it. / Source: FB
-- **LS-314** (unverified; expected answer, got answer) "Carjackings in Arlington, Texas over the last 12 months"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Arlington city police, TX: 11 carjacking offenses in October 2025 through September 2026. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-t
-- **LS-315** (unverified; expected answer, got answer) "Rolling 12-month shoplifting in Greensboro since 2025"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Greensboro city police, NC: shoplifting offenses, rolling 12-month totals by month, January 2025 through September 2026. / Each month's figure is the total of that month and the 11 months before it. / No repor
-- **LS-316** (unverified; expected answer, got answer) "Rolling 12-month shoplifting in Greensboro since 2026"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Greensboro city police, NC: shoplifting offenses, rolling 12-month totals by month, January through September 2026. / Each month's figure is the total of that month and the 11 months before it. / No report is 
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 

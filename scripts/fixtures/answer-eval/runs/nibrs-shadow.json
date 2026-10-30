@@ -2244,308 +2244,196 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Columbus city police, OH: shoplifting offenses by year, 2019 and 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "spans 2021",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-304",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Austin city police, TX: simple assault victims, 2022 against 2024. / 10,045 in 2022 and 9,688 in 2024: a change of -357 (-3.6%). / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-305",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Minneapolis city police, MN: theft from motor vehicle offenses, 2023 against 2024. / 3,755 in 2023 and 4,240 in 2024: a change of +485 (+12.9%). / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; cano"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-306",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Aurora city police, CO: drug/narcotic violation offenses, 2024 against 2025. / 578 in 2024 and 718 in 2025: a change of +140 (+24.2%). / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical rele"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-307",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Dallas city police, TX: carjacking offenses, January through September 2025 against January through September 2026. / Compares the same months of each year: January through September. / 207 in January through September 2025 and 150 in Janua"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-308",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Charlotte-Mecklenburg city police, NC: robbery offenses with a firearm, 2021 against 2025. / 739 in 2021 and 440 in 2025: a change of -299 (-40.5%). / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; "
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-309",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Austin city police, TX: shoplifting offenses, January through June 2023 against January through June 2024. / Compares the same months of each year: January through June. / 819 in January through June 2023 and 1,151 in January through June 2"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-310",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Frisco city police, TX: carjacking offenses, 2022 against 2023. / 0 in 2022 and 6 in 2023: a change of +6. / The percent change cannot be computed from a zero base. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-311",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Greensboro city police, NC: shoplifting offenses, 2024 against 2025. / 2,559 in 2024. / No report is known for November 2025 to December 2025, so the 2025 total is not established and no change is given. / Source: FBI National Incident-Base"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-312",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Seattle city police, WA: shoplifting offenses, January through September 2025 against January through September 2026. / Compares the same months of each year: January through September. / 2,254 in January through September 2025. / No report"
    ],
    "capability": "answer:nibrs change",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-313",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Arlington city police, TX: carjacking offenses, rolling 12-month totals by month, January 2023 through September 2026. / Each month's figure is the total of that month and the 11 months before it. / Source: FBI National Incident-Based Repor"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-314",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Arlington city police, TX: 11 carjacking offenses in October 2025 through September 2026. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-315",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Greensboro city police, NC: shoplifting offenses, rolling 12-month totals by month, January 2025 through September 2026. / Each month's figure is the total of that month and the 11 months before it. / No report is known for November 2025 to"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-316",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Greensboro city police, NC: shoplifting offenses, rolling 12-month totals by month, January through September 2026. / Each month's figure is the total of that month and the 11 months before it. / No report is known for November 2025 to Dece"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   }
  ],
  "provisional": []

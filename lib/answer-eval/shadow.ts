@@ -52,6 +52,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
+    const time = timeCells(v as unknown as TimeFile);
+    if (time) {
+      for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g))
+        out.set(m[3] ? `${m[1]}|alternative` : m[2] ? `${m[1]}|${m[2]}` : m[1], time);
+      continue;
+    }
     // A breakdown's rows carry a category field (race, sex, ethnicity, location_type): keyed by period (if any) and the
     // category's name as NIBRSAI shows it. Each category's share is its count over its own period's independent total:
     // the measure's known total, or the sum of every category of that period when all of them are known (each unit is in
@@ -94,6 +100,29 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+/**
+ * Batch 6 (increment 3): time files carry `periods` (each with its total), and for a change its `change`, for rolling
+ * windows its `rolling`. A set of years: a cell per year. A change: the cells "earlier", "later", "change" and
+ * "pct_change" (no percent from a zero base is UNAVAILABLE, from an unknown period UNKNOWN). Rolling: a cell per
+ * displayed month. One period with no `totals` (the last 12 months): its total. Null for any other file.
+ */
+type TimeTotal = { status: string; value: number | null };
+type TimeFile = { grouping: string; totals?: unknown; periods?: { from: string; to: string; total: TimeTotal }[];
+  change?: { change: number | null; percent_change: number | null; percent_reason?: string };
+  rolling?: { month: string; total: TimeTotal }[] };
+function timeCells(v: TimeFile): ExpectedCell[] | null {
+  if (!v.periods) return null;
+  if (v.grouping === "years") return v.periods.map((p) => ({ key: p.from.slice(0, 4), ...pick(p.total) }));
+  if (v.grouping === "change" && v.change && v.periods.length === 2) {
+    const c = v.change;
+    return [{ key: "earlier", ...pick(v.periods[0].total) }, { key: "later", ...pick(v.periods[1].total) },
+      { key: "change", value: c.change, status: c.change === null ? "UNKNOWN" : "VALUE" },
+      { key: "pct_change", value: c.percent_change, status: c.percent_change !== null ? "VALUE" : c.percent_reason ? "UNAVAILABLE" : "UNKNOWN" }];
+  }
+  if (v.grouping === "rolling" && v.rolling) return v.rolling.map((r) => ({ key: r.month, ...pick(r.total) }));
+  if (v.grouping === "total" && !v.totals && v.periods.length === 1) return [{ key: "", ...pick(v.periods[0].total) }];
+  return null;
+}
 /** nibrs-model's breakdown field names -> the plan's grouping dimensions. */
 const CATEGORY_FIELDS: Record<string, string> = { race: "victim.race", sex: "victim.sex", ethnicity: "victim.ethnicity", location_type: "offense.location_type",
   weapon: "offense_weapon.weapon", relationship: "victim_offender.relationship", age_group: "victim.age", offender_sex: "offender.sex", offender_segment_sex: "offender.sex" };
@@ -319,6 +348,19 @@ function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer"
 /** Delivered cells (value and status) against independent expected cells; none given is NOT MEASURED, never a match. */
 function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
   if (!expected) return { values: "not measured", diffs: [{ field: `${prefix}values`, expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
+  // A change: each output cell (earlier, later, change, percent change) against its expected cell, value and status.
+  const cmpCells = comparisonCells(o);
+  if (cmpCells) {
+    const as = o.plan.statistics[0].as;
+    const diffs: Diff[] = [];
+    for (const k of ["earlier", "later", "change", "pct_change"]) {
+      const x = expected.find((e) => e.key === k);
+      const status = o.delivered.evidence.find((e) => e.statistic === `${as}.${k}`)?.status ?? "?";
+      if (!x) diffs.push({ field: `${prefix}value ${k}`, expected: "an expected cell", actual: "none given", kind: "unverified" });
+      else if (cmpCells[k] !== x.value || status !== x.status) diffs.push({ field: `${prefix}value ${k}`, expected: `${x.value} ${x.status}`, actual: `${cmpCells[k]} ${status}`, kind: "material" });
+    }
+    return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
+  }
   if (o.plan.measures.length > 1 || expected.some((x) => x.measure)) {
     if (o.plan.measures.length > 1 && expected.every((x) => x.measure)) return severalDiffs(prefix, o, expected);
     return { values: "mismatch", diffs: [{ field: `${prefix}measures`, expected: `${new Set(expected.map((x) => x.measure)).size} measures`, actual: `${o.plan.measures.length} measures`, kind: "material" }] };
