@@ -592,6 +592,18 @@ assert.equal(hide(tx.delivered.text.filter((t) => !t.startsWith("Not ranked"))),
 assert.equal(hide(tx.delivered.text.map((t) => t.replace("(11 months)", "(10 months)"))), "mismatch", "a wrong month count");
 // 7. A sheriff's office is never matched to a police department.
 assert.equal(fbiNameFor("Wichita Sheriff Office", "KS0870300"), null);
+// Re-check A: several agencies by year are declined, never answered with the first agency alone.
+assert.equal(ask("Shoplifting in Tulsa and Oklahoma City combined by year from 2021 to 2024").kind, "decline");
+// Re-check B: one agency named twice, "combined", is that agency once.
+assert.equal(ask("Shoplifting in Tulsa Police Department and Tulsa combined in 2024").kind, "answer");
+// Re-check C: more than five left out: the count and five distinct names, each with its months.
+const six = ["A", "B", "C", "D", "E", "F"].map((x, i) => ({ ori: `TX000000${i}`, agency_name: `${x} Police Department`, months_reported: Array(i + 1).fill("2024") }));
+const sixLine = (names: string[]) => `Not ranked because they didn't report all 12 months of 2024: 6 agencies, the largest ${names.join(", ")}.`;
+const withLine = (line: string, left: typeof six) => scoreShadow(txLabel, { ...tx, delivered: { ...tx.delivered, text: tx.delivered.text.map((t) => (t.startsWith("Not ranked") ? line : t)) } }, r, ctx,
+  rankFile([["Houston Police Department", "TXHPD0000", 108], ["Dallas Police Department", "TXDPD0000", 84], [null, "TX9999900", 60]], left)).result!.values;
+assert.equal(withLine(sixLine(six.slice(0, 5).map((a, i) => `${a.agency_name} (${i + 1} month${i ? "s" : ""})`)), six), "match", "the first name follows \"the largest\"");
+const twoOut = six.slice(0, 2);
+assert.equal(withLine(`Not ranked because they didn't report all 12 months of 2024: A Police Department (1 month), A Police Department (1 month).`, twoOut), "mismatch", "names are distinct");
 // 8. A blank rate says why: no population is not months unknown.
 assert.match(raleigh.delivered.text[0], /because the FBI gives no 2024 population for the /);
 

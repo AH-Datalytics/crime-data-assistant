@@ -478,13 +478,15 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   // than five as their count and five of them, each named agency with its own months; none left out, no such line.
   if (expected.some((x) => x.position !== undefined)) {
     const lines = o.delivered.text.filter((t) => t.startsWith("Not ranked because they didn't report"));
-    const named = lines.flatMap((t) => [...t.matchAll(/(?:: |, |the largest )([^,:]+?) \((\d+) months?\)/g)].map((m) => ({ key: m[1], months: Number(m[2]) })));
+    // Each "<name> (<n> months)" after the line's colon; the first of more than five follows "the largest " (Codex 02
+    // re-check C).
+    const named = lines.flatMap((t) => [...t.slice(t.indexOf(": ") + 2).matchAll(/(?:^|, )(?:the largest )?([^,]+?) \((\d+) months?\)/g)].map((m) => ({ key: m[1], months: Number(m[2]) })));
     const months = new Map(leftOut.map((x) => [x.key, x.value]));
     const bad = (why: string, actual: string) => diffs.push({ field: `${prefix}left out`, expected: why, actual, kind: "material" });
     if (!leftOut.length) { if (lines.length) bad("no agency left out", lines.join(" / ")); }
     else if (lines.length !== 1) bad(`one line naming the ${leftOut.length} agencies left out`, lines.join(" / ") || "none");
     else if (leftOut.length > 5 && !lines[0].includes(`: ${leftOut.length} agencies, the largest `)) bad(`${leftOut.length} agencies and the five largest`, lines[0]);
-    else if (named.length !== Math.min(5, leftOut.length) || named.some((n) => months.get(n.key) !== n.months))
+    else if (named.length !== Math.min(5, leftOut.length) || new Set(named.map((n) => n.key)).size !== named.length || named.some((n) => months.get(n.key) !== n.months))
       bad(`${Math.min(5, leftOut.length)} of them, each with its months reported`, lines[0]);
   }
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };

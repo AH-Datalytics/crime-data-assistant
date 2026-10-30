@@ -3,4 +3,5 @@
 | # | Subject | Commit | Verdict | Applied in |
 |---|---|---|---|---|
 | 01 | Labels of LS-317..LS-333, before the build (three passes) | 1c4d5d6, befc849, c62097f | 16 ACCEPT, 1 FIX (LS-333 button) resolved by P60; coverage cases added | befc849, c62097f; 17 frozen |
-| 02 | Full review of the build | 2298249 | REVISE (8: year sets, conflicts in rankings, bindings after dedupe, "combined" of crimes, three scorer checks, no-population wording) | (this commit) |
+| 02 | Full review of the build | 2298249 | REVISE (8: year sets, conflicts in rankings, bindings after dedupe, "combined" of crimes, three scorer checks, no-population wording) | f558ebb |
+| 03 | Re-check of 02 | f558ebb | REVISE (6 resolved; A: several agencies by year, B: one agency named twice + combined, C: P60 parser and distinct names) | (next commit) |

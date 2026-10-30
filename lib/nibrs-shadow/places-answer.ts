@@ -125,7 +125,8 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   }
   if (set) return decline("Not in the slice yet: a set of agencies without a ranking.");
 
-  // One agency's values by year.
+  // One agency's values by year. Several agencies by year (combined or not) come later (Codex 02 re-check A).
+  if (yearG && agencies.length > 1) return decline("Not in the slice yet: several agencies by year; ask for each year, or each agency.");
   if (yearG) {
     const a = agencies[0], cells = byOri.get(a.ori) ?? [];
     const rows = years.map((y) => {

@@ -233,8 +233,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // "Combined": one total of the agencies; one agency needs no agency column. "Combined" of anything else (several
   // crimes) is not answered as separate numbers (Codex 02.4).
+  // Several names of one agency, combined, are that agency once (Codex 02 re-check B).
   if (flags(ledger0).combined && plan.geography.places.length > 1) plan.geography.combine = "combined";
-  else if (flags(ledger0).combined && !flags(ledger0).composite)
+  else if (flags(ledger0).combined && !flags(ledger0).composite && namedPlaces.length <= 1)
     return decline("unsupported_capability", `Not in the slice yet: "combined" applies to several agencies here; a combined total of several crimes comes later. I haven't answered with separate numbers.`);
   if (plan.geography.combine === "combined" || (plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency")) {
     // Dropping the agency grouping renumbers the groupings after it: their bindings follow (Codex 02.3); a part bound
