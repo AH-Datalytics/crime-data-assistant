@@ -32,16 +32,20 @@ export function parseRequest(body: unknown): { question: string; path: string[] 
   return { question, path: path as string[] };
 }
 
-export type PreviewButton ={ label: string; path: string[]; kind: "continuation" | "entry" | "other-source"; note?: string };
+export type PreviewButton = { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built"; note?: string };
 export type PreviewResponse =
   | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string } }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }
   | { kind: "decline"; reason: string; text: string; buttons: PreviewButton[]; notBuilt: boolean };
 
-const button = (o: ShadowOption, path: string[]): PreviewButton => o.continuation
+// A continuation this build cannot answer (its years are outside the build) is shown, not offered: the build is the
+// limit, not the question. The preview has no follow-up turns, so an entry asks for the whole question again.
+const button = (o: ShadowOption, path: string[]): PreviewButton => o.continuation && o.continuation.kind === "decline" && o.continuation.notBuilt
+  ? { label: o.label, path: [...path, o.label], kind: "not-built", note: `Not in this test build: ${o.continuation.explanation}` }
+  : o.continuation
   ? { label: o.label, path: [...path, o.label], kind: "continuation" }
   : o.otherSource ? { label: o.label, path: [...path, o.label], kind: "other-source", note: `Answered by ${o.otherSource}, which this preview does not run.` }
-  : { label: o.label, path: [...path, o.label], kind: "entry", note: o.entry ? `Asks ${o.entry}: type it into the question.` : undefined };
+  : { label: o.label, path: [...path, o.label], kind: "entry", note: o.entry ? `Asks ${o.entry}: ask the whole question again with it (a reply on its own starts a new question).` : undefined };
 
 /** The outcome reached by following a path of button labels from the first outcome; null when a label is not offered. */
 export function follow(o: ShadowOutcome, path: string[]): ShadowOutcome | null {
