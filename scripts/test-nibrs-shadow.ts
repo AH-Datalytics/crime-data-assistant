@@ -596,6 +596,8 @@ assert.equal(fbiNameFor("Wichita Sheriff Office", "KS0870300"), null);
 assert.equal(ask("Shoplifting in Tulsa and Oklahoma City combined by year from 2021 to 2024").kind, "decline");
 // Re-check B: one agency named twice, "combined", is that agency once.
 assert.equal(ask("Shoplifting in Tulsa Police Department and Tulsa combined in 2024").kind, "answer");
+// Review 04: several crimes "combined" is declined even when one agency is named twice.
+assert.match(as(ask("Shoplifting and carjackings combined in Tulsa Police Department and Tulsa in 2023"), "decline").explanation, /combined/);
 // Re-check C: more than five left out: the count and five distinct names, each with its months.
 const six = ["A", "B", "C", "D", "E", "F"].map((x, i) => ({ ori: `TX000000${i}`, agency_name: `${x} Police Department`, months_reported: Array(i + 1).fill("2024") }));
 const sixLine = (names: string[]) => `Not ranked because they didn't report all 12 months of 2024: 6 agencies, the largest ${names.join(", ")}.`;
