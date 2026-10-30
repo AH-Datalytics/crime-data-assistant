@@ -35,7 +35,7 @@ import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } 
 import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
 import { planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
-import { compilePlan, type CompileTarget } from "../nibrs-plan/compile";
+import { agencyPopulationSql, compilePlan, type CompileTarget } from "../nibrs-plan/compile";
 import { compare, rolling, windowMonths, type MonthCell } from "../nibrs-plan/transforms";
 import { validateOutcome } from "../nibrs-plan/outcome";
 import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
@@ -44,6 +44,7 @@ import { validateBindings } from "../nibrs-plan/validate";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, monthName, periodWords, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, candidateLabel, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { answerPlaces } from "./places-answer";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -215,8 +216,34 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v) => resolved.get(v) ?? null });
   if (a.kind === "unmapped") return decline("unsupported_capability", `No plan form for this reading: ${a.reason}`);
   const plan = a.plan;
-  // The slice is one agency: states and the nation need status evidence across agencies (D6) and come later.
-  if (plan.geography.places.some((p) => p.kind !== "agency")) return decline("unsupported_capability", "Not in the slice yet: state and national totals come later.");
+  // Places (increment 4): named agencies, separate or combined, and a state's city agencies for a ranking. State and
+  // national totals are increment 5.
+  const citySet = (p: Place) => p.kind === "agency_set" && p.within.kind === "state"
+    && p.where.every((w) => (w.field === "agency.type" && JSON.stringify(w.value) === '["city"]') || w.field === "agency.population");
+  if (plan.geography.places.some((p) => p.kind !== "agency" && !citySet(p)) || (plan.geography.places.some(citySet) && plan.geography.places.length > 1))
+    return decline("unsupported_capability", "Not in the slice yet: state and national totals come later.");
+  // The same agency named twice is one member (never counted twice).
+  const namedPlaces = plan.geography.places.filter((p): p is Extract<Place, { kind: "agency" }> => p.kind === "agency");
+  if (namedPlaces.length > 1) {
+    const kept = namedPlaces.filter((p, i) => namedPlaces.findIndex((q) => q.ori === p.ori) === i);
+    // A part bound to a dropped duplicate is bound to the place kept for that agency.
+    const moved = new Map(namedPlaces.map((p, i) => [`geography.places[${i}]`, `geography.places[${kept.findIndex((q) => q.ori === p.ori)}]`]));
+    plan.bindings = plan.bindings.map((b) => (moved.has(b.path) ? { ...b, path: moved.get(b.path)! } : b));
+    plan.geography.places = kept;
+  }
+  // "Combined": one total of the agencies; one agency needs no agency column.
+  if (flags(ledger0).combined && plan.geography.places.length > 1) plan.geography.combine = "combined";
+  if (plan.geography.combine === "combined" || (plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency"))
+    plan.groupings = plan.groupings.filter((g) => g.dimension !== "geo.place");
+  // P08: "large" cities are 250,000 residents or more.
+  const set0 = plan.geography.places[0];
+  if (flags(ledger0).largeCities) {
+    if (set0.kind !== "agency_set") return decline("unsupported_capability", "Not in the slice yet: large cities outside a ranking of a state's cities.");
+    set0.where.push({ field: "agency.population", op: ">=", value: 250000 });
+    plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities are 250,000 residents or more" });
+  }
+  // D05: a ranking with no number shows 20 rows.
+  plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: 20 } : t));
   let parts2 = a.parts;
   const statements: AnswerStatement[] = [];
   const unbind = (drop: (p: (typeof parts2)[number]) => boolean) => {
@@ -318,7 +345,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (rollingT && (plan.measures.length !== 1 || plan.transforms.length !== 1 || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count"
     || plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month"))
     return decline("unsupported_capability", "Not in the slice yet: rolling windows of a rate, a breakdown, or several crimes.");
-  if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison"))
+  if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison" && !(t.kind === "rank" && plan.geography.places[0].kind === "agency_set")))
     return decline("unsupported_capability", "Not in the slice yet: rankings.");
 
   // The slice delivers counts, as totals or by month or year: one measure optionally broken down by ONE delivered
@@ -326,13 +353,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // (with their combined total, as totals only, for D19 and P31). Two-way breakdowns, rates and other shares are
   // declined before anything is asked or run.
   const timeG = plan.groupings.filter((g) => g.dimension.startsWith("time."));
-  const catG = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
+  const catG = plan.groupings.filter((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo."));
+  // Several agencies, rates and rankings take the places path (increment 4).
+  const placesMode = plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate");
+  if (placesMode && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
+    return decline("unsupported_capability", "Not in the slice yet: several agencies or rates with several crimes, a breakdown, a change or rolling windows.");
   const [first, second, ...more] = plan.statistics;
   const counts = plan.statistics.every((s) => s.kind === "count") && plan.measures.every((m) => plan.statistics.filter((s) => "measure" in s && s.measure === m.as).length === 1);
   const several = plan.measures.length > 1;
   const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
-  if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || first.kind !== "count" || (!several && more.length) || !shareOk
+  if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || (first.kind !== "count" && !(placesMode && first.kind === "rate")) || (!several && more.length) || !shareOk
     || (several && (catG.length || !counts)) || (combined && timeG.length))
     return decline("unsupported_capability", "Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.");
 
@@ -388,7 +419,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
 
   // Validation, as any reader outcome: shape, semantic layer, release; then every part of the question applied.
-  const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : []) };
+  // A state's city agencies (a ranking) are the release's agencies with a population for that year, as answered.
+  const cityMembers = new Map<string, string[]>();
+  const geo = { members: (p: Place, y: number) => {
+    if (p.kind === "agency") return [p.ori];
+    if (p.kind !== "agency_set" || p.within.kind !== "state") return [];
+    const min = p.where.find((w) => w.field === "agency.population");
+    const key = `${p.within.code}|${y}|${min ? min.value : ""}`;
+    if (!cityMembers.has(key)) cityMembers.set(key, deps.execute(agencyPopulationSql(deps.target.root, { state: p.within.code, city: true }, [y]))
+      .filter((r) => !min || (r[2] !== null && Number(r[2]) >= Number(min.value))).map((r) => String(r[0])));
+    return cityMembers.get(key)!;
+  } };
   const authority = (v: string) => { const p = resolved.get(v); return p && p.kind === "agency" ? { oris: [p.ori] } : null; };
   const problems = [...validateOutcome({ kind: "plan", plan: checked }, DRAFT_LAYER, release, geo), ...validateBindings(plan, parts2, authority)];
   if (problems.length) return decline("unsupported_capability", `The plan did not validate: ${problems.map((p) => `${p.rule} ${p.path}: ${p.message}`).join("; ")}`);
@@ -397,6 +438,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "Not in the slice yet: this weapon or relationship selection.");
   const notes0 = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
+  if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why) => decline("unsupported_capability", why));
   // Changes and rolling windows: one monthly query of the measure over every month they reach; the transforms roll it.
   if (cmpPeriods || rollingT) {
     const m = checked.measures[0];

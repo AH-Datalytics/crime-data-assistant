@@ -202,9 +202,11 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const undefinedTerm = SHOOTERS.test(own) ? "shooters" : GUN_VIOLENCE.test(own) ? "gun violence" : null;
   // A future year with nothing predicting is a period after the data (P24), read as that year.
   if (!forecast) text = text.replace(NEXT_YEAR, (m) => (readings.push({ kind: "period", from: m, to: `in ${currentYear + 1}` }), `in ${currentYear + 1}`));
+  // "Combined" is the flag's (one total of the named agencies); the reader is not asked to apply it.
   const combined = /\b(?:combined|together|altogether)\b/i.test(own);
+  if (combined) text = text.replace(/\s*\b(?:combined|together|altogether)\b/gi, "");
   const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities };
-  const ledger = Object.assign(readings.length ? accountNibrsRequest(text) : first, flags);
+  const ledger = Object.assign(readings.length || combined ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 

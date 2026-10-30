@@ -17,6 +17,9 @@ const sqls: string[] = [];
 /** Rows for the compiled query: every month (or year) of the period, 7 each, March 2024 unknown. */
 function stub(sql: string): unknown[][] {
   sqls.push(sql);
+  // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
+  if (sql.includes("agency/data.parquet")) return popRows(sql);
+  if (/unnest\(\[.*\]\) AS ori/.test(sql)) return gridRows(sql);
   // A one-category breakdown over a period: F 30 (share 0.6), M 20 (0.4), U unknown.
   if (/cats AS/.test(sql) && !/AS period/.test(sql)) return [["F", 30, "VALUE", 0.6, "VALUE"], ["M", 20, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN"]];
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
@@ -29,6 +32,27 @@ function stub(sql: string): unknown[][] {
   }
   if (/AS period/.test(sql)) return months.map((m) => [m, ...cell(m)]);
   return months.some((m) => cell(m)[0] === null) ? [[null, "UNKNOWN"]] : [[7 * months.length, "VALUE"]];
+}
+/** Populations by ORI (null: the FBI gives none), and Texas's city agencies. */
+const POP: Record<string, number | null> = { OK0720500: 400_000, OK0550600: 700_000, KS0870300: 400_000, NC0410200: 300_000, NC0920100: null,
+  TXHPD0000: 2_300_000, TXDPD0000: 1_300_000, TX2270100: 970_000, TX9999900: 0 };
+const TX = { TXHPD0000: "HOUSTON", TXDPD0000: "DALLAS", TX2270100: "AUSTIN", TX9999900: "SMALLVILLE" } as Record<string, string>;
+function popRows(sql: string): unknown[][] {
+  const years = /data_year IN \(([\d, ]+)\)/.exec(sql)![1].split(", ").map(Number);
+  const oris = sql.includes("u.state_abbr = 'TX'") ? Object.keys(TX) : [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
+  return oris.flatMap((o) => years.map((y) => [o, y, POP[o] ?? null, TX[o] ?? "", o.slice(0, 2)]));
+}
+/** Monthly grid: Houston 9 a month, Dallas 7, the rest 5; Greensboro unknown November-December 2025, Austin June 2024. */
+function gridRows(sql: string): unknown[][] {
+  const oris = /unnest\(\[(.*?)\]\) AS ori/.exec(sql)![1].split(", ").map((x) => x.slice(1, -1));
+  const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
+  const rows: unknown[][] = [];
+  for (const o of oris) for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) {
+    const ym = `${y}-${String(m).padStart(2, "0")}`;
+    const unknown = (o === "NC0410200" && ym >= "2025-11" && ym <= "2025-12") || (o === "TX2270100" && ym === "2024-06");
+    rows.push(unknown ? [o, ym, null, "UNKNOWN"] : [o, ym, o === "TXHPD0000" ? 9 : o === "TXDPD0000" ? 7 : 5, "VALUE"]);
+  }
+  return rows;
 }
 const deps: ShadowDeps = {
   places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
@@ -463,5 +487,39 @@ assert.deepEqual(v5("offender_sex", [{ offender_sex: "00", m: { status: "VALUE",
 const weaponYear = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "year", category: "weapon", measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } },
   rows: [{ year: "2023", weapon: "12", m: { status: "VALUE", value: 8 } }, { year: "2023", weapon: "40", m: { status: "VALUE", value: 7 } }] }) }]).get("LS-999")!;
 assert.deepEqual(weaponYear.map((x) => [x.key, x.share]), [["2023|Handgun", undefined], ["2023|Personal Weapons", undefined]], "overlapping categories are never summed");
+
+// Increment 4: several agencies, combined totals, rates (P58, P59) and rankings (P60), on the grid and population stubs.
+const ok4 = (q: string) => { const o = as(ask(q), "answer"); assert.deepEqual(o.delivered.contractProblems, [], q); return o; };
+const tulsaOkc = ok4("Shoplifting in Tulsa and Oklahoma City in 2024");
+assert.deepEqual(tulsaOkc.delivered.table.rows, [["Tulsa city police, OK", 60], ["Oklahoma City city police, OK", 60]]);
+assert.ok(sqls.some((s) => s.includes("unnest(['OK0550600', 'OK0720500']) AS ori")), "one grid query for both agencies");
+const combinedTotal = ok4("Shoplifting in Tulsa and Oklahoma City combined in 2024");
+assert.deepEqual(combinedTotal.delivered.table.rows, [[120]]);
+assert.equal(combinedTotal.delivered.text[0], "Tulsa city police, OK and Oklahoma City city police, OK, combined: 120 shoplifting offenses in 2024.");
+assert.deepEqual(ok4("Shoplifting in Tulsa Police Department, Tulsa, and Oklahoma City combined in 2024").delivered.table.rows, [[120]], "an agency named twice is counted once");
+// A combined total needs every month of every agency (D6): Greensboro's unknown months blank the total, never a part-sum.
+const gr = ok4("Shoplifting in Greensboro and Raleigh combined in 2025");
+assert.deepEqual(gr.delivered.table.rows, [[null]]);
+assert.ok(gr.delivered.text.includes("No report is known for November 2025 to December 2025 for Greensboro city police, NC."));
+// Rates: count over the FBI population, per 100,000; none from a missing or zero population (never 0 or infinite).
+assert.deepEqual(ok4("Shoplifting rate in Wichita in 2024").delivered.table.rows, [[15]]);
+const raleigh = ok4("Shoplifting rate in Raleigh in 2024");
+assert.deepEqual(raleigh.delivered.table.rows, [[null]]);
+assert.equal(raleigh.delivered.evidence[0].status, "UNAVAILABLE");
+// A combined rate is the summed counts over the summed populations; a missing population blanks it.
+assert.deepEqual(ok4("Shoplifting rate in Tulsa and Oklahoma City combined in 2024").delivered.table.rows, [[10.9]]);
+assert.deepEqual(ok4("Shoplifting rate in Wichita and Raleigh combined in 2024").delivered.table.rows, [[null]]);
+// P59: a part year's rate is for those months, not annualized.
+const partYearRate = ok4("Shoplifting rate in Wichita this year");
+assert.deepEqual(partYearRate.delivered.table.rows, [[11.3]], "45 offenses in January-September 2026 over 400,000");
+assert.ok(partYearRate.delivered.text.some((t) => t.includes("not annualized")));
+// P60: only full-year reporters are ranked; the rest are named with their months; no population is not ranked by rate.
+const tx = ok4("Which Texas cities had the most shoplifting in 2024?");
+assert.deepEqual(tx.delivered.table.rows, [["Houston", 108], ["Dallas", 84], ["Smallville", 60]]);
+assert.ok(tx.delivered.text.includes("Not ranked because they didn't report all 12 months of 2024: Austin (11 months)."));
+const txRate = ok4("Which Texas cities had the highest shoplifting rate in 2024?");
+assert.deepEqual(txRate.delivered.table.rows, [["Dallas", 6.5], ["Houston", 4.7]]);
+assert.ok(txRate.delivered.text.includes("Not ranked because the FBI gives no population: Smallville."));
+assert.equal(as(ask("Which large Texas cities had the most shoplifting in 2024?"), "answer").delivered.table.rows.length, 2, "P08: 250,000 or more");
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

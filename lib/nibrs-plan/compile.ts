@@ -204,7 +204,9 @@ const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"] };
  */
 export function agencyPopulationSql(root: string, who: { oris: string[] } | { state: string; city: true }, years: number[]): string {
   const where = "oris" in who ? `ori IN (${list(who.oris)})` : `u.state_abbr = ${q(who.state)} AND u.agency_indicator = '1'`;
-  return `SELECT ori, u.data_year, u.population, trim(u.city) AS city, u.state_abbr AS state
+  // A year with a blank city takes the agency's latest named year.
+  return `SELECT ori, u.data_year, u.population,
+    coalesce(nullif(trim(u.city), ''), list_last(list_transform(list_filter(by_year, x -> trim(x.city) <> ''), x -> trim(x.city)))) AS city, u.state_abbr AS state
     FROM read_parquet(${q(`${root}/agency/data.parquet`)}), unnest(by_year) AS t(u)
     WHERE ${where} AND u.data_year IN (${years.map(Number).join(", ")}) ORDER BY ori, u.data_year`;
 }
