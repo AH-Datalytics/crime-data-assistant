@@ -69,6 +69,7 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { out.set(m[0], batch8); out.set(`${m[0]}|button`, batch8); }
       continue;
     }
+    if (!v.measures) continue;   // a file of no form read here: no cells, never a crash
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
     const time = timeCells(v as unknown as TimeFile) ?? placesCells(v as unknown as PlacesFile);
@@ -140,7 +141,8 @@ type StateSumYearFile = { year: number; agencies_counted: number; partial_report
 type StateSumFile = { basis?: string; by_year?: StateSumYearFile[];
   consistent_reporters?: { agencies: number; by_year: { year: number; sum: number; share_of_crime_index_population: number }[] } };
 function stateSumCells(v: StateSumFile): ExpectedCell[] | null {
-  if (v.basis !== "raw" || !v.by_year?.length || v.by_year[0].all_months_sum === undefined) return null;
+  // Raw files, or canonical where nibrs-model checked the raw counts on a sample (V111, the nation).
+  if (!["raw", "canonical"].includes(v.basis ?? "") || !v.by_year?.length || v.by_year[0].all_months_sum === undefined) return null;
   const many = v.by_year.length > 1;
   const key = (y: number) => (many ? String(y) : "");
   const out: ExpectedCell[] = [];
