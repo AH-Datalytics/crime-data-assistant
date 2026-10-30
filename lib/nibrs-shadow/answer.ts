@@ -23,6 +23,10 @@
  *                        violence" and "shooters" (P45) are declined;
  *   P29/P49              "by men and women" names the offenders: the crimes by the sexes of their incidents' offenders;
  *   P50                  arrests are placed by arrest date;
+ *   time (increment 3)   a set of years; a change between two periods (any wording reading.ts reads), the later
+ *                        period clipped to the release with the earlier clipped to the same months (D06, D17), no
+ *                        change from an unknown period (D17), no percent change from a zero base (P55); rolling
+ *                        windows, each known only when all its months are; the last 12 months as one total (P56);
  *   P24/D04              a period after the data says where the data ends and offers this year so far; a period
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
@@ -32,12 +36,13 @@ import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
 import { planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
 import { compilePlan, type CompileTarget } from "../nibrs-plan/compile";
+import { compare, rolling, windowMonths, type MonthCell } from "../nibrs-plan/transforms";
 import { validateOutcome } from "../nibrs-plan/outcome";
 import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, filterWords, monthName, periodWords, type Combined, type Delivered } from "./deliver";
+import { CATEGORY, deliver, deliverComparison, filterWords, monthName, periodWords, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, candidateLabel, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 
 export type ShadowDeps = {
@@ -79,7 +84,10 @@ function withParts(ledger: RequestLedger, parts: Part[]): RequestLedger {
 function filled(ledger: RequestLedger, concept: string, value: string, text: string): RequestLedger {
   const n = ledger.question.length + 1 + ledger.parts.filter((p) => p.rule === "shadow:button").length;
   const part = { concept, value, span: [n, n], text, explains: [[n, n]], clause: 0, rule: "shadow:button", state: "recognized", explanation: null } as unknown as Part;
-  return withParts(ledger, [...ledger.parts.filter((p) => !(p.clause === 0 && p.concept === concept)), part]);
+  const next = withParts(ledger, [...ledger.parts.filter((p) => !(p.clause === 0 && p.concept === concept)), part]);
+  // A period or grain chosen by a button replaces the question's own time intent: a comparison or "the last 12 months"
+  // read from the words no longer applies (Codex increment-3 review: else a future comparison's alternative recurs).
+  return concept === "period" || concept === "grain" ? Object.assign(next, { comparison: null, last12: false }) : next;
 }
 
 /** The reason a reader decline gives, as a limitation reason; "reader" when its words name none of them. */
@@ -92,7 +100,7 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 }
 
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
-  return fromLedger(readQuestion(question, Number(deps.release.lastMonth.slice(0, 4))).ledger, deps);
+  return fromLedger(readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger, deps);
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */
@@ -195,8 +203,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // NIBRS shadow's; it is declined rather than answered from the wrong source.
   // Only a plain count of the crime: its details (a weapon, arrests, clearances, a breakdown) are NIBRS's, and go on to
   // the slice's own limits.
-  const asked = !flags(ledger0).composite && d.spec.type === "series" && !d.spec.filters.length && (d.spec.unit === null || ["offenses", "victims", "incidents"].includes(d.spec.unit))
-    && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept)) ? d.spec.measures : [];
+  // The reader's own change form ("did X increase from 2022 to 2023") is a plain count compared, under the same rule.
+  const plainUnit = (u: string | null) => u === null || ["offenses", "victims", "incidents"].includes(u);
+  const noDetail = !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+  const asked = flags(ledger0).composite || !noDetail ? []
+    : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
+    : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
   if (asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
 
   // The plan.
@@ -286,6 +298,29 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     plan.defaults.push({ path: "timeBasis", value: "arrest_date", reason: "P50: arrests are counted by arrest date" });
   }
 
+  // Time (increment 3). A comparison the reading recorded becomes the plan's period_comparison over the whole span;
+  // "the last 12 months" is one total (P56). Either replaces the reader's time grouping.
+  const cmpFlag = flags(ledger0).comparison ?? null;
+  if (cmpFlag || flags(ledger0).last12) {
+    if (plan.transforms.length) return decline("unsupported_capability", "Not in the slice yet: this combination of time forms.");
+    plan.groupings = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
+  }
+  if (cmpFlag) {
+    const st = plan.statistics[0];
+    if (plan.measures.length !== 1 || plan.groupings.length || plan.statistics.length !== 1 || st.kind !== "count")
+      return decline("unsupported_capability", "Not in the slice yet: a change of several crimes, of a breakdown, or of a rate.");
+    // The plan's period is the comparison's whole years, as the question's period part reads; the compared periods
+    // carry any months (R2: they lie inside it).
+    plan.period = { kind: "absolute", from: `${cmpFlag.earlier.from.slice(0, 4)}-01`, to: `${cmpFlag.later.to.slice(0, 4)}-12` };
+    plan.transforms = [{ kind: "period_comparison", of: [st.as], earlier: { kind: "absolute", ...cmpFlag.earlier }, later: { kind: "absolute", ...cmpFlag.later }, outputs: ["earlier", "later", "change", "pct_change"] }];
+  }
+  const rollingT = plan.transforms.find((t) => t.kind === "rolling");
+  if (rollingT && (plan.measures.length !== 1 || plan.transforms.length !== 1 || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count"
+    || plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month"))
+    return decline("unsupported_capability", "Not in the slice yet: rolling windows of a rate, a breakdown, or several crimes.");
+  if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison"))
+    return decline("unsupported_capability", "Not in the slice yet: rankings.");
+
   // The slice delivers counts, as totals or by month or year: one measure optionally broken down by ONE delivered
   // category with each category's share of its period (compiler increments 1 and 2), or several measures side by side
   // (with their combined total, as totals only, for D19 and P31). Two-way breakdowns, rates and other shares are
@@ -319,8 +354,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
 
   // Release: the effective months. After the data: P24. Before this build: not built.
   let period: { from: string; to: string };
-  try { const r = resolvePeriod(plan.period, release); if (r.kind !== "absolute") return decline("unsupported_capability", "Separate years are not in the slice."); period = { from: r.from, to: r.to }; }
-  catch (e) { return decline("unsupported_capability", String(e)); }
+  // A set of years ("in 2019 and 2024"): the span is for the release checks; the compiler counts only those years.
+  let yearSet: number[] | null = null;
+  try {
+    const r = resolvePeriod(plan.period, release);
+    if (r.kind === "years") { yearSet = [...r.years].sort((a, b) => a - b); period = { from: `${yearSet[0]}-01`, to: `${yearSet[yearSet.length - 1]}-12` }; }
+    else period = { from: r.from, to: r.to };
+  } catch (e) { return decline("unsupported_capability", String(e)); }
   if (period.from > release.lastMonth) {
     const y = release.lastMonth.slice(0, 4);
     return decline("outside_release_coverage", `${periodWords(period.from, period.to)} is not in the data; the latest month available is ${monthName(release.lastMonth)}.`,
@@ -333,7 +373,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A year still in progress runs through the release's last month (D06: the answer names the months covered). The
   // release rules check that clipped period; the question's own period part is checked against what it asked for.
   if (period.to > release.lastMonth) period = { from: period.from, to: release.lastMonth };
-  const checked: NibrsPlan = period.to === requestedTo ? plan : { ...plan, period: { kind: "absolute", ...period } };
+  let checked: NibrsPlan = period.to === requestedTo || yearSet ? plan : { ...plan, period: { kind: "absolute", ...period } };
+  // A comparison whose later period runs past the data compares the same months of both (D06, D17); a later period
+  // wholly after the data is P24's.
+  const cmpT = checked.transforms.find((t) => t.kind === "period_comparison");
+  let cmpPeriods: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null = null;
+  if (cmpT && cmpT.kind === "period_comparison") {
+    const later = { from: cmpT.later.from, to: cmpT.later.to }, earlier = { from: cmpT.earlier.from, to: cmpT.earlier.to };
+    if (later.from > release.lastMonth) return decline("outside_release_coverage", `${periodWords(later.from, later.to)} is not in the data; the latest month available is ${monthName(release.lastMonth)}.`);
+    if (later.to > release.lastMonth) { later.to = release.lastMonth; earlier.to = addMonths(earlier.from, monthsBetween(later.from, later.to)); }
+    cmpPeriods = { earlier, later };
+    checked = { ...checked, period: { kind: "absolute", from: earlier.from, to: later.to },
+      transforms: [{ ...cmpT, earlier: { kind: "absolute", ...earlier }, later: { kind: "absolute", ...later } }] };
+  }
 
   // Validation, as any reader outcome: shape, semantic layer, release; then every part of the question applied.
   const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : []) };
@@ -344,13 +396,43 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "Not in the slice yet: this weapon or relationship selection.");
+  const notes0 = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
+  // Changes and rolling windows: one monthly query of the measure over every month they reach; the transforms roll it.
+  if (cmpPeriods || rollingT) {
+    const m = checked.measures[0];
+    const months = rollingT && rollingT.kind === "rolling" ? rollingT.months : 0;
+    const span = cmpPeriods ? { from: cmpPeriods.earlier.from, to: cmpPeriods.later.to } : { from: windowMonths(period.from, months)[0], to: period.to };
+    const sub: NibrsPlan = { ...checked, measures: [{ ...m, filters: undefined }], filters: [...checked.filters, ...(m.filters ?? [])], transforms: [],
+      groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }], period: { kind: "absolute", ...span } };
+    const c = compilePlan(sub, { kind: "absolute", ...span }, deps.target);
+    if (c.kind === "unsupported") return decline("unsupported_capability", `Not in the slice yet: ${c.reason}`);
+    const got = deps.execute(c.query.sql);
+    const cells: MonthCell[] = got.map((r) => ({ ym: String(r[0]), value: r[1] === null || r[1] === undefined ? null : Number(r[1]), status: String(r[2]) }));
+    for (const st of c.query.statements) if (!statements.includes(st)) statements.push(st);
+    const inSpan = (p: { from: string; to: string }) => cells.filter((x) => x.ym >= p.from && x.ym <= p.to);
+    // A conflict in any month the answer uses refuses the whole answer, as for every count.
+    const used = cmpPeriods ? [...inSpan(cmpPeriods.earlier), ...inSpan(cmpPeriods.later)] : cells;
+    if (used.some((x) => x.status === "EVIDENCE_CONFLICT")) return decline("unsupported_capability", "The records for this agency and period conflict with its monthly reporting status, so no number is given.");
+    if (cmpPeriods) {
+      const delivered = deliverComparison(checked, cmpPeriods, compare(inSpan(cmpPeriods.earlier), inSpan(cmpPeriods.later)), statements, release.id, notes0);
+      if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
+      return { kind: "answer", plan: checked, period: { from: cmpPeriods.earlier.from, to: cmpPeriods.later.to }, sql: c.query.sql, delivered };
+    }
+    const displayed = cells.filter((x) => x.ym >= period.from && x.ym <= period.to).map((x) => x.ym);
+    const windows = rolling(cells, months, displayed);
+    const as = checked.statistics[0].as;
+    const delivered = deliver(checked, period, requestedTo, ["period", as, `${as}_status`], windows.map((w) => [w.ym, w.value, w.status]), statements, release.id, notes0, null,
+      { rolling: { months, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO").map((x) => x.ym) } });
+    if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
+    return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered };
+  }
   // One compiled query per measure (its own filters as the query's), its rows joined on the period key.
   const sqls: string[] = [];
   let columns: string[] = [];
   let rows: unknown[][] = [];
   for (const m of checked.measures) {
     const sub: NibrsPlan = { ...checked, measures: [{ ...m, filters: undefined }], filters: [...checked.filters, ...(m.filters ?? [])], statistics: checked.statistics.filter((s) => "measure" in s && s.measure === m.as) };
-    const c = compilePlan(sub, { kind: "absolute", ...period }, deps.target);
+    const c = compilePlan(sub, yearSet ? { kind: "years", years: yearSet, ...(period.to < `${yearSet[yearSet.length - 1]}-12` ? { through: period.to } : {}) } : { kind: "absolute", ...period }, deps.target);
     if (c.kind === "unsupported") return decline("unsupported_capability", `Not in the slice yet: ${c.reason}`);
     const got = deps.execute(c.query.sql);
     if (got.some((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i])))))
@@ -366,10 +448,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     columns = [...columns, ...stat.map((i) => c.query.columns[i])];
     rows = rows.map((r, k) => [...r, ...stat.map((i) => got[k][i])]);
   }
-  const notes = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
-  const delivered = deliver(checked, period, requestedTo, columns, rows, statements, release.id, notes, combined);
+  const delivered = deliver(checked, period, requestedTo, columns, rows, statements, release.id, notes0, combined, yearSet ? { years: yearSet } : {});
   if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
   return { kind: "answer", plan: checked, period, sql: sqls.join(";\n"), delivered };
 }
 
+const monthIndex = (ym: string) => Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7)) - 1;
+const monthsBetween = (from: string, to: string) => monthIndex(to) - monthIndex(from);
+const addMonths = (ym: string, n: number) => { const k = monthIndex(ym) + n; return `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`; };
 const periodWordsShort = (from: string, to: string) => (from === to ? monthName(to) : `${monthName(from).split(" ")[0]} to ${monthName(to)}`);

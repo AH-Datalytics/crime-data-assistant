@@ -62,7 +62,12 @@ const clippedLabel = (to: string) => compareMeaning({ ...label, places: clipped.
 assert.deepEqual(clippedLabel("2026-10"), [], "January-October 2026 is the clipped year");
 assert.deepEqual(clippedLabel("2026-12"), ["material"], "a full 2026 is not the clipped year");
 const cmp = planToMeaning(X.SAME_AGENCIES_CHANGE, { kind: "absolute", from: "2023-01", to: "2025-12" });
-assert.ok(compareMeaning({ ...label, places: cmp.meaning.places, measures: cmp.meaning.measures, period: { from: "2023-01", to: "2025-12" }, statistic: "change", cohort: "same_agencies" }, cmp, r).some((d) => d.kind === "unverified" && d.field === "untracked"), "comparison baselines are not in the label");
+// Increment 3: a change label implies its two periods (the first and last years of its period, or the same months it
+// names); the comparison is checked against them, a different baseline is material, and unnamed months stay unverified.
+const cmpLabel = (extra: Partial<Meaning>) => compareMeaning({ ...label, places: cmp.meaning.places, measures: cmp.meaning.measures, period: { from: "2023-01", to: "2025-12" }, statistic: "change", cohort: "same_agencies", groupings: ["year"], ...extra }, cmp, r).filter((d) => d.field === "comparison").map((d) => d.kind);
+assert.deepEqual(cmpLabel({}), [], "2023 against 2025, as the label's period implies");
+assert.deepEqual(cmpLabel({ period: { from: "2024-01", to: "2025-12" } }), ["material"], "a different baseline is a different comparison");
+assert.deepEqual(cmpLabel({ filters: ["the same months of each year: some of them"] }), ["unverified"], "months the label does not name stay unverified");
 // Codex probe: combined versus separate places.
 const two = planToMeaning({ ...X.NAMED_PLACES }, year(2024));
 const twoLabel: Meaning = { ...label, places: two.meaning.places, measures: two.meaning.measures.map((m) => ({ name: m.name, unit: m.unit })), period: two.meaning.period, groupings: two.meaning.groupings, statistic: two.meaning.statistic as Meaning["statistic"], combine: two.meaning.combine === "combined" ? "separate" : "combined" };
