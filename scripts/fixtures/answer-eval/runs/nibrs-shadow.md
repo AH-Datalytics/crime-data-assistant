@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 316 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 333 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 112: run by this candidate
+- 129: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 262: scorable (reviewed, decided policy)
+- 279: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Refused as not built (not scored)
@@ -70,22 +70,23 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-75 cases. Correct 61; unverified 8; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+92 cases. Correct 62; unverified 7; wrong answers 0; avoidable declines 21; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 430 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 57 | 0 | 4 | 0 |
+| answer | 57 | 0 | 21 | 0 |
 | clarify | 0 | 3 | 2 | 0 |
 | decline | 0 | 0 | 9 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs change | 2021 and later | 10 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (10/10)); direct answers: not measured (90% verified, 1 unverified); numeric fixtures: not measured (9/10 match, 1 not measured) |
-| answer:nibrs count | 2021 and later | 49 | fail | wrong answers: pass (0); initial action: fail (94% (46/49)); direct answers: fail (94% (0 unverified)); numeric fixtures: pass (46/46 match) |
+| answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
+| answer:nibrs count | 2021 and later | 57 | fail | wrong answers: pass (0); initial action: fail (81% (46/57)); direct answers: fail (81% (0 unverified)); numeric fixtures: pass (46/46 match) |
 | answer:nibrs count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:nibrs rate | 2021 and later | 9 | fail | wrong answers: pass (0); initial action: fail (0% (0/9)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -120,9 +121,6 @@ Discrepancies and unverified cases:
   - declined (unsupported_capability): Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.
 - **LS-267** (wrong_action; expected clarify, got decline) "Shootings in Nashville in 2024"
   - declined (reader): NIBRS does not track shootings as a category, so I can't apply "Shootings". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a f
-- **LS-268** (unverified; expected answer, got answer) "Is shoplifting in Denver up this year compared with last year?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Denver city police, CO: shoplifting offenses, January through September 2025 against January through September 2026. / Compares the same months of each year: January through September. / 2,696 in January throu
 - **LS-269** (avoidable_decline; expected answer, got decline) "How many shoplifting offenses will Denver's 2024 numbers show?"
   - declined (reader): I couldn't interpret "will" in this question, so I haven't answered it with a number that ignores it.
 - **LS-270** (wrong_action; expected clarify, got decline) "Shplftg in Nashville in 2024"
@@ -131,6 +129,40 @@ Discrepancies and unverified cases:
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
+- **LS-317** (avoidable_decline; expected answer, got decline) "Shoplifting in Tulsa and Oklahoma City in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-318** (avoidable_decline; expected answer, got decline) "Shoplifting in Tulsa and Oklahoma City combined in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-319** (avoidable_decline; expected answer, got decline) "Shoplifting in Greensboro and Raleigh in 2025"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-320** (avoidable_decline; expected answer, got decline) "Shoplifting rate in Wichita in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-321** (avoidable_decline; expected answer, got decline) "Shoplifting rate in Memphis by year from 2021 to 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-322** (avoidable_decline; expected answer, got decline) "Carjackings per 100,000 residents in Dallas this year"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-323** (avoidable_decline; expected answer, got decline) "Shoplifting rate in Greensboro in 2025"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-324** (avoidable_decline; expected answer, got decline) "Which Texas cities had the most carjackings in 2024?"
+  - declined (unsupported_capability): Not in the slice yet: state and national totals come later.
+- **LS-325** (avoidable_decline; expected answer, got decline) "Top 10 cities by shoplifting rate in Ohio in 2024"
+  - declined (unsupported_capability): Not in the slice yet: state and national totals come later.
+- **LS-326** (avoidable_decline; expected answer, got decline) "Which large Texas cities had the highest shoplifting rate in 2024?"
+  - declined (reader): I couldn't interpret "Which large" in this question, so I haven't answered it with a number that ignores it.
+- **LS-327** (avoidable_decline; expected answer, got decline) "Which Colorado cities had the fewest carjackings in 2024?"
+  - declined (unsupported_capability): Not in the slice yet: state and national totals come later.
+- **LS-328** (avoidable_decline; expected answer, got decline) "Shoplifting in Tulsa Police Department, Tulsa, and Oklahoma City combined in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-329** (avoidable_decline; expected answer, got decline) "Shoplifting in Greensboro and Raleigh combined in 2025"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-330** (avoidable_decline; expected answer, got decline) "Shoplifting rates in Tulsa and Oklahoma City in 2024"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-331** (avoidable_decline; expected answer, got decline) "Shoplifting rate in Tulsa and Oklahoma City combined in 2024"
+  - declined (reader): I can't apply "combined": a rate over several years is given per year; ask without "total" for one rate per year. I haven't answered with a number that leaves it out.
+- **LS-332** (avoidable_decline; expected answer, got decline) "Shoplifting rate in Greensboro and Raleigh combined in 2025"
+  - declined (reader): I can't apply "combined": a rate over several years is given per year; ask without "total" for one rate per year. I haven't answered with a number that leaves it out.
+- **LS-333** (avoidable_decline; expected answer, got decline) "Which Texas cities had the most carjackings so far this year?"
+  - declined (unsupported_capability): Not in the slice yet: state and national totals come later.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 

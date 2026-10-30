@@ -18809,9 +18809,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: a count per agency."
    }
   },
@@ -18874,9 +18874,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: 'combined' is one total of both agencies' offenses."
    }
   },
@@ -18940,9 +18940,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: Raleigh's count; Greensboro's total not established (D6), its missing months named."
    }
   },
@@ -19001,9 +19001,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: the year's count over the FBI's 2024 population for the agency."
    }
   },
@@ -19064,9 +19064,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: each year over its own population."
    }
   },
@@ -19128,9 +19128,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: P59, January-September 2026, the FBI population carried forward."
    }
   },
@@ -19191,9 +19191,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER (no rate): P58."
    }
   },
@@ -19265,9 +19265,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: Texas city agencies (indicator 1), full-year reporters (P04), 20 rows (D05), ties alphabetical (P17)."
    }
   },
@@ -19342,9 +19342,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: each city's own rate; exactly 10 (P17)."
    }
   },
@@ -19420,9 +19420,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: P08 (large = 250,000+); at most 20 rows (D05)."
    }
   },
@@ -19495,9 +19495,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: many known zeros (P51); the cut falls inside a tie, ordered alphabetically (P17)."
    }
   },
@@ -19560,9 +19560,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: two references to one agency are one member; never double-counted."
    }
   },
@@ -19627,9 +19627,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER (no total): D6; Raleigh's months cannot stand in for Greensboro's."
    }
   },
@@ -19695,9 +19695,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: a rate per agency."
    }
   },
@@ -19763,9 +19763,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: 100,000 x (sum of counts) / (sum of populations)."
    }
   },
@@ -19833,9 +19833,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER (no rate): P58; Greensboro is never dropped from the numerator or kept only in the denominator."
    }
   },
@@ -19909,9 +19909,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc4",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: P04 for the current year: every month available so far (January-September 2026, P52)."
    }
   }
