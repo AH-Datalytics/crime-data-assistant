@@ -21139,9 +21139,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER (Jeff): property on one segment (loss stolen + firearm) and the incident's clearance status, offense unit."
    }
   },
@@ -21206,9 +21206,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: the type level of P66."
    }
   },
@@ -21267,9 +21267,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: a cleared count of a NIBRS-only offense."
    }
   },
@@ -21330,9 +21330,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: the share cleared (method A), never the FBI's annual rate."
    }
   },
@@ -21394,9 +21394,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: offense unit, type level."
    }
   },
@@ -21461,9 +21461,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: victim unit (D18) with a weapon filter: a NIBRS detail of a Part I crime (P01)."
    }
   },
@@ -21524,9 +21524,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: cleared by arrest as a filter."
    }
   },
@@ -21582,9 +21582,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "ROUTE: a Part I offense's clearance rate for a completed year is the historical clearances' (P57), not computed from NIBRS; the NIBRS shadow names the route."
    }
   },
@@ -21641,9 +21641,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: a property filter (trap: incident-level property; a stolen television with a recovered firearm does not match)."
    }
   },
@@ -21699,9 +21699,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: the recovered loss type; NIBRS detail of a Part I crime (P01)."
    }
   },
@@ -21758,9 +21758,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: vehicle descriptions with the recovered loss type."
    }
   },
@@ -21823,9 +21823,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: arrestee unit reached through the incident (never by matching the arrest offense); Group B excluded and said."
    }
   },
@@ -21883,9 +21883,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: re-scored under P68 (segments marked M are not counted)."
    }
   },
@@ -21938,15 +21938,15 @@
     },
     "statements": [
      "names the agency (Dallas Police Department)",
-     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "says it counts the period's carjackings still uncleared as of the file date, which is not the FBI's annual method (P64)",
      "gives the number of incidents beside the count (P66)",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: uncleared as a selection."
    }
   },
@@ -22007,9 +22007,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: exceptional-only as a selection (an incident also cleared by arrest is not exceptional, P67)."
    }
   },
@@ -22073,9 +22073,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: the clearance discrimination case (victim count against incident count, P67's tie, later arrests, every type)."
    }
   },
@@ -22137,10 +22137,10 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
-    "notes": "MUST ANSWER: the incident association (r2 case 2c), paired with LS-372."
+    "reviewed_by": "codex:inc6-labels-1",
+    "notes": "MUST ANSWER: the incident association (r2 case 2c), paired with LS-373."
    }
   },
   {
@@ -22197,9 +22197,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: arrests classified by arrest offense; paired with the incident-association case before it."
    }
   }
