@@ -417,6 +417,12 @@ ROWS = [
      "Source line: \"Source: FBI NIBRS.\" and the like.",
      "The reader needs the source's name, not a description of it.",
      "Decided 2026-10-30 (Jeff: \"Source line is the source - FBI NIBRS, Crime Index for current, fbi srs for historical, etc.\")", NEW),
+    ("P64", "\"Houston vehicle burglaries where a firearm was stolen, by clearance status\" (a NIBRS clearance count or breakdown)",
+     "NIBRS clearances are refused in the slice (P57 left the NIBRS method open).",
+     "Method A: count the period's incidents that are cleared as of the latest file, by arrest (the first arrestee segment) or by exceptional clearance, whenever cleared. Clearance is incident-level, per the NIBRS rules: every offense in a cleared incident is cleared. \"By clearance status\" breaks down into cleared by arrest, cleared exceptionally (with its type) and not cleared. The answer says it counts that period's crimes cleared as of the file date, which is not the FBI's annual method. Historical Part I clearance rates still come from the Crime Index clearances data (P57); state clearance rates stay declined (P18).",
+     "Clearance: the period's crimes cleared as of the file date (arrest or exceptional), incident-level; statement: not the FBI's annual method.",
+     "One rule for every NIBRS clearance answer, said plainly; the annual method stays with the historical figures.",
+     "Decided 2026-10-30 (Jeff: \"Agreed on A\")", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
