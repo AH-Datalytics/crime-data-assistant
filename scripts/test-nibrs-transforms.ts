@@ -4,7 +4,7 @@
  * Offline, no database.
  */
 import assert from "node:assert/strict";
-import { compare, pct1, rolling, rollup, windowMonths, type MonthCell } from "../lib/nibrs-plan/transforms";
+import { combineMonths, compare, pct1, rankAgencies, rate, rolling, rollup, round1, windowMonths, type MonthCell } from "../lib/nibrs-plan/transforms";
 
 const months = (year: number, values: (number | null | "Z" | "C")[]): MonthCell[] => values.map((v, i) => ({
   ym: `${year}-${String(i + 1).padStart(2, "0")}`,
@@ -40,5 +40,27 @@ assert.deepEqual(r.map((x) => [x.ym, x.value, x.status]), [["2025-01", 13, "VALU
 assert.deepEqual(r[2].missing, ["2025-11"]);
 // Months the cells do not hold (before the build) are unknown, never zero.
 assert.equal(rolling(full(2017, 1), 12, ["2017-06"])[0].status, "UNKNOWN");
+
+// Increment 4. Several agencies as one: a month is known only when every agency's is; REPORTED_ZERO only when all are.
+const tulsa = full(2024, 3), okc = full(2024, 4);
+assert.deepEqual(rollup(combineMonths([tulsa, okc])), { value: 84, status: "VALUE", missing: [] });
+const greensboro = months(2025, [...Array(10).fill(5), null, null]);
+assert.deepEqual(rollup(combineMonths([greensboro, full(2025, 9)])).missing, ["2025-11", "2025-12"], "Raleigh's months never stand in for Greensboro's");
+assert.equal(rollup(combineMonths([months(2024, Array(12).fill("Z")), months(2024, Array(12).fill("Z"))])).status, "REPORTED_ZERO");
+assert.equal(rollup(combineMonths([months(2024, ["C", ...Array(11).fill(1)]), full(2024, 1)])).status, "EVIDENCE_CONFLICT");
+// Rates (P58, P59): known only with the count; no rate from a missing or zero population (never 0 or infinite).
+assert.deepEqual(rate({ value: 3404, status: "VALUE" }, 413_066), { value: 824.1, status: "VALUE" });
+assert.deepEqual(rate({ value: 0, status: "VALUE" }, 50_000), { value: 0, status: "VALUE" });
+assert.deepEqual(rate({ value: null, status: "UNKNOWN" }, 50_000), { value: null, status: "UNKNOWN" });
+for (const pop of [null, undefined, 0, -1]) assert.deepEqual(rate({ value: 7, status: "VALUE" }, pop), { value: null, status: "UNAVAILABLE" }, String(pop));
+assert.deepEqual([round1(824.05), round1(0.04), round1(12.25)], [824.1, 0, 12.3]);
+// A combined rate is the sum of counts over the sum of populations, not an average of rates.
+assert.deepEqual(rate({ value: 3404 + 4375, status: "VALUE" }, 413_066 + 702_767), { value: 697.1, status: "VALUE" });
+// Rankings (P17, P60): only known values ranked; ties alphabetical; cut at the limit; the rest left out, never ranked.
+const xs = [{ name: "Cee", value: 5, known: true }, { name: "Bee", value: 5, known: true }, { name: "Aye", value: 9, known: true }, { name: "Dee", value: null, known: false }, { name: "Eee", value: 1, known: true }];
+assert.deepEqual(rankAgencies(xs, "top", 3).ranked.map((x) => x.name), ["Aye", "Bee", "Cee"]);
+assert.deepEqual(rankAgencies(xs, "top", 2).ranked.map((x) => x.name), ["Aye", "Bee"], "the cut inside a tie keeps the alphabetical first");
+assert.deepEqual(rankAgencies(xs, "bottom", null).ranked.map((x) => x.name), ["Eee", "Bee", "Cee", "Aye"]);
+assert.deepEqual(rankAgencies(xs, "top", 10).leftOut.map((x) => x.name), ["Dee"]);
 
 console.log("nibrs transforms: totals, changes and rolling windows follow D6, P51, D17 and P55");

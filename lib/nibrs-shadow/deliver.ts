@@ -70,7 +70,7 @@ export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): st
 /** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
 export type Combined = { label: string; definition: string };
 /** Consecutive periods as ranges: "January 2017 to June 2020, March 2021", "2017 to 2019". */
-function runs(periods: string[]): string {
+export function runs(periods: string[]): string {
   const idx = (p: string) => (p.length === 7 ? Number(p.slice(0, 4)) * 12 + Number(p.slice(5)) - 1 : Number(p));
   const name = (p: string) => (p.length === 7 ? monthName(p) : p);
   const out: string[] = [];
@@ -82,7 +82,7 @@ function runs(periods: string[]): string {
   }
   return out.join(", ");
 }
-const fmt = (n: number) => n.toLocaleString("en-US");
+export const fmt = (n: number) => n.toLocaleString("en-US");
 const GROUPING_HEADER: Record<string, string> = { "time.month": "Month", "time.year": "Year" };
 const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "UNAVAILABLE"];
 
@@ -325,5 +325,27 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
   text.push(SOURCE_STATEMENT(release));
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   evidence.forEach((e, j) => { if (BLANK.includes(e.status) !== (table.rows[0][j] === null)) contractProblems.push(`${e.statistic}: value and status disagree`); });
+  return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
+}
+
+/**
+ * A table of one statistic over one grouping or none (increment 4: agencies side by side, a combined total, a ranking,
+ * a rate by year), with the text lines its caller built from templates: the fixed statements and the source are added
+ * last. The columns are exactly the plan's groupings and statistic (the answer contract).
+ */
+export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; header: string } | null, stat: { as: string; header: string },
+  rows: { key: string | null; value: number | null; status: string }[], lines: string[], statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
+  const labels: Record<string, string> = { [`statistic:${stat.as}`]: stat.header };
+  const tableCols: ResultColumn[] = [];
+  if (grouping) {
+    labels[`grouping:${grouping.dimension}`] = grouping.header;
+    tableCols.push({ binding: { kind: "grouping", dimension: grouping.dimension }, header: grouping.header });
+  }
+  tableCols.push({ binding: { kind: "statistic", as: stat.as }, header: stat.header });
+  const evidence: CellEvidence[] = rows.map((r, i) => ({ row: i, statistic: stat.as, status: r.status as CellStatus }));
+  const table: ResultTable = { columns: tableCols, rows: rows.map((r) => [...(grouping ? [r.key ?? ""] : []), r.value]) };
+  const text = [...lines, ...readings, ...statements.map((s) => ANSWER_STATEMENTS[s]), SOURCE_STATEMENT(release)];
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
   return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
 }

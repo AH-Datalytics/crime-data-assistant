@@ -12,6 +12,12 @@ import { AGE_BINS } from "../nibrs-plan/from-spec";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ResolvedPeriod } from "../nibrs-plan/resolve";
 import type { Meaning } from "./case";
+import fs from "node:fs";
+import path from "node:path";
+
+/** The agencies' FBI names (scripts/fixtures/nibrs-shadow/agency-names.json), read once. */
+let NAMES: Map<string, string> | null = null;
+const fbiNames = () => (NAMES ??= new Map(Object.entries(JSON.parse(fs.readFileSync(path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agency-names.json"), "utf8")).names as Record<string, string>)));
 
 export type Diff = { field: string; expected: string; actual: string; kind: "material" | "unverified" };
 
@@ -69,6 +75,10 @@ function labelFilterKey(f: string): string | null {
   // Increment 3: a comparison of the same months of each year; rolling windows counted only when complete.
   if (family === "the same months of each year") return "same-months";
   if (/requires all twelve source months/.test(norm(f))) return "rolling:complete windows";
+  // Increment 4: a ranking's agencies.
+  if (norm(f) === "city agencies") return "agency:city";
+  if (/^250,000 residents or more$/.test(f.trim())) return "population:250000+";
+  if (/^agencies that reported every month of /.test(norm(f))) return "reporters:every month";
   if (family === "loss") return /stolen/.test(value) ? "loss:stolen" : /seized/.test(value) ? "loss:seized" : null;
   if (/^(victim|offender|arrestee) age$/.test(family)) return /under 18/.test(value) ? `${family}:under 18` : null;
   if (/^(victim|offender|arrestee) sex$/.test(family)) return /female/.test(value) ? `${family.split(" ")[0]} sex:female` : /\bmale/.test(value) ? `${family.split(" ")[0]} sex:male` : null;
@@ -132,6 +142,17 @@ function placeKey(p: { kind: string; name: string; state?: string }): string {
   return `local:${p.state ?? ""}:${name}`;
 }
 
+/**
+ * The FBI's name for an ORI when a label's agency name is that same agency in other words ("Portland Police Bureau"
+ * is the FBI's "Portland Police Department"): the names agree once the words for police and agency are set aside, and
+ * both are the same kind of agency, a sheriff never a police department (Codex 02.7).
+ */
+const agencyKind = (name: string) => (/\bsheriff/i.test(name) ? "sheriff" : /\b(marshal|constable)/i.test(name) ? "other" : "police");
+export function fbiNameFor(labelName: string, ori: string): string | null {
+  const fbi = fbiNames().get(ori);
+  return fbi && agencyKind(fbi) === agencyKind(labelName) && placeKey({ kind: "agency", name: fbi }) === placeKey({ kind: "agency", name: labelName }) ? fbi : null;
+}
+
 /* ------------------------------------------------------------------ plan -> meaning --------------------------------- */
 
 /** What a plan says, in the comparator's terms (not all of it fits the label schema; extra parts travel alongside). */
@@ -143,7 +164,9 @@ export type PlanView = {
   statistics: string[];
   years: number[] | null;          // a year selection, else null
   yearsThrough: string | null;     // the month its last year is clipped to (a year still in progress), else null
-  rank: { direction: string; limit: number | null } | null;
+  rank: { direction: string; limit: number | null; by: string | null } | null;
+  /** A rate's population (increment 4): one agency's, each agency's own, or the agencies' summed; null otherwise. */
+  denominator: "agency" | "each agency" | "summed agencies" | null;
   /** A period comparison's two periods (increment 3), checked against the periods the label implies. */
   comparison: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null;
   untracked: string[];             // plan features the label schema cannot express (transform parameters, bins)
@@ -154,7 +177,12 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
     const at = p.kind === "agency_set" ? p.within : p;
     if (at.kind === "national") return { kind: "national" as const, name: "United States" };
     if (at.kind === "state") return { kind: "state" as const, name: STATE_NAMES[at.code] ?? at.code, state: at.code };
-    if (at.kind === "agency") { const st = at.label.match(/,\s*([A-Z]{2})$/)?.[1]; return { kind: "agency" as const, name: at.label.replace(/,\s*[A-Z]{2}$/, ""), ...(st ? { state: st } : {}) }; }
+    // An agency by its FBI name (the name a label gives), its state from the place label ("Denver, Colorado").
+    if (at.kind === "agency") {
+      const tail = at.label.replace(/^.*,\s*/, "");
+      const st = /, D\.C\.$/.test(at.label) ? "DC" : /^[A-Z]{2}$/.test(tail) ? tail : STATE_CODES[norm(tail)];
+      return { kind: "agency" as const, name: fbiNames().get(at.ori) ?? at.label.replace(/,[^,]*$/, ""), ...(st ? { state: st } : {}) };
+    }
     return { kind: "county" as const, name: at.label };
   });
   const months = period.kind === "absolute" ? { from: period.from, to: period.to } : { from: ym(Math.min(...period.years), 1), to: period.through ?? ym(Math.max(...period.years), 12) };
@@ -177,8 +205,13 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   const same = perMeasure.length > 1 && perMeasure.every((k) => JSON.stringify(k) === JSON.stringify(perMeasure[0])) && !perMeasure[0].includes(null);
   filterKeys.push(...(same ? perMeasure[0] : perMeasure.flat()));
   for (const m of plan.measures) if (m.id.endsWith("_cleared")) filterKeys.push("clearance:cleared");
-  for (const p of plan.geography.places) if (p.kind === "agency_set") for (const w of p.where) filterKeys.push(w.field === "agency.population" && w.op === ">=" ? `population:${w.value}+` : null);
+  for (const p of plan.geography.places) if (p.kind === "agency_set") for (const w of p.where)
+    filterKeys.push(w.field === "agency.population" && w.op === ">=" ? `population:${w.value}+`
+      : w.field === "agency.type" && JSON.stringify(w.value) === '["city"]' ? "agency:city" : null);
   const rankT = plan.transforms.find((t) => t.kind === "rank");
+  // Increment 4: a ranking ranks only agencies that reported every month of its period (P60), the engine's rule for
+  // every ranking.
+  if (rankT) filterKeys.push("reporters:every month");
   // Increment 3: a comparison of the same months of each year (not whole years) and rolling 12-month windows are label
   // terms: a filter key and a grouping. Comparisons of whole years read as a change by year.
   const cmpT = plan.transforms.find((t) => t.kind === "period_comparison");
@@ -208,10 +241,27 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
     },
     measures: plan.measures.map((m) => ({ name: m.id, unit: m.unit, role: roles.get(m.as) ?? "value" })),
     filterKeys, statistics: [...new Set([headline, ...statistics])], years, yearsThrough: period.kind === "years" ? period.through ?? null : null,
-    rank: rankT && rankT.kind === "rank" ? { direction: rankT.direction, limit: rankT.limit } : null,
+    rank: rankT && rankT.kind === "rank" ? { direction: rankT.direction, limit: rankT.limit, by: plan.statistics.find((x) => x.as === rankT.by)?.kind ?? null } : null,
+    denominator: denominatorOf(plan),
     comparison: cmpT && cmpT.kind === "period_comparison" ? { earlier: { from: cmpT.earlier.from, to: cmpT.earlier.to }, later: { from: cmpT.later.from, to: cmpT.later.to } } : null,
     untracked,
   };
+}
+
+/** A per-100,000 rate's population, in the label's terms. */
+function denominatorOf(plan: NibrsPlan): PlanView["denominator"] {
+  const r = plan.statistics.find((x) => x.kind === "rate");
+  if (!r || r.kind !== "rate" || r.per !== 100000) return null;
+  const ps = plan.geography.places;
+  if (ps.length === 1 && ps[0].kind === "agency") return "agency";
+  if (ps.every((p) => p.kind === "agency") && plan.geography.combine === "combined") return "summed agencies";
+  return "each agency";
+}
+function labelDenominator(d: string): PlanView["denominator"] {
+  if (/^residents of .+'s jurisdiction \(the FBI's agency population\), per 100,000$/.test(d)) return "agency";
+  if (/^each agency's residents \(the FBI's agency population\), per 100,000$/.test(d)) return "each agency";
+  if (/^the two agencies' residents together \(the FBI's agency populations\), per 100,000$/.test(d)) return "summed agencies";
+  return null;
 }
 
 /* ------------------------------------------------------------------ comparison ------------------------------------- */
@@ -269,7 +319,8 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
     else {
       if (expected.rank.direction !== actual.rank.direction) add("rank direction", expected.rank.direction, actual.rank.direction, "material");
       if (expected.rank.limit !== actual.rank.limit) add("rank limit", String(expected.rank.limit), String(actual.rank.limit), "material");
-      add("rank by", expected.rank.by, "(the ranked statistic is not mapped)", "unverified");
+      if (!actual.rank.by) add("rank by", expected.rank.by, "(the ranked statistic is not mapped)", "unverified");
+      else if (expected.rank.by !== actual.rank.by) add("rank by", expected.rank.by, actual.rank.by, "material");
     }
   }
   // Increment 3: a change's two periods, as the label implies them. Its period runs from the earlier period's start to
@@ -293,7 +344,11 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
     else if (show(want) !== show(actual.comparison)) add("comparison", show(want), show(actual.comparison), "material");
   } else if (actual.comparison) add("comparison", "(label states no change)", `${actual.comparison.earlier.from}..${actual.comparison.later.to}`, expected.statistic === "change" ? "unverified" : "material");
   if (expected.cohort && expected.cohort !== (actual.meaning.cohort ?? "all_reporting")) add("cohort", expected.cohort, actual.meaning.cohort ?? "all_reporting", "material");
-  if (expected.denominator && !ratio) add("denominator", expected.denominator, "(not represented in the plan's meaning)", "unverified");
+  if (expected.denominator && !ratio) {
+    const want = labelDenominator(expected.denominator);
+    if (!want || !actual.denominator) add("denominator", expected.denominator, actual.denominator ?? "(not represented in the plan's meaning)", "unverified");
+    else if (want !== actual.denominator) add("denominator", want, actual.denominator, "material");
+  }
   for (const u of actual.untracked) add("untracked", "(not in the label schema)", u, "unverified");
   return out;
 }

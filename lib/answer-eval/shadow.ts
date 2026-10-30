@@ -16,14 +16,15 @@ import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
-import { compareMeaning, planToMeaning, type Diff, type Release } from "./compare";
+import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type Release } from "./compare";
+import { RETURN_A } from "../nibrs-shadow/places";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
 /** The slice: its designed group, the replay cases inside it, and replay cases next to it (action and reason only). */
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -36,7 +37,11 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  */
 export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null;
   /** A file with several measures: the cell's measure, as "<key>: <definition>" (its codes and unit are matched to the plan's). */
-  measure?: string };
+  measure?: string;
+  /** A ranking's row: its place in the order (1 = first row). */
+  position?: number;
+  /** A ranking's agency left out under P60 (not a row): `value` is its months reported. */
+  leftOut?: boolean };
 export type ExpectedValues = Map<string, ExpectedCell[]>;
 
 /**
@@ -52,7 +57,7 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
-    const time = timeCells(v as unknown as TimeFile);
+    const time = timeCells(v as unknown as TimeFile) ?? placesCells(v as unknown as PlacesFile);
     if (time) {
       for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g))
         out.set(m[3] ? `${m[1]}|alternative` : m[2] ? `${m[1]}|${m[2]}` : m[1], time);
@@ -100,6 +105,32 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+type StatusValue = { status: string; value: number | null };
+type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
+type PlacesFile = { grouping: string; agencies?: PlacesAgency[]; years?: PlacesAgency[]; combined_total?: StatusValue; combined_rate?: StatusValue;
+  left_out_months_unknown?: { ori?: string; agency_name: string | null; months_reported: string[] }[];
+  ranked_by?: "count" | "rate"; result?: { ori?: string; agency_name: string | null; count: number; rate: number | null; position: number }[] };
+/**
+ * Batch 7 (increment 4): several agencies, combined totals, rates and rankings. Rows are keyed as the answer shows
+ * them: an agency by its FBI name, a year, or "" for one value. A ranking's cells carry their position. Null for any
+ * other file.
+ */
+function placesCells(v: PlacesFile): ExpectedCell[] | null {
+  // No FBI name: the ORI, as the answer shows it (never the build's mailing city).
+  const name = (a: { agency_name: string | null; ori?: string }) => a.agency_name ?? a.ori ?? "";
+  switch (v.grouping) {
+    case "per_agency": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.total) }));
+    case "per_agency_rate": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.rate) }));
+    case "rate": return [{ key: "", ...pick(v.agencies![0].rate) }];
+    case "rate_per_year": return v.years!.map((y) => ({ key: String(y.population_year), ...pick(y.rate) }));
+    case "combined": return [{ key: "", ...pick(v.combined_total!) }];
+    case "combined_rate": return [{ key: "", ...pick(v.combined_rate!) }];
+    case "ranking": return [
+      ...v.result!.map((r) => ({ key: name(r), value: v.ranked_by === "rate" ? r.rate : r.count, status: "VALUE", position: r.position })),
+      ...(v.left_out_months_unknown ?? []).map((r) => ({ key: name(r), value: r.months_reported.length, status: "LEFT_OUT", leftOut: true }))];
+    default: return null;
+  }
+}
 /**
  * Batch 6 (increment 3): time files carry `periods` (each with its total), and for a change its `change`, for rolling
  * windows its `rolling`. A set of years: a cell per year. A change: the cells "earlier", "later", "change" and
@@ -181,10 +212,6 @@ function monthsReported(text: string[]): Set<string> {
 /** Words that characterize a change instead of reporting it (P54: no adjectives). */
 const ADJECTIVES = /\b(?:sharply|slightly|significantly|dramatically|substantially|modestly|markedly|considerably|steeply|notably|alarming(?:ly)?|huge|massive|small|large)\b/i;
 
-/** The label's agency name as the words an answer must carry (its city), e.g. "St. Louis". */
-function agencyWords(name: string): string {
-  return name.replace(/\b(Metropolitan|Metro|Police|Department|Bureau|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
-}
 
 /** A comparison answer's cells by output ("earlier", "later", "change", "pct_change"), or null for any other answer. */
 function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<string, number | null> | null {
@@ -198,6 +225,10 @@ function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<
  * header line; the same-months line; the change line, rebuilt from the cells; the zero-base line; a known period's count;
  * a period not established; then readings, fixed statements and the source.
  */
+/** A rate's column says per 100,000 residents. */
+const rateHeader = (o: Extract<ShadowOutcome, { kind: "answer" }>) =>
+  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000 residents$/.test(c.header));
+
 function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean {
   const cols = comparisonCells(o);
   const t = o.plan.transforms.find((x) => x.kind === "period_comparison");
@@ -206,7 +237,7 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
   const f = (n: number) => n.toLocaleString("en-US");
   const signed = (n: number) => (n > 0 ? `+${f(n)}` : n < 0 ? `-${f(-n)}` : "0");
   const changeLine = cols.change === null ? null : `${f(cols.earlier!)} in ${E} and ${f(cols.later!)} in ${L}: a change of ${signed(cols.change)}${cols.pct_change !== null ? ` (${cols.pct_change > 0 ? "+" : ""}${cols.pct_change}%)` : ""}.`;
-  const allowed = (line: string) => line === changeLine || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line)
+  const allowed = (line: string) => line === changeLine || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line) || /^Reported by .+\.$/.test(line)
     || (Object.values(ANSWER_STATEMENTS) as string[]).includes(line) || /^Compares the same months of each year: [A-Za-z ]+\.$/.test(line)
     || line.endsWith(`, ${E} against ${L}.`)
     || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
@@ -224,7 +255,10 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
   for (const s of e.statements) {
     let ok: boolean | null = null;
     const ag = /^names the agency \((.+)\)$/.exec(s);
-    if (ag) ok = all.toLowerCase().includes(agencyWords(ag[1]).toLowerCase());
+    // The agency by its FBI name, as the answer's "Reported by" line gives it (Jeff 2026-10-30).
+    // The FBI's name may put the label's agency in other words ("Portland Police Bureau" is its "Portland Police
+    // Department"): either is accepted for an agency the plan names.
+    if (ag) ok = all.includes(ag[1]) || o.plan.geography.places.some((p) => p.kind === "agency" && (() => { const f = fbiNameFor(ag[1], p.ori); return !!f && all.includes(f); })());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
     else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
     else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|No total is established for/.test(all);
@@ -295,6 +329,49 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const cols = o.delivered.table.columns.map((c, i) => (c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") ? i : -1)).filter((i) => i >= 0);
       ok = cols.length > 0 && o.delivered.table.rows.every((r) => cols.every((i) => typeof r[i] === "string" && r[i] !== ""));
     }
+    // Increment 4: several agencies, combined totals, rates and rankings.
+    else if (/^gives one total of both agencies/.test(s)) {
+      // One known number of the plan's distinct agencies, said as combined.
+      const oris = o.plan.geography.places.map((p) => (p.kind === "agency" ? p.ori : ""));
+      ok = o.plan.geography.combine === "combined" && new Set(oris).size === 2 && oris.every(Boolean) && o.delivered.table.rows.length === 1
+        && typeof o.delivered.table.rows[0][0] === "number"
+        // The headline's number is the table's (Codex 02.5), never any number.
+        && Number((/, combined: ([\d,.]+) /.exec(text[0] ?? "")?.[1] ?? "x").replace(/,/g, "")) === o.delivered.table.rows[0][0];
+    } else if (/^gives no (?:combined total|rate), because not every month|^gives no combined total, because/.test(s)) {
+      // Blank, with a reason, never a part-sum.
+      ok = o.delivered.table.rows.length === 1 && o.delivered.table.rows[0].every((x) => typeof x === "string" || x === null)
+        && o.delivered.evidence.every((x) => x.status !== "VALUE") && /no (?:total|rate) is given .*because not every month is known/.test(text[0] ?? "");
+    } else if (s === "gives the rate per 100,000 residents and names the population and its year") {
+      const y = o.period.to.slice(0, 4);
+      ok = rateHeader(o) && text.some((t) => new RegExp(`the FBI's ${y} population of the agency: .+ [\\d,]+\\.$`).test(t));
+    } else if (s === "gives each year's rate over that year's population") {
+      const line = text.find((t) => /^Each year's rate uses the FBI's population for that year: /.test(t)) ?? "";
+      ok = rateHeader(o) && o.plan.groupings.some((g) => g.dimension === "time.year") && o.delivered.table.rows.length > 0
+        && o.delivered.table.rows.every((r) => new RegExp(`\\b${r[0]} [\\d,]+`).test(line));
+    } else if (s === "gives each agency's rate over its own population") {
+      const line = text.find((t) => /population of each agency: /.test(t)) ?? "";
+      ok = rateHeader(o) && o.plan.geography.combine !== "combined" && o.delivered.table.rows.length > 1
+        && o.delivered.table.rows.every((r) => line.includes(`${r[0]} `));
+    } else if (/^gives one rate: both agencies' offenses over both agencies' populations/.test(s)) {
+      ok = rateHeader(o) && o.plan.geography.combine === "combined" && o.delivered.table.rows.length === 1
+        && text.some((t) => /^The rate is both agencies' offenses over both agencies' populations /.test(t));
+    } else if (s === "says the rate is for those months and is not annualized") ok = text.some((t) => /the rate is for those months and is not annualized\.$/.test(t));
+    else if (/^shows (?:exactly )?(\d+) agencies/.test(s)) ok = o.delivered.table.rows.length === Number(/(\d+)/.exec(s)![1]);
+    else if (/^ranks only agencies that reported (?:all 12 months of (\d{4})|every month of (\d{4}) so far)/.test(s)) {
+      // The rule said, every ranked agency known, the left-out named with their months, and no button to include them.
+      const when = periodWords(o.period.from, o.period.to);
+      const full = o.period.from.slice(5) === "01" && o.period.to.slice(5) === "12" ? `all 12 months of ${when}` : `every month of ${when}`;
+      ok = text.includes(`Ranked: agencies that reported ${full}; ties are ordered by agency name.`)
+        && o.delivered.evidence.every((x) => x.status === "VALUE" || x.status === "REPORTED_ZERO")
+        && text.filter((t) => t.startsWith("Not ranked because they didn't report")).every((t) => /\(\d+ months?\)/.test(t))
+        && !("alternative" in o && (o as { alternative?: unknown }).alternative);
+    } else if (s === "orders ties alphabetically by agency name") {
+      const rows = o.delivered.table.rows;
+      ok = text.some((t) => /ties are ordered by agency name/.test(t)) && rows.every((r, i) => i === 0 || r[1] !== rows[i - 1][1] || String(rows[i - 1][0]).localeCompare(String(r[0])) <= 0);
+    } else if (s === "adds no other eligibility filter") {
+      const p = o.plan.geography.places[0];
+      ok = p.kind === "agency_set" && p.where.every((w) => w.field === "agency.type") && o.plan.filters.length === 0;
+    } else if (s === "says large means 250,000 residents or more") ok = text.includes("Large means 250,000 residents or more (the FBI's agency population).");
     if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
     else if (!ok) out.push({ field: "statement", expected: s, actual: text.join(" / ").slice(0, 200), kind: "material" });
   }
@@ -346,7 +423,10 @@ function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer"
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }
 /** Delivered cells (value and status) against independent expected cells; none given is NOT MEASURED, never a match. */
-function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected0: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+  // A ranking's left-out agencies (P60) are not rows: checked against the answer's "Not ranked" line below.
+  const leftOut = (expected0 ?? []).filter((x) => x.leftOut);
+  const expected = expected0?.filter((x) => !x.leftOut);
   if (!expected) return { values: "not measured", diffs: [{ field: `${prefix}values`, expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
   // A change: each output cell (earlier, later, change, percent change) against its expected cell, value and status.
   const cmpCells = comparisonCells(o);
@@ -374,7 +454,7 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   const statCol = (n: number) => columns.findIndex((c, i) => c.binding.kind === "statistic" && columns.slice(0, i).filter((x) => x.binding.kind === "statistic").length === n);
   const [ci, si] = [statCol(0), statCol(1)];
   const countAs = (columns[ci].binding as { as: string }).as;
-  const keys = rows.map((r) => groupCols.map((j) => String(r[j])).join("|"));
+  const keys = rows.map((r) => groupCols.map((j) => String(r[j]).replace(RETURN_A, "")).join("|"));  // a Return A name matches the FBI text without its marker
   const got = new Map(rows.map((r, i) => [keys[i],
     { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
   const diffs: Diff[] = [];
@@ -387,10 +467,28 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   for (const x of expected) {
     const g = got.get(x.key);
     if (!g || g.value !== x.value || g.status !== x.status) diffs.push({ field: `${prefix}value ${x.key || "total"}`, expected: `${x.value} ${x.status}`, actual: g ? `${g.value} ${g.status}` : "missing", kind: "material" });
+    // A ranking: each agency in its place (P17's tie order included).
+    else if (x.position !== undefined && keys.indexOf(x.key) + 1 !== x.position)
+      diffs.push({ field: `${prefix}position ${x.key}`, expected: String(x.position), actual: String(keys.indexOf(x.key) + 1), kind: "material" });
     else if (g.share !== undefined && x.share !== undefined && g.share !== x.share)   // null against a number included
       diffs.push({ field: `${prefix}share ${x.key}`, expected: String(x.share), actual: String(g.share), kind: "material" });
     else if (g.share !== undefined && x.share === undefined)
       diffs.push({ field: `${prefix}share ${x.key}`, expected: "(no independent share)", actual: String(g.share), kind: "unverified" });
+  }
+  // P60 (Codex 02.6): a ranking with agencies left out names them, five or fewer each with its months reported, more
+  // than five as their count and five of them, each named agency with its own months; none left out, no such line.
+  if (expected.some((x) => x.position !== undefined)) {
+    const lines = o.delivered.text.filter((t) => t.startsWith("Not ranked because they didn't report"));
+    // Each "<name> (<n> months)" after the line's colon; the first of more than five follows "the largest " (Codex 02
+    // re-check C).
+    const named = lines.flatMap((t) => [...t.slice(t.indexOf(": ") + 2).matchAll(/(?:^|, )(?:the largest )?([^,]+?) \((\d+) months?\)/g)].map((m) => ({ key: m[1].replace(RETURN_A, ""), months: Number(m[2]) })));
+    const months = new Map(leftOut.map((x) => [x.key, x.value]));
+    const bad = (why: string, actual: string) => diffs.push({ field: `${prefix}left out`, expected: why, actual, kind: "material" });
+    if (!leftOut.length) { if (lines.length) bad("no agency left out", lines.join(" / ")); }
+    else if (lines.length !== 1) bad(`one line naming the ${leftOut.length} agencies left out`, lines.join(" / ") || "none");
+    else if (leftOut.length > 5 && !lines[0].includes(`: ${leftOut.length} agencies, the largest `)) bad(`${leftOut.length} agencies and the five largest`, lines[0]);
+    else if (named.length !== Math.min(5, leftOut.length) || new Set(named.map((n) => n.key)).size !== named.length || named.some((n) => months.get(n.key) !== n.months))
+      bad(`${Math.min(5, leftOut.length)} of them, each with its months reported`, lines[0]);
   }
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }

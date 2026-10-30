@@ -4,7 +4,7 @@
  * against a local canonical build). No database, no model, no network.
  */
 import assert from "node:assert/strict";
-import { compilePlan } from "../lib/nibrs-plan/compile";
+import { agencyPopulationSql, compilePlan } from "../lib/nibrs-plan/compile";
 import * as X from "../lib/nibrs-plan/examples";
 
 const t = { root: "/build/canonical", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] };
@@ -118,5 +118,18 @@ assert.ok(strangers.sql.includes("r2.offender_relationship IN ('ST')"));
 assert.match(refuse(plan("offenses.robbery", "offense", [], [weapon("victim", firearm)])), /cannot apply an existence over offense_weapon at victim scope to offense/);
 // 35B (D19's second drug part) has a definition.
 assert.ok(ok(compilePlan(plan("offenses.drug_equipment", "offense"), year(2023), t)).sql.includes("o.offense_code IN ('35B')"));
+
+// Increment 4. Several agencies as a monthly grid: one cell per agency-month, each with its own status (D6); the
+// ORIs deduplicated and sorted; anything else refused.
+const monthly = plan("offenses.shoplifting", "offense", [by("time.month")]);
+const grid = ok(compilePlan(monthly, year(2024), { ...t, agencies: ["OK0720600", "OK0550900", "OK0720600"] }));
+assert.deepEqual(grid.columns, ["ori", "period", "c", "c_status"]);
+for (const s of ["u.ori IN ('OK0550900', 'OK0720600')", "CROSS JOIN (SELECT unnest(['OK0550900', 'OK0720600']) AS ori) a", "GROUP BY u.ori, u.ym"]) assert.ok(grid.sql.includes(s), s);
+assert.match(ok(compilePlan(plan("offenses.shoplifting", "offense"), year(2024), t)).sql, /u.ori = 'TNMPD0000'|ori = /, "without agencies the plan's own place is read");
+assert.match(String((() => { const r = compilePlan({ ...monthly, groupings: [] } as Plan, year(2024), { ...t, agencies: ["OK0550900"] }); return r.kind === "unsupported" ? r.reason : ""; })()), /monthly grid of one count/);
+// Populations: the canonical agency file, per data year, by ORI or a state's city agencies.
+const pops = agencyPopulationSql(t.root, { oris: ["OK0550900"] }, [2024]);
+for (const s of ["/build/canonical/agency/data.parquet", "unnest(by_year)", "ori IN ('OK0550900')", "u.data_year IN (2024)"]) assert.ok(pops.includes(s), s);
+assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024]).includes("u.state_abbr = 'TX' AND u.agency_indicator = '1'"));
 
 console.log("nibrs compile v0: agency-level forms compile; the rest refuse with a reason");

@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 316 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 333 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 112: run by this candidate
+- 129: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 262: scorable (reviewed, decided policy)
+- 279: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Refused as not built (not scored)
@@ -63,29 +63,30 @@ Discrepancies and unverified cases:
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-241** (unverified; expected answer, got answer) "Shoplifting arrests in Memphis in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis city police, TN: 2,087 shoplifting arrests in 2024. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIB
+  - delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI Natio
 - **LS-243** (unverified; expected clarify, got clarify) "Shoplifting in Washington in 2024"
   - unverified option "Washington state" : expected `answer`, got `Not in the slice yet: state and national totals come later.`
   - asked which Washington: Washington, D.C. | Washington state | Washington County, Oregon | Washington County, Maryland
 
 ### Held out
 
-75 cases. Correct 61; unverified 8; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+92 cases. Correct 79; unverified 7; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 57 | 0 | 4 | 0 |
+| answer | 74 | 0 | 4 | 0 |
 | clarify | 0 | 3 | 2 | 0 |
 | decline | 0 | 0 | 9 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs change | 2021 and later | 10 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (10/10)); direct answers: not measured (90% verified, 1 unverified); numeric fixtures: not measured (9/10 match, 1 not measured) |
-| answer:nibrs count | 2021 and later | 49 | fail | wrong answers: pass (0); initial action: fail (94% (46/49)); direct answers: fail (94% (0 unverified)); numeric fixtures: pass (46/46 match) |
+| answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
+| answer:nibrs count | 2021 and later | 57 | fail | wrong answers: pass (0); initial action: fail (95% (54/57)); direct answers: fail (95% (0 unverified)); numeric fixtures: pass (54/54 match) |
 | answer:nibrs count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:nibrs rate | 2021 and later | 9 | pass | wrong answers: pass (0); initial action: pass (100% (9/9)); direct answers: pass (100%); numeric fixtures: pass (9/9 match) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -120,9 +121,6 @@ Discrepancies and unverified cases:
   - declined (unsupported_capability): Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.
 - **LS-267** (wrong_action; expected clarify, got decline) "Shootings in Nashville in 2024"
   - declined (reader): NIBRS does not track shootings as a category, so I can't apply "Shootings". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a f
-- **LS-268** (unverified; expected answer, got answer) "Is shoplifting in Denver up this year compared with last year?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Denver city police, CO: shoplifting offenses, January through September 2025 against January through September 2026. / Compares the same months of each year: January through September. / 2,696 in January throu
 - **LS-269** (avoidable_decline; expected answer, got decline) "How many shoplifting offenses will Denver's 2024 numbers show?"
   - declined (reader): I couldn't interpret "will" in this question, so I haven't answered it with a number that ignores it.
 - **LS-270** (wrong_action; expected clarify, got decline) "Shplftg in Nashville in 2024"

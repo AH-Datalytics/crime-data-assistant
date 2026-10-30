@@ -47,18 +47,42 @@ export const PLACE_ALIASES: Record<string, string> = {
   NC0600100: "Charlotte",   // Historical: "Charlotte-Mecklenburg Police Department" (else "Charlotte, North Carolina" finds no agency)
 };
 
-export type PlaceIndex = { byName: Map<string, Agency[]> };
+/**
+ * `names`: each ORI's FBI name (scripts/fixtures/nibrs-shadow/agency-names.json); `returnA`: the ORIs whose name is
+ * Return A's 24-character short name, not a department name.
+ */
+export type PlaceIndex = { byName: Map<string, Agency[]>; names: Map<string, string>; returnA: Set<string> };
+const NAMES_FILE = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agency-names.json");
 export function loadPlaceIndex(file = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
+  const namesFile = JSON.parse(fs.readFileSync(NAMES_FILE, "utf8")) as { names: Record<string, string>; return_a?: string[] };
+  const names = new Map<string, string>(Object.entries(namesFile.names));
+  const returnA = new Set(namesFile.return_a ?? []);
   const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => (PLACE_NAMES[a.ori] ? { ...a, name: PLACE_NAMES[a.ori] } : a));
   const byName = new Map<string, Agency[]>();
   const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
   for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }
   for (const xs of byName.values()) xs.sort((a, b) => b.population - a.population);
-  return { byName };
+  return { byName, names, returnA };
 }
 
-/** The build names no agency, so the label says what is known: the city's police or the county's agency, and the state. */
-export const agencyLabel = (a: Agency) => (a.kind === "city" ? `${a.name} city police, ${a.state}` : `${a.name} agency, ${a.state}`);
+/**
+ * Who reported the figures: the agency's FBI name (Jeff 2026-10-30: "Reported by the Denver Police Department"), never
+ * one built from a city and a type, nor the build's city (a mailing city, so possibly another agency's). Without one,
+ * the ORI. A Return A short name says so ("Kake (FBI Return A name)"), never expanded into a department name.
+ */
+export const RETURN_A = " (FBI Return A name)";
+export function agencyName(idx: PlaceIndex, ori: string): string {
+  const n = idx.names.get(ori);
+  return n === undefined ? ori : idx.returnA.has(ori) ? `${n}${RETURN_A}` : n;
+}
+/** "Reported by the Denver Police Department." / "... the Tulsa Police Department and the Oklahoma City Police Department." / "Reported by Kake (FBI Return A name)." */
+export function reportedBy(names: string[]): string {
+  const the = names.map((n) => (/^[A-Z]{2}[A-Z0-9]{7}$/.test(n) ? `agency ${n} (no FBI name in the archived sources)` : n.endsWith(RETURN_A) ? n : `the ${n}`));
+  return `Reported by ${the.length > 2 ? `${the.slice(0, -1).join(", ")} and ${the[the.length - 1]}` : the.join(" and ")}.`;
+}
+
+/** A place's name in an answer (Jeff 2026-10-30): "Denver, Colorado", "Baltimore County, Maryland", "Washington, D.C."; the agency is named on the next line (reportedBy). */
+export const agencyLabel = (a: Agency) => `${PLACE_ALIASES[a.ori] ?? a.name}, ${a.state === "DC" ? "D.C." : stateName(a.state)}`;
 const asPlace = (a: Agency): PlaceResolution => ({ kind: "agency", place: { kind: "agency", ori: a.ori, label: agencyLabel(a) }, agency: a });
 /** A button's label for a candidate: "Kansas City, Missouri"; "Baltimore city, Maryland" beside "Baltimore County, Maryland"; "Washington state". */
 export function candidateLabel(c: Candidate, all: Candidate[]): string {

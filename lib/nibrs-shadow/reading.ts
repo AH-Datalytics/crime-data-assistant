@@ -37,6 +37,8 @@
  *                months, D06/D17, through the latest reported month).
  *   last 12    "over (in, during) the last (past) 12 months" -> the 12 months ending at the release's latest month (P56),
  *              `last12`: one total.
+ *   places     "combined", "together", "altogether" with several places -> `combined` (one total of the agencies).
+ *              "large" or "big" before "cities" -> `largeCities` (P08: 250,000 residents or more), the word removed.
  */
 import type { RequestLedger } from "../request-accounting";
 import { accountNibrsRequest } from "../nibrs-request-accounting";
@@ -48,7 +50,7 @@ export type Span = { from: string; to: string };
 /** A change between two periods (the shadow attaches it as a period_comparison). `matched`: the same months each year. */
 export type Comparison = { earlier: Span; later: Span; matched: boolean };
 export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
-  undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean };
+  undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 const PHRASES: [RegExp, string][] = [
@@ -153,6 +155,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   let text = question;
   const cmp = readComparison(text, currentYear);
   if (cmp) { readings.push({ kind: "period", from: cmp.from, to: cmp.text }); text = cmp.text; }
+  // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest.
+  let largeCities = false;
+  text = text.replace(/\b(?:large|big)\s+(?=(?:[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(250,000 residents or more)" }); return ""; });
   let last12 = false;
   const L12 = /\b(?:over|in|during|for)\s+the\s+(?:last|past|previous)\s+(?:12|twelve)\s+months\b/i;
   if (lastMonth && L12.test(text)) {
@@ -197,8 +202,11 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const undefinedTerm = SHOOTERS.test(own) ? "shooters" : GUN_VIOLENCE.test(own) ? "gun violence" : null;
   // A future year with nothing predicting is a period after the data (P24), read as that year.
   if (!forecast) text = text.replace(NEXT_YEAR, (m) => (readings.push({ kind: "period", from: m, to: `in ${currentYear + 1}` }), `in ${currentYear + 1}`));
-  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12 };
-  const ledger = Object.assign(readings.length ? accountNibrsRequest(text) : first, flags);
+  // "Combined" is the flag's (one total of the named agencies); the reader is not asked to apply it.
+  const combined = /\b(?:combined|together|altogether)\b/i.test(own);
+  if (combined) text = text.replace(/\s*\b(?:combined|together|altogether)\b/gi, "");
+  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities };
+  const ledger = Object.assign(readings.length || combined ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 
