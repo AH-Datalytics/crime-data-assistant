@@ -19914,6 +19914,1170 @@
     "reviewed_by": "codex:inc4-labels-1",
     "notes": "MUST ANSWER: P04 for the current year: every month available so far (January-September 2026, P52)."
    }
+  },
+  {
+   "id": "LS-334",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies in Texas in 2024",
+   "policy": [
+    "P01",
+    "P53",
+    "P63",
+    "D30"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the state (Texas)",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the state total from the historical file; no NIBRS agency sum."
+   }
+  },
+  {
+   "id": "LS-335",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Murders in the US in 2023",
+   "policy": [
+    "P01",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the national estimate."
+   }
+  },
+  {
+   "id": "LS-336",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Burglary rate in Ohio in 2022",
+   "policy": [
+    "P01",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Ohio",
+       "state": "OH"
+      }
+     ],
+     "period": {
+      "from": "2022-01",
+      "to": "2022-12"
+     },
+     "measures": [
+      {
+       "name": "burglary",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "the state's residents, per 100,000"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the rate per 100,000 residents",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the file's per-capita rate."
+   }
+  },
+  {
+   "id": "LS-337",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Motor vehicle thefts in Florida by year from 2015 to 2024",
+   "policy": [
+    "P01",
+    "P14",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Florida",
+       "state": "FL"
+      }
+     ],
+     "period": {
+      "from": "2015-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "motor vehicle theft",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives ten yearly totals from one source",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: one source for the whole span (P14)."
+   }
+  },
+  {
+   "id": "LS-338",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Violent crime in California in 2024",
+   "policy": [
+    "P01",
+    "P53",
+    "P63",
+    "D18"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "California",
+       "state": "CA"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "violent crime",
+       "unit": "victim (robbery by offense)"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the file's violent crime total, not a re-added sum",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the file's own violent total."
+   }
+  },
+  {
+   "id": "LS-339",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Did robberies go up in Georgia in 2025?",
+   "policy": [
+    "P01",
+    "P53",
+    "P54",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Georgia",
+       "state": "GA"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "change"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives both counts, the change and the percent change, with no adjectives",
+     "names the comparison year (2024)",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: 2024 against 2025 (P54)."
+   }
+  },
+  {
+   "id": "LS-340",
+   "group": "designed:inc5-partI-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Murder clearance rate in the US in 2023",
+   "policy": [
+    "P53",
+    "P57",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "murder cleared",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "murders, per 100"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the national murder clearance rate",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the historical clearances data (P57)."
+   }
+  },
+  {
+   "id": "LS-341",
+   "group": "designed:inc5-nibrs-sum",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Carjackings in Texas in 2024",
+   "policy": [
+    "P03",
+    "P53",
+    "P61",
+    "P63",
+    "D22"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "offers a button to show only agencies that reported every month of the period; clicking it keeps Texas, carjackings and 2024 and counts only the agencies that reported all 12 months (P61)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: every month any Texas agency reported, summed (P61)."
+   }
+  },
+  {
+   "id": "LS-342",
+   "group": "designed:inc5-nibrs-sum",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Carjackings in Texas in 2024, only agencies that reported every month",
+   "policy": [
+    "P61",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "agencies that reported every month of 2024"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "states how many agencies reported every month and what share of residents they cover",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: P61's consistent-reporters view (the button's question, typed)."
+   }
+  },
+  {
+   "id": "LS-343",
+   "group": "designed:inc5-nibrs-sum",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies with a gun in Georgia in 2024",
+   "policy": [
+    "P03",
+    "P31",
+    "P53",
+    "P61",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Georgia",
+       "state": "GA"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "weapon: firearm"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "offers a button to show only agencies that reported every month of the period (P61)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: a detail only NIBRS records."
+   }
+  },
+  {
+   "id": "LS-344",
+   "group": "designed:inc5-nibrs-sum",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults with a knife in the US in 2024",
+   "policy": [
+    "P03",
+    "P31",
+    "P53",
+    "P61",
+    "P63",
+    "D18"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "weapon: knife"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "offers a button to show only agencies that reported every month of the period (P61)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: a national NIBRS sum, by victim (D18)."
+   }
+  },
+  {
+   "id": "LS-345",
+   "group": "designed:inc5-nibrs-sum",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Shoplifting in Ohio by year from 2018 to 2024",
+   "policy": [
+    "D22",
+    "P03",
+    "P53",
+    "P61",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Ohio",
+       "state": "OH"
+      }
+     ],
+     "period": {
+      "from": "2018-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives each year's agencies counted and share of residents covered",
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "notes that participation changed over the years (P03)",
+     "offers a button to show only agencies that reported every month; clicking it keeps Ohio, shoplifting and 2018-2024 and counts one fixed set of agencies that reported every month of 2018 through 2024 (all 84 months), not a different set each year (P03, P61)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: a trend of a NIBRS detail (P03)."
+   }
+  },
+  {
+   "id": "LS-346",
+   "group": "designed:inc5-nibrs-sum",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies in Texas in 2024 according to NIBRS",
+   "policy": [
+    "P01",
+    "P53",
+    "P61",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "offers a button to show only agencies that reported every month of the period (P61)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the source asked for in words is used and labelled (P01), never replaced by the historical file."
+   }
+  },
+  {
+   "id": "LS-347",
+   "group": "designed:inc5-refuse",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assault clearance rate in Ohio in 2023",
+   "policy": [
+    "P18"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate.",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST DECLINE (P18)."
+   }
+  },
+  {
+   "id": "LS-348",
+   "group": "designed:inc5-route",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies in Texas this year",
+   "policy": [
+    "P01",
+    "P52",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "rule": "year to date through the latest reported month"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the months covered, through the latest reported month (P52)",
+     "says the current year is incomplete and which agencies the current source covers (P53)",
+     "ends with the source line \"Source: Crime Index.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "ROUTE: the current year goes to Current Trends (another source; the NIBRS shadow names the route and does not run it). A routing notice verifies the route only, not the values or statements of the other source."
+   }
+  },
+  {
+   "id": "LS-349",
+   "group": "designed:inc5-route",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Murders in the US by victim-offender relationship in 2023",
+   "policy": [
+    "P01",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "shr",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim-offender relationship"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says the Homicide Reports count only the homicides agencies reported to the SHR, not a complete national estimate (P53)",
+     "ends with the source line \"Source: FBI SHR.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "ROUTE: Homicide Reports (another source; not run by the NIBRS shadow). A routing notice verifies the route only, not the values or statements of the other source."
+   }
+  },
+  {
+   "id": "LS-350",
+   "group": "designed:inc5-refuse",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Carjacking clearance rate in Texas in 2024",
+   "policy": [
+    "P18",
+    "P57"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "There is no state clearance rate in the data (P18), and how to compute a clearance rate for a NIBRS-only offense is not yet decided (P57).",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST DECLINE."
+   }
+  },
+  {
+   "id": "LS-351",
+   "group": "designed:inc5-refuse",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies in Texas in 1955",
+   "policy": [
+    "D04",
+    "P14",
+    "P53"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "State figures in the data cover 1960 through 2025, so 1955 is outside them.",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST DECLINE: outside the historical file's years; no alternative is offered since the question names one year."
+   }
+  },
+  {
+   "id": "LS-352",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies in Texas by year from 1955 to 1965",
+   "policy": [
+    "D04",
+    "P14",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "1960-01",
+      "to": "1965-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says the data covers 1960 through 2025, so 1955 through 1959 are outside it (D04)",
+     "uses one source for every year shown, never another for the missing years (P14)",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER the covered part: 1960-1965, the missing years named."
+   }
+  },
+  {
+   "id": "LS-353",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Property crime in Arizona in 2023",
+   "policy": [
+    "D18",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Arizona",
+       "state": "AZ"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "property crime",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the file's property crime total, not a re-added sum",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the file's own property total, by offense."
+   }
+  },
+  {
+   "id": "LS-354",
+   "group": "designed:inc5-refuse",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Gun violence in Texas in 2024",
+   "policy": [
+    "P31",
+    "P53"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data has no counts of non-fatal shootings, so gun violence cannot be counted.",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST DECLINE (P31), as LS-302: never reinterpreted as gun crime summed over agencies."
+   }
+  },
+  {
+   "id": "LS-355",
+   "group": "designed:inc5-nibrs-rate",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Carjacking rate in Texas in 2024",
+   "policy": [
+    "P15",
+    "P53",
+    "P61",
+    "P62",
+    "P63",
+    "D22"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "residents of the reporting agencies (the sum of their FBI agency populations), per 100,000",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the rate per 100,000 residents of the reporting agencies (P15, P62)",
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "offers a button to show only agencies that reported every month of the period; clicking it keeps Texas, carjackings and 2024 and gives the rate over the agencies that reported all 12 months (P61, P62)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": "codex:inc5-labels-1",
+    "notes": "MUST ANSWER: the all-months sum over the summed populations of every reporting agency, partial reporters included and disclosed (Jeff 2026-10-30)."
+   }
   }
  ]
 }

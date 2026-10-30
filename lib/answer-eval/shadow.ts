@@ -16,7 +16,7 @@ import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
-import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type Release } from "./compare";
+import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type PlanView, type Release } from "./compare";
 import { RETURN_A } from "../nibrs-shadow/places";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
@@ -24,7 +24,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -41,7 +41,14 @@ export type ExpectedCell = { key: string; value: number | null; status: string; 
   /** A ranking's row: its place in the order (1 = first row). */
   position?: number;
   /** A ranking's agency left out under P60 (not a row): `value` is its months reported. */
-  leftOut?: boolean };
+  leftOut?: boolean;
+  /** Batch 8, the historical file: the column and row (uid) the value is read from (provenance, not just the number). */
+  column?: string; uid?: string;
+  /**
+   * Batch 8, a NIBRS state or national sum (P61): which view the cell belongs to (all reported months, the
+   * every-month set, their rates), or "meta" for the disclaimer's figures (key "agencies|<year>" and the like).
+   */
+  view?: "all" | "every" | "rate" | "every-rate" | "meta" };
 export type ExpectedValues = Map<string, ExpectedCell[]>;
 
 /**
@@ -55,6 +62,14 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   for (const f of files) {
     const v = JSON.parse(f.json) as { nibrsai_cases: string; grouping: string; measures: Record<string, string>; totals: Record<string, { status: string; value: number | null }>;
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
+    // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
+    const batch8 = srsCells(v as unknown as SrsFile) ?? stateSumCells(v as unknown as StateSumFile);
+    if (batch8) {
+      // A state sum's button (the every-month view) is checked under "<case>|button" with the same cells.
+      for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { out.set(m[0], batch8); out.set(`${m[0]}|button`, batch8); }
+      continue;
+    }
+    if (!v.measures) continue;   // a file of no form read here: no cells, never a crash
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
     const time = timeCells(v as unknown as TimeFile) ?? placesCells(v as unknown as PlacesFile);
@@ -107,6 +122,49 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
 type StatusValue = { status: string; value: number | null };
 type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
+/** Batch 8, the historical file: each value with its row (uid), year and column; a change carries its cells. */
+type SrsFile = { basis?: string; values?: { uid: string; year: number; column: string; value: string | null }[]; change?: { earlier: number; later: number; change: number; percent_change: number | null } };
+function srsCells(v: SrsFile): ExpectedCell[] | null {
+  if (v.basis !== "crime_index_snapshot" || !v.values) return null;
+  const vals = v.values.filter((x) => x.value !== null && x.value !== "");
+  if (v.change) {
+    const [e, l] = vals;
+    return [{ key: "earlier", value: v.change.earlier, status: "VALUE", column: e.column, uid: e.uid }, { key: "later", value: v.change.later, status: "VALUE", column: l.column, uid: l.uid },
+      { key: "change", value: v.change.change, status: "VALUE" }, { key: "pct_change", value: v.change.percent_change, status: v.change.percent_change === null ? "UNAVAILABLE" : "VALUE" }];
+  }
+  // The first value of a year is the answer's own column; later values of the same year are supporting evidence (a
+  // rate's total, a sum's parts), not cells.
+  const primary = vals.filter((x, i) => vals.findIndex((y) => y.year === x.year) === i);
+  return primary.map((x) => ({ key: primary.length > 1 ? String(x.year) : "", value: Number(x.value), status: "VALUE", column: x.column, uid: x.uid }));
+}
+/** Batch 8, NIBRS state and national sums (P61): read in stateSumCells, defined with the state-sum checks below. */
+type StateSumYearFile = { year: number; agencies_counted: number; partial_reporters: number; all_months_sum: number; every_month_agencies_sum: number;
+  rate_p62?: { rate: number }; every_month_rate?: { rate: number };
+  coverage: { any_month: { agencies: number; share: number }; every_month: { agencies: number; share: number } } };
+type StateSumFile = { basis?: string; by_year?: StateSumYearFile[];
+  consistent_reporters?: { agencies: number; by_year: { year: number; sum: number; share_of_crime_index_population: number }[] } };
+function stateSumCells(v: StateSumFile): ExpectedCell[] | null {
+  // Raw files, or canonical where nibrs-model checked the raw counts on a sample (V111, the nation).
+  if (!["raw", "canonical"].includes(v.basis ?? "") || !v.by_year?.length || v.by_year[0].all_months_sum === undefined) return null;
+  const many = v.by_year.length > 1;
+  const key = (y: number) => (many ? String(y) : "");
+  const out: ExpectedCell[] = [];
+  for (const y of v.by_year) {
+    // The every-month set: one fixed set over a span of years (the file's consistent_reporters), else the year's own.
+    const cr = v.consistent_reporters?.by_year.find((x) => x.year === y.year);
+    out.push({ key: key(y.year), value: y.all_months_sum, status: "VALUE", view: "all" },
+      { key: key(y.year), value: cr ? cr.sum : y.every_month_agencies_sum, status: "VALUE", view: "every" },
+      { key: `agencies|${y.year}`, value: y.coverage.any_month.agencies, status: "VALUE", view: "meta" },
+      { key: `partial|${y.year}`, value: y.partial_reporters, status: "VALUE", view: "meta" },
+      { key: `share|${y.year}`, value: y.coverage.any_month.share, status: "VALUE", view: "meta" },
+      { key: `every-agencies|${y.year}`, value: v.consistent_reporters ? v.consistent_reporters.agencies : y.coverage.every_month.agencies, status: "VALUE", view: "meta" },
+      { key: `every-share|${y.year}`, value: cr ? cr.share_of_crime_index_population : y.coverage.every_month.share, status: "VALUE", view: "meta" });
+    if (!many && y.rate_p62) out.push({ key: "", value: y.rate_p62.rate, status: "VALUE", view: "rate" });
+    if (!many && y.every_month_rate) out.push({ key: "", value: y.every_month_rate.rate, status: "VALUE", view: "every-rate" });
+  }
+  return out;
+}
+
 type PlacesFile = { grouping: string; agencies?: PlacesAgency[]; years?: PlacesAgency[]; combined_total?: StatusValue; combined_rate?: StatusValue;
   left_out_months_unknown?: { ori?: string; agency_name: string | null; months_reported: string[] }[];
   ranked_by?: "count" | "rate"; result?: { ori?: string; agency_name: string | null; count: number; rate: number | null; position: number }[] };
@@ -179,6 +237,8 @@ const LABEL_REASON: [RegExp, string][] = [
   // P45, P31: terms the data does not define, and counts it does not hold.
   [/not a term the data defines|non-fatal shootings/i, "not_recorded_in_nibrs"],
   [/cannot predict|predict/i, "forecast"], [/is not in the data/i, "outside_release_coverage"], [/cause/i, "explanation_requested"],
+  // Increment 5: no state clearance rate (P18); years outside the historical file (D04, P14).
+  [/no state clearance rate/i, "not_recorded_in_nibrs"], [/figures in the data cover \d{4} through \d{4}|outside them/i, "outside_release_coverage"],
 ];
 const reasonClass = (s: string) => LABEL_REASON.find(([re]) => re.test(s))?.[1] ?? null;
 /** The answered plan as a meaning; a set of years keeps its years (through the answer's end when clipped). */
@@ -227,7 +287,7 @@ function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<
  */
 /** A rate's column says per 100,000 residents. */
 const rateHeader = (o: Extract<ShadowOutcome, { kind: "answer" }>) =>
-  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000 residents$/.test(c.header));
+  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000 residents(?: of the reporting agencies)?$/.test(c.header));
 
 function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean {
   const cols = comparisonCells(o);
@@ -329,6 +389,37 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const cols = o.delivered.table.columns.map((c, i) => (c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") ? i : -1)).filter((i) => i >= 0);
       ok = cols.length > 0 && o.delivered.table.rows.every((r) => cols.every((i) => typeof r[i] === "string" && r[i] !== ""));
     }
+    // Increment 5: P63's source line, and P61's disclaimer and button on a state or national sum.
+    else if (/^ends with the source line "(.+?)"/.test(s)) { const want = /^ends with the source line "(.+?)"/.exec(s)![1]; ok = text[text.length - 1] === want && text.filter((t) => /^Source: /.test(t)).length === 1; }
+    else if (/^states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included/.test(s)) {
+      // Each figure read from its own place in the sentence (Codex increment-5 review 2.9: never a substring search, where
+      // "14 agencies" would pass for 4), against what the answer computed; and that partial reporters are included.
+      const n = (x: string) => Number(x.replace(/,/g, ""));
+      const ys = o.stateSum?.years ?? [];
+      if (ys.length === 1) {
+        const m = /^([\d,]+) agencies reported at least one month of .+?, covering (?:at least )?([\d.]+)% of .+?; ([\d,]+) of them reported only some months and are included\. ([\d,]+) reported every month \((?:at least )?([\d.]+)% of /.exec(text.find((t) => / agencies reported at least one month of /.test(t)) ?? "");
+        const y = ys[0];
+        ok = !!m && n(m[1]) === y.agencies && Number(m[2]) === y.share && n(m[3]) === y.partial && n(m[4]) === y.every.agencies && Number(m[5]) === y.every.share;
+      } else {
+        const line = text.find((t) => /^Agencies counted and share of /.test(t)) ?? "";
+        ok = ys.length > 1 && /Agencies reporting only some months are included\.$/.test(line) && ys.every((y) => {
+          const m = new RegExp(`(?:: |; )${y.year} ([\\d,]+) \\((?:at least )?([\\d.]+)%, ([\\d,]+) reporting only some months\\)`).exec(line);
+          return !!m && n(m[1]) === y.agencies && Number(m[2]) === y.share && n(m[3]) === y.partial;
+        });
+      }
+    } else if (/^offers a button to show only agencies that reported every month/.test(s)) {
+      // Clicked: the same place, crime, filters and period, counting only the every-month set (one fixed set over years).
+      const b = (o.buttons ?? []).find((x) => /only agencies that reported every month/i.test(x.label))?.continuation;
+      const same = (p: NibrsPlan) => JSON.stringify([p.geography, p.measures, p.filters, p.period, p.groupings, p.statistics]) === JSON.stringify([o.plan.geography, o.plan.measures, o.plan.filters, o.plan.period, o.plan.groupings, o.plan.statistics]);
+      ok = !!b && b.kind === "answer" && b.plan.coverage.cohort === "same_agencies" && same(b.plan) && !!b.stateSum && b.delivered.table.rows.length === o.delivered.table.rows.length
+        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} agencies that reported every month of`).test(b.delivered.text[0] ?? ""));
+    } else if (/^states how many agencies reported every month and what share of residents they cover/.test(s))
+      ok = o.plan.coverage.cohort === "same_agencies" && !!o.stateSum && o.stateSum.years.every((y) => all.includes(y.every.agencies.toLocaleString("en-US")) && all.includes(`${y.every.share.toFixed(1)}%`));
+    else if (/^gives each year's agencies counted and share of residents covered/.test(s))
+      ok = !!o.stateSum && o.stateSum.years.length > 1 && o.stateSum.years.every((y) => all.includes(`${y.year} ${y.agencies.toLocaleString("en-US")} (${y.share.toFixed(1)}%`));
+    else if (/^notes that participation changed over the years/.test(s)) ok = /Which agencies report changed over these years/.test(all);
+    else if (/^gives the rate per 100,000 residents of the reporting agencies/.test(s))
+      ok = rateHeader(o) && /per 100,000 residents of the reporting agencies/.test(o.delivered.table.columns.at(-1)?.header ?? "") && /^The rate is the sum per 100,000 residents of the agencies counted: [\d,]+ residents/m.test(text.join("\n"));
     // Increment 4: several agencies, combined totals, rates and rankings.
     else if (/^gives one total of both agencies/.test(s)) {
       // One known number of the plan's distinct agencies, said as combined.
@@ -428,6 +519,7 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   const leftOut = (expected0 ?? []).filter((x) => x.leftOut);
   const expected = expected0?.filter((x) => !x.leftOut);
   if (!expected) return { values: "not measured", diffs: [{ field: `${prefix}values`, expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
+  if (expected.some((x) => x.view)) return stateSumDiffs(prefix, o, expected);
   // A change: each output cell (earlier, later, change, percent change) against its expected cell, value and status.
   const cmpCells = comparisonCells(o);
   if (cmpCells) {
@@ -547,7 +639,13 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
  * without a meaning: its values where given, its contract and its text, and it stays unverified.
  */
 function walkAnswers(prefix: string, key: string, o: ShadowOutcome, r: Release, ev: ExpectedValues | undefined, ctx: Walk): Check {
-  if (o.kind === "answer") return ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
+  if (o.kind === "answer") {
+    // An answer's own buttons (P61's consistent-reporters view) are answers too: clicked and checked, values under
+    // `<case>|button`.
+    const own = ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
+    return (o.buttons ?? []).reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}button "${x.label}" `, `${key}|button`, x.continuation, r, ev, ctx)) : acc), own);
+  }
+  if (o.kind === "srs" || o.kind === "route") return none();
   if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}option "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev, ctx)) : acc), none());
   return o.alternative?.continuation ? walkAnswers(`${prefix}alternative `, `${key}|alternative`, o.alternative.continuation, r, ev, ctx) : none();
 }
@@ -570,6 +668,8 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   const c = got.continuation!;
   if (c.kind === "decline" && c.notBuilt) return one(d("", wantLeads, "refused: this build does not hold the months (not built)", "unverified"));
   if (c.kind === "decline" && /^Not in the slice yet/.test(c.explanation)) return one(d("", wantLeads, c.explanation, "unverified"));
+  // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
+  if (c.kind === "srs" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
   if (wantLeads === "answer") {
     if (c.kind !== "answer") return one(d("", "answer", `${c.kind}: ${c.kind === "decline" ? c.explanation.slice(0, 160) : c.about}`, "material"));
     return deliveredCheck(prefix, key, c, want, r, ev, ctx);
@@ -581,6 +681,7 @@ export type ShadowScore = { result: CaseResult | null; excluded?: string };
 
 export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capability: string; era: string }, expectedValues?: ExpectedValues): ShadowScore {
   const e = c.expected!;
+  if (o.kind === "srs" || o.kind === "route") return { result: scoreOther(c, o, r, ctx, expectedValues) };
   const actual: ActualAction = o.kind;
   const notes: string[] = [];
   let diffs: Diff[] = [];
@@ -600,6 +701,12 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
     if (v.diffs.some((x) => x.kind === "unverified")) unverifiedAnswers++;
     if (o.delivered.contractProblems.length) diffs.push({ field: "answer contract", expected: "no problems", actual: o.delivered.contractProblems.join("; "), kind: "material" });
     notes.push(`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`);
+    // P61's button: the label's own question over the every-month set, checked as an answer (values "<case>|button").
+    for (const b of o.buttons ?? []) if (b.continuation?.kind === "answer" && /only agencies that reported every month/i.test(b.label)) {
+      walk.checked.add(b.continuation);
+      const want: Meaning = { ...e.meaning, cohort: "same_agencies", filters: [...e.meaning.filters, "agencies that reported every month of the period"] };
+      take(deliveredCheck(`button "${b.label}" `, `${c.id}|button`, b.continuation, want, r, expectedValues, walk));
+    }
   }
   if (e.action === "clarify" && o.kind === "clarify") {
     for (const want of e.options) {
@@ -637,4 +744,128 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
   if (values === "mismatch" || wrongBehindButton) outcome = "wrong_answer";
   return { result: { id: c.id, split: c.split, expected: e.action, actual, outcome, diffs, notes, capability: ctx.capability, era: ctx.era, ...(values ? { values } : {}),
     ...(unverifiedAnswers ? { unverifiedAnswers } : {}) } };
+}
+
+/* ------------------------------------------------------------------ increment 5: the historical file and routes ---- */
+
+type SrsOutcome = Extract<ShadowOutcome, { kind: "srs" }>;
+/** A historical-file answer as the comparator's view: its own meaning (it has no NIBRS plan). */
+function srsView(o: SrsOutcome): PlanView {
+  const m = o.meaning;
+  const p = m.period as { from: string; to: string };
+  return {
+    meaning: { ...m, denominator: undefined }, measures: m.measures.map((x) => ({ ...x, role: "value" as const })), filterKeys: [], statistics: [m.statistic],
+    years: null, yearsThrough: null, rank: null, denominator: null, untracked: [],
+    comparison: m.statistic === "change" ? { earlier: { from: p.from, to: `${p.from.slice(0, 4)}-12` }, later: { from: `${p.to.slice(0, 4)}-01`, to: p.to } } : null,
+  };
+}
+/** The required statements a historical-file answer can show: each checked on its text, table and what it read. */
+function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: SrsOutcome): Diff[] {
+  const out: Diff[] = [];
+  const text = o.delivered.text, all = text.join(" "), rows = o.delivered.table.rows;
+  for (const s of e.statements) {
+    let ok: boolean | null = null;
+    const src = /^ends with the source line "(.+?)"/.exec(s);
+    const st = /^names the state \((.+)\)$/.exec(s);
+    if (src) ok = text[text.length - 1] === src[1] && text.filter((t) => /^Source: /.test(t)).length === 1;
+    else if (st) ok = (text[0] ?? "").startsWith(`${st[1]}:`);
+    else if (/^gives the rate per 100,000 residents/.test(s)) ok = /_capita$/.test(o.read.column) && all.includes("per 100,000 residents");
+    else if (/^gives (\w+) yearly totals from one source/.test(s)) ok = rows.length === ({ ten: 10 } as Record<string, number>)[/^gives (\w+)/.exec(s)![1]] && /_total$/.test(o.read.column);
+    // Provenance (Codex label review): the file's own aggregate column, read as given, never its parts re-added.
+    else if (/^gives the file's (violent|property) crime total, not a re-added sum/.test(s)) ok = o.read.column === `${/(violent|property)/.exec(s)![1]}_total` && o.read.uids.length === 1;
+    else if (/^gives both counts, the change and the percent change, with no adjectives/.test(s)) {
+      const [ev, lv, ch, pc] = rows[0] as (number | null)[];
+      const f = (n: number) => n.toLocaleString("en-US");
+      const line = `${f(ev!)} in ${o.period.from.slice(0, 4)} and ${f(lv!)} in ${o.period.to.slice(0, 4)}: a change of ${ch! > 0 ? "+" : ch! < 0 ? "-" : ""}${ch === 0 ? "0" : f(Math.abs(ch!))}${pc !== null ? ` (${pc > 0 ? "+" : ""}${pc}%)` : ""}.`;
+      ok = [ev, lv, ch].every((x) => typeof x === "number") && text.includes(line) && !ADJECTIVES.test(all);
+    } else if (/^names the comparison year \((\d{4})\)$/.test(s)) ok = new RegExp(`\\b${/\((\d{4})\)/.exec(s)![1]}\\b`).test(text[0] ?? "");
+    else if (/^gives the national (\w+) clearance rate$/.test(s)) ok = /_cleared_rate$/.test(o.read.column) && /% of .+ were cleared in \d{4}\.$/.test(text[0] ?? "");
+    else if (/^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4}) are outside it/.test(s)) {
+      const [, a, b, c, d] = /^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4})/.exec(s)!;
+      ok = text.some((t) => t.includes(`cover ${a} through ${b}`) && t.includes(`${c} through ${d} are outside`));
+    } else if (/^uses one source for every year shown/.test(s)) ok = rows.every((r) => Number(r[0]) >= 1960) && /_total$/.test(o.read.column);
+    if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
+    else if (!ok) out.push({ field: "statement", expected: s, actual: all.slice(0, 200), kind: "material" });
+  }
+  return out;
+}
+/** A historical-file answer's cells against the file's own values: the number, and the column and row it came from. */
+function srsValueDiffs(o: SrsOutcome, expected: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+  if (!expected) return { values: "not measured", diffs: [{ field: "values", expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
+  const diffs: Diff[] = [];
+  const rows = o.delivered.table.rows;
+  const isChange = expected.some((x) => x.key === "pct_change");
+  const got = (k: string): number | null | undefined => isChange ? (rows[0] as (number | null)[])[["earlier", "later", "change", "pct_change"].indexOf(k)]
+    : k === "" ? (rows.length === 1 && rows[0].length === 1 ? (rows[0][0] as number) : undefined) : (rows.find((r) => r[0] === k)?.[1] as number | null | undefined);
+  if (!isChange && rows.length !== expected.length) diffs.push({ field: "values", expected: `${expected.length} cells`, actual: `${rows.length} rows`, kind: "material" });
+  for (const x of expected) {
+    const g = got(x.key);
+    if (g !== x.value) diffs.push({ field: `value ${x.key || "total"}`, expected: String(x.value), actual: String(g), kind: "material" });
+    if (x.column && x.column !== o.read.column) diffs.push({ field: `column ${x.key || "total"}`, expected: x.column, actual: o.read.column, kind: "material" });
+    if (x.uid && !o.read.uids.includes(x.uid)) diffs.push({ field: `row ${x.key || "total"}`, expected: x.uid, actual: o.read.uids.join(", "), kind: "material" });
+  }
+  return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : "match" };
+}
+/**
+ * A historical-file answer or a route, scored as an answer. A route verifies the routing only (Codex label review): the
+ * other source's values and statements are not run here, so a right route is unverified, never correct.
+ */
+function scoreOther(c: Case, o: SrsOutcome | Extract<ShadowOutcome, { kind: "route" }>, r: Release, ctx: { capability: string; era: string }, ev?: ExpectedValues): CaseResult {
+  const e = c.expected!;
+  const notes: string[] = [];
+  let diffs: Diff[] = [];
+  let values: Values | undefined;
+  if (o.kind === "route") {
+    notes.push(`routed to ${o.source}: ${o.explanation.slice(0, 200)}`);
+    if (e.action === "answer") diffs = [e.meaning.source === o.source
+      ? { field: "route", expected: `${e.meaning.source} answer`, actual: `routed to ${o.source}: not run by this NIBRS shadow`, kind: "unverified" }
+      : { field: "source", expected: e.meaning.source, actual: o.source, kind: "material" }];
+  } else {
+    notes.push(`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`);
+    if (e.action === "answer") {
+      // The denominator is compared below, as words (the comparator's mapping is for NIBRS plans).
+      diffs = [...compareMeaning({ ...e.meaning, denominator: undefined }, srsView(o), r), ...srsStatementDiffs(e, o)];
+      if (e.meaning.denominator !== undefined && e.meaning.denominator !== o.meaning.denominator)
+        diffs.push({ field: "denominator", expected: e.meaning.denominator, actual: o.meaning.denominator ?? "(none)", kind: "material" });
+      const v = srsValueDiffs(o, ev?.get(c.id));
+      diffs.push(...v.diffs); values = v.values;
+    }
+  }
+  const material = diffs.filter((x) => x.kind === "material").length, unverified = diffs.filter((x) => x.kind === "unverified").length;
+  let outcome: Outcome = outcomeOf(e.action, "answer", { material, unverified, structured: true, alternativeMissing: false });
+  if (values === "mismatch") outcome = "wrong_answer";
+  return { id: c.id, split: c.split, expected: e.action, actual: "answer", outcome, diffs, notes, capability: ctx.capability, era: ctx.era, ...(values ? { values } : {}) };
+}
+
+/* ------------------------------------------------------------------ increment 5: NIBRS state and national sums ----- */
+
+/**
+ * A state or national sum (P61) against nibrs-model's file: the view the answer shows (every reported month, or the
+ * every-month set its button gives; or either's rate, P62), each row, and the disclaimer's figures the answer carries
+ * (agencies counted, partial reporters, coverage, the every-month set) per year.
+ */
+function stateSumDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[]): { diffs: Diff[]; values: Values } {
+  const every = o.plan.coverage.cohort === "same_agencies";
+  const isRate = o.plan.statistics[0].kind === "rate";
+  const view = isRate ? (every ? "every-rate" : "rate") : every ? "every" : "all";
+  const want = expected.filter((x) => x.view === view);
+  const diffs: Diff[] = [];
+  const rows = o.delivered.table.rows;
+  const keyOf = (r: (string | number | null)[]) => (r.length > 1 ? String(r[0]) : "");
+  if (!want.length) diffs.push({ field: `${prefix}values`, expected: `a ${view} figure`, actual: "none in the independent file", kind: "unverified" });
+  if (want.length && rows.length !== want.length) diffs.push({ field: `${prefix}values`, expected: `${want.length} cells`, actual: `${rows.length} rows`, kind: "material" });
+  for (const x of want) {
+    const r = rows.find((row) => keyOf(row) === x.key);
+    const g = r ? r[r.length - 1] : undefined;
+    if (g !== x.value) diffs.push({ field: `${prefix}value ${x.key || "total"} (${view})`, expected: String(x.value), actual: String(g), kind: "material" });
+  }
+  const meta = o.stateSum;
+  if (!meta) diffs.push({ field: `${prefix}coverage`, expected: "the disclaimer's figures", actual: "none carried", kind: "material" });
+  else for (const x of expected.filter((c) => c.view === "meta")) {
+    const [what, y] = x.key.split("|");
+    const yr = meta.years.find((m) => m.year === Number(y));
+    const got = !yr ? undefined : what === "agencies" ? yr.agencies : what === "partial" ? yr.partial : what === "share" ? yr.share : what === "every-agencies" ? yr.every.agencies : yr.every.share;
+    if (got !== x.value) diffs.push({ field: `${prefix}${what} ${y}`, expected: String(x.value), actual: String(got), kind: "material" });
+  }
+  return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }

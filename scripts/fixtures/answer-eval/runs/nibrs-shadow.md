@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 333 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 355 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 129: run by this candidate
+- 151: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 279: scorable (reviewed, decided policy)
+- 301: scorable (reviewed, decided policy)
 - 54: label unresolved
 
 ## Refused as not built (not scored)
@@ -36,7 +36,7 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer:nibrs count | 2021 and later | 10 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (10/10)); direct answers: not measured (90% verified, 1 unverified); numeric fixtures: not measured (9/10 match, 1 not measured) |
 | clarify:historical count | 2021 and later | 1 | not measured | wrong answers: pass (0); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: pass (0); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: pass (5/5 match) |
+| clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
 | clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: pass (0); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
 | decline:nibrs count | 2021 and later | 2 | not measured | wrong answers: not measured (0, 1 answers unverified); declines: not measured (1/2 verified correct, 1 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/2 match, 1 not measured) |
 | decline:nibrs count | spans 2021 | 1 | not measured | wrong answers: pass (0); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -45,7 +45,9 @@ Expected (rows) by actual (columns):
 Discrepancies and unverified cases:
 
 - **LS-232** (unverified; expected clarify, got clarify) "How many shoplifting offenses were there in 2024?"
-  - unverified option "The United States" : expected `answer`, got `Not in the slice yet: state and national totals come later.`
+  - unverified option "The United States" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "The United States" button "Show only agencies that reported every month" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
+  - unverified option "The United States" button "Show only agencies that reported every month" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which place: The United States | A state | A city or agency
 - **LS-234** (unverified; expected clarify, got clarify) "Carjackings in Memphis by month"
   - unverified option "The last 10 complete years" : expected `answer`, got `refused: this build does not hold the months (not built)`
@@ -63,41 +65,51 @@ Discrepancies and unverified cases:
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-241** (unverified; expected answer, got answer) "Shoplifting arrests in Memphis in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI Natio
+  - delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS
 - **LS-243** (unverified; expected clarify, got clarify) "Shoplifting in Washington in 2024"
-  - unverified option "Washington state" : expected `answer`, got `Not in the slice yet: state and national totals come later.`
+  - unverified option "Washington state" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "Washington state" button "Show only agencies that reported every month" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
+  - unverified option "Washington state" button "Show only agencies that reported every month" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which Washington: Washington, D.C. | Washington state | Washington County, Oregon | Washington County, Maryland
 
 ### Held out
 
-92 cases. Correct 79; unverified 7; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+114 cases. Correct 99; unverified 9; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 74 | 0 | 4 | 0 |
+| answer | 92 | 0 | 4 | 0 |
 | clarify | 0 | 3 | 2 | 0 |
-| decline | 0 | 0 | 9 | 0 |
+| decline | 0 | 0 | 13 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
-| answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
+| answer:historical change | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:historical count | 2021 and later | 5 | fail | wrong answers: pass (0); initial action: fail (80% (4/5)); direct answers: fail (80% (0 unverified)); numeric fixtures: pass (4/4 match) |
+| answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:historical rate | 2021 and later | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
-| answer:nibrs count | 2021 and later | 57 | fail | wrong answers: pass (0); initial action: fail (95% (54/57)); direct answers: fail (95% (0 unverified)); numeric fixtures: pass (54/54 match) |
-| answer:nibrs count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:nibrs rate | 2021 and later | 9 | pass | wrong answers: pass (0); initial action: pass (100% (9/9)); direct answers: pass (100%); numeric fixtures: pass (9/9 match) |
+| answer:nibrs count | 2021 and later | 62 | pass | wrong answers: pass (0); initial action: pass (95% (59/62)); direct answers: pass (95%); numeric fixtures: pass (59/59 match) |
+| answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
+| answer:nibrs rate | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
+| answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
+| answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
+| clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/3 match, 1 not measured) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | 2021 and later | 3 | not measured | wrong answers: not measured (0, 2 answers unverified); declines: not measured (1/3 verified correct, 2 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/3 match, 2 not measured) |
 | decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: pass (0); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| decline:no meaning | no period | 2 | not measured | wrong answers: pass (0); declines: pass (2/2 verified correct); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 6 | not measured | wrong answers: pass (0); declines: pass (6/6 verified correct); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
 - **LS-245** (unverified; expected clarify, got clarify) "Shoplifting in New York in 2024"
-  - unverified option "New York state" : expected `answer`, got `Not in the slice yet: state and national totals come later.`
+  - unverified option "New York state" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "New York state" button "Show only agencies that reported every month" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
+  - unverified option "New York state" button "Show only agencies that reported every month" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which New York: New York City | New York state
 - **LS-260** (unverified; expected decline, got decline) "Will shoplifting rise in Denver next year?"
   - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
@@ -129,6 +141,12 @@ Discrepancies and unverified cases:
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
+- **LS-348** (unverified; expected answer, got answer) "Robberies in Texas this year"
+  - unverified route: expected `rtci answer`, got `routed to rtci: not run by this NIBRS shadow`
+  - routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends.
+- **LS-349** (unverified; expected answer, got answer) "Murders in the US by victim-offender relationship in 2023"
+  - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
+  - routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run H
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 

@@ -86,8 +86,11 @@ export const fmt = (n: number) => n.toLocaleString("en-US");
 const GROUPING_HEADER: Record<string, string> = { "time.month": "Month", "time.year": "Year" };
 const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "UNAVAILABLE"];
 
-export const SOURCE_STATEMENT = (release: string) =>
-  `Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release ${release}.`;
+// P63 (Jeff 2026-10-30): the source line names the source plainly. The release stays in the outcome's metadata (the
+// caller's deps.release), not in the text.
+export const SOURCE_STATEMENT = (_release: string) => "Source: FBI NIBRS.";
+/** P63's line for the FBI's Summary Reporting System figures (the Crime Index historical file). */
+export const SRS_SOURCE = "Source: FBI SRS.";
 
 const SEX = { F: "Female", M: "Male", U: "Unknown", X: "Non-binary" };
 /**

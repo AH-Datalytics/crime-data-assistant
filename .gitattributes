@@ -69,3 +69,6 @@ docs/superpowers/2026-09-06-correctness-gold-set-v7.json -text
 
 # Word documents are binary (the answer policy, docs/policy/*.docx).
 *.docx binary
+
+# The Crime Index snapshot files are byte-hashed against nibrs-model's manifest (scripts/build-crimeindex-fixture.py).
+scripts/fixtures/nibrs-shadow/crimeindex/** -text

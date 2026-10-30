@@ -50,7 +50,13 @@ export type Span = { from: string; to: string };
 /** A change between two periods (the shadow attaches it as a period_comparison). `matched`: the same months each year. */
 export type Comparison = { earlier: Span; later: Span; matched: boolean };
 export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
-  undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean };
+  undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
+  /** "According to NIBRS": the source asked for in words is used and labelled (P01). */
+  nibrsAsked: boolean;
+  /** "Only agencies that reported every month": P61's consistent-reporters view. */
+  consistent: boolean;
+  /** Murders by a Homicide Report detail (the victim-offender relationship): Homicide Reports' (P53). */
+  shrDetail: boolean };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 const PHRASES: [RegExp, string][] = [
@@ -205,8 +211,16 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // "Combined" is the flag's (one total of the named agencies); the reader is not asked to apply it.
   const combined = /\b(?:combined|together|altogether)\b/i.test(own);
   if (combined) text = text.replace(/\s*\b(?:combined|together|altogether)\b/gi, "");
-  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities };
-  const ledger = Object.assign(readings.length || combined ? accountNibrsRequest(text) : first, flags);
+  // Increment 5: words that choose a source or a cohort are flags, and the reader is not asked to apply them.
+  const NIBRS_ASKED = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
+  const nibrsAsked = NIBRS_ASKED.test(own);
+  if (nibrsAsked) text = text.replace(NIBRS_ASKED, "");
+  const CONSISTENT = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters)\b/i;
+  const consistent = CONSISTENT.test(own);
+  if (consistent) text = text.replace(CONSISTENT, "");
+  const shrDetail = /\b(?:murders?|homicides?)\b/i.test(own) && /\bvictim[-\s]offender\s+relationships?\b/i.test(own);
+  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail };
+  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 
