@@ -142,6 +142,15 @@ function placeKey(p: { kind: string; name: string; state?: string }): string {
   return `local:${p.state ?? ""}:${name}`;
 }
 
+/**
+ * The FBI's name for an ORI when a label's agency name is that same agency in other words ("Portland Police Bureau"
+ * is the FBI's "Portland Police Department"): the names agree once the words for police and agency are set aside.
+ */
+export function fbiNameFor(labelName: string, ori: string): string | null {
+  const fbi = fbiNames().get(ori);
+  return fbi && placeKey({ kind: "agency", name: fbi }) === placeKey({ kind: "agency", name: labelName }) ? fbi : null;
+}
+
 /* ------------------------------------------------------------------ plan -> meaning --------------------------------- */
 
 /** What a plan says, in the comparator's terms (not all of it fits the label schema; extra parts travel alongside). */

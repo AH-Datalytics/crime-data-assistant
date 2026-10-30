@@ -47,7 +47,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const floor = set.where.find((w) => w.field === "agency.population" && w.op === ">=");
     const lastYear = years[years.length - 1];
     const rows = deps.execute(agencyPopulationSql(root, { state: set.within.code, city: true }, [lastYear]));
-    agencies = rows.map((r) => { const name = agencyName(deps.places, String(r[0]), r[3] ? String(r[3]) : null); return { ori: String(r[0]), label: name, name, population: r[2] === null ? null : Number(r[2]) }; })
+    agencies = rows.map((r) => { const name = agencyName(deps.places, String(r[0])); return { ori: String(r[0]), label: name, name, population: r[2] === null ? null : Number(r[2]) }; })
       .filter((a) => !floor || (a.population ?? 0) >= Number(floor.value));
   } else {
     agencies = plan.geography.places.map((p) => (p.kind === "agency" ? { ori: p.ori, label: p.label, name: agencyName(deps.places, p.ori), population: null } : { ori: "", label: "", name: "", population: null }));

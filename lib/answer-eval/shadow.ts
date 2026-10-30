@@ -16,7 +16,7 @@ import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
-import { compareMeaning, planToMeaning, type Diff, type Release } from "./compare";
+import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type Release } from "./compare";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
 /** The slice: its designed group, the replay cases inside it, and replay cases next to it (action and reason only). */
@@ -103,17 +103,17 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
 type StatusValue = { status: string; value: number | null };
-type PlacesAgency = { agency_name: string | null; bh_city?: string; population_year?: number; total: StatusValue; rate: StatusValue };
+type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
 type PlacesFile = { grouping: string; agencies?: PlacesAgency[]; years?: PlacesAgency[]; combined_total?: StatusValue; combined_rate?: StatusValue;
-  ranked_by?: "count" | "rate"; result?: { agency_name: string | null; bh_city?: string; count: number; rate: number | null; position: number }[] };
+  ranked_by?: "count" | "rate"; result?: { ori?: string; agency_name: string | null; count: number; rate: number | null; position: number }[] };
 /**
  * Batch 7 (increment 4): several agencies, combined totals, rates and rankings. Rows are keyed as the answer shows
  * them: an agency by its FBI name, a year, or "" for one value. A ranking's cells carry their position. Null for any
  * other file.
  */
 function placesCells(v: PlacesFile): ExpectedCell[] | null {
-  // No FBI name: the build's city, in the answer's title case.
-  const name = (a: { agency_name: string | null; bh_city?: string }) => a.agency_name ?? (a.bh_city ?? "").toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  // No FBI name: the ORI, as the answer shows it (never the build's mailing city).
+  const name = (a: { agency_name: string | null; ori?: string }) => a.agency_name ?? a.ori ?? "";
   switch (v.grouping) {
     case "per_agency": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.total) }));
     case "per_agency_rate": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.rate) }));
@@ -250,7 +250,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     let ok: boolean | null = null;
     const ag = /^names the agency \((.+)\)$/.exec(s);
     // The agency by its FBI name, as the answer's "Reported by" line gives it (Jeff 2026-10-30).
-    if (ag) ok = all.includes(ag[1]);
+    // The FBI's name may put the label's agency in other words ("Portland Police Bureau" is its "Portland Police
+    // Department"): either is accepted for an agency the plan names.
+    if (ag) ok = all.includes(ag[1]) || o.plan.geography.places.some((p) => p.kind === "agency" && (() => { const f = fbiNameFor(ag[1], p.ori); return !!f && all.includes(f); })());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
     else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
     else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|No total is established for/.test(all);

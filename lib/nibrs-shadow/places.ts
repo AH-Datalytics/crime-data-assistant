@@ -62,14 +62,15 @@ export function loadPlaceIndex(file = path.join(__dirname, "../../scripts/fixtur
 
 /**
  * Who reported the figures: the agency's FBI name (Jeff 2026-10-30: "Reported by the Denver Police Department"), never
- * one built from a city and a type. Without one, the build's city (nibrs-model's fallback), else the ORI.
+ * one built from a city and a type, nor the build's city (a mailing city, so possibly another agency's). Without one,
+ * the ORI.
  */
-export function agencyName(idx: PlaceIndex, ori: string, city?: string | null): string {
-  return idx.names.get(ori) ?? (city ? city.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase()) : ori);
+export function agencyName(idx: PlaceIndex, ori: string): string {
+  return idx.names.get(ori) ?? ori;
 }
 /** "Reported by the Denver Police Department." / "... the Tulsa Police Department and the Oklahoma City Police Department." */
 export function reportedBy(names: string[]): string {
-  const the = names.map((n) => (/^[A-Z]{2}[A-Z0-9]{7}$/.test(n) ? `agency ${n} (the FBI publishes no name for it)` : `the ${n}`));
+  const the = names.map((n) => (/^[A-Z]{2}[A-Z0-9]{7}$/.test(n) ? `agency ${n} (no FBI name in the archived sources)` : `the ${n}`));
   return `Reported by ${the.length > 2 ? `${the.slice(0, -1).join(", ")} and ${the[the.length - 1]}` : the.join(" and ")}.`;
 }
 

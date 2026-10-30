@@ -5,8 +5,8 @@
 
 The names are nibrs-model's reference/agency-names/agency-names.csv on its main branch (read with git show, never from
 a work tree): the FBI Crime Data Explorer agency directory (retrieved 2026-10-29), then the CDE participation download
-(2026-10-29), each archived by SHA-256 on B2. An ORI neither names has no entry (the engine then falls back to the
-build's city, as nibrs-model's ranking values do). Never built from a city and an agency type (Jeff 2026-10-30): the
+(2026-10-29), each archived by SHA-256 on B2. An ORI neither names has no entry (the engine then shows the ORI;
+never the build's city). Never built from a city and an agency type (Jeff 2026-10-30): the
 build's city is a mailing city (OH0311100 says CINCINNATI and is the Fairfax Police Department).
 """
 import argparse
