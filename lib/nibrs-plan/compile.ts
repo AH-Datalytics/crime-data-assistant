@@ -62,8 +62,13 @@ export type CompiledQuery = {
 };
 export type CompileResult = { kind: "query"; query: CompiledQuery } | { kind: "unsupported"; reason: string };
 
-/** Canonical table location: `<root>/<table>/data_year=<y>/data.parquet`. */
-export type CompileTarget = { root: string; builtYears: number[] };
+/**
+ * Canonical table location: `<root>/<table>/data_year=<y>/data.parquet`. `agencies` (increment 4): compile the plan's
+ * measure for each of these ORIs as a monthly grid (columns ori, period, count, status), whatever the plan's geography
+ * names (several agencies, combined, or a state's agencies). Totals, combined sums, rates and rankings are rolled from
+ * the grid (lib/nibrs-plan/transforms.ts), so each agency-month keeps its own status (D6).
+ */
+export type CompileTarget = { root: string; builtYears: number[]; agencies?: string[] };
 
 const CARJACK_VEHICLES = ["03", "05", "24", "28", "37"];
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
@@ -204,9 +209,14 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (plan.measures[0].filters?.length) return no("v0 compiles plan-level filters only");
   if (plan.transforms.length) return no("v0 compiles plans without transforms");
   if (plan.coverage.cohort !== "all_reporting") return no("v0 compiles the all-reporting cohort only");
-  if (plan.geography.places.length !== 1) return no("v0 compiles one place");
+  const grid = t.agencies?.length ? [...new Set(t.agencies)].sort() : null;
   const place = plan.geography.places[0];
-  if (place.kind !== "agency") return no(`v0 compiles one agency; ${place.kind} totals need status evidence across their agencies (D6) and come later`);
+  if (!grid) {
+    if (plan.geography.places.length !== 1) return no("v0 compiles one place");
+    if (place.kind !== "agency") return no(`v0 compiles one agency; ${place.kind} totals need status evidence across their agencies (D6) and come later`);
+  } else if (plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month" || plan.statistics.length !== 1)
+    return no("v0 compiles several agencies as a monthly grid of one count");
+  const oriIs = (col: string) => (grid ? `${col} IN (${list(grid)})` : `${col} = ${q((place as { ori: string }).ori)}`);
   if (plan.groupings.some((g) => g.absent !== "show")) return no("v0 shows every category");
 
   // Groupings: at most one time grouping, first; then attributes of the counted entity.
@@ -292,22 +302,24 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const g = groupCols.map((_, i) => `g${i}`);
   const gSel = g.map((x) => `, ${x}`).join("");
   const key = `(u.data_year, u.ori, u.incident_num, u.sub)`;
-  const inScope = `u.ori = ${q(place.ori)} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
+  const inScope = `${oriIs("u.ori")} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
+  // In grid mode every month and status is per agency (O: the ori column and join key).
+  const O = grid ? "ori, " : "";
   const parts = [
     `units AS (${units.sql})`,
     `scoped AS (SELECT * FROM units u WHERE ${inScope})`,
     // Every month of the period, so a month with no rows still gets a status.
-    `spine AS (SELECT ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d)) WHERE TRUE${inYears("ym")})`,
-    `status AS (SELECT CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
-      FROM ${read("agency_month_status")} WHERE ori = ${q(place.ori)})`,
+    `spine AS (SELECT ${O}ym FROM (SELECT strftime(d, '%Y%m') AS ym FROM range(DATE ${q(`${span.from}-01`)}, DATE ${q(`${span.to}-01`)} + INTERVAL 1 MONTH, INTERVAL 1 MONTH) r(d))${grid ? ` CROSS JOIN (SELECT unnest([${list(grid)}]) AS ori) a` : ""} WHERE TRUE${inYears("ym")})`,
+    `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
+      FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.
-    `month_total AS (SELECT u.ym, COUNT(DISTINCT ${key}) AS n FROM scoped u GROUP BY u.ym)`,
-    `month_cells AS (SELECT s.ym, coalesce(t.n, 0) AS den,
+    `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, COUNT(DISTINCT ${key}) AS n FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
+    `month_cells AS (SELECT ${grid ? "s.ori, " : ""}s.ym, coalesce(t.n, 0) AS den,
       CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN 'EVIDENCE_CONFLICT'
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
            ELSE 'VALUE' END AS month_cell
-      FROM spine s LEFT JOIN status st USING (ym) LEFT JOIN month_total t USING (ym))`,
+      FROM spine s LEFT JOIN status st USING (${O}ym) LEFT JOIN month_total t USING (${O}ym))`,
   ];
   if (g.length) {
     // Every category that occurs in the place and period, in every month.
@@ -318,7 +330,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       FROM month_cells mc CROSS JOIN cats c
       LEFT JOIN counted k ON k.ym = mc.ym${g.map((x) => ` AND k.${x} IS NOT DISTINCT FROM c.${x}`).join("")})`);
   } else {
-    parts.push(`cells AS (SELECT ym, den, month_cell, den AS n, month_cell AS cell FROM month_cells)`);
+    parts.push(`cells AS (SELECT ${O}ym, den, month_cell, den AS n, month_cell AS cell FROM month_cells)`);
   }
 
   const grain = timeDims[0]?.dimension === "time.month" ? "month" : timeDims[0]?.dimension === "time.year" ? "year" : "total";
@@ -329,9 +341,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     const shareCols = share ? `,
       CASE WHEN cell = 'VALUE' AND den > 0 THEN n::DOUBLE / den END AS ${shareName},
       CASE WHEN ${known("cell")} AND den = 0 THEN 'UNAVAILABLE' ELSE cell END AS ${ident(`${share.as}_status`)}` : "";
-    body = `SELECT substr(ym, 1, 4) || '-' || substr(ym, 5, 2) AS period${gSel},
+    body = `SELECT ${O}substr(ym, 1, 4) || '-' || substr(ym, 5, 2) AS period${gSel},
       CASE WHEN ${known("cell")} THEN n END AS ${countName}, cell AS ${ident(`${count.as}_status`)}${shareCols}
-      FROM cells ORDER BY ym${gSel}`;
+      FROM cells ORDER BY ${O}ym${gSel}`;
   } else {
     // A year or total is a sum of months: known only when every month of it is. A share of a year divides by the year's
     // own units, which (one unit, one category) is the sum of its months' totals.
@@ -345,7 +357,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       CASE WHEN bool_and(${known("cell")}) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${shareCols}
       FROM cells${grain === "year" || g.length ? ` GROUP BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")}` : ""}`;
   }
-  const columns = [...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(share ? [share.as, `${share.as}_status`] : [])];
+  const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(share ? [share.as, `${share.as}_status`] : [])];
   const sql = `WITH ${parts.join(",\n")}\n${body}`;
   return { kind: "query", query: { sql, columns, scanYears: years, refuseOn: ["EVIDENCE_CONFLICT"], statements } };
 }

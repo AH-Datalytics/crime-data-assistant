@@ -64,3 +64,45 @@ export function rolling(cells: MonthCell[], months: number, displayed: string[])
   const at = new Map(cells.map((c) => [c.ym, c]));
   return displayed.map((ym) => ({ ym, ...rollup(windowMonths(ym, months).map((m) => at.get(m) ?? { ym: m, value: null, status: "UNKNOWN" })) }));
 }
+
+/* ------------------------------------------------------------------ several agencies (increment 4) -------------- */
+
+/**
+ * Several agencies' months as one: a month is known only when every agency's month is (P58: no agency stands in for
+ * another); a conflict in any is a conflict; REPORTED_ZERO only when every agency reported zero; else the sum.
+ */
+export function combineMonths(perAgency: MonthCell[][]): MonthCell[] {
+  const months = [...new Set(perAgency.flatMap((cells) => cells.map((c) => c.ym)))].sort();
+  return months.map((ym) => {
+    const cells = perAgency.map((xs) => xs.find((c) => c.ym === ym) ?? { ym, value: null, status: "UNKNOWN" });
+    if (cells.some((c) => c.status === "EVIDENCE_CONFLICT")) return { ym, value: null, status: "EVIDENCE_CONFLICT" };
+    if (!cells.every((c) => known(c.status))) return { ym, value: null, status: "UNKNOWN" };
+    return { ym, value: cells.reduce((a, c) => a + (c.value ?? 0), 0), status: cells.every((c) => c.status === "REPORTED_ZERO") ? "REPORTED_ZERO" : "VALUE" };
+  });
+}
+
+/** One decimal, half up (a rate is never negative). */
+export const round1 = (x: number) => Math.floor(x * 10 + 0.5 + 1e-9) / 10;
+
+/**
+ * A rate per `per` residents (P15, P58): known only when the count is; UNAVAILABLE when the population is missing or not
+ * positive (never zero or infinite); one decimal, half up. A known zero count over a population is a rate of 0.
+ */
+export function rate(count: Cell, population: number | null | undefined, per = 100_000): Cell {
+  if (count.status === "EVIDENCE_CONFLICT") return { value: null, status: "EVIDENCE_CONFLICT" };
+  if (!known(count.status) || count.value === null) return { value: null, status: "UNKNOWN" };
+  if (!population || population <= 0) return { value: null, status: "UNAVAILABLE" };
+  return { value: round1((per * count.value) / population), status: "VALUE" };
+}
+
+/**
+ * A ranking (P17, P60): only agencies whose value is known are ranked; ordered by value (descending for "top",
+ * ascending for "bottom"), ties by name alphabetically; cut at `limit`. The others are left out, never ranked or listed
+ * among the ranked.
+ */
+export function rankAgencies<T extends { name: string; value: number | null; known: boolean }>(xs: T[], direction: "top" | "bottom", limit: number | null): { ranked: T[]; leftOut: T[] } {
+  const ok = xs.filter((x) => x.known && x.value !== null);
+  const sign = direction === "top" ? -1 : 1;
+  ok.sort((a, b) => sign * (a.value! - b.value!) || a.name.localeCompare(b.name));
+  return { ranked: limit === null ? ok : ok.slice(0, limit), leftOut: xs.filter((x) => !(x.known && x.value !== null)) };
+}
