@@ -2439,6 +2439,15 @@
       "note": "NIBRS shadow slice: question to answer, clarification or decline under the decided policy, with a stubbed DuckDB step and the checked-in place index; the runner scores it locally against a canonical build"
     },
     {
+      "id": "test-nibrs-preview",
+      "tier": "F",
+      "script": "scripts/test-nibrs-preview.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Local private preview of the shadow engine: the production gate, the outcome adapter for the UI, button paths and request parsing; stubbed DuckDB, offline (scripts/test-nibrs-preview-production.sh checks a production build locally)"
+    },
+    {
       "id": "test-answer-eval-cases",
       "tier": "F",
       "script": "scripts/test-answer-eval-cases.ts",
