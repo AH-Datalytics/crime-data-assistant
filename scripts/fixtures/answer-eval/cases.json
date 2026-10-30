@@ -22202,6 +22202,197 @@
     "reviewed_by": "codex:inc6-labels-1",
     "notes": "MUST ANSWER: arrests classified by arrest offense; paired with the incident-association case before it."
    }
+  },
+  {
+   "id": "LS-374",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults in Detroit in 2024 by clearance type",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "clearance type"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "discriminating: all five exceptional types (A-E) occur; victims and incidents differ"
+    },
+    "statements": [
+     "names the agency (Detroit Police Department)",
+     "breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared (P66)",
+     "counts victims, each taking its incident's clearance status (D18, P66)",
+     "says arrest takes precedence over exceptional clearance (P67)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: every exceptional type A-E present (nibrs-model search, MI8234900 2024; Los Angeles CA0194200 was the other option but reported only part of 2024)."
+   }
+  },
+  {
+   "id": "LS-375",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults in Denver in 2023 by clearance type",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "clearance type"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "discriminating: incidents with both an arrest and an exceptional clearance are counted as by arrest (P67); give the tie count"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared (P66)",
+     "counts victims, each taking its incident's clearance status (D18, P66)",
+     "says arrest takes precedence over exceptional clearance (P67)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: P67 ties present (nibrs-model search, CODPD0000 2023: 3 incidents with both an arrest and an exceptional clearance)."
+   }
+  },
+  {
+   "id": "LS-376",
+   "group": "designed:inc6-property",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Vehicle burglaries in Charlotte, North Carolina in 2024 where a firearm was stolen",
+   "policy": [
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "property: firearm stolen"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Charlotte-Mecklenburg Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "discriminating: give the negative-control exclusion count (firearm recovered, none stolen)"
+    },
+    "statements": [
+     "names the agency (Charlotte-Mecklenburg Police Department)",
+     "says property belongs to the incident, not to one offense (N2)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: property negative control present (nibrs-model search, NC0600100 2024: incidents with a recovered firearm but none stolen are excluded)."
+   }
   }
  ]
 }

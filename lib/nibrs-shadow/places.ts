@@ -106,7 +106,9 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   const words = key(text).replace(/ (city|county)$/, "");
   const stateNamed = m[3] && words !== base(name) ? m[3] : null;
   let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed));
-  if (/ city$/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
+  // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
+  if (/ city$|\bpolice\b/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
+  else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");
   if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with 10,000+ residents in this build` };
   // The most populous agency of each kind in each state; the large ones are the real candidates.
   const firsts = pool.filter((a, i) => pool.findIndex((b) => b.kind === a.kind && b.state === a.state) === i);
