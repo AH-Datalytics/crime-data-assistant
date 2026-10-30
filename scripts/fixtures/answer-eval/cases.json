@@ -19966,9 +19966,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the state total from the historical file; no NIBRS agency sum."
    }
   },
@@ -20020,9 +20020,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the national estimate."
    }
   },
@@ -20077,9 +20077,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the file's per-capita rate."
    }
   },
@@ -20136,9 +20136,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: one source for the whole span (P14)."
    }
   },
@@ -20193,9 +20193,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the file's own violent total."
    }
   },
@@ -20251,9 +20251,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: 2024 against 2025 (P54)."
    }
   },
@@ -20307,9 +20307,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the historical clearances data (P57)."
    }
   },
@@ -20367,9 +20367,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: every month any Texas agency reported, summed (P61)."
    }
   },
@@ -20425,9 +20425,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: P61's consistent-reporters view (the button's question, typed)."
    }
   },
@@ -20487,9 +20487,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: a detail only NIBRS records."
    }
   },
@@ -20549,9 +20549,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: a national NIBRS sum, by victim (D18)."
    }
   },
@@ -20613,9 +20613,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: a trend of a NIBRS detail (P03)."
    }
   },
@@ -20672,9 +20672,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the source asked for in words is used and labelled (P01), never replaced by the historical file."
    }
   },
@@ -20698,9 +20698,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST DECLINE (P18)."
    }
   },
@@ -20755,9 +20755,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "ROUTE: the current year goes to Current Trends (another source; the NIBRS shadow names the route and does not run it). A routing notice verifies the route only, not the values or statements of the other source."
    }
   },
@@ -20812,9 +20812,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "ROUTE: Homicide Reports (another source; not run by the NIBRS shadow). A routing notice verifies the route only, not the values or statements of the other source."
    }
   },
@@ -20839,9 +20839,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST DECLINE."
    }
   },
@@ -20867,9 +20867,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST DECLINE: outside the historical file's years; no alternative is offered since the question names one year."
    }
   },
@@ -20921,15 +20921,15 @@
      "status": "pending_build"
     },
     "statements": [
-     "names 1955 through 1959 as outside the data, which starts in 1960 (D04)",
+     "says the data covers 1960 through 2025, so 1955 through 1959 are outside it (D04)",
      "uses one source for every year shown, never another for the missing years (P14)",
      "ends with the source line \"Source: FBI SRS.\" (P63)"
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER the covered part: 1960-1965, the missing years named."
    }
   },
@@ -20983,9 +20983,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST ANSWER: the file's own property total, by offense."
    }
   },
@@ -21010,9 +21010,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc5",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST DECLINE (P31), as LS-302: never reinterpreted as gun crime summed over agencies."
    }
   }
