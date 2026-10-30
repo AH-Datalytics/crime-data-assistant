@@ -59,6 +59,12 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     const what = desc && PROPERTY_WORDS[[...desc].sort().join(",")], how = loss && loss.length === 1 ? LOSS_WORDS[loss[0]] : undefined;
     return what && how && f.where.length === 2 ? `where ${what} was ${how}` : null;
   }
+  // Increment 6: a clearance selection (P64, P66): "cleared", "not cleared", "cleared by arrest", "cleared by exceptional means".
+  if (f.kind === "attribute" && f.op === "in" && f.values?.length === 1) {
+    const v = String(f.values[0]);
+    if (f.dimension === "offense.clearance_status") return v === "cleared" ? "cleared" : v === "none" ? "not cleared" : null;
+    if (f.dimension === "offense.clearance_method") return v === "arrest" ? "cleared by arrest" : v === "exceptional" ? "cleared by exceptional means" : null;
+  }
   if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute" || f.where[0].op !== "in") return null;
   const codes = (f.where[0].values ?? []).map(String);
   const v = [...codes].sort().join(",");

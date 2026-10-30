@@ -47,7 +47,7 @@
  */
 import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import type { NibrsPlan } from "./plan";
-import type { AnswerStatement } from "./result";
+import { clearanceDims, type AnswerStatement } from "./result";
 import type { ResolvedPeriod } from "./resolve";
 
 export type CompiledQuery = {
@@ -341,6 +341,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if ("error" in units) return no(units.error);
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   if (units.entity === "arrestee") statements.push("arrests_counted_once");
+  // P64 for any clearance grouping or selection; P67 where arrests and exceptional clearances are told apart.
+  const clr = clearanceDims(plan);
+  if (clr.length) statements.push("clearance_as_of_file");
+  if (clr.some((d) => d !== "offense.clearance_status")) statements.push("clearance_arrest_first");
 
   const g = groupCols.map((_, i) => `g${i}`);
   const gSel = g.map((x) => `, ${x}`).join("");

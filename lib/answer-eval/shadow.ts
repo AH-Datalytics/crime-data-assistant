@@ -12,7 +12,7 @@
  */
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
-import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
+import { ANSWER_STATEMENTS, clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
@@ -326,6 +326,8 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (/^says drug crimes include/.test(s)) ok = /drug equipment/i.test(all);
     else if (/^says a unit with several categories counts once in each/.test(s)) ok = text.includes(ANSWER_STATEMENTS.categories_overlap);
     else if (/^says each arrest counts once/.test(s)) ok = text.includes(ANSWER_STATEMENTS.arrests_counted_once);
+    else if (/^says it counts the crimes of the period cleared as of the file date/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_as_of_file);
+    else if (/^says arrest takes precedence over exceptional clearance/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_arrest_first);
     else if (/^gives the .* total \(/.test(s)) {
       // The combined total: a "Together:" sentence whose number is the sum of the table's counts (all of them known).
       const cells = o.delivered.table.rows[0]?.filter((x) => typeof x === "number" || x === null) ?? [];
@@ -619,7 +621,8 @@ type Walk = { question: string; checked: Set<object> };
  * The fixed sentences an answer must carry where they apply (result.ts ANSWER_STATEMENTS), checked on its text:
  * property_counted_by_offense when the question asks for victims and the answer counts offenses (P11);
  * property_not_attributed for an incident-level property filter; reported_nibrs_counts for the nation;
- * categories_overlap for a multi-valued grouping; arrests_counted_once for arrests (P46).
+ * categories_overlap for a multi-valued grouping; arrests_counted_once for arrests (P46); clearance_as_of_file for a
+ * clearance grouping or selection (P64), and clearance_arrest_first where arrests and exceptional clearances are told apart (P67).
  */
 function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
   const plan = c.plan;
@@ -629,6 +632,9 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
   if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
+  const clr = clearanceDims(plan);
+  if (clr.length) want.push("clearance_as_of_file");
+  if (clr.some((d) => d !== "offense.clearance_status")) want.push("clearance_arrest_first");
   return want.filter((s) => !c.delivered.text.includes(ANSWER_STATEMENTS[s]))
     .map((s) => ({ field: "statement", expected: ANSWER_STATEMENTS[s], actual: c.delivered.text.join(" / ").slice(0, 200), kind: "material" as const }));
 }
