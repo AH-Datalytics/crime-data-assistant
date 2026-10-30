@@ -164,6 +164,28 @@ function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<
   return Object.fromEntries(cols.map((c, i) => [(c.binding as { as: string }).as.split(".").pop()!, o.delivered.table.rows[0]?.[i] as number | null]));
 }
 
+/**
+ * A comparison answer's text is only its templates, and its numbers are the table's (Codex increment-3 review): the
+ * header line; the same-months line; the change line, rebuilt from the cells; the zero-base line; a known period's count;
+ * a period not established; then readings, fixed statements and the source.
+ */
+function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean {
+  const cols = comparisonCells(o);
+  const t = o.plan.transforms.find((x) => x.kind === "period_comparison");
+  if (!cols || !t || t.kind !== "period_comparison") return false;
+  const E = periodWords(t.earlier.from, t.earlier.to), L = periodWords(t.later.from, t.later.to);
+  const f = (n: number) => n.toLocaleString("en-US");
+  const signed = (n: number) => (n > 0 ? `+${f(n)}` : n < 0 ? `-${f(-n)}` : "0");
+  const changeLine = cols.change === null ? null : `${f(cols.earlier!)} in ${E} and ${f(cols.later!)} in ${L}: a change of ${signed(cols.change)}${cols.pct_change !== null ? ` (${cols.pct_change > 0 ? "+" : ""}${cols.pct_change}%)` : ""}.`;
+  const allowed = (line: string) => line === changeLine || line === "The percent change cannot be computed from a zero base." || /^Source: /.test(line) || /^Read "/.test(line)
+    || (Object.values(ANSWER_STATEMENTS) as string[]).includes(line) || /^Compares the same months of each year: [A-Za-z ]+\.$/.test(line)
+    || line.endsWith(`, ${E} against ${L}.`)
+    || (cols.change === null && ((cols.earlier !== null && line === `${f(cols.earlier)} in ${E}.`) || (cols.later !== null && line === `${f(cols.later)} in ${L}.`)
+      || new RegExp(`^No report is known for .+, so the (?:${E}|${L}) total is not established and no change is given\\.$`).test(line)));
+  const text = o.delivered.text;
+  return text.every(allowed) && (changeLine === null || text.includes(changeLine)) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
+}
+
 function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
   const out: Diff[] = [];
   const text = o.delivered.text;
@@ -207,9 +229,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (/^gives both counts, the change and the percent change, with no adjectives$/.test(s) || /^gives both counts and the change$/.test(s)) {
       const cols = comparisonCells(o);
       const need = /percent/.test(s) ? ["earlier", "later", "change", "pct_change"] : ["earlier", "later", "change"];
-      ok = !!cols && need.every((k) => typeof cols[k] === "number") && !ADJECTIVES.test(all);
-    } else if (s === "says the percent change cannot be computed from a zero base") ok = text.includes("The percent change cannot be computed from a zero base.") && comparisonCells(o)?.pct_change === null;
-    else if (/^makes no change claim/.test(s)) { const cols = comparisonCells(o); ok = !!cols && cols.change === null && cols.pct_change === null && !/a change of/.test(all); }
+      ok = !!cols && need.every((k) => typeof cols[k] === "number") && !ADJECTIVES.test(all) && comparisonProse(o);
+    } else if (s === "says the percent change cannot be computed from a zero base") ok = text.includes("The percent change cannot be computed from a zero base.") && comparisonCells(o)?.pct_change === null && comparisonProse(o);
+    else if (/^makes no change claim/.test(s)) { const cols = comparisonCells(o); ok = !!cols && cols.change === null && cols.pct_change === null && !/a change of/.test(all) && comparisonProse(o); }
     else if (/^names the comparison year \((\d{4})\)$/.test(s)) ok = new RegExp(`\\b${/\((\d{4})\)/.exec(s)![1]}\\b`).test(text[0] ?? "");
     else if (s === "names the months compared") {
       const t = o.plan.transforms.find((x) => x.kind === "period_comparison");
@@ -224,9 +246,14 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       // Each window with a status other than a known one is blank (never zero or a shorter sum); "the windows ending A
       // through B" and "every window" also say which windows those are.
       const rows = o.delivered.table.rows;
+      // Every displayed month, in order: a window cannot pass by being left out.
+      const months: string[] = [];
+      for (let k = Number(o.period.from.slice(0, 4)) * 12 + Number(o.period.from.slice(5)) - 1; k <= Number(o.period.to.slice(0, 4)) * 12 + Number(o.period.to.slice(5)) - 1; k++)
+        months.push(`${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`);
+      const complete = rows.map((r) => String(r[0])).join(",") === months.join(",");
       const blankAt = rows.map((r) => r[1] === null);
       const statusBlank = o.delivered.evidence.map((x) => !["VALUE", "REPORTED_ZERO"].includes(x.status));
-      ok = rows.length > 0 && blankAt.every((b, i) => b === statusBlank[i]);
+      ok = complete && rows.length > 0 && blankAt.every((b, i) => b === statusBlank[i]);
       const span = /^shows the windows ending (.+?) through (.+?) as missing/.exec(s);
       if (ok && span) {
         const [a, b] = [monthsNamed(span[1])[0], monthsNamed(span[2])[0]];

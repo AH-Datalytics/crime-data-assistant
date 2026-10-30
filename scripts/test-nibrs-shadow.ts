@@ -399,6 +399,42 @@ assert.deepEqual([last12.period, last12.plan.groupings, last12.delivered.text[0]
 assert.match(as(ask("Shoplifting in Charlotte, North Carolina in 2023"), "answer").delivered.text[0], /^Charlotte-Mecklenburg city police, NC/);
 assert.equal(ask("Shoplifting in Charlotte in 2023").kind, "clarify");
 
+// Codex increment-3 review. A future comparison declines with an alternative that answers its label (no recursion); a
+// forecast's alternative is the trend it names; the reader's own change form keeps P01.
+for (const q of ["Did shoplifting go up in Detroit in 2028?", "Change in shoplifting in Detroit from 2027 to 2028"]) {
+  const d = as(ask(q), "decline");
+  assert.equal(d.reason, "outside_release_coverage", q);
+}
+const fcCmp = as(ask("Will shoplifting increase in Detroit in 2027 compared with 2026?"), "decline");
+assert.equal(fcCmp.reason, "forecast");
+const fcAltCmp = as(fcCmp.alternative!.continuation!, "decline");
+assert.deepEqual([fcAltCmp.notBuilt, /2016 to 2025/.test(fcAltCmp.explanation)], [true, true], "the trend alternative is the last 10 complete years (before this build), not the forecast's comparison");
+assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /P01/);
+// Scoring: the comparison's periods are checked against the label; prose must be the templates with the table's numbers;
+// a rolling answer must show every displayed month.
+const lab309 = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2022-01", to: "2023-06" },
+  measures: [{ name: "shoplifting", unit: "offense" }], filters: ["the same months of each year: January through June"], groupings: ["year"], statistic: "change" },
+  values: { status: "pending_build" }, statements: ["gives both counts, the change and the percent change, with no adjectives", "names the months compared"] });
+const half = as(ask("Shoplifting in Detroit January through June 2023 compared with January through June 2022"), "answer");
+const material = (o: typeof half, c: Case) => scoreShadow(c, o, r, ctx).result!.diffs.filter((d) => d.kind === "material").map((d) => d.field);
+assert.deepEqual(material(half, lab309), []);
+const t0 = half.plan.transforms[0] as Extract<typeof half.plan.transforms[number], { kind: "period_comparison" }>;
+const shifted = { ...half, plan: { ...half.plan, transforms: [{ ...t0, earlier: { ...t0.earlier, to: "2022-03" } }] } };
+assert.ok(material(shifted, lab309).includes("comparison"), "an earlier period of January-March is not January-June");
+const lab304 = label({ ...(lab309.expected as object), meaning: { ...(lab309.expected as { meaning: object }).meaning, period: { from: "2022-01", to: "2023-12" }, filters: [] } } as never);
+const whole = as(ask("Change in shoplifting in Detroit from 2022 to 2023"), "answer");
+assert.deepEqual(material(whole, lab304), []);
+const lie = { ...whole, delivered: { ...whole.delivered, text: whole.delivered.text.map((x) => (/a change of/.test(x) ? "999 in 2022 and 1 in 2023: a catastrophic increase." : x)) } };
+assert.ok(material(lie, lab304).includes("statement"), "prose that is not the table's numbers fails");
+const rollLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { rule: "2024 through the latest month in the data" },
+  measures: [{ name: "shoplifting", unit: "offense" }], filters: [], groupings: ["month (rolling 12-month total ending that month)"], statistic: "count" },
+  values: { status: "pending_build" }, statements: ["shows the windows ending March 2024 through February 2025 as missing (each contains March 2024), never zero or a shorter-window total"] });
+assert.ok(!material(roll, rollLabel).includes("statement"));
+const kept = roll.delivered.table.rows.map((row, i) => [row, i] as const).filter(([row]) => row[1] !== null);
+const omitted = { ...roll, delivered: { ...roll.delivered, table: { ...roll.delivered.table, rows: kept.map(([row]) => row) },
+  evidence: kept.map(([, i], j) => ({ ...roll.delivered.evidence[i], row: j })) } };
+assert.ok(material(omitted, rollLabel).includes("statement"), "leaving the missing windows out does not pass");
+
 // Batch 5's category fields and codes: the file names its field; age and unknown-offender codes map to NIBRSAI's labels;
 // a multi-valued field's categories are never summed into a share's denominator.
 const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", category,

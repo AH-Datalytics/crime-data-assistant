@@ -84,7 +84,10 @@ function withParts(ledger: RequestLedger, parts: Part[]): RequestLedger {
 function filled(ledger: RequestLedger, concept: string, value: string, text: string): RequestLedger {
   const n = ledger.question.length + 1 + ledger.parts.filter((p) => p.rule === "shadow:button").length;
   const part = { concept, value, span: [n, n], text, explains: [[n, n]], clause: 0, rule: "shadow:button", state: "recognized", explanation: null } as unknown as Part;
-  return withParts(ledger, [...ledger.parts.filter((p) => !(p.clause === 0 && p.concept === concept)), part]);
+  const next = withParts(ledger, [...ledger.parts.filter((p) => !(p.clause === 0 && p.concept === concept)), part]);
+  // A period or grain chosen by a button replaces the question's own time intent: a comparison or "the last 12 months"
+  // read from the words no longer applies (Codex increment-3 review: else a future comparison's alternative recurs).
+  return concept === "period" || concept === "grain" ? Object.assign(next, { comparison: null, last12: false }) : next;
 }
 
 /** The reason a reader decline gives, as a limitation reason; "reader" when its words name none of them. */
@@ -200,8 +203,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // NIBRS shadow's; it is declined rather than answered from the wrong source.
   // Only a plain count of the crime: its details (a weapon, arrests, clearances, a breakdown) are NIBRS's, and go on to
   // the slice's own limits.
-  const asked = !flags(ledger0).composite && d.spec.type === "series" && !d.spec.filters.length && (d.spec.unit === null || ["offenses", "victims", "incidents"].includes(d.spec.unit))
-    && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept)) ? d.spec.measures : [];
+  // The reader's own change form ("did X increase from 2022 to 2023") is a plain count compared, under the same rule.
+  const plainUnit = (u: string | null) => u === null || ["offenses", "victims", "incidents"].includes(u);
+  const noDetail = !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+  const asked = flags(ledger0).composite || !noDetail ? []
+    : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
+    : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
   if (asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
 
   // The plan.
