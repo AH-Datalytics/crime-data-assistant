@@ -18622,6 +18622,134 @@
     "reviewed_by": null,
     "notes": "MUST ANSWER: P56, October 2025 through September 2026, one total."
    }
+  },
+  {
+   "id": "LS-315",
+   "group": "designed:inc3-rolling-gap",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Rolling 12-month shoplifting in Greensboro since 2025",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Greensboro Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "rule": "2025 through the latest month in the data"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "Each displayed month requires all twelve source months; never sum an incomplete window"
+     ],
+     "groupings": [
+      "month (rolling 12-month total ending that month)"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "defines each point as the sum of the 12 months ending that month",
+     "shows the windows ending November 2025 through September 2026 as missing (each contains November or December 2025), never zero or a shorter-window total",
+     "names November and December 2025 as having no data",
+     "names the agency (Greensboro Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc3",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: windows ending January-October 2025 are complete; every later window contains a missing month."
+   }
+  },
+  {
+   "id": "LS-316",
+   "group": "designed:inc3-rolling-prehistory-gap",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Rolling 12-month shoplifting in Greensboro since 2026",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Greensboro Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "rule": "2026 through the latest month in the data"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "Each displayed month requires all twelve source months; January 2026 uses February 2025 through January 2026; never sum an incomplete window"
+     ],
+     "groupings": [
+      "month (rolling 12-month total ending that month)"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "defines each point as the sum of the 12 months ending that month",
+     "shows every window as missing (each contains November or December 2025), never zero or a shorter-window total",
+     "names November and December 2025 as having no data",
+     "names the agency (Greensboro Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc3",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER (all windows missing): the missing months fall before the period start, inside the first windows."
+   }
   }
  ]
 }

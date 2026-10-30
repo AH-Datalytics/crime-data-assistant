@@ -451,6 +451,19 @@ INC3 = [
     ("inc3-last-12", "Carjackings in Arlington, Texas over the last 12 months", ["D06", "D18", "D30", "P01", "P16", "P52", "P56"],
      answer(meaning("arlington", {"rule": "the 12 months ending at the latest month in the data"}, CARJACK), "names the months covered", names("arlington"), SOURCE_LAST),
      "MUST ANSWER: P56, October 2025 through September 2026, one total."),
+    # Codex inc3 label check: rolling windows with missing inputs (Greensboro has no data for November-December 2025).
+    ("inc3-rolling-gap", "Rolling 12-month shoplifting in Greensboro since 2025", ["D04", "D18", "D30", "P01", "P16"],
+     answer(dict(meaning("greensboro", {"rule": "2025 through the latest month in the data"}, SHOP, ["month (rolling 12-month total ending that month)"]),
+                 filters=["Each displayed month requires all twelve source months; never sum an incomplete window"]),
+            WINDOWS, "shows the windows ending November 2025 through September 2026 as missing (each contains November or December 2025), never zero or a shorter-window total",
+            "names November and December 2025 as having no data", names("greensboro"), SOURCE_LAST),
+     "MUST ANSWER: windows ending January-October 2025 are complete; every later window contains a missing month."),
+    ("inc3-rolling-prehistory-gap", "Rolling 12-month shoplifting in Greensboro since 2026", ["D04", "D18", "D30", "P01", "P16"],
+     answer(dict(meaning("greensboro", {"rule": "2026 through the latest month in the data"}, SHOP, ["month (rolling 12-month total ending that month)"]),
+                 filters=["Each displayed month requires all twelve source months; January 2026 uses February 2025 through January 2026; never sum an incomplete window"]),
+            WINDOWS, "shows every window as missing (each contains November or December 2025), never zero or a shorter-window total",
+            "names November and December 2025 as having no data", names("greensboro"), SOURCE_LAST),
+     "MUST ANSWER (all windows missing): the missing months fall before the period start, inside the first windows."),
 ]
 
 # Replay labels P28 changes (reviewed before P28): drafted again, for review.
