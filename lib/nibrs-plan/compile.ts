@@ -197,6 +197,18 @@ const ENTITY_OF: Record<string, Entity> = { offenses: "offense", incidents: "inc
 /** Measures the question vocabulary does not name yet (D19's drug crimes: 35A and 35B). */
 const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"] };
 
+/**
+ * The agencies of a place and their populations (increment 4), from the canonical agency table's batch-header rows:
+ * the FBI's agency population for each data year (P15, P59: the FBI carries the latest forward into the current year).
+ * By ORIs, or a state's city agencies (FBI agency indicator 1). Columns: ori, data_year, population, city, state.
+ */
+export function agencyPopulationSql(root: string, who: { oris: string[] } | { state: string; city: true }, years: number[]): string {
+  const where = "oris" in who ? `ori IN (${list(who.oris)})` : `u.state_abbr = ${q(who.state)} AND u.agency_indicator = '1'`;
+  return `SELECT ori, u.data_year, u.population, trim(u.city) AS city, u.state_abbr AS state
+    FROM read_parquet(${q(`${root}/agency/data.parquet`)}), unnest(by_year) AS t(u)
+    WHERE ${where} AND u.data_year IN (${years.map(Number).join(", ")}) ORDER BY ori, u.data_year`;
+}
+
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
   // A set of years ("in 2019 and 2024"): each year's months only, the last clipped to `through`, grouped by year.
