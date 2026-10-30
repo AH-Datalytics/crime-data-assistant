@@ -2482,222 +2482,375 @@
    "id": "LS-317",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Shoplifting offenses by agency, 2024: Tulsa city police, OK and Oklahoma City city police, OK. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-318",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Tulsa city police, OK and Oklahoma City city police, OK, combined: 7,779 shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-319",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Shoplifting offenses by agency, 2025: Greensboro city police, NC and Raleigh city police, NC. / No report is known for November 2025 to December 2025 for Greensboro city police, NC, so its 2025 total is not given. / Source: FBI National Inc"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-320",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Wichita city police, KS: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita city police, KS 395,486. / Source: FBI National Incident-Based Rep"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-321",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Memphis city police, TN: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 613,207. / Source: FBI National Incident-B"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-322",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Dallas city police, TX: 11.3 carjacking offenses per 100,000 residents in January through September 2026. / Rates are per 100,000 residents, using the FBI's 2026 population of the agency: Dallas city police, TX 1,331,217. / This covers Janu"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-323",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Greensboro city police, NC: no rate is given for 2025, because not every month is known. / Rates are per 100,000 residents, using the FBI's 2025 population of the agency: Greensboro city police, NC 310,328. / No report is known for November"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-324",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: state and national totals come later."
+    "delivered: Texas city agencies: the 20 with the most carjacking offenses, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of 2024: 83 agencies, the la"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-325",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: state and national totals come later."
+    "delivered: Ohio city agencies: the 10 with the highest shoplifting offenses per 100,000 residents, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of "
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-326",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (reader): I couldn't interpret \"Which large\" in this question, so I haven't answered it with a number that ignores it."
+    "delivered: Texas city agencies of 250,000 residents or more: the 12 with the highest shoplifting offenses per 100,000 residents, 2024. / Large means 250,000 residents or more (the FBI's agency population). / Ranked: agencies that reported all 12 month"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-327",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: state and national totals come later."
+    "delivered: Colorado city agencies: the 20 with the fewest carjacking offenses, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of 2024: 67 agencies, t"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-328",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Tulsa city police, OK and Oklahoma City city police, OK, combined: 7,779 shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261028-test5."
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-329",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Greensboro city police, NC and Raleigh city police, NC, combined: no total is given for 2025, because not every month is known for every agency counted. / No report is known for November 2025 to December 2025 for Greensboro city police, NC."
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-330",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Shoplifting offenses per 100,000 residents by agency, 2024: Tulsa city police, OK and Oklahoma City city police, OK. / Rates are per 100,000 residents, using the FBI's 2024 population of each agency: Tulsa city police, OK 411,310; Oklahoma "
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-331",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (reader): I can't apply \"combined\": a rate over several years is given per year; ask without \"total\" for one rate per year. I haven't answered with a number that leaves it out."
+    "delivered: Tulsa city police, OK and Oklahoma City city police, OK, combined: 694.1 shoplifting offenses per 100,000 residents in 2024. / The rate is both agencies' offenses over both agencies' populations (the FBI's 2024 figures: Tulsa city police, O"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-332",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (reader): I can't apply \"combined\": a rate over several years is given per year; ask without \"total\" for one rate per year. I haven't answered with a number that leaves it out."
+    "delivered: Greensboro city police, NC and Raleigh city police, NC, combined: no rate is given for 2025, because not every month is known for every agency counted. / No report is known for November 2025 to December 2025 for Greensboro city police, NC. "
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-333",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: state and national totals come later."
+    "delivered: Texas city agencies: the 20 with the most carjacking offenses, January through September 2026. / This covers January through September 2026. / Ranked: agencies that reported every month of January through September 2026; ties are ordered by"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   }
  ],
  "provisional": []
