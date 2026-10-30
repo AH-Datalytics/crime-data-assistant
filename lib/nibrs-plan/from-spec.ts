@@ -32,7 +32,8 @@ const DV: Record<string, string[]> = {
   family: ["CH", "PA", "SB", "OF", "SC", "SP", "GP", "GC", "IL", "CF", "BE"],
 };
 /** Today's age groups (scripts/nibrs-auto-update.py age_group_expr), as bins; special codes stay their own categories. */
-const AGE_BINS = [
+/** Today's age groups (P30). */
+export const AGE_BINS = [
   { label: "Under 18", from: 1, to: 17 }, { label: "18-24", from: 18, to: 24 }, { label: "25-34", from: 25, to: 34 },
   { label: "35-44", from: 35, to: 44 }, { label: "45-54", from: 45, to: 54 }, { label: "55-64", from: 55, to: 64 },
   { label: "65+", from: 65, to: 99 },

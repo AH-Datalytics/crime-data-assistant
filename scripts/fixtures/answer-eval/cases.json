@@ -15747,8 +15747,7 @@
       }
      ],
      "period": {
-      "from": "2025-01",
-      "to": "2026-10"
+      "rule": "2025 through the latest month in the data"
      },
      "measures": [
       {
@@ -15778,7 +15777,7 @@
     "status": "reviewed",
     "drafted_by": "claude-reader",
     "reviewed_by": "codex:reader-labels-1",
-    "notes": "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve."
+    "notes": "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve. [P52 (Jeff 2026-10-29): the period ends at the latest reported month, a rule, not a fixed month]"
    }
   },
   {
@@ -16750,6 +16749,1117 @@
     "drafted_by": "claude-breakdown",
     "reviewed_by": "codex:breakdown-labels-1",
     "notes": "BOUNDARY: carjacking offenses (D18) by location; an incident-level reading is multi-value."
+   }
+  },
+  {
+   "id": "LS-284",
+   "group": "designed:inc2-two-measures",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting and theft from motor vehicle offenses in Oklahoma City in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Oklahoma City Police Department",
+       "state": "OK"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      },
+      {
+       "name": "theft from motor vehicle",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Oklahoma City Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: two measures side by side, each with its own status (D6)."
+   }
+  },
+  {
+   "id": "LS-285",
+   "group": "designed:inc2-drug",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Drug crimes in Wichita in 2023",
+   "policy": [
+    "D18",
+    "D19",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "drug/narcotic violation",
+       "unit": "offense"
+      },
+      {
+       "name": "drug equipment violation",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says drug crimes include drug/narcotic and drug equipment violations",
+     "gives the combined drug-crimes total (drug/narcotic plus drug equipment offenses)",
+     "names the agency (Wichita Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: D19, the combined total; the two parts may accompany it (Codex label check)."
+   }
+  },
+  {
+   "id": "LS-286",
+   "group": "designed:inc2-two-measures-month",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Carjackings and shoplifting in Raleigh by month in 2024",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Raleigh Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      },
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Raleigh Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: two measures by month."
+   }
+  },
+  {
+   "id": "LS-287",
+   "group": "designed:inc2-weapon",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robberies in Fort Worth by weapon in 2023",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Fort Worth Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "weapon"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Fort Worth Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "says a unit with several categories counts once in each, so the categories can add up to more than the total",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: weapons are multi-valued per offense."
+   }
+  },
+  {
+   "id": "LS-288",
+   "group": "designed:inc2-age",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Mesa by age in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16",
+    "P30"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Mesa Police Department",
+       "state": "AZ"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim age"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "groups ages as Under 18 (01-17 and infants NN, NB, BB), 18-24, 25-34, 35-44, 45-54, 55-64, 65+ (65-99), Unknown (00) and Not recorded (blank)",
+     "names the agency (Mesa Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: victim age groups with infants in Under 18 (P30); 00 unknown, 99 'over 98' in 65+ (Jeff confirmed 00 is unknown)."
+   }
+  },
+  {
+   "id": "LS-289",
+   "group": "designed:inc2-relationship",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murder victims in Colorado Springs by relationship to the offender in 2023",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Colorado Springs Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "relationship"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Colorado Springs Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "says a unit with several categories counts once in each, so the categories can add up to more than the total",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: a victim with several offenders can have several relationships."
+   }
+  },
+  {
+   "id": "LS-290",
+   "group": "designed:inc2-strangers",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murders by strangers in Virginia Beach in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P36"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Virginia Beach Police Department",
+       "state": "VA"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "relationship: stranger"
+     ],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Virginia Beach Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: P36."
+   }
+  },
+  {
+   "id": "LS-291",
+   "group": "designed:inc2-carjack-loc",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Carjackings in Wichita by location type in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "location type"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Wichita Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: carjacking offenses (D18); one location per offense."
+   }
+  },
+  {
+   "id": "LS-292",
+   "group": "designed:inc2-offender-sex",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assaults by men and women in Oklahoma City in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16",
+    "P29",
+    "P49"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Oklahoma City Police Department",
+       "state": "OK"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "offender sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Oklahoma City Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "says a unit with several categories counts once in each, so the categories can add up to more than the total",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: P29 offenders; P49 counts the crimes (victims, D18) by the incident's offender sexes, once in each."
+   }
+  },
+  {
+   "id": "LS-293",
+   "group": "designed:inc2-offenders",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robbery offenders in Raleigh by sex in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16",
+    "P44"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Raleigh Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offender"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "offender sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Raleigh Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: 'offenders' asks for the offenders themselves (P44), counted per offender record."
+   }
+  },
+  {
+   "id": "LS-294",
+   "group": "designed:inc2-twoway",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Mesa by race and sex in 2024",
+   "policy": [
+    "D18",
+    "D29",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Mesa Police Department",
+       "state": "AZ"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim race",
+      "victim sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Mesa Police Department)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "A two-way breakdown, if the reader reads it."
+   }
+  },
+  {
+   "id": "LS-295",
+   "group": "designed:inc2-gun-crime",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Gun crime in Fort Worth in 2023",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P31"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Fort Worth Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      },
+      {
+       "name": "robbery",
+       "unit": "offense"
+      },
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "weapon: firearm"
+     ],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the crimes counted (murder, robbery and aggravated assault with a firearm)",
+     "gives the gun-crime total (firearm murder victims plus firearm robbery offenses plus firearm aggravated assault victims)",
+     "names the agency (Fort Worth Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: P31's gun crime as a total; each crime in its D18 unit (Codex label check)."
+   }
+  },
+  {
+   "id": "LS-296",
+   "group": "designed:inc2-stabbings",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Stabbings in Oklahoma City in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P31"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Oklahoma City Police Department",
+       "state": "OK"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      },
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "weapon: knife or cutting instrument"
+     ],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the crimes counted (murder and aggravated assault with a knife or cutting instrument)",
+     "gives the stabbings total (murder victims plus aggravated assault victims with a knife or cutting instrument)",
+     "names the agency (Oklahoma City Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: P31's stabbings as a total, victims (D18) (Codex label check)."
+   }
+  },
+  {
+   "id": "LS-297",
+   "group": "designed:inc2-arrests",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Shoplifting arrests in Colorado Springs in 2024",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P46",
+    "P50"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Colorado Springs Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice",
+     "names the agency (Colorado Springs Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: arrests made in 2024 (P50)."
+   }
+  },
+  {
+   "id": "LS-298",
+   "group": "designed:inc2-arrests-month",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robbery arrests in Wichita by month in 2023",
+   "policy": [
+    "D04",
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P46",
+    "P50"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice",
+     "names the agency (Wichita Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: by month of arrest."
+   }
+  },
+  {
+   "id": "LS-299",
+   "group": "designed:inc2-people-arrested",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many people were arrested for burglary in Raleigh in 2024?",
+   "policy": [
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P46",
+    "P48",
+    "P50"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Raleigh Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "burglary",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice",
+     "names the agency (Raleigh Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "MUST ANSWER: P48 'were arrested' -> arrests; arrests are NIBRS's detail."
+   }
+  },
+  {
+   "id": "LS-300",
+   "group": "designed:inc2-b-charged",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many robbery suspects were charged in Wichita in 2024?",
+   "policy": [
+    "D01",
+    "P16",
+    "P46"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "Charging records are not in the data; it records police arrests and clearances.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "BOUNDARY: P46 charged is declined; offer the arrests (D01)."
+   }
+  },
+  {
+   "id": "LS-301",
+   "group": "designed:inc2-b-shooters",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "How many shooters were there in Raleigh in 2024?",
+   "policy": [
+    "P16",
+    "P45"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "\"Shooters\" is not a term the data defines.",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "BOUNDARY: P45 shooters declined."
+   }
+  },
+  {
+   "id": "LS-302",
+   "group": "designed:inc2-b-gun-violence",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Gun violence in Fort Worth in 2024",
+   "policy": [
+    "P16",
+    "P31"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data has no counts of non-fatal shootings, so gun violence cannot be counted.",
+    "alternative": null
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc2",
+    "reviewed_by": "codex:inc2-labels-1",
+    "notes": "BOUNDARY: P31 gun violence declined with the note."
    }
   }
  ]

@@ -18,16 +18,23 @@
  *   forecast   predictive wording: "forecast", "predict", "projection", "expected to", "going to rise", "will ... rise /
  *              go up / fall / be" (P20). "Will" about a year the data already holds is not a forecast; nor is a future
  *              year alone.
- *   court      trials, sentences, prosecutions, acquittals, pleas: court outcomes the data does not record (D01). The
- *              accounting already reads convictions, defendants and prosecutions.
+ *   court      trials, sentences, prosecutions, acquittals, pleas, charges: court outcomes and charging decisions the data
+ *              does not record (D01, P46). The accounting already reads convictions, defendants and prosecutions.
+ *   composite  P31's named composites, read as the crimes they count, each with the weapon: "gun crime" -> murders,
+ *              robberies and aggravated assaults with a firearm; "stabbings" -> murders and aggravated assaults with a
+ *              knife or cutting instrument. The weapon is the composite's (`composite`), applied by the shadow.
+ *   arrested   P48: "people (were) arrested for <crime>" -> "<crime> arrests".
+ *   undefined  terms the data does not define, declined by decided policy: "shooters" (P45), "gun violence" (P31: the
+ *              data has no counts of non-fatal shootings).
  */
 import type { RequestLedger } from "../request-accounting";
 import { accountNibrsRequest } from "../nibrs-request-accounting";
 import { MEASURE_LABEL, STATE_NAME_BY_CODE } from "../nibrs-question-types";
 
 export type Reading = { kind: "spelling" | "phrase" | "period"; from: string; to: string };
-export type ReadQuestion = { question: string; text: string; readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean;
-  ledger: RequestLedger & { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean } };
+export type Composite = "firearm" | "knife";
+export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null; undefinedTerm: "shooters" | "gun violence" | null };
+export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 const PHRASES: [RegExp, string][] = [
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
@@ -40,14 +47,23 @@ const PHRASES: [RegExp, string][] = [
   [/\bagainst\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "by sex"],
   // A category and a time grain joined by "and": "by race and year" -> "by race by year".
   [/\bby\s+(race|sex|gender|ethnicity|location(?:\s+type)?)\s+and\s+(year|month)\b/gi, "by $1 by $2"],
+  // P48: people arrested for a crime are its arrests.
+  [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];
+/** P31's composites: the crimes each counts, and its weapon. */
+const COMPOSITES: [RegExp, string, Composite][] = [
+  [/\bgun\s+crimes?\b/gi, "murders, robberies and aggravated assaults", "firearm"],
+  [/\bstabbings?\b/gi, "murders and aggravated assaults", "knife"],
+];
+const SHOOTERS = /\bshooters?\b/i;
+const GUN_VIOLENCE = /\bgun\s+violence\b/i;
 const YTD = /\b(?:so\s+far\s+this\s+year|this\s+year\s+so\s+far|year\s+to\s+date|ytd|this\s+year)\b|\bso\s+far\s+in\s+(\d{4})\b/gi;
 const NEXT_YEAR = /\bnext\s+year\b/gi;
 const FORECAST_WORDS = /\b(?:forecast\w*|predict\w*|projection\w*|projected|expected\s+to)\b|\bgoing\s+to\s+(?:go\s+up|go\s+down|rise|increase|fall|drop|decrease|decline)\b/i;
 const WILL = /\bwill\b[^?.!]*\b(?:go\s+up|go\s+down|rise|increase|fall|drop|decrease|decline|be|happen|look)\b/i;
 /** P29: "by <group>" names the offenders ("assaults by men and women", "committed by juveniles"). */
 const BY_GROUP = /\b(?:committed\s+|perpetrated\s+)?by\s+(?:(?:males?|men|females?|women)(?:\s+(?:or|and|vs\.?|versus)\s+(?:males?|men|females?|women))?|juveniles?|adults?|minors?|teens?|teenagers?|youths?)\b/i;
-const COURT = /\b(?:(?:went|go|goes|going|gone|sent)\s+to\s+trial|trials?|sentenc(?:ed|es|ing)|acquit(?:ted|tals?)|plea(?:ded|d)?\s+guilty|guilty\s+pleas?)\b/i;
+const COURT = /\b(?:(?:went|go|goes|going|gone|sent)\s+to\s+trial|trials?|sentenc(?:ed|es|ing)|acquit(?:ted|tals?)|plea(?:ded|d)?\s+guilty|guilty\s+pleas?|charged|charges?\s+(?:filed|brought))\b/i;
 
 /** The words a misspelling may be read as: the reader's crime words and state names. */
 const VOCAB = [...new Set([
@@ -84,6 +100,12 @@ export function readQuestion(question: string, currentYear: number): ReadQuestio
     readings.push({ kind: "phrase", from: m, to: t });
     return t;
   });
+  let composite: Composite | null = null;
+  for (const [re, to, weapon] of COMPOSITES) text = text.replace(re, (m) => {
+    readings.push({ kind: "phrase", from: m, to });
+    composite = weapon;
+    return to;
+  });
   text = text.replace(YTD, (m, y) => {
     const to = `in ${y ?? currentYear}`;
     readings.push({ kind: "period", from: m, to });
@@ -105,15 +127,17 @@ export function readQuestion(question: string, currentYear: number): ReadQuestio
   const forecast = FORECAST_WORDS.test(own) || (WILL.test(own) && (!years.length || futureYear));
   const court = COURT.test(own);
   const offenders = BY_GROUP.test(own);
+  const undefinedTerm = SHOOTERS.test(own) ? "shooters" : GUN_VIOLENCE.test(own) ? "gun violence" : null;
   // A future year with nothing predicting is a period after the data (P24), read as that year.
   if (!forecast) text = text.replace(NEXT_YEAR, (m) => (readings.push({ kind: "period", from: m, to: `in ${currentYear + 1}` }), `in ${currentYear + 1}`));
-  const ledger = Object.assign(readings.length ? accountNibrsRequest(text) : first, { readings, forecast, court, offenders });
-  return { question, text, readings, forecast, court, offenders, ledger };
+  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm };
+  const ledger = Object.assign(readings.length ? accountNibrsRequest(text) : first, flags);
+  return { question, text, ...flags, ledger };
 }
 
 /** Words of the question that only carry a forecast or a court outcome: an alternative drops these and nothing else. */
 export const FORECAST_TEXT = /^(?:\s|\b(?:will|would|can|could|you|please|what|be|is|are|it|the|in|for|of|to|forecast\w*|predict\w*|projection\w*|projected|expected|going|go|up|down|rise|rising|increase|increasing|fall|falling|drop|decrease|decline|happen|look|next|year)\b)+$/i;
-export const COURT_TEXT = /^(?:\s|\b(?:led|lead|leads|resulted|result|results|went|go|goes|going|gone|sent|to|in|a|an|the|trial|trials|sentenc\w*|acquit\w*|plea\w*|guilty|conviction\w*|convicted)\b)+$/i;
+export const COURT_TEXT = /^(?:\s|\b(?:led|lead|leads|resulted|result|results|went|go|goes|going|gone|sent|were|was|to|in|a|an|the|trial|trials|sentenc\w*|acquit\w*|plea\w*|guilty|conviction\w*|convicted|charged|charges|filed|brought|people|for)\b)+$/i;
 
 /** How a rewrite is disclosed in an answer: only spellings change what the user typed into another word. */
 export const readingSentence = (r: Reading) => `Read "${r.from}" as ${r.to}.`;

@@ -1,7 +1,7 @@
 /**
  * The compiler's correctness gate (engine phase 1, step 2). Two parts:
  *   1. synthetic: a tiny canonical build written to a temporary directory exercises the rules no real case happens
- *      to hit (an incident in a later year's file under a REPORTED_ZERO month, an unevidenced zero, two offense
+ *      to hit (an incident in a later year's file under a REPORTED_ZERO month, a known zero in a month with crimes reported (P51), two offense
  *      segments of one code in one incident, UNKNOWN and REPORTED_ZERO months);
  *   2. correctness cases: the plans X.H1-H3, X.N1, X.N2 and X.N3, run read-only against a canonical build and compared
  *      cell by cell with the hand-traced expected values (nibrs-model's correctness cases).
@@ -9,13 +9,16 @@
  * statistic in every row, value/status consistency, the fixed answer statements, and that no status the compiler
  * marks for refusal appears.
  *
- *   npx tsx scripts/nibrs-compile-gate.ts [--root <canonical dir>] [--python <python with duckdb>] [--expected <cases dir>]
+ *   npx tsx scripts/nibrs-compile-gate.ts [--root <canonical dir>] [--python <python with duckdb>] [--values-repo <nibrs-model checkout>]
+ *
+ * The expected cases are read from nibrs-model's main branch with `git show` (correctness/cases/<case>/expected.json), never
+ * from a work tree.
  *
  * LOCAL ONLY: it needs Python with duckdb and the canonical build, which are not in this repository, so it is not part
  * of the CI harness. Read-only against the build: DuckDB runs in memory with its temporary directory elsewhere.
  * Exit 1 on any failure.
  */
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -28,9 +31,10 @@ import { validateResolved, type ResolvedPeriod } from "../lib/nibrs-plan/resolve
 const arg = (name: string, dflt: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const ROOT = arg("--root", "C:/Users/jeffm/nibrs-model/work/build/20261028-test5/canonical").replace(/\\/g, "/");
 const PY = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe");
-const CASES = arg("--expected", "C:/Users/jeffm/nibrs-model-correctness/correctness/cases");
+const VALUES_REPO = arg("--values-repo", "C:/Users/jeffm/nibrs-model");
 const BUILT = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
-const release = { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" };
+// P52: the upload month (2026-10) is not reported.
+const release = { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" };
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-compile-gate-")).replace(/\\/g, "/");
 
 function python(code: string, args: string[]): string {
@@ -132,7 +136,8 @@ def write(table, year, cols, rows):
     sel = f"SELECT * FROM (VALUES {values}) t({', '.join(cols)})"
     con.execute(f"COPY ({sel}) TO '{d}/data.parquet' (FORMAT parquet)")
 O = ["ori", "incident_num", "incident_date", "offense_code", "key_occurrence", "location_type"]
-write("offense", 2024, O, [("YY0000000", "Y-1", "20240110", "240", 1, "20")])  # YY: one 2024 theft at a residence
+write("offense", 2024, O, [("YY0000000", "Y-1", "20240110", "240", 1, "20"),  # YY: one 2024 theft at a residence
+    ("ZZ0000000", "Z-1", "20240105", "120", 1, "13"), ("ZZ0000000", "Z-2", "20240106", "13A", 1, "20")])  # ZZ: below
 write("offense", 2025, O, [
     ("XX0000000", "FEB-OTHER", "20250210", "13B", 1, "20"),   # February: crimes reported, none of this kind
     ("XX0000000", "MAR-1", "20250305", "240", 1, "20"),       # March: one incident, two 240 segments
@@ -140,15 +145,24 @@ write("offense", 2025, O, [
 ])
 write("offense", 2026, O, [("XX0000000", "JAN-LATE", "20250115", "240", 1, "20")])  # a January 2025 incident in the 2026 file
 S = ["ori", "month", "status"]
-write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)])
+write("agency_month_status", 2024, S, [("YY0000000", 1, "REPORTED_CRIMES")] + [("YY0000000", m, "REPORTED_ZERO") for m in range(2, 13)] + [("ZZ0000000", 1, "REPORTED_CRIMES")])
 write("agency_month_status", 2025, S, [("XX0000000", 1, "REPORTED_ZERO"), ("XX0000000", 2, "REPORTED_CRIMES"), ("XX0000000", 3, "REPORTED_CRIMES"), ("XX0000000", 4, "UNKNOWN"), ("XX0000000", 5, "REPORTED_ZERO")]
     + [("YY0000000", m, "REPORTED_ZERO") for m in range(1, 13)])  # YY: all of 2025 reported zero
 write("agency_month_status", 2026, S, [("XX0000000", 1, "REPORTED_CRIMES")])
+# ZZ, January 2024 (Codex review 02): key_occurrence numbers lines within one segment family, so it never links families.
+# One robbery (occurrence 1) with two offender lines sharing sequence "##" (occurrences 1 and 2, M and F); one aggravated
+# assault (occurrence 1, handgun) whose victim line is occurrence 2 of its sequence.
+F = ["ori", "incident_num", "incident_date", "offender_seq", "key_occurrence", "sex"]
+write("offender", 2024, F, [("ZZ0000000", "Z-1", "20240105", "##", 1, "M"), ("ZZ0000000", "Z-1", "20240105", "##", 2, "F"), ("ZZ0000000", "Z-2", "20240106", "01", 1, "M")])
+write("victim", 2024, ["ori", "incident_num", "incident_date", "victim_seq", "key_occurrence"], [("ZZ0000000", "Z-2", "20240106", "001", 2)])
+write("victim_offense", 2024, ["ori", "incident_num", "victim_seq", "key_occurrence", "connected_offense"], [("ZZ0000000", "Z-2", "001", 2, "13A")])
+write("offense_weapon", 2024, ["ori", "incident_num", "offense_code", "key_occurrence", "weapon", "weapon_automatic"], [("ZZ0000000", "Z-2", "13A", 1, "12", " ")])
 `, [SYN]);
 const syn = (id: string, unit: "offense" | "incident"): NibrsPlan => ({ ...X.N3, question: "synthetic", geography: { places: [{ kind: "agency", ori: "XX0000000", label: "Synthetic, XX" }], combine: "separate" }, measures: [{ id, unit, as: "n" }], statistics: [{ kind: "count", as: "count", measure: "n" }], bindings: [], defaults: [] });
 const SYN_PERIOD: ResolvedPeriod = { kind: "absolute", from: "2025-01", to: "2025-05" };
+// February: crimes reported, none of this kind: a known 0 (P51).
 const synExpected = (march: number) => new Map<string, Cell[]>([
-  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(null, "UNKNOWN_UNEVIDENCED_ZERO")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
+  ["2025-01", [C(null, "EVIDENCE_CONFLICT")]], ["2025-02", [C(0, "VALUE")]], ["2025-03", [C(march, "VALUE")]], ["2025-04", [C(null, "UNKNOWN")]], ["2025-05", [C(0, "REPORTED_ZERO")]]]);
 check("synthetic offenses", syn("offenses.motor_vehicle_theft", "offense"), SYN_PERIOD, SYN, [2025, 2026], synExpected(2));
 check("synthetic incidents", syn("incidents.motor_vehicle_theft", "incident"), SYN_PERIOD, SYN, [2025, 2026], synExpected(1));
 // Codex review (N1/N2 increment): a category year that is all reported zeros has count 0 and an UNAVAILABLE share.
@@ -158,8 +172,17 @@ check("synthetic grouped years", { ...syn("offenses.motor_vehicle_theft", "offen
   { kind: "absolute", from: "2024-01", to: "2025-12" }, SYN, [2024, 2025, 2026], new Map<string, Cell[]>([
     ["2024|20", [C(1, "VALUE"), C(100, "VALUE", true)]], ["2025|20", [C(0, "REPORTED_ZERO"), C(null, "UNAVAILABLE")]]]));
 
+const zz = (measures: NibrsPlan["measures"], groupings: NibrsPlan["groupings"] = [], filters: NibrsPlan["filters"] = []): NibrsPlan =>
+  ({ ...syn("offenses.robbery", "offense"), geography: { places: [{ kind: "agency", ori: "ZZ0000000", label: "Synthetic, ZZ" }], combine: "separate" }, measures, groupings, filters });
+const JAN24: ResolvedPeriod = { kind: "absolute", from: "2024-01", to: "2024-01" };
+check("synthetic offenders sharing a sequence", zz([{ id: "offenders.robbery", unit: "offender", as: "n" }]), JAN24, SYN, [2024], new Map([["total", [known(2)]]]));
+check("synthetic robbery by its offenders' sexes", zz([{ id: "offenses.robbery", unit: "offense", as: "n" }], [{ ...by("offender.sex"), multiValue: "each_value" }]), JAN24, SYN, [2024],
+  new Map([["M", [known(1)]], ["F", [known(1)]]]), ["categories_overlap"]);
+check("synthetic victim with a handgun on its connecting offense", zz([{ id: "victims.aggravated_assault", unit: "victim", as: "n" }], [],
+  [{ kind: "exists", scope: "victim", entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: ["12"] }] }]), JAN24, SYN, [2024], new Map([["total", [known(1)]]]));
+
 // ---- 2. correctness cases against the canonical build ----
-const load = (c: string) => JSON.parse(fs.readFileSync(path.join(CASES, c, "expected.json"), "utf8"));
+const load = (c: string) => JSON.parse(execFileSync("git", ["-C", VALUES_REPO, "show", `main:correctness/cases/${c}/expected.json`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }));
 const [n1, n2, n3, n4] = ["N1", "N2", "N3", "N4"].map(load);
 // N1: every race-sex category that occurs, in every month; an UNKNOWN month is blank in every category.
 type N1Cell = { race: string; sex: string; num: number | null; pct_1dp: number | null; status?: string };

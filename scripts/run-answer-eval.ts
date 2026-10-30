@@ -46,7 +46,8 @@ const CANDIDATE = arg("--candidate", "nibrs-reader")!;
 if (!["nibrs-reader", "nibrs-shadow"].includes(CANDIDATE)) throw new Error(`unknown candidate ${CANDIDATE}`);
 const SHADOW = CANDIDATE === "nibrs-shadow";
 const release: Release & { id: string; asOf: string } = SHADOW
-  ? { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" }
+  // P52: the FBI uploaded the 2026 file on 2026-10-15; the upload month is partial and not reported, so data runs through 2026-09.
+  ? { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }
   : { id: "eval", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
 const shadowDeps = (): ShadowDeps => ({
   places: loadPlaceIndex(), release,

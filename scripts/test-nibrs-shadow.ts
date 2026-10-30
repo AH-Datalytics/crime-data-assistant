@@ -31,7 +31,7 @@ function stub(sql: string): unknown[][] {
   return months.some((m) => cell(m)[0] === null) ? [[null, "UNKNOWN"]] : [[7 * months.length, "VALUE"]];
 }
 const deps: ShadowDeps = {
-  places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" },
+  places, release: { id: "test-release", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
   target: { root: "/build", builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] }, execute: stub,
 };
 const ask = (q: string) => shadowAnswer(q, deps);
@@ -91,12 +91,12 @@ const noPeriod = as(ask("Shoplifting in Memphis"), "clarify");
 assert.deepEqual(noPeriod.options.map((o) => o.label), ["The latest complete year (2025)", "This year so far", "Another year"]);
 assert.deepEqual(as(noPeriod.options[0].continuation!, "answer").period, { from: "2025-01", to: "2025-12" });
 const ytd = as(noPeriod.options[1].continuation!, "answer");
-assert.deepEqual(ytd.period, { from: "2026-01", to: "2026-10" });
-assert.ok(ytd.delivered.text.includes("The data runs through October 2026: this covers January through October 2026."), "D06: the months covered are named");
+assert.deepEqual(ytd.period, { from: "2026-01", to: "2026-09" });
+assert.ok(ytd.delivered.text.includes("The data runs through September 2026: this covers January through September 2026."), "D06: the months covered are named");
 const trend = as(ask("Carjackings in Memphis by month"), "clarify");
 assert.deepEqual(trend.options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
 assert.equal(as(trend.options[0].continuation!, "decline").notBuilt, true, "2016 is before this build");
-assert.deepEqual(as(trend.options[1].continuation!, "answer").period, { from: "2017-01", to: "2026-10" });
+assert.deepEqual(as(trend.options[1].continuation!, "answer").period, { from: "2017-01", to: "2026-09" });
 assert.deepEqual(as(ask("How many crimes were there in Detroit in 2024?"), "clarify").options.map((o) => o.otherSource), ["historical", "historical", "historical"]);
 const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
 assert.deepEqual(kc.options.map((o) => o.label), ["Kansas City, Missouri", "Kansas City, Kansas"]);
@@ -118,16 +118,32 @@ assert.match(as(wa.options[1].continuation!, "decline").explanation, /^Not in th
 // not built; drug crimes (D19) are not one measure.
 assert.equal(as(ask("crime by ZIP code in Chicago"), "decline").reason, "below_agency_level");
 const future = as(ask("Shoplifting in Memphis in 2027"), "decline");
-assert.equal(future.explanation, "2027 is not in the data; the latest month available is October 2026.");
-assert.deepEqual(as(future.alternative!.continuation!, "answer").period, { from: "2026-01", to: "2026-10" });
+assert.equal(future.explanation, "2027 is not in the data; the latest month available is September 2026.");
+assert.deepEqual(as(future.alternative!.continuation!, "answer").period, { from: "2026-01", to: "2026-09" });
 assert.equal(as(ask("Shoplifting in Memphis in 2012"), "decline").notBuilt, true);
-assert.match(as(ask("Drug crimes in Detroit in 2024"), "decline").explanation, /D19/);
+// D19: drug crimes are both drug measures, side by side, with their combined total (both known: 84 + 84).
+const drugs = as(ask("Drug crimes in Detroit in 2023"), "answer");
+assert.deepEqual(drugs.plan.measures.map((m) => m.id), ["offenses.drug_possession", "offenses.drug_equipment"]);
+assert.deepEqual(drugs.delivered.table.columns.map((c) => c.header), ["Drug/narcotic violation offenses", "Drug equipment violation offenses"]);
+assert.deepEqual(drugs.delivered.table.rows, [[84, 84]]);
+assert.deepEqual(drugs.delivered.text.slice(0, 3), ["Drug crimes are drug/narcotic violations plus drug equipment violations.",
+  "Detroit city police, MI, 2023: 84 drug/narcotic violation offenses; 84 drug equipment violation offenses.", "Together: 168 drug crimes in 2023."]);
+assert.deepEqual(drugs.delivered.contractProblems, []);
+assert.equal(as(ask("Drug possession in Detroit in 2023"), "answer").plan.measures.length, 1, "drug possession itself is one measure");
+// A combined total is given only when every part is known (March 2024 is unknown in the stub).
+const drugsMonth = as(ask("Drug crimes in Detroit in 2024"), "answer");
+assert.ok(drugsMonth.delivered.text.includes("No combined total of drug crimes is given: the available evidence does not establish every part."));
+assert.ok(!drugsMonth.delivered.text.some((t) => /^Together/.test(t)));
 // No question is asked when every choice ends in a refusal (D28): "Shplftg" is near no crime word, so nothing reads it.
 assert.equal(as(ask("Shplftg in baltimore per month, 2021-2025"), "decline").reason, "reader");
 
 // Codex review 1: what the slice cannot deliver is declined before anything runs or is asked; P11 covers carjacking;
 // a future month is named as asked; P26 asks city or state for "New York".
-assert.match(as(ask("Simple assault victims in Detroit by age in 2023"), "decline").explanation, /^Not in the slice yet: this breakdown/);
+// Compiler increment 2: age groups (P30), named with what each holds.
+const byAge = as(ask("Simple assault victims in Detroit by age in 2023"), "answer");
+assert.equal(byAge.plan.groupings[0].dimension, "victim.age");
+assert.match(byAge.delivered.text.find((t) => /^Age groups: /.test(t))!, /^Age groups: Under 18 \(ages 1-17 and infants under one year\), 18-24, .*65\+ \(65 and over\); Unknown is an age recorded as unknown, and Not recorded is no age recorded\.$/);
+assert.ok(sqls.at(-1)!.includes("WHEN v.age IN ('NN', 'NB', 'BB') THEN 'Under 18'"));
 // Compiler increment 1: one delivered category, with counts, each category's share of its period, and blanks named.
 const bySex = as(ask("Simple assault victims in Detroit by sex in 2023"), "answer");
 assert.deepEqual(bySex.delivered.table.columns.map((c) => c.header), ["Victim sex", "Simple assault victims", "Share of all simple assault victims (%)"]);
@@ -135,14 +151,51 @@ assert.deepEqual(bySex.delivered.table.rows, [["Female", 30, 60], ["Male", 20, 4
 assert.ok(bySex.delivered.text.includes("Each share is that category's part of all simple assault victims in 2023."));
 assert.match(bySex.delivered.text.find((t) => /^No total is established/.test(t))!, /Unknown/);
 assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], null]);
-for (const q of ["Robberies in Detroit by weapon in 2023", "Simple assault victims in Detroit by race and sex in 2023"]) assert.equal(ask(q).kind === "answer", false, q);
-// P29: offenders declined with their reason; "against" answered as victims by sex.
-assert.match(as(ask("Simple assaults by men and women in Detroit in 2023"), "decline").explanation, /P29/);
+assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").kind === "answer", false, "two-way breakdowns are not built");
+// Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
+const byWeapon = as(ask("Robberies in Detroit by weapon in 2023"), "answer");
+assert.deepEqual([byWeapon.plan.groupings[0].multiValue, byWeapon.delivered.answerStatements], ["each_value", ["categories_overlap"]]);
+const cjLoc = as(ask("Carjackings in Detroit by location type in 2023"), "answer");
+assert.deepEqual([cjLoc.plan.measures[0].id, cjLoc.plan.groupings[0].multiValue], ["offenses.carjacking", undefined]);
+// P29/P49: "by men and women" -> the crimes by their offenders' sexes; one sex alone is still declined; "against" is victims.
+const bySexes = as(ask("Simple assaults by men and women in Detroit in 2023"), "answer");
+assert.deepEqual([bySexes.plan.filters, bySexes.plan.groupings.map((g) => `${g.dimension}:${g.multiValue}`)], [[], ["offender.sex:each_value"]]);
+assert.deepEqual(bySexes.delivered.table.rows.map((r) => r[0]), ["Female", "Male", "Unknown"]);
+assert.ok(sqls.at(-1)!.includes("'unknown_offender'"));
+assert.match(as(ask("Simple assaults by women in Detroit in 2023"), "decline").explanation, /P29/);
+// P44: offenders themselves, by their own sex.
+assert.equal(as(ask("Robbery offenders in Detroit by sex in 2023"), "answer").plan.groupings[0].multiValue, undefined);
+// P36: murders by strangers say so in their words.
+assert.match(as(ask("Murders by strangers in Detroit in 2023"), "answer").delivered.text[0], /murder victims by a stranger in 2023/);
+// P31: gun crime and stabbings, each crime in its unit with the weapon, and the total; gun violence and shooters declined.
+const gun = as(ask("Gun crime in Detroit in 2023"), "answer");
+assert.deepEqual(gun.plan.measures.map((m) => `${m.id}:${(m.filters?.[0] as { scope: string }).scope}`), ["victims.murder:victim", "offenses.robbery:offense", "victims.aggravated_assault:victim"]);
+assert.deepEqual(gun.delivered.table.columns.map((c) => c.header), ["Murder victims with a firearm", "Robbery offenses with a firearm", "Aggravated assault victims with a firearm"]);
+assert.ok(gun.delivered.text.includes("Together: 252 gun crimes in 2023."));
+assert.ok(sqls.slice(-3).every((q) => q.includes("w2.weapon IN ('11', '12', '13', '14', '15')")));
+const stab = as(ask("Stabbings in Detroit in 2023"), "answer");
+assert.deepEqual([stab.plan.measures.length, stab.delivered.text[0]], [2, "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument."]);
+assert.match(as(ask("Gun violence in Detroit in 2023"), "decline").explanation, /non-fatal shootings/);
+assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "decline").explanation, /^"Shooters" is not a term/);
+// P46, P48, P50: arrests by arrest date, counted once each; "people arrested for" is arrests; "charged" is declined with
+// the arrests offered.
+const arr = as(ask("How many people were arrested for burglary in Detroit in 2023?"), "answer");
+assert.deepEqual([arr.plan.measures[0].id, arr.plan.timeBasis, arr.delivered.answerStatements], ["arrests.burglary", "arrest_date", ["arrests_counted_once"]]);
+assert.ok(sqls.at(-1)!.includes("substr(a.arrest_date, 1, 6) AS ym"));
+const charged = as(ask("How many robbery suspects were charged in Detroit in 2023?"), "decline");
+assert.deepEqual([charged.reason, as(charged.alternative!.continuation!, "answer").plan.measures[0].id], ["court_outcome", "arrests.robbery"]);
+// Several measures by month: a column each, and the months a crime is blank named.
+const two = as(ask("Carjackings and shoplifting in Detroit by month in 2024"), "answer");
+assert.deepEqual(two.delivered.table.columns.map((c) => c.header), ["Month", "Carjacking offenses", "Shoplifting offenses"]);
+assert.deepEqual(two.delivered.table.rows[2], ["2024-03", null, null]);
+assert.deepEqual(two.delivered.chart, { kind: "line", x: "Month", y: ["Carjacking offenses", "Shoplifting offenses"] });
 assert.equal(as(ask("Simple assaults against men and women in Detroit in 2023"), "answer").plan.groupings[0].dimension, "victim.sex");
 assert.equal(as(ask("Shoplifting in Kansas City by ZIP code in 2024"), "decline").reason, "below_agency_level");
 const cjv = as(ask("How many carjacking victims were there in Memphis in 2024?"), "answer");
 assert.deepEqual([cjv.plan.measures[0].id, cjv.delivered.answerStatements], ["offenses.carjacking", ["property_counted_by_offense"]]);
-assert.equal(as(ask("Shoplifting in Memphis in November 2026"), "decline").explanation, "November 2026 is not in the data; the latest month available is October 2026.");
+assert.equal(as(ask("Shoplifting in Memphis in November 2026"), "decline").explanation, "November 2026 is not in the data; the latest month available is September 2026.");
+// P52: the upload month itself is not reported.
+assert.equal(as(ask("Shoplifting in Memphis in October 2026"), "decline").explanation, "October 2026 is not in the data; the latest month available is September 2026.");
 assert.deepEqual(as(ask("Shoplifting in New York in 2024"), "clarify").options.map((o) => o.label), ["New York City", "New York state"]);
 assert.deepEqual(as(ask("Shoplifting in Memphis by month"), "clarify").options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
 
@@ -151,7 +204,7 @@ assert.equal(periodWords("2021-03", "2025-06"), "March 2021 through June 2025");
 
 // Scoring: a matching answer is unverified until independent values are given, then correct; a wrong value is a wrong
 // answer; a not-built refusal is never scored.
-const r = { firstMonth: "2017-01", lastMonth: "2026-10", asOf: "2026-10-29" };
+const r = { firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" };
 const ctx = { capability: "answer:nibrs count", era: "2021 and later" };
 const label = (expected: Case["expected"]): Case => ({ id: "LS-999", group: "designed:slice-test", split: "dev", origin: { kind: "designed", ref: null }, tab: "nibrs", setup: [], question: "q", policy: [], expected, label: { status: "reviewed", drafted_by: "a", reviewed_by: "b", notes: "" } });
 const shop: Case["expected"] = { action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Memphis Police Department", state: "TN" }], period: { from: "2023-01", to: "2023-12" }, measures: [{ name: "shoplifting", unit: "offense" }], filters: [], groupings: [], statistic: "count" }, values: { status: "pending_build" }, statements: ["names the agency (Memphis Police Department)", "names its source at the end"] };
@@ -171,11 +224,11 @@ const periodLabel = (opts: { label: string; leads_to: "answer" | "clarify"; mean
 const shopIn = (period: { from: string; to: string }) => ({ ...(shop as { meaning: object }).meaning, period }) as never;
 const np = periodLabel([
   { label: "The latest complete year (2025)", leads_to: "answer", meaning: shopIn({ from: "2025-01", to: "2025-12" }) },
-  { label: "This year so far", leads_to: "answer", meaning: shopIn({ from: "2026-01", to: "2026-10" }) },
+  { label: "This year so far", leads_to: "answer", meaning: shopIn({ from: "2026-01", to: "2026-09" }) },
   { label: "Another year", leads_to: "clarify", meaning: null as never, next_about: "which year" }]);
 const score = (vals?: Map<string, { key: string; value: number | null; status: string }[]>) => scoreShadow(label(np), noPeriod, r, ctx, vals).result!;
 assert.deepEqual([score().outcome, score().values], ["unverified", "not measured"]);
-const both = (a1: number) => new Map([["LS-999|The latest complete year (2025)", [{ key: "", value: a1, status: "VALUE" }]], ["LS-999|This year so far", [{ key: "", value: 70, status: "VALUE" }]]]);
+const both = (a1: number) => new Map([["LS-999|The latest complete year (2025)", [{ key: "", value: a1, status: "VALUE" }]], ["LS-999|This year so far", [{ key: "", value: 63, status: "VALUE" }]]]);
 assert.deepEqual([score(both(84)).outcome, score(both(84)).values], ["correct", "match"]);
 assert.deepEqual([score(both(83)).outcome, score(both(83)).values], ["wrong_answer", "mismatch"]);
 const wrongEntry = periodLabel([...(np as unknown as { options: never[] }).options.slice(0, 2), { label: "Another year", leads_to: "clarify", meaning: null as never, next_about: "which range of years" }]);
@@ -184,7 +237,9 @@ assert.equal(scoreShadow(label(wrongEntry), noPeriod, r, ctx, both(84)).result!.
 // Codex review 2: no button answers "Shoplifting arrests in Washington" (arrests and state totals are not in the slice),
 // so it declines rather than asks; a different question behind a button is a wrong answer; its text is checked; an
 // answer behind a button with no values leaves the zero-wrong-answers gate NOT MEASURED.
-assert.equal(ask("Shoplifting arrests in Washington in 2024").kind, "decline");
+// (Increment 2: arrests are built, so the city button answers and the state button declines.)
+const waArrests = as(ask("Shoplifting arrests in Washington in 2024"), "clarify");
+assert.deepEqual([waArrests.options[0].continuation?.kind, waArrests.options.find((o) => / state$/.test(o.label))?.continuation?.kind], ["answer", "decline"]);
 const detroitInstead = periodLabel([
   { label: "The latest complete year (2025)", leads_to: "answer", meaning: { ...(shopIn({ from: "2025-01", to: "2025-12" }) as object), places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }] } as never },
   ...(np as unknown as { options: never[] }).options.slice(1)]);
@@ -197,7 +252,7 @@ assert.equal(gates([unv])[0].categories.find((x) => x.name === "wrong answers")!
 const stlCase = label({ action: "clarify", about: "which St. Louis", options: [
   { label: "St. Louis city, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" },
   { label: "St. Louis County, Missouri", leads_to: "clarify", meaning: null, next_about: "which range of years" }] });
-const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|Every year available", Array.from({ length: 118 }, (_, i) => {
+const deep = (v: number) => new Map([["LS-999|St. Louis city, Missouri|Every year available", Array.from({ length: 117 }, (_, i) => {
   const m = `${2017 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`; return { key: m, value: m === "2024-03" ? null : v, status: m === "2024-03" ? "UNKNOWN" : "VALUE" }; })]]);
 assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(7)).result!.values, "not measured", "the county's answers have no values");
 assert.equal(scoreShadow(stlCase, stl, r, ctx, deep(6)).result!.outcome, "wrong_answer");
@@ -231,7 +286,8 @@ const fcAlt = as(as(shadowAnswer("Will shoplifting rise in Memphis next year?", 
 assert.deepEqual([fcAlt.period, fcAlt.plan.groupings.map((g) => g.dimension)], [{ from: "2016-01", to: "2025-12" }, ["time.year"]]);
 assert.equal(as(shadowAnswer("Will shoplifting near schools rise in Memphis next year?", deeper), "decline").alternative!.continuation!.kind, "decline", "an unread qualifier stays, so the narrower alternative declines");
 assert.notEqual(ask("Sample assaults in Memphis in 2023").kind, "answer");
-for (const q of ["Robberies with a firearm in Memphis in 2023", "Robbery arrests in Memphis in 2023"]) assert.doesNotMatch(as(ask(q), "decline").explanation, /P01/, q);
+// A Part I crime's details are NIBRS's (P01 is a plain count only): answered since increment 2.
+for (const q of ["Robberies with a firearm in Memphis in 2023", "Robbery arrests in Memphis in 2023"]) as(ask(q), "answer");
 assert.equal(as(ask("Shoplifting in Memphis next year"), "decline").reason, "outside_release_coverage", "P24, not a forecast");
 assert.equal(as(ask("Predicting shoplifting in Memphis in 2027"), "decline").reason, "forecast");
 const ct = as(ask("How many shoplifting arrests in Memphis in 2024 led to convictions?"), "decline");
@@ -262,5 +318,60 @@ const yearly = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "
   rows: [{ year: "2021", sex: "F", sa: { status: "VALUE", value: 3 } }, { year: "2021", sex: "M", sa: { status: "VALUE", value: 1 } },
     { year: "2022", sex: "F", sa: { status: "VALUE", value: 5 } }, { year: "2022", sex: "M", sa: { status: "UNKNOWN", value: null } }] }) }]).get("LS-998")!;
 assert.deepEqual(yearly.map((x) => [x.key, x.share]), [["2021|Female", 75], ["2021|Male", 25], ["2022|Female", undefined], ["2022|Male", null]]);
+
+// Several measures: each column is checked against the expected measure naming its codes and unit, wherever it sits.
+const drugLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2023-01", to: "2023-12" },
+  measures: [{ name: "drug/narcotic violation", unit: "offense" }, { name: "drug equipment violation", unit: "offense" }], filters: [], groupings: [], statistic: "count" }, values: { status: "pending_build" },
+  statements: ["gives the combined drug-crimes total (drug/narcotic plus drug equipment offenses)", "names its source at the end"] });
+const drugValues = (a: number, b: number) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total",
+  measures: { equipment_35B: "offense segments (02) with code 35B", narcotic_35A: "offense segments (02) with code 35A" },
+  totals: { equipment_35B: { status: "VALUE", value: b }, narcotic_35A: { status: "VALUE", value: a } }, rows: null }) }]);
+assert.equal(scoreShadow(drugLabel, drugs, r, ctx, drugValues(84, 84)).result!.outcome, "correct");
+assert.equal(scoreShadow(drugLabel, drugs, r, ctx, drugValues(84, 85)).result!.outcome, "wrong_answer");
+// A total sentence that does not add the table's cells fails its statement.
+const badSum = { ...drugs, delivered: { ...drugs.delivered, text: drugs.delivered.text.map((t) => t.replace("168", "170")) } };
+assert.notEqual(scoreShadow(drugLabel, badSum, r, ctx, drugValues(84, 84)).result!.outcome, "correct");
+// By month: a cell per measure per month.
+const monthly = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "month", measures: { cj: "carjacking offenses (120, motor vehicle taken)", sh: "offense segments with code 23C" },
+  totals: {}, rows: [{ month: "2024-01", cj: { status: "VALUE", value: 2 }, sh: { status: "VALUE", value: 9 } }] }) }]).get("LS-999")!;
+assert.deepEqual(monthly.map((x) => [x.key, x.value, x.measure]), [["2024-01", 2, "cj: carjacking offenses (120, motor vehicle taken)"], ["2024-01", 9, "sh: offense segments with code 23C"]]);
+
+// Codex review 02: compositions that would silently change what was asked are declined or kept whole.
+assert.match(as(ask("Female simple assault victims by men and women in Detroit in 2023"), "decline").explanation, /victims restricted by sex/);
+assert.match(as(ask("Drug crimes and shoplifting in Detroit in 2024"), "decline").explanation, /D19/);
+for (const q of ["Gun crimes and murders in Detroit in 2024", "Stabbings and murders in Detroit in 2024"]) assert.match(as(ask(q), "decline").explanation, /beside other crimes/, q);
+assert.match(as(ask("Robberies with a handgun in Detroit in 2023"), "answer").delivered.text[0], /robbery offenses with a weapon recorded as Handgun/);
+assert.equal(ask("Simple assaults by men and men in Detroit in 2023").kind, "decline");
+const chargedFor = as(ask("How many people were charged for shoplifting in Detroit in 2024?"), "decline");
+assert.equal(as(chargedFor.alternative!.continuation!, "answer").plan.measures[0].id, "arrests.shoplifting");
+// The combined total is checked exactly: 2520 is not 252 (gun crime stub: 84 each).
+const gunLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2023-01", to: "2023-12" },
+  measures: [{ name: "murder", unit: "victim" }, { name: "robbery", unit: "offense" }, { name: "aggravated assault", unit: "victim" }], filters: ["weapon: firearm"], groupings: [], statistic: "count" },
+  values: { status: "pending_build" }, statements: ["gives the gun-crime total (firearm murder victims plus firearm robbery offenses plus firearm aggravated assault victims)"] });
+const gunDiffs = (g: typeof gun) => scoreShadow(gunLabel, g, r, ctx).result!.diffs.filter((d) => d.field === "statement" && d.kind === "material");
+assert.equal(gunDiffs(gun).length, 0);
+assert.equal(gunDiffs({ ...gun, delivered: { ...gun.delivered, text: gun.delivered.text.map((t) => t.replace("252", "2520")) } }).length, 1);
+
+// Codex P51 review: a known 0 denominator gives an expected blank share (not unverified); a share UNAVAILABLE for that
+// reason is not a missing month.
+const zeroDen = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "year", category: "sex", measures: { sa: "13B" }, totals: { sa: { status: "VALUE", value: 1 } },
+  rows: [{ year: "2023", sex: "F", sa: { status: "VALUE", value: 1 } }, { year: "2024", sex: "F", sa: { status: "VALUE", value: 0 } }] }) }]).get("LS-999")!;
+assert.deepEqual(zeroDen.map((x) => [x.key, x.share]), [["2023|Female", 100], ["2024|Female", null]]);
+const unavailable = { ...bySex, delivered: { ...bySex.delivered, table: { ...bySex.delivered.table, rows: [["Female", 0, null]] },
+  evidence: [{ row: 0, statistic: bySex.plan.statistics[0].as, status: "VALUE" as const }, { row: 0, statistic: bySex.plan.statistics[1].as, status: "UNAVAILABLE" as const }] } };
+const missingLabel = label({ ...(sexLabel.expected as object), statements: ["names any months with no data as missing, not zero"] } as never);
+assert.equal(scoreShadow(missingLabel, unavailable, r, ctx).result!.diffs.filter((d) => d.field === "statement" && d.kind === "material").length, 0);
+
+// Batch 5's category fields and codes: the file names its field; age and unknown-offender codes map to NIBRSAI's labels;
+// a multi-valued field's categories are never summed into a share's denominator.
+const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", category,
+  measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } }, rows, ...extra }) }]).get("LS-999")!;
+assert.deepEqual(v5("age_group", [{ age_group: "under_18", m: { status: "VALUE", value: 4 } }, { age_group: "00", m: { status: "VALUE", value: 1 } }, { age_group: " ", m: { status: "VALUE", value: 1 } }]).map((x) => [x.key, x.share]),
+  [["Under 18", 40], ["Unknown", 10], ["Not recorded", 10]]);
+assert.deepEqual(v5("offender_sex", [{ offender_sex: "00", m: { status: "VALUE", value: 3 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } }]).map((x) => [x.key, x.share]),
+  [["Unknown offender", 30], ["Male", 90]]);
+const weaponYear = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "year", category: "weapon", measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } },
+  rows: [{ year: "2023", weapon: "12", m: { status: "VALUE", value: 8 } }, { year: "2023", weapon: "40", m: { status: "VALUE", value: 7 } }] }) }]).get("LS-999")!;
+assert.deepEqual(weaponYear.map((x) => [x.key, x.share]), [["2023|Handgun", undefined], ["2023|Personal Weapons", undefined]], "overlapping categories are never summed");
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

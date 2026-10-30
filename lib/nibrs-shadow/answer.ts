@@ -17,21 +17,27 @@
  *   P16                  a city means its principal police agency (places.ts);
  *   P11                  victims of a property crime are answered with offenses, with the fixed sentence;
  *   D18                  carjacking is counted by offense;
+ *   D19                  drug crimes are drug/narcotic plus drug equipment violations: both, and their total;
+ *   P31                  gun crime (murder victims, robbery offenses, aggravated assault victims with a firearm) and
+ *                        stabbings (murder and aggravated assault victims with a knife): each part and the total; "gun
+ *                        violence" and "shooters" (P45) are declined;
+ *   P29/P49              "by men and women" names the offenders: the crimes by the sexes of their incidents' offenders;
+ *   P50                  arrests are placed by arrest date;
  *   P24/D04              a period after the data says where the data ends and offers this year so far; a period
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
 import type { Part, RequestLedger } from "../request-accounting";
-import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Reading } from "./reading";
+import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
 import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
 import { planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
 import { compilePlan, type CompileTarget } from "../nibrs-plan/compile";
 import { validateOutcome } from "../nibrs-plan/outcome";
-import type { LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
+import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { DELIVERED_CATEGORIES, deliver, monthName, periodWords, type Delivered } from "./deliver";
+import { CATEGORY, deliver, filterWords, monthName, periodWords, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, candidateLabel, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 
 export type ShadowDeps = {
@@ -90,8 +96,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */
-type Read = { readings?: Reading[]; forecast?: boolean; court?: boolean; offenders?: boolean };
-const flags = (l: RequestLedger) => l as RequestLedger & Read;
+const flags = (l: RequestLedger) => l as RequestLedger & Partial<Flags>;
 const unflagged = (l: RequestLedger) => Object.assign(l, { forecast: false, court: false });
 
 /** P20: the same place and crime over the last 10 complete years, by year (the question's own period and words dropped). */
@@ -109,7 +114,15 @@ function arrestsAlternative(ledger: RequestLedger, deps: ShadowDeps): ShadowOpti
     || p.concept === "unit" || (p.concept === "measure" && p.value === "unspecified"))));
   return { label: "Arrests for the same crime, place and period", continuation: fromLedger(filled(unflagged(withParts(ledger, keep)), "unit", "arrests", "arrests"), deps) };
 }
-const COURT_SENTENCE = "NIBRS doesn't record court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.";
+const COURT_SENTENCE = "NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.";
+const UNDEFINED_TERM: Record<string, string> = {
+  shooters: "\"Shooters\" is not a term the data defines: it records offenders and the weapons used, not who fired a gun.",
+  "gun violence": "The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm.",
+};
+/** P31's weapons, as the reader writes them. */
+const WEAPON_CODES: Record<string, string[]> = { firearm: ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"], knife: ["20"] };
+/** P29/P49: "by men and women" (both sexes) names the offenders' sexes. */
+const BY_SEXES = /\bby\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/i;
 const FORECAST_SENTENCE = "The data records past crime and cannot predict the future.";
 
 /** P01: crimes whose completed years are Historical's and whose current year is Current Trends'; NIBRS answers their details. */
@@ -126,9 +139,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const unrecorded = ledger0.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
-  // P29: "by <group>" asks about offenders. Offender breakdowns are compiler increment 2: declined with that reason,
-  // never answered as victims.
-  if (flags(ledger0).offenders) return decline("unsupported_capability", "Not in the slice yet: \"by\" a group names the offenders (P29), and offender breakdowns are not built yet.");
+  const term = flags(ledger0).undefinedTerm;
+  if (term) return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term]);
+  // P29: "by <group>" asks about offenders. "By men and women" is answered by the offenders' sexes (P49, below); any
+  // other group (one sex, juveniles) is declined, never answered as victims.
+  const bySexes = !!flags(ledger0).offenders && BY_SEXES.test(ledger0.question);
+  if (flags(ledger0).offenders && !bySexes) return decline("unsupported_capability", "Not in the slice yet: \"by\" a group names the offenders (P29); only \"by men and women\" (the offenders' sexes) is built.");
   if (unrecorded.length) {
     const why = unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
     return decline(readerReason(why), why);
@@ -179,7 +195,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // NIBRS shadow's; it is declined rather than answered from the wrong source.
   // Only a plain count of the crime: its details (a weapon, arrests, clearances, a breakdown) are NIBRS's, and go on to
   // the slice's own limits.
-  const asked = d.spec.type === "series" && !d.spec.filters.length && (d.spec.unit === null || ["offenses", "victims", "incidents"].includes(d.spec.unit))
+  const asked = !flags(ledger0).composite && d.spec.type === "series" && !d.spec.filters.length && (d.spec.unit === null || ["offenses", "victims", "incidents"].includes(d.spec.unit))
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept)) ? d.spec.measures : [];
   if (asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
 
@@ -191,37 +207,99 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (plan.geography.places.some((p) => p.kind !== "agency")) return decline("unsupported_capability", "Not in the slice yet: state and national totals come later.");
   let parts2 = a.parts;
   const statements: AnswerStatement[] = [];
-  const m = plan.measures[0];
-  const name = m.id.replace(/^[a-z_]+\./, "");
-  // D19: "drug crimes" are drug/narcotic plus drug equipment violations. Today's reader reads them as drug possession
-  // alone, and the slice compiles one measure, so it declines rather than answer a narrower count.
-  if (name === "drug_possession" && clause0("measure").some((p) => p.value === "drug_possession" && !/possess/i.test(p.text)))
-    return decline("unsupported_capability", "Not in the slice yet: drug crimes are drug/narcotic violations plus drug equipment violations (D19), two measures.");
-  // D18: carjacking by offense.
-  if (m.id === "incidents.carjacking" && !clause0("unit").length) plan.measures[0] = { ...m, id: "offenses.carjacking", unit: "offense" };
-  // P11: victims of a property crime -> offenses, with the fixed sentence. The unit part is answered differently by
-  // decided policy and disclosed by that sentence, so it is not held to the victim unit.
-  const codes = MEASURE_CODES[name];
-  const property = name === "carjacking" || (!!codes && codes.every((c) => CRIMES_AGAINST_PROPERTY.has(c)));
-  if (m.id.startsWith("victims.") && property) {
-    plan.measures[0] = { ...m, id: `offenses.${name}`, unit: "offense" };
-    plan.defaults.push({ path: "measures[0].unit", value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
-    const unitPart = parts2.filter((p) => p.concept === "unit");
-    parts2 = parts2.filter((p) => p.concept !== "unit");
-    plan.bindings = plan.bindings.filter((b) => !unitPart.some((u) => u.span[0] === b.part.span[0] && u.concept === b.part.concept));
-    statements.push("property_counted_by_offense");
+  const unbind = (drop: (p: (typeof parts2)[number]) => boolean) => {
+    const gone = parts2.filter(drop);
+    parts2 = parts2.filter((p) => !drop(p));
+    plan.bindings = plan.bindings.filter((b) => !gone.some((u) => u.span[0] === b.part.span[0] && u.concept === b.part.concept));
+  };
+  let combined: Combined | null = null;
+  // D19: "drug crimes" are drug/narcotic plus drug equipment violations: both measures, and their total. Today's reader
+  // reads them as drug possession alone ("drug possession" itself stays one measure).
+  const drugPart = clause0("measure").find((p) => p.value === "drug_possession" && !/possess/i.test(p.text));
+  // Drug crimes beside other crimes would need a total inside a list: declined (Codex review 02).
+  if (drugPart && plan.measures.length > 1) return decline("unsupported_capability", "Not in the slice yet: drug crimes (drug/narcotic plus drug equipment violations, D19) beside other crimes.");
+  if (drugPart && plan.measures.length === 1 && plan.measures[0].id === "offenses.drug_possession") {
+    plan.measures.push({ id: "offenses.drug_equipment", unit: "offense", as: "drug_equipment_offenses" });
+    plan.statistics.push({ kind: "count", as: "drug_equipment_offenses_count", measure: "drug_equipment_offenses" });
+    combined = { label: "drug crimes", definition: "Drug crimes are drug/narcotic violations plus drug equipment violations." };
+  }
+  plan.measures.forEach((m, i) => {
+    const name = m.id.replace(/^[a-z_]+\./, "");
+    // D18: carjacking by offense; an offense has one location.
+    if (m.id === "incidents.carjacking" && !clause0("unit").length) {
+      plan.measures[i] = { ...m, id: "offenses.carjacking", unit: "offense" };
+      plan.groupings = plan.groupings.map(({ multiValue, ...g }) => (g.dimension === "offense.location_type" ? g : { ...g, ...(multiValue ? { multiValue } : {}) }));
+    }
+    // P11: victims of a property crime -> offenses, with the fixed sentence. The unit part is answered differently by
+    // decided policy and disclosed by that sentence, so it is not held to the victim unit.
+    const codes = MEASURE_CODES[name];
+    const property = name === "carjacking" || (!!codes && codes.every((c) => CRIMES_AGAINST_PROPERTY.has(c)));
+    if (m.id.startsWith("victims.") && property) {
+      plan.measures[i] = { ...m, id: `offenses.${name}`, unit: "offense" };
+      plan.defaults.push({ path: `measures[${i}].unit`, value: "offense", reason: "P11: property crimes are counted by offense, not by victim" });
+      unbind((p) => p.concept === "unit");
+      if (!statements.includes("property_counted_by_offense")) statements.push("property_counted_by_offense");
+    }
+  });
+  // P31: a composite's crimes, each in its own unit (FBI standard), with the composite's weapon on the offense that
+  // connects a victim, or on the robbery offense itself.
+  const composite = flags(ledger0).composite;
+  if (composite) {
+    const want = composite === "firearm" ? ["victims.murder", "offenses.robbery", "victims.aggravated_assault"] : ["victims.murder", "victims.aggravated_assault"];
+    // Only the composite's own crimes: a crime asked beside it ("gun crimes and murders") would be absorbed into the
+    // composite's weapon-filtered part, so that form is declined (Codex review 02).
+    if (JSON.stringify(plan.measures.map((m) => m.id)) !== JSON.stringify(want) || clause0("measure").length !== want.length)
+      return decline("unsupported_capability", "Not in the slice yet: gun crime or stabbings beside other crimes, or in this form.");
+    plan.measures = plan.measures.map((m) => ({ ...m, filters: [{ kind: "exists", scope: m.unit === "victim" ? "victim" : "offense", entity: "offense_weapon",
+      where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values: WEAPON_CODES[composite] }] } as Filter] }));
+    combined = composite === "firearm"
+      ? { label: "gun crimes", definition: "Gun crime here is murder victims, robbery offenses and aggravated assault victims with a firearm." }
+      : { label: "stabbings", definition: "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument." };
+  }
+  // P29/P49: "by men and women" -> the crimes by the sexes of their incidents' offenders (each crime once under each sex
+  // present), with each category's share. Only the victim-sex filters the reader made from those words are dropped and
+  // unbound; any other restriction stays (and is declined later if it cannot be compiled) (Codex review 02).
+  if (bySexes) {
+    const at = BY_SEXES.exec(ledger0.question)!;
+    const [from, to] = [at.index, at.index + at[0].length];
+    const sexParts = parts2.filter((p) => p.concept === "filter" && /^sex:/.test(p.value ?? "") && p.span[0] >= from && p.span[1] <= to);
+    const gone = new Set(plan.bindings.filter((b) => sexParts.some((p) => p.span[0] === b.part.span[0] && p.concept === b.part.concept))
+      .map((b) => Number(/^filters\[(\d+)\]$/.exec(b.path)?.[1] ?? -1)));
+    // A filter those words share with another part ("Female ... by men and women": one F filter) is that part's too.
+    const shared = plan.bindings.some((b) => !sexParts.some((p) => p.span[0] === b.part.span[0] && p.concept === b.part.concept) && gone.has(Number(/^filters\[(\d+)\]$/.exec(b.path)?.[1] ?? -1)));
+    if (shared) return decline("unsupported_capability", "Not in the slice yet: victims restricted by sex beside the offenders' sexes.");
+    const kept = plan.filters.map((_, k) => k).filter((k) => !gone.has(k));
+    plan.filters = kept.map((k) => plan.filters[k]);
+    unbind((p) => sexParts.includes(p));
+    // Bindings to the filters that stay follow them to their new places.
+    plan.bindings = plan.bindings.map((b) => { const k = /^filters\[(\d+)\]/.exec(b.path); return k ? { ...b, path: b.path.replace(/^filters\[\d+\]/, `filters[${kept.indexOf(Number(k[1]))}]`) } : b; });
+    if (plan.measures.length !== 1 || plan.groupings.some((g) => !g.dimension.startsWith("time."))) return decline("unsupported_capability", "Not in the slice yet: offenders' sexes beside another breakdown or measure.");
+    plan.groupings.push({ dimension: "offender.sex", unknown: "visible", absent: "show", multiValue: "each_value" });
+    const m0 = plan.measures[0];
+    plan.statistics = [{ kind: "count", as: plan.statistics[0].as, measure: m0.as }, { kind: "share", as: "share_of_period", measure: m0.as, within: plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension) }];
+  }
+  // P50: arrests are placed by arrest date; arrests beside other measures would mix time bases (refused).
+  const arrests = plan.measures.filter((m) => m.id.startsWith("arrests."));
+  if (arrests.length && arrests.length !== plan.measures.length) return decline("unsupported_capability", "Not in the slice yet: arrests beside other measures (two time bases).");
+  if (arrests.length) {
+    plan.timeBasis = "arrest_date";
+    plan.defaults.push({ path: "timeBasis", value: "arrest_date", reason: "P50: arrests are counted by arrest date" });
   }
 
-  // The slice delivers one count, as a total or by month or year, optionally broken down by ONE delivered category
-  // (victim race, sex, ethnicity; offense location type) with each category's share of its period (compiler increment
-  // 1). Age groups, weapons, two-way breakdowns, rates and other shares are declined before anything is asked or run.
+  // The slice delivers counts, as totals or by month or year: one measure optionally broken down by ONE delivered
+  // category with each category's share of its period (compiler increments 1 and 2), or several measures side by side
+  // (with their combined total, as totals only, for D19 and P31). Two-way breakdowns, rates and other shares are
+  // declined before anything is asked or run.
   const timeG = plan.groupings.filter((g) => g.dimension.startsWith("time."));
   const catG = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
   const [first, second, ...more] = plan.statistics;
-  const shareOk = !second || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
+  const counts = plan.statistics.every((s) => s.kind === "count") && plan.measures.every((m) => plan.statistics.filter((s) => "measure" in s && s.measure === m.as).length === 1);
+  const several = plan.measures.length > 1;
+  const shareOk = !second || several || (second.kind === "share" && first.kind === "count" && catG.length === 1 && second.measure === first.measure && !second.denominator
     && JSON.stringify(second.within) === JSON.stringify(timeG.map((g) => g.dimension)));
-  if (catG.length > 1 || catG.some((g) => !DELIVERED_CATEGORIES.has(g.dimension) || g.bins || g.multiValue) || first.kind !== "count" || more.length || !shareOk)
-    return decline("unsupported_capability", "Not in the slice yet: this breakdown (age groups, weapons and other multi-valued categories, two-way breakdowns), rates and other shares.");
+  if (catG.length > 1 || catG.some((g) => !CATEGORY[g.dimension]) || first.kind !== "count" || (!several && more.length) || !shareOk
+    || (several && (catG.length || !counts)) || (combined && timeG.length))
+    return decline("unsupported_capability", "Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.");
 
   // D31/P06: a missing period is asked about, for any reader form, once the question is known to be in the slice.
   const spec = d.spec as { period?: { form: string }; grain?: string };
@@ -263,15 +341,35 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const problems = [...validateOutcome({ kind: "plan", plan: checked }, DRAFT_LAYER, release, geo), ...validateBindings(plan, parts2, authority)];
   if (problems.length) return decline("unsupported_capability", `The plan did not validate: ${problems.map((p) => `${p.rule} ${p.path}: ${p.message}`).join("; ")}`);
 
-  const c = compilePlan(checked, { kind: "absolute", ...period }, deps.target);
-  if (c.kind === "unsupported") return decline("unsupported_capability", `Not in the slice yet: ${c.reason}`);
-  const rows = deps.execute(c.query.sql);
-  const refused = rows.filter((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i]))));
-  if (refused.length) return decline("unsupported_capability", "The records for this agency and period conflict with its monthly reporting status, so no number is given.");
+  // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.
+  const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
+  if (unnamed) return decline("unsupported_capability", "Not in the slice yet: this weapon or relationship selection.");
+  // One compiled query per measure (its own filters as the query's), its rows joined on the period key.
+  const sqls: string[] = [];
+  let columns: string[] = [];
+  let rows: unknown[][] = [];
+  for (const m of checked.measures) {
+    const sub: NibrsPlan = { ...checked, measures: [{ ...m, filters: undefined }], filters: [...checked.filters, ...(m.filters ?? [])], statistics: checked.statistics.filter((s) => "measure" in s && s.measure === m.as) };
+    const c = compilePlan(sub, { kind: "absolute", ...period }, deps.target);
+    if (c.kind === "unsupported") return decline("unsupported_capability", `Not in the slice yet: ${c.reason}`);
+    const got = deps.execute(c.query.sql);
+    if (got.some((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i])))))
+      return decline("unsupported_capability", "The records for this agency and period conflict with its monthly reporting status, so no number is given.");
+    for (const st of c.query.statements) if (!statements.includes(st)) statements.push(st);
+    sqls.push(c.query.sql);
+    if (!columns.length) { columns = c.query.columns; rows = got; continue; }
+    // Several measures have no categories: the same period keys (or one total row) in the same order.
+    const ip = c.query.columns.indexOf("period");
+    const keys = (rs: unknown[][], i: number) => rs.map((r) => (i >= 0 ? String(r[i]) : "")).join(",");
+    if (got.length !== rows.length || keys(got, ip) !== keys(rows, columns.indexOf("period"))) return decline("unsupported_capability", "Not in the slice yet: measures whose periods do not line up.");
+    const stat = c.query.columns.map((col, i) => (col === "period" ? -1 : i)).filter((i) => i >= 0);
+    columns = [...columns, ...stat.map((i) => c.query.columns[i])];
+    rows = rows.map((r, k) => [...r, ...stat.map((i) => got[k][i])]);
+  }
   const notes = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
-  const delivered = deliver(checked, period, requestedTo, c.query.columns, rows, [...c.query.statements, ...statements], release.id, notes);
+  const delivered = deliver(checked, period, requestedTo, columns, rows, statements, release.id, notes, combined);
   if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
-  return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered };
+  return { kind: "answer", plan: checked, period, sql: sqls.join(";\n"), delivered };
 }
 
 const periodWordsShort = (from: string, to: string) => (from === to ? monthName(to) : `${monthName(from).split(" ")[0]} to ${monthName(to)}`);

@@ -47,6 +47,13 @@ AG = {
     "louisville": {"kind": "agency", "name": "Louisville Metro Police Department", "state": "KY"},
     "tucson": {"kind": "agency", "name": "Tucson Police Department", "state": "AZ"},
     "austin": {"kind": "agency", "name": "Austin Police Department", "state": "TX"},
+    "okc": {"kind": "agency", "name": "Oklahoma City Police Department", "state": "OK"},
+    "cosprings": {"kind": "agency", "name": "Colorado Springs Police Department", "state": "CO"},
+    "fortworth": {"kind": "agency", "name": "Fort Worth Police Department", "state": "TX"},
+    "wichita": {"kind": "agency", "name": "Wichita Police Department", "state": "KS"},
+    "raleigh": {"kind": "agency", "name": "Raleigh Police Department", "state": "NC"},
+    "vabeach": {"kind": "agency", "name": "Virginia Beach Police Department", "state": "VA"},
+    "mesa": {"kind": "agency", "name": "Mesa Police Department", "state": "AZ"},
 }
 
 
@@ -257,10 +264,10 @@ READER = [
          {"label": "Aggravated assaults with a firearm (includes people not hit)", "leads_to": "answer", "meaning": dict(meaning("nashville", year(2024), [("aggravated assault", "victim")]), filters=["weapon: firearm"])}]},
      "Boundary: 'shootings' is a real word, never corrected toward shoplifting; D14 asks, as LS-202."),
     ("reader-b-ytd-compare", "Is shoplifting in Denver up this year compared with last year?", ["D06", "D18", "D30", "P01", "P16"],
-     {"action": "answer", "meaning": dict(meaning("denver", {"from": "2025-01", "to": "2026-10"}, SHOP, ["year"]), statistic="change",
+     {"action": "answer", "meaning": dict(meaning("denver", {"rule": "2025 through the latest month in the data"}, SHOP, ["year"]), statistic="change",
                                           filters=["the same months of each year: January through the latest month"]),
       "values": {"status": "pending_build"}, "statements": ["names the months compared", "compares the same months of each year", names("denver"), SOURCE_LAST]},
-     "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve."),
+     "Boundary: a partial year against last year compares the same months (D06; as LS-055), never ten months with twelve. [P52 (Jeff 2026-10-29): the period ends at the latest reported month, a rule, not a fixed month]"),
     ("reader-b-will-past", "How many shoplifting offenses will Denver's 2024 numbers show?", ["D18", "D30", "P01", "P16"],
      answer(meaning("denver", year(2024), SHOP), names("denver"), SOURCE_LAST), "Boundary: 'will' about a past year is not a forecast."),
     ("reader-b-nonword", "Shplftg in Nashville in 2024", ["D09", "D18", "D31", "P01", "P16", "P22"],
@@ -309,6 +316,70 @@ BREAKDOWN = [
      answer(meaning("kcmo", year(2024), CARJACK, ["location type"]), names("kcmo"), CATS, SOURCE_LAST), "BOUNDARY: carjacking offenses (D18) by location; an incident-level reading is multi-value."),
 ]
 
+# Compiler increment 2 (2026-10-29): several measures, multi-value and relationship breakdowns, age groups, offender
+# breakdowns (P29, P49), weapon filters (P31), the composite gun crime (P31), arrests by arrest date (P46, P50). Fresh,
+# held out, labeled from policy before the build. MUST ANSWER unless marked; boundaries must decline or ask.
+INC2_DRAFTER = "claude-inc2"
+DRUG = [("drug/narcotic violation", "offense"), ("drug equipment violation", "offense")]
+OVERLAP = "says a unit with several categories counts once in each, so the categories can add up to more than the total"
+ARREST_ONCE = "says each arrest counts once and NIBRS cannot tell when one person was arrested twice"
+INC2 = [
+    ("inc2-two-measures", "Shoplifting and theft from motor vehicle offenses in Oklahoma City in 2024", ["D18", "D30", "P01", "P16"],
+     answer(meaning("okc", year(2024), SHOP + TFMV), names("okc"), SOURCE_LAST), "MUST ANSWER: two measures side by side, each with its own status (D6)."),
+    ("inc2-drug", "Drug crimes in Wichita in 2023", ["D18", "D19", "D30", "P01", "P16"],
+     answer(meaning("wichita", year(2023), DRUG), "says drug crimes include drug/narcotic and drug equipment violations",
+            "gives the combined drug-crimes total (drug/narcotic plus drug equipment offenses)", names("wichita"), SOURCE_LAST),
+     "MUST ANSWER: D19, the combined total; the two parts may accompany it (Codex label check)."),
+    ("inc2-two-measures-month", "Carjackings and shoplifting in Raleigh by month in 2024", ["D04", "D18", "D30", "P01", "P16"],
+     answer(meaning("raleigh", year(2024), CARJACK + SHOP, ["month"]), names("raleigh"), MISSING, SOURCE_LAST), "MUST ANSWER: two measures by month."),
+    ("inc2-weapon", "Robberies in Fort Worth by weapon in 2023", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("fortworth", year(2023), [("robbery", "offense")], ["weapon"]), names("fortworth"), CATS, OVERLAP, SOURCE_LAST),
+     "MUST ANSWER: weapons are multi-valued per offense."),
+    ("inc2-age", "Aggravated assault victims in Mesa by age in 2024", ["D18", "D29", "D30", "P01", "P16", "P30"],
+     answer(meaning("mesa", year(2024), AA, ["victim age"]), "groups ages as Under 18 (01-17 and infants NN, NB, BB), 18-24, 25-34, 35-44, 45-54, 55-64, 65+ (65-99), Unknown (00) and Not recorded (blank)",
+            names("mesa"), CATS, SOURCE_LAST),
+     "MUST ANSWER: victim age groups with infants in Under 18 (P30); 00 unknown, 99 'over 98' in 65+ (Jeff confirmed 00 is unknown)."),
+    ("inc2-relationship", "Murder victims in Colorado Springs by relationship to the offender in 2023", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("cosprings", year(2023), MURDER, ["relationship"]), names("cosprings"), CATS, OVERLAP, SOURCE_LAST),
+     "MUST ANSWER: a victim with several offenders can have several relationships."),
+    ("inc2-strangers", "Murders by strangers in Virginia Beach in 2024", ["D18", "D30", "P01", "P16", "P36"],
+     answer(dict(meaning("vabeach", year(2024), MURDER), filters=["relationship: stranger"]), names("vabeach"), SOURCE_LAST), "MUST ANSWER: P36."),
+    ("inc2-carjack-loc", "Carjackings in Wichita by location type in 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("wichita", year(2024), CARJACK, ["location type"]), names("wichita"), CATS, SOURCE_LAST), "MUST ANSWER: carjacking offenses (D18); one location per offense."),
+    ("inc2-offender-sex", "Simple assaults by men and women in Oklahoma City in 2024", ["D18", "D29", "D30", "P01", "P16", "P29", "P49"],
+     answer(meaning("okc", year(2024), SA, ["offender sex"]), names("okc"), CATS, OVERLAP, SOURCE_LAST),
+     "MUST ANSWER: P29 offenders; P49 counts the crimes (victims, D18) by the incident's offender sexes, once in each."),
+    ("inc2-offenders", "Robbery offenders in Raleigh by sex in 2024", ["D18", "D29", "D30", "P01", "P16", "P44"],
+     answer(meaning("raleigh", year(2024), [("robbery", "offender")], ["offender sex"]), names("raleigh"), CATS, SOURCE_LAST),
+     "MUST ANSWER: 'offenders' asks for the offenders themselves (P44), counted per offender record."),
+    ("inc2-twoway", "Aggravated assault victims in Mesa by race and sex in 2024", ["D18", "D29", "D30", "P01", "P16"],
+     answer(meaning("mesa", year(2024), AA, ["victim race", "victim sex"]), names("mesa"), CATS, SOURCE_LAST), "A two-way breakdown, if the reader reads it."),
+    ("inc2-gun-crime", "Gun crime in Fort Worth in 2023", ["D18", "D30", "P01", "P16", "P31"],
+     answer(dict(meaning("fortworth", year(2023), MURDER + [("robbery", "offense")] + AA), filters=["weapon: firearm"]),
+            "names the crimes counted (murder, robbery and aggravated assault with a firearm)",
+            "gives the gun-crime total (firearm murder victims plus firearm robbery offenses plus firearm aggravated assault victims)", names("fortworth"), SOURCE_LAST),
+     "MUST ANSWER: P31's gun crime as a total; each crime in its D18 unit (Codex label check)."),
+    ("inc2-stabbings", "Stabbings in Oklahoma City in 2024", ["D18", "D30", "P01", "P16", "P31"],
+     answer(dict(meaning("okc", year(2024), MURDER + AA), filters=["weapon: knife or cutting instrument"]),
+            "names the crimes counted (murder and aggravated assault with a knife or cutting instrument)",
+            "gives the stabbings total (murder victims plus aggravated assault victims with a knife or cutting instrument)", names("okc"), SOURCE_LAST),
+     "MUST ANSWER: P31's stabbings as a total, victims (D18) (Codex label check)."),
+    ("inc2-arrests", "Shoplifting arrests in Colorado Springs in 2024", ["D18", "D30", "P01", "P16", "P46", "P50"],
+     answer(meaning("cosprings", year(2024), [("shoplifting", "arrest")]), ARREST_ONCE, names("cosprings"), SOURCE_LAST), "MUST ANSWER: arrests made in 2024 (P50)."),
+    ("inc2-arrests-month", "Robbery arrests in Wichita by month in 2023", ["D04", "D18", "D30", "P01", "P16", "P46", "P50"],
+     answer(meaning("wichita", year(2023), [("robbery", "arrest")], ["month"]), ARREST_ONCE, names("wichita"), MISSING, SOURCE_LAST), "MUST ANSWER: by month of arrest."),
+    ("inc2-people-arrested", "How many people were arrested for burglary in Raleigh in 2024?", ["D18", "D30", "P01", "P16", "P46", "P48", "P50"],
+     answer(meaning("raleigh", year(2024), [("burglary", "arrest")]), ARREST_ONCE, names("raleigh"), SOURCE_LAST), "MUST ANSWER: P48 'were arrested' -> arrests; arrests are NIBRS's detail."),
+    # Boundaries: declined by decided policy.
+    ("inc2-b-charged", "How many robbery suspects were charged in Wichita in 2024?", ["D01", "P16", "P46"],
+     {"action": "decline", "reason": "Charging records are not in the data; it records police arrests and clearances.", "alternative": meaning("wichita", year(2024), [("robbery", "arrest")])},
+     "BOUNDARY: P46 charged is declined; offer the arrests (D01)."),
+    ("inc2-b-shooters", "How many shooters were there in Raleigh in 2024?", ["P16", "P45"],
+     {"action": "decline", "reason": "\"Shooters\" is not a term the data defines.", "alternative": None}, "BOUNDARY: P45 shooters declined."),
+    ("inc2-b-gun-violence", "Gun violence in Fort Worth in 2024", ["P16", "P31"],
+     {"action": "decline", "reason": "The data has no counts of non-fatal shootings, so gun violence cannot be counted.", "alternative": None}, "BOUNDARY: P31 gun violence declined with the note."),
+]
+
 # Replay labels P28 changes (reviewed before P28): drafted again, for review.
 RELABEL = {
     "LS-151": (["P22", "P28"], choose("which Baltimore",
@@ -325,6 +396,7 @@ args = sys.argv[1:]
 reviewer = args[1] if args[:1] == ["--reviewed-by"] else None
 reader_reviewer = args[1] if args[:1] == ["--reader-reviewed-by"] else None
 breakdown_reviewer = args[1] if args[:1] == ["--breakdown-reviewed-by"] else None
+inc2_reviewer = args[1] if args[:1] == ["--inc2-reviewed-by"] else None
 data = json.load(open(CASES, encoding="utf-8"))
 have = {(c["group"], c["question"]) for c in data["cases"]}
 added = 0
@@ -373,7 +445,25 @@ for g, q, pol, exp, notes in BREAKDOWN:
         "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
         "label": {"status": "drafted", "drafted_by": BREAKDOWN_DRAFTER, "reviewed_by": None, "notes": notes}})
     added += 1
+for g, q, pol, exp, notes in INC2:
+    group = f"designed:{g}"
+    if (group, q) in have:
+        old = next(c for c in data["cases"] if (c["group"], c["question"]) == (group, q))
+        if old["label"]["drafted_by"] == INC2_DRAFTER and old["label"]["status"] == "drafted":
+            old.update(policy=pol, expected=exp)
+            old["label"]["notes"] = notes
+        continue
+    data["cases"].append({
+        "id": f"LS-{len(data['cases']) + 1:03d}", "group": group, "split": "heldout",
+        "origin": {"kind": "designed", "ref": None}, "tab": "nibrs", "setup": [], "question": q, "policy": pol, "expected": exp,
+        "label": {"status": "drafted", "drafted_by": INC2_DRAFTER, "reviewed_by": None, "notes": notes}})
+    added += 1
 marked = 0
+if inc2_reviewer:
+    for c in data["cases"]:
+        if c["label"]["drafted_by"] == INC2_DRAFTER and c["label"]["status"] == "drafted":
+            c["label"].update(status="reviewed", reviewed_by=inc2_reviewer)
+            marked += 1
 if breakdown_reviewer:
     for c in data["cases"]:
         if c["label"]["drafted_by"] == BREAKDOWN_DRAFTER and c["label"]["status"] == "drafted":

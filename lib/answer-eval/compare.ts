@@ -8,6 +8,7 @@
  *               the label cannot express (a share's numerator and denominator roles, transform parameters).
  * An unverified field never earns correctness credit and never proves a wrong answer (Codex runner review r1).
  */
+import { AGE_BINS } from "../nibrs-plan/from-spec";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ResolvedPeriod } from "../nibrs-plan/resolve";
 import type { Meaning } from "./case";
@@ -26,7 +27,7 @@ const MEASURES: Record<string, string> = {
   burglary: "burglary", theft: "theft", "larceny theft": "theft", larceny: "theft", "motor vehicle theft": "motor vehicle theft", "auto theft": "motor vehicle theft", "car theft": "motor vehicle theft",
   "theft from motor vehicle": "theft from motor vehicle", "vehicle burglary": "theft from motor vehicle", shoplifting: "shoplifting", arson: "arson",
   carjacking: "carjacking", "carjacking robbery in which a motor vehicle was taken": "carjacking", "violent crime": "violent crime", "violent crime ucr": "violent crime", "property crime": "property crime", "property crime ucr": "property crime",
-  "sex offense": "sex offense", "drug possession": "drug narcotic violation", "drug narcotic violation": "drug narcotic violation", "drug equipment violation": "drug equipment violation",
+  "sex offense": "sex offense", "drug possession": "drug narcotic violation", "drug narcotic violation": "drug narcotic violation", "drug equipment violation": "drug equipment violation", "drug equipment": "drug equipment violation",
   dui: "driving under the influence", "driving under the influence": "driving under the influence", "domestic violence": "domestic violence", "hate crime": "hate crime",
   "all offense": "all offenses", "all offenses": "all offenses", "all crime offenses": "all offenses", "all crime": "all offenses",
 };
@@ -53,6 +54,7 @@ function planFilterKey(dimension: string, values: (string | number)[], op: strin
   if (dimension.endsWith("weapon")) return [...v].sort().join("+") === [...FIREARM].sort().join("+") ? "weapon:firearm" : v.join("+") === "20" ? "weapon:knife" : null;
   if (dimension === "offense.clearance_method") return v.join("+") === "exceptional" ? "clearance:exceptional" : v.join("+") === "arrest" ? "clearance:arrest" : null;
   if (dimension === "offense.clearance_type") return v.join("+") === "B" ? "clearance:prosecution declined" : null;
+  if (dimension === "victim_offender.relationship") return v.join("+") === "ST" ? "relationship:stranger" : null;
   if (dimension === "property.loss_type") return v.join("+") === "7" ? "loss:stolen" : v.join("+") === "6" ? "loss:seized" : null;
   if (/\.age$/.test(dimension) && op === "between" && v.join("+") === "1+17") return `${dimension.split(".")[0]} age:under 18`;
   if (/\.sex$/.test(dimension)) return v.join("+") === "F" ? `${dimension.split(".")[0]} sex:female` : v.join("+") === "M" ? `${dimension.split(".")[0]} sex:male` : null;
@@ -63,6 +65,7 @@ function labelFilterKey(f: string): string | null {
   const family = norm(fam), value = norm(rest.join(":"));
   if (family === "weapon") return /firearm|gun/.test(value) ? "weapon:firearm" : /knife/.test(value) ? "weapon:knife" : null;
   if (family === "clearance") return /prosecution declined/.test(value) ? "clearance:prosecution declined" : /exceptional/.test(value) ? "clearance:exceptional" : /arrest/.test(value) ? "clearance:arrest" : null;
+  if (family === "relationship") return /stranger/.test(value) ? "relationship:stranger" : null;
   if (family === "loss") return /stolen/.test(value) ? "loss:stolen" : /seized/.test(value) ? "loss:seized" : null;
   if (/^(victim|offender|arrestee) age$/.test(family)) return /under 18/.test(value) ? `${family}:under 18` : null;
   if (/^(victim|offender|arrestee) sex$/.test(family)) return /female/.test(value) ? `${family.split(" ")[0]} sex:female` : /\bmale/.test(value) ? `${family.split(" ")[0]} sex:male` : null;
@@ -146,11 +149,16 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   const transforms = plan.transforms.map((t) => t.kind);
   const headline = transforms.includes("rank") ? "rank" : transforms.includes("period_comparison") ? "change" : statistics[statistics.length - 1];
   const filterKeys: (string | null)[] = [];
-  for (const f of [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])]) {
-    if (f.kind === "attribute") filterKeys.push(planFilterKey(f.dimension, f.values ?? [], f.op));
-    else if (f.negate) filterKeys.push(null); // a negated existence has no label equivalent here
-    else for (const w of f.where) filterKeys.push(w.kind === "attribute" ? planFilterKey(w.dimension, w.values ?? [], w.op) : null);
-  }
+  const keysOf = (fs: NibrsPlan["filters"]) => fs.flatMap((f): (string | null)[] =>
+    f.kind === "attribute" ? [planFilterKey(f.dimension, f.values ?? [], f.op)]
+    : f.negate ? [null] // a negated existence has no label equivalent here
+    : f.where.map((w) => (w.kind === "attribute" ? planFilterKey(w.dimension, w.values ?? [], w.op) : null)));
+  filterKeys.push(...keysOf(plan.filters));
+  // A filter every measure carries (a composite's weapon, P31) is one filter of the question, as a label lists it; a
+  // filter on only some measures stays per measure.
+  const perMeasure = plan.measures.map((m) => keysOf(m.filters ?? []));
+  const same = perMeasure.length > 1 && perMeasure.every((k) => JSON.stringify(k) === JSON.stringify(perMeasure[0])) && !perMeasure[0].includes(null);
+  filterKeys.push(...(same ? perMeasure[0] : perMeasure.flat()));
   for (const m of plan.measures) if (m.id.endsWith("_cleared")) filterKeys.push("clearance:cleared");
   for (const p of plan.geography.places) if (p.kind === "agency_set") for (const w of p.where) filterKeys.push(w.field === "agency.population" && w.op === ">=" ? `population:${w.value}+` : null);
   const rankT = plan.transforms.find((t) => t.kind === "rank");
@@ -162,7 +170,8 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
     // share, checked against independent counts; any other share's roles stay unverified.
     ...plan.statistics.filter((s) => s.kind === "share" && !(s.within.join("+") === plan.groupings.filter((g) => g.dimension.startsWith("time.")).map((g) => g.dimension).join("+")
       && plan.groupings.some((g) => !g.dimension.startsWith("time.")) && !s.denominator)).map((s) => `share within ${"within" in s ? s.within.join("+") || "all" : "?"}`),
-    ...plan.groupings.filter((g) => g.bins).map((g) => `${g.dimension} bins`),
+    // Today's age groups (P30) are what the labels name; any other bins are not in the label schema.
+    ...plan.groupings.filter((g) => g.bins && JSON.stringify(g.bins) !== JSON.stringify(AGE_BINS)).map((g) => `${g.dimension} bins`),
   ];
   return {
     meaning: {

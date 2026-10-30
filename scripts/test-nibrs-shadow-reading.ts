@@ -57,6 +57,19 @@ assert.equal(read("robberies in Tulsa next year").text, "robberies in Tulsa in 2
 for (const q of ["How many robbery arrests in Tulsa went to trial in 2023?", "robbers sentenced in Tulsa in 2023", "guilty pleas for burglary in Tulsa"]) assert.equal(read(q).court, true, q);
 for (const q of ["robbery arrests in Tulsa in 2023", "robberies cleared in Tulsa in 2023"]) assert.equal(read(q).court, false, q);
 
+// Charging decisions are declined like court outcomes (P46).
+for (const q of ["How many robbery suspects were charged in Tulsa in 2024?", "robberies in Tulsa with charges filed"]) assert.equal(read(q).court, true, q);
+
+// P48: people arrested for a crime are its arrests.
+assert.equal(read("How many people were arrested for burglary in Tulsa in 2024?").text, "How many burglary arrests in Tulsa in 2024?");
+assert.equal(read("people arrested for shoplifting in Tulsa").text, "shoplifting arrests in Tulsa");
+// P31: composites read as their crimes, with the weapon flagged; gun violence and shooters are undefined terms (P45).
+const gc = read("Gun crime in Tulsa in 2023");
+assert.deepEqual([gc.text, gc.composite], ["murders, robberies and aggravated assaults in Tulsa in 2023", "firearm"]);
+assert.deepEqual([read("Stabbings in Tulsa in 2023").text, read("Stabbings in Tulsa in 2023").composite], ["murders and aggravated assaults in Tulsa in 2023", "knife"]);
+assert.equal(read("Robberies in Tulsa in 2023").composite, null);
+assert.deepEqual([read("Gun violence in Tulsa in 2023").undefinedTerm, read("How many shooters were there in Tulsa?").undefinedTerm, read("Gun crime in Tulsa").undefinedTerm], ["gun violence", "shooters", null]);
+
 // Every rewrite is recorded on the ledger the reader reads.
 const l = read("Shoplfting in Tulsa so far this year").ledger;
 assert.deepEqual(l.readings.map((r) => r.kind), ["period", "spelling"]);
