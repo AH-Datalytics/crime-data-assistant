@@ -122,6 +122,11 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
   // A crime by its offenders' sexes (P49), or offenders by their own sex (P44).
   "offender.sex": { header: "Offender sex", plural: "offender sex", names: { ...SEX, unknown_offender: "Unknown offender" } },
+  // P66 (Jeff 2026-10-30): STATUS is cleared or uncleared; TYPE is by arrest, each exceptional type, or uncleared.
+  "offense.clearance_status": { header: "Clearance status", plural: "clearance status", names: { cleared: "Cleared", none: "Uncleared" } },
+  "offense.clearance_type": { header: "Clearance type", plural: "clearance type", names: {
+    arrest: "Cleared by arrest", A: "Exceptional: death of the offender", B: "Exceptional: prosecution declined",
+    C: "Exceptional: in custody of another jurisdiction", D: "Exceptional: victim refused to cooperate", E: "Exceptional: juvenile, no custody", none: "Uncleared" } },
 };
 /** A category's name: the code's name; a blank field is "Not recorded"; a code with no name keeps its code. */
 export function categoryName(dimension: string, code: unknown): string {

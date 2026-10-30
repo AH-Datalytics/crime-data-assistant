@@ -98,14 +98,39 @@ const age = (a: string): Groupable => ({ col: `${a}.age`, age: true });
 /** P49: a crime by the sexes of its incident's offenders; offender 00 (none known) is its own category. */
 const offenderSex = (a: string): Groupable => ({ col: `CASE WHEN f2.offender_seq = '00' THEN 'unknown_offender' ELSE f2.sex END`, multi: true,
   join: (read) => `LEFT JOIN ${read("offender")} f2 ON ${sameIncident("f2", a)}` });
+/**
+ * P64, P67: an incident's clearance as of the file, read from its own data year: any arrestee row (C, N or M, P68)
+ * makes it cleared by arrest; otherwise an exceptional clearance A-E; otherwise not cleared. Every unit of the incident
+ * takes that status (P66). `ca` and `ic` are the joined incident facts.
+ */
+const typeOf = (arrested: string, exceptional: string) =>
+  `CASE WHEN ${arrested} THEN 'arrest' WHEN ${exceptional} IN ('A', 'B', 'C', 'D', 'E') THEN ${exceptional} ELSE 'none' END`;
+/** Each clearance dimension from the incident's type (arrest, A-E, none). */
+const clearanceCols = (type: string): Record<string, string> => ({
+  "offense.clearance_type": type,
+  "offense.clearance_method": `CASE ${type} WHEN 'arrest' THEN 'arrest' WHEN 'none' THEN 'none' ELSE 'exceptional' END`,
+  "offense.clearance_status": `CASE ${type} WHEN 'none' THEN 'none' ELSE 'cleared' END`,
+});
+const CLEARANCE_COL = clearanceCols(typeOf("ca.data_year IS NOT NULL", "ic.cleared_exceptionally"));
+const clearanceJoin = (a: string) => (read: Read) =>
+  `LEFT JOIN ${read("incident")} ic ON ${sameIncident("ic", a)} LEFT JOIN (SELECT DISTINCT data_year, ori, incident_num FROM ${read("arrestee")}) ca ON ${sameIncident("ca", a)}`;
+const clearance = (a: string): Record<string, Groupable> =>
+  Object.fromEntries(Object.entries(CLEARANCE_COL).map(([d, col]) => [d, { col, join: clearanceJoin(a) }]));
+/** The same status as a condition on a unit's own incident (a clearance filter: "cleared by arrest", "uncleared"). */
+function clearanceCond(read: Read, a: string, dimension: string, values: string[]): string {
+  // Correlated subqueries only (DuckDB has no correlated outer join): the same rule as the grouping's joins.
+  const type = typeOf(`EXISTS (SELECT 1 FROM ${read("arrestee")} a4 WHERE ${sameIncident("a4", a)})`,
+    `(SELECT max(i4.cleared_exceptionally) FROM ${read("incident")} i4 WHERE ${sameIncident("i4", a)})`);
+  return `(${clearanceCols(type)[dimension]}) IN (${list(values)})`;
+}
 const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
   victim: { "victim.race": own("v.race"), "victim.sex": own("v.sex"), "victim.ethnicity": own("v.ethnicity"), "victim.age": age("v"),
     "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
-    "offender.sex": offenderSex("v") },
+    "offender.sex": offenderSex("v"), ...clearance("v") },
   offense: { "offense.location_type": own("o.location_type"),
     "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
-    "offender.sex": offenderSex("o") },
-  incident: {},
+    "offender.sex": offenderSex("o"), ...clearance("o") },
+  incident: { ...clearance("o") },
   offender: { "offender.race": own("f.race"), "offender.sex": own("f.sex"), "offender.ethnicity": own("f.ethnicity"), "offender.age": age("f") },
   arrestee: { "arrestee.race": own("a.race"), "arrestee.sex": own("a.sex"), "arrestee.ethnicity": own("a.ethnicity"), "arrestee.age": age("a") },
 };
@@ -169,7 +194,7 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
   }
   if (kind === "incidents" && unit === "incident") {
     return { entity: "incident", sql: `SELECT DISTINCT o.data_year, o.ori, o.incident_num, NULL AS sub, substr(o.incident_date, 1, 6) AS ym${extra}
-      FROM ${read("offense")} o WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
+      FROM ${read("offense")} o ${joins} WHERE o.offense_code IN (${list(codes)})${incidentFilter("o")}` };
   }
   if (kind === "victims" && unit === "victim") {
     if (!codes.every((c) => PERSON_CODES.has(c))) return { error: `"${measureId}" counts victims of offenses that are not crimes against persons; not in v0` };
@@ -269,7 +294,10 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const statements: AnswerStatement[] = [];
   const incidentConds: string[] = [];
   const unitConds: ((read: Read) => string)[] = [];
+  // Clearance selections (P64, P66): a condition on the counted unit's own incident.
+  const clearanceConds: { dimension: string; values: string[] }[] = [];
   for (const f of plan.filters) {
+    if (f.kind === "attribute" && CLEARANCE_COL[f.dimension] && f.op === "in" && f.values?.length) { clearanceConds.push({ dimension: f.dimension, values: f.values.map(String) }); continue; }
     if (f.kind === "exists" && !f.negate && f.entity !== "property") {
       const w = f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].op === "in" && f.where[0].values?.length ? f.where[0] : null;
       const values = (w?.values ?? []).map(String);
@@ -307,7 +335,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   const read = (table: string) => `read_parquet([${years.map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
   const incidentFilter = (a: string) => [...incidentConds.map((c) => `EXISTS (SELECT 1 FROM ${read("property")} p WHERE p.data_year = ${a}.data_year AND p.ori = ${a}.ori AND p.incident_num = ${a}.incident_num AND ${c})`),
-    ...unitConds.map((c) => c(read))].map((c) => `
+    ...unitConds.map((c) => c(read)), ...clearanceConds.map((c) => clearanceCond(read, a, c.dimension, c.values))].map((c) => `
       AND ${c}`).join("");
   const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter);
   if ("error" in units) return no(units.error);

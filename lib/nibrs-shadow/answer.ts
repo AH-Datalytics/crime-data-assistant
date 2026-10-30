@@ -217,7 +217,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // (FBI SRS), Current Trends' this year; unless NIBRS is asked for in words (P01). Its clearance rate is the
   // historical clearances' for the nation (P57) and declined for a state (P18).
   // An every-month cohort (P61's button, typed) keeps the question in NIBRS: the historical file has no cohorts.
-  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property) {
+  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance) {
     const sp = d.spec;
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
@@ -262,7 +262,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // the slice's own limits.
   // The reader's own change form ("did X increase from 2022 to 2023") is a plain count compared, under the same rule.
   const plainUnit = (u: string | null) => u === null || ["offenses", "victims", "incidents"].includes(u);
-  const noDetail = !flags(ledger0).property && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+  const noDetail = !flags(ledger0).property && !flags(ledger0).clearance && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
   const asked = flags(ledger0).composite || !noDetail ? []
     : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
     : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
@@ -280,6 +280,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (!d || !loss) return decline("unsupported_capability", `Not in the slice yet: this property condition (${prop.what} ${prop.loss}).`);
     plan.filters.push({ kind: "exists", scope: "incident", entity: "property", attribution: "incident_level_only",
       where: [{ kind: "attribute", dimension: "property.loss_type", op: "in", values: [loss] }, { kind: "attribute", dimension: "property.description", op: "in", values: d.codes }] });
+  }
+  // Increment 6: clearance (P64, P66, P67), each unit taking its incident's status as of the file: a breakdown by
+  // status or type, or a selection.
+  const clr = flags(ledger0).clearance;
+  if (clr) {
+    if (clr.share) return decline("unsupported_capability", "Not in the slice yet: the share cleared; ask how many were cleared, or by clearance status.");
+    if (clr.by) plan.groupings.push({ dimension: clr.by === "type" ? "offense.clearance_type" : "offense.clearance_status", unknown: "visible", absent: "show" });
+    if (clr.only) plan.filters.push({ kind: "attribute", op: "in",
+      dimension: clr.only === "arrest" || clr.only === "exceptional" ? "offense.clearance_method" : "offense.clearance_status",
+      values: [clr.only === "cleared" ? "cleared" : clr.only === "uncleared" ? "none" : clr.only] });
   }
   // Places (increment 4): named agencies, separate or combined, and a state's city agencies for a ranking. State and
   // national totals are increment 5.

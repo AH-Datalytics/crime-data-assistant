@@ -116,8 +116,10 @@ const DIMENSIONS: SemanticDimension[] = [
   dim("time.month", "time"), dim("time.year", "time"), dim("geo.agency", "agency"), dim("geo.state", "agency"),
   ...["victim", "offender", "arrestee", "group_b_arrest"].flatMap((e) => [dim(`${e}.sex`, e, { values: SEX }), dim(`${e}.race`, e, { values: RACE_CODES }), dim(`${e}.ethnicity`, e, { values: ETHNICITY_CODES }), dim(`${e}.age`, e, { numeric: AGE })]),
   dim("offense.location_type", "offense", { values: LOCATION_TYPES }), dim("offense.offense", "offense"),
-  dim("offense.clearance_type", "offense", { values: { arrest: "Cleared by arrest", A: "Death of offender", B: "Prosecution declined", C: "In custody of other jurisdiction", D: "Victim refused to cooperate", E: "Juvenile, no custody", none: "Not cleared" } }),
-  dim("offense.clearance_method", "offense", { values: { arrest: "By arrest", exceptional: "By exceptional means", none: "Not cleared" } }),
+  dim("offense.clearance_type", "incident", { values: { arrest: "Cleared by arrest", A: "Death of offender", B: "Prosecution declined", C: "In custody of other jurisdiction", D: "Victim refused to cooperate", E: "Juvenile, no custody", none: "Not cleared" } }),
+  dim("offense.clearance_method", "incident", { values: { arrest: "By arrest", exceptional: "By exceptional means", none: "Not cleared" } }),
+  // P66's STATUS level (Jeff 2026-10-30): cleared or uncleared, the incident's status as of the file (P64).
+  dim("offense.clearance_status", "incident", { values: { cleared: "Cleared", none: "Uncleared" } }),
   dim("offense_weapon.weapon", "offense_weapon", { values: { ...WEAPON_TYPES, ...Object.fromEntries(["11", "12", "13", "14", "15"].map((c) => [`${c}A`, `${WEAPON_TYPES[c]}, automatic`])) } }), dim("offense_bias.bias", "offense_bias"),
   dim("property.loss_type", "property", { values: PROPERTY_LOSS_TYPES }), dim("property.description", "property"),
   dim("property_drug.drug_type", "property_drug"), dim("property_drug.drug", "property_drug"),
