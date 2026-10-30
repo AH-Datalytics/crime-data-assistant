@@ -21015,6 +21015,69 @@
     "reviewed_by": "codex:inc5-labels-1",
     "notes": "MUST DECLINE (P31), as LS-302: never reinterpreted as gun crime summed over agencies."
    }
+  },
+  {
+   "id": "LS-355",
+   "group": "designed:inc5-nibrs-rate",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Carjacking rate in Texas in 2024",
+   "policy": [
+    "P15",
+    "P53",
+    "P61",
+    "P62",
+    "P63",
+    "D22"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "residents of the reporting agencies (the sum of their FBI agency populations), per 100,000",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the rate per 100,000 residents of the reporting agencies (P15, P62)",
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "offers a button to show only agencies that reported every month of the period; clicking it keeps Texas, carjackings and 2024 and gives the rate over the agencies that reported all 12 months (P61, P62)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the all-months sum over the summed populations of every reporting agency, partial reporters included and disclosed (Jeff 2026-10-30)."
+   }
   }
  ]
 }
