@@ -20835,14 +20835,14 @@
    ],
    "expected": {
     "action": "decline",
-    "reason": "There is no state clearance rate in the data (P18), and how to compute a clearance rate for a NIBRS-only offense is not yet decided (P57).",
+    "reason": "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states (P18).",
     "alternative": null
    },
    "label": {
     "status": "reviewed",
     "drafted_by": "claude-inc5",
     "reviewed_by": "codex:inc5-labels-1",
-    "notes": "MUST DECLINE."
+    "notes": "MUST DECLINE. Reason updated 2026-10-30 (increment-6 label review): P64 decided the NIBRS clearance method; the refusal stands on P18."
    }
   },
   {
@@ -21198,7 +21198,7 @@
     "statements": [
      "names the agency (Memphis Police Department)",
      "breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared (P66)",
-     "counts an incident with both an arrest and an exceptional clearance as cleared by arrest (P67)",
+     "says arrest takes precedence over exceptional clearance (P67)",
      "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
      "gives the number of incidents beside the count (P66)",
      "says property belongs to the incident, not to one offense (N2)",
@@ -21294,7 +21294,9 @@
     "action": "answer",
     "meaning": {
      "source": "nibrs",
-     "filters": [],
+     "filters": [
+      "cleared (by arrest or exceptional means)"
+     ],
      "groupings": [],
      "statistic": "share",
      "places": [
@@ -21323,6 +21325,7 @@
      "names the agency (Memphis Police Department)",
      "gives the cleared count, the total and the share",
      "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
@@ -21346,10 +21349,10 @@
    "question": "Carjackings in Dallas in 2024 by clearance type",
    "policy": [
     "D18",
+    "P63",
     "P64",
     "P66",
-    "P67",
-    "P63"
+    "P67"
    ],
    "expected": {
     "action": "answer",
@@ -21386,6 +21389,7 @@
      "breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared (P66)",
      "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
      "gives the number of incidents beside the count (P66)",
+     "says arrest takes precedence over exceptional clearance (P67)",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
@@ -21476,10 +21480,10 @@
    "question": "Shoplifting offenses in Memphis in 2024 cleared by arrest",
    "policy": [
     "D18",
+    "P63",
     "P64",
     "P66",
-    "P67",
-    "P63"
+    "P67"
    ],
    "expected": {
     "action": "answer",
@@ -21515,6 +21519,7 @@
      "names the agency (Memphis Police Department)",
      "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
      "gives the number of incidents beside the count (P66)",
+     "says arrest takes precedence over exceptional clearance (P67)",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
@@ -21538,6 +21543,7 @@
    "question": "Robbery clearance rate in Atlanta in 2023",
    "policy": [
     "P01",
+    "P16",
     "P57",
     "P63"
    ],
@@ -21571,6 +21577,7 @@
      "status": "pending_build"
     },
     "statements": [
+     "names the agency (Atlanta Police Department)",
      "ends with the source line \"Source: FBI SRS.\" (P63)"
     ]
    },
@@ -21624,7 +21631,8 @@
      ]
     },
     "values": {
-     "status": "pending_build"
+     "status": "pending_build",
+     "source": "incident-level property on one segment: an incident whose stolen property is not a firearm and whose firearm is recovered is excluded (give its count)"
     },
     "statements": [
      "names the agency (Memphis Police Department)",
@@ -21802,14 +21810,15 @@
      ]
     },
     "values": {
-     "status": "pending_build"
+     "status": "pending_build",
+     "source": "P68: arrestee segments marked C or N are counted, M is not; each apprehension counts once; reached through the incident (never by matching the arrest offense)"
     },
     "statements": [
      "names the agency (Memphis Police Department)",
      "counts arrests by arrest date (P50)",
-     "counts each apprehension once (P68)",
-     "says arrests without an incident (Group B) are not included",
+     "says arrests with no incident (standalone Group B arrests) are not included; an arrestee of an incident with a Group B arrest offense is",
      "says property belongs to the incident, not to one offense (N2)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
@@ -21863,12 +21872,13 @@
      ]
     },
     "values": {
-     "status": "pending_build"
+     "status": "pending_build",
+     "source": "P68: arrestee segments marked C or N are counted, M is not; each apprehension counts once"
     },
     "statements": [
      "names the agency (Memphis Police Department)",
      "counts arrests by arrest date (P50)",
-     "counts each apprehension once (P68)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
@@ -21877,6 +21887,320 @@
     "drafted_by": "claude-inc6",
     "reviewed_by": null,
     "notes": "MUST ANSWER: re-scored under P68 (segments marked M are not counted)."
+   }
+  },
+  {
+   "id": "LS-369",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Uncleared carjackings in Dallas in 2024",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "not cleared"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Dallas Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Dallas Police Department)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: uncleared as a selection."
+   }
+  },
+  {
+   "id": "LS-370",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Carjackings in Dallas in 2024 cleared by exceptional means",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "cleared by exceptional means"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Dallas Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Dallas Police Department)",
+     "says arrest takes precedence over exceptional clearance (P67)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: exceptional-only as a selection (an incident also cleared by arrest is not exceptional, P67)."
+   }
+  },
+  {
+   "id": "LS-371",
+   "group": "designed:inc6-clearance",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults in Memphis in 2024 by clearance type",
+   "policy": [
+    "D18",
+    "P64",
+    "P66",
+    "P67",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "clearance type"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "discriminating: victims and incidents differ; give the incidents with both an arrest and an exceptional clearance (counted as by arrest), those cleared after the period, and each exceptional type"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared (P66)",
+     "counts victims, each taking its incident's clearance status (D18, P66)",
+     "says arrest takes precedence over exceptional clearance (P67)",
+     "says it counts the crimes of the period cleared as of the file date, which is not the FBI's annual method (P64)",
+     "gives the number of incidents beside the count (P66)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the clearance discrimination case (victim count against incident count, P67's tie, later arrests, every type)."
+   }
+  },
+  {
+   "id": "LS-372",
+   "group": "designed:inc6-arrests",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Arrests in Memphis in 2024 for incidents that included a robbery",
+   "policy": [
+    "D18",
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "incident offense: robbery"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "all offenses",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "P68: arrestee segments marked C or N are counted, M is not; each apprehension counts once; reached through the incident: an arrestee whose own arrest offense is not robbery (e.g. a Group B offense) is included; give how many"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts arrests by arrest date (P50)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice",
+     "says arrests with no incident (standalone Group B arrests) are not included; an arrestee of an incident with a Group B arrest offense is",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the incident association (r2 case 2c), paired with LS-372."
+   }
+  },
+  {
+   "id": "LS-373",
+   "group": "designed:inc6-arrests",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robbery arrests in Memphis in 2024",
+   "policy": [
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "P68: arrestee segments marked C or N are counted, M is not; each apprehension counts once; classified by the arrestee's own arrest offense (robbery), whatever the incident's offenses"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts arrests by arrest date (P50)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc6",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: arrests classified by arrest offense; paired with the incident-association case before it."
    }
   }
  ]
