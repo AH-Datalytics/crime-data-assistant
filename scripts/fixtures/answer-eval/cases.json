@@ -18185,7 +18185,7 @@
    },
    "tab": "nibrs",
    "setup": [],
-   "question": "Percent change in robberies with a firearm in Charlotte from 2021 to 2025",
+   "question": "Percent change in robberies with a firearm in Charlotte, North Carolina from 2021 to 2025",
    "policy": [
     "D17",
     "D18",
@@ -18237,7 +18237,7 @@
     "status": "reviewed",
     "drafted_by": "claude-inc3",
     "reviewed_by": "codex:inc3-labels-1",
-    "notes": "MUST ANSWER: a Part I crime with a NIBRS detail (the weapon) is NIBRS's (P01)."
+    "notes": "MUST ANSWER: a Part I crime with a NIBRS detail (the weapon) is NIBRS's (P01). [State named before the build: a bare 'Charlotte' is a city and a county of 100,000+ (Charlotte County, FL), which P28 asks about]"
    }
   },
   {

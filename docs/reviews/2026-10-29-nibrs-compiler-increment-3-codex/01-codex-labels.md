@@ -23,3 +23,8 @@ Nov-Dec 2025. Since 2025: Jan-Oct 2025 windows complete, later ones missing. Sin
 the gap is in the prehistory. Rolling rates and rolling plus comparison stay refused.
 
 All 14 labels frozen, reviewed by `codex:inc3-labels-1`.
+
+**Edit after freezing, before the build:** LS-308 now names the state ("Charlotte, North Carolina"). The place index named
+the city agency "Charlotte-Mecklenburg", so a bare "Charlotte" found Charlotte County, FL. With the city named
+(PLACE_NAMES stop-gap NC0600100 "Charlotte"), a bare "Charlotte" is a city and a county of 100,000+, which P28 asks
+about. The label's meaning is unchanged; only the question's place words changed.

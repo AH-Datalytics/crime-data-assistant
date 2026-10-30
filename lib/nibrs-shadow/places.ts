@@ -38,6 +38,7 @@ export const PLACE_NAMES: Record<string, string> = {
   TN0190100: "Nashville",   // Return A: "METROPOLITAN NASHVILLE P"; Historical: "Metropolitan Nashville Police Department"
   NV0020100: "Las Vegas",   // Return A: "LAS VEGAS METRO PD"; Historical: "Las Vegas Metropolitan Police Department"
   KY0568000: "Louisville",  // Return A: "LOUISVILLE METRO"; Historical: "Louisville Metro" (else "Louisville" finds Louisville, CO)
+  NC0600100: "Charlotte",   // Historical: "Charlotte-Mecklenburg Police Department" (else "Charlotte, North Carolina" finds no agency)
 };
 
 export type PlaceIndex = { byName: Map<string, Agency[]> };
