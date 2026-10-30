@@ -352,6 +352,16 @@ const gunDiffs = (g: typeof gun) => scoreShadow(gunLabel, g, r, ctx).result!.dif
 assert.equal(gunDiffs(gun).length, 0);
 assert.equal(gunDiffs({ ...gun, delivered: { ...gun.delivered, text: gun.delivered.text.map((t) => t.replace("252", "2520")) } }).length, 1);
 
+// Codex P51 review: a known 0 denominator gives an expected blank share (not unverified); a share UNAVAILABLE for that
+// reason is not a missing month.
+const zeroDen = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "year", category: "sex", measures: { sa: "13B" }, totals: { sa: { status: "VALUE", value: 1 } },
+  rows: [{ year: "2023", sex: "F", sa: { status: "VALUE", value: 1 } }, { year: "2024", sex: "F", sa: { status: "VALUE", value: 0 } }] }) }]).get("LS-999")!;
+assert.deepEqual(zeroDen.map((x) => [x.key, x.share]), [["2023|Female", 100], ["2024|Female", null]]);
+const unavailable = { ...bySex, delivered: { ...bySex.delivered, table: { ...bySex.delivered.table, rows: [["Female", 0, null]] },
+  evidence: [{ row: 0, statistic: bySex.plan.statistics[0].as, status: "VALUE" as const }, { row: 0, statistic: bySex.plan.statistics[1].as, status: "UNAVAILABLE" as const }] } };
+const missingLabel = label({ ...(sexLabel.expected as object), statements: ["names any months with no data as missing, not zero"] } as never);
+assert.equal(scoreShadow(missingLabel, unavailable, r, ctx).result!.diffs.filter((d) => d.field === "statement" && d.kind === "material").length, 0);
+
 // Batch 5's category fields and codes: the file names its field; age and unknown-offender codes map to NIBRSAI's labels;
 // a multi-valued field's categories are never summed into a share's denominator.
 const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", category,

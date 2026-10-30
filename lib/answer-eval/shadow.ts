@@ -79,8 +79,11 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
         const code = catField ? (CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
         const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], code) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
         const p = String(r.year ?? r.month ?? "");
-        const den = !p && total?.value ? total.value : periodTotal.get(p) || undefined;
-        const share = c.value === null ? null : den === undefined ? undefined : Math.round((1000 * c.value) / den) / 10;
+        // A known 0 denominator (P51) is evidence: its share is an expected blank (UNAVAILABLE). Only absent or unknown
+        // denominator evidence leaves the share unverified (Codex P51 review).
+        const knownTotal = !!total && ["VALUE", "REPORTED_ZERO"].includes(total.status) && total.value !== null;
+        const den = !p && knownTotal ? total!.value! : periodTotal.get(p) ?? undefined;
+        const share = c.value === null || den === 0 ? null : den === undefined ? undefined : Math.round((1000 * c.value) / den) / 10;
         return { key, ...c, ...(catField ? { share } : {}) };
       });
     for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g)) {
@@ -129,7 +132,8 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
   const out: Diff[] = [];
   const text = o.delivered.text;
   const all = text.join(" ");
-  const blank = o.delivered.evidence.some((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO");
+  // Missing reporting evidence only: a share UNAVAILABLE because its denominator is a known 0 is not a missing month.
+  const blank = o.delivered.evidence.some((x) => !["VALUE", "REPORTED_ZERO", "UNAVAILABLE"].includes(x.status));
   for (const s of e.statements) {
     let ok: boolean | null = null;
     const ag = /^names the agency \((.+)\)$/.exec(s);
