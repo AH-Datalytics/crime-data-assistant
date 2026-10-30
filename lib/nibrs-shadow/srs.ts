@@ -47,6 +47,8 @@ export type SrsPlace = { kind: "state"; code: string } | { kind: "national" };
 export type SrsQuestion = {
   measure: string; place: SrsPlace; from: number; to: number; byYear: boolean;
   statistic: "count" | "rate" | "clearance_rate"; comparison: { earlier: number; later: number } | null;
+  /** Lines after the title (a span reaching this year names it as Current Trends'). */
+  notes?: string[];
 };
 /** A Part I answer from the historical file: the table, its text, its meaning in the labels' terms, and what it read. */
 export type SrsAnswer = {
@@ -95,7 +97,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   const rows = covered.map((y) => ({ y, row: rowFor(crime(), q.place, y) }));
   const value = (r: Row | undefined) => (r && r[col] !== "" ? Number(r[col]) : null);
   const uids = rows.flatMap((r) => (r.row ? [r.row.uid] : []));
-  const missingLine = outside.length ? [`${span}; ${yearsWords(outside[0], outside[outside.length - 1])} ${outside.length > 1 ? "are" : "is"} outside them.`] : [];
+  const missingLine = [...(outside.length ? [`${span}; ${yearsWords(outside[0], outside[outside.length - 1])} ${outside.length > 1 ? "are" : "is"} outside them.`] : []), ...(q.notes ?? [])];
   const meaningBase = { source: "historical" as const, places: [placeOf(q.place)], measures: [{ name: m.name, unit: m.unit }], filters: [] as string[] };
   const read = { file: "historical_crime_states_nation_1960-2025.csv", column: col, uids };
   const header = `${m.words[0].toUpperCase()}${m.words.slice(1)}${q.statistic === "rate" ? " per 100,000 residents" : ""}`;

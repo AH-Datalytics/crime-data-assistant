@@ -207,7 +207,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
   const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
-  if (flags(ledger0).shrDetail && geoOnly(clause0("place")))
+  if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run Homicide Reports." };
   const d = matchNibrsType(ledger);
   if (d.kind === "none") return decline("reader", "The question could not be read: no typed reading.");
@@ -216,21 +216,35 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // P53 (increment 5): a Part I offense for a state or the nation is the historical file's in a completed year
   // (FBI SRS), Current Trends' this year; unless NIBRS is asked for in words (P01). Its clearance rate is the
   // historical clearances' for the nation (P57) and declined for a state (P18).
-  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked) {
+  // An every-month cohort (P61's button, typed) keeps the question in NIBRS: the historical file has no cohorts.
+  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent) {
     const sp = d.spec;
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
       || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
     const yrs = sp.period.form === "year" ? [sp.period.year, sp.period.year] : sp.period.form === "range" ? [sp.period.from, sp.period.to] : null;
-    if (geo && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims", "incidents"].includes(sp.unit))
+    // The file's own unit only (offenses; victims for murder, rape, assault): incidents are another quantity (Codex
+    // increment-5 review 2.3) and stay with P01's decline.
+    if (geo && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
       && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate") && !flags(ledger0).composite) {
-      const thisYear = Number(release.lastMonth.slice(0, 4));
-      if (yrs[1] >= thisYear && sp.statistic !== "clearance_rate")
-        return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends.` };
+      // The file has whole years only: a month, part of a year or a part-year comparison is declined, never answered
+      // as whole years (review 2.1).
       const cmp = flags(ledger0).comparison;
-      const r = answerSrs({ measure: sp.measures[0], place: geo.kind === "state" ? { kind: "state", code: geo.code } : { kind: "national" }, from: yrs[0], to: yrs[1],
+      const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") && s.to.endsWith("-12");
+      if ((sp.grain !== "total" && sp.grain !== "year") || (cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later))))
+        return decline("unsupported_capability", "Not in the slice yet: state and national figures for these crimes come from the historical file, which has whole years only; ask for whole years.");
+      const thisYear = Number(release.lastMonth.slice(0, 4));
+      if (yrs[0] > thisYear) return decline("outside_release_coverage", `${yrs[0]} is not in the data; the latest year is ${thisYear}.`);
+      if (yrs[0] === thisYear && sp.statistic !== "clearance_rate")
+        return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends.` };
+      if (yrs[1] > thisYear) return decline("outside_release_coverage", `${yrs[1]} is not in the data; the latest year is ${thisYear}.`);
+      // A span reaching this year: its completed years from the file, this year named as Current Trends' (P14: never
+      // spliced in; review 2.6).
+      const reachesNow = yrs[1] === thisYear && sp.statistic !== "clearance_rate";
+      const r = answerSrs({ measure: sp.measures[0], place: geo.kind === "state" ? { kind: "state", code: geo.code } : { kind: "national" }, from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1],
         byYear: sp.grain === "year", statistic: sp.statistic,
-        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null });
+        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
+        notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [] });
       if (r.kind === "srs") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
     }
@@ -251,7 +265,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const asked = flags(ledger0).composite || !noDetail ? []
     : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
     : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
-  if (!flags(ledger0).nibrsAsked && asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
+  if (!flags(ledger0).nibrsAsked && !flags(ledger0).consistent && asked.some((x) => PART_ONE.has(x))) return decline("unsupported_capability", "Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run.");
 
   // The plan.
   const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v) => resolved.get(v) ?? null });

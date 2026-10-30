@@ -45,7 +45,8 @@ function popRows(sql: string): unknown[][] {
   const hdr = /u\.state_abbr IN \(([^)]*)\)/.exec(sql);
   if (hdr) {
     const states = hdr[1].split(", ").map((x) => x.slice(1, -1));
-    const oris = states.flatMap((s) => (s === "TX" ? Object.keys(TX) : [`${s}0000001`, `${s}0000002`]));
+    // North Carolina: Raleigh (no FBI population) and Greensboro (300,000).
+    const oris = states.flatMap((s) => (s === "TX" ? Object.keys(TX) : s === "NC" ? ["NC0920100", "NC0410200"] : [`${s}0000001`, `${s}0000002`]));
     return oris.flatMap((o) => years.map((y) => [o, y, POP[o] === undefined ? 100_000 : POP[o], o.slice(0, 2)]));
   }
   const oris = sql.includes("u.state_abbr = 'TX'") ? Object.keys(TX) : [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
@@ -674,5 +675,35 @@ assert.equal(scoreShadow(sumLabel, txCj, r, ctx, sumV(307)).result!.outcome, "co
 assert.equal(scoreShadow(sumLabel, txCj, r, ctx, sumV(306)).result!.values, "mismatch");
 assert.equal(scoreShadow(sumLabel, txCj, r, ctx, sumV(307, 5)).result!.values, "mismatch", "the disclaimer's agencies are checked");
 assert.ok(material({ ...txCj, buttons: [] }, sumLabel).includes("statement"), "the button must be there");
+
+// Codex increment-5 review 2's findings, each a regression.
+// 1. The historical file has whole years only: a month or a part-year comparison is declined, never answered as years.
+assert.notEqual(ask("Robberies in Texas by month in 2024").kind, "srs");
+assert.notEqual(ask("Robberies in Texas from January to June 2024 compared with January to June 2023").kind, "srs");
+// 2. The every-month cohort survives source selection: a Part I crime with it is a NIBRS state sum over that set.
+const txRobEvery = ask("Robberies in Texas in 2024, only agencies that reported every month");
+assert.ok(txRobEvery.kind === "answer" && txRobEvery.plan.coverage.cohort === "same_agencies", JSON.stringify(txRobEvery).slice(0, 160));
+// 3. Incidents are not the file's unit.
+assert.notEqual(ask("Murder incidents in Texas in 2024").kind, "srs");
+// 4. A conflict month is not summed, and is said; the agency leaves the every-month set.
+CONFLICT = { ori: "TXHPD0000", ym: "2024-02" };
+const txConflict = as(ask("Carjackings in Texas in 2024"), "answer");
+assert.deepEqual([txConflict.delivered.table.rows, txConflict.stateSum!.years[0].conflicts, txConflict.stateSum!.years[0].every.agencies], [[[298]], 1, 2]);
+assert.ok(txConflict.delivered.text.includes("1 agency-month whose records conflict with the agency's reporting status is not counted."));
+CONFLICT = null;
+// 5. A missing population is never 0: no rate, and the share covered is a lower bound.
+assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /no rate is given for 2024, because 1 of the agencies counted have no FBI population/);
+assert.match(as(ask("Shoplifting in North Carolina in 2024"), "answer").delivered.text[1], /covering at least [\d.]+% of the state's residents/);
+// 6. A span reaching this year: its completed years, this year named; a future year is declined.
+const toNow = srs("Robberies in Texas by year from 2020 to 2026");
+assert.deepEqual([toNow.delivered.table.rows.map((x) => x[0]), toNow.delivered.text[1]], [["2020", "2021", "2022", "2023", "2024", "2025"], "2026 is this year: its figures come from Current Trends (Crime Index) and are not included here."]);
+assert.equal(ask("Robberies in Texas in 2027").kind, "decline");
+// 7. "According to NIBRS" overrides the Homicide Reports route (P01).
+assert.notEqual(ask("Murders in the US by victim-offender relationship in 2023 according to NIBRS").kind, "route");
+// 8. By year, one year: the Year cell is there.
+assert.deepEqual(as(ask("Carjackings in Texas by year in 2024"), "answer").delivered.table.rows, [["2024", 307]]);
+// 9. The disclaimer's figures are read in their roles: "14 agencies" never passes for 4.
+const wrongCount = { ...txCj, delivered: { ...txCj.delivered, text: txCj.delivered.text.map((t, i) => (i === 1 ? t.replace(/^4 agencies/, "14 agencies") : t)) } };
+assert.ok(material(wrongCount, sumLabel).includes("statement"));
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

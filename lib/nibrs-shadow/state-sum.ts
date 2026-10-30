@@ -38,8 +38,9 @@ export function agencyHeaderSql(root: string, states: string[], years: number[])
 }
 export const universeStates = (p: NibrsPlan["geography"]["places"][number]) => (p.kind === "national" ? NATION : p.kind === "state" ? headerCodes(p.code) : []);
 
-export type StateSumYear = { year: number; sum: number; agencies: number; partial: number; population: number; share: number;
-  every: { agencies: number; sum: number; population: number; share: number } };
+/** `noPopulation`: agencies counted with no FBI population (coverage is then a lower bound, and no rate is given). */
+export type StateSumYear = { year: number; sum: number; agencies: number; partial: number; population: number; share: number; noPopulation: number; conflicts: number;
+  every: { agencies: number; sum: number; population: number; share: number; noPopulation: number } };
 export type StateSumMeta = { years: StateSumYear[]; everyAgencies: number; crimeIndexPopulation: Record<number, number> };
 
 export function answerStateSum(plan: NibrsPlan, period: { from: string; to: string }, yearSet: number[] | null, deps: ShadowDeps, statements: AnswerStatement[],
@@ -60,9 +61,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
 
   // The universe and populations, per data year.
   const header = deps.execute(agencyHeaderSql(root, universeStates(place), years));
-  const pop = new Map<string, number>();
+  // A missing FBI population stays missing (null), never 0: it withholds the rate and makes coverage a lower bound
+  // (Codex increment-5 review 2.5). A population of 0 is the FBI's own figure (a state police, a university).
+  const pop = new Map<string, number | null>();
   const inYear = new Map<number, Set<string>>(years.map((y) => [y, new Set<string>()]));
-  for (const r of header) { inYear.get(Number(r[1]))?.add(String(r[0])); pop.set(`${r[0]}|${r[1]}`, r[2] === null ? 0 : Number(r[2])); }
+  for (const r of header) { inYear.get(Number(r[1]))?.add(String(r[0])); pop.set(`${r[0]}|${r[1]}`, r[2] === null ? null : Number(r[2])); }
   const oris = [...new Set(header.map((r) => String(r[0])))];
   if (!oris.length) return decline(`No agency in ${where} has a header in the data for ${periodWords(period.from, period.to)}.`);
   const ciPop: Record<number, number> = {};
@@ -87,19 +90,28 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // The button's set: reported every month of the whole period, with a header in every year (one fixed set).
   const everySet = oris.filter((o) => years.every((y) => inYear.get(y)!.has(o)) && (cells.get(o) ?? []).length > 0 && (cells.get(o) ?? []).every(reported));
   const byYear: StateSumYear[] = years.map((y) => {
-    let sum = 0, agencies = 0, partial = 0, population = 0;
+    let sum = 0, agencies = 0, partial = 0, population = 0, noPopulation = 0, conflicts = 0;
     for (const o of inYear.get(y)!) {
       const mine = (cells.get(o) ?? []).filter((x) => x.ym.startsWith(`${y}-`));
+      // A month whose records conflict with its reporting status is neither reported nor zero: not summed, and said
+      // (review 2.4), never folded silently into "reported only some months".
+      conflicts += mine.filter((x) => x.status === "EVIDENCE_CONFLICT").length;
       const rep = mine.filter(reported);
       if (!rep.length) continue;
-      agencies++; population += pop.get(`${o}|${y}`) ?? 0;
+      agencies++;
+      const p = pop.get(`${o}|${y}`);
+      if (p === null || p === undefined) noPopulation++; else population += p;
       if (rep.length < monthsOf(y)) partial++;
       sum += rep.reduce((a, x) => a + (x.value ?? 0), 0);
     }
-    const ev = { agencies: everySet.length, sum: 0, population: 0, share: 0 };
-    for (const o of everySet) { ev.sum += (cells.get(o) ?? []).filter((x) => x.ym.startsWith(`${y}-`)).reduce((a, x) => a + (x.value ?? 0), 0); ev.population += pop.get(`${o}|${y}`) ?? 0; }
+    const ev = { agencies: everySet.length, sum: 0, population: 0, share: 0, noPopulation: 0 };
+    for (const o of everySet) {
+      ev.sum += (cells.get(o) ?? []).filter((x) => x.ym.startsWith(`${y}-`)).reduce((a, x) => a + (x.value ?? 0), 0);
+      const p = pop.get(`${o}|${y}`);
+      if (p === null || p === undefined) ev.noPopulation++; else ev.population += p;
+    }
     ev.share = pct(ev.population, ciPop[y]);
-    return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), every: ev };
+    return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), noPopulation, conflicts, every: ev };
   });
   const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop };
 
@@ -115,20 +127,30 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     if (years.length === 1) {
       const y = byYear[0];
       const n = every ? y.every.sum : y.sum, P = every ? y.every.population : y.population;
-      const v = isRate ? rate({ value: n, status: "VALUE" }, P).value : n;
-      lines.push(every
-        ? `${Where}: ${isRate ? `${v} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${pc(y.every.share)} of ${residents}).`
+      const noPop = every ? y.every.noPopulation : y.noPopulation;
+      // No rate over an incomplete denominator (P62, review 2.5); a lower-bound share says "at least".
+      const v = isRate ? (noPop ? null : rate({ value: n, status: "VALUE" }, P).value) : n;
+      const atLeast = (k: number) => (k ? "at least " : "");
+      lines.push(isRate && v === null
+        ? `${Where}: no rate is given for ${when}, because ${fmt(noPop)} of the agencies ${every ? "that reported every month" : "counted"} have no FBI population.`
+        : every
+        ? `${Where}: ${isRate ? `${v} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`
         : `${Where}: ${isRate ? `${v} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
-      if (!every) lines.push(`${fmt(y.agencies)} agencies reported at least one month of ${when}, covering ${pc(y.share)} of ${residents}; ${fmt(y.partial)} of them reported only some months and are included. ${fmt(y.every.agencies)} reported every month (${pc(y.every.share)} of ${residents}).`);
-      if (isRate) lines.push(`The rate is the sum per 100,000 residents of the agencies ${every ? "that reported every month" : "counted"}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
-      return { lines, rows: [{ key: null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }] };
+      if (!every) lines.push(`${fmt(y.agencies)} agencies reported at least one month of ${when}, covering ${atLeast(y.noPopulation)}${pc(y.share)} of ${residents}; ${fmt(y.partial)} of them reported only some months and are included. ${fmt(y.every.agencies)} reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`);
+      if (y.noPopulation && !every) lines.push(`${fmt(y.noPopulation)} of the agencies counted have no FBI population, so the share covered is a lower bound.`);
+      if (y.conflicts) lines.push(`${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose records conflict with the agency's reporting status ${y.conflicts === 1 ? "is" : "are"} not counted.`);
+      if (isRate && v !== null) lines.push(`The rate is the sum per 100,000 residents of the agencies ${every ? "that reported every month" : "counted"}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
+      // By year for one year keeps its Year cell (review 2.8).
+      return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }] };
     }
     lines.push(every
       ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`
       : `${Where}: ${what} by year, ${when}, summed over the agencies that reported each year.`);
     lines.push(every
       ? `Residents covered by those agencies: ${byYear.map((y) => `${y.year} ${pc(y.every.share)}`).join("; ")}.`
-      : `Agencies counted and share of ${residents} covered: ${byYear.map((y) => `${y.year} ${fmt(y.agencies)} (${pc(y.share)}, ${fmt(y.partial)} reporting only some months)`).join("; ")}. Agencies reporting only some months are included.`);
+      : `Agencies counted and share of ${residents} covered: ${byYear.map((y) => `${y.year} ${fmt(y.agencies)} (${y.noPopulation ? "at least " : ""}${pc(y.share)}, ${fmt(y.partial)} reporting only some months)`).join("; ")}. Agencies reporting only some months are included.`);
+    const conflicted = byYear.filter((y) => y.conflicts);
+    if (conflicted.length) lines.push(`Agency-months whose records conflict with the agency's reporting status are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
     if (!every) lines.push(`Which agencies report changed over these years, so part of a change can be agencies joining or leaving; the button shows one fixed set of ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`);
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })) };
   };

@@ -392,10 +392,21 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     // Increment 5: P63's source line, and P61's disclaimer and button on a state or national sum.
     else if (/^ends with the source line "(.+?)"/.test(s)) { const want = /^ends with the source line "(.+?)"/.exec(s)![1]; ok = text[text.length - 1] === want && text.filter((t) => /^Source: /.test(t)).length === 1; }
     else if (/^states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included/.test(s)) {
-      // Each year's agencies counted, their share and partial reporters, as the answer computed them; and that those are included.
-      const pcs = (n: number) => `${n.toFixed(1)}%`;
-      ok = !!o.stateSum && o.stateSum.years.every((y) => all.includes(y.agencies.toLocaleString("en-US")) && all.includes(pcs(y.share)) && all.includes(y.partial.toLocaleString("en-US")))
-        && /only some months (?:and )?are included|reporting only some months are included/.test(all);
+      // Each figure read from its own place in the sentence (Codex increment-5 review 2.9: never a substring search, where
+      // "14 agencies" would pass for 4), against what the answer computed; and that partial reporters are included.
+      const n = (x: string) => Number(x.replace(/,/g, ""));
+      const ys = o.stateSum?.years ?? [];
+      if (ys.length === 1) {
+        const m = /^([\d,]+) agencies reported at least one month of .+?, covering (?:at least )?([\d.]+)% of .+?; ([\d,]+) of them reported only some months and are included\. ([\d,]+) reported every month \((?:at least )?([\d.]+)% of /.exec(text.find((t) => / agencies reported at least one month of /.test(t)) ?? "");
+        const y = ys[0];
+        ok = !!m && n(m[1]) === y.agencies && Number(m[2]) === y.share && n(m[3]) === y.partial && n(m[4]) === y.every.agencies && Number(m[5]) === y.every.share;
+      } else {
+        const line = text.find((t) => /^Agencies counted and share of /.test(t)) ?? "";
+        ok = ys.length > 1 && /Agencies reporting only some months are included\.$/.test(line) && ys.every((y) => {
+          const m = new RegExp(`(?:: |; )${y.year} ([\\d,]+) \\((?:at least )?([\\d.]+)%, ([\\d,]+) reporting only some months\\)`).exec(line);
+          return !!m && n(m[1]) === y.agencies && Number(m[2]) === y.share && n(m[3]) === y.partial;
+        });
+      }
     } else if (/^offers a button to show only agencies that reported every month/.test(s)) {
       // Clicked: the same place, crime, filters and period, counting only the every-month set (one fixed set over years).
       const b = (o.buttons ?? []).find((x) => /only agencies that reported every month/i.test(x.label))?.continuation;
