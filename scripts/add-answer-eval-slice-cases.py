@@ -474,7 +474,7 @@ INC4_DRAFTER = "claude-inc4"
 TEXAS = {"kind": "state", "name": "Texas", "state": "TX"}
 OHIO = {"kind": "state", "name": "Ohio", "state": "OH"}
 COLORADO = {"kind": "state", "name": "Colorado", "state": "CO"}
-RANKED = "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them"
+RANKED = "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)"
 TIES = "orders ties alphabetically by agency name"
 NO_FILTER = "adds no other eligibility filter"
 
@@ -526,19 +526,19 @@ INC4 = [
      answer(rate("greensboro", year(2025), SHOP), "gives no rate, because not every month of 2025 is known", "names November and December 2025 as having no data",
             names("greensboro"), SOURCE_LAST),
      "MUST ANSWER (no rate): P58."),
-    ("inc4-rank", "Which Texas cities had the most carjackings in 2024?", ["D05", "D18", "D30", "P01", "P04", "P16", "P17"],
+    ("inc4-rank", "Which Texas cities had the most carjackings in 2024?", ["D05", "D18", "D30", "P01", "P04", "P16", "P17", "P60"],
      answer(ranking(TEXAS, CARJACK, "count", "top", 20, ["city agencies", "agencies that reported every month of 2024"]),
             "shows 20 agencies (D05)", RANKED, TIES, NO_FILTER, SOURCE_LAST),
      "MUST ANSWER: Texas city agencies (indicator 1), full-year reporters (P04), 20 rows (D05), ties alphabetical (P17)."),
-    ("inc4-rank-rate", "Top 10 cities by shoplifting rate in Ohio in 2024", ["D05", "D18", "D30", "P01", "P04", "P15", "P16", "P17", "P58"],
+    ("inc4-rank-rate", "Top 10 cities by shoplifting rate in Ohio in 2024", ["D05", "D18", "D30", "P01", "P04", "P15", "P16", "P17", "P58", "P60"],
      answer(ranking(OHIO, SHOP, "rate", "top", 10, ["city agencies", "agencies that reported every month of 2024"], "each agency's residents (the FBI's agency population), per 100,000"),
             "shows exactly 10 agencies", RANKED, TIES, NO_FILTER, SOURCE_LAST),
      "MUST ANSWER: each city's own rate; exactly 10 (P17)."),
-    ("inc4-rank-large", "Which large Texas cities had the highest shoplifting rate in 2024?", ["D05", "D18", "D30", "P01", "P04", "P08", "P15", "P16", "P17", "P58"],
+    ("inc4-rank-large", "Which large Texas cities had the highest shoplifting rate in 2024?", ["D05", "D18", "D30", "P01", "P04", "P08", "P15", "P16", "P17", "P58", "P60"],
      answer(ranking(TEXAS, SHOP, "rate", "top", 20, ["city agencies", "250,000 residents or more", "agencies that reported every month of 2024"], "each agency's residents (the FBI's agency population), per 100,000"),
             "says large means 250,000 residents or more", RANKED, TIES, SOURCE_LAST),
      "MUST ANSWER: P08 (large = 250,000+); at most 20 rows (D05)."),
-    ("inc4-rank-bottom", "Which Colorado cities had the fewest carjackings in 2024?", ["D05", "D18", "D30", "P01", "P04", "P16", "P17", "P51"],
+    ("inc4-rank-bottom", "Which Colorado cities had the fewest carjackings in 2024?", ["D05", "D18", "D30", "P01", "P04", "P16", "P17", "P51", "P60"],
      answer(ranking(COLORADO, CARJACK, "count", "bottom", 20, ["city agencies", "agencies that reported every month of 2024"]),
             "shows 20 agencies (D05)", RANKED, TIES, NO_FILTER, SOURCE_LAST),
      "MUST ANSWER: many known zeros (P51); the cut falls inside a tie, ordered alphabetically (P17)."),
@@ -563,9 +563,9 @@ INC4 = [
             "gives no rate, because not every month of 2025 is known for every agency counted", "names November and December 2025 as having no data",
             names("greensboro"), names("raleigh"), SOURCE_LAST),
      "MUST ANSWER (no rate): P58; Greensboro is never dropped from the numerator or kept only in the denominator."),
-    ("inc4-rank-ytd", "Which Texas cities had the most carjackings so far this year?", ["D05", "D06", "D18", "D30", "P01", "P04", "P16", "P17", "P52"],
+    ("inc4-rank-ytd", "Which Texas cities had the most carjackings so far this year?", ["D05", "D06", "D18", "D30", "P01", "P04", "P16", "P17", "P52", "P60"],
      answer(dict(ranking(TEXAS, CARJACK, "count", "top", 20, ["city agencies", "agencies that reported every month of 2026 so far"]), period={"rule": "2026 through the latest month in the data"}),
-            "names the months covered", "shows 20 agencies (D05)", "ranks only agencies that reported every month of 2026 so far, says how many were left out, and offers a button to include them",
+            "names the months covered", "shows 20 agencies (D05)", "ranks only agencies that reported every month of 2026 so far, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
             TIES, NO_FILTER, SOURCE_LAST),
      "MUST ANSWER: P04 for the current year: every month available so far (January-September 2026, P52)."),
 ]

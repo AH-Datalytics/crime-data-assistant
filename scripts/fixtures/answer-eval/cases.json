@@ -19215,7 +19215,8 @@
     "P01",
     "P04",
     "P16",
-    "P17"
+    "P17",
+    "P60"
    ],
    "expected": {
     "action": "answer",
@@ -19257,7 +19258,7 @@
     },
     "statements": [
      "shows 20 agencies (D05)",
-     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "adds no other eligibility filter",
      "names its source at the end"
@@ -19290,7 +19291,8 @@
     "P15",
     "P16",
     "P17",
-    "P58"
+    "P58",
+    "P60"
    ],
    "expected": {
     "action": "answer",
@@ -19333,7 +19335,7 @@
     },
     "statements": [
      "shows exactly 10 agencies",
-     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "adds no other eligibility filter",
      "names its source at the end"
@@ -19367,7 +19369,8 @@
     "P15",
     "P16",
     "P17",
-    "P58"
+    "P58",
+    "P60"
    ],
    "expected": {
     "action": "answer",
@@ -19411,7 +19414,7 @@
     },
     "statements": [
      "says large means 250,000 residents or more",
-     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "names its source at the end"
     ]
@@ -19442,7 +19445,8 @@
     "P04",
     "P16",
     "P17",
-    "P51"
+    "P51",
+    "P60"
    ],
    "expected": {
     "action": "answer",
@@ -19484,7 +19488,7 @@
     },
     "statements": [
      "shows 20 agencies (D05)",
-     "ranks only agencies that reported all 12 months of 2024, says how many were left out, and offers a button to include them",
+     "ranks only agencies that reported all 12 months of 2024, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "adds no other eligibility filter",
      "names its source at the end"
@@ -19855,7 +19859,8 @@
     "P04",
     "P16",
     "P17",
-    "P52"
+    "P52",
+    "P60"
    ],
    "expected": {
     "action": "answer",
@@ -19897,7 +19902,7 @@
     "statements": [
      "names the months covered",
      "shows 20 agencies (D05)",
-     "ranks only agencies that reported every month of 2026 so far, says how many were left out, and offers a button to include them",
+     "ranks only agencies that reported every month of 2026 so far, and names those left out with their months reported; no button to include them, and they appear in neither the chart nor the table (P60)",
      "orders ties alphabetically by agency name",
      "adds no other eligibility filter",
      "names its source at the end"

@@ -393,6 +393,12 @@ ROWS = [
      "Part-year rate: the months' count per 100,000, months named, not annualized.",
      "",
      "Decided 2026-10-30 (Jeff: \"Agreed on both\", on: a part-year rate is the January-September 2026 count per 100,000, labeled with those months, never annualized, using the agency's latest FBI population carried forward)", NEW),
+    ("P60", "\"Top 20 cities by murder rate in 2024\" where some cities reported only part of the year (revises P04's button)",
+     "P04: full-year reporters ranked, with a button to include the others.",
+     "A completed-year ranking (counts or rates) ranks only agencies that reported all 12 months, in both the chart and the table. A one-line note names who was left out and why, e.g. \"Not ranked because they didn't report all 12 months: Chicago (9 months), Phoenix (11 months).\" When the list is long, it gives the count and names the largest few by population. No button to include them, and no unranked partial list: agencies with missing months never appear in the chart or the table. (The current year, as P04: every month available so far.)",
+     "Ranked: full-year reporters only. Note: those left out, with their months reported; when more than five, the count and the five largest by population.",
+     "An agency with missing months has no established total (D6) and no rate (P58), so it cannot be ranked or listed beside those that do.",
+     "Decided 2026-10-30 (Jeff: \"That way is better\", on ranking only full-year reporters and naming those left out, with no include button)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
