@@ -24,7 +24,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -132,7 +132,10 @@ function srsCells(v: SrsFile): ExpectedCell[] | null {
     return [{ key: "earlier", value: v.change.earlier, status: "VALUE", column: e.column, uid: e.uid }, { key: "later", value: v.change.later, status: "VALUE", column: l.column, uid: l.uid },
       { key: "change", value: v.change.change, status: "VALUE" }, { key: "pct_change", value: v.change.percent_change, status: v.change.percent_change === null ? "UNAVAILABLE" : "VALUE" }];
   }
-  return vals.map((x) => ({ key: vals.length > 1 ? String(x.year) : "", value: Number(x.value), status: "VALUE", column: x.column, uid: x.uid }));
+  // The first value of a year is the answer's own column; later values of the same year are supporting evidence (a
+  // rate's total, a sum's parts), not cells.
+  const primary = vals.filter((x, i) => vals.findIndex((y) => y.year === x.year) === i);
+  return primary.map((x) => ({ key: primary.length > 1 ? String(x.year) : "", value: Number(x.value), status: "VALUE", column: x.column, uid: x.uid }));
 }
 /** Batch 8, NIBRS state and national sums (P61): read in stateSumCells, defined with the state-sum checks below. */
 type StateSumYearFile = { year: number; agencies_counted: number; partial_reporters: number; all_months_sum: number; every_month_agencies_sum: number;
@@ -809,7 +812,8 @@ function scoreOther(c: Case, o: SrsOutcome | Extract<ShadowOutcome, { kind: "rou
   } else {
     notes.push(`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`);
     if (e.action === "answer") {
-      diffs = [...compareMeaning(e.meaning, srsView(o), r), ...srsStatementDiffs(e, o)];
+      // The denominator is compared below, as words (the comparator's mapping is for NIBRS plans).
+      diffs = [...compareMeaning({ ...e.meaning, denominator: undefined }, srsView(o), r), ...srsStatementDiffs(e, o)];
       if (e.meaning.denominator !== undefined && e.meaning.denominator !== o.meaning.denominator)
         diffs.push({ field: "denominator", expected: e.meaning.denominator, actual: o.meaning.denominator ?? "(none)", kind: "material" });
       const v = srsValueDiffs(o, ev?.get(c.id));

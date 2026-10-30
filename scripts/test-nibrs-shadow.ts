@@ -661,6 +661,9 @@ const srsV = (value: number, column = "robbery_total") => sliceValues([{ name: "
 assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19935)).result!.outcome, "correct");
 assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19936)).result!.outcome, "wrong_answer");
 assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19935, "robbery_capita")).result!.outcome, "wrong_answer", "provenance: the column read");
+// A file listing supporting values after the answer's own (a sum's parts) scores on the first value of the year.
+const withParts = sliceValues([{ name: "V", json: JSON.stringify({ basis: "crime_index_snapshot", nibrsai_cases: "LS-999", values: [{ uid: "tx_2024", year: 2024, column: "robbery_total", value: "19935" }, { uid: "tx_2024", year: 2024, column: "murder_total", value: "1" }] }) }]);
+assert.equal(scoreShadow(srsLabel, txRob, r, ctx, withParts).result!.outcome, "correct");
 const routeLabel = label({ action: "answer", meaning: { source: "rtci", places: [{ kind: "state", name: "Texas", state: "TX" }], period: { rule: "year to date through the latest reported month" }, measures: [{ name: "robbery", unit: "offense" }], filters: [], groupings: [], statistic: "count" }, values: { status: "pending_build" }, statements: [] });
 assert.equal(scoreShadow(routeLabel, ask("Robberies in Texas this year"), r, ctx).result!.outcome, "unverified", "a route verifies the routing only");
 const sumV = (sum: number, agencies = 4) => sliceValues([{ name: "V", json: JSON.stringify({ basis: "raw", nibrsai_cases: "LS-999", by_year: [{ year: 2024, agencies_counted: agencies, partial_reporters: 1, all_months_sum: sum, every_month_agencies_sum: 252,

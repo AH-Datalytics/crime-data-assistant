@@ -84,7 +84,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
     if (v === null) return { kind: "srs-decline", explanation: `The data has no national ${m.name} clearance rate for ${y}.` };
     return {
       kind: "srs", period: { from: `${y}-01`, to: `${y}-12` },
-      meaning: { source: "historical", places: [placeOf(q.place)], period: { from: `${y}-01`, to: `${y}-12` }, measures: [{ name: `${m.name} cleared`, unit: m.unit }], filters: [], groupings: [], statistic: "rate", denominator: `${m.words}, per 100` },
+      meaning: { source: "historical", places: [placeOf(q.place)], period: { from: `${y}-01`, to: `${y}-12` }, measures: [{ name: `${m.name} cleared`, unit: "offense" }], filters: [], groupings: [], statistic: "rate", denominator: `${m.words}, per 100` },
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "clearance_rate" }, header: `${m.words[0].toUpperCase()}${m.words.slice(1)} cleared (%)` }], rows: [[v]] },
         text: [`${where}: ${v}% of ${m.words} were cleared in ${y}.`, SRS_SOURCE] },
       read: { file: "historical_clearances_states_nation_1960-2025.csv", column: col, uids: [row!.uid] },
