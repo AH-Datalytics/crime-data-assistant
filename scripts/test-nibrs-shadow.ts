@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { candidateLabel, loadPlaceIndex, resolvePlace } from "../lib/nibrs-shadow/places";
+import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } from "../lib/nibrs-shadow/places";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { scoreShadow, sliceValues } from "../lib/answer-eval/shadow";
 import { fbiNameFor } from "../lib/answer-eval/compare";
@@ -590,6 +590,10 @@ const hide = (t: string[]) => scoreShadow(txLabel, { ...tx, delivered: { ...tx.d
   rankFile([["Houston Police Department", "TXHPD0000", 108], ["Dallas Police Department", "TXDPD0000", 84], [null, "TX9999900", 60]])).result!.values;
 assert.equal(hide(tx.delivered.text.filter((t) => !t.startsWith("Not ranked"))), "mismatch", "a missing left-out line");
 assert.equal(hide(tx.delivered.text.map((t) => t.replace("(11 months)", "(10 months)"))), "mismatch", "a wrong month count");
+// Return A short names (Jeff 2026-10-30) say so, and are never "the <name> Police Department".
+assert.equal(agencyName(places, "AK0014700"), "Kake (FBI Return A name)");
+assert.equal(reportedBy([agencyName(places, "AK0014700")]), "Reported by Kake (FBI Return A name).");
+assert.equal(reportedBy([agencyName(places, "TNMPD0000")]), "Reported by the Memphis Police Department.");
 // 7. A sheriff's office is never matched to a police department.
 assert.equal(fbiNameFor("Wichita Sheriff Office", "KS0870300"), null);
 // Re-check A: several agencies by year are declined, never answered with the first agency alone.

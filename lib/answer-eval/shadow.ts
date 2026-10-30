@@ -17,6 +17,7 @@ import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
 import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type Release } from "./compare";
+import { RETURN_A } from "../nibrs-shadow/places";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
 /** The slice: its designed group, the replay cases inside it, and replay cases next to it (action and reason only). */
@@ -453,7 +454,7 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   const statCol = (n: number) => columns.findIndex((c, i) => c.binding.kind === "statistic" && columns.slice(0, i).filter((x) => x.binding.kind === "statistic").length === n);
   const [ci, si] = [statCol(0), statCol(1)];
   const countAs = (columns[ci].binding as { as: string }).as;
-  const keys = rows.map((r) => groupCols.map((j) => String(r[j])).join("|"));
+  const keys = rows.map((r) => groupCols.map((j) => String(r[j]).replace(RETURN_A, "")).join("|"));  // a Return A name matches the FBI text without its marker
   const got = new Map(rows.map((r, i) => [keys[i],
     { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
   const diffs: Diff[] = [];
@@ -480,7 +481,7 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
     const lines = o.delivered.text.filter((t) => t.startsWith("Not ranked because they didn't report"));
     // Each "<name> (<n> months)" after the line's colon; the first of more than five follows "the largest " (Codex 02
     // re-check C).
-    const named = lines.flatMap((t) => [...t.slice(t.indexOf(": ") + 2).matchAll(/(?:^|, )(?:the largest )?([^,]+?) \((\d+) months?\)/g)].map((m) => ({ key: m[1], months: Number(m[2]) })));
+    const named = lines.flatMap((t) => [...t.slice(t.indexOf(": ") + 2).matchAll(/(?:^|, )(?:the largest )?([^,]+?) \((\d+) months?\)/g)].map((m) => ({ key: m[1].replace(RETURN_A, ""), months: Number(m[2]) })));
     const months = new Map(leftOut.map((x) => [x.key, x.value]));
     const bad = (why: string, actual: string) => diffs.push({ field: `${prefix}left out`, expected: why, actual, kind: "material" });
     if (!leftOut.length) { if (lines.length) bad("no agency left out", lines.join(" / ")); }
