@@ -43,6 +43,8 @@ function popRows(sql: string): unknown[][] {
   const oris = sql.includes("u.state_abbr = 'TX'") ? Object.keys(TX) : [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
   return oris.flatMap((o) => years.map((y) => [o, y, POP[o] ?? null, TX[o] ?? "", o.slice(0, 2)]));
 }
+/** An agency-month whose records conflict with its reporting status, when a test sets one. */
+let CONFLICT: { ori: string; ym: string } | null = null;
 /** Monthly grid: Houston 9 a month, Dallas 7, the rest 5; Greensboro unknown November-December 2025, Austin June 2024. */
 function gridRows(sql: string): unknown[][] {
   const oris = /unnest\(\[(.*?)\]\) AS ori/.exec(sql)![1].split(", ").map((x) => x.slice(1, -1));
@@ -51,7 +53,8 @@ function gridRows(sql: string): unknown[][] {
   for (const o of oris) for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) {
     const ym = `${y}-${String(m).padStart(2, "0")}`;
     const unknown = (o === "NC0410200" && ym >= "2025-11" && ym <= "2025-12") || (o === "TX2270100" && ym === "2024-06");
-    rows.push(unknown ? [o, ym, null, "UNKNOWN"] : [o, ym, o === "TXHPD0000" ? 9 : o === "TXDPD0000" ? 7 : 5, "VALUE"]);
+    rows.push(CONFLICT && CONFLICT.ori === o && CONFLICT.ym === ym ? [o, ym, null, "EVIDENCE_CONFLICT"]
+      : unknown ? [o, ym, null, "UNKNOWN"] : [o, ym, o === "TXHPD0000" ? 9 : o === "TXDPD0000" ? 7 : 5, "VALUE"]);
   }
   return rows;
 }
@@ -549,8 +552,9 @@ assert.deepEqual(material(wichita, wichitaLabel), [], "the population sentence i
 assert.ok(material({ ...wichita, delivered: { ...wichita.delivered, text: wichita.delivered.text.filter((t) => !t.startsWith("Rates are")) } }, wichitaLabel).includes("statement"));
 // Batch 7 values: a ranking's agencies by FBI name (or the ORI when the FBI gives none), its value and its place; a rate.
 const v7 = (o: object) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", measures: { shoplifting: "23C" }, ...o }) }]);
-const rankFile = (order: [string | null, string, number][]) => v7({ grouping: "ranking", ranked_by: "count",
-  result: order.map(([agency_name, ori, count], i) => ({ agency_name, ori, count, rate: null, position: i + 1 })) });
+const austinOut = [{ ori: "TX2270100", agency_name: "Austin Police Department", months_reported: Array(11).fill("2024") }];
+const rankFile = (order: [string | null, string, number][], left = austinOut) => v7({ grouping: "ranking", ranked_by: "count",
+  result: order.map(([agency_name, ori, count], i) => ({ agency_name, ori, count, rate: null, position: i + 1 })), left_out_months_unknown: left });
 const scoredTx = (ev: ReturnType<typeof v7>) => scoreShadow(txLabel, tx, r, ctx, ev).result!;
 assert.equal(scoredTx(rankFile([["Houston Police Department", "TXHPD0000", 108], ["Dallas Police Department", "TXDPD0000", 84], [null, "TX9999900", 60]])).values, "match");
 const swapped = scoredTx(rankFile([["Dallas Police Department", "TXDPD0000", 84], ["Houston Police Department", "TXHPD0000", 108], [null, "TX9999900", 60]]));
@@ -562,5 +566,33 @@ assert.equal(scoreShadow(wichitaLabel, wichita, r, ctx, v7({ grouping: "rate", a
 assert.equal(fbiNameFor("Portland Police Bureau", "OR0260200"), "Portland Police Department");
 assert.equal(fbiNameFor("Washington Metropolitan Police Department", "DCMPD0000"), "Washington Police Department");
 assert.equal(fbiNameFor("Nashville Police Department", "TNMPD0000"), null);
+
+// Codex review 02's findings, each a regression.
+// 1. A set of years is those years only.
+const setYears = as(ask("Shoplifting rate in Wichita in 2019 and 2023"), "answer");
+assert.deepEqual(setYears.delivered.table.rows.map((x) => x[0]), ["2019", "2023"]);
+assert.ok(setYears.delivered.text[0].includes("2019 and 2023"));
+// 2. A conflict refuses a ranking (D6); it is never read as a month not reported.
+CONFLICT = { ori: "TXHPD0000", ym: "2024-02" };
+assert.match(as(ask("Which Texas cities had the most shoplifting in 2024?"), "decline").explanation, /conflict/);
+CONFLICT = null;
+// 3. The same agency twice, by month: the time grouping keeps its binding.
+assert.equal(ask("Shoplifting in Tulsa Police Department and Tulsa by month in 2023").kind, "answer");
+// 4. "Combined" of several crimes is declined, never answered as separate numbers.
+assert.match(as(ask("Shoplifting and carjackings combined in Detroit in 2023"), "decline").explanation, /combined/);
+// 5. The combined headline's number must be the table's.
+const combinedLabel = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Tulsa Police Department", state: "OK" }, { kind: "agency", name: "Oklahoma City Police Department", state: "OK" }],
+  period: year24, measures: [{ name: "shoplifting", unit: "offense" }], filters: [], groupings: [], statistic: "count", combine: "combined" }, values: { status: "pending_build" }, statements: ["gives one total of both agencies", "names its source at the end"] });
+assert.deepEqual(material(combinedTotal, combinedLabel), []);
+assert.ok(material({ ...combinedTotal, delivered: { ...combinedTotal.delivered, text: [combinedTotal.delivered.text[0].replace("120", "999"), ...combinedTotal.delivered.text.slice(1)] } }, combinedLabel).includes("statement"));
+// 6. The left-out line must be there, with each agency's months.
+const hide = (t: string[]) => scoreShadow(txLabel, { ...tx, delivered: { ...tx.delivered, text: t } }, r, ctx,
+  rankFile([["Houston Police Department", "TXHPD0000", 108], ["Dallas Police Department", "TXDPD0000", 84], [null, "TX9999900", 60]])).result!.values;
+assert.equal(hide(tx.delivered.text.filter((t) => !t.startsWith("Not ranked"))), "mismatch", "a missing left-out line");
+assert.equal(hide(tx.delivered.text.map((t) => t.replace("(11 months)", "(10 months)"))), "mismatch", "a wrong month count");
+// 7. A sheriff's office is never matched to a police department.
+assert.equal(fbiNameFor("Wichita Sheriff Office", "KS0870300"), null);
+// 8. A blank rate says why: no population is not months unknown.
+assert.match(raleigh.delivered.text[0], /because the FBI gives no 2024 population for the /);
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

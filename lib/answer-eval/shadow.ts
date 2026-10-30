@@ -38,7 +38,9 @@ export type ExpectedCell = { key: string; value: number | null; status: string; 
   /** A file with several measures: the cell's measure, as "<key>: <definition>" (its codes and unit are matched to the plan's). */
   measure?: string;
   /** A ranking's row: its place in the order (1 = first row). */
-  position?: number };
+  position?: number;
+  /** A ranking's agency left out under P60 (not a row): `value` is its months reported. */
+  leftOut?: boolean };
 export type ExpectedValues = Map<string, ExpectedCell[]>;
 
 /**
@@ -105,6 +107,7 @@ const pick = (c: { status: string; value: number | null }) => ({ value: c.value,
 type StatusValue = { status: string; value: number | null };
 type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
 type PlacesFile = { grouping: string; agencies?: PlacesAgency[]; years?: PlacesAgency[]; combined_total?: StatusValue; combined_rate?: StatusValue;
+  left_out_months_unknown?: { ori?: string; agency_name: string | null; months_reported: string[] }[];
   ranked_by?: "count" | "rate"; result?: { ori?: string; agency_name: string | null; count: number; rate: number | null; position: number }[] };
 /**
  * Batch 7 (increment 4): several agencies, combined totals, rates and rankings. Rows are keyed as the answer shows
@@ -121,7 +124,9 @@ function placesCells(v: PlacesFile): ExpectedCell[] | null {
     case "rate_per_year": return v.years!.map((y) => ({ key: String(y.population_year), ...pick(y.rate) }));
     case "combined": return [{ key: "", ...pick(v.combined_total!) }];
     case "combined_rate": return [{ key: "", ...pick(v.combined_rate!) }];
-    case "ranking": return v.result!.map((r) => ({ key: name(r), value: v.ranked_by === "rate" ? r.rate : r.count, status: "VALUE", position: r.position }));
+    case "ranking": return [
+      ...v.result!.map((r) => ({ key: name(r), value: v.ranked_by === "rate" ? r.rate : r.count, status: "VALUE", position: r.position })),
+      ...(v.left_out_months_unknown ?? []).map((r) => ({ key: name(r), value: r.months_reported.length, status: "LEFT_OUT", leftOut: true }))];
     default: return null;
   }
 }
@@ -328,7 +333,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       // One known number of the plan's distinct agencies, said as combined.
       const oris = o.plan.geography.places.map((p) => (p.kind === "agency" ? p.ori : ""));
       ok = o.plan.geography.combine === "combined" && new Set(oris).size === 2 && oris.every(Boolean) && o.delivered.table.rows.length === 1
-        && typeof o.delivered.table.rows[0][0] === "number" && /, combined: [\d,]+ /.test(text[0] ?? "");
+        && typeof o.delivered.table.rows[0][0] === "number"
+        // The headline's number is the table's (Codex 02.5), never any number.
+        && Number((/, combined: ([\d,.]+) /.exec(text[0] ?? "")?.[1] ?? "x").replace(/,/g, "")) === o.delivered.table.rows[0][0];
     } else if (/^gives no (?:combined total|rate), because not every month|^gives no combined total, because/.test(s)) {
       // Blank, with a reason, never a part-sum.
       ok = o.delivered.table.rows.length === 1 && o.delivered.table.rows[0].every((x) => typeof x === "string" || x === null)
@@ -415,7 +422,10 @@ function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer"
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }
 /** Delivered cells (value and status) against independent expected cells; none given is NOT MEASURED, never a match. */
-function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected0: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+  // A ranking's left-out agencies (P60) are not rows: checked against the answer's "Not ranked" line below.
+  const leftOut = (expected0 ?? []).filter((x) => x.leftOut);
+  const expected = expected0?.filter((x) => !x.leftOut);
   if (!expected) return { values: "not measured", diffs: [{ field: `${prefix}values`, expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
   // A change: each output cell (earlier, later, change, percent change) against its expected cell, value and status.
   const cmpCells = comparisonCells(o);
@@ -463,6 +473,19 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
       diffs.push({ field: `${prefix}share ${x.key}`, expected: String(x.share), actual: String(g.share), kind: "material" });
     else if (g.share !== undefined && x.share === undefined)
       diffs.push({ field: `${prefix}share ${x.key}`, expected: "(no independent share)", actual: String(g.share), kind: "unverified" });
+  }
+  // P60 (Codex 02.6): a ranking with agencies left out names them, five or fewer each with its months reported, more
+  // than five as their count and five of them, each named agency with its own months; none left out, no such line.
+  if (expected.some((x) => x.position !== undefined)) {
+    const lines = o.delivered.text.filter((t) => t.startsWith("Not ranked because they didn't report"));
+    const named = lines.flatMap((t) => [...t.matchAll(/(?:: |, |the largest )([^,:]+?) \((\d+) months?\)/g)].map((m) => ({ key: m[1], months: Number(m[2]) })));
+    const months = new Map(leftOut.map((x) => [x.key, x.value]));
+    const bad = (why: string, actual: string) => diffs.push({ field: `${prefix}left out`, expected: why, actual, kind: "material" });
+    if (!leftOut.length) { if (lines.length) bad("no agency left out", lines.join(" / ")); }
+    else if (lines.length !== 1) bad(`one line naming the ${leftOut.length} agencies left out`, lines.join(" / ") || "none");
+    else if (leftOut.length > 5 && !lines[0].includes(`: ${leftOut.length} agencies, the largest `)) bad(`${leftOut.length} agencies and the five largest`, lines[0]);
+    else if (named.length !== Math.min(5, leftOut.length) || named.some((n) => months.get(n.key) !== n.months))
+      bad(`${Math.min(5, leftOut.length)} of them, each with its months reported`, lines[0]);
   }
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }

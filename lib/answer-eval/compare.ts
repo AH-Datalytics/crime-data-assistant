@@ -144,11 +144,13 @@ function placeKey(p: { kind: string; name: string; state?: string }): string {
 
 /**
  * The FBI's name for an ORI when a label's agency name is that same agency in other words ("Portland Police Bureau"
- * is the FBI's "Portland Police Department"): the names agree once the words for police and agency are set aside.
+ * is the FBI's "Portland Police Department"): the names agree once the words for police and agency are set aside, and
+ * both are the same kind of agency, a sheriff never a police department (Codex 02.7).
  */
+const agencyKind = (name: string) => (/\bsheriff/i.test(name) ? "sheriff" : /\b(marshal|constable)/i.test(name) ? "other" : "police");
 export function fbiNameFor(labelName: string, ori: string): string | null {
   const fbi = fbiNames().get(ori);
-  return fbi && placeKey({ kind: "agency", name: fbi }) === placeKey({ kind: "agency", name: labelName }) ? fbi : null;
+  return fbi && agencyKind(fbi) === agencyKind(labelName) && placeKey({ kind: "agency", name: fbi }) === placeKey({ kind: "agency", name: labelName }) ? fbi : null;
 }
 
 /* ------------------------------------------------------------------ plan -> meaning --------------------------------- */

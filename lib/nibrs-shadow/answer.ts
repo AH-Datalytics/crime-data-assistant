@@ -231,10 +231,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     plan.bindings = plan.bindings.map((b) => (moved.has(b.path) ? { ...b, path: moved.get(b.path)! } : b));
     plan.geography.places = kept;
   }
-  // "Combined": one total of the agencies; one agency needs no agency column.
+  // "Combined": one total of the agencies; one agency needs no agency column. "Combined" of anything else (several
+  // crimes) is not answered as separate numbers (Codex 02.4).
   if (flags(ledger0).combined && plan.geography.places.length > 1) plan.geography.combine = "combined";
-  if (plan.geography.combine === "combined" || (plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency"))
-    plan.groupings = plan.groupings.filter((g) => g.dimension !== "geo.place");
+  else if (flags(ledger0).combined && !flags(ledger0).composite)
+    return decline("unsupported_capability", `Not in the slice yet: "combined" applies to several agencies here; a combined total of several crimes comes later. I haven't answered with separate numbers.`);
+  if (plan.geography.combine === "combined" || (plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency")) {
+    // Dropping the agency grouping renumbers the groupings after it: their bindings follow (Codex 02.3); a part bound
+    // to the dropped grouping is bound to the places.
+    const before = plan.groupings;
+    plan.groupings = before.filter((g) => g.dimension !== "geo.place");
+    const to = (i: number) => (before[i].dimension === "geo.place" ? "geography.places[0]" : `groupings[${plan.groupings.indexOf(before[i])}]`);
+    plan.bindings = plan.bindings.map((b) => {
+      const m = /^groupings\[(\d+)\](.*)$/.exec(b.path);
+      return m && Number(m[1]) < before.length ? { ...b, path: `${to(Number(m[1]))}${before[Number(m[1])].dimension === "geo.place" ? "" : m[2]}` } : b;
+    });
+  }
   // P08: "large" cities are 250,000 residents or more.
   const set0 = plan.geography.places[0];
   if (flags(ledger0).largeCities) {
