@@ -20177,7 +20177,7 @@
      "measures": [
       {
        "name": "violent crime",
-       "unit": "offense"
+       "unit": "victim (robbery by offense)"
       }
      ],
      "filters": [],
@@ -20362,7 +20362,7 @@
     },
     "statements": [
      "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
-     "offers a button to show only agencies that reported every month of the period (P61)",
+     "offers a button to show only agencies that reported every month of the period; clicking it keeps Texas, carjackings and 2024 and counts only the agencies that reported all 12 months (P61)",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
@@ -20567,6 +20567,7 @@
    "setup": [],
    "question": "Shoplifting in Ohio by year from 2018 to 2024",
    "policy": [
+    "D22",
     "P03",
     "P53",
     "P61",
@@ -20605,7 +20606,9 @@
     },
     "statements": [
      "gives each year's agencies counted and share of residents covered",
-     "notes that participation changed over the years and offers the consistent-reporters view (P03)",
+     "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
+     "notes that participation changed over the years (P03)",
+     "offers a button to show only agencies that reported every month; clicking it keeps Ohio, shoplifting and 2018-2024 and counts one fixed set of agencies that reported every month of 2018 through 2024 (all 84 months), not a different set each year (P03, P61)",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
@@ -20715,7 +20718,8 @@
    "policy": [
     "P01",
     "P52",
-    "P53"
+    "P53",
+    "P63"
    ],
    "expected": {
     "action": "answer",
@@ -20729,7 +20733,7 @@
       }
      ],
      "period": {
-      "rule": "year to date through the latest month"
+      "rule": "year to date through the latest reported month"
      },
      "measures": [
       {
@@ -20745,7 +20749,8 @@
      "status": "pending_build"
     },
     "statements": [
-     "names the months covered",
+     "names the months covered, through the latest reported month (P52)",
+     "says the current year is incomplete and which agencies the current source covers (P53)",
      "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
@@ -20753,7 +20758,7 @@
     "status": "drafted",
     "drafted_by": "claude-inc5",
     "reviewed_by": null,
-    "notes": "ROUTE: the current year goes to Current Trends (another source; the NIBRS shadow names the route and does not run it)."
+    "notes": "ROUTE: the current year goes to Current Trends (another source; the NIBRS shadow names the route and does not run it). A routing notice verifies the route only, not the values or statements of the other source."
    }
   },
   {
@@ -20769,7 +20774,8 @@
    "question": "Murders in the US by victim-offender relationship in 2023",
    "policy": [
     "P01",
-    "P53"
+    "P53",
+    "P63"
    ],
    "expected": {
     "action": "answer",
@@ -20801,6 +20807,7 @@
      "status": "pending_build"
     },
     "statements": [
+     "says the Homicide Reports count only the homicides agencies reported to the SHR, not a complete national estimate (P53)",
      "ends with the source line \"Source: FBI SHR.\" (P63)"
     ]
    },
@@ -20808,7 +20815,7 @@
     "status": "drafted",
     "drafted_by": "claude-inc5",
     "reviewed_by": null,
-    "notes": "ROUTE: Homicide Reports (another source; not run by the NIBRS shadow)."
+    "notes": "ROUTE: Homicide Reports (another source; not run by the NIBRS shadow). A routing notice verifies the route only, not the values or statements of the other source."
    }
   },
   {
@@ -20850,12 +20857,13 @@
    "setup": [],
    "question": "Robberies in Texas in 1955",
    "policy": [
+    "D04",
     "P14",
-    "D04"
+    "P53"
    ],
    "expected": {
     "action": "decline",
-    "reason": "State figures in the data start in 1960, so 1955 is not covered.",
+    "reason": "State figures in the data cover 1960 through 2025, so 1955 is outside them.",
     "alternative": null
    },
    "label": {
@@ -20863,6 +20871,149 @@
     "drafted_by": "claude-inc5",
     "reviewed_by": null,
     "notes": "MUST DECLINE: outside the historical file's years; no alternative is offered since the question names one year."
+   }
+  },
+  {
+   "id": "LS-352",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies in Texas by year from 1955 to 1965",
+   "policy": [
+    "D04",
+    "P14",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "1960-01",
+      "to": "1965-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names 1955 through 1959 as outside the data, which starts in 1960 (D04)",
+     "uses one source for every year shown, never another for the missing years (P14)",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER the covered part: 1960-1965, the missing years named."
+   }
+  },
+  {
+   "id": "LS-353",
+   "group": "designed:inc5-partI",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Property crime in Arizona in 2023",
+   "policy": [
+    "D18",
+    "P53",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Arizona",
+       "state": "AZ"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "property crime",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "gives the file's property crime total, not a re-added sum",
+     "ends with the source line \"Source: FBI SRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": null,
+    "notes": "MUST ANSWER: the file's own property total, by offense."
+   }
+  },
+  {
+   "id": "LS-354",
+   "group": "designed:inc5-refuse",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Gun violence in Texas in 2024",
+   "policy": [
+    "P31",
+    "P53"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data has no counts of non-fatal shootings, so gun violence cannot be counted.",
+    "alternative": null
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc5",
+    "reviewed_by": null,
+    "notes": "MUST DECLINE (P31), as LS-302: never reinterpreted as gun crime summed over agencies."
    }
   }
  ]
