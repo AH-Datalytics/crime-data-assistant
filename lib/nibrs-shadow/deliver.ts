@@ -155,13 +155,18 @@ function ageSentence(bins: { label: string; from: number; to: number }[]): strin
  */
 /** Time forms (increment 3): a set of years, or rolling windows (each row a window ending that month). */
 export type TimeOptions = { years?: number[]; rolling?: { months: number; missing: string[] } };
+/** P66: the incidents beside a count (answer.ts): their statistic, or null. */
+export function incidentsBeside(plan: NibrsPlan): string | null {
+  return plan.statistics.find((s) => s.kind === "incidents")?.as ?? null;
+}
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null, opts: TimeOptions = {}): Delivered {
   const place = plan.geography.places[0];
   const agency = place.kind === "agency" ? place.label : "the place";
   // Several measures: a count each, side by side (no categories, no shares). One measure: a count and optionally its share.
+  const beside = incidentsBeside(plan);
   if (plan.measures.length > 1) return deliverSeveral(plan, effective, requestedTo, columns, rows, statements, release, readings, combined);
-  const [countStat, shareStat] = plan.statistics;
+  const [countStat, shareStat] = plan.statistics.filter((x) => x.as !== beside);
   const count = countStat.as, share = shareStat?.as;
   const what = measureWords(plan);
   const header = `${what[0].toUpperCase()}${what.slice(1)}${opts.rolling ? `, rolling ${opts.rolling.months}-month total` : ""}`;
@@ -169,12 +174,14 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const cats = plan.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension);
   const labels: Record<string, string> = { [`statistic:${count}`]: header };
   if (share) labels[`statistic:${share}`] = `Share of all ${what} (%)`;
+  if (beside) labels[`statistic:${beside}`] = "Incidents";
   const tableCols: ResultColumn[] = [];
   for (const g of plan.groupings) {
     labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? CATEGORY[g.dimension]?.header ?? g.dimension;
     tableCols.push({ binding: { kind: "grouping", dimension: g.dimension }, header: labels[`grouping:${g.dimension}`] });
   }
   tableCols.push({ binding: { kind: "statistic", as: count }, header });
+  if (beside) tableCols.push({ binding: { kind: "statistic", as: beside }, header: labels[`statistic:${beside}`] });
   if (share) tableCols.push({ binding: { kind: "statistic", as: share }, header: labels[`statistic:${share}`] });
   const ip = columns.indexOf("period");
   const at = (name: string) => columns.indexOf(name);
@@ -193,6 +200,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const c = r[at(count)];
     out.push(c === null || c === undefined ? null : Number(c));
     evidence.push({ row: i, statistic: count, status: cStatus });
+    if (beside) {
+      const b = r[at(beside)];
+      out.push(b === null || b === undefined ? null : Number(b));
+      evidence.push({ row: i, statistic: beside, status: String(r[at(`${beside}_status`)]) as CellStatus });
+    }
     if (share) {
       const sStatus = String(r[at(`${share}_status`)]) as CellStatus;
       const s = r[at(share)];
@@ -210,7 +222,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const v = tableRows[0]?.[0] as number | null | undefined;
     text.push(v === null || v === undefined
       ? `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`
-      : `${agency}: ${fmt(v)} ${what} in ${when}.`);
+      : `${agency}: ${fmt(v)} ${what} in ${when}${beside && typeof tableRows[0]?.[1] === "number" ? `, in ${fmt(tableRows[0][1] as number)} incidents` : ""}.`);
   } else if (!cats.length && opts.rolling) {
     // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
     const n = opts.rolling.months;

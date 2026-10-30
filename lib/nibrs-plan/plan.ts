@@ -199,6 +199,12 @@ export const Statistic = z.discriminatedUnion("kind", [
    * is 0 or unknown are null with a reason.
    */
   z.strictObject({ kind: z.literal("ratio"), as: Name, numerator: Name, denominator: Name }),
+  /**
+   * The distinct incidents of `measure`'s counted units in each cell (P66: the incidents beside a count of offenses or
+   * victims). The same units, filters and status as the measure's count; an incident has one date, so a period's
+   * incidents are the sum of its months'.
+   */
+  z.strictObject({ kind: z.literal("incidents"), as: Name, measure: Name }),
 ]);
 
 /* ------------------------------------------------------------------ transforms ----------------------------------- */

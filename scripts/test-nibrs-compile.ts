@@ -40,6 +40,21 @@ const n2 = ok(compilePlan(X.N2, year(2024), t));
 assert.ok(n2.sql.includes("p.loss_type IN ('7') AND p.property_description IN ('13')"));
 assert.deepEqual(n2.statements, ["property_not_attributed"]);
 
+// Increment 6: N2 by clearance type (P64, P66, P67), with the incidents beside the count: the type from the incident's
+// own arrestee rows and exceptional clearance, both statements, and the incidents counted over the same rows.
+const n2as = X.N2.statistics[0].as, n2m = X.N2.measures[0].as;
+const byType = ok(compilePlan({ ...X.N2, groupings: [{ dimension: "offense.clearance_type", unknown: "visible", absent: "show" }],
+  statistics: [X.N2.statistics[0], { kind: "incidents", as: "inc", measure: n2m }] }, year(2024), t));
+assert.deepEqual(byType.columns, ["offense.clearance_type", n2as, `${n2as}_status`, "inc", "inc_status"]);
+for (const s of ["cleared_exceptionally", "COUNT(DISTINCT (u.data_year, u.ori, u.incident_num)) AS ni", 'sum(ni) END AS "inc"']) assert.ok(byType.sql.includes(s), s);
+assert.deepEqual(byType.statements, ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
+// A selection by status says P64 only; by arrest, P67 too.
+const sel = (dimension: string, v: string) => ok(compilePlan({ ...X.N2, filters: [...X.N2.filters, { kind: "attribute", dimension, op: "in", values: [v] }] }, year(2024), t)).statements;
+assert.deepEqual(sel("offense.clearance_status", "cleared"), ["property_not_attributed", "clearance_as_of_file"]);
+assert.deepEqual(sel("offense.clearance_method", "arrest"), ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
+// The incidents come right after the count of the counted measure.
+assert.equal(compilePlan({ ...X.N2, statistics: [{ kind: "incidents", as: "inc", measure: n2m }, X.N2.statistics[0]] }, year(2024), t).kind, "unsupported");
+
 // Everything outside v0 is refused, with its reason.
 const refuse = (p: Parameters<typeof compilePlan>[0], period: Parameters<typeof compilePlan>[1] = year(2025)) => { const r = compilePlan(p, period, t); assert.equal(r.kind, "unsupported"); return r.kind === "unsupported" ? r.reason : ""; };
 // Increment 3: a set of years, each year's months only (the last clipped to `through`), grouped by year.

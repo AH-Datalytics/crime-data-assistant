@@ -41,7 +41,7 @@ import { validateOutcome } from "../nibrs-plan/outcome";
 import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
-import type { AnswerStatement } from "../nibrs-plan/result";
+import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
@@ -460,6 +460,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     || (several && (catG.length || !counts)) || (combined && timeG.length))
     return decline("unsupported_capability", "Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.");
 
+  // P66 (Jeff 2026-10-30): a clearance answer gives the number of incidents beside its count: the crime's incidents,
+  // with the same groupings and filters, as a second count. One agency only for now.
+  if (clearanceDims(plan).length && plan.measures[0].unit !== "incident") {
+    if (stateMode || placesMode || cmpFlag || rollingT || several)
+      return decline("unsupported_capability", "Not in the slice yet: clearance for a state, the nation or several agencies, for several crimes, or as a change or rolling windows.");
+    plan.statistics.splice(1, 0, { kind: "incidents", as: `${plan.measures[0].as}_incidents`, measure: plan.measures[0].as });
+  }
+
   // D31/P06: a missing period is asked about, for any reader form, once the question is known to be in the slice.
   const spec = d.spec as { period?: { form: string }; grain?: string };
   if (spec.period?.form === "none") {
@@ -590,13 +598,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     for (const st of c.query.statements) if (!statements.includes(st)) statements.push(st);
     sqls.push(c.query.sql);
     if (!columns.length) { columns = c.query.columns; rows = got; continue; }
-    // Several measures have no categories: the same period keys (or one total row) in the same order.
-    const ip = c.query.columns.indexOf("period");
-    const keys = (rs: unknown[][], i: number) => rs.map((r) => (i >= 0 ? String(r[i]) : "")).join(",");
-    if (got.length !== rows.length || keys(got, ip) !== keys(rows, columns.indexOf("period"))) return decline("unsupported_capability", "Not in the slice yet: measures whose periods do not line up.");
-    const stat = c.query.columns.map((col, i) => (col === "period" ? -1 : i)).filter((i) => i >= 0);
+    // Each row by its period and categories (one total row has none): the same keys for every measure. Several
+    // measures have no categories; the incidents beside a clearance count (P66) have the count's.
+    const keyCols = (cols: string[]) => cols.map((col, i) => (col === "period" || checked.groupings.some((g) => g.dimension === col) ? i : -1)).filter((i) => i >= 0);
+    const keyOf = (r: unknown[], idx: number[]) => idx.map((i) => String(r[i])).join("|");
+    const kGot = keyCols(c.query.columns), kRows = keyCols(columns);
+    const byKey = new Map(got.map((r) => [keyOf(r, kGot), r]));
+    if (got.length !== rows.length || byKey.size !== got.length || rows.some((r) => !byKey.has(keyOf(r, kRows)))) return decline("unsupported_capability", "Not in the slice yet: measures whose periods or categories do not line up.");
+    const stat = c.query.columns.map((_, i) => (kGot.includes(i) ? -1 : i)).filter((i) => i >= 0);
     columns = [...columns, ...stat.map((i) => c.query.columns[i])];
-    rows = rows.map((r, k) => [...r, ...stat.map((i) => got[k][i])]);
+    rows = rows.map((r) => [...r, ...stat.map((i) => byKey.get(keyOf(r, kRows))![i])]);
   }
   const delivered = deliver(checked, period, requestedTo, columns, rows, statements, release.id, notes0, combined, yearSet ? { years: yearSet } : {});
   if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);

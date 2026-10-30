@@ -36,6 +36,8 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  * or a case's alternative ("LS-236|alternative").
  */
 export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null;
+  /** Increment 6 (P66): the distinct incidents of the cell's units, beside its count. */
+  incidents?: number | null;
   /** A file with several measures: the cell's measure, as "<key>: <definition>" (its codes and unit are matched to the plan's). */
   measure?: string;
   /** A ranking's row: its place in the order (1 = first row). */
@@ -328,6 +330,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (/^says each arrest counts once/.test(s)) ok = text.includes(ANSWER_STATEMENTS.arrests_counted_once);
     else if (/^says it counts the crimes of the period cleared as of the file date/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_as_of_file);
     else if (/^says arrest takes precedence over exceptional clearance/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_arrest_first);
+    else if (/^gives the number of incidents beside the count/.test(s)) ok = o.plan.statistics.some((x) => x.kind === "incidents") && o.delivered.table.columns.some((c) => c.header === "Incidents");
     else if (/^gives the .* total \(/.test(s)) {
       // The combined total: a "Together:" sentence whose number is the sum of the table's counts (all of them known).
       const cells = o.delivered.table.rows[0]?.filter((x) => typeof x === "number" || x === null) ?? [];
@@ -541,16 +544,17 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
     if (o.plan.measures.length > 1 && expected.every((x) => x.measure)) return severalDiffs(prefix, o, expected);
     return { values: "mismatch", diffs: [{ field: `${prefix}measures`, expected: `${new Set(expected.map((x) => x.measure)).size} measures`, actual: `${o.plan.measures.length} measures`, kind: "material" }] };
   }
-  // Each row by its grouping values (period, category), its count by the first statistic's column, its share (if any)
-  // by the second's.
+  // Each row by its grouping values (period, category), its count by the first statistic's column, its incidents (P66)
+  // and its share (if any) by theirs.
   const { columns, rows } = o.delivered.table;
   const groupCols = columns.map((c, i) => (c.binding.kind === "grouping" ? i : -1)).filter((i) => i >= 0);
   const statCol = (n: number) => columns.findIndex((c, i) => c.binding.kind === "statistic" && columns.slice(0, i).filter((x) => x.binding.kind === "statistic").length === n);
-  const [ci, si] = [statCol(0), statCol(1)];
+  const colOf = (kind: string) => { const st = o.plan.statistics.find((x) => x.kind === kind); return st ? columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === st.as) : -1; };
+  const [ci, si, ii] = [statCol(0), colOf("share"), colOf("incidents")];
   const countAs = (columns[ci].binding as { as: string }).as;
   const keys = rows.map((r) => groupCols.map((j) => String(r[j]).replace(RETURN_A, "")).join("|"));  // a Return A name matches the FBI text without its marker
   const got = new Map(rows.map((r, i) => [keys[i],
-    { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
+    { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, incidents: ii >= 0 ? (r[ii] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
   const diffs: Diff[] = [];
   // A key delivered twice could hide a wrong row behind a right one: never compared, always wrong.
   const twice = keys.filter((k, i) => keys.indexOf(k) !== i);
@@ -568,6 +572,10 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
       diffs.push({ field: `${prefix}share ${x.key}`, expected: String(x.share), actual: String(g.share), kind: "material" });
     else if (g.share !== undefined && x.share === undefined)
       diffs.push({ field: `${prefix}share ${x.key}`, expected: "(no independent share)", actual: String(g.share), kind: "unverified" });
+    else if (g.incidents !== undefined && x.incidents !== undefined && g.incidents !== x.incidents)
+      diffs.push({ field: `${prefix}incidents ${x.key}`, expected: String(x.incidents), actual: String(g.incidents), kind: "material" });
+    else if (g.incidents !== undefined && x.incidents === undefined)
+      diffs.push({ field: `${prefix}incidents ${x.key}`, expected: "(no independent incident count)", actual: String(g.incidents), kind: "unverified" });
   }
   // P60 (Codex 02.6): a ranking with agencies left out names them, five or fewer each with its months reported, more
   // than five as their count and five of them, each named agency with its own months; none left out, no such line.

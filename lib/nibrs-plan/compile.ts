@@ -283,8 +283,12 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (joins.length > 1) return no("v0 groups by one dimension from another table at a time");
 
   // Statistics: a count, and optionally its share within the time grouping.
-  const [count, ...rest] = plan.statistics;
+  const [count, ...rest0] = plan.statistics;
   if (!count || count.kind !== "count" || count.measure !== m.as) return no("v0 compiles a count of the plan's measure first");
+  // P66: the count's incidents, beside it (right after the count, before any share).
+  const inc = rest0.find((s) => s.kind === "incidents");
+  if (inc && (inc.measure !== m.as || rest0[0] !== inc || (m.unit !== "offense" && m.unit !== "victim"))) return no("v0 compiles the incidents of the counted offenses or victims, right after the count");
+  const rest = rest0.filter((s) => s !== inc);
   if (rest.length > 1) return no("v0 compiles a count and at most one share");
   const share = rest[0];
   if (share && (share.kind !== "share" || share.measure !== m.as || share.denominator || JSON.stringify(share.within) !== JSON.stringify(timeDims.map((g) => g.dimension)) || !attrDims.length))
@@ -349,6 +353,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const g = groupCols.map((_, i) => `g${i}`);
   const gSel = g.map((x) => `, ${x}`).join("");
   const key = `(u.data_year, u.ori, u.incident_num, u.sub)`;
+  const ikey = `(u.data_year, u.ori, u.incident_num)`;
   const inScope = `${oriIs("u.ori")} AND u.ym BETWEEN ${q(from)} AND ${q(to)}${inYears("u.ym")}`;
   // In grid mode every month and status is per agency (O: the ori column and join key).
   const O = grid ? "ori, " : "";
@@ -360,8 +365,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     `status AS (SELECT ${O}CAST(data_year AS VARCHAR) || lpad(CAST(month AS VARCHAR), 2, '0') AS ym, status
       FROM ${read("agency_month_status")} WHERE ${oriIs("ori")})`,
     // The month's own total of the measure: the evidence for the month and every share's denominator.
-    `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, COUNT(DISTINCT ${key}) AS n FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
-    `month_cells AS (SELECT ${grid ? "s.ori, " : ""}s.ym, coalesce(t.n, 0) AS den,
+    `month_total AS (SELECT ${grid ? "u.ori, " : ""}u.ym, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ${grid ? "u.ori, " : ""}u.ym)`,
+    `month_cells AS (SELECT ${grid ? "s.ori, " : ""}s.ym, coalesce(t.n, 0) AS den, coalesce(t.ni, 0) AS deni,
       CASE WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' AND coalesce(t.n, 0) > 0 THEN 'EVIDENCE_CONFLICT'
            WHEN coalesce(st.status, 'UNKNOWN') = 'REPORTED_ZERO' THEN 'REPORTED_ZERO'
            WHEN coalesce(st.status, 'UNKNOWN') <> 'REPORTED_CRIMES' THEN 'UNKNOWN'
@@ -371,13 +376,13 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (g.length) {
     // Every category that occurs in the place and period, in every month.
     parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped)`);
-    parts.push(`counted AS (SELECT u.ym${g.map((x) => `, u.${x}`).join("")}, COUNT(DISTINCT ${key}) AS n FROM scoped u GROUP BY ALL)`);
-    parts.push(`cells AS (SELECT mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n,
+    parts.push(`counted AS (SELECT u.ym${g.map((x) => `, u.${x}`).join("")}, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ALL)`);
+    parts.push(`cells AS (SELECT mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni,
       mc.month_cell AS cell
       FROM month_cells mc CROSS JOIN cats c
       LEFT JOIN counted k ON k.ym = mc.ym${g.map((x) => ` AND k.${x} IS NOT DISTINCT FROM c.${x}`).join("")})`);
   } else {
-    parts.push(`cells AS (SELECT ${O}ym, den, month_cell, den AS n, month_cell AS cell FROM month_cells)`);
+    parts.push(`cells AS (SELECT ${O}ym, den, month_cell, den AS n, deni AS ni, month_cell AS cell FROM month_cells)`);
   }
 
   const grain = timeDims[0]?.dimension === "time.month" ? "month" : timeDims[0]?.dimension === "time.year" ? "year" : "total";
@@ -389,7 +394,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       CASE WHEN cell = 'VALUE' AND den > 0 THEN n::DOUBLE / den END AS ${shareName},
       CASE WHEN ${known("cell")} AND den = 0 THEN 'UNAVAILABLE' ELSE cell END AS ${ident(`${share.as}_status`)}` : "";
     body = `SELECT ${O}substr(ym, 1, 4) || '-' || substr(ym, 5, 2) AS period${gSel},
-      CASE WHEN ${known("cell")} THEN n END AS ${countName}, cell AS ${ident(`${count.as}_status`)}${shareCols}
+      CASE WHEN ${known("cell")} THEN n END AS ${countName}, cell AS ${ident(`${count.as}_status`)}${inc ? `,
+      CASE WHEN ${known("cell")} THEN ni END AS ${ident(inc.as)}, cell AS ${ident(`${inc.as}_status`)}` : ""}${shareCols}
       FROM cells ORDER BY ${O}ym${gSel}`;
   } else {
     // A year or total is a sum of months: known only when every month of it is. A share of a year divides by the year's
@@ -401,10 +407,11 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       CASE WHEN bool_or(cell = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN NOT bool_and(${known("cell")}) THEN 'UNKNOWN'
            WHEN sum(den) = 0 THEN 'UNAVAILABLE' ELSE 'VALUE' END AS ${ident(`${share.as}_status`)}` : "";
     body = `SELECT ${pk}${g.join(", ")}${g.length ? ", " : ""}
-      CASE WHEN bool_and(${known("cell")}) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${shareCols}
+      CASE WHEN bool_and(${known("cell")}) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${inc ? `,
+      CASE WHEN bool_and(${known("cell")}) THEN sum(ni) END AS ${ident(inc.as)}, ${rolled("cell")} AS ${ident(`${inc.as}_status`)}` : ""}${shareCols}
       FROM cells${grain === "year" || g.length ? ` GROUP BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")}` : ""}`;
   }
-  const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(share ? [share.as, `${share.as}_status`] : [])];
+  const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(inc ? [inc.as, `${inc.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
   const sql = `WITH ${parts.join(",\n")}\n${body}`;
   return { kind: "query", query: { sql, columns, scanYears: years, refuseOn: ["EVIDENCE_CONFLICT"], statements } };
 }
