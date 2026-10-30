@@ -186,9 +186,10 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
       WHERE EXISTS (SELECT 1 FROM ${read("offense")} o WHERE ${sameIncident("o", "f")} AND o.offense_code IN (${list(codes)}))${incidentFilter("f")}` };
   }
   if (kind === "arrests" && (unit === "arrest" || unit === "arrestee")) {
-    // P46, P50: Group A arrestee segments by arrest offense, each once, placed by arrest date.
+    // P46, P50: Group A arrestee segments by arrest offense, each once, placed by arrest date. P68 (DE44): a segment the
+    // FBI marks M is the same apprehension reported on another incident, so it is not counted (C and N are).
     return { entity: "arrestee", sql: `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
-      FROM ${read("arrestee")} a ${joins} WHERE a.arrest_offense IN (${list(codes)})${incidentFilter("a")}` };
+      FROM ${read("arrestee")} a ${joins} WHERE a.arrest_offense IN (${list(codes)}) AND coalesce(a.multiple_arrestee_indicator, '') <> 'M'${incidentFilter("a")}` };
   }
   return { error: `measure "${measureId}" counted by ${unit} has no executable definition in v0` };
 }

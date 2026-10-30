@@ -103,6 +103,7 @@ assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS s
 // Arrests (P46, P50): by arrest date only, every built year scanned, and the once-each statement.
 const arrests = ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), year(2024), t));
 assert.ok(arrests.sql.includes("substr(a.arrest_date, 1, 6) AS ym") && arrests.sql.includes("a.arrest_offense IN ('23C')"));
+assert.ok(arrests.sql.includes("coalesce(a.multiple_arrestee_indicator, '') <> 'M'"), "P68: an M segment (the same apprehension on another incident) is not counted");
 assert.deepEqual(arrests.scanYears, t.builtYears);
 assert.deepEqual(arrests.statements, ["arrests_counted_once"]);
 assert.match(refuse(plan("arrests.shoplifting", "arrest")), /arrest date/);
