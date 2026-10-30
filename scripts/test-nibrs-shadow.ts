@@ -705,5 +705,9 @@ assert.deepEqual(as(ask("Carjackings in Texas by year in 2024"), "answer").deliv
 // 9. The disclaimer's figures are read in their roles: "14 agencies" never passes for 4.
 const wrongCount = { ...txCj, delivered: { ...txCj.delivered, text: txCj.delivered.text.map((t, i) => (i === 1 ? t.replace(/^4 agencies/, "14 agencies") : t)) } };
 assert.ok(material(wrongCount, sumLabel).includes("statement"));
+// Codex review 03. 1: the every-month view over years qualifies a missing population too.
+assert.match(as(ask("Shoplifting in North Carolina by year from 2023 to 2024, only agencies that reported every month"), "answer").delivered.text[1], /^Residents covered by those agencies: 2023 at least [\d.]+%; 2024 at least [\d.]+%\. Some of them have no FBI population/);
+// 2: a span from this year into the future is declined, never routed as this year alone.
+assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").reason, "outside_release_coverage");
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

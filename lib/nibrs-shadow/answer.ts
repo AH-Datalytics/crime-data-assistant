@@ -235,9 +235,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         return decline("unsupported_capability", "Not in the slice yet: state and national figures for these crimes come from the historical file, which has whole years only; ask for whole years.");
       const thisYear = Number(release.lastMonth.slice(0, 4));
       if (yrs[0] > thisYear) return decline("outside_release_coverage", `${yrs[0]} is not in the data; the latest year is ${thisYear}.`);
+      // The whole span is checked before any route: a year after this one is not in the data (Codex review 03.2).
+      if (yrs[1] > thisYear) return decline("outside_release_coverage", `${yrs[1]} is not in the data; the latest year is ${thisYear}.`);
       if (yrs[0] === thisYear && sp.statistic !== "clearance_rate")
         return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends.` };
-      if (yrs[1] > thisYear) return decline("outside_release_coverage", `${yrs[1]} is not in the data; the latest year is ${thisYear}.`);
       // A span reaching this year: its completed years from the file, this year named as Current Trends' (P14: never
       // spliced in; review 2.6).
       const reachesNow = yrs[1] === thisYear && sp.statistic !== "clearance_rate";

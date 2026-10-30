@@ -132,7 +132,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       const v = isRate ? (noPop ? null : rate({ value: n, status: "VALUE" }, P).value) : n;
       const atLeast = (k: number) => (k ? "at least " : "");
       lines.push(isRate && v === null
-        ? `${Where}: no rate is given for ${when}, because ${fmt(noPop)} of the agencies ${every ? "that reported every month" : "counted"} have no FBI population.`
+        ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of the agencies ${every ? "that reported every month" : "counted"} have no FBI population` : `the FBI population of the agencies ${every ? "that reported every month" : "counted"} is 0`}.`
         : every
         ? `${Where}: ${isRate ? `${v} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`
         : `${Where}: ${isRate ? `${v} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
@@ -147,7 +147,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`
       : `${Where}: ${what} by year, ${when}, summed over the agencies that reported each year.`);
     lines.push(every
-      ? `Residents covered by those agencies: ${byYear.map((y) => `${y.year} ${pc(y.every.share)}`).join("; ")}.`
+      ? `Residents covered by those agencies: ${byYear.map((y) => `${y.year} ${y.every.noPopulation ? "at least " : ""}${pc(y.every.share)}`).join("; ")}.${byYear.some((y) => y.every.noPopulation) ? " Some of them have no FBI population, so those shares are lower bounds." : ""}`
       : `Agencies counted and share of ${residents} covered: ${byYear.map((y) => `${y.year} ${fmt(y.agencies)} (${y.noPopulation ? "at least " : ""}${pc(y.share)}, ${fmt(y.partial)} reporting only some months)`).join("; ")}. Agencies reporting only some months are included.`);
     const conflicted = byYear.filter((y) => y.conflicts);
     if (conflicted.length) lines.push(`Agency-months whose records conflict with the agency's reporting status are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
