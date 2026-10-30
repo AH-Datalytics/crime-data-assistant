@@ -89,7 +89,7 @@ assert.equal(a.plan.measures[0].id, "offenses.shoplifting");
 assert.ok(sqls.at(-1)!.includes("'TNMPD0000'") && sqls.at(-1)!.includes("'23C'"));
 assert.deepEqual(a.delivered.table.rows, [[84]]);
 assert.equal(a.delivered.text[0], "Memphis, Tennessee: 84 shoplifting offenses in 2023.");
-assert.match(a.delivered.text.at(-1)!, /^Source: FBI National Incident-Based Reporting System \(NIBRS\)/);
+assert.equal(a.delivered.text.at(-1), "Source: FBI NIBRS.", "P63: the source, plainly");
 assert.deepEqual(a.delivered.contractProblems, []);
 assert.equal(a.delivered.chart, null);
 
