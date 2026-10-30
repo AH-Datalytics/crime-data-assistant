@@ -546,5 +546,15 @@ const wichitaLabel = label({ action: "answer", meaning: { source: "nibrs", place
   statements: ["gives the rate per 100,000 residents and names the population and its year", "names the agency (Wichita Police Department)", "names its source at the end"] });
 assert.deepEqual(material(wichita, wichitaLabel), [], "the population sentence is any line, not the last");
 assert.ok(material({ ...wichita, delivered: { ...wichita.delivered, text: wichita.delivered.text.filter((t) => !t.startsWith("Rates are")) } }, wichitaLabel).includes("statement"));
+// Batch 7 values: a ranking's agencies by FBI name (or the build's city in title case), its value and its place; a rate.
+const v7 = (o: object) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", measures: { shoplifting: "23C" }, ...o }) }]);
+const rankFile = (order: [string | null, string, number][]) => v7({ grouping: "ranking", ranked_by: "count",
+  result: order.map(([agency_name, bh_city, count], i) => ({ agency_name, bh_city, count, rate: null, position: i + 1 })) });
+const scoredTx = (ev: ReturnType<typeof v7>) => scoreShadow(txLabel, tx, r, ctx, ev).result!;
+assert.equal(scoredTx(rankFile([["Houston Police Department", "HOUSTON", 108], ["Dallas Police Department", "DALLAS", 84], [null, "SMALLVILLE", 60]])).values, "match");
+const swapped = scoredTx(rankFile([["Dallas Police Department", "DALLAS", 84], ["Houston Police Department", "HOUSTON", 108], [null, "SMALLVILLE", 60]]));
+assert.deepEqual([swapped.values, swapped.diffs.some((d) => d.field === "position Houston Police Department")], ["mismatch", true], "the order is checked");
+assert.equal(scoreShadow(wichitaLabel, wichita, r, ctx, v7({ grouping: "rate", agencies: [{ agency_name: "Wichita Police Department", total: { status: "VALUE", value: 60 }, rate: { status: "VALUE", value: 15 } }] })).result!.values, "match");
+assert.equal(scoreShadow(wichitaLabel, wichita, r, ctx, v7({ grouping: "rate", agencies: [{ agency_name: "Wichita Police Department", total: { status: "VALUE", value: 60 }, rate: { status: "VALUE", value: 15.1 } }] })).result!.values, "mismatch");
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

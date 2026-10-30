@@ -36,7 +36,9 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  */
 export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null;
   /** A file with several measures: the cell's measure, as "<key>: <definition>" (its codes and unit are matched to the plan's). */
-  measure?: string };
+  measure?: string;
+  /** A ranking's row: its place in the order (1 = first row). */
+  position?: number };
 export type ExpectedValues = Map<string, ExpectedCell[]>;
 
 /**
@@ -52,7 +54,7 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
-    const time = timeCells(v as unknown as TimeFile);
+    const time = timeCells(v as unknown as TimeFile) ?? placesCells(v as unknown as PlacesFile);
     if (time) {
       for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g))
         out.set(m[3] ? `${m[1]}|alternative` : m[2] ? `${m[1]}|${m[2]}` : m[1], time);
@@ -100,6 +102,29 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+type StatusValue = { status: string; value: number | null };
+type PlacesAgency = { agency_name: string | null; bh_city?: string; population_year?: number; total: StatusValue; rate: StatusValue };
+type PlacesFile = { grouping: string; agencies?: PlacesAgency[]; years?: PlacesAgency[]; combined_total?: StatusValue; combined_rate?: StatusValue;
+  ranked_by?: "count" | "rate"; result?: { agency_name: string | null; bh_city?: string; count: number; rate: number | null; position: number }[] };
+/**
+ * Batch 7 (increment 4): several agencies, combined totals, rates and rankings. Rows are keyed as the answer shows
+ * them: an agency by its FBI name, a year, or "" for one value. A ranking's cells carry their position. Null for any
+ * other file.
+ */
+function placesCells(v: PlacesFile): ExpectedCell[] | null {
+  // No FBI name: the build's city, in the answer's title case.
+  const name = (a: { agency_name: string | null; bh_city?: string }) => a.agency_name ?? (a.bh_city ?? "").toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  switch (v.grouping) {
+    case "per_agency": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.total) }));
+    case "per_agency_rate": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.rate) }));
+    case "rate": return [{ key: "", ...pick(v.agencies![0].rate) }];
+    case "rate_per_year": return v.years!.map((y) => ({ key: String(y.population_year), ...pick(y.rate) }));
+    case "combined": return [{ key: "", ...pick(v.combined_total!) }];
+    case "combined_rate": return [{ key: "", ...pick(v.combined_rate!) }];
+    case "ranking": return v.result!.map((r) => ({ key: name(r), value: v.ranked_by === "rate" ? r.rate : r.count, status: "VALUE", position: r.position }));
+    default: return null;
+  }
+}
 /**
  * Batch 6 (increment 3): time files carry `periods` (each with its total), and for a change its `change`, for rolling
  * windows its `rolling`. A set of years: a cell per year. A change: the cells "earlier", "later", "change" and
@@ -429,6 +454,9 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   for (const x of expected) {
     const g = got.get(x.key);
     if (!g || g.value !== x.value || g.status !== x.status) diffs.push({ field: `${prefix}value ${x.key || "total"}`, expected: `${x.value} ${x.status}`, actual: g ? `${g.value} ${g.status}` : "missing", kind: "material" });
+    // A ranking: each agency in its place (P17's tie order included).
+    else if (x.position !== undefined && keys.indexOf(x.key) + 1 !== x.position)
+      diffs.push({ field: `${prefix}position ${x.key}`, expected: String(x.position), actual: String(keys.indexOf(x.key) + 1), kind: "material" });
     else if (g.share !== undefined && x.share !== undefined && g.share !== x.share)   // null against a number included
       diffs.push({ field: `${prefix}share ${x.key}`, expected: String(x.share), actual: String(g.share), kind: "material" });
     else if (g.share !== undefined && x.share === undefined)
