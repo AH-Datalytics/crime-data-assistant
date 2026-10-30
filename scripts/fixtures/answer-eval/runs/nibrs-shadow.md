@@ -63,14 +63,14 @@ Discrepancies and unverified cases:
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-241** (unverified; expected answer, got answer) "Shoplifting arrests in Memphis in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis city police, TN: 2,087 shoplifting arrests in 2024. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI National Incident-Based Reporting System (NIB
+  - delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI Natio
 - **LS-243** (unverified; expected clarify, got clarify) "Shoplifting in Washington in 2024"
   - unverified option "Washington state" : expected `answer`, got `Not in the slice yet: state and national totals come later.`
   - asked which Washington: Washington, D.C. | Washington state | Washington County, Oregon | Washington County, Maryland
 
 ### Held out
 
-92 cases. Correct 62; unverified 24; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+92 cases. Correct 79; unverified 7; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -84,9 +84,9 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
-| answer:nibrs count | 2021 and later | 57 | fail | wrong answers: not measured (0, 8 answers unverified); initial action: fail (95% (54/57)); direct answers: fail (81% (8 unverified)); numeric fixtures: not measured (46/54 match, 8 not measured) |
+| answer:nibrs count | 2021 and later | 57 | fail | wrong answers: pass (0); initial action: fail (95% (54/57)); direct answers: fail (95% (0 unverified)); numeric fixtures: pass (54/54 match) |
 | answer:nibrs count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:nibrs rate | 2021 and later | 9 | not measured | wrong answers: not measured (0, 9 answers unverified); initial action: pass (100% (9/9)); direct answers: not measured (0% verified, 9 unverified); numeric fixtures: not measured (0/9 match, 9 not measured) |
+| answer:nibrs rate | 2021 and later | 9 | pass | wrong answers: pass (0); initial action: pass (100% (9/9)); direct answers: pass (100%); numeric fixtures: pass (9/9 match) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: pass (0); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: pass (3/3 match) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -129,57 +129,6 @@ Discrepancies and unverified cases:
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can't apply "and sex": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out.
-- **LS-317** (unverified; expected answer, got answer) "Shoplifting in Tulsa and Oklahoma City in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Shoplifting offenses by agency, 2024: Tulsa city police, OK and Oklahoma City city police, OK. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical release 20261
-- **LS-318** (unverified; expected answer, got answer) "Shoplifting in Tulsa and Oklahoma City combined in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Tulsa city police, OK and Oklahoma City city police, OK, combined: 7,779 shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical relea
-- **LS-319** (unverified; expected answer, got answer) "Shoplifting in Greensboro and Raleigh in 2025"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Shoplifting offenses by agency, 2025: Greensboro city police, NC and Raleigh city police, NC. / No report is known for November 2025 to December 2025 for Greensboro city police, NC, so its 2025 total is not gi
-- **LS-320** (unverified; expected answer, got answer) "Shoplifting rate in Wichita in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Wichita city police, KS: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita city police, KS 395,486. / Source: 
-- **LS-321** (unverified; expected answer, got answer) "Shoplifting rate in Memphis by year from 2021 to 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis city police, TN: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 613,207. / 
-- **LS-322** (unverified; expected answer, got answer) "Carjackings per 100,000 residents in Dallas this year"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Dallas city police, TX: 11.3 carjacking offenses per 100,000 residents in January through September 2026. / Rates are per 100,000 residents, using the FBI's 2026 population of the agency: Dallas city police, T
-- **LS-323** (unverified; expected answer, got answer) "Shoplifting rate in Greensboro in 2025"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Greensboro city police, NC: no rate is given for 2025, because not every month is known. / Rates are per 100,000 residents, using the FBI's 2025 population of the agency: Greensboro city police, NC 310,328. / 
-- **LS-324** (unverified; expected answer, got answer) "Which Texas cities had the most carjackings in 2024?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Texas city agencies: the 20 with the most carjacking offenses, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 mont
-- **LS-325** (unverified; expected answer, got answer) "Top 10 cities by shoplifting rate in Ohio in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Ohio city agencies: the 10 with the highest shoplifting offenses per 100,000 residents, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they 
-- **LS-326** (unverified; expected answer, got answer) "Which large Texas cities had the highest shoplifting rate in 2024?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Texas city agencies of 250,000 residents or more: the 12 with the highest shoplifting offenses per 100,000 residents, 2024. / Large means 250,000 residents or more (the FBI's agency population). / Ranked: agen
-- **LS-327** (unverified; expected answer, got answer) "Which Colorado cities had the fewest carjackings in 2024?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Colorado city agencies: the 20 with the fewest carjacking offenses, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12
-- **LS-328** (unverified; expected answer, got answer) "Shoplifting in Tulsa Police Department, Tulsa, and Oklahoma City combined in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Tulsa city police, OK and Oklahoma City city police, OK, combined: 7,779 shoplifting offenses in 2024. / Source: FBI National Incident-Based Reporting System (NIBRS), as reported by the agency; canonical relea
-- **LS-329** (unverified; expected answer, got answer) "Shoplifting in Greensboro and Raleigh combined in 2025"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Greensboro city police, NC and Raleigh city police, NC, combined: no total is given for 2025, because not every month is known for every agency counted. / No report is known for November 2025 to December 2025 
-- **LS-330** (unverified; expected answer, got answer) "Shoplifting rates in Tulsa and Oklahoma City in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Shoplifting offenses per 100,000 residents by agency, 2024: Tulsa city police, OK and Oklahoma City city police, OK. / Rates are per 100,000 residents, using the FBI's 2024 population of each agency: Tulsa cit
-- **LS-331** (unverified; expected answer, got answer) "Shoplifting rate in Tulsa and Oklahoma City combined in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Tulsa city police, OK and Oklahoma City city police, OK, combined: 694.1 shoplifting offenses per 100,000 residents in 2024. / The rate is both agencies' offenses over both agencies' populations (the FBI's 202
-- **LS-332** (unverified; expected answer, got answer) "Shoplifting rate in Greensboro and Raleigh combined in 2025"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Greensboro city police, NC and Raleigh city police, NC, combined: no rate is given for 2025, because not every month is known for every agency counted. / No report is known for November 2025 to December 2025 f
-- **LS-333** (unverified; expected answer, got answer) "Which Texas cities had the most carjackings so far this year?"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Texas city agencies: the 20 with the most carjacking offenses, January through September 2026. / This covers January through September 2026. / Ranked: agencies that reported every month of January through Sept
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
