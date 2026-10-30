@@ -42,7 +42,11 @@ assert.deepEqual(n2.statements, ["property_not_attributed"]);
 
 // Everything outside v0 is refused, with its reason.
 const refuse = (p: Parameters<typeof compilePlan>[0], period: Parameters<typeof compilePlan>[1] = year(2025)) => { const r = compilePlan(p, period, t); assert.equal(r.kind, "unsupported"); return r.kind === "unsupported" ? r.reason : ""; };
-assert.match(refuse(X.SEPARATE_YEARS, { kind: "years", years: [2019, 2024] }), /absolute periods/);
+// Increment 3: a set of years, each year's months only (the last clipped to `through`), grouped by year.
+const sep = ok(compilePlan(X.SEPARATE_YEARS, { kind: "years", years: [2024, 2019] }, t));
+assert.ok(sep.sql.includes("substr(ym, 1, 4) IN ('2019', '2024')") && sep.sql.includes("BETWEEN '201901' AND '202412' AND substr(u.ym, 1, 4) IN ('2019', '2024')"));
+assert.ok(ok(compilePlan(X.SEPARATE_YEARS, { kind: "years", years: [2019, 2026], through: "2026-09" }, t)).sql.includes("BETWEEN '201901' AND '202609'"));
+assert.match(refuse({ ...X.SEPARATE_YEARS, groupings: [] }, { kind: "years", years: [2019, 2024] }), /grouped by year/);
 assert.match(refuse(X.ROLLING), /transforms|one place|agency/);
 assert.match(refuse(X.SAME_AGENCIES_CHANGE), /transforms|cohort|agency/);
 assert.match(refuse({ ...X.H2, measures: [{ id: "incidents.nope", unit: "incident", as: "x" }], statistics: [{ kind: "count", as: "c", measure: "x" }] }), /no executable definition/);

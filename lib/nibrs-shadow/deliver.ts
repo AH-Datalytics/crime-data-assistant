@@ -8,7 +8,8 @@
  */
 import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
-import { ANSWER_STATEMENTS, checkEnvelope, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
+import type { Comparison } from "../nibrs-plan/transforms";
+import { ANSWER_STATEMENTS, checkEnvelope, finalStatistics, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
 import { MEASURE_LABEL } from "../nibrs-question-types";
 import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
 import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
@@ -123,8 +124,10 @@ function ageSentence(bins: { label: string; from: number; to: number }[]): strin
  * per statistic its value and status. Statistics: a count, and optionally its share within the time grouping (each
  * category's part of all units of its own period).
  */
+/** Time forms (increment 3): a set of years, or rolling windows (each row a window ending that month). */
+export type TimeOptions = { years?: number[]; rolling?: { months: number; missing: string[] } };
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
-  statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null): Delivered {
+  statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null, opts: TimeOptions = {}): Delivered {
   const place = plan.geography.places[0];
   const agency = place.kind === "agency" ? place.label : "the place";
   // Several measures: a count each, side by side (no categories, no shares). One measure: a count and optionally its share.
@@ -132,7 +135,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const [countStat, shareStat] = plan.statistics;
   const count = countStat.as, share = shareStat?.as;
   const what = measureWords(plan);
-  const header = `${what[0].toUpperCase()}${what.slice(1)}`;
+  const header = `${what[0].toUpperCase()}${what.slice(1)}${opts.rolling ? `, rolling ${opts.rolling.months}-month total` : ""}`;
   const time = plan.groupings.find((g) => g.dimension.startsWith("time."))?.dimension;
   const cats = plan.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension);
   const labels: Record<string, string> = { [`statistic:${count}`]: header };
@@ -171,7 +174,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   });
   const table: ResultTable = { columns: tableCols, rows: tableRows };
   const text: string[] = [];
-  const when = periodWords(effective.from, effective.to);
+  const when = opts.years ? andList(opts.years.map(String)) : periodWords(effective.from, effective.to);
   const by = [time === "time.month" ? "month" : time === "time.year" ? "year" : null, ...cats.map((d) => CATEGORY[d]?.plural ?? d)].filter(Boolean).join(" and ");
   const statusOf = (r: unknown[]) => String(r[at(`${count}_status`)]);
   if (!time && !cats.length) {
@@ -179,6 +182,13 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     text.push(v === null || v === undefined
       ? `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`
       : `${agency}: ${fmt(v)} ${what} in ${when}.`);
+  } else if (!cats.length && opts.rolling) {
+    // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
+    const n = opts.rolling.months;
+    text.push(`${agency}: ${what}, rolling ${n}-month totals by month, ${when}.`);
+    text.push(`Each month's figure is the total of that month and the ${n - 1} months before it.`);
+    if (rows.some((r) => statusOf(r) !== "VALUE" && statusOf(r) !== "REPORTED_ZERO") && opts.rolling.missing.length)
+      text.push(`No report is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter total.`);
   } else if (!cats.length) {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
     const missing = rows.filter((r) => statusOf(r) === "UNKNOWN" || statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
@@ -268,4 +278,52 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
     if (BLANK.includes(e.status) !== (table.rows[e.row][col] === null)) contractProblems.push(`row ${e.row}, ${e.statistic}: value and status disagree`);
   }
   return { table, evidence, chart, text, answerStatements: statements, contractProblems };
+}
+
+const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
+const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : n < 0 ? `-${fmt(-n)}` : "0");
+/** "January through September" for a span inside one year that is not the whole year; null for whole years. */
+function monthsOf(p: { from: string; to: string }): string | null {
+  if (p.from.endsWith("-01") && p.to.endsWith("-12")) return null;
+  const [a, b] = [MONTHS[Number(p.from.slice(5)) - 1], MONTHS[Number(p.to.slice(5)) - 1]];
+  return a === b ? a : `${a} through ${b}`;
+}
+
+/**
+ * A change between two periods (period_comparison, increment 3): both totals, the change and the percent change, as
+ * one row. No change from an unknown period (D17), with its months named (D04); no percent change from a zero base
+ * (P55); the same months of each year named when the periods are not whole years (D06). No adjectives (P54).
+ */
+export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: string; to: string }; later: { from: string; to: string } }, cmp: Comparison,
+  statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
+  const place = plan.geography.places[0];
+  const agency = place.kind === "agency" ? place.label : "the place";
+  const what = measureWords(plan);
+  const Header = `${what[0].toUpperCase()}${what.slice(1)}`;
+  const [E, L] = [periodWords(periods.earlier.from, periods.earlier.to), periodWords(periods.later.from, periods.later.to)];
+  const outs = finalStatistics(plan);
+  const as = plan.statistics[0].as;
+  const headerOf: Record<string, string> = { [`${as}.earlier`]: `${Header}, ${E}`, [`${as}.later`]: `${Header}, ${L}`, [`${as}.change`]: "Change", [`${as}.pct_change`]: "Percent change (%)" };
+  const cellOf: Record<string, { value: number | null; status: string }> = { [`${as}.earlier`]: cmp.earlier, [`${as}.later`]: cmp.later, [`${as}.change`]: cmp.change, [`${as}.pct_change`]: cmp.pctChange };
+  const labels: Record<string, string> = Object.fromEntries(outs.map((o) => [`statistic:${o}`, headerOf[o]]));
+  const tableCols: ResultColumn[] = outs.map((o) => ({ binding: { kind: "statistic", as: o }, header: headerOf[o] }));
+  const evidence: CellEvidence[] = outs.map((o) => ({ row: 0, statistic: o, status: cellOf[o].status as CellStatus }));
+  const table: ResultTable = { columns: tableCols, rows: [outs.map((o) => cellOf[o].value)] };
+  const text: string[] = [`${agency}: ${what}, ${E} against ${L}.`];
+  const months = monthsOf(periods.earlier);
+  if (months && months === monthsOf(periods.later)) text.push(`Compares the same months of each year: ${months}.`);
+  if (cmp.change.value !== null) {
+    text.push(`${fmt(cmp.earlier.value!)} in ${E} and ${fmt(cmp.later.value!)} in ${L}: a change of ${signed(cmp.change.value)}${cmp.pctChange.value !== null ? ` (${cmp.pctChange.value > 0 ? "+" : ""}${cmp.pctChange.value}%)` : ""}.`);
+    if (cmp.zeroBase) text.push("The percent change cannot be computed from a zero base.");
+  } else {
+    for (const [p, words] of [[cmp.earlier, E], [cmp.later, L]] as const)
+      if (p.value !== null) text.push(`${fmt(p.value)} in ${words}.`);
+      else if (p.missing.length) text.push(`No report is known for ${runs(p.missing)}, so the ${words} total is not established and no change is given.`);
+  }
+  text.push(...readings);
+  for (const st of statements) text.push(ANSWER_STATEMENTS[st]);
+  text.push(SOURCE_STATEMENT(release));
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  evidence.forEach((e, j) => { if (BLANK.includes(e.status) !== (table.rows[0][j] === null)) contractProblems.push(`${e.statistic}: value and status disagree`); });
+  return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
 }
