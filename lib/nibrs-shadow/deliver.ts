@@ -104,6 +104,8 @@ export function runs(periods: string[]): string {
   return out.join(", ");
 }
 export const fmt = (n: number) => n.toLocaleString("en-US");
+/** "1 carjacking offense", not "1 carjacking offenses": the unit word in the singular for a count of one. */
+const one = (n: number, words: string) => (n === 1 ? words.replace(/\b(offense|incident|victim|offender|arrest)s\b/, "$1") : words);
 const GROUPING_HEADER: Record<string, string> = { "time.month": "Month", "time.year": "Year" };
 const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "UNAVAILABLE"];
 
@@ -222,7 +224,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const v = tableRows[0]?.[0] as number | null | undefined;
     text.push(v === null || v === undefined
       ? `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`
-      : `${agency}: ${fmt(v)} ${what} in ${when}${beside && typeof tableRows[0]?.[1] === "number" ? `, in ${fmt(tableRows[0][1] as number)} incidents` : ""}.`);
+      : `${agency}: ${fmt(v)} ${one(v, what)} in ${when}${beside && typeof tableRows[0]?.[1] === "number" ? `, in ${fmt(tableRows[0][1] as number)} ${one(tableRows[0][1] as number, "incidents")}` : ""}.`);
   } else if (!cats.length && opts.rolling) {
     // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
     const n = opts.rolling.months;

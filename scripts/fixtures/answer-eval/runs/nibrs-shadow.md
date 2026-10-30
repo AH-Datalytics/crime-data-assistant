@@ -1,18 +1,19 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 355 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 376 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 151: run by this candidate
+- 172: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 301: scorable (reviewed, decided policy)
+- 319: scorable (reviewed, decided policy)
 - 54: label unresolved
+- 3: label drafted
 
 ## Refused as not built (not scored)
 
@@ -65,7 +66,7 @@ Discrepancies and unverified cases:
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-241** (unverified; expected answer, got answer) "Shoplifting arrests in Memphis in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS
+  - delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS
 - **LS-243** (unverified; expected clarify, got clarify) "Shoplifting in Washington in 2024"
   - unverified option "Washington state" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "Washington state" button "Show only agencies that reported every month" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
@@ -74,13 +75,13 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-114 cases. Correct 99; unverified 9; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+132 cases. Correct 113; unverified 9; wrong answers 0; avoidable declines 8; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 170 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 92 | 0 | 4 | 0 |
+| answer | 106 | 0 | 8 | 0 |
 | clarify | 0 | 3 | 2 | 0 |
 | decline | 0 | 0 | 13 | 0 |
 
@@ -90,11 +91,12 @@ Expected (rows) by actual (columns):
 | answer:historical count | 2021 and later | 5 | fail | wrong answers: pass (0); initial action: fail (80% (4/5)); direct answers: fail (80% (0 unverified)); numeric fixtures: pass (4/4 match) |
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:historical rate | 2021 and later | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
+| answer:historical rate | 2021 and later | 3 | fail | wrong answers: pass (0); initial action: fail (67% (2/3)); direct answers: fail (67% (0 unverified)); numeric fixtures: pass (2/2 match) |
 | answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
-| answer:nibrs count | 2021 and later | 62 | pass | wrong answers: pass (0); initial action: pass (95% (59/62)); direct answers: pass (95%); numeric fixtures: pass (59/59 match) |
+| answer:nibrs count | 2021 and later | 78 | fail | wrong answers: pass (0); initial action: fail (94% (73/78)); direct answers: fail (94% (0 unverified)); numeric fixtures: pass (73/73 match) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
+| answer:nibrs share | 2021 and later | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
 | answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -147,6 +149,14 @@ Discrepancies and unverified cases:
 - **LS-349** (unverified; expected answer, got answer) "Murders in the US by victim-offender relationship in 2023"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run H
+- **LS-359** (avoidable_decline; expected answer, got decline) "What share of shoplifting offenses in Memphis in 2024 were cleared?"
+  - declined (unsupported_capability): Not in the slice yet: the share cleared; ask how many were cleared, or by clearance status.
+- **LS-363** (avoidable_decline; expected answer, got decline) "Robbery clearance rate in Atlanta in 2023"
+  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-367** (avoidable_decline; expected answer, got decline) "Arrests in Memphis in 2024 for incidents where a firearm was stolen"
+  - declined (reader): I can't apply "Arrests": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply "incidents": one
+- **LS-372** (avoidable_decline; expected answer, got decline) "Arrests in Memphis in 2024 for incidents that included a robbery"
+  - declined (reader): I can't apply "Arrests": one counting unit per question; ask for victims, offenders, arrests or offenses separately. I haven't answered with a number that leaves it out. I can't apply "incidents": one
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
@@ -181,35 +191,45 @@ No cases.
 
 ### Development
 
-10 cases. Correct 4; unverified 0; wrong answers 0; avoidable declines 5; unnecessary clarifications 0; wrong actions 1; incomplete 0. Severity score 105 (trend only).
+10 cases. Correct 4; unverified 2; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 80 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
 | decline | 0 | 0 | 4 | 0 |
-| answer | 0 | 0 | 5 | 0 |
-| clarify | 0 | 0 | 1 | 0 |
+| answer | 1 | 0 | 4 | 0 |
+| clarify | 0 | 1 | 0 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:nibrs count | 2021 and later | 4 | fail | wrong answers: pass (0); initial action: fail (0% (0/4)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| answer:nibrs count | period not mapped | 1 | fail | wrong answers: pass (0); initial action: fail (0% (0/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | spans 2021 | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
+| clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
 | decline:no meaning | no period | 4 | not measured | wrong answers: pass (0); declines: pass (4/4 verified correct); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
-- **LS-043** (avoidable_decline; expected answer, got decline) "Houston vehicle burglaries by year and clearance status, 2018 to 2026"
-  - declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.
+- **LS-043** (unverified; expected answer, got answer) "Houston vehicle burglaries by year and clearance status, 2018 to 2026"
+  - unverified period: expected `{"rule":"2018-01 through the latest month in the data (requested end 2026)"}`, got `2018-01..2026-09`
+  - unverified statement: expected `If the requested start or end falls outside the data, states where the data starts or ends for that place`, got `(no check defined)`
+  - unverified statement: expected `Names any missing years or months inside the span as missing, not zero`, got `(no check defined)`
+  - unverified statement: expected `Names the months the partial 2026 figure covers`, got `(no check defined)`
+  - unverified statement: expected `Does not annualize or project the partial year, and does not re-cut earlier years to match`, got `(no check defined)`
+  - unverified statement: expected `Names the Houston Police Department as the agency counted`, got `(no check defined)`
+  - unverified statement: expected `Names its source at the end`, got `(no check defined)`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Houston, Texas: theft from motor vehicle offenses by year and clearance status, January 2018 through September 2026. / Reported by the Houston Police Department. / No total is established for Cleared (2018); U
 - **LS-124** (avoidable_decline; expected answer, got decline) "Narcotics possession or distribution arrests in tolleson Arizona in 2025"
   - declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "or distribution". I haven't answered with a number that leaves it 
 - **LS-135** (avoidable_decline; expected answer, got decline) "Posession or distribution of narcotics arrests in 2025 In Tucson az. Please provide total"
   - declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "or distribution of". I haven't answered with a number that leaves 
 - **LS-146** (avoidable_decline; expected answer, got decline) "Posession or distribution of narcotics arrests in 2025 in Yuma Az"
   - declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply "or distribution of". I haven't answered with a number that leaves 
-- **LS-150** (wrong_action; expected clarify, got decline) "houston vehicle burglaries by month by clearance status"
-  - declined (reader): I can't apply "by month": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out.
+- **LS-150** (unverified; expected clarify, got clarify) "houston vehicle burglaries by month by clearance status"
+  - unverified option "Last 10 complete years" : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - unverified option "Every year available" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - asked which range of years: The last 10 complete years | Every year available | Another range
 - **LS-160** (avoidable_decline; expected answer, got decline) "What weapons were used in robberies in Atlanta in 2024?"
   - declined (reader): I couldn't interpret "weapons were used in" in this question, so I haven't answered it with a number that ignores it.
 
@@ -242,7 +262,20 @@ No cases.
 
 ### Held out
 
-No cases.
+3 cases. Correct 3; unverified 0; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
+
+Expected (rows) by actual (columns):
+
+| | answer | clarify | decline | no reading |
+|---|---|---|---|---|
+| answer | 3 | 0 | 0 | 0 |
+
+| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
+|---|---|---|---|---|
+| answer:nibrs count | 2021 and later | 3 | pass | wrong answers: pass (0); initial action: pass (100% (3/3)); direct answers: pass (100%); numeric fixtures: pass (3/3 match) |
+
+Discrepancies and unverified cases:
+
 
 ## PROVISIONAL: drafted labels (never a gate): replay cases inside the slice
 

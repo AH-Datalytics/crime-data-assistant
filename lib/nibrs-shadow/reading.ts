@@ -244,6 +244,10 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/,?\s*\b(?:that\s+were\s+|which\s+were\s+)?cleared\s+by\s+(arrest|exceptional\s+means)\b/i, (_m, how: string) => (set({ only: /arrest/i.test(how) ? "arrest" : "exceptional" }), ""));
   text = text.replace(/\b(?:uncleared|unsolved|not\s+cleared)\s+/i, () => (set({ only: "uncleared" }), ""));
   text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+not\s+cleared\b/i, () => (set({ only: "uncleared" }), ""));
+  // In a list with another breakdown: "by year and clearance status", "by clearance type and month".
+  const kind = (w: string) => (/type/i.test(w) ? "type" : "status");
+  text = text.replace(/(\bby\s+(?:year|month))\s+and\s+(?:by\s+)?clearance(\s+(?:status|type))?\b(?!\s+rate)/i, (_m, by: string, w = "") => (set({ by: kind(w) }), by));
+  text = text.replace(/\bby\s+clearance(\s+(?:status|type))?\s+and\s+(?:by\s+)?(year|month)\b/i, (_m, w = "", t: string) => (set({ by: kind(w) }), `by ${t}`));
   text = text.replace(/,?\s*\bby\s+(?:clearance\s+type|type\s+of\s+clearance|how\s+(?:they\s+were|it\s+was)\s+cleared)\b/i, () => (set({ by: "type" }), ""));
   text = text.replace(/,?\s*\bby\s+clearance(?:\s+status)?\b(?!\s+rate)/i, () => (set({ by: "status" }), ""));
   text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b/i, () => (set({ only: "cleared" }), ""));

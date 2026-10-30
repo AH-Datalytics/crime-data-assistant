@@ -62,15 +62,34 @@ function planFilterKey(dimension: string, values: (string | number)[], op: strin
   if (dimension.endsWith("weapon")) return [...v].sort().join("+") === [...FIREARM].sort().join("+") ? "weapon:firearm" : v.join("+") === "20" ? "weapon:knife" : null;
   if (dimension === "offense.clearance_method") return v.join("+") === "exceptional" ? "clearance:exceptional" : v.join("+") === "arrest" ? "clearance:arrest" : null;
   if (dimension === "offense.clearance_type") return v.join("+") === "B" ? "clearance:prosecution declined" : null;
+  // Increment 6: a clearance status selection (P66).
+  if (dimension === "offense.clearance_status") return v.join("+") === "cleared" ? "clearance:cleared" : v.join("+") === "none" ? "clearance:uncleared" : null;
   if (dimension === "victim_offender.relationship") return v.join("+") === "ST" ? "relationship:stranger" : null;
   if (dimension === "property.loss_type") return v.join("+") === "7" ? "loss:stolen" : v.join("+") === "6" ? "loss:seized" : null;
   if (/\.age$/.test(dimension) && op === "between" && v.join("+") === "1+17") return `${dimension.split(".")[0]} age:under 18`;
   if (/\.sex$/.test(dimension)) return v.join("+") === "F" ? `${dimension.split(".")[0]} sex:female` : v.join("+") === "M" ? `${dimension.split(".")[0]} sex:male` : null;
   return null;
 }
+/** Increment 6: a property selection on one segment (N2) as "property:firearm stolen"; null for any other. */
+const PROPERTY_WHAT: Record<string, string> = { "13": "firearm", "03+05+24+28+37": "vehicle" };
+const PROPERTY_LOSS: Record<string, string> = { "7": "stolen", "5": "recovered", "6": "seized", "4": "damaged", "2": "burned" };
+function propertyKey(where: { kind: string; dimension?: string; values?: (string | number)[]; op?: string }[]): string | null {
+  const at = (d: string) => where.find((w) => w.kind === "attribute" && w.dimension === d && w.op === "in");
+  const what = PROPERTY_WHAT[[...(at("property.description")?.values ?? []).map(String)].sort().join("+")];
+  const loss = PROPERTY_LOSS[(at("property.loss_type")?.values ?? []).map(String).join("+")];
+  return where.length === 2 && what && loss ? `property:${what} ${loss}` : null;
+}
 function labelFilterKey(f: string): string | null {
   const [fam, ...rest] = f.split(":");
   const family = norm(fam), value = norm(rest.join(":"));
+  // Increment 6: clearance selections in words, and property on one segment.
+  if (!rest.length) {
+    if (/^(not cleared|uncleared)$/.test(family)) return "clearance:uncleared";
+    if (/^cleared by arrest$/.test(family)) return "clearance:arrest";
+    if (/^cleared by exceptional means$/.test(family)) return "clearance:exceptional";
+    if (/^cleared\b/.test(family)) return "clearance:cleared";
+  }
+  if (family === "property") { const m = /^(firearm|vehicle) (stolen|recovered|seized|damaged|burned)$/.exec(value); return m ? `property:${m[1]} ${m[2]}` : null; }
   if (family === "weapon") return /firearm|gun/.test(value) ? "weapon:firearm" : /knife/.test(value) ? "weapon:knife" : null;
   if (family === "clearance") return /prosecution declined/.test(value) ? "clearance:prosecution declined" : /exceptional/.test(value) ? "clearance:exceptional" : /arrest/.test(value) ? "clearance:arrest" : null;
   if (family === "relationship") return /stranger/.test(value) ? "relationship:stranger" : null;
@@ -94,6 +113,7 @@ const GROUPINGS: Record<string, string> = {
   "victim.race": "victim race", "victim race": "victim race", "victim.sex": "victim sex", "victim sex": "victim sex", "victim.ethnicity": "victim ethnicity", "victim ethnicity": "victim ethnicity", "victim.age": "victim age", "victim age": "victim age",
   "offender.race": "offender race", "offender race": "offender race", "offender.sex": "offender sex", "offender sex": "offender sex", "offender.age": "offender age", "offender age": "offender age",
   "offense.location_type": "location type", "location type": "location type", "offense.clearance_type": "clearance type", "clearance type": "clearance type",
+  "offense.clearance_status": "clearance status", "clearance status": "clearance status",
   "offense_weapon.weapon": "weapon", weapon: "weapon", "victim_offender.relationship": "relationship", relationship: "relationship", "offense.offense": "offense type", "offense type": "offense type",
   // Increment 3: a monthly series of rolling 12-month windows.
   "rolling 12-month": "rolling 12-month", "month (rolling 12-month total ending that month)": "rolling 12-month",
@@ -199,6 +219,7 @@ export function planToMeaning(plan: NibrsPlan, period: ResolvedPeriod): PlanView
   const keysOf = (fs: NibrsPlan["filters"]) => fs.flatMap((f): (string | null)[] =>
     f.kind === "attribute" ? [planFilterKey(f.dimension, f.values ?? [], f.op)]
     : f.negate ? [null] // a negated existence has no label equivalent here
+    : f.entity === "property" ? [propertyKey(f.where)]
     : f.where.map((w) => (w.kind === "attribute" ? planFilterKey(w.dimension, w.values ?? [], w.op) : null)));
   filterKeys.push(...keysOf(plan.filters));
   // A filter every measure carries (a composite's weapon, P31) is one filter of the question, as a label lists it; a

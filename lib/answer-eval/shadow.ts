@@ -24,7 +24,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -69,6 +69,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     if (batch8) {
       // A state sum's button (the every-month view) is checked under "<case>|button" with the same cells.
       for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { out.set(m[0], batch8); out.set(`${m[0]}|button`, batch8); }
+      continue;
+    }
+    // Batch 9 (increment 6): clearances, property selections and arrests, each case reading its own part of the file.
+    const b9 = (v as unknown as { values?: ClearanceValues }).values;
+    if (b9 && !v.measures) {
+      for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { const c = clearanceCells(m[0], b9); if (c) out.set(m[0], c); }
       continue;
     }
     if (!v.measures) continue;   // a file of no form read here: no cells, never a crash
@@ -122,6 +128,30 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+/** Batch 9: units and their incidents (P66), per status or type, or for one selection. */
+type UnitsIncidents = { units: number; incidents: number };
+type ClearanceValues = { by_status?: Record<string, UnitsIncidents>; by_type?: Record<string, UnitsIncidents> } & Record<string, unknown>;
+/** The part of a batch-9 file a case reads, where the file serves several (V116, V117). */
+const CLEARANCE_PART: Record<string, string> = { "LS-358": "cleared", "LS-362": "cleared_by_arrest", "LS-369": "uncleared", "LS-370": "exceptional_excluding_ties" };
+/** A batch-9 key as the answer names its category: "exceptional_B" is type B, "arrest" and "uncleared" their own. */
+const CLEARANCE_CODE: Record<string, string> = { arrest: "arrest", uncleared: "none", cleared: "cleared" };
+/**
+ * Batch 9 (increment 6) as expected cells: a breakdown by clearance status or type, a cell per category named as the
+ * answer names it, with its incidents; a selection, one total with its incidents; offenses with a property selection,
+ * one total with its incidents; arrests, one total. Null for a case whose part the file does not give (the share
+ * cleared until the slice answers it).
+ */
+function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
+  const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
+    ({ key: dim ? categoryName(dim, CLEARANCE_CODE[key] ?? key.replace(/^exceptional_/, "")) : "", value: x.units, status: "VALUE", incidents: x.incidents });
+  const part = CLEARANCE_PART[lsCase];
+  if (part) return v[part] ? [ui(v[part] as UnitsIncidents, part)] : null;
+  if (v.by_status) return Object.entries(v.by_status).map(([k, x]) => ui(x, k, "offense.clearance_status"));
+  if (v.by_type) return Object.entries(v.by_type).map(([k, x]) => ui(x, k, "offense.clearance_type"));
+  if (typeof v.offenses === "number") return [{ key: "", value: v.offenses, status: "VALUE" }];
+  if (typeof v.arrests === "number") return [{ key: "", value: v.arrests, status: "VALUE" }];
+  return null;
+}
 type StatusValue = { status: string; value: number | null };
 type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
 /** Batch 8, the historical file: each value with its row (uid), year and column; a change carries its cells. */
@@ -331,6 +361,15 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (/^says it counts the crimes of the period cleared as of the file date/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_as_of_file);
     else if (/^says arrest takes precedence over exceptional clearance/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_arrest_first);
     else if (/^gives the number of incidents beside the count/.test(s)) ok = o.plan.statistics.some((x) => x.kind === "incidents") && o.delivered.table.columns.some((c) => c.header === "Incidents");
+    // Increment 6: the breakdowns by name (P66), each unit taking its incident's status, property on the incident (N2),
+    // arrests by arrest date (P50), and an uncleared selection under P64's statement.
+    else if (/^breaks down into cleared and uncleared/.test(s)) ok = clearanceRows(o, "offense.clearance_status", ["Cleared", "Uncleared"]);
+    else if (/^breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared/.test(s))
+      ok = clearanceRows(o, "offense.clearance_type", ["Cleared by arrest", "Uncleared"]) && o.delivered.table.rows.every((r) => typeof r[0] !== "string" || !/^Code /.test(r[0]));
+    else if (/^counts victims, each taking its incident's clearance status/.test(s)) ok = o.plan.measures[0].unit === "victim" && clearanceDims(o.plan).length > 0;
+    else if (/^says property belongs to the incident, not to one offense/.test(s)) ok = text.includes(ANSWER_STATEMENTS.property_not_attributed);
+    else if (/^counts arrests by arrest date/.test(s)) ok = o.plan.timeBasis === "arrest_date";
+    else if (/^says it counts the period's .* still uncleared as of the file date/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_as_of_file);
     else if (/^gives the .* total \(/.test(s)) {
       // The combined total: a "Together:" sentence whose number is the sum of the table's counts (all of them known).
       const cells = o.delivered.table.rows[0]?.filter((x) => typeof x === "number" || x === null) ?? [];
@@ -622,6 +661,12 @@ function deliveredCheck(prefix: string, key: string, c: Extract<ShadowOutcome, {
   return { diffs, values: [v.values], wrong, unverifiedAnswers: !wrong && diffs.some((x) => x.kind === "unverified") ? 1 : 0 };
 }
 
+/** A clearance breakdown (P66): grouped by `dimension`, its column holding each of `names` (the categories it has). */
+function clearanceRows(o: Extract<ShadowOutcome, { kind: "answer" }>, dimension: string, names: string[]): boolean {
+  const col = o.delivered.table.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension === dimension);
+  const shown = new Set(o.delivered.table.rows.map((r) => String(r[col])));
+  return col >= 0 && names.every((n) => shown.has(n));
+}
 /** The question and the answers already checked against a label, shared by one case's checks. */
 type Walk = { question: string; checked: Set<object> };
 
