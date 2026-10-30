@@ -362,6 +362,43 @@ const unavailable = { ...bySex, delivered: { ...bySex.delivered, table: { ...byS
 const missingLabel = label({ ...(sexLabel.expected as object), statements: ["names any months with no data as missing, not zero"] } as never);
 assert.equal(scoreShadow(missingLabel, unavailable, r, ctx).result!.diffs.filter((d) => d.field === "statement" && d.kind === "material").length, 0);
 
+// Increment 3 (time). The stub gives 7 per month, March 2024 unknown.
+const chg = as(ask("Change in shoplifting in Detroit from 2022 to 2023"), "answer");
+assert.deepEqual(chg.delivered.table.columns.map((c) => c.header), ["Shoplifting offenses, 2022", "Shoplifting offenses, 2023", "Change", "Percent change (%)"]);
+assert.deepEqual(chg.delivered.table.rows, [[84, 84, 0, 0]]);
+assert.ok(chg.delivered.text.includes("84 in 2022 and 84 in 2023: a change of 0 (0%)."));
+// P54: no comparison year -> the year before; D17: no change from a year with a month unknown, the month named (D04).
+const goUp = as(ask("Did shoplifting go up in Detroit in 2024?"), "answer");
+assert.deepEqual(goUp.delivered.table.rows, [[84, null, null, null]]);
+assert.ok(goUp.delivered.text.includes("No report is known for March 2024, so the 2024 total is not established and no change is given."));
+assert.ok(!goUp.delivered.text.some((t) => /a change of/.test(t)));
+// This year against last year: the same months, through the latest month (P52, D06).
+const ytdCmp = as(ask("Is shoplifting in Detroit up this year compared with last year?"), "answer");
+assert.deepEqual(ytdCmp.period, { from: "2025-01", to: "2026-09" });
+assert.ok(ytdCmp.delivered.text.includes("Compares the same months of each year: January through September."));
+assert.deepEqual(ytdCmp.delivered.table.rows, [[63, 63, 0, 0]]);
+// "Compared with" and "percent change" read; a change with a NIBRS filter is a comparison too.
+for (const q of ["Shoplifting in Detroit in 2023 compared with 2022", "Percent change in shoplifting in Detroit from 2022 to 2023", "Change in robberies with a firearm in Detroit from 2022 to 2023"])
+  assert.equal(as(ask(q), "answer").plan.transforms[0].kind, "period_comparison", q);
+// A change of several crimes or of a breakdown is not built.
+assert.equal(ask("Change in shoplifting and burglary in Detroit from 2022 to 2023").kind, "decline");
+// A set of years: only those years, grouped by year.
+const sepYears = as(ask("Shoplifting in Detroit in 2019 and 2023"), "answer");
+assert.deepEqual([sepYears.plan.period, sepYears.delivered.text[0]], [{ kind: "years", years: [2019, 2023] }, "Detroit city police, MI: shoplifting offenses by year, 2019 and 2023."]);
+assert.ok(sqls.at(-1)!.includes("IN ('2019', '2023')"));
+// Rolling windows reach back before the period; a window holding March 2024 is blank, never a shorter sum.
+const roll = as(ask("Rolling 12-month shoplifting in Detroit since 2024"), "answer");
+const rollRow = (ym: string) => roll.delivered.table.rows.find((r) => r[0] === ym)![1];
+assert.deepEqual([rollRow("2024-02"), rollRow("2024-03"), rollRow("2025-02"), rollRow("2025-03")], [84, null, null, 84]);
+assert.ok(roll.delivered.text.includes("Each month's figure is the total of that month and the 11 months before it."));
+assert.ok(roll.delivered.text.some((t) => /^No report is known for March 2024: every window containing one of those months is shown blank/.test(t)));
+// P56: the last 12 months, one total, months named.
+const last12 = as(ask("Shoplifting in Detroit over the last 12 months"), "answer");
+assert.deepEqual([last12.period, last12.plan.groupings, last12.delivered.text[0]], [{ from: "2025-10", to: "2026-09" }, [], "Detroit city police, MI: 84 shoplifting offenses in October 2025 through September 2026."]);
+// Charlotte: found by its place name, named as its agency; a bare "Charlotte" is a city and a county (P28).
+assert.match(as(ask("Shoplifting in Charlotte, North Carolina in 2023"), "answer").delivered.text[0], /^Charlotte-Mecklenburg city police, NC/);
+assert.equal(ask("Shoplifting in Charlotte in 2023").kind, "clarify");
+
 // Batch 5's category fields and codes: the file names its field; age and unknown-offender codes map to NIBRSAI's labels;
 // a multi-valued field's categories are never summed into a share's denominator.
 const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "total", category,

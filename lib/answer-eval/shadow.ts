@@ -121,11 +121,47 @@ const LABEL_REASON: [RegExp, string][] = [
   [/cannot predict|predict/i, "forecast"], [/is not in the data/i, "outside_release_coverage"], [/cause/i, "explanation_requested"],
 ];
 const reasonClass = (s: string) => LABEL_REASON.find(([re]) => re.test(s))?.[1] ?? null;
-const viewOf = (plan: NibrsPlan, p: { from: string; to: string }) => planToMeaning(plan, { kind: "absolute", ...p });
+/** The answered plan as a meaning; a set of years keeps its years (through the answer's end when clipped). */
+const viewOf = (plan: NibrsPlan, p: { from: string; to: string }) => planToMeaning(plan, plan.period.kind === "years"
+  ? { kind: "years", years: plan.period.years, ...(p.to < `${Math.max(...plan.period.years)}-12` ? { through: p.to } : {}) }
+  : { kind: "absolute", ...p });
+
+const MONTH_WORDS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+/** "November and December 2025", "September 2026" -> ["2025-11", "2025-12"], ["2026-09"]. */
+function monthsNamed(words: string): string[] {
+  const out: string[] = [];
+  for (const m of words.toLowerCase().matchAll(new RegExp(`((?:(?:${MONTH_WORDS.join("|")})(?:,\\s*|\\s+and\\s+|\\s+)?)+)(\\d{4})`, "g")))
+    for (const name of m[1].match(new RegExp(MONTH_WORDS.join("|"), "g")) ?? []) out.push(`${m[2]}-${String(MONTH_WORDS.indexOf(name) + 1).padStart(2, "0")}`);
+  return out;
+}
+/** The months a "No report is known for ..." sentence names, ranges ("November 2025 to December 2025") expanded. */
+function monthsReported(text: string[]): Set<string> {
+  const out = new Set<string>();
+  const idx = (ym: string) => Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7)) - 1;
+  const ymOf = (k: number) => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+  for (const t of text.filter((x) => /^No report is known for /.test(x))) {
+    const list = /^No report is known for (.+?)(?:[:,] |$)/.exec(t)?.[1] ?? "";
+    for (const part of list.split(/,\s*/)) {
+      const ends = part.split(/\s+to\s+/).map(monthsNamed).map((x) => x[0]).filter(Boolean);
+      if (ends.length === 2) for (let k = idx(ends[0]); k <= idx(ends[1]); k++) out.add(ymOf(k));
+      else if (ends.length === 1) out.add(ends[0]);
+    }
+  }
+  return out;
+}
+/** Words that characterize a change instead of reporting it (P54: no adjectives). */
+const ADJECTIVES = /\b(?:sharply|slightly|significantly|dramatically|substantially|modestly|markedly|considerably|steeply|notably|alarming(?:ly)?|huge|massive|small|large)\b/i;
 
 /** The label's agency name as the words an answer must carry (its city), e.g. "St. Louis". */
 function agencyWords(name: string): string {
   return name.replace(/\b(Metropolitan|Metro|Police|Department|Bureau|Division of|Sheriff'?s?|Office|County)\b/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** A comparison answer's cells by output ("earlier", "later", "change", "pct_change"), or null for any other answer. */
+function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<string, number | null> | null {
+  const cols = o.delivered.table.columns;
+  if (!cols.length || !cols.every((c) => c.binding.kind === "statistic" && /\.(earlier|later|change|pct_change)$/.test(c.binding.as))) return null;
+  return Object.fromEntries(cols.map((c, i) => [(c.binding as { as: string }).as.split(".").pop()!, o.delivered.table.rows[0]?.[i] as number | null]));
 }
 
 function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
@@ -166,6 +202,37 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const line = text.find((t) => /^Age groups: /.test(t)) ?? "";
       const bins = o.plan.groupings.find((g) => g.bins)?.bins ?? [];
       ok = bins.length > 0 && bins.every((b) => line.includes(b.label)) && /infants/.test(line) && /Unknown/.test(line) && /Not recorded/.test(line);
+    }
+    // Increment 3: comparisons and rolling windows.
+    else if (/^gives both counts, the change and the percent change, with no adjectives$/.test(s) || /^gives both counts and the change$/.test(s)) {
+      const cols = comparisonCells(o);
+      const need = /percent/.test(s) ? ["earlier", "later", "change", "pct_change"] : ["earlier", "later", "change"];
+      ok = !!cols && need.every((k) => typeof cols[k] === "number") && !ADJECTIVES.test(all);
+    } else if (s === "says the percent change cannot be computed from a zero base") ok = text.includes("The percent change cannot be computed from a zero base.") && comparisonCells(o)?.pct_change === null;
+    else if (/^makes no change claim/.test(s)) { const cols = comparisonCells(o); ok = !!cols && cols.change === null && cols.pct_change === null && !/a change of/.test(all); }
+    else if (/^names the comparison year \((\d{4})\)$/.test(s)) ok = new RegExp(`\\b${/\((\d{4})\)/.exec(s)![1]}\\b`).test(text[0] ?? "");
+    else if (s === "names the months compared") {
+      const t = o.plan.transforms.find((x) => x.kind === "period_comparison");
+      ok = !!t && t.kind === "period_comparison" && all.includes(periodWords(t.earlier.from, t.earlier.to)) && all.includes(periodWords(t.later.from, t.later.to));
+    } else if (s === "compares the same months of each year") ok = /^Compares the same months of each year: /m.test(text.join("\n"));
+    else if (/^names (.+) as having no data$/.test(s)) {
+      const want = monthsNamed(/^names (.+) as having no data$/.exec(s)![1]);
+      const named = monthsReported(text);
+      ok = want.length > 0 && want.every((m) => named.has(m));
+    } else if (s === "defines each point as the sum of the 12 months ending that month") ok = text.includes("Each month's figure is the total of that month and the 11 months before it.");
+    else if (/^shows (?:any window lacking a month|the windows ending .+|every window) as missing/.test(s)) {
+      // Each window with a status other than a known one is blank (never zero or a shorter sum); "the windows ending A
+      // through B" and "every window" also say which windows those are.
+      const rows = o.delivered.table.rows;
+      const blankAt = rows.map((r) => r[1] === null);
+      const statusBlank = o.delivered.evidence.map((x) => !["VALUE", "REPORTED_ZERO"].includes(x.status));
+      ok = rows.length > 0 && blankAt.every((b, i) => b === statusBlank[i]);
+      const span = /^shows the windows ending (.+?) through (.+?) as missing/.exec(s);
+      if (ok && span) {
+        const [a, b] = [monthsNamed(span[1])[0], monthsNamed(span[2])[0]];
+        ok = rows.every((r) => (String(r[0]) >= a && String(r[0]) <= b) === (r[1] === null));
+      }
+      if (ok && /^shows every window as missing/.test(s)) ok = rows.every((r) => r[1] === null);
     }
     else if (/^shows unknown and not-recorded categories as their own rows/.test(s)) {
       // Every row names its category (unknown and not-recorded are named categories); only number cells may be blank.

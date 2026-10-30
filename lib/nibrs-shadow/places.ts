@@ -38,6 +38,12 @@ export const PLACE_NAMES: Record<string, string> = {
   TN0190100: "Nashville",   // Return A: "METROPOLITAN NASHVILLE P"; Historical: "Metropolitan Nashville Police Department"
   NV0020100: "Las Vegas",   // Return A: "LAS VEGAS METRO PD"; Historical: "Las Vegas Metropolitan Police Department"
   KY0568000: "Louisville",  // Return A: "LOUISVILLE METRO"; Historical: "Louisville Metro" (else "Louisville" finds Louisville, CO)
+};
+/**
+ * Agencies that serve a place AND its county under a joint name: found by the place's name too, but named as they are
+ * (renaming one would put another agency's name on its counts). Same evidence rule as PLACE_NAMES.
+ */
+export const PLACE_ALIASES: Record<string, string> = {
   NC0600100: "Charlotte",   // Historical: "Charlotte-Mecklenburg Police Department" (else "Charlotte, North Carolina" finds no agency)
 };
 
@@ -45,7 +51,8 @@ export type PlaceIndex = { byName: Map<string, Agency[]> };
 export function loadPlaceIndex(file = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
   const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => (PLACE_NAMES[a.ori] ? { ...a, name: PLACE_NAMES[a.ori] } : a));
   const byName = new Map<string, Agency[]>();
-  for (const a of agencies) (byName.get(base(a.name)) ?? byName.set(base(a.name), []).get(base(a.name))!).push(a);
+  const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
+  for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }
   for (const xs of byName.values()) xs.sort((a, b) => b.population - a.population);
   return { byName };
 }

@@ -70,6 +70,22 @@ assert.deepEqual([read("Stabbings in Tulsa in 2023").text, read("Stabbings in Tu
 assert.equal(read("Robberies in Tulsa in 2023").composite, null);
 assert.deepEqual([read("Gun violence in Tulsa in 2023").undefinedTerm, read("How many shooters were there in Tulsa?").undefinedTerm, read("Gun crime in Tulsa").undefinedTerm], ["gun violence", "shooters", null]);
 
+// Increment 3: comparisons are recorded with their periods, and the question passed on as a count over the span.
+const cmp = (q: string) => readQuestion(q, 2026, "2026-09");
+assert.deepEqual([cmp("Shoplifting in Tulsa in 2024 compared with 2023").text, cmp("Shoplifting in Tulsa in 2024 compared with 2023").comparison],
+  ["Shoplifting in Tulsa from 2023 to 2024", { earlier: { from: "2023-01", to: "2023-12" }, later: { from: "2024-01", to: "2024-12" }, matched: false }]);
+assert.equal(cmp("Percent change in robberies with a firearm in Tulsa from 2021 to 2025").text, "Robberies with a firearm in Tulsa from 2021 to 2025");
+assert.deepEqual(cmp("Did burglaries go up in Tulsa in 2025?").comparison?.earlier, { from: "2024-01", to: "2024-12" }, "P54: the year before");
+assert.deepEqual(cmp("Did burglaries go up in Tulsa in 2025?").forecast, false, "a past year is not a forecast");
+assert.deepEqual(cmp("Is shoplifting in Tulsa up this year compared with last year?").comparison, { earlier: { from: "2025-01", to: "2025-12" }, later: { from: "2026-01", to: "2026-12" }, matched: true });
+assert.deepEqual(cmp("Shoplifting in Tulsa January through June 2024 compared with January through June 2023").comparison,
+  { earlier: { from: "2023-01", to: "2023-06" }, later: { from: "2024-01", to: "2024-06" }, matched: true });
+assert.equal(cmp("Shoplifting in Tulsa January through June 2024 compared with March through May 2023").comparison, null, "different months: not read as a comparison");
+assert.equal(cmp("Will shoplifting go up in Tulsa next year?").forecast, true, "a forecast stays a forecast");
+// P56: the last 12 months end at the release's latest month.
+assert.deepEqual([cmp("Shoplifting in Tulsa over the last 12 months").text, cmp("Shoplifting in Tulsa over the last 12 months").last12], ["Shoplifting in Tulsa from October 2025 to September 2026", true]);
+assert.equal(readQuestion("Shoplifting in Tulsa over the last 12 months", 2026).last12, false, "without a release month the wording is left to the reader");
+
 // Every rewrite is recorded on the ledger the reader reads.
 const l = read("Shoplfting in Tulsa so far this year").ledger;
 assert.deepEqual(l.readings.map((r) => r.kind), ["period", "spelling"]);
