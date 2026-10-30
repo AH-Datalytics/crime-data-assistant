@@ -45,6 +45,7 @@ import type { AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, monthName, periodWords, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
+import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -63,7 +64,12 @@ export type ShadowOption = {
   otherSource?: string;
 };
 export type ShadowOutcome =
-  | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered }
+  /** `buttons`: continuations offered beside the answer (P61's consistent-reporters view). */
+  | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered; buttons?: ShadowOption[] }
+  /** A Part I figure for a state or the nation, read from the historical file (P53; srs.ts). */
+  | SrsAnswer
+  /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
+  | { kind: "route"; source: "rtci" | "shr"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
   | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean };
 
@@ -196,10 +202,36 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },
       { label: "A state", entry: "which state" }, { label: "A city or agency", entry: "which city or agency" }] };
   }
+  // P53: murders by a Homicide Report detail for a state or the nation are Homicide Reports' (named, not run here).
+  const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
+  if (flags(ledger0).shrDetail && geoOnly(clause0("place")))
+    return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run Homicide Reports." };
   const d = matchNibrsType(ledger);
   if (d.kind === "none") return decline("reader", "The question could not be read: no typed reading.");
   if (d.kind === "decline") return decline(readerReason(d.explanation), d.explanation);
   if (d.kind === "clarify") return decline("reader", `The reader asked in text only: ${d.explanation}`);
+  // P53 (increment 5): a Part I offense for a state or the nation is the historical file's in a completed year
+  // (FBI SRS), Current Trends' this year; unless NIBRS is asked for in words (P01). Its clearance rate is the
+  // historical clearances' for the nation (P57) and declined for a state (P18).
+  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked) {
+    const sp = d.spec;
+    const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
+    const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
+      || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
+    const yrs = sp.period.form === "year" ? [sp.period.year, sp.period.year] : sp.period.form === "range" ? [sp.period.from, sp.period.to] : null;
+    if (geo && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims", "incidents"].includes(sp.unit))
+      && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate") && !flags(ledger0).composite) {
+      const thisYear = Number(release.lastMonth.slice(0, 4));
+      if (yrs[1] >= thisYear && sp.statistic !== "clearance_rate")
+        return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends.` };
+      const cmp = flags(ledger0).comparison;
+      const r = answerSrs({ measure: sp.measures[0], place: geo.kind === "state" ? { kind: "state", code: geo.code } : { kind: "national" }, from: yrs[0], to: yrs[1],
+        byYear: sp.grain === "year", statistic: sp.statistic,
+        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null });
+      if (r.kind === "srs") return r;
+      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
+    }
+  }
   // P01: a standard (Part I) crime's count is Historical's (completed years) or Current Trends' (this year), not this
   // NIBRS shadow's; it is declined rather than answered from the wrong source.
   // Only a plain count of the crime: its details (a weapon, arrests, clearances, a breakdown) are NIBRS's, and go on to

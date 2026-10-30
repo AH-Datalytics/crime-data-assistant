@@ -34,7 +34,7 @@ export function parseRequest(body: unknown): { question: string; path: string[] 
 
 export type PreviewButton = { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built"; note?: string };
 export type PreviewResponse =
-  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string } }
+  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[] }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }
   | { kind: "decline"; reason: string; text: string; buttons: PreviewButton[]; notBuilt: boolean };
 
@@ -51,7 +51,7 @@ const button = (o: ShadowOption, path: string[]): PreviewButton => o.continuatio
 export function follow(o: ShadowOutcome, path: string[]): ShadowOutcome | null {
   let at: ShadowOutcome = o;
   for (const label of path) {
-    const opts = at.kind === "clarify" ? at.options : at.kind === "decline" && at.alternative ? [at.alternative] : [];
+    const opts = at.kind === "clarify" ? at.options : at.kind === "decline" && at.alternative ? [at.alternative] : at.kind === "answer" ? at.buttons ?? [] : [];
     const next = opts.find((x) => x.label === label)?.continuation;
     if (!next) return null;
     at = next;
@@ -62,11 +62,15 @@ export function follow(o: ShadowOutcome, path: string[]): ShadowOutcome | null {
 export function toPreview(o: ShadowOutcome, path: string[] = []): PreviewResponse {
   if (o.kind === "clarify") return { kind: "clarify", about: o.about, buttons: o.options.map((x) => button(x, path)) };
   if (o.kind === "decline") return { kind: "decline", reason: o.reason, text: o.explanation, buttons: o.alternative ? [button(o.alternative, path)] : [], notBuilt: !!o.notBuilt };
-  const { table, chart, text } = o.delivered;
+  // Another source's question: the route is named (this preview runs only the NIBRS shadow and the historical file).
+  if (o.kind === "route") return { kind: "decline", reason: `route:${o.source}`, text: o.explanation, buttons: [], notBuilt: false };
+  const { table, text } = o.delivered;
+  const chart = o.kind === "answer" ? o.delivered.chart : null;
   const columns = table.columns.map((c) => c.header);
   const rows = table.rows.map((r) => Object.fromEntries(columns.map((c, i) => [c, r[i] ?? null])));
   return {
     kind: "answer", columns, rows, text, period: o.period,
     chart: chart ? { type: chart.kind, xAxis: chart.x, yAxis: chart.y, title: text[0] ?? "" } : null,
+    buttons: o.kind === "answer" ? (o.buttons ?? []).map((x) => button(x, path)) : [],
   };
 }

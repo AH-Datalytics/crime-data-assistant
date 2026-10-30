@@ -16,7 +16,7 @@ import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
-import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type Release } from "./compare";
+import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type PlanView, type Release } from "./compare";
 import { RETURN_A } from "../nibrs-shadow/places";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
@@ -41,7 +41,9 @@ export type ExpectedCell = { key: string; value: number | null; status: string; 
   /** A ranking's row: its place in the order (1 = first row). */
   position?: number;
   /** A ranking's agency left out under P60 (not a row): `value` is its months reported. */
-  leftOut?: boolean };
+  leftOut?: boolean;
+  /** Batch 8, the historical file: the column and row (uid) the value is read from (provenance, not just the number). */
+  column?: string; uid?: string };
 export type ExpectedValues = Map<string, ExpectedCell[]>;
 
 /**
@@ -55,6 +57,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   for (const f of files) {
     const v = JSON.parse(f.json) as { nibrsai_cases: string; grouping: string; measures: Record<string, string>; totals: Record<string, { status: string; value: number | null }>;
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
+    // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
+    const batch8 = srsCells(v as unknown as SrsFile) ?? stateSumCells(v as unknown as StateSumFile);
+    if (batch8) {
+      for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) out.set(m[0], batch8);
+      continue;
+    }
     const measures = Object.keys(v.measures);
     const cell = (x: unknown) => x as { status: string; value: number | null };
     const time = timeCells(v as unknown as TimeFile) ?? placesCells(v as unknown as PlacesFile);
@@ -107,6 +115,24 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
 type StatusValue = { status: string; value: number | null };
 type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
+/** Batch 8, the historical file: each value with its row (uid), year and column; a change carries its cells. */
+type SrsFile = { basis?: string; values?: { uid: string; year: number; column: string; value: string | null }[]; change?: { earlier: number; later: number; change: number; percent_change: number | null } };
+function srsCells(v: SrsFile): ExpectedCell[] | null {
+  if (v.basis !== "crime_index_snapshot" || !v.values) return null;
+  const vals = v.values.filter((x) => x.value !== null && x.value !== "");
+  if (v.change) {
+    const [e, l] = vals;
+    return [{ key: "earlier", value: v.change.earlier, status: "VALUE", column: e.column, uid: e.uid }, { key: "later", value: v.change.later, status: "VALUE", column: l.column, uid: l.uid },
+      { key: "change", value: v.change.change, status: "VALUE" }, { key: "pct_change", value: v.change.percent_change, status: v.change.percent_change === null ? "UNAVAILABLE" : "VALUE" }];
+  }
+  return vals.map((x) => ({ key: vals.length > 1 ? String(x.year) : "", value: Number(x.value), status: "VALUE", column: x.column, uid: x.uid }));
+}
+/** Batch 8, NIBRS state and national sums (P61): read in stateSumCells, defined with the state-sum checks below. */
+type StateSumFile = { basis?: string; by_year?: unknown[] };
+function stateSumCells(_v: StateSumFile): ExpectedCell[] | null {
+  return null;   // the NIBRS state-sum reader comes with its engine path
+}
+
 type PlacesFile = { grouping: string; agencies?: PlacesAgency[]; years?: PlacesAgency[]; combined_total?: StatusValue; combined_rate?: StatusValue;
   left_out_months_unknown?: { ori?: string; agency_name: string | null; months_reported: string[] }[];
   ranked_by?: "count" | "rate"; result?: { ori?: string; agency_name: string | null; count: number; rate: number | null; position: number }[] };
@@ -179,6 +205,8 @@ const LABEL_REASON: [RegExp, string][] = [
   // P45, P31: terms the data does not define, and counts it does not hold.
   [/not a term the data defines|non-fatal shootings/i, "not_recorded_in_nibrs"],
   [/cannot predict|predict/i, "forecast"], [/is not in the data/i, "outside_release_coverage"], [/cause/i, "explanation_requested"],
+  // Increment 5: no state clearance rate (P18); years outside the historical file (D04, P14).
+  [/no state clearance rate/i, "not_recorded_in_nibrs"], [/figures in the data cover \d{4} through \d{4}|outside them/i, "outside_release_coverage"],
 ];
 const reasonClass = (s: string) => LABEL_REASON.find(([re]) => re.test(s))?.[1] ?? null;
 /** The answered plan as a meaning; a set of years keeps its years (through the answer's end when clipped). */
@@ -547,7 +575,13 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
  * without a meaning: its values where given, its contract and its text, and it stays unverified.
  */
 function walkAnswers(prefix: string, key: string, o: ShadowOutcome, r: Release, ev: ExpectedValues | undefined, ctx: Walk): Check {
-  if (o.kind === "answer") return ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
+  if (o.kind === "answer") {
+    // An answer's own buttons (P61's consistent-reporters view) are answers too: clicked and checked, values under
+    // `<case>|button`.
+    const own = ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
+    return (o.buttons ?? []).reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}button "${x.label}" `, `${key}|button`, x.continuation, r, ev, ctx)) : acc), own);
+  }
+  if (o.kind === "srs" || o.kind === "route") return none();
   if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}option "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev, ctx)) : acc), none());
   return o.alternative?.continuation ? walkAnswers(`${prefix}alternative `, `${key}|alternative`, o.alternative.continuation, r, ev, ctx) : none();
 }
@@ -570,6 +604,8 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   const c = got.continuation!;
   if (c.kind === "decline" && c.notBuilt) return one(d("", wantLeads, "refused: this build does not hold the months (not built)", "unverified"));
   if (c.kind === "decline" && /^Not in the slice yet/.test(c.explanation)) return one(d("", wantLeads, c.explanation, "unverified"));
+  // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
+  if (c.kind === "srs" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
   if (wantLeads === "answer") {
     if (c.kind !== "answer") return one(d("", "answer", `${c.kind}: ${c.kind === "decline" ? c.explanation.slice(0, 160) : c.about}`, "material"));
     return deliveredCheck(prefix, key, c, want, r, ev, ctx);
@@ -581,6 +617,7 @@ export type ShadowScore = { result: CaseResult | null; excluded?: string };
 
 export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capability: string; era: string }, expectedValues?: ExpectedValues): ShadowScore {
   const e = c.expected!;
+  if (o.kind === "srs" || o.kind === "route") return { result: scoreOther(c, o, r, ctx, expectedValues) };
   const actual: ActualAction = o.kind;
   const notes: string[] = [];
   let diffs: Diff[] = [];
@@ -637,4 +674,94 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
   if (values === "mismatch" || wrongBehindButton) outcome = "wrong_answer";
   return { result: { id: c.id, split: c.split, expected: e.action, actual, outcome, diffs, notes, capability: ctx.capability, era: ctx.era, ...(values ? { values } : {}),
     ...(unverifiedAnswers ? { unverifiedAnswers } : {}) } };
+}
+
+/* ------------------------------------------------------------------ increment 5: the historical file and routes ---- */
+
+type SrsOutcome = Extract<ShadowOutcome, { kind: "srs" }>;
+/** A historical-file answer as the comparator's view: its own meaning (it has no NIBRS plan). */
+function srsView(o: SrsOutcome): PlanView {
+  const m = o.meaning;
+  const p = m.period as { from: string; to: string };
+  return {
+    meaning: { ...m, denominator: undefined }, measures: m.measures.map((x) => ({ ...x, role: "value" as const })), filterKeys: [], statistics: [m.statistic],
+    years: null, yearsThrough: null, rank: null, denominator: null, untracked: [],
+    comparison: m.statistic === "change" ? { earlier: { from: p.from, to: `${p.from.slice(0, 4)}-12` }, later: { from: `${p.to.slice(0, 4)}-01`, to: p.to } } : null,
+  };
+}
+/** The required statements a historical-file answer can show: each checked on its text, table and what it read. */
+function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: SrsOutcome): Diff[] {
+  const out: Diff[] = [];
+  const text = o.delivered.text, all = text.join(" "), rows = o.delivered.table.rows;
+  for (const s of e.statements) {
+    let ok: boolean | null = null;
+    const src = /^ends with the source line "(.+?)"/.exec(s);
+    const st = /^names the state \((.+)\)$/.exec(s);
+    if (src) ok = text[text.length - 1] === src[1] && text.filter((t) => /^Source: /.test(t)).length === 1;
+    else if (st) ok = (text[0] ?? "").startsWith(`${st[1]}:`);
+    else if (/^gives the rate per 100,000 residents/.test(s)) ok = /_capita$/.test(o.read.column) && all.includes("per 100,000 residents");
+    else if (/^gives (\w+) yearly totals from one source/.test(s)) ok = rows.length === ({ ten: 10 } as Record<string, number>)[/^gives (\w+)/.exec(s)![1]] && /_total$/.test(o.read.column);
+    // Provenance (Codex label review): the file's own aggregate column, read as given, never its parts re-added.
+    else if (/^gives the file's (violent|property) crime total, not a re-added sum/.test(s)) ok = o.read.column === `${/(violent|property)/.exec(s)![1]}_total` && o.read.uids.length === 1;
+    else if (/^gives both counts, the change and the percent change, with no adjectives/.test(s)) {
+      const [ev, lv, ch, pc] = rows[0] as (number | null)[];
+      const f = (n: number) => n.toLocaleString("en-US");
+      const line = `${f(ev!)} in ${o.period.from.slice(0, 4)} and ${f(lv!)} in ${o.period.to.slice(0, 4)}: a change of ${ch! > 0 ? "+" : ch! < 0 ? "-" : ""}${ch === 0 ? "0" : f(Math.abs(ch!))}${pc !== null ? ` (${pc > 0 ? "+" : ""}${pc}%)` : ""}.`;
+      ok = [ev, lv, ch].every((x) => typeof x === "number") && text.includes(line) && !ADJECTIVES.test(all);
+    } else if (/^names the comparison year \((\d{4})\)$/.test(s)) ok = new RegExp(`\\b${/\((\d{4})\)/.exec(s)![1]}\\b`).test(text[0] ?? "");
+    else if (/^gives the national (\w+) clearance rate$/.test(s)) ok = /_cleared_rate$/.test(o.read.column) && /% of .+ were cleared in \d{4}\.$/.test(text[0] ?? "");
+    else if (/^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4}) are outside it/.test(s)) {
+      const [, a, b, c, d] = /^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4})/.exec(s)!;
+      ok = text.some((t) => t.includes(`cover ${a} through ${b}`) && t.includes(`${c} through ${d} are outside`));
+    } else if (/^uses one source for every year shown/.test(s)) ok = rows.every((r) => Number(r[0]) >= 1960) && /_total$/.test(o.read.column);
+    if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
+    else if (!ok) out.push({ field: "statement", expected: s, actual: all.slice(0, 200), kind: "material" });
+  }
+  return out;
+}
+/** A historical-file answer's cells against the file's own values: the number, and the column and row it came from. */
+function srsValueDiffs(o: SrsOutcome, expected: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+  if (!expected) return { values: "not measured", diffs: [{ field: "values", expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
+  const diffs: Diff[] = [];
+  const rows = o.delivered.table.rows;
+  const isChange = expected.some((x) => x.key === "pct_change");
+  const got = (k: string): number | null | undefined => isChange ? (rows[0] as (number | null)[])[["earlier", "later", "change", "pct_change"].indexOf(k)]
+    : k === "" ? (rows.length === 1 && rows[0].length === 1 ? (rows[0][0] as number) : undefined) : (rows.find((r) => r[0] === k)?.[1] as number | null | undefined);
+  if (!isChange && rows.length !== expected.length) diffs.push({ field: "values", expected: `${expected.length} cells`, actual: `${rows.length} rows`, kind: "material" });
+  for (const x of expected) {
+    const g = got(x.key);
+    if (g !== x.value) diffs.push({ field: `value ${x.key || "total"}`, expected: String(x.value), actual: String(g), kind: "material" });
+    if (x.column && x.column !== o.read.column) diffs.push({ field: `column ${x.key || "total"}`, expected: x.column, actual: o.read.column, kind: "material" });
+    if (x.uid && !o.read.uids.includes(x.uid)) diffs.push({ field: `row ${x.key || "total"}`, expected: x.uid, actual: o.read.uids.join(", "), kind: "material" });
+  }
+  return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : "match" };
+}
+/**
+ * A historical-file answer or a route, scored as an answer. A route verifies the routing only (Codex label review): the
+ * other source's values and statements are not run here, so a right route is unverified, never correct.
+ */
+function scoreOther(c: Case, o: SrsOutcome | Extract<ShadowOutcome, { kind: "route" }>, r: Release, ctx: { capability: string; era: string }, ev?: ExpectedValues): CaseResult {
+  const e = c.expected!;
+  const notes: string[] = [];
+  let diffs: Diff[] = [];
+  let values: Values | undefined;
+  if (o.kind === "route") {
+    notes.push(`routed to ${o.source}: ${o.explanation.slice(0, 200)}`);
+    if (e.action === "answer") diffs = [e.meaning.source === o.source
+      ? { field: "route", expected: `${e.meaning.source} answer`, actual: `routed to ${o.source}: not run by this NIBRS shadow`, kind: "unverified" }
+      : { field: "source", expected: e.meaning.source, actual: o.source, kind: "material" }];
+  } else {
+    notes.push(`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`);
+    if (e.action === "answer") {
+      diffs = [...compareMeaning(e.meaning, srsView(o), r), ...srsStatementDiffs(e, o)];
+      if (e.meaning.denominator !== undefined && e.meaning.denominator !== o.meaning.denominator)
+        diffs.push({ field: "denominator", expected: e.meaning.denominator, actual: o.meaning.denominator ?? "(none)", kind: "material" });
+      const v = srsValueDiffs(o, ev?.get(c.id));
+      diffs.push(...v.diffs); values = v.values;
+    }
+  }
+  const material = diffs.filter((x) => x.kind === "material").length, unverified = diffs.filter((x) => x.kind === "unverified").length;
+  let outcome: Outcome = outcomeOf(e.action, "answer", { material, unverified, structured: true, alternativeMissing: false });
+  if (values === "mismatch") outcome = "wrong_answer";
+  return { id: c.id, split: c.split, expected: e.action, actual: "answer", outcome, diffs, notes, capability: ctx.capability, era: ctx.era, ...(values ? { values } : {}) };
 }

@@ -75,6 +75,7 @@ function Outcome({ r, onButton }: { r: PreviewResponse; onButton: (b: PreviewBut
         <div style={{ maxHeight: 420 }} className="flex flex-col"><DataTable columns={r.columns} rows={r.rows} /></div>
       )}
       <div className="mt-2 space-y-1 text-sm">{r.text.slice(1).map((t, j) => <p key={j}>{t}</p>)}</div>
+      {r.buttons.length ? <Buttons buttons={r.buttons} onButton={onButton} /> : null}
     </div>
   );
 }

@@ -36,6 +36,8 @@ const MEASURES: Record<string, string> = {
   "sex offense": "sex offense", "drug possession": "drug narcotic violation", "drug narcotic violation": "drug narcotic violation", "drug equipment violation": "drug equipment violation", "drug equipment": "drug equipment violation",
   dui: "driving under the influence", "driving under the influence": "driving under the influence", "domestic violence": "domestic violence", "hate crime": "hate crime",
   "all offense": "all offenses", "all offenses": "all offenses", "all crime offenses": "all offenses", "all crime": "all offenses",
+  // Increment 5: a label's cleared offenses (the national clearance rate, P57).
+  "murder cleared": "murder cleared",
 };
 export function measureName(s: string): string | null {
   const n = singular(norm(s.replace(/^[a-z_]+\./, "").replace(/_cleared$/, "").replace(/_/g, " ")));
