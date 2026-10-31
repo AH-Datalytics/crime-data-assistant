@@ -59,7 +59,7 @@ const FIREARM = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"
 function planFilterKey(dimension: string, values: (string | number)[], op: string): string | null {
   const v = values.map(String);
   if (op !== "in" && op !== "between") return null;
-  if (op === "between" && !/\.age$/.test(dimension)) return null;
+  if (op === "between" && !/[._]age$/.test(dimension)) return null;
   if (dimension.endsWith("weapon")) return [...v].sort().join("+") === [...FIREARM].sort().join("+") ? "weapon:firearm" : v.join("+") === "20" ? "weapon:knife" : null;
   if (dimension === "offense.clearance_method") return v.join("+") === "exceptional" ? "clearance:exceptional" : v.join("+") === "arrest" ? "clearance:arrest" : null;
   if (dimension === "offense.clearance_type") return v.join("+") === "B" ? "clearance:prosecution declined" : null;
@@ -70,8 +70,10 @@ function planFilterKey(dimension: string, values: (string | number)[], op: strin
   if (dimension === "victim_offender.relationship") return v.join("+") === "ST" ? "relationship:stranger" : null;
   if (dimension === "property.loss_type") return v.join("+") === "7" ? "loss:stolen" : v.join("+") === "6" ? "loss:seized" : null;
   // Increment 7: a linked offender (P65) is told apart from any offender of the incident (P49).
-  if (dimension === "victim_offender.offender_age" && op === "between" && v.join("+") === "1+17") return "linked offender age:under 18";
-  if (/\.age$/.test(dimension) && op === "between" && v.join("+") === "1+17") return `${dimension.split(".")[0]} age:under 18`;
+  // An age range is "under 18" (1-17, P30) or "<from>-<to>" ("young adults" chosen as 18 to 24).
+  const range = op === "between" && v.length === 2 ? (v.join("+") === "1+17" ? "under 18" : `${v[0]}-${v[1]}`) : null;
+  if (dimension === "victim_offender.offender_age" && range) return `linked offender age:${range}`;
+  if (/\.age$/.test(dimension) && range) return `${dimension.split(".")[0]} age:${range}`;
   if (/\.sex$/.test(dimension)) return v.join("+") === "F" ? `${dimension.split(".")[0]} sex:female` : v.join("+") === "M" ? `${dimension.split(".")[0]} sex:male` : null;
   return null;
 }
@@ -107,7 +109,11 @@ function labelFilterKey(f: string): string | null {
   if (/^250,000 residents or more$/.test(f.trim())) return "population:250000+";
   if (/^agencies that reported every month of /.test(norm(f))) return "reporters:every month";
   if (family === "loss") return /stolen/.test(value) ? "loss:stolen" : /seized/.test(value) ? "loss:seized" : null;
-  if (/^(victim|offender|arrestee) age$/.test(family)) return /under 18/.test(value) ? `${family === "offender age" && /pair linked/.test(value) ? "linked offender age" : family}:under 18` : null;
+  if (/^(victim|offender|arrestee) age$/.test(family)) {
+    const who = family === "offender age" && /pair linked/.test(value) ? "linked offender age" : family;
+    const r = /under 18/.test(value) ? "under 18" : /^(\d+) to (\d+)\b/.exec(value)?.slice(1, 3).join("-");
+    return r ? `${who}:${r}` : null;
+  }
   if (/^(victim|offender|arrestee) sex$/.test(family)) return /female/.test(value) ? `${family.split(" ")[0]} sex:female` : /\bmale/.test(value) ? `${family.split(" ")[0]} sex:male` : null;
   return null;
 }

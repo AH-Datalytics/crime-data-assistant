@@ -12,7 +12,7 @@
  */
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
-import { ANSWER_STATEMENTS, clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
+import { ANSWER_STATEMENTS, clearanceDims, peopleFacts, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
@@ -159,12 +159,17 @@ function peopleCells(v: Record<string, unknown> | undefined): ExpectedCell[] | n
   if (!key) return typeof v.victims === "number" && Object.keys(v).some((k) => /contrast|negative_control/.test(k)) ? [{ key: "", value: v.victims, status: "VALUE" }]
     : typeof v.count === "number" && "group_b_arrests_07" in v ? [{ key: "", value: v.count, status: "VALUE" }] : null;
   const map = v[key] as Record<string, number>;
+  // Each category's share of the independent total, in percent to one decimal as the answer shows it: the file's own
+  // total for a crime by its offenders (categories overlap), else the categories' sum (each unit in one category).
+  const own = Object.keys(v).find((k) => /_total$/.test(k) && typeof v[k] === "number");
+  const total = own ? (v[own] as number) : Object.values(map).reduce((a, b) => a + b, 0);
+  const share = (n: number) => (total > 0 ? Math.round((1000 * n) / total) / 10 : null);
   const age = Object.keys(map).some((k) => /^\d{2}-\d{2}$|^under_18$/.test(k));
   const dim = age ? "victim.age" : PEOPLE_MAPS.find(([re]) => re.test(key))?.[1]
     ?? (Object.keys(map).some((k) => ["H", "N"].includes(k)) ? "victim.ethnicity" : Object.keys(map).some((k) => ["F", "M"].includes(k)) ? "victim.sex" : "victim.race");
   const name = (k: string) => k === "seq_00" ? "Unknown offender" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
     : age ? (k === "under_18" ? "Under 18" : k === "00" ? "Unknown" : k) : categoryName(dim, k);
-  return Object.entries(map).map(([k, n]) => ({ key: name(k), value: n, status: "VALUE" }));
+  return Object.entries(map).map(([k, n]) => ({ key: name(k), value: n, status: "VALUE", share: share(n) }));
 }
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
   const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
@@ -771,7 +776,14 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
   if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
-  if (plan.measures.some((m) => m.id === "arrests.all_crime")) want.push("arrests_through_incident");
+  // Increment 7: every arrest (Group B included) or arrests through an incident; the linked offenders; offender records;
+  // a condition on a person.
+  const people = peopleFacts(plan);
+  if (people.throughIncident) want.push("arrests_through_incident");
+  if (people.allArrests) want.push("arrests_include_group_b");
+  if (people.pair) want.push("pair_linked");
+  if (people.offenders) want.push("offender_records");
+  if (people.personFilter) want.push("unknown_not_counted");
   const clr = clearanceDims(plan);
   if (clr.length) want.push("clearance_as_of_file");
   if (clr.some((d) => d !== "offense.clearance_status")) want.push("clearance_arrest_first");
