@@ -232,7 +232,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // and loss type. The reader is not asked to apply them.
   const PROPERTY = /,?\s*\b(?:where|in\s+which|with)\s+(?:a|an|the)?\s*(firearms?|guns?|vehicles?|cars?)\s+(?:was|were|being)\s+(stolen|recovered|seized|damaged)\b/i;
   const pm = PROPERTY.exec(own);
-  const property = pm ? { what: /fire|gun/i.test(pm[1]) ? "firearm" : "vehicle", loss: pm[2].toLowerCase() } : null;
+  // A car is an automobile (03); a vehicle is any motor vehicle description (Codex increment-6 review 02.2).
+  const property = pm ? { what: /fire|gun/i.test(pm[1]) ? "firearm" : /car/i.test(pm[1]) ? "car" : "vehicle", loss: pm[2].toLowerCase() } : null;
   if (property) text = text.replace(PROPERTY, "");
   // Increment 6: arrests reached through the incident (P50, P68): every arrest on an incident with the condition,
   // whatever its arrest offense; read as all-crime arrests, the condition applied by the shadow.

@@ -47,6 +47,7 @@ const MEASURE_WORDS: Record<string, string> = { drug_possession: "drug/narcotic 
 export const PROPERTY_CODES: Record<string, { codes: string[]; words: string }> = {
   firearm: { codes: ["13"], words: "a firearm" },
   vehicle: { codes: ["03", "05", "24", "28", "37"], words: "the vehicle" },
+  car: { codes: ["03"], words: "a car" },
 };
 const PROPERTY_WORDS: Record<string, string> = Object.fromEntries(Object.values(PROPERTY_CODES).map((x) => [[...x.codes].sort().join(","), x.words]));
 export const LOSS_CODES: Record<string, string> = { stolen: "7", recovered: "5", seized: "6", damaged: "4", burned: "2" };

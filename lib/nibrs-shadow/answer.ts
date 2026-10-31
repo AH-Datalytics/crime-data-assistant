@@ -253,8 +253,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // P57 (increment 6): a Part I offense's clearance rate for an agency in a completed year is the historical
   // clearances' (FBI SRS, Return A), not computed from NIBRS. The shadow's historical file has states and the nation
   // only, so it names the route.
+  // Only the plain rate: a restriction the historical figures cannot apply (a property condition, a cohort, a
+  // breakdown or filter) is never dropped by the route (Codex increment-6 review 02.1).
+  const plainRate = !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).arrestsThrough && !flags(ledger0).consistent && !flags(ledger0).composite
+    && !ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
   if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && !flags(ledger0).nibrsAsked && d.spec.places.length === 1 && d.spec.places[0].kind === "agency"
-    && d.spec.measures.length === 1 && isSrsMeasure(d.spec.measures[0]) && !d.spec.filters.length) {
+    && d.spec.measures.length === 1 && isSrsMeasure(d.spec.measures[0]) && !d.spec.filters.length && plainRate) {
     const p = d.spec.period, last = p.form === "year" ? p.year : p.form === "range" ? p.to : null;
     if (last !== null && last < Number(release.lastMonth.slice(0, 4)))
       return { kind: "route", source: "historical", explanation: `The ${d.spec.measures[0].replace(/_/g, " ")} clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Historical.` };

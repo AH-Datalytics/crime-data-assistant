@@ -74,7 +74,7 @@ function planFilterKey(dimension: string, values: (string | number)[], op: strin
   return null;
 }
 /** Increment 6: a property selection on one segment (N2) as "property:firearm stolen"; null for any other. */
-const PROPERTY_WHAT: Record<string, string> = { "13": "firearm", "03+05+24+28+37": "vehicle" };
+const PROPERTY_WHAT: Record<string, string> = { "13": "firearm", "03+05+24+28+37": "vehicle", "03": "car" };
 const PROPERTY_LOSS: Record<string, string> = { "7": "stolen", "5": "recovered", "6": "seized", "4": "damaged", "2": "burned" };
 function propertyKey(where: { kind: string; dimension?: string; values?: (string | number)[]; op?: string }[]): string | null {
   const at = (d: string) => where.find((w) => w.kind === "attribute" && w.dimension === d && w.op === "in");
@@ -93,7 +93,7 @@ function labelFilterKey(f: string): string | null {
     if (/^cleared\b/.test(family)) return "clearance:cleared";
   }
   if (family === "incident offense") return value ? `incident offense:${value}` : null;
-  if (family === "property") { const m = /^(firearm|vehicle) (stolen|recovered|seized|damaged|burned)$/.exec(value); return m ? `property:${m[1]} ${m[2]}` : null; }
+  if (family === "property") { const m = /^(firearm|vehicle|car) (stolen|recovered|seized|damaged|burned)$/.exec(value); return m ? `property:${m[1]} ${m[2]}` : null; }
   if (family === "weapon") return /firearm|gun/.test(value) ? "weapon:firearm" : /knife/.test(value) ? "weapon:knife" : null;
   if (family === "clearance") return /prosecution declined/.test(value) ? "clearance:prosecution declined" : /exceptional/.test(value) ? "clearance:exceptional" : /arrest/.test(value) ? "clearance:arrest" : null;
   if (family === "relationship") return /stranger/.test(value) ? "relationship:stranger" : null;
@@ -349,7 +349,11 @@ export function compareMeaning(expected: Meaning, actual: PlanView, r: Release):
   decide("measures", ePairs.map((x) => (x.includes("?") ? null : x)), aPairs.map((x) => (x.includes("?") ? null : x)));
   // A share of a measure in its own units (the share cleared) reads its roles from the plan, against a label whose
   // denominator is all of that measure.
-  const ownShare = !!actual.subsetShare && expected.statistic === "share" && /^all\b/i.test(expected.denominator ?? "");
+  // The label's denominator must name all of its one measure, in its unit ("all shoplifting offenses in the period");
+  // any other wording keeps the roles unverified (Codex increment-6 review 02.3).
+  const dm = /^all (.+) (offenses|victims|incidents) in the period$/i.exec(expected.denominator ?? "");
+  const ownShare = !!actual.subsetShare && expected.statistic === "share" && expected.measures.length === 1 && !!dm
+    && measureName(dm[1]) !== null && measureName(dm[1]) === measureName(expected.measures[0].name) && unitName(dm[2]) === unitName(expected.measures[0].unit);
   if (ratio && !ownShare) add("share roles", expected.denominator ?? "(label gives no roles)", actual.measures.map((m) => `${m.role}:${m.name}`).join(", "), "unverified");
   decide("filters", expected.filters.map(labelFilterKey), actual.filterKeys);
   decide("groupings", [...new Set(expected.groupings.map(groupingName))], [...new Set(actual.meaning.groupings.map(groupingName))]);
