@@ -157,7 +157,7 @@ assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.age
 assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.sex", { bins })])), /bins ages only/);
 // Offenders (P44): offender segments of incidents with the codes, by their own sex.
 const offenders = ok(compilePlan(plan("offenders.robbery", "offender", [by("offender.sex")]), year(2024), t));
-assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS sub") && offenders.sql.includes("o.offense_code IN ('120')") && offenders.sql.includes("f.sex AS g0"));
+assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS sub") && offenders.sql.includes("o.offense_code IN ('120')") && offenders.sql.includes("CASE WHEN f.offender_seq = '00' THEN 'unknown_offender' ELSE f.sex END AS g0"));
 // Arrests (P46, P50): by arrest date only, every built year scanned, and the once-each statement.
 const arrests = ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), year(2024), t));
 assert.ok(arrests.sql.includes("substr(a.arrest_date, 1, 6) AS ym") && arrests.sql.includes("a.arrest_offense IN ('23C')"));

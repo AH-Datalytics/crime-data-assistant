@@ -71,6 +71,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { out.set(m[0], batch8); out.set(`${m[0]}|button`, batch8); }
       continue;
     }
+    // Batch 10 (increment 7): people, a category map or one count per case.
+    const b10 = peopleCells((v as unknown as { values?: Record<string, unknown> }).values);
+    if (b10 && !v.measures) {
+      for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) out.set(m[0], b10);
+      continue;
+    }
     // Batch 9 (increment 6): clearances, property selections and arrests, each case reading its own part of the file.
     const b9 = (v as unknown as { values?: ClearanceValues }).values;
     if (b9 && !v.measures) {
@@ -141,6 +147,25 @@ const CLEARANCE_CODE: Record<string, string> = { arrest: "arrest", uncleared: "n
  * one total with its incidents; arrests, one total. Null for a case whose part the file does not give (the share
  * cleared until the slice answers it).
  */
+/**
+ * Batch 10 (increment 7): a case's category map ("victims_by_offender_race", "by_category", ...) as cells keyed by the
+ * category's name as NIBRSAI shows it, or its one count ("victims", "count"). The file's own category names: "seq_00"
+ * (offender 00) is "Unknown offender"; "no_relationship_reported"; " " is not recorded; age groups by their labels.
+ */
+const PEOPLE_MAPS: [RegExp, string][] = [[/_race$/, "victim.race"], [/_ethnicity$/, "victim.ethnicity"], [/_sex$/, "victim.sex"], [/_age$/, "victim.age"]];
+function peopleCells(v: Record<string, unknown> | undefined): ExpectedCell[] | null {
+  if (!v) return null;
+  const key = Object.keys(v).find((k) => /^(?:victims|offenses|offenders)_by_|^by_category$/.test(k) && v[k] && typeof v[k] === "object");
+  if (!key) return typeof v.victims === "number" && Object.keys(v).some((k) => /contrast|negative_control/.test(k)) ? [{ key: "", value: v.victims, status: "VALUE" }]
+    : typeof v.count === "number" && "group_b_arrests_07" in v ? [{ key: "", value: v.count, status: "VALUE" }] : null;
+  const map = v[key] as Record<string, number>;
+  const age = Object.keys(map).some((k) => /^\d{2}-\d{2}$|^under_18$/.test(k));
+  const dim = age ? "victim.age" : PEOPLE_MAPS.find(([re]) => re.test(key))?.[1]
+    ?? (Object.keys(map).some((k) => ["H", "N"].includes(k)) ? "victim.ethnicity" : Object.keys(map).some((k) => ["F", "M"].includes(k)) ? "victim.sex" : "victim.race");
+  const name = (k: string) => k === "seq_00" ? "Unknown offender" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
+    : age ? (k === "under_18" ? "Under 18" : k === "00" ? "Unknown" : k) : categoryName(dim, k);
+  return Object.entries(map).map(([k, n]) => ({ key: name(k), value: n, status: "VALUE" }));
+}
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
   const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
     ({ key: dim ? categoryName(dim, CLEARANCE_CODE[key] ?? key.replace(/^exceptional_/, "")) : "", value: x.units, status: "VALUE", incidents: x.incidents });

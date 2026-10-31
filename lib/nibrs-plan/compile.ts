@@ -149,7 +149,12 @@ const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
     "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
     ...offenderGroupings("o"), ...clearance("o") },
   incident: { ...clearance("o") },
-  offender: { "offender.race": own("f.race"), "offender.sex": own("f.sex"), "offender.ethnicity": own("f.ethnicity"), "offender.age": age("f") },
+  // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is its own
+  // category, "unknown_offender", whatever its blank fields hold.
+  offender: Object.fromEntries(OFFENDER_ATTRS.map((x) => {
+    const seq00 = (c: string) => `CASE WHEN f.offender_seq = '00' THEN 'unknown_offender' ELSE ${c} END`;
+    return [`offender.${x}`, x === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(`f.${x}`))];
+  })),
   arrestee: { "arrestee.race": own("a.race"), "arrestee.sex": own("a.sex"), "arrestee.ethnicity": own("a.ethnicity"), "arrestee.age": age("a") },
 };
 
