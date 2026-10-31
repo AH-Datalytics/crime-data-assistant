@@ -145,8 +145,10 @@ for (const c of cases) {
     // A follow-up whose rewrite is another case's question reuses that case's independent values.
     // P71: a quarterly rewrite of a monthly case sums that case's months.
     const src = c.expected.action === "answer" ? c.expected.values.source ?? "" : "";
-    const reuse = /^the same cells as (LS-\d{3})\b/.exec(src)?.[1], quarters = /^the sums of (LS-\d{3})'s months by quarter/.exec(src)?.[1];
-    const ref = reuse ?? quarters;
+    // A rate case's count: its file's total ("<case>|count").
+    const reuse = /^the same (?:rate )?cells as (LS-\d{3})\b/.exec(src)?.[1], quarters = /^the sums of (LS-\d{3})'s months by quarter/.exec(src)?.[1];
+    const countOf = /^the count in (LS-\d{3})'s values\b/.exec(src)?.[1];
+    const ref = reuse ?? quarters ?? (countOf ? `${countOf}|count` : undefined);
     const values: ExpectedValues | undefined = ref && expectedValues?.has(ref) && !expectedValues.has(c.id)
       ? new Map([...expectedValues, [c.id, quarters ? quarterCells(expectedValues.get(ref)!) : expectedValues.get(ref)!]]) : expectedValues;
     const sc = scoreShadow(c, outcome, release, { capability: capability(c), era: era(c) }, values);

@@ -25603,7 +25603,7 @@
     },
     "values": {
      "status": "pending_build",
-     "source": "the 2024 shoplifting count in LS-320's values (Wichita), or nibrs-model request 12"
+     "source": "the count in LS-320's values (V87's 2024 shoplifting total for Wichita; nibrs-model batch 12)"
     },
     "statements": [
      "shows the rewritten question above the answer, as the question answered (P69)",

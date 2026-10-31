@@ -39,6 +39,8 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
 export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null;
   /** Increment 6 (P66): the distinct incidents of the cell's units, beside its count. */
   incidents?: number | null;
+  /** Increment 7b (P72): the population the cell's rate divides by (the file's FBI agency population). */
+  population?: number | null;
   /** A file with several measures: the cell's measure, as "<key>: <definition>" (its codes and unit are matched to the plan's). */
   measure?: string;
   /** A ranking's row: its place in the order (1 = first row). */
@@ -89,8 +91,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     const cell = (x: unknown) => x as { status: string; value: number | null };
     const time = timeCells(v as unknown as TimeFile) ?? placesCells(v as unknown as PlacesFile);
     if (time) {
-      for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g))
+      // Increment 7b: one agency's rate file also gives its count ("<case>|count"), for a follow-up that asks for it.
+      const total = v.grouping === "rate" ? (v as unknown as PlacesFile).agencies?.[0]?.total : undefined;
+      for (const m of v.nibrsai_cases.matchAll(/(LS-\d{3})(?:\s+"([^"]+)"|\s+(alternative))?/g)) {
         out.set(m[3] ? `${m[1]}|alternative` : m[2] ? `${m[1]}|${m[2]}` : m[1], time);
+        if (total && !m[2] && !m[3]) out.set(`${m[1]}|count`, [{ key: "", value: total.value, status: total.status }]);
+      }
       continue;
     }
     // A breakdown's rows carry a category field (race, sex, ethnicity, location_type): keyed by period (if any) and the
@@ -189,7 +195,7 @@ function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | nu
   return null;
 }
 type StatusValue = { status: string; value: number | null };
-type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
+type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; population?: number | null; total: StatusValue; rate: StatusValue };
 /** Batch 8, the historical file: each value with its row (uid), year and column; a change carries its cells. */
 type SrsFile = { basis?: string; values?: { uid: string; year: number; column: string; value: string | null }[]; change?: { earlier: number; later: number; change: number; percent_change: number | null } };
 function srsCells(v: SrsFile): ExpectedCell[] | null {
@@ -241,14 +247,16 @@ type PlacesFile = { grouping: string; agencies?: PlacesAgency[]; years?: PlacesA
  * them: an agency by its FBI name, a year, or "" for one value. A ranking's cells carry their position. Null for any
  * other file.
  */
+const popOf = (a: PlacesAgency) => ("population" in a ? { population: a.population || null } : {});
 function placesCells(v: PlacesFile): ExpectedCell[] | null {
   // No FBI name: the ORI, as the answer shows it (never the build's mailing city).
   const name = (a: { agency_name: string | null; ori?: string }) => a.agency_name ?? a.ori ?? "";
   switch (v.grouping) {
     case "per_agency": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.total) }));
-    case "per_agency_rate": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.rate) }));
-    case "rate": return [{ key: "", ...pick(v.agencies![0].rate) }];
-    case "rate_per_year": return v.years!.map((y) => ({ key: String(y.population_year), ...pick(y.rate) }));
+    // A rate's cells carry the population it divides by when the file gives it (P72's column is checked against it).
+    case "per_agency_rate": return v.agencies!.map((a) => ({ key: name(a), ...pick(a.rate), ...popOf(a) }));
+    case "rate": return [{ key: "", ...pick(v.agencies![0].rate), ...popOf(v.agencies![0]) }];
+    case "rate_per_year": return v.years!.map((y) => ({ key: String(y.population_year), ...pick(y.rate), ...popOf(y) }));
     case "combined": return [{ key: "", ...pick(v.combined_total!) }];
     case "combined_rate": return [{ key: "", ...pick(v.combined_rate!) }];
     case "ranking": return [
@@ -428,7 +436,12 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     // Department"): either is accepted for an agency the plan names.
     if (ag) ok = all.includes(ag[1]) || o.plan.geography.places.some((p) => p.kind === "agency" && (() => { const f = fbiNameFor(ag[1], p.ori); return !!f && all.includes(f); })());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
-    else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
+    else if (/^gives each quarter as the sum of its three months; a quarter in which the agency did not report/.test(s)) {
+      // P71: quarters from months; exactly the blank quarters are named incomplete.
+      const inc = text.find((t) => /^Incomplete: /.test(t)) ?? "";
+      ok = o.plan.groupings.some((g) => g.dimension === "time.quarter") && text.includes("Each quarter's figure is the sum of its three months.")
+        && o.delivered.table.rows.every((r) => { const [y, qn] = String(r[0]).split("-"); return (r[1] === null) === inc.includes(`${qn} ${y}`); });
+    } else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
     else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|No total is established for/.test(all);
     else if (s === "names the months covered") ok = all.includes(periodWords(o.period.from, o.period.to));
     else if (/^says drug crimes include/.test(s)) ok = /drug equipment/i.test(all);
@@ -560,6 +573,14 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     } else if (s === "gives the rate per 100,000 residents and names the population and its year") {
       const y = o.period.to.slice(0, 4);
       ok = rateHeader(o) && text.some((t) => new RegExp(`the FBI's ${y} population of the agency: .+ [\\d,]+\\.$`).test(t));
+    } else if (/^gives the population the rate divides by .+ in its own column beside the rate/.test(s)) {
+      // P72: a Population column beside the rate, each cell the population the rate sentence names (the number itself
+      // is checked against the independent file's denominator with the values, Codex 7b-04.6).
+      const t = o.delivered.table, pi = t.columns.findIndex((c) => c.binding.kind === "statistic" && c.header === "Population");
+      const popOf = o.plan.statistics.find((x) => x.kind === "population");
+      const named = text.find((l) => /^Rates are per 100,000 residents, using the FBI's \d{4} population of /.test(l)) ?? "";
+      ok = rateHeader(o) && pi >= 0 && popOf?.kind === "population" && o.plan.statistics.some((x) => x.kind === "rate" && x.as === popOf.of)
+        && t.rows.length > 0 && t.rows.every((r) => typeof r[pi] === "number" && new RegExp(` ${(r[pi] as number).toLocaleString("en-US")}(?:;|\\.$)`).test(named));
     } else if (s === "gives each year's rate over that year's population") {
       const line = text.find((t) => /^Each year's rate uses the FBI's population for that year: /.test(t)) ?? "";
       ok = rateHeader(o) && o.plan.groupings.some((g) => g.dimension === "time.year") && o.delivered.table.rows.length > 0
@@ -685,11 +706,12 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   const groupCols = columns.map((c, i) => (c.binding.kind === "grouping" ? i : -1)).filter((i) => i >= 0);
   const statCol = (n: number) => columns.findIndex((c, i) => c.binding.kind === "statistic" && columns.slice(0, i).filter((x) => x.binding.kind === "statistic").length === n);
   const colOf = (kind: string) => { const st = o.plan.statistics.find((x) => x.kind === kind); return st ? columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === st.as) : -1; };
-  const [ci, si, ii] = [statCol(0), colOf("share"), colOf("incidents")];
+  const [ci, si, ii, pi] = [statCol(0), colOf("share"), colOf("incidents"), colOf("population")];
   const countAs = (columns[ci].binding as { as: string }).as;
   const keys = rows.map((r) => groupCols.map((j) => String(r[j]).replace(RETURN_A, "")).join("|"));  // a Return A name matches the FBI text without its marker
   const got = new Map(rows.map((r, i) => [keys[i],
-    { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, incidents: ii >= 0 ? (r[ii] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
+    { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, incidents: ii >= 0 ? (r[ii] as number | null) : undefined,
+      population: pi >= 0 ? (r[pi] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
   const diffs: Diff[] = [];
   // A key delivered twice could hide a wrong row behind a right one: never compared, always wrong.
   const twice = keys.filter((k, i) => keys.indexOf(k) !== i);
@@ -711,6 +733,11 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
       diffs.push({ field: `${prefix}incidents ${x.key}`, expected: String(x.incidents), actual: String(g.incidents), kind: "material" });
     else if (g.incidents !== undefined && x.incidents === undefined)
       diffs.push({ field: `${prefix}incidents ${x.key}`, expected: "(no independent incident count)", actual: String(g.incidents), kind: "unverified" });
+    // P72: the population column against the file's denominator (Codex 7b-04.6).
+    else if (g.population !== undefined && x.population !== undefined && g.population !== x.population)
+      diffs.push({ field: `${prefix}population ${x.key || "total"}`, expected: String(x.population), actual: String(g.population), kind: "material" });
+    else if (g.population !== undefined && x.population === undefined)
+      diffs.push({ field: `${prefix}population ${x.key || "total"}`, expected: "(no independent population)", actual: String(g.population), kind: "unverified" });
   }
   // P60 (Codex 02.6): a ranking with agencies left out names them, five or fewer each with its months reported, more
   // than five as their count and five of them, each named agency with its own months; none left out, no such line.
@@ -850,8 +877,13 @@ export type ShadowScore = { result: CaseResult | null; excluded?: string };
  * already judged by the action.
  */
 const rwNorm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
-const readingKey = (q: string) => readQuestion(q, 2026).ledger.parts.filter((p) => p.clause === 0 && !["filler", "context"].includes(p.concept) && p.state !== "context")
-  .map((p) => `${p.concept}=${String(p.value).toLowerCase().replace(/[^a-z0-9:=]+/g, " ").trim()}`).sort().join("|");
+// The reader's parts and the pre-pass flags that change the answer without a part (quarters, P72's columns): monthly
+// and quarterly, or a rate with and without its population column, are different questions (Codex 7b-04.5).
+const readingKey = (q: string) => {
+  const l = readQuestion(q, 2026).ledger as ReturnType<typeof readQuestion>["ledger"] & { quarter?: boolean; column?: string | null };
+  return [...l.parts.filter((p) => p.clause === 0 && !["filler", "context"].includes(p.concept) && p.state !== "context")
+    .map((p) => `${p.concept}=${String(p.value).toLowerCase().replace(/[^a-z0-9:=]+/g, " ").trim()}`).sort(), `quarter=${!!l.quarter}`, `column=${l.column ?? ""}`].join("|");
+};
 /**
  * P71: a monthly series' expected cells summed into quarters ("2025-Q1"): a quarter is known only when all three of its
  * months are, else it is expected blank (incomplete).
@@ -872,7 +904,8 @@ export function withRewrite(res: CaseResult, c: Case, o: { rewrite: string | nul
   if (c.rewrite === undefined) return res;
   const diff: Diff | null = c.rewrite === null
     ? (o.rewrite === null ? null : { field: "rewrite", expected: "(ask: the rewrite is uncertain)", actual: o.rewrite, kind: "material" })
-    : o.rewrite === null ? null
+    // An expected rewrite that was asked about instead is missing (Codex 7b-04.5).
+    : o.rewrite === null ? { field: "rewrite", expected: c.rewrite, actual: "(none: asked)", kind: "material" }
     : sameRewrite(c.rewrite, o.rewrite) ? null : { field: "rewrite", expected: c.rewrite, actual: o.rewrite, kind: "material" };
   if (!diff) return res;
   const outcome: Outcome = res.outcome === "correct" || res.outcome === "unverified" ? (res.actual === "answer" ? "wrong_answer" : "wrong_action") : res.outcome;

@@ -634,6 +634,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       transforms: [{ ...cmpT, earlier: { kind: "absolute", ...earlier }, later: { kind: "absolute", ...later } }] };
   }
 
+  // P72 (Jeff 2026-10-31: "Show it"): a supporting column beside the answer, never a change to its numbers.
+  const column = flags(ledger0).column;
+  if (column === "both") return decline("unsupported_capability", "Not in the slice yet: the population and the agencies reporting together; ask for one of them.");
+  if (column === "population") {
+    const r = checked.statistics.find((s) => s.kind === "rate");
+    if (!r) return decline("unsupported_capability", "A population column goes with a rate; this answer has no rate.");
+    checked = { ...checked, statistics: [...checked.statistics, { kind: "population", as: "population", of: r.as }] };
+  } else if (column === "agencies") {
+    const s0 = checked.statistics[0];
+    if (!stateMode || !("measure" in s0)) return decline("unsupported_capability", "The number of agencies reporting goes with a state or national total.");
+    checked = { ...checked, statistics: [...checked.statistics, { kind: "agencies", as: "agencies", measure: s0.measure }] };
+  }
+
   // Validation, as any reader outcome: shape, semantic layer, release; then every part of the question applied.
   // A state's city agencies (a ranking) are the release's agencies with a population for that year, as answered.
   const cityMembers = new Map<string, string[]>();
@@ -673,6 +686,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // P71 (Jeff 2026-10-31: "Add up months"): each quarter the sum of its three months; a quarter in which the agency did
   // not report all three months (or that runs past the data) is marked incomplete, never shown as a whole quarter.
   if (quarterly) {
+    // Only whole quarters of one continuous period: a set of years, or a period starting or ending inside a quarter,
+    // would be widened to months not asked for (Codex 7b-04.3).
+    const qEdge = (ym: string, end: boolean) => (Number(ym.slice(5, 7)) - (end ? 0 : 1)) % 3 === 0;
+    if (yearSet || !qEdge(period.from, false) || !qEdge(requestedTo, true))
+      return decline("unsupported_capability", "Not in the slice yet: quarters of a set of years, or of a period that starts or ends inside a quarter; ask for whole quarters or whole years.");
     const qStart = (ym: string) => `${ym.slice(0, 4)}-${String(Math.floor((Number(ym.slice(5, 7)) - 1) / 3) * 3 + 1).padStart(2, "0")}`;
     const from = qStart(period.from), toQ = addMonths(qStart(period.to), 2);
     const to = toQ > release.lastMonth ? release.lastMonth : toQ;

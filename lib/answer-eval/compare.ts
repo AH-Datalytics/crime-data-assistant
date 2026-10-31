@@ -121,7 +121,7 @@ function labelFilterKey(f: string): string | null {
 /* ------------------------------------------------------------------ groupings -------------------------------------- */
 
 const GROUPINGS: Record<string, string> = {
-  "time.year": "year", year: "year", "time.month": "month", month: "month", "geo.agency": "agency", agency: "agency", city: "agency", "geo.state": "state", state: "state",
+  "time.year": "year", year: "year", "time.month": "month", month: "month", "time.quarter": "quarter", quarter: "quarter", "geo.agency": "agency", agency: "agency", city: "agency", "geo.state": "state", state: "state",
   "victim.race": "victim race", "victim race": "victim race", "victim.sex": "victim sex", "victim sex": "victim sex", "victim.ethnicity": "victim ethnicity", "victim ethnicity": "victim ethnicity", "victim.age": "victim age", "victim age": "victim age",
   "offender.race": "offender race", "offender race": "offender race", "offender.sex": "offender sex", "offender sex": "offender sex", "offender.age": "offender age", "offender age": "offender age",
   // Increment 7: offender ethnicity, the arrestee's own attributes, and the linked offenders' (P65).

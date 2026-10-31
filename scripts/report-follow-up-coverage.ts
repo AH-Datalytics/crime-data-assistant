@@ -3,6 +3,8 @@
  * question, or a presentation-only edit) and how many it asks about. The query-log copy has no session data, so a
  * follow-up's real previous turn is unknown: each is tried against three typical previous questions (a yearly count,
  * a breakdown, a monthly series of victims), and counted as placed when the rewriter places it after any of them.
+ * This measures how many follow-ups the rewriter recognizes, not real-session correctness or answer coverage (Codex
+ * 7b-04): the previous questions are synthetic and the rewrites are not checked against what the user meant.
  *
  *   npx tsx scripts/report-follow-up-coverage.ts   # reads docs/coverage/2026-10-30-query-log-classification.csv
  *
@@ -40,7 +42,8 @@ for (const f of follow) {
 }
 const pct = (n: number) => `${((100 * n) / follow.length).toFixed(1)}%`;
 console.log(`Logged follow-up turns: ${follow.length}`);
-console.log(`Placed (rewritten, a new question, or presentation): ${placed} (${pct(placed)})`);
+console.log(`Placed under at least one of three synthetic previous questions (rewritten, a new question, or presentation): ${placed} (${pct(placed)})`);
+console.log("This measures recognition, not real-session correctness or answer coverage.");
 for (const [k, n] of [...kinds].sort((a, b) => b[1] - a[1])) console.log(`  ${k}: ${n} (${pct(n)})`);
 console.log(`Asked about: ${follow.length - placed} (${pct(follow.length - placed)}). Examples:`);
 for (const e of askedExamples) console.log(`  - ${e.slice(0, 120)}`);
