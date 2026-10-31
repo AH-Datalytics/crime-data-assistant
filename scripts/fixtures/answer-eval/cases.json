@@ -24089,9 +24089,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-320's question. Guidance: F6, a count becomes a rate under P58/P59."
    }
   },
@@ -24161,9 +24161,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-321's question. Guidance: F6 over a series."
    }
   },
@@ -24232,9 +24232,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-304's question. Guidance: F7, the first and last periods of the previous answer."
    }
   },
@@ -24306,9 +24306,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-308's question. Guidance: F7, percent change of the first and last periods."
    }
   },
@@ -24375,9 +24375,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-227's question. Guidance: F8, only the time grain changes."
    }
   },
@@ -24448,9 +24448,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-317's question. Guidance: F2, \"compare to\" adds a place."
    }
   },
@@ -24522,9 +24522,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-318's question. Guidance: F2, the same places as one total."
    }
   },
@@ -24594,9 +24594,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-399's question. Guidance: F2 and F4, a new place and period replace the old."
    }
   },
@@ -24665,9 +24665,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-377's question. Guidance: a breakdown added; nothing else changes."
    }
   },
@@ -24737,9 +24737,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-393's question. Guidance: a breakdown replaced."
    }
   },
@@ -24809,9 +24809,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-394's question. Guidance: a breakdown replaced."
    }
   },
@@ -24880,9 +24880,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-402's question. Guidance: P65's pairing named by the follow-up."
    }
   },
@@ -24952,9 +24952,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Rewrite is LS-321's question. Guidance: F4/F11, \"remove 2025\" shortens the period."
    }
   },
@@ -25024,9 +25024,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Guidance: F4, a new period replaces the old."
    }
   },
@@ -25094,9 +25094,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Guidance: Jeff's example (P69): the follow-up names the one part that changes."
    }
   },
@@ -25165,9 +25165,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Guidance: F3, a new crime replaces the old."
    }
   },
@@ -25476,9 +25476,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "P69: uncertain (two places before, one named now, no add or replace word): ask instead of guessing."
    }
   },
@@ -25543,9 +25543,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Codex 7b-01: a complete new question after a filtered one; the earlier filters (female, firearm) and place are not inherited."
    }
   },
@@ -25610,9 +25610,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Codex 7b-01: P23's exact pattern, one place replaced; crime, unit and period kept."
    }
   },
@@ -25678,9 +25678,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Codex 7b-01: the previous turn asked which period (D31); the follow-up answers it, as a button would (P22)."
    }
   },
@@ -25733,9 +25733,9 @@
     }
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Codex 7b-01: after a decline, a place-only follow-up keeps the unsupported request (charging records, P46): still declined, with Detroit's robbery arrests offered."
    }
   }
