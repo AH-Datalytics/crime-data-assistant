@@ -1,0 +1,223 @@
+check,id,question,shape,place,source,rule_status,hand_verdict,hand_status,reason
+gap,G1,DUI arrests by age group nationally,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G2,How many agencies reported NIBRS data in 2023?,lookup/list,several,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G3,"Drug violations by state in 2022, top 10",ranking,national,NIBRS,"G (rankings of states, cities nationally)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G4,How many agencies report hate crimes in each state?,lookup/list,several,Hate Crime,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G5,assaults by location type in Florida,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G6,What percentage of murders are cleared by arrest vs exceptional nationally?,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G7,Show me the trends in misdemeanor arrests in the ten largest cities,trend,several,NIBRS,G (sets of cities nationally),moved,decline,"""misdemeanor"" is not recorded in NIBRS; offer arrests by offense"
+gap,G8,"Top 10 cities of 250,000 people or more by shoplifting rate in 2025",ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G9,What 10 cities with at least 30 murders in 2025 had the highest share of murders cleared by exception ?,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G10,Can I see the victim age breakdown in Texas in 2023?,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G11,Does NIBRS data have location codes like gambling parlors and convenience stores? I want to calculate the number of robberies that occur at those different locations by year,method/definition,none,NIBRS,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G12,how is domestic violence defined?,method/definition,none,NIBRS,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G13,Victim age breakdown in Texas in 2023,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G14,what months does 2026 include?,method/definition,none,unresolved,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G15,Which states have the highest share of rapes cleared by exception in 2025?,ranking,national,NIBRS,"G (rankings of states, cities nationally)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G16,can you give me a list of nibrs offense codes with their descriptions?,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G17,list of property offense codes in nibrs,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G18,top 10 cities female offender,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G19,virginia rape clearances by exception by type in 2025,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G20,What percentage of robberies were cleared by arrest vs exceptional means?,method/definition,none,NIBRS,G,moved,"clarify, then built (inc 6)",no place or period; clearance type for an agency is built
+gap,G21,What's the breakdown of aggravated assaults by location type in California?,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G22,Compare offender demographics for robbery by sex nationally,place comparison,national,NIBRS,"G (comparisons for states, the nation)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G23,DUI arrests by race in Texas,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G24,hi; any way to tell me about violent crime data in albuquerque new mexico,lookup/list,agency,Crime Index historical,G,moved,"planned (Historical), clarify period",an agency's Part I crime; not a lookup
+gap,G25,"Historical agency coverage for Athens, GA",lookup/list,agency,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G26,How many agencies reported hate crime data in each of those years?,lookup/list,several,Hate Crime,G,moved,planned (inc 7b),"follow-up: ""those years"""
+gap,G27,List all agencies in Texas with type County,lookup/list,state,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G28,list of person offense codes in NIBRS,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G29,show me nationwide arrests by age by year for 2015 to 2025 for consistent reporters,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G30,show me nationwide arrests for violent crimes by age by year for 2015 to 2025 for consistent reporters,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G31,Top 10 cities by shoplifting in 2025,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G32,virginia murder clearances by exception by type in 2025,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G33,What agencies reported the highest share of murders cleared by exception in 2025?,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G34,What are incident rates in California over time?,trend,state,NIBRS,G (monthly or rate series for states),gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G35,What are the top ten cities by carjacking rates total?,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G36,what is the historical trend in rapes if you use only the old 11A definition?,method/definition,none,Crime Index historical,G,moved,clarify,"which definition: NIBRS 11A (forcible rape) only, or Historical's legacy rape series; and the place and period"
+gap,G37,What is the nibrs pinal code for murder and assult,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G38,what timeframe is this? how is DV defined?,method/definition,none,unresolved,G,gap,gap (confirmed),"definition or method (a text answer), asked with a follow-up (increment 7b): a compound question stays a gap if any part is one"
+gap,G39,what was the share of all rapes that were cleared by exception in the US in 2025?,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G40,2025 vehicle burglaries and clearances in cities of 250k or more,count,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G41,A national estimate since 1991 of robbery offenders by race,share/breakdown,national,NIBRS,G (no source: NIBRS has no estimates),moved,decline,P61: non-reporters are never estimated; offer sums of reporting agencies
+gap,G42,Add the plain language to the offense code and giv eme a table,lookup/list,none,unresolved,G,moved,planned (inc 7b),follow-up: edits the previous table
+gap,G43,Aggravated assault victims in Texas in 2024 by age group,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G44,Are there any months in the carjacking data that might be impacted by the amount of agencies reporting?,lookup/list,several,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G45,Arrests for domestic violence related incidents in Idaho versus other states since 2015,place comparison,state,NIBRS,"G (comparisons for states, the nation)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G46,"Can you give me a chart of the top ten gun arrests cities, along with the percentage of arrestees who are Black?",ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G47,Can you make a bar graph that shows the percent of crimes cleared by arrest or exceptional means for 2024 at the national level? Only have the index crimes,share/breakdown,several,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G48,Carjackings per month since 2019 in consistent reporting agencies,trend,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G49,Carjackings rolling over 12 months since 2019 in consistent reporting agencies,trend,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G50,Chart domestic violence calls over time in the four largest cities in the country,trend,several,NIBRS,G (sets of cities nationally),moved,decline,calls for service are not recorded; offer crimes (the next row)
+gap,G51,Chart domestic violence crimes over time in the four largest cities in the country,trend,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G52,Cities with the highest gun arrest counts,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G53,does this include SRS data,method/definition,none,unresolved,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G54,"DUI arrests by age nationally, 2023 - 2025",share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G55,Fraud offenses by type in Texas in 2024,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G56,Hi [name] can you get me murder rates for denver since 1980,lookup/list,agency,Crime Index historical,G,moved,planned (Historical),an agency's murder rate series; not a lookup
+gap,G57,"Historical agency coverage for Butte, MT",lookup/list,agency,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G58,how is domestic violence defined in NIBRS?,method/definition,none,NIBRS,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G59,How many agencies in PA are NIBRS compliant?,count,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G60,How many agencies reported zero hate crimes?,lookup/list,several,Hate Crime,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G61,How many robberies in Chicago were cleared by arrest versus exceptional means from 2021 to 2025?,method/definition,agency,NIBRS,G,moved,built (inc 6),"clearance by arrest vs exceptional for one agency, by year"
+gap,G62,how many tribal agencies reported data per year,lookup/list,several,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G63,how to enter NIBRS code for a murder,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G64,"In North Carolina, between the years of 2015-2023, how many incidents involved a firearm, 4 or more victims , and an offense code of homicide or aggravated assault",lookup/list,state,SHR,G,gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G65,Increasing participation is a problem. Need a model with agency fixed effects.,lookup/list,none,unresolved,G,moved,decline,"modeling request; the app reports counts, not models"
+gap,G66,is baltimore's homicide trend meaningfully different from the national trend?,method/definition,national,Crime Index historical,G,moved,decline,asks for a statistical judgment; offer the two series
+gap,G67,Is Lauderhill’s murder rate relative to its population considered high?,method/definition,agency,Crime Index historical,G,moved,decline,"asks whether a rate is ""high""; offer a comparison"
+gap,G68,Is the observed trend just due to more departments reporting? Can you redo the analysis including only those departments that contributed to NIBRS consistently from 2021-2025,trend,several,NIBRS,G (sets of cities nationally),moved,planned (inc 7b),"follow-up: ""the observed trend"""
+gap,G69,"is there another data source that will aggregate murder data for  all St. Louis County, MO agencies",method/definition,agency,Crime Index historical,G,moved,"planned (area totals, county-wide)",an explicit sum of a county's agencies (ruling 2026-10-30)
+gap,G70,just show me a list of nibrs offense codes in the property category,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G71,Kentucky fraud offenses by type in 2024,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G72,Let's compare clearance rates for 23F for cities with between 700000 and 1000000,place comparison,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G73,list nibrs offense codes in group b,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G74,list nibrs offense codes in the category of crimes against property,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G75,list nibrs offense codes starting with 6,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G76,list nibrs offense codes starting with 7,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G77,list nibrs offense codes starting with 8,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G78,list nibrs offense codes starting with 9,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G79,list the specific offense codes included in the category of property offenses,lookup/list,none,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G80,"murders cleared by clearance type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",share/breakdown,several,NIBRS,"G (breakdowns for states, the nation, sets of cities)",moved,planned (inc 8),named agencies x clearance type is a two-way breakdown
+gap,G81,Nibrs offense code for murder,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G82,"please use ""Domestic violence incident counts per 100,000 population (per-capita rates), comparing cities or states"", and lets compare across states. thanks.",place comparison,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G83,provide the values and agencies for the top 20 shoplifting incidents with the highest values stolen in 2024,ranking,several,NIBRS,G (sets of cities nationally),moved,decline,a list of individual incidents is outside the result contract (groupings and numbers)
+gap,G84,rape exceptional clearances by type in Virginia per year from 2022 to 2025,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G85,share of rapes cleared by exception by type in virginia in 2025,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G86,show me arrests for motor vehicle theft (code 240) for 2015 through 2025 for continuously reporting agencies by year by arrestee age,trend,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G87,show me group b offenses involving juvenile offenders  by year for 2015 to 2025 for continuously reporting agencies,trend,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G88,Show me national arrests for violent crimes in the following age groups: under 18; 18 to 24; 25 to 39; and 40 and older,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G89,show me nationwide arrests by age by year for 2021 to 2025 for consistent reporters,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G90,show me nationwide violent crimes by victim age for consistent reporters for 2017 to 2025,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G91,Show me the cities with the highest carjacking statistics,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G92,show me violent crime arrests by age group from 2022 through 2025 for agencies reporting in all four of those years,lookup/list,several,NIBRS,G,gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G93,show me violent crime in maryland by arrestee age by month for 2022 to 2026,trend,state,NIBRS,G (monthly or rate series for states),gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G94,show me violent crimes by age group from 2022 through 2025 for agencies reporting in all four of those years,lookup/list,several,Crime Index historical,G,gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G95,show offense names instead of offense codes,lookup/list,none,unresolved,G,moved,planned (inc 7b),follow-up: edits the previous table
+gap,G96,Show the national violent crime arrest trend by offense type since 2018,share/breakdown,national,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown or ranking for the nation, or a ranking of states"
+gap,G97,"Top 10 cities of 250,000 or more in terms of vehicle burglary in 2024",ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G98,top 10 cities with highest share of murders cleared by exception in 2025,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G99,Vehicle burglaries in 2017 and 2025 in cities over 250k that reported in both years,count,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),agencies reporting in every year (a panel) across states
+gap,G100,Virginia murder clearances by Exception in 2025 by type,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G101,virginia rape clearances by exception in 2025 by type,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G102,What agencies match Dallas County in Texas? Show me the agencies table entries.,lookup/list,ambiguous,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G103,What agencies reported the largest murder rate in 2017 (regardless of agency size),lookup/list,several,Crime Index historical,G,moved,planned (Historical),agency rankings by Part I rate come with the Historical source
+gap,G104,What are the units and what offenses are included in violent offenses?,method/definition,none,unresolved,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G105,What can you tell me about DC violent crime trends?,lookup/list,agency,Crime Index historical,G,moved,"planned (Historical), clarify period",an agency's Part I trend; not a lookup
+gap,G106,What can you tell me about violent crime trends im Baltimore city?,lookup/list,agency,Crime Index historical,G,moved,"planned (Historical), clarify period",an agency's Part I trend; not a lookup
+gap,G107,what cities have highest carjacking,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G108,What cities of 100k or more had the highest vehicle burglary rate in 2025?,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G109,What cities with at least 30 murders in 2024 had the highest share of murders cleared by exception ?,ranking,several,NIBRS,G (sets of cities nationally),gap,gap (confirmed),"a set of cities across states (by size, rank or threshold)"
+gap,G110,"what counts as ""personal weapons"" in weapon type",method/definition,none,unresolved,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G111,What counts as violent crime here? Can you show this as a per capita rate?,method/definition,none,Crime Index historical,G,gap,gap (confirmed),"definition or method (a text answer), asked with a follow-up (increment 7b): a compound question stays a gap if any part is one"
+gap,G112,what do you have on PPD?,lookup/list,none,unresolved,G,moved,clarify,"which agency (""PPD"") and which crime"
+gap,G113,What is defined as violent crime,method/definition,none,Crime Index historical,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G114,What is the breakdown of aggravated assaults by location type in California?,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G115,What is the exact agency name for Nashville in the dataset? Show me the agencies table entry.,lookup/list,agency,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G116,what is the nibrs code for trespassing,lookup/list,none,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G117,What months in 2026 are included in this data,method/definition,none,unresolved,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+gap,G118,what share of rapes were cleared by exception each year from 2022 to 2025 in Virginia?,share/breakdown,state,NIBRS,"G (breakdowns for states, the nation, sets of cities)",gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G119,what share of rapes were cleared by exceptional means in Virginia each year from 2022 to 2025?,method/definition,state,NIBRS,G,gap,gap (confirmed),"a breakdown, comparison or series for a state (increment 5 built sums only)"
+gap,G120,what was the population of NIBRS participating agencies per year?,lookup/list,several,NIBRS,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G121,what years are covered here?,lookup/list,none,unresolved,G,gap,gap (confirmed),"lookup: coverage, codes or the agency directory"
+gap,G122,Where does this data come from?  Is this UCR data?,method/definition,none,unresolved,G,gap,gap (confirmed),definition or method: a text answer outside the plan language
+planned sample,P1,can you show trends in the value of stolen item over time,follow-up (needs context),none,NIBRS,P inc 7b,misplaced,"planned (inc 9), clarify place","standalone question, not a follow-up; value is increment 9"
+planned sample,P2,add in homicide rate to this,follow-up (needs context),none,Crime Index historical,P inc 7b,correct,P inc 7b,
+planned sample,P3,"What's El Paso, Texas's violent crime rate",rate,ambiguous,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P4,"what do we know about the age of homicide perpetrators, and whether the rates among generational cohorts (millenials, gen z) etc are trending nationally?",trend,national,SHR,P SHR,misplaced,decline (D03); offer homicides by offender age (SHR),rates for generational cohorts are group rates (D03)
+planned sample,P5,firearm-involved assaults proxy per in louisville since 2022,trend,agency,Crime Index historical,P Historical,misplaced,built (inc 3),aggravated assaults with a firearm for one agency are a NIBRS weapon filter
+planned sample,P6,Nonfatal shooting rates in baltimore city from 2022 to 2025.,trend,agency,Crime Index historical,P Historical,misplaced,clarify,nonfatal shootings are not recorded as such; ask whether aggravated assaults with a firearm are meant
+planned sample,P7,murders per year to 2025,trend,none,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P8,Allentown murder rate 2026,rate,agency,Crime Index current,P Current Trends,correct,P Current Trends,
+planned sample,P9,show nationwide total of robberies by age of offender from 2015 to 2025 for agencies that reported in all of those years,share/breakdown,several,NIBRS,P inc 7,gap,gap,national panel by offender age: a national breakdown
+planned sample,P10,all availabe years,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P11,minneapolis,follow-up (needs context),agency,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P12,What are the homicide rates in Baltimore City Boston Chicago Cleveland Detroit Houston Phoenix Pittsburgh Washington DC Philadelphia from. 2022 to 2025?,trend,several,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P13,show me robberies and murders in the southwest,count,none,Crime Index historical,P Historical,gap,gap,"a region (""the southwest"") is not a place any source or ruling covers"
+planned sample,P14,How many murders by month have there been in Chicago since 2019,trend,agency,Crime Index current,P Current Trends,correct,P Current Trends,
+planned sample,P15,show the average value of shoplifted goods from 2015,count,none,NIBRS,P inc 9,correct,P inc 9,
+planned sample,P16,prince george's county md,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P17,"What was the murder rate in Athens, Ga in 2025?",rate,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P18,what's houston's violent crime rate,rate,none,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P19,Robbery in Houston 2020–2024,count,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P20,What percentage of murders are domestic violence related nationally?,share/breakdown,national,SHR,P SHR,correct,P SHR,
+planned sample,P21,by age group,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P22,What race are offenders in NYC murders in 2024?,count,agency,SHR,P SHR,correct,P SHR,
+planned sample,P23,"show me violent crimes by offender age for worcester county, md sheriff's office and pocomoke city, md police department",share/breakdown,several,NIBRS,P inc 7,correct,P inc 7,
+planned sample,P24,What share of homicides in South Carolina have been deemed justifiable since 2015?,share/breakdown,state,Crime Index historical,P Historical,misplaced,planned (SHR),justifiable homicide is an SHR circumstance
+planned sample,P25,Philadelphia murder victims by race in 2022,share/breakdown,agency,SHR,P SHR,correct,P SHR,
+planned sample,P26,Mesa,follow-up (needs context),agency,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P27,"no, how about the typical dollar value of theft offenses with the location type is a type of business in california",count,state,NIBRS,P inc 9,gap,gap,a typical value for a whole state: a state statistic beyond sums
+planned sample,P28,Who built you?,follow-up (needs context),none,unresolved,P inc 7b,misplaced,decline,not a data question
+planned sample,P29,"for tarrant county, tx as a whole",follow-up (needs context),agency,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P30,show the crime breakdown for Chicago 2024,share/breakdown,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P31,Do that intend,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P32,show me arrests of offenders under 18 involving firearms by offense name,cross-segment,none,NIBRS,P inc 7-8,correct,P inc 7-8,
+planned sample,P33,add a column for the city's population in 2025,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P34,Show me anti-Jewish hate crimes by year from 2019 to 2024,trend,none,Hate Crime,P Hate Crime,correct,P Hate Crime,
+planned sample,P35,Compare the number of Chicago officers to NYPD officers per year.,place comparison,several,Crime Index historical,P Historical (staffing),correct,P Historical (staffing),
+planned sample,P36,how is murder data in louisville kentucky?,count,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P37,"How many murders in Tulsa, OK in 2025?",count,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P38,show me statewide violent crimes by offender age for california,share/breakdown,state,NIBRS,P inc 7,gap,gap,statewide offender-age breakdown: increment 7 is for agencies
+planned sample,P39,"how does balitmore's violent crime rate compare to the national rate, or to other cities?",place comparison,several,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P40,murder rate in new orleans,rate,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P41,Now show me share of female murder victims,share/breakdown,none,SHR,P SHR,correct,P SHR,
+planned sample,P42,Compare murders in 2026 between Chicago and Houston,place comparison,several,Crime Index current,P Current Trends,correct,P Current Trends,
+planned sample,P43,"[name]’s crime in Crofton, Md compare to surrounding areas?",place comparison,agency,Crime Index historical,P Historical,misplaced,clarify,"Crofton is not an agency; ask which agency, and ""surrounding areas"" is unspecified"
+planned sample,P44,does the data classify gang homicides,count,none,SHR,P SHR,gap,gap,a method question about the data (gang circumstance)
+planned sample,P45,Give me intimate partner firearm vs non-firearm homicides per year in SHR gave me,share/breakdown,none,SHR,P SHR,correct,P SHR,
+planned sample,P46,"firearm murders by gender per year, 2015 - 2025",share/breakdown,none,SHR,P SHR,correct,P SHR,
+planned sample,P47,"show me the violent crime rate for cook county, IL since 2020",trend,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P48,Give me violent crime metrics in DC per month,trend,agency,Crime Index current,P Current Trends,correct,P Current Trends,
+planned sample,P49,exclude 2026,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P50,atlanta violent crime per year since 2016,trend,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P51,Number of murders where the victim was pushed out a window by year,trend,none,SHR,P SHR,correct,P SHR,
+planned sample,P52,show me the number of sworn officers in Salem Oregon 2017 to 2025,trend,agency,Crime Index historical,P Historical (staffing),correct,P Historical (staffing),
+planned sample,P53,anne arundel countywide property crime counts 1975-present,count,none,Crime Index historical,"P area totals (county-wide, ruling 2026-10-30)",correct,"P area totals (county-wide, ruling 2026-10-30)",
+planned sample,P54,number of homicides in jefferson county missouri in 2025,count,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P55,is this countywide or just the sheriff?,count,none,unresolved,"P area totals (county-wide, ruling 2026-10-30)",misplaced,planned (inc 7b),follow-up about the previous answer
+planned sample,P56,How many murders were committed in Boston in 2023,count,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P57,Population by race and sex and rate per 100000,follow-up (needs context),none,unresolved,P inc 7b,misplaced,decline,population by race is not crime data; group rates are D03
+planned sample,P58,can you break it out by crime type? what are the interesting trends you see?,trend,none,Crime Index historical,P Historical,misplaced,planned (inc 7b); decline the commentary,"follow-up; ""interesting trends"" asks for commentary"
+planned sample,P59,focus only on chicago,follow-up (needs context),agency,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P60,add Omaha,follow-up (needs context),agency,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P61,Show me a chart of the three-month moving average for murders in DC and Baltimore.,count,ambiguous,SHR,P SHR,misplaced,planned (Current Trends),a moving average of monthly murders is Current Trends'
+planned sample,P62,Add 2020 and 2021,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P63,show me violent crime involving use of a firearm by offender race by year for 2017 to 2025 for consistent reporters,cross-segment,none,NIBRS,P inc 7-8,gap,gap,national panel by offender race: a national breakdown
+planned sample,P64,Share of female murder victims killed by firearm per year since 2000,share/breakdown,none,SHR,P SHR,correct,P SHR,
+planned sample,P65,Chicago officers since 1930,trend,agency,Crime Index historical,P Historical (staffing),correct,P Historical (staffing),
+planned sample,P66,Break out by crime type,count,none,Crime Index historical,P Historical,misplaced,planned (inc 7b),"follow-up: ""break out by crime type"""
+planned sample,P67,nypd's ori,follow-up (needs context),none,unresolved,P inc 7b,gap,gap,an agency identifier lookup
+planned sample,P68,Show me nationwide police staffing data since 2015,trend,national,Crime Index historical,P Historical (staffing),correct,P Historical (staffing),
+planned sample,P69,2025,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P70,Los Angeles city murder per month,trend,ambiguous,Crime Index current,P Current Trends,correct,P Current Trends,
+planned sample,P71,Murders through april New york city,count,agency,Crime Index current,P Current Trends,correct,P Current Trends,
+planned sample,P72,aggravated assaults per year on tribal agencies,trend,several,Crime Index historical,P Historical,gap,gap,selecting agencies by type (tribal) is in no plan; sets of named agencies are planned with Historical
+planned sample,P73,countywide murders in Cook County Illinois by year,trend,agency,Crime Index historical,"P area totals (county-wide, ruling 2026-10-30)",correct,"P area totals (county-wide, ruling 2026-10-30)",
+planned sample,P74,What is the crime rate in New York?,rate,ambiguous,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P75,Robbery in New York City vs Chicago 2023,place comparison,several,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P76,"Allentown, PA violent crime per year since 1930",trend,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P77,show me the full history of violent crime in allentown,trend,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P78,Female murder victims by year and whether firearm or not,trend,none,SHR,P SHR,correct,P SHR,
+planned sample,P79,homicide in baltimore,count,ambiguous,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P80,now give me as a rate,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P81,oakland murders per month in 1996,trend,agency,Crime Index current,P Current Trends,misplaced,planned (SHR),murders by month in 1996: SHR is monthly from 1976 (Current Trends starts in 2017; Historical is annual)
+planned sample,P82,What factors correlate with higher violent crime?,count,none,Crime Index historical,P Historical,misplaced,decline,asks for correlates (causes)
+planned sample,P83,"Compare Murder, Robbery, Aggravated Assault, and Burglary in the cities of St. Louis city, Chicago, New York City, Memphis, New Orleans, Los Angeles, California, and Memphis between 2010 and 2025",period comparison,several,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P84,compare murder rates for albuquerque police department and bernalillo county sheriff by year for 2020 to 2025,period comparison,several,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P85,Please use Philadelphia's 2025 rate as the reference point.,follow-up (needs context),agency,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P86,now what about cleared by arrest?,follow-up (needs context),none,NIBRS,P inc 7b,correct,P inc 7b,
+planned sample,P87,offender counts by sex since 2020 for each different form of violent crime,share/breakdown,none,NIBRS,P inc 7,correct,P inc 7,
+planned sample,P88,violent crime in Charlotte monthly,trend,agency,Crime Index current,P Current Trends,correct,P Current Trends,
+planned sample,P89,Kansas City murders by weapon and year,share/breakdown,ambiguous,SHR,P SHR,correct,P SHR,
+planned sample,P90,"how Rochester, NY's murder rate compares to the national average",rate,ambiguous,SHR,P SHR,misplaced,planned (Historical),"an agency's murder rate against the nation is Part I (Historical), not SHR"
+planned sample,P91,Show me shootings in Indianapolis 2020-2025,trend,agency,Crime Index historical,P Historical,misplaced,clarify,shootings are not recorded as such; ask which crime is meant
+planned sample,P92,"show me the violent crime stats for Seattle, WA, year by year, going back as far as records allow",trend,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P93,Omaha murder clearances by type and year since 2020,share/breakdown,agency,Crime Index historical,P Historical,misplaced,built (inc 6),"clearance by type for one agency is NIBRS (P66), built"
+planned sample,P94,Compare historical violent crime in Chicago and Houston,place comparison,several,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P95,murders in Chicago in 2024,count,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P96,provide a table with the raw counts of homicide offenders from 1980 to 2024 by race and age,share/breakdown,none,SHR,P SHR,misplaced,decline the offender count; offer homicides by the primary offender's race and age (SHR),"SHR records one offender per incident, so offender counts are refused (other-sources plan)"
+planned sample,P97,Robberies by weapon type in Arizona in 2024,share/breakdown,state,Crime Index historical,P Historical,gap,gap,PROVISIONAL: robbery by weapon for a state is a NIBRS state breakdown; no local evidence that Historical carries the Return A weapon split
+planned sample,P98,make it quarterly rather than annually,follow-up (needs context),none,unresolved,P inc 7b,correct,P inc 7b,
+planned sample,P99,how has violent crime reported by the oakland police department changed since 2008?,trend,agency,Crime Index historical,P Historical,correct,P Historical,
+planned sample,P100,That's the national trend. Show me Seattle only,follow-up (needs context),several,unresolved,P inc 7b,correct,P inc 7b,
