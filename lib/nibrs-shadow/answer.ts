@@ -32,6 +32,7 @@
  */
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
+import { deterministicRewriter, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
@@ -111,6 +112,23 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   return fromLedger(readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger, deps);
+}
+
+/**
+ * Increment 7b (P69): a follow-up's outcome, with the standalone question it was rewritten to (shown above the answer,
+ * editable) or null when the app asks instead. `presentation`: a chart-only edit; the data question is unchanged and the
+ * page's controls change the chart.
+ */
+export type FollowUpOutcome = ShadowOutcome & { rewrite: string | null; rewriteKind: Rewrite["kind"]; presentation?: true };
+export function shadowFollowUp(previous: string, followUp: string, deps: ShadowDeps, rewriter: FollowUpRewriter = deterministicRewriter): FollowUpOutcome {
+  const r = rewriter.rewrite(previous, followUp);
+  if (r.kind === "ask") {
+    // P69: uncertain, so ask; each option is a complete question, run as a new one. With none, the user rephrases.
+    const options: ShadowOption[] = r.options.length ? r.options.map((o) => ({ label: o.label, continuation: shadowAnswer(o.question, deps) }))
+      : [{ label: "Ask the full question", entry: "the full question" }, { label: "Start over", entry: "a new question" }];
+    return { kind: "clarify", about: r.why, question: followUp, options, rewrite: null, rewriteKind: "ask" };
+  }
+  return { ...shadowAnswer(r.question, deps), rewrite: r.question, rewriteKind: r.kind, ...(r.kind === "presentation" ? { presentation: true as const } : {}) };
 }
 
 /** What the reading pre-pass found, carried on the ledger (reading.ts). Alternatives built from a ledger clear the flags. */

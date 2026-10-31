@@ -18,13 +18,14 @@ import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
 import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type PlanView, type Release } from "./compare";
 import { RETURN_A } from "../nibrs-shadow/places";
+import { readQuestion } from "../nibrs-shadow/reading";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
 /** The slice: its designed group, the replay cases inside it, and replay cases next to it (action and reason only). */
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7|inc7b)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -838,6 +839,27 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
 }
 
 export type ShadowScore = { result: CaseResult | null; excluded?: string };
+
+/**
+ * Increment 7b (P69): a follow-up's rewrite against the label's. Two rewrites are the same question when their words
+ * match (case and punctuation aside) or the reader finds the same parts in both ("Memphis TN" and "Memphis, Tennessee").
+ * A rewrite where the label asks (null), or a different question, is material; a question where the label rewrites is
+ * already judged by the action.
+ */
+const rwNorm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+const readingKey = (q: string) => readQuestion(q, 2026).ledger.parts.filter((p) => p.clause === 0 && !["filler", "context"].includes(p.concept) && p.state !== "context")
+  .map((p) => `${p.concept}=${String(p.value).toLowerCase().replace(/[^a-z0-9:=]+/g, " ").trim()}`).sort().join("|");
+export function sameRewrite(a: string, b: string): boolean { return rwNorm(a) === rwNorm(b) || readingKey(a) === readingKey(b); }
+export function withRewrite(res: CaseResult, c: Case, o: { rewrite: string | null }): CaseResult {
+  if (c.rewrite === undefined) return res;
+  const diff: Diff | null = c.rewrite === null
+    ? (o.rewrite === null ? null : { field: "rewrite", expected: "(ask: the rewrite is uncertain)", actual: o.rewrite, kind: "material" })
+    : o.rewrite === null ? null
+    : sameRewrite(c.rewrite, o.rewrite) ? null : { field: "rewrite", expected: c.rewrite, actual: o.rewrite, kind: "material" };
+  if (!diff) return res;
+  const outcome: Outcome = res.outcome === "correct" || res.outcome === "unverified" ? (res.actual === "answer" ? "wrong_answer" : "wrong_action") : res.outcome;
+  return { ...res, outcome, diffs: [...res.diffs, diff] };
+}
 
 export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capability: string; era: string }, expectedValues?: ExpectedValues): ShadowScore {
   const e = c.expected!;
