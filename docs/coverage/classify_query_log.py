@@ -35,7 +35,7 @@ SEG = {'clearance': R(r"clear(?:ed|ance)|solv"), 'weapon': R(r"firearm|gun|weapo
        'victim': R(r"victim(?:s|'s)? (?:race|sex|age|gender|ethnic)|(?:female|male|black|white|hispanic|juvenile|child|teen|elderly) victim"),
        'offender': R(r"offender|suspect|perpetrator"), 'relationship': R(r"relationship|stranger|domestic|intimate|acquaint|family"),
        'location': R(r"location|residence|parking|school|store")}
-RANK = R(r"\b(top \d+|top ten|most\b|highest|lowest|least\b|rank|ranking|worst|safest|most dangerous|which (?:city|cities|state|states|county|counties|agenc\w+)|leading)\b")
+RANK = R(r"\b(top \d+|top ten|most\b(?! recent)|highest|lowest|least\b|rank|ranking|worst|safest|most dangerous|which (?:city|cities|state|states|county|counties|agenc\w+)|leading)\b")
 YEARS = re.compile(r"\b(?:19[3-9]\d|20[0-3]\d)\b")
 PCMP = R(r"\b(?:vs\.?|versus|compared? (?:to|with)|compare|change|increase|decrease|went (?:up|down)|go(?:ne)? (?:up|down)|up or down|ytd|year[- ]to[- ]date|year over year|percent change|than (?:last|in))\b")
 CATVS = R(r"\b(?:arrest|exceptional|male|female|men|women|firearm|gun|non-firearm|gang|non-gang|under \d+|over \d+|black|white|hispanic|adult|juvenile|stranger|known|cleared|uncleared|weekday|weekend|day|night|domestic|methamphetamine|cocaine)\w*\s+(?:vs\.?|versus)\s+")
@@ -44,15 +44,23 @@ TREND = R(r"\b(?:since|over time|trends?|trending|per year|each month|as far bac
 RATE = R(r"\b(?:rates?|per capita|per 100|per 1,?000|per resident|percent cleared|clearance percent)\b")
 # A period is a range or a point in time; grain and window words ("per year", "monthly", "over time") are not (Codex 01.2).
 RANGE = R(r"\b(?:19[3-9]\d|20[0-3]\d|since|this year|last year|ytd|year[- ]to[- ]date|so far|today|to present|to date|currently|latest|most recent|as far back|every year available|all years|last \d+ (?:years|months)|past \d+ (?:years|months)|last decade|past decade)\b")
-NATIONAL = R(r"\b(?:national(?:ly)?|nationwide|nation\b|u\.?s\.?a?\b|united states|america|the country|countrywide|all states|every state|each state|by state|all cities|major (?:us )?cities|big cities|large cities)\b")
+NATIONAL = R(r"\b(?:national(?:ly)?|nationwide|nation\b|u\.?s\.?a?\b|united states|america|the country|countrywide|all states|every state|each state|by state|which states?|what states?|states with|all cities|major (?:us )?cities|big cities|large cities)\b")
+EDIT = R(r"^(?:add (?:a |in |the )?(?:column|row|line|the \d{4}|\d{4})|add in\b|remove\b|delete\b|drop\b|hide\b|sort\b|label\b)|\b(?:y-axis|x-axis|axis|legend|column for|to the table|to the chart|from the (?:data|table|chart))\b")
+CAUSAL = R(r"^did .* work\b|\b(?:affect(?:ed|s)?|effect of|impact(?:ed)? (?:of|on))\b")
+# Many places, each its own series or row, are a collection of agencies, not a national total (Codex 02.3).
+COLLECTION = R(r"\b(?:top \d+|\d+ (?:largest|biggest|most populous)|largest|biggest|major|big|large|these \d+|\d+) (?:us |u\.s\. |american )?(?:cities|agencies|departments)\b|\bcities\b|\bagencies\b|\bdepartments\b")
+SUBAGENCY = R(r"\b(?:zip ?codes?|neighborhoods?|census tracts?|police districts?|beats?|precincts?|wards?|blocks?)\b")
 GROUP_RATE = R(r"\b(?:black|white|hispanic|latino|asian|teen\w*|juvenile|youth|men|women|female|male|elderly|children|age \d+|under \d+|over \d+)\b")
 # ---- sources by policy (P01, P53, P57)
 HATE = R(r"\bhate|bias|anti-")
 STAFF = R(r"staff|officers?\b|sworn|personnel|police employees")
 HOMICIDE = R(r"murder|homicid|kill")
 HOM_DETAIL = R(r"race|sex|gender|age\b|ages\b|relationship|weapon|gun|firearm|knife|circumstance|gang|domestic|victim|offender|stranger|poison")
-NIBRS_ONLY = R(r"carjack|shoplift|vehicle burglar|burglar(?:y|ies) (?:from|of) (?:a )?(?:vehicle|car)|theft from (?:a )?motor|23f|drug|narcot|meth|cocaine|fentanyl|dui|dwi|fraud|vandal|weapons? law|simple assault|intimidation|kidnap|traffick|sex offense|fondl|animal cruel|pornograph|gambl|bribery|embezzl|extortion|stolen property|counterfeit|identity theft|location type|offender|arrestee|exceptional|cleared by arrest|clearance type|by clearance|nibrs|domestic violence|juvenile|incidents?\b")
-CURRENT = R(r"\b(?:this year|ytd|year[- ]to[- ]date|so far|2026|last 12 months|rolling|per month|monthly|by month|each month|month by month)\b")
+NIBRS_ONLY = R(r"\barrest|cannabis|marijuana|carjack|shoplift|vehicle burglar|burglar(?:y|ies) (?:from|of) (?:a )?(?:vehicle|car)|theft from (?:a )?motor|23f|drug|narcot|meth|cocaine|fentanyl|dui|dwi|fraud|vandal|weapons? law|simple assault|intimidation|kidnap|traffick|sex offense|fondl|animal cruel|pornograph|gambl|bribery|embezzl|extortion|stolen property|counterfeit|identity theft|location type|offender|arrestee|exceptional|by exception|cleared by arrest|clearance type|by clearance|nibrs|domestic violence|juvenile|incidents?\b")
+CURRENT = R(r"\b(?:this year|ytd|year[- ]to[- ]date|so far|2026)\b")
+# Monthly data is Current Trends' whatever the years (Historical is annual).
+MONTHLY = R(r"\b(?:last 12 months|rolling|per month|monthly|by month|each month|month by month|most recent month|through (?:january|february|march|april|may|june|july|august|september|october|november)|january|february|march|april|june|july|august|september|october|november|december|jan|feb|jun|jul|aug|sept?|oct|nov|dec)\b")
+NIBRS_DETAIL = R(r"\bvalue\b|dollar|(?<!homicide )(?<!murder )victims?\b.*\bby (?:age|race|sex|gender)|\bvictims? (?:age|race|sex)|age groups?\b.*victim")
 PART1 = R(r"murder|homicid|kill|robber|burglar|aggravated assault|\bassault|rape|larceny|theft|motor vehicle|arson|violent crime|property crime|crime rate|\bcrime\b|part i|part 1|index crime|shoot")
 
 def place_level(q):
@@ -61,11 +69,14 @@ def place_level(q):
     if 'ambiguous' in kinds: return 'ambiguous'
     if len(kinds) > 1 or (nat and kinds): return 'several'
     if kinds: return 'state' if kinds[0] == 'state' else 'agency'
-    # Many places with none named ("cities with the most murders") is the nation's.
-    return 'national' if nat or R(r"\b(?:cities|counties|agencies|departments)\b").search(q) else 'none'
+    # Many places with none named ("cities with the most murders"): agencies across the nation, not one national total.
+    if COLLECTION.search(q) or R(r"\bcounties\b").search(q): return 'several'
+    return 'national' if nat else 'none'
 
 def shape(q, follow):
-    if OUT.search(q): return 'out of scope'
+    # Edits to the previous table or chart are follow-ups even when they name no crime (Codex 02.1).
+    if EDIT.search(q): return 'follow-up (needs context)'
+    if OUT.search(q) or CAUSAL.search(q): return 'out of scope'
     if len(q.split()) <= 4 and not CRIME.search(q) and not YEARS.search(q): return 'follow-up (needs context)'
     if (follow or FOLLOW.search(q) or CONTEXT.search(q)) and (not CRIME.search(q) or len(q.split()) <= 6 or CONTEXT.search(q)) and not R(r"^(?:can you )?compare\b").search(q) and ':' not in q:
         return 'follow-up (needs context)'
@@ -88,16 +99,27 @@ def source(q):
     if HATE.search(q): return 'Hate Crime'
     if STAFF.search(q) and not PART1.search(q): return 'Crime Index historical'
     if HOMICIDE.search(q) and HOM_DETAIL.search(q) and not R(r"clear").search(q): return 'SHR'
-    if NIBRS_ONLY.search(q): return 'NIBRS'
+    # A detail only NIBRS records wins over the period default (Codex 02.2).
+    if NIBRS_ONLY.search(q) or NIBRS_DETAIL.search(q): return 'NIBRS'
     if PART1.search(q) or R(r"clear").search(q):
-        return 'Crime Index current' if CURRENT.search(q) else 'Crime Index historical'
+        # A series reaching back past the current year needs Historical for the completed years; the current year is
+        # Current Trends' (status says so). Monthly data is Current Trends'.
+        if MONTHLY.search(q): return 'Crime Index current'
+        if CURRENT.search(q) and not (TREND.search(q) and any(int(y) < 2025 for y in YEARS.findall(q))): return 'Crime Index current'
+        return 'Crime Index historical'
     if STAFF.search(q): return 'Crime Index historical'
     return 'unresolved'
+
+# A state's clearance rate, or every state's, is declined (P18).
+STATECLR = lambda q, lvl, src: src == 'Crime Index historical' and bool(R(r"clear").search(q)) and (lvl == 'state' or bool(R(r"\b(?:by|each|every|all|which) states?\b").search(q)))
 
 def action(q, sh, lvl, src):
     if sh == 'out of scope': return 'decline'
     if sh in ('method/definition', 'lookup/list'): return 'answer'
     if sh == 'follow-up (needs context)': return 'needs context'
+    if SUBAGENCY.search(q): return 'decline (below the agency: no source)'
+    if METRO.search(q): return 'decline (metro area: until after inc 8)'
+    if STATECLR(q, lvl, src): return 'decline (P18: no state clearance rate)'
     if RATE.search(q) and GROUP_RATE.search(q) and not STAFF.search(q): return 'decline (D03: offer counts or shares)'
     if src == 'unresolved' or not CRIME.search(q): return 'clarify'
     if lvl in ('none', 'ambiguous') and not LOOKUP.search(q): return 'clarify'
@@ -105,7 +127,8 @@ def action(q, sh, lvl, src):
     return 'answer'
 
 COUNTYWIDE = R(r"countywide|county-wide|all (?:the )?agencies in|entire county|whole county|county total|county as a whole")
-METRO = R(r"\bmetro|\bmsa\b|metropolitan")
+# Metro geography, not agency names ("LAS VEGAS METRO PD", "Metropolitan Nashville") (Codex 02.6).
+METRO = R(r"\bmetro(?:politan)? (?:areas?|regions?|statistical)|\bmsas?\b|\bcbsas?\b")
 INC9 = R(r"circumstance|injur|drug type|meth|cocaine|fentanyl|heroin|marijuana|cannabis|opioid|\bvalue\b|dollar|number of (?:victims|offenders)|justifiable")
 PEOPLE = R(r"offender|arrestee|suspect|juvenile|adult|female victim|male victim|victims? under|relationship|stranger")
 def status(q, sh, lvl, src):
@@ -113,33 +136,46 @@ def status(q, sh, lvl, src):
     if sh == 'out of scope': return 'B decline'
     # Follow-ups are increment 7b (coordinator 2026-10-30): continuations of the previous answer.
     if sh == 'follow-up (needs context)': return 'P inc 7b'
+    if SUBAGENCY.search(q): return 'B decline (below the agency)'
     if sh in ('lookup/list', 'method/definition'): return 'G'
     # Areas (ruling 2026-10-30): an explicit county-wide total sums the county's agencies; a metro area after increment 8.
     if COUNTYWIDE.search(q): return 'P area totals (county-wide, ruling 2026-10-30)'
     if METRO.search(q): return 'P area totals (metro, after inc 8; declined until then)'
     # No crime named: the policy action is to ask (D31), not a missing capability.
     if src == 'unresolved': return 'C clarify first (no crime named)'
+    # Decided declines come before the generic rules: a group rate (D03), a state clearance rate (P18).
+    if RATE.search(q) and GROUP_RATE.search(q) and not STAFF.search(q): return 'B decline (D03)'
+    if STATECLR(q, lvl, src): return 'B decline (P18)'
     if src == 'NIBRS':
+        # National totals of people are not estimated; NIBRS has no estimates (P61).
+        if R(r"\bestimates? (?:since|of|for)\b").search(q): return 'G (no source: NIBRS has no estimates)'
         if INC9.search(q): return 'P inc 9'
         if sh == 'cross-segment': return 'B inc 6' if SEG['property'].search(q) and SEG['clearance'].search(q) and lvl == 'agency' else 'P inc 7-8'
         if sh == 'share/breakdown':
             if PEOPLE.search(q): return 'P inc 7'
-            return 'B inc 1, 6' if lvl == 'agency' else 'G (breakdowns for states, the nation)'
+            # A question with no place is judged as for an agency once the place is given (as for every other shape).
+            return 'B inc 1, 6' if lvl in ('agency', 'none', 'ambiguous') else 'G (breakdowns for states, the nation, sets of cities)'
         if lvl in ('state', 'national'):
             if sh == 'count': return 'B inc 5'
             if sh == 'trend': return 'G (monthly or rate series for states)' if R(r"month|rolling|rate").search(q) else 'B inc 5'
             if sh == 'rate': return 'B inc 5'
-            if sh == 'ranking': return 'G (rankings of states, cities nationally)'
+            if sh == 'ranking': return 'B inc 4 (a state\'s agencies, P60)' if lvl == 'state' else 'G (rankings of states, cities nationally)'
             return 'G (comparisons for states, the nation)'
+        if lvl == 'several' and sh in ('ranking', 'count', 'rate', 'trend', 'period comparison', 'place comparison') and not places.get(q):
+            return 'G (sets of cities nationally)'
         if sh == 'ranking': return 'B inc 4'
         return {'count': 'B inc 1-2', 'rate': 'B inc 4', 'trend': 'B inc 3', 'period comparison': 'B inc 3', 'place comparison': 'B inc 4'}.get(sh, 'B')
     if src == 'Crime Index historical':
         if STAFF.search(q) and not PART1.search(q): return 'P Historical (staffing)'
+        cur = ' (+ current year: Current Trends)' if CURRENT.search(q) else ''
         if lvl in ('state', 'national') and sh in ('count', 'rate', 'trend', 'period comparison'):
-            if R(r"clear").search(q): return 'B inc 5' if lvl == 'national' and sh == 'rate' else 'P Historical (clearance series, states)'
-            return 'B inc 5'
-        return 'P Historical'
-    if src == 'Crime Index current': return 'B route (inc 5); P Current Trends' if lvl in ('state', 'national') else 'P Current Trends'
+            if R(r"clear").search(q): return 'B inc 5' if sh == 'rate' else 'P Historical (national clearance series)'
+            return 'B inc 5' + cur
+        # An agency's Part I clearance rate for a year is a named Historical route (P57).
+        if lvl == 'agency' and sh == 'rate' and R(r"clear").search(q): return 'B route (inc 5, P57); P Historical'
+        return 'P Historical' + cur
+    if src == 'Crime Index current':
+        return 'B route (inc 5); P Current Trends' if lvl in ('state', 'national') and sh in ('count', 'trend', 'period comparison', 'rate') else 'P Current Trends'
     if src == 'SHR': return 'B route (inc 5); P SHR' if R(r"relationship").search(q) else 'P SHR'
     return 'P Hate Crime'
 
