@@ -70,6 +70,11 @@ for (const s of ["group_b_arrest", "UNION ALL", "identical_to_line_no IS NULL", 
 assert.deepEqual(every.statements, ["arrests_counted_once", "arrests_include_group_b"]);
 const byArrestee = ok(compilePlan({ ...allArrests, filters: [], groupings: [{ dimension: "arrestee.race", unknown: "visible", absent: "show" }] }, year(2024), t));
 assert.ok(byArrestee.sql.includes("a.race AS g0"));
+// Codex increment-7 review 04.1: a condition only on the arrestee ("juvenile arrests") still counts every arrest, with
+// the condition on the Group A and the Group B branch alike.
+const juvAll = ok(compilePlan({ ...allArrests, filters: [{ kind: "attribute", dimension: "arrestee.age", op: "between", values: [1, 17] }] }, year(2024), t));
+assert.ok(juvAll.sql.includes("group_b_arrest") && juvAll.sql.split("TRY_CAST(a.age AS INTEGER) BETWEEN 1 AND 17").length === 3, "both branches");
+assert.deepEqual(juvAll.statements, ["arrests_counted_once", "arrests_include_group_b", "unknown_not_counted"]);
 
 // Increment 7: people. Victims by the incident's offenders' races (P49, multi-valued, 00 its own category); by the
 // linked offenders' races (P65, "no_relationship"); a victim's own age; an offender of the incident; a linked offender;
@@ -90,7 +95,7 @@ const byJuv = ok(compilePlan({ ...vic, filters: [{ kind: "exists", scope: "incid
 assert.ok(byJuv.sql.includes("f4.offender_seq <> '00'") && byJuv.sql.includes("TRY_CAST(f4.age AS INTEGER) BETWEEN 1 AND 17"));
 const ofJuv = ok(compilePlan({ ...vic, filters: [{ kind: "exists", scope: "victim", entity: "victim_offender", where: [{ kind: "attribute", dimension: "victim_offender.offender_age", op: "between", values: [1, 17] }] }] }, year(2024), t));
 assert.ok(ofJuv.sql.includes("f4.offender_seq = r4.offender_number") && ofJuv.sql.includes("r4.victim_seq = v.victim_seq"));
-assert.deepEqual(ofJuv.statements, ["pair_linked", "unknown_not_counted"]);
+assert.deepEqual(ofJuv.statements, ["pair_condition", "unknown_not_counted"]);
 const off = { ...vic, measures: [{ id: "offenders.aggravated_assault", unit: "offender" as const, as: "v" }] };
 const offStrangers = ok(compilePlan({ ...off, filters: [{ kind: "exists", scope: "offender", entity: "victim_offender", where: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["ST"] }] }] }, year(2024), t));
 for (const s of ["r4.offender_number = f.offender_seq", "r4.offender_relationship IN ('ST')", "vo4.connected_offense IN ('13A')"]) assert.ok(offStrangers.sql.includes(s), s);

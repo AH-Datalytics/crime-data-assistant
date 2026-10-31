@@ -758,6 +758,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.match(f("Aggravated assaults against juveniles in Memphis in 2024"), /"dimension":"victim.age","op":"between"/);
   assert.match(f("Aggravated assault victims of offenders who were under 18, in Memphis in 2024, by victim race"), /"scope":"victim","entity":"victim_offender".*"victim_offender.offender_age"/);
   assert.match(f("Offenders in aggravated assaults in Memphis in 2024 by sex, where the victim was a stranger"), /"scope":"offender","entity":"victim_offender".*"values":\["ST"\]/);
+  // Codex 04.2: a victim's attribute on arrests is declined, never answered as the arrestee's.
+  assert.match(as(ask("Arrests in Denver in 2023 by victim race"), "decline").explanation, /a victim's race for arrests/);
   // A people breakdown for a state is declined with P29's reason, never answered from the historical file.
   assert.match(as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "decline").explanation, /^Offender breakdowns for a whole state or the nation are not built yet/);
   // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).

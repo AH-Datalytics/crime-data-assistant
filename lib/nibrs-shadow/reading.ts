@@ -79,6 +79,8 @@ export type People = {
   by: { who: "offender" | "arrestee"; attr: PersonAttr; paired: boolean } | null;
   where: ({ who: "victim" | "offender" | "arrestee"; attr: "age"; range: [number, number]; paired: boolean } | { who: "offender"; attr: "relationship"; values: string[]; paired: true })[];
   ask: "young adults" | "attackers" | null;
+  /** A person named for a unit that does not record them ("arrests ... by victim race"): declined, never re-read. */
+  unsupported?: string;
 };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
@@ -91,8 +93,6 @@ const PHRASES: [RegExp, string][] = [
   [/\b(victims?\b[^?.!]*?\s)were\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "$1by sex"],
   // P29: "against men and women" names the victims -> by (victim) sex.
   [/\bagainst\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "by sex"],
-  // Increment 7: "by victim race" is the victims' own breakdown, as the reader writes it ("by race").
-  [/\bby\s+(?:the\s+)?victims?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b/gi, "by $1"],
   // A category and a time grain joined by "and": "by race and year" -> "by race by year".
   [/\bby\s+(race|sex|gender|ethnicity|location(?:\s+type)?)\s+and\s+(year|month)\b/gi, "by $1 by $2"],
   // P48: people arrested for a crime are its arrests.
@@ -313,6 +313,11 @@ function readPeople(text0: string): { text: string; people: People | null } {
     (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: true }; });
   if (!p.by) cut(/,?\s*\bby\s+(?:the\s+)?(offenders?|arrestees?)(?:'s|s')?\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i,
     (m) => { p.by = { who: /^arrestee/i.test(m[1]) ? "arrestee" : "offender", attr: ATTR(m[2]), paired: false }; });
+  // "By victim race": the victims' own breakdown, as the reader writes it ("by race"); for arrests the victim is not
+  // recorded, so it is declined, never read as the arrestee's (Codex 04.2).
+  const vm = /,?\s*\bby\s+(?:the\s+)?victims?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b/i.exec(text);
+  if (vm && /\barrest(?:s|ed|ee|ees)?\b/i.test(text)) cut(new RegExp(vm[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), () => { p.unsupported = `a victim's ${vm[1].toLowerCase()} for arrests`; });
+  else if (vm) text = text.replace(vm[0], ` by ${vm[1]}`);
   // The counted person's own attribute: offenders by sex or age (the reader's own breakdown, left to it), arrests by race.
   if (!p.by && /^\s*(?:all\s+crime\s+)?arrests\b|\barrests\s+in\b/i.test(text))
     cut(/,?\s*\bby\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i, (m) => { p.by = { who: "arrestee", attr: ATTR(m[1]), paired: false }; });
@@ -329,7 +334,7 @@ function readPeople(text0: string): { text: string; people: People | null } {
   });
   // Every arrest, with no crime named.
   if (/^\s*arrests\s+(?:in|for)\s+(?=[A-Z])/.test(text) || /^\s*arrests\s+in\b/i.test(text)) text = text.replace(/^\s*arrests\b/i, "All crime arrests");
-  const any = p.by || p.where.length || p.ask;
+  const any = p.by || p.where.length || p.ask || p.unsupported;
   return { text, people: any ? p : null };
 }
 

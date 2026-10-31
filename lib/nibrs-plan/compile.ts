@@ -182,7 +182,8 @@ type Units = { sql: string; entity: Entity };
  * columns. `joins` bring groupings from other tables; `incidentFilter` adds the conditions on the counted unit (its
  * alias: o; v with its connecting victim_offense vo; f; a) and its incident.
  */
-function unitsSql(measureId: string, unit: string, read: Read, groupCols: string[], joins: string, incidentFilter: (alias: string) => string): Units | { error: string } {
+function unitsSql(measureId: string, unit: string, read: Read, groupCols: string[], joins: string, incidentFilter: (alias: string) => string,
+  parts: { rest: (alias: string) => string; own: (alias: string) => string } = { rest: incidentFilter, own: () => "" }): Units | { error: string } {
   const extra = groupCols.map((c, i) => `, ${c} AS g${i}`).join("");
   if (measureId === "offenses.carjacking") {
     // D18: robbery-based, so counted by offense: the 120 segments of carjacking incidents (on 20261028-test5 the same
@@ -211,7 +212,9 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
     const cond = incidentFilter("a");
     const groupA = `SELECT DISTINCT a.data_year, a.ori, a.incident_num, a.arrestee_seq || ':' || a.key_occurrence AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
       FROM ${read("arrestee")} a ${joins} WHERE coalesce(a.multiple_arrestee_indicator, '') <> 'M'${cond}`;
-    if (cond) return { entity: "arrestee", sql: groupA };
+    // A condition on the incident: arrests through it (increment 6). A condition only on the arrestee ("juvenile
+    // arrests") still counts every arrest, Group B included, with the condition on both (Codex 04.1).
+    if (parts.rest("a")) return { entity: "arrestee", sql: groupA };
     // Increment 7: every arrest, with no incident condition: Group A arrestee segments (M left out, P68) and standalone
     // Group B arrests (the arrest transaction is the key; Group B has no multiple-arrestee indicator). A grouping reads
     // the arrestee's own columns, which both tables carry.
@@ -219,7 +222,7 @@ function unitsSql(measureId: string, unit: string, read: Read, groupCols: string
     return { entity: "arrestee", sql: `${groupA}
       UNION ALL
       SELECT DISTINCT a.data_year, a.ori, 'B:' || a.arrest_transaction_num AS incident_num, a.arrestee_seq || ':' || CAST(a.occurrence AS VARCHAR) AS sub, substr(a.arrest_date, 1, 6) AS ym${extra}
-      FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL` };
+      FROM ${read("group_b_arrest")} a WHERE a.identical_to_line_no IS NULL${parts.own("a")}` };
   }
   // Exactly <kind>.<measure>, with a measure whose codes are known.
   const m = measureId.match(/^(offenses|incidents|victims|offenders|arrests)\.([a-z_]+)$/);
@@ -359,13 +362,15 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const clearanceConds: { dimension: string; values: string[] }[] = [];
   const alias = UNIT_ALIAS[entity];
   const codes = MEASURE_CODES[m.id.split(".")[1]] ?? EXTRA_CODES[m.id.split(".")[1]] ?? [];
+  /** Conditions on the counted person's own columns, on alias x. */
+  const ownConds: ((x: string) => string)[] = [];
   for (const f of plan.filters) {
     if (f.kind === "attribute" && CLEARANCE_COL[f.dimension] && f.op === "in" && f.values?.length) { clearanceConds.push({ dimension: f.dimension, values: f.values.map(String) }); continue; }
     // Increment 7: a condition on the counted person's own attribute ("female victims", "juvenile arrests").
     if (f.kind === "attribute" && f.dimension.split(".")[0] === entity) {
-      const c = personCond(alias, f);
-      if (!c) return no(`v0 cannot apply ${f.op} on ${f.dimension}`);
-      unitConds.push(() => c);
+      if (!personCond(alias, f)) return no(`v0 cannot apply ${f.op} on ${f.dimension}`);
+      // Kept apart from the incident's conditions: every arrest applies it to standalone Group B arrests too (Codex 04.1).
+      ownConds.push((x) => personCond(x, f)!);
       continue;
     }
     // Increment 7: P49, any offender of the unit's incident with the attributes ("assaults by juveniles"). Offender 00
@@ -433,10 +438,13 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const years = isArrest ? t.builtYears : t.builtYears.filter((y) => y >= firstYear);
   if (!years.length) return no(`no built data year at or after ${firstYear}`);
   const read = (table: string) => `read_parquet([${years.map((y) => q(`${t.root}/${table}/data_year=${y}/data.parquet`)).join(", ")}], hive_partitioning = true)`;
-  const incidentFilter = (a: string) => [...incidentConds.map((c) => `EXISTS (SELECT 1 FROM ${read("property")} p WHERE p.data_year = ${a}.data_year AND p.ori = ${a}.ori AND p.incident_num = ${a}.incident_num AND ${c})`),
-    ...unitConds.map((c) => c(read)), ...clearanceConds.map((c) => clearanceCond(read, a, c.dimension, c.values))].map((c) => `
+  const and = (cs: string[]) => cs.map((c) => `
       AND ${c}`).join("");
-  const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter);
+  const restFilter = (a: string) => and([...incidentConds.map((c) => `EXISTS (SELECT 1 FROM ${read("property")} p WHERE p.data_year = ${a}.data_year AND p.ori = ${a}.ori AND p.incident_num = ${a}.incident_num AND ${c})`),
+    ...unitConds.map((c) => c(read)), ...clearanceConds.map((c) => clearanceCond(read, a, c.dimension, c.values))]);
+  const ownFilter = (a: string) => and(ownConds.map((c) => c(a)));
+  const incidentFilter = (a: string) => restFilter(a) + ownFilter(a);
+  const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter });
   if ("error" in units) return no(units.error);
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
   if (units.entity === "arrestee") statements.push("arrests_counted_once");
@@ -444,6 +452,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (people.throughIncident) statements.push("arrests_through_incident");
   if (people.allArrests) statements.push("arrests_include_group_b");
   if (people.pair) statements.push("pair_linked");
+  if (people.pairCondition) statements.push("pair_condition");
   if (people.offenders) statements.push("offender_records");
   if (people.personFilter) statements.push("unknown_not_counted");
   // P64 for any clearance grouping or selection; P67 where arrests and exceptional clearances are told apart.

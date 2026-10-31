@@ -405,7 +405,7 @@ function peopleStatement(s: string, o: Extract<ShadowOutcome, { kind: "answer" }
   if (/^reads juvenile as an arrestee under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "arrestee.age" && under18(w)) && says("unknown_not_counted");
   if (/^counts each victim once, under the victim's own race/.test(s)) return unit === "victim" && grouped(/^victim\.race$/, false);
   if (/^applies the offender's age through the victim-offender pairing the question names, and says so/.test(s))
-    return conds((sc, e, w) => sc === "victim" && e === "victim_offender" && w.dimension === "victim_offender.offender_age" && under18(w)) && says("pair_linked");
+    return conds((sc, e, w) => sc === "victim" && e === "victim_offender" && w.dimension === "victim_offender.offender_age" && under18(w)) && says("pair_condition") && !says("pair_linked");
   return null;
 }
 
@@ -782,6 +782,7 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   if (people.throughIncident) want.push("arrests_through_incident");
   if (people.allArrests) want.push("arrests_include_group_b");
   if (people.pair) want.push("pair_linked");
+  if (people.pairCondition) want.push("pair_condition");
   if (people.offenders) want.push("offender_records");
   if (people.personFilter) want.push("unknown_not_counted");
   const clr = clearanceDims(plan);

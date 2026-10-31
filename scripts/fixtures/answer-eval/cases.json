@@ -23383,37 +23383,13 @@
    "expected": {
     "action": "decline",
     "reason": "Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.",
-    "alternative": {
-     "source": "nibrs",
-     "places": [
-      {
-       "kind": "agency",
-       "name": "Memphis Police Department",
-       "state": "TN"
-      }
-     ],
-     "period": {
-      "from": "2024-01",
-      "to": "2024-12"
-     },
-     "measures": [
-      {
-       "name": "aggravated assault",
-       "unit": "victim"
-      }
-     ],
-     "filters": [],
-     "groupings": [
-      "offender sex"
-     ],
-     "statistic": "count"
-    }
+    "alternative": null
    },
    "label": {
     "status": "reviewed",
     "drafted_by": "claude-inc7",
     "reviewed_by": "codex:inc7-labels-1",
-    "notes": "NEGATIVE CONTROL: P29, an offender breakdown the engine cannot compute is declined with that reason, never answered as victims; state breakdowns are a confirmed gap."
+    "notes": "NEGATIVE CONTROL: P29, an offender breakdown the engine cannot compute is declined with that reason, never answered as victims; state breakdowns are a confirmed gap. Corrected after Codex review 04: no agency alternative (choosing one agency for a state needs a policy decision); the decline names one agency or several named agencies."
    }
   },
   {
