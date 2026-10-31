@@ -25231,14 +25231,15 @@
      "names the agency (Detroit Police Department)",
      "names any months with no data as missing, not zero",
      "names its source at the end",
-     "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)"
+     "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)",
+     "Changes the existing chart to bars using the existing result; makes no data-engine request."
     ]
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-inc7b",
     "reviewed_by": null,
-    "notes": "Rewrite is LS-227's question. Guidance: P69: presentation never reaches the data engine."
+    "notes": "Rewrite is LS-227's question. Guidance: P69: presentation never reaches the data engine. HELD as drafted (provisional, never scored), Codex 7b-01: presentation behavior, outside engine scoring; the unchanged rewrite is the retained data question's caption, not a question resubmitted."
    }
   },
   {
@@ -25300,14 +25301,14 @@
      "shows the rewritten question above the answer, as the question answered (P69)",
      "names the agency (Memphis Police Department)",
      "names its source at the end",
-     "gives each quarter as the sum of its three months, blank when a month is not known"
+     "gives each quarter as the sum of its three months, and says explicitly when a quarter is incomplete (PROPOSAL: how an incomplete quarter is shown is not decided)"
     ]
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-inc7b",
     "reviewed_by": null,
-    "notes": "Guidance: F8 (coordinator recommendation, not Jeff's decision; flagged): quarters are sums of months, flagged when incomplete."
+    "notes": "Guidance: F8 (coordinator recommendation, not Jeff's decision; flagged): quarters are sums of months, flagged when incomplete. HELD as drafted (provisional, never scored), Codex 7b-01: held until quarterly aggregation and incomplete quarters are decided (a coordinator proposal, not Jeff's decision; it changes answer numbers)."
    }
   },
   {
@@ -25326,7 +25327,7 @@
     }
    ],
    "question": "add a column for population",
-   "rewrite": "Shoplifting rate in Wichita in 2024, with the population",
+   "rewrite": "Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate",
    "policy": [
     "P69",
     "D18",
@@ -25371,14 +25372,14 @@
      "gives the rate per 100,000 residents and names the population and its year",
      "names the agency (Wichita Police Department)",
      "names its source at the end",
-     "gives the population the rate divides by (the FBI's agency population for 2024, P59) beside the rate, without changing the rate"
+     "gives the population the rate divides by (the FBI's agency population for 2024) beside the rate, without changing the rate"
     ]
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-inc7b",
     "reviewed_by": null,
-    "notes": "Guidance: F10 (coordinator recommendation, flagged): a population column is allowed; no number changes."
+    "notes": "Guidance: F10 (coordinator recommendation, flagged): a population column is allowed; no number changes. HELD as drafted (provisional, never scored), Codex 7b-01: held until the population column is decided (a coordinator proposal)."
    }
   },
   {
@@ -25400,7 +25401,8 @@
    "rewrite": null,
    "policy": [
     "P69",
-    "P22"
+    "P22",
+    "D28"
    ],
    "expected": {
     "action": "clarify",
@@ -25434,7 +25436,7 @@
       }
      },
      {
-      "label": "Tulsa, Oklahoma City and Wichita",
+      "label": "Add Wichita; show all three separately",
       "leads_to": "answer",
       "meaning": {
        "source": "nibrs",
@@ -25467,7 +25469,8 @@
        ],
        "filters": [],
        "groupings": [],
-       "statistic": "count"
+       "statistic": "count",
+       "combine": "separate"
       }
      }
     ]
@@ -25477,6 +25480,263 @@
     "drafted_by": "claude-inc7b",
     "reviewed_by": null,
     "notes": "P69: uncertain (two places before, one named now, no add or replace word): ask instead of guessing."
+   }
+  },
+  {
+   "id": "LS-423",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Female victims of aggravated assault with a firearm in Memphis in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "How many simple assaults were there in Detroit in 2023?",
+   "rewrite": "How many simple assaults were there in Detroit in 2023?",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P09",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-226 (the rewrite is LS-226's meaning)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Detroit Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Codex 7b-01: a complete new question after a filtered one; the earlier filters (female, firearm) and place are not inherited."
+   }
+  },
+  {
+   "id": "LS-424",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "How many shoplifting offenses were there in Memphis in 2024?",
+     "tab": "auto"
+    }
+   ],
+   "question": "what about Wichita?",
+   "rewrite": "How many shoplifting offenses were there in Wichita in 2024?",
+   "policy": [
+    "P69",
+    "P23",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the 2024 shoplifting count in LS-320's values (Wichita), or nibrs-model request 12"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Wichita Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Codex 7b-01: P23's exact pattern, one place replaced; crime, unit and period kept."
+   }
+  },
+  {
+   "id": "LS-425",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting in Memphis",
+     "tab": "auto"
+    }
+   ],
+   "question": "2024",
+   "rewrite": "Shoplifting in Memphis in 2024",
+   "policy": [
+    "P69",
+    "P22",
+    "D31",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-219 (the rewrite is LS-219's meaning)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Codex 7b-01: the previous turn asked which period (D31); the follow-up answers it, as a button would (P22)."
+   }
+  },
+  {
+   "id": "LS-426",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "People charged with robbery in Memphis in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "what about Detroit?",
+   "rewrite": "People charged with robbery in Detroit in 2024",
+   "policy": [
+    "P69",
+    "P46"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data has no charging records, so people charged cannot be counted.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Codex 7b-01: after a decline, a place-only follow-up keeps the unsupported request (charging records, P46): still declined, with Detroit's robbery arrests offered."
    }
   }
  ]

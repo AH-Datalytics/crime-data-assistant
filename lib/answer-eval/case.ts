@@ -82,7 +82,8 @@ export const Case = z.strictObject({
   /**
    * P69 (increment 7b): a follow-up's rewrite, from the last setup turn and the question: the one standalone question the
    * app shows above its answer (editable) and then answers; null when the rewrite is uncertain and the app asks instead.
-   * Absent for a question that is not a follow-up.
+   * For a presentation-only turn ("make it a bar chart") it is the retained data question, shown as the caption and not
+   * submitted again. Absent for a question that is not a follow-up.
    */
   rewrite: z.string().min(1).nullable().optional(),
   /** A button press answering an earlier case's clarifying question. */
