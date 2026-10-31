@@ -69,6 +69,8 @@ function planFilterKey(dimension: string, values: (string | number)[], op: strin
   if (dimension === "offense.clearance_status") return v.join("+") === "cleared" ? "clearance:cleared" : v.join("+") === "none" ? "clearance:uncleared" : null;
   if (dimension === "victim_offender.relationship") return v.join("+") === "ST" ? "relationship:stranger" : null;
   if (dimension === "property.loss_type") return v.join("+") === "7" ? "loss:stolen" : v.join("+") === "6" ? "loss:seized" : null;
+  // Increment 7: a linked offender (P65) is told apart from any offender of the incident (P49).
+  if (dimension === "victim_offender.offender_age" && op === "between" && v.join("+") === "1+17") return "linked offender age:under 18";
   if (/\.age$/.test(dimension) && op === "between" && v.join("+") === "1+17") return `${dimension.split(".")[0]} age:under 18`;
   if (/\.sex$/.test(dimension)) return v.join("+") === "F" ? `${dimension.split(".")[0]} sex:female` : v.join("+") === "M" ? `${dimension.split(".")[0]} sex:male` : null;
   return null;
@@ -105,7 +107,7 @@ function labelFilterKey(f: string): string | null {
   if (/^250,000 residents or more$/.test(f.trim())) return "population:250000+";
   if (/^agencies that reported every month of /.test(norm(f))) return "reporters:every month";
   if (family === "loss") return /stolen/.test(value) ? "loss:stolen" : /seized/.test(value) ? "loss:seized" : null;
-  if (/^(victim|offender|arrestee) age$/.test(family)) return /under 18/.test(value) ? `${family}:under 18` : null;
+  if (/^(victim|offender|arrestee) age$/.test(family)) return /under 18/.test(value) ? `${family === "offender age" && /pair linked/.test(value) ? "linked offender age" : family}:under 18` : null;
   if (/^(victim|offender|arrestee) sex$/.test(family)) return /female/.test(value) ? `${family.split(" ")[0]} sex:female` : /\bmale/.test(value) ? `${family.split(" ")[0]} sex:male` : null;
   return null;
 }
@@ -116,13 +118,27 @@ const GROUPINGS: Record<string, string> = {
   "time.year": "year", year: "year", "time.month": "month", month: "month", "geo.agency": "agency", agency: "agency", city: "agency", "geo.state": "state", state: "state",
   "victim.race": "victim race", "victim race": "victim race", "victim.sex": "victim sex", "victim sex": "victim sex", "victim.ethnicity": "victim ethnicity", "victim ethnicity": "victim ethnicity", "victim.age": "victim age", "victim age": "victim age",
   "offender.race": "offender race", "offender race": "offender race", "offender.sex": "offender sex", "offender sex": "offender sex", "offender.age": "offender age", "offender age": "offender age",
+  // Increment 7: offender ethnicity, the arrestee's own attributes, and the linked offenders' (P65).
+  "offender.ethnicity": "offender ethnicity", "offender ethnicity": "offender ethnicity",
+  "arrestee.race": "arrestee race", "arrestee race": "arrestee race", "arrestee.sex": "arrestee sex", "arrestee sex": "arrestee sex",
+  "arrestee.ethnicity": "arrestee ethnicity", "arrestee ethnicity": "arrestee ethnicity", "arrestee.age": "arrestee age", "arrestee age": "arrestee age",
+  "victim_offender.offender_race": "linked offender race", "victim_offender.offender_sex": "linked offender sex",
+  "victim_offender.offender_ethnicity": "linked offender ethnicity", "victim_offender.offender_age": "linked offender age",
   "offense.location_type": "location type", "location type": "location type", "offense.clearance_type": "clearance type", "clearance type": "clearance type",
   "offense.clearance_status": "clearance status", "clearance status": "clearance status",
   "offense_weapon.weapon": "weapon", weapon: "weapon", "victim_offender.relationship": "relationship", relationship: "relationship", "offense.offense": "offense type", "offense type": "offense type",
   // Increment 3: a monthly series of rolling 12-month windows.
   "rolling 12-month": "rolling 12-month", "month (rolling 12-month total ending that month)": "rolling 12-month",
 };
-const groupingName = (s: string): string | null => GROUPINGS[s] ?? GROUPINGS[norm(s)] ?? null;
+/**
+ * A label's grouping may explain itself in parentheses ("offender race (crimes grouped by ...)"); "pair-linked" there
+ * names P65's linked offenders.
+ */
+const groupingName = (s: string): string | null => {
+  if (GROUPINGS[s]) return GROUPINGS[s];
+  const base = s.replace(/\s*\(.*\)\s*$/, ""), g = GROUPINGS[base] ?? GROUPINGS[norm(base)] ?? null;
+  return g && /pair-linked/i.test(s) && g.startsWith("offender ") ? `linked ${g}` : g;
+};
 
 /* ------------------------------------------------------------------ periods and places ----------------------------- */
 

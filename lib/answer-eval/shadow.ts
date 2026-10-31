@@ -24,7 +24,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -342,6 +342,43 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
   return text.every(allowed) && (changeLine === null || text.includes(changeLine)) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
 }
 
+/** Increment 7: a label statement about people, judged against the answer; null when the statement is not one of these. */
+function peopleStatement(s: string, o: Extract<ShadowOutcome, { kind: "answer" }>): boolean | null {
+  const text = o.delivered.text, plan = o.plan;
+  const says = (k: keyof typeof ANSWER_STATEMENTS) => text.includes(ANSWER_STATEMENTS[k]);
+  const filters = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])];
+  const conds = (pred: (scope: string, entity: string, w: { dimension: string; op: string; values?: (string | number)[] }) => boolean) =>
+    filters.some((f) => (f.kind === "attribute" ? pred("unit", "unit", f) : !f.negate && f.where.some((w) => w.kind === "attribute" && pred(f.scope, f.entity, w))));
+  const under18 = (w: { op: string; values?: (string | number)[] }) => w.op === "between" && (w.values ?? []).map(String).join(",") === "1,17";
+  const unit = plan.measures[0]?.unit;
+  const grouped = (d: RegExp, multi?: boolean) => plan.groupings.some((g) => d.test(g.dimension) && (multi === undefined || !!g.multiValue === multi));
+  if (/^says a (?:crime with offenders|victim linked to offenders) (?:in|of) more than one (?:category|race) counts once in each/.test(s)) return says("categories_overlap");
+  if (/^uses the incident's offenders, not the pair-linked reading/.test(s)) return grouped(/^offender\./, true) && !says("pair_linked");
+  if (/^uses only the offenders linked to each victim by the relationship segment, and says so/.test(s)) return grouped(/^victim_offender\.offender_/) && says("pair_linked");
+  if (/^shows victims with no relationship reported as their own category/.test(s)) return says("pair_linked");
+  const each = /^counts (victims|robbery offenses|offenses) \(D18\), each under the (?:races|age groups|ethnicities) of its incident's offenders/.exec(s);
+  if (each) return unit === (each[1] === "victims" ? "victim" : "offense") && grouped(/^offender\./, true);
+  if (/^reads "by juveniles" as offenders under 18/.test(s) || /^counts victims of incidents with at least one offender under 18, each once/.test(s))
+    return conds((scope, entity, w) => scope === "incident" && entity === "offender" && w.dimension === "offender.age" && under18(w));
+  if (/^says (?:offenders|victims|arrestees) of unknown age(?: or sex)? are not counted/.test(s)) return says("unknown_not_counted");
+  if (/^reads "against juveniles" as victims under 18/.test(s) || /^counts victims under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
+  if (/^counts female victims whose aggravated assault involved a firearm/.test(s))
+    return unit === "victim" && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, e) => sc === "victim" && e === "offense_weapon");
+  if (/^counts victims who are both female and under 18/.test(s))
+    return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
+  if (/^counts offenders, each once, who are linked as a stranger/.test(s))
+    return unit === "offender" && conds((sc, e, w) => sc === "offender" && e === "victim_offender" && w.dimension === "victim_offender.relationship" && (w.values ?? []).join() === "ST");
+  if (/^counts offenders, each offender segment once/.test(s)) return unit === "offender" && !grouped(/./, true);
+  if (/^says it counts offender records \(segments\)/.test(s)) return says("offender_records");
+  if (/^says standalone Group B arrests \(with no incident\) are included/.test(s)) return says("arrests_include_group_b");
+  if (/^counts arrests with robbery as the arrest offense, by arrest date/.test(s)) return plan.measures[0]?.id === "arrests.robbery" && plan.timeBasis === "arrest_date";
+  if (/^reads juvenile as an arrestee under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "arrestee.age" && under18(w)) && says("unknown_not_counted");
+  if (/^counts each victim once, under the victim's own race/.test(s)) return unit === "victim" && grouped(/^victim\.race$/, false);
+  if (/^applies the offender's age through the victim-offender pairing the question names, and says so/.test(s))
+    return conds((sc, e, w) => sc === "victim" && e === "victim_offender" && w.dimension === "victim_offender.offender_age" && under18(w)) && says("pair_linked");
+  return null;
+}
+
 function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
   const out: Diff[] = [];
   const text = o.delivered.text;
@@ -439,6 +476,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const cols = o.delivered.table.columns.map((c, i) => (c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") ? i : -1)).filter((i) => i >= 0);
       ok = cols.length > 0 && o.delivered.table.rows.every((r) => cols.every((i) => typeof r[i] === "string" && r[i] !== ""));
     }
+    // Increment 7: people (P29, P30, P44, P46, P49, P65). A statement about a fixed sentence checks the sentence; one
+    // about what is counted checks the plan's unit, condition or grouping.
+    else if ((ok = peopleStatement(s, o)) !== null) { /* judged by peopleStatement */ }
     // Increment 5: P63's source line, and P61's disclaimer and button on a state or national sum.
     else if (/^ends with the source line "(.+?)"/.test(s)) { const want = /^ends with the source line "(.+?)"/.exec(s)![1]; ok = text[text.length - 1] === want && text.filter((t) => /^Source: /.test(t)).length === 1; }
     else if (/^states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included/.test(s)) {
