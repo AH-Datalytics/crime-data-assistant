@@ -127,6 +127,9 @@ const DIMENSIONS: SemanticDimension[] = [
   dim("property.loss_type", "property", { values: PROPERTY_LOSS_TYPES }), dim("property.description", "property"),
   dim("property_drug.drug_type", "property_drug"), dim("property_drug.drug", "property_drug"),
   dim("victim_offender.relationship", "victim_offender"), dim("victim_offender.victim_offender_race", "victim_offender"),
+  // Increment 7 (P65): the attributes of the offender a victim's relationship segment links to it.
+  dim("victim_offender.offender_sex", "victim_offender", { values: SEX }), dim("victim_offender.offender_race", "victim_offender", { values: RACE_CODES }),
+  dim("victim_offender.offender_ethnicity", "victim_offender", { values: ETHNICITY_CODES }), dim("victim_offender.offender_age", "victim_offender", { numeric: AGE }),
   dim("victim_offense.offense", "victim_offense"), dim("incident.hour", "incident"),
 ];
 

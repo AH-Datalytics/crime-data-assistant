@@ -65,7 +65,21 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
    * Clearance wording (P64, P66): a breakdown by status (cleared / uncleared) or type (by arrest / exceptional A-E /
    * uncleared), a selection (cleared, by arrest, exceptionally, uncleared) or the share cleared. The shadow builds it.
    */
-  clearance: { by: "status" | "type" | null; only: "cleared" | "arrest" | "exceptional" | "uncleared" | null; share: boolean } | null };
+  clearance: { by: "status" | "type" | null; only: "cleared" | "arrest" | "exceptional" | "uncleared" | null; share: boolean } | null;
+  /** Increment 7: people wording, read here and built by the shadow (reading the `People` type). */
+  people: People | null };
+/** A person's attribute a question names. */
+export type PersonAttr = "sex" | "race" | "ethnicity" | "age";
+/**
+ * Increment 7 (P29, P30, P44, P49, P65): a breakdown by an offender's or arrestee's attribute (`paired`: only the
+ * offenders linked to each victim, named by the question); conditions on a person (an age range; for offenders, a
+ * relationship to the victim); or a word policy asks about ("young adults" P30, "attackers" P44).
+ */
+export type People = {
+  by: { who: "offender" | "arrestee"; attr: PersonAttr; paired: boolean } | null;
+  where: ({ who: "victim" | "offender" | "arrestee"; attr: "age"; range: [number, number]; paired: boolean } | { who: "offender"; attr: "relationship"; values: string[]; paired: true })[];
+  ask: "young adults" | "attackers" | null;
+};
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 const PHRASES: [RegExp, string][] = [
@@ -77,6 +91,8 @@ const PHRASES: [RegExp, string][] = [
   [/\b(victims?\b[^?.!]*?\s)were\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "$1by sex"],
   // P29: "against men and women" names the victims -> by (victim) sex.
   [/\bagainst\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "by sex"],
+  // Increment 7: "by victim race" is the victims' own breakdown, as the reader writes it ("by race").
+  [/\bby\s+(?:the\s+)?victims?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b/gi, "by $1"],
   // A category and a time grain joined by "and": "by race and year" -> "by race by year".
   [/\bby\s+(race|sex|gender|ethnicity|location(?:\s+type)?)\s+and\s+(year|month)\b/gi, "by $1 by $2"],
   // P48: people arrested for a crime are its arrests.
@@ -260,9 +276,61 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/,?\s*\bby\s+(?:clearance\s+type|type\s+of\s+clearance|how\s+(?:they\s+were|it\s+was)\s+cleared)\b/i, () => (set({ by: "type" }), ""));
   text = text.replace(/,?\s*\bby\s+clearance(?:\s+status)?\b(?!\s+rate)/i, () => (set({ by: "status" }), ""));
   text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b/i, () => (set({ only: "cleared" }), ""));
-  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough };
-  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough ? accountNibrsRequest(text) : first, flags);
+  // Increment 7: people wording (P29, P30, P44, P49, P65). Read here, built by the shadow; the reader reads the rest.
+  const pr = readPeople(text);
+  text = pr.text;
+  const people = pr.people;
+  // "By juveniles" is now read (an offender age condition), so it is no longer an unread offender group.
+  const offendersLeft = offenders && !(people && people.where.some((w) => w.who === "offender"));
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people };
+  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
+}
+
+const JUV = String.raw`(?:juveniles?|minors?|teens?|teenagers?|youths?|kids|children)`;
+const UNDER18: [number, number] = [1, 17];
+const ATTR = (w: string): PersonAttr => (/^(?:sex|gender)$/i.test(w) ? "sex" : /^race$/i.test(w) ? "race" : /^ethnicity$/i.test(w) ? "ethnicity" : "age");
+/**
+ * Increment 7: the question's people wording, removed from the text the reader reads:
+ *   "by the race of the offender(s) who killed (attacked, robbed ...) them"  -> by linked offender race (P65: named pairing);
+ *   "by offender (arrestee) race / sex / ethnicity / age (group)"            -> by that attribute (P29, P49);
+ *   "<crime> offenders ... by sex (age ...)" and "arrests ... by race"         -> the counted person's own attribute;
+ *   "by juveniles" / "against juveniles"                                     -> an offender (any of the incident, P49) or
+ *                                                                               victim under 18 (P29, P30);
+ *   "juvenile victims / arrests / offenders"                                 -> that person under 18;
+ *   "victims of offenders who were under 18"                                 -> a linked offender under 18 (P65);
+ *   "offenders ... where the victim was a stranger"                          -> offenders linked as a stranger;
+ *   "young adults" (P30) and "attackers" (P44)                               -> asked about;
+ *   "arrests in <place>" with no crime                                       -> every arrest ("all crime arrests").
+ */
+function readPeople(text0: string): { text: string; people: People | null } {
+  let text = text0;
+  const p: People = { by: null, where: [], ask: null };
+  const cut = (re: RegExp, f: (m: RegExpExecArray) => void) => { const m = re.exec(text); if (!m) return false; f(m); text = text.replace(m[0], " ").replace(/\s+([,?.!])/g, "$1").replace(/\s{2,}/g, " ").trim(); return true; };
+  cut(/,?\s*\b(?:committed\s+)?by\s+young\s+adults?\b/i, () => { p.ask = "young adults"; });
+  if (/\battackers?\b/i.test(text)) p.ask = "attackers";
+  cut(/,?\s*\bby\s+the\s+(race|sex|gender|ethnicity|age)\s+of\s+(?:the\s+)?offenders?\s+who\s+(?:killed|murdered|attacked|assaulted|robbed|raped|shot|stabbed|victimized)\s+(?:them|him|her)\b/i,
+    (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: true }; });
+  if (!p.by) cut(/,?\s*\bby\s+(?:the\s+)?(offenders?|arrestees?)(?:'s|s')?\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i,
+    (m) => { p.by = { who: /^arrestee/i.test(m[1]) ? "arrestee" : "offender", attr: ATTR(m[2]), paired: false }; });
+  // The counted person's own attribute: offenders by sex or age (the reader's own breakdown, left to it), arrests by race.
+  if (!p.by && /^\s*(?:all\s+crime\s+)?arrests\b|\barrests\s+in\b/i.test(text))
+    cut(/,?\s*\bby\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i, (m) => { p.by = { who: "arrestee", attr: ATTR(m[1]), paired: false }; });
+  // Only when offenders are what is counted ("offenders in aggravated assaults ..."); for victims the reader's own
+  // "by strangers" applies.
+  if (/^\s*(?:[a-z]+\s+){0,2}?offenders\b/i.test(text))
+    cut(/,?\s*\bwhere\s+the\s+victim\s+was\s+a\s+stranger\b/i, () => { p.where.push({ who: "offender", attr: "relationship", values: ["ST"], paired: true }); });
+  cut(/\bof\s+offenders?\s+who\s+(?:was|were)\s+(?:under|younger\s+than)\s+18\b/i, () => { p.where.push({ who: "offender", attr: "age", range: UNDER18, paired: true }); });
+  cut(new RegExp(String.raw`,?\s*\b(?:committed\s+)?by\s+${JUV}\b`, "i"), () => { p.where.push({ who: "offender", attr: "age", range: UNDER18, paired: false }); });
+  cut(new RegExp(String.raw`,?\s*\bagainst\s+${JUV}\b`, "i"), () => { p.where.push({ who: "victim", attr: "age", range: UNDER18, paired: false }); });
+  cut(/\b(?:juvenile|youth|teen(?:age)?|minor)\s+(?=(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b)/i, (m) => {
+    const noun = /^\s*\S+\s+(?:[a-z]+\s+){0,3}?(victims|arrests|offenders)\b/i.exec(text.slice(m.index))?.[1].toLowerCase();
+    p.where.push({ who: noun === "arrests" ? "arrestee" : noun === "offenders" ? "offender" : "victim", attr: "age", range: UNDER18, paired: false });
+  });
+  // Every arrest, with no crime named.
+  if (/^\s*arrests\s+(?:in|for)\s+(?=[A-Z])/.test(text) || /^\s*arrests\s+in\b/i.test(text)) text = text.replace(/^\s*arrests\b/i, "All crime arrests");
+  const any = p.by || p.where.length || p.ask;
+  return { text, people: any ? p : null };
 }
 
 /** Words of the question that only carry a forecast or a court outcome: an alternative drops these and nothing else. */

@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } from "../lib/nibrs-shadow/places";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
+import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { scoreShadow, sliceValues } from "../lib/answer-eval/shadow";
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
 import { gates } from "../lib/answer-eval/gates";
@@ -734,5 +735,34 @@ assert.ok(material(wrongCount, sumLabel).includes("statement"));
 assert.match(as(ask("Shoplifting in North Carolina by year from 2023 to 2024, only agencies that reported every month"), "answer").delivered.text[1], /^Residents covered by those agencies: 2023 at least [\d.]+%; 2024 at least [\d.]+%\. Some of them have no FBI population/);
 // 2: a span from this year into the future is declined, never routed as this year alone.
 assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").reason, "outside_release_coverage");
+
+// Increment 7: people (P29, P30, P44, P49, P65). The reading pre-pass takes the people wording; the plan carries it.
+{
+  const rq = (q: string) => readQuestion(q, 2026, "2026-09");
+  assert.deepEqual(rq("Aggravated assaults in Memphis in 2024 by offender race").people, { by: { who: "offender", attr: "race", paired: false }, where: [], ask: null });
+  assert.deepEqual(rq("Murder victims in Memphis in 2024 by the race of the offender who killed them").people?.by, { who: "offender", attr: "race", paired: true });
+  assert.deepEqual(rq("Aggravated assaults by juveniles in Memphis in 2024").people?.where, [{ who: "offender", attr: "age", range: [1, 17], paired: false }]);
+  assert.deepEqual(rq("Aggravated assaults against juveniles in Memphis in 2024").people?.where, [{ who: "victim", attr: "age", range: [1, 17], paired: false }]);
+  assert.deepEqual(rq("Juvenile arrests for robbery in Detroit in 2024").people?.where, [{ who: "arrestee", attr: "age", range: [1, 17], paired: false }]);
+  assert.equal(rq("Arrests in Denver in 2023 by arrestee race").text, "All crime arrests in Denver in 2023");
+  assert.equal(rq("Murders by young adults in Memphis in 2024").people?.ask, "young adults");
+  // "By juveniles" is read, so it is no longer an unread offender group (P29's decline).
+  assert.equal(rq("Aggravated assaults by juveniles in Memphis in 2024").offenders, false);
+  const g = (q: string) => planOf(q).groupings.map((x) => `${x.dimension}${x.multiValue ? "*" : ""}${x.bins ? "[bins]" : ""}`);
+  const f = (q: string) => JSON.stringify(planOf(q).filters);
+  assert.deepEqual(g("Aggravated assaults in Memphis in 2024 by offender race"), ["offender.race*"]);
+  assert.deepEqual(g("Robberies in Detroit in 2024 by offender age"), ["offender.age*[bins]"]);
+  assert.deepEqual(g("According to NIBRS, murder victims in Memphis in 2024 by the race of the offender who killed them"), ["victim_offender.offender_race*"]);
+  assert.deepEqual(g("Arrests in Denver in 2023 by arrestee age"), ["arrestee.age[bins]"]);
+  assert.match(f("Aggravated assaults by juveniles in Memphis in 2024"), /"scope":"incident","entity":"offender".*"offender.age","op":"between","values":\[1,17\]/);
+  assert.match(f("Aggravated assaults against juveniles in Memphis in 2024"), /"dimension":"victim.age","op":"between"/);
+  assert.match(f("Aggravated assault victims of offenders who were under 18, in Memphis in 2024, by victim race"), /"scope":"victim","entity":"victim_offender".*"victim_offender.offender_age"/);
+  assert.match(f("Offenders in aggravated assaults in Memphis in 2024 by sex, where the victim was a stranger"), /"scope":"offender","entity":"victim_offender".*"values":\["ST"\]/);
+  // A people breakdown for a state is declined with P29's reason, never answered from the historical file.
+  assert.match(as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "decline").explanation, /^Offender breakdowns for a whole state or the nation are not built yet/);
+  // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).
+  assert.deepEqual(as(ask("Murders by young adults in Memphis in 2024"), "clarify").options.map((o) => o.label), ["18 to 24", "18 to 29"]);
+  assert.deepEqual(as(ask("How many attackers were there in aggravated assaults in Detroit in 2024?"), "clarify").options.map((o) => o.label), ["Offenders", "People arrested"]);
+}
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

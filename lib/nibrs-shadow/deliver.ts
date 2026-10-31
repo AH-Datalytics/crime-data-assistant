@@ -9,7 +9,7 @@
 import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
 import type { Comparison } from "../nibrs-plan/transforms";
-import { ANSWER_STATEMENTS, checkEnvelope, finalStatistics, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
+import { ANSWER_STATEMENTS, checkEnvelope, finalStatistics, peopleFacts, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
 import { MEASURE_CODES, MEASURE_LABEL } from "../nibrs-question-types";
 import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
 import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
@@ -66,6 +66,26 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     if (f.dimension === "offense.clearance_status") return v === "cleared" ? "cleared" : v === "none" ? "not cleared" : null;
     if (f.dimension === "offense.clearance_method") return v === "arrest" ? "cleared by arrest" : v === "exceptional" ? "cleared by exceptional means" : null;
   }
+  // Increment 7: a person's own attribute ("victims under 18", "female victims"), an offender of the incident (P49), an
+  // offender linked to the victim (P65), or an offender's relationship to a victim.
+  if (f.kind === "attribute" && /^(?:victim|arrestee|offender)\.(?:sex|race|ethnicity|age)$/.test(f.dimension)) {
+    const who = f.dimension.split(".")[0] === "arrestee" ? "arrestees " : "";
+    const p = personWords(f);
+    const said = p && (f.dimension.endsWith(".sex") ? `who were ${p}` : p);
+    return said && (who ? `of ${who}${said}` : said);
+  }
+  if (f.kind === "exists" && !f.negate && f.entity === "offender" && f.scope === "incident") {
+    const ws = f.where.map((w) => (w.kind === "attribute" && w.dimension.startsWith("offender.") ? personWords(w) : null));
+    return ws.every(Boolean) ? `with an offender ${ws.join(" and ")} in the incident` : null;
+  }
+  if (f.kind === "exists" && !f.negate && f.entity === "victim_offender" && f.scope === "victim" && f.where.every((w) => w.kind === "attribute" && w.dimension.startsWith("victim_offender.offender_"))) {
+    const ws = f.where.map((w) => personWords({ ...w, dimension: w.dimension.replace("victim_offender.offender_", "offender.") }));
+    return ws.every(Boolean) ? `of an offender ${ws.join(" and ")} (linked to the victim by the victim-offender relationship)` : null;
+  }
+  if (f.kind === "exists" && !f.negate && f.entity === "victim_offender" && f.scope === "offender" && f.where.length === 1 && f.where[0].kind === "attribute" && f.where[0].dimension === "victim_offender.relationship") {
+    const codes = (f.where[0].values ?? []).map(String);
+    return codes.length === 1 && codes[0] === "ST" ? "who were strangers to the victim" : null;
+  }
   if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute" || f.where[0].op !== "in") return null;
   // Increment 6: an offense of the incident ("that included a robbery"), named by the crime with exactly those codes.
   if (f.entity === "offense" && f.where[0].dimension === "offense.offense") {
@@ -90,12 +110,21 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
   }
   return null;
 }
+/** Increment 7: a person condition in words: "under 18", "aged 18 to 24", "female", "recorded as Black". */
+function personWords(w: { dimension: string; op: string; values?: (string | number)[] }): string | null {
+  const attr = w.dimension.split(".")[1], vs = (w.values ?? []).map(String);
+  if (attr === "age" && w.op === "between" && vs.length === 2) return Number(vs[0]) <= 1 ? `under ${Number(vs[1]) + 1}` : `aged ${vs[0]} to ${vs[1]}`;
+  if (attr === "sex" && w.op === "in" && vs.length === 1 && (vs[0] === "F" || vs[0] === "M")) return vs[0] === "F" ? "female" : "male";
+  const names = attr === "race" ? RACE_CODES : attr === "ethnicity" ? ETHNICITY_CODES : null;
+  return names && w.op === "in" && vs.length && vs.every((v) => names[v]) ? `recorded as ${vs.map((v) => names[v]).join(" or ")}` : null;
+}
 /** "shoplifting offenses", "simple assault victims", "murder victims with a firearm". */
 export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): string {
   const name = m.id.replace(/^[a-z_]+\./, "");
   const filters = [...plan.filters, ...(m.filters ?? [])].map(filterWords).filter(Boolean);
   // Increment 6: every arrest on an incident with the condition ("arrests on incidents where a firearm was stolen").
-  if (m.id === "arrests.all_crime") return ["arrests on incidents", ...filters].join(" ");
+  // Increment 7: with no condition on the incident, every arrest (standalone Group B arrests included).
+  if (m.id === "arrests.all_crime") return [peopleFacts(plan).throughIncident ? "arrests on incidents" : "arrests", ...filters].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }
 /** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
@@ -138,8 +167,21 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "offense.location_type": { header: "Location type", plural: "location type", names: LOCATION_TYPES },
   "offense_weapon.weapon": { header: "Weapon", plural: "weapon", names: WEAPON_TYPES },
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
-  // A crime by its offenders' sexes (P49), or offenders by their own sex (P44).
+  // A crime by its offenders' sexes, races, ethnicities or ages (P49), or offenders by their own (P44).
   "offender.sex": { header: "Offender sex", plural: "offender sex", names: { ...SEX, unknown_offender: "Unknown offender" } },
+  "offender.race": { header: "Offender race", plural: "offender race", names: { ...RACE_CODES, unknown_offender: "Unknown offender" } },
+  "offender.ethnicity": { header: "Offender ethnicity", plural: "offender ethnicity", names: { ...ETHNICITY_CODES, unknown_offender: "Unknown offender" } },
+  "offender.age": { header: "Offender age", plural: "offender age group", names: null },
+  // Increment 7: arrests by the arrestee's own attributes.
+  "arrestee.sex": { header: "Arrestee sex", plural: "arrestee sex", names: SEX },
+  "arrestee.race": { header: "Arrestee race", plural: "arrestee race", names: RACE_CODES },
+  "arrestee.ethnicity": { header: "Arrestee ethnicity", plural: "arrestee ethnicity", names: ETHNICITY_CODES },
+  "arrestee.age": { header: "Arrestee age", plural: "arrestee age group", names: null },
+  // P65: a victim by the offenders its relationship segments link to it.
+  "victim_offender.offender_sex": { header: "Linked offender sex", plural: "the sex of the linked offenders", names: { ...SEX, no_relationship: "No relationship reported" } },
+  "victim_offender.offender_race": { header: "Linked offender race", plural: "the race of the linked offenders", names: { ...RACE_CODES, no_relationship: "No relationship reported" } },
+  "victim_offender.offender_ethnicity": { header: "Linked offender ethnicity", plural: "the ethnicity of the linked offenders", names: { ...ETHNICITY_CODES, no_relationship: "No relationship reported" } },
+  "victim_offender.offender_age": { header: "Linked offender age", plural: "the age group of the linked offenders", names: null },
   // P66 (Jeff 2026-10-30): STATUS is cleared or uncleared; TYPE is by arrest, each exceptional type, or uncleared.
   "offense.clearance_status": { header: "Clearance status", plural: "clearance status", names: { cleared: "Cleared", none: "Uncleared" } },
   "offense.clearance_type": { header: "Clearance type", plural: "clearance type", names: {
@@ -150,6 +192,9 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
 export function categoryName(dimension: string, code: unknown): string {
   const c = code === null || code === undefined ? "" : String(code).trim();
   if (!c) return "Not recorded";
+  // Increment 7: the compiler's two categories that are not codes (offender 00; a victim with no relationship segment).
+  if (c === "unknown_offender") return "Unknown offender";
+  if (c === "no_relationship") return "No relationship reported";
   const names = CATEGORY[dimension]?.names;
   return names === null ? c : names?.[c] ?? `Code ${c}`;
 }
