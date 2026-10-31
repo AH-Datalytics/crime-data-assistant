@@ -1,6 +1,6 @@
 # Codex review 04: increment 7 full review
 
-Reviewed 2026-10-31, read-only, no network, of `origin/dev...HEAD` at 1b7b3f0 and the scored run against nibrs-model main 6b98d8d (V131-V146). Verdict: **REVISE** (five P2). Applied as below.
+Reviewed 2026-10-31, read-only, no network, of `origin/dev...HEAD` at 01f0717 and the scored run against nibrs-model main 6b98d8d (V131-V146). Verdict: **REVISE** (five P2). Applied as below.
 
 1. **P2: person conditions silently dropped standalone Group B arrests.** Any condition on the arrestee took the Group A-only path, while the answer said Group B was included. "Juvenile arrests in Denver in 2023" would give 939; V141 gives 1,114 (939 Group A plus 175 Group B).
    - Applied: compile.ts keeps conditions on the counted person apart from conditions on the incident. Every arrest with only a person condition is Group A and Group B, with the condition on both.

@@ -278,12 +278,14 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b/i, () => (set({ only: "cleared" }), ""));
   // Increment 7: people wording (P29, P30, P44, P49, P65). Read here, built by the shadow; the reader reads the rest.
   const pr = readPeople(text);
+  // Any rewrite here ("by victim race" -> "by race") is read again by the accounting, flag or not (Codex 05).
+  const peopleRewrote = pr.text !== text;
   text = pr.text;
   const people = pr.people;
   // "By juveniles" is now read (an offender age condition), so it is no longer an unread offender group.
   const offendersLeft = offenders && !(people && people.where.some((w) => w.who === "offender"));
   const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people };
-  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people ? accountNibrsRequest(text) : first, flags);
+  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 

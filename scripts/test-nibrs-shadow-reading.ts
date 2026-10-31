@@ -40,6 +40,9 @@ assert.deepEqual([read("burglaries committed by juveniles in Tulsa").offenders, 
 // Codex increment-7 review 04.2: a victim's attribute on arrests is never read as the arrestee's.
 assert.deepEqual([read("Arrests in Denver in 2023 by victim race").people?.unsupported, read("Arrests in Denver in 2023 by victim race").people?.by], ["a victim's race for arrests", null]);
 assert.equal(read("Aggravated assault victims in Tulsa in 2024, by victim race").text, "Aggravated assault victims in Tulsa in 2024 by race");
+// Codex 05: the rewritten words are what the accounting reads ("by race" a breakdown, nothing left unread).
+{ const l = read("Aggravated assault victims in Tulsa in 2024, by victim race").ledger.parts.filter((p) => p.clause === 0);
+  assert.ok(l.some((p) => p.concept === "breakdown" && p.value === "race") && !l.some((p) => p.state === "not-interpreted"), JSON.stringify(l.map((p) => [p.concept, p.value, p.state]))); }
 for (const q of ["robberies by sex in Tulsa", "assaults against women in Tulsa", "robberies by month in Tulsa"]) assert.equal(read(q).offenders, false, q);
 assert.equal(read("Were male or female victims assaulted more in Tulsa?").readings.length, 0, "no 'victims ... were' form");
 
