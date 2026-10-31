@@ -116,7 +116,7 @@ const dim = (id: string, ent: EntityId, extra: Partial<SemanticDimension> = {}):
 const AGE = { min: 1, max: 99, special: { "00": "Unknown", NN: "Under 24 hours", NB: "1-6 days", BB: "7-364 days" } };
 const SEX = { F: "Female", M: "Male", U: "Unknown" };
 const DIMENSIONS: SemanticDimension[] = [
-  dim("time.month", "time"), dim("time.year", "time"), dim("geo.agency", "agency"), dim("geo.state", "agency"),
+  dim("time.month", "time"), dim("time.quarter", "time"), dim("time.year", "time"), dim("geo.agency", "agency"), dim("geo.state", "agency"),
   ...["victim", "offender", "arrestee", "group_b_arrest"].flatMap((e) => [dim(`${e}.sex`, e, { values: SEX }), dim(`${e}.race`, e, { values: RACE_CODES }), dim(`${e}.ethnicity`, e, { values: ETHNICITY_CODES }), dim(`${e}.age`, e, { numeric: AGE })]),
   dim("offense.location_type", "offense", { values: LOCATION_TYPES }), dim("offense.offense", "offense"),
   dim("offense.clearance_type", "incident", { values: { arrest: "Cleared by arrest", A: "Death of offender", B: "Prosecution declined", C: "In custody of other jurisdiction", D: "Victim refused to cooperate", E: "Juvenile, no custody", none: "Not cleared" } }),

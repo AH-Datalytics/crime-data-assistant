@@ -396,8 +396,11 @@ function peopleStatement(s: string, o: Extract<ShadowOutcome, { kind: "answer" }
   if (/^reads "against juveniles" as victims under 18/.test(s) || /^counts victims under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
   if (/^counts female victims whose aggravated assault involved a firearm/.test(s))
     return unit === "victim" && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, e) => sc === "victim" && e === "offense_weapon");
-  if (/^counts victims who are both female and under 18/.test(s))
-    return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
+  const both = /^counts victims who are both (female|male) and under 18/.exec(s);
+  if (both)
+    return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === (both[1] === "female" ? "F" : "M")) && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
+  // Increment 7b (P69): the rewritten question travels with the answer, for the page to show above it.
+  if (/^shows the rewritten question above the answer/.test(s)) { const rw = (o as { rewrite?: unknown }).rewrite; return typeof rw === "string" && rw.length > 0; }
   if (/^counts offenders, each once, who are linked as a stranger/.test(s))
     return unit === "offender" && conds((sc, e, w) => sc === "offender" && e === "victim_offender" && w.dimension === "victim_offender.relationship" && (w.values ?? []).join() === "ST");
   if (/^counts offenders, each offender segment once/.test(s)) return unit === "offender" && !grouped(/./, true);
@@ -849,6 +852,21 @@ export type ShadowScore = { result: CaseResult | null; excluded?: string };
 const rwNorm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 const readingKey = (q: string) => readQuestion(q, 2026).ledger.parts.filter((p) => p.clause === 0 && !["filler", "context"].includes(p.concept) && p.state !== "context")
   .map((p) => `${p.concept}=${String(p.value).toLowerCase().replace(/[^a-z0-9:=]+/g, " ").trim()}`).sort().join("|");
+/**
+ * P71: a monthly series' expected cells summed into quarters ("2025-Q1"): a quarter is known only when all three of its
+ * months are, else it is expected blank (incomplete).
+ */
+export function quarterCells(months: ExpectedCell[]): ExpectedCell[] {
+  const by = new Map(months.filter((m) => /^\d{4}-\d{2}$/.test(m.key)).map((m) => [m.key, m]));
+  const keys = [...new Set([...by.keys()].map((k) => `${k.slice(0, 4)}-Q${Math.floor((Number(k.slice(5, 7)) - 1) / 3) + 1}`))].sort();
+  return keys.map((q) => {
+    const first = (Number(q.slice(6)) - 1) * 3 + 1;
+    const ms = [0, 1, 2].map((i) => by.get(`${q.slice(0, 4)}-${String(first + i).padStart(2, "0")}`));
+    const known = ms.every((m) => m && ["VALUE", "REPORTED_ZERO"].includes(m.status) && m.value !== null);
+    return known ? { key: q, value: ms.reduce((a, m) => a + (m!.value ?? 0), 0), status: ms.every((m) => m!.status === "REPORTED_ZERO") ? "REPORTED_ZERO" : "VALUE" }
+      : { key: q, value: null, status: "UNKNOWN" };
+  });
+}
 export function sameRewrite(a: string, b: string): boolean { return rwNorm(a) === rwNorm(b) || readingKey(a) === readingKey(b); }
 export function withRewrite(res: CaseResult, c: Case, o: { rewrite: string | null }): CaseResult {
   if (c.rewrite === undefined) return res;

@@ -533,6 +533,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return decline("unsupported_capability", "Not in the slice yet: rolling windows of a rate, a breakdown, or several crimes.");
   if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison" && !(t.kind === "rank" && plan.geography.places[0].kind === "agency_set")))
     return decline("unsupported_capability", "Not in the slice yet: rankings.");
+  // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime.
+  const quarterly = !!flags(ledger0).quarter;
+  if (quarterly && (plan.measures.length !== 1 || plan.transforms.length || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count"
+    || plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month" || plan.geography.places.length !== 1 || plan.geography.places[0].kind !== "agency"))
+    return decline("unsupported_capability", "Not in the slice yet: quarters of a rate, a breakdown, several crimes or several places.");
 
   // The slice delivers counts, as totals or by month or year: one measure optionally broken down by ONE delivered
   // category with each category's share of its period (compiler increments 1 and 2), or several measures side by side
@@ -665,6 +670,33 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const at = d.text.findIndex((t) => t.startsWith(p.label)) + 1 || 1;
     return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]), ...d.text.slice(at)] };
   };
+  // P71 (Jeff 2026-10-31: "Add up months"): each quarter the sum of its three months; a quarter in which the agency did
+  // not report all three months (or that runs past the data) is marked incomplete, never shown as a whole quarter.
+  if (quarterly) {
+    const qStart = (ym: string) => `${ym.slice(0, 4)}-${String(Math.floor((Number(ym.slice(5, 7)) - 1) / 3) * 3 + 1).padStart(2, "0")}`;
+    const from = qStart(period.from), toQ = addMonths(qStart(period.to), 2);
+    const to = toQ > release.lastMonth ? release.lastMonth : toQ;
+    const sub: NibrsPlan = { ...checked, period: { kind: "absolute", from, to } };
+    const c = compilePlan(sub, { kind: "absolute", from, to }, deps.target);
+    if (c.kind === "unsupported") return decline("unsupported_capability", `Not in the slice yet: ${c.reason}`);
+    const got = deps.execute(c.query.sql);
+    if (got.some((r) => String(r[2]) === "EVIDENCE_CONFLICT")) return decline("unsupported_capability", "The records for this agency and period conflict with its monthly reporting status, so no number is given.");
+    for (const st of c.query.statements) if (!statements.includes(st)) statements.push(st);
+    const cell = new Map(got.map((r) => [String(r[0]), { value: r[1] === null || r[1] === undefined ? null : Number(r[1]), status: String(r[2]) }]));
+    const known = (s: string) => s === "VALUE" || s === "REPORTED_ZERO";
+    const rows: unknown[][] = [], incomplete: string[] = [];
+    for (let q = from; q <= qStart(period.to); q = addMonths(q, 3)) {
+      const ms = [q, addMonths(q, 1), addMonths(q, 2)].map((m) => cell.get(m));
+      const key = `${q.slice(0, 4)}-Q${Math.floor((Number(q.slice(5, 7)) - 1) / 3) + 1}`;
+      if (ms.every((x) => x && known(x.status))) rows.push([key, ms.reduce((a, x) => a + (x!.value ?? 0), 0), ms.every((x) => x!.status === "REPORTED_ZERO") ? "REPORTED_ZERO" : "VALUE"]);
+      else { rows.push([key, null, "UNKNOWN"]); incomplete.push(key); }
+    }
+    const qPlan: NibrsPlan = { ...checked, groupings: [{ dimension: "time.quarter", unknown: "visible", absent: "show" }] };
+    const as = checked.statistics[0].as;
+    const delivered = deliver(qPlan, period, requestedTo, ["period", as, `${as}_status`], rows, statements, release.id, notes0, null, { quarters: { incomplete } });
+    if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
+    return { kind: "answer", plan: qPlan, period, sql: c.query.sql, delivered: reported(delivered) };
+  }
   // Changes and rolling windows: one monthly query of the measure over every month they reach; the transforms roll it.
   if (cmpPeriods || rollingT) {
     const m = checked.measures[0];

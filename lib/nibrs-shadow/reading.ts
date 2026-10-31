@@ -67,7 +67,9 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
    */
   clearance: { by: "status" | "type" | null; only: "cleared" | "arrest" | "exceptional" | "uncleared" | null; share: boolean } | null;
   /** Increment 7: people wording, read here and built by the shadow (reading the `People` type). */
-  people: People | null };
+  people: People | null;
+  /** Increment 7b (P71): "by quarter", "quarterly": monthly counts summed into quarters by the shadow. */
+  quarter: boolean };
 /** A person's attribute a question names. */
 export type PersonAttr = "sex" | "race" | "ethnicity" | "age";
 /**
@@ -284,8 +286,11 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const people = pr.people;
   // "By juveniles" is now read (an offender age condition), so it is no longer an unread offender group.
   const offendersLeft = offenders && !(people && people.where.some((w) => w.who === "offender"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people };
-  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote ? accountNibrsRequest(text) : first, flags);
+  // Increment 7b (P71): quarters are sums of months: read as "by month", the quarters built by the shadow.
+  let quarter = false;
+  text = text.replace(/\b(?:by|per|each)\s+quarter\b|\bquarterly\b/i, () => { quarter = true; return "by month"; });
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter };
+  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 

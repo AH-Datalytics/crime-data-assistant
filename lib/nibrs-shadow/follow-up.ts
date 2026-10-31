@@ -30,6 +30,7 @@ export type Rewrite =
   | { kind: "ask"; why: string; options: { label: string; question: string }[] };
 export interface FollowUpRewriter { rewrite(previous: string, followUp: string): Rewrite }
 
+const COUNT: Record<number, string> = { 3: "three", 4: "four", 5: "five", 6: "six" };
 const YEAR = /\b(19|20)\d{2}\b/;
 const lcFirst = (s: string) => s.replace(/^([A-Z])(?=[a-z])/, (c) => c.toLowerCase());
 const ucFirst = (s: string) => s.replace(/^([a-z])/, (c) => c.toUpperCase());
@@ -97,6 +98,11 @@ export const deterministicRewriter: FollowUpRewriter = {
       return ok(`${prev.slice(0, at)} rate${prev.slice(at)}`, "a count becomes a rate");
     }
 
+    // Counts in place of a rate.
+    if (/^(?:show |give me |make (?:it|this|that) )?(?:the )?(?:raw )?counts?(?: instead| rather than rates?)?$/i.test(f)) {
+      const r = /\s+rates?\b(?:\s+per\s+100,?000(?:\s+residents)?)?|\s+per\s+(?:capita|100,?000(?:\s+residents)?)\b/i.exec(prev);
+      return r ? ok(prev.replace(r[0], ""), "a rate becomes a count") : ask("The previous answer is already a count.");
+    }
     // A change between the first and last periods of the previous answer (P54, P55).
     const chg = /^(?:(?:what(?:'s| is| was) the |the )?(percent(?:age)?|%) change|(?:how much did (?:it|they|that) change|what(?:'s| is| was) the change|(?:the )?change))$/i.exec(f);
     if (chg) {
@@ -161,7 +167,14 @@ export const deterministicRewriter: FollowUpRewriter = {
 
     // Place and period: "what about Dallas?", "what about Denver in 2023?", "same for 2023", "2024", "compare to X", "add X".
     const pp = /^(?:(?:what|how) about|same (?:thing )?for|do|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
-    const target = pp ? pp[2] : /^(?:in\s+)?(?:19|20)\d{2}$/i.test(f) ? f : null;
+    // A bare place ("washington state", "minneapolis"), or a place and year, is read as "what about ..." (P23): the
+    // follow-up's words must be nothing but that place (and year).
+    const bare = (() => {
+      if (pp) return null;
+      const t = partsOf(`Shoplifting in ${f}`);
+      return t.places.length === 1 && t.all.every((p) => ["measure", "place", "period", "filler"].includes(p.concept)) && t.measures.every((m) => m.text === "Shoplifting") ? f : null;
+    })();
+    const target = pp ? pp[2] : /^(?:in\s+)?(?:19|20)\d{2}$/i.test(f) ? f : bare;
     if (target !== null) {
       const adding = !!pp?.[1];
       const t = partsOf(`Shoplifting in ${target}`);
@@ -180,7 +193,7 @@ export const deterministicRewriter: FollowUpRewriter = {
           const list = pw.text.replace(/\s+and\s+(?=[^,]*$)/, ", ");
           return ask(`Whether ${newPlace} replaces ${pw.text} or is added to them.`, [
             { label: `${newPlace} only`, question: clean(`${prev.slice(0, pw.at)}${newPlace}${prev.slice(pw.at + pw.text.length)}`) },
-            { label: `Add ${newPlace}; show all ${prevParts.places.length + 1} separately`, question: clean(`${prev.slice(0, pw.at)}${list} and ${newPlace}${prev.slice(pw.at + pw.text.length)}`) }]);
+            { label: `Add ${newPlace}; show all ${COUNT[prevParts.places.length + 1] ?? prevParts.places.length + 1} separately`, question: clean(`${prev.slice(0, pw.at)}${list} and ${newPlace}${prev.slice(pw.at + pw.text.length)}`) }]);
         } else q = `${q.slice(0, pw.at)}${newPlace}${q.slice(pw.at + pw.text.length)}`;
       }
       if (newYear) {

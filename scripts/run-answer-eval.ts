@@ -34,7 +34,7 @@ import { validateResolved } from "../lib/nibrs-plan/resolve";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { matchNibrsType } from "../lib/nibrs-question-types";
-import { scoreShadow, sliceGroup, sliceValues, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
+import { quarterCells, scoreShadow, sliceGroup, sliceValues, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
 import { shadowAnswer, shadowFollowUp, type FollowUpOutcome, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
@@ -143,8 +143,12 @@ for (const c of cases) {
   if (deps) {
     const outcome = followUp ? shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps) : shadowAnswer(c.question, deps);
     // A follow-up whose rewrite is another case's question reuses that case's independent values.
-    const reuse = c.expected.action === "answer" ? /^the same cells as (LS-\d{3})\b/.exec(c.expected.values.source ?? "")?.[1] : undefined;
-    const values: ExpectedValues | undefined = reuse && expectedValues?.has(reuse) && !expectedValues.has(c.id) ? new Map([...expectedValues, [c.id, expectedValues.get(reuse)!]]) : expectedValues;
+    // P71: a quarterly rewrite of a monthly case sums that case's months.
+    const src = c.expected.action === "answer" ? c.expected.values.source ?? "" : "";
+    const reuse = /^the same cells as (LS-\d{3})\b/.exec(src)?.[1], quarters = /^the sums of (LS-\d{3})'s months by quarter/.exec(src)?.[1];
+    const ref = reuse ?? quarters;
+    const values: ExpectedValues | undefined = ref && expectedValues?.has(ref) && !expectedValues.has(c.id)
+      ? new Map([...expectedValues, [c.id, quarters ? quarterCells(expectedValues.get(ref)!) : expectedValues.get(ref)!]]) : expectedValues;
     const sc = scoreShadow(c, outcome, release, { capability: capability(c), era: era(c) }, values);
     if (sc.excluded) notBuilt.push(`${c.id}: ${sc.excluded}`);
     res = sc.result && followUp ? withRewrite(sc.result, c, outcome as FollowUpOutcome) : sc.result;
