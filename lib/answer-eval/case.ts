@@ -79,6 +79,12 @@ export const Case = z.strictObject({
   /** Earlier turns, unscored; a failed setup makes the case inconclusive. */
   setup: z.array(z.strictObject({ question: z.string().min(1), tab: Tab })),
   question: z.string().min(1),
+  /**
+   * P69 (increment 7b): a follow-up's rewrite, from the last setup turn and the question: the one standalone question the
+   * app shows above its answer (editable) and then answers; null when the rewrite is uncertain and the app asks instead.
+   * Absent for a question that is not a follow-up.
+   */
+  rewrite: z.string().min(1).nullable().optional(),
   /** A button press answering an earlier case's clarifying question. */
   button: z.strictObject({ answers: z.string().regex(/^LS-\d{3}$/), option: z.string().min(1) }).optional(),
   /** Policy rows the expectation depends on (docs/policy/nibrsai-answer-policy.csv). An open row leaves it unscored. */

@@ -24024,6 +24024,1460 @@
     "reviewed_by": "codex:inc7-denver-labels-1",
     "notes": "MUST ANSWER: P65 for murder, discriminating against P49 (Codex 04 (a))."
    }
+  },
+  {
+   "id": "LS-403",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting in Wichita in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "make it a rate",
+   "rewrite": "Shoplifting rate in Wichita in 2024",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "residents of the Wichita Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-320 (the rewrite is LS-320's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "gives the rate per 100,000 residents and names the population and its year",
+     "names the agency (Wichita Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-320's question. Guidance: F6, a count becomes a rate under P58/P59."
+   }
+  },
+  {
+   "id": "LS-404",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting in Memphis by year from 2021 to 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "show rates instead of counts",
+   "rewrite": "Shoplifting rate in Memphis by year from 2021 to 2024",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2021-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "rate",
+     "denominator": "residents of the Memphis Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-321 (the rewrite is LS-321's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "gives each year's rate over that year's population",
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-321's question. Guidance: F6 over a series."
+   }
+  },
+  {
+   "id": "LS-405",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Simple assaults in Austin by year from 2022 to 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "how much did it change?",
+   "rewrite": "Change in simple assaults in Austin from 2022 to 2024",
+   "policy": [
+    "P69",
+    "D17",
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P54"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Austin Police Department",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2022-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "change"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-304 (the rewrite is LS-304's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "gives both counts, the change and the percent change, with no adjectives",
+     "names the agency (Austin Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-304's question. Guidance: F7, the first and last periods of the previous answer."
+   }
+  },
+  {
+   "id": "LS-406",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Robberies with a firearm in Charlotte, North Carolina by year from 2021 to 2025",
+     "tab": "auto"
+    }
+   ],
+   "question": "percent change",
+   "rewrite": "Percent change in robberies with a firearm in Charlotte, North Carolina from 2021 to 2025",
+   "policy": [
+    "P69",
+    "D17",
+    "D18",
+    "D30",
+    "P01",
+    "P16",
+    "P31",
+    "P54"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Charlotte-Mecklenburg Police Department",
+       "state": "NC"
+      }
+     ],
+     "period": {
+      "from": "2021-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [
+      "weapon: firearm"
+     ],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "change"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-308 (the rewrite is LS-308's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "gives both counts, the change and the percent change, with no adjectives",
+     "names the agency (Charlotte-Mecklenburg Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-308's question. Guidance: F7, percent change of the first and last periods."
+   }
+  },
+  {
+   "id": "LS-407",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Simple assault victims in Detroit in 2023",
+     "tab": "auto"
+    }
+   ],
+   "question": "by month",
+   "rewrite": "simple assault victims in Detroit by month in 2023",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-227 (the rewrite is LS-227's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Detroit Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-227's question. Guidance: F8, only the time grain changes."
+   }
+  },
+  {
+   "id": "LS-408",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting in Tulsa in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "compare to Oklahoma City",
+   "rewrite": "Shoplifting in Tulsa and Oklahoma City in 2024",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Tulsa Police Department",
+       "state": "OK"
+      },
+      {
+       "kind": "agency",
+       "name": "Oklahoma City Police Department",
+       "state": "OK"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "combine": "separate"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-317 (the rewrite is LS-317's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Tulsa Police Department)",
+     "names the agency (Oklahoma City Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-317's question. Guidance: F2, \"compare to\" adds a place."
+   }
+  },
+  {
+   "id": "LS-409",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting in Tulsa and Oklahoma City in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "combined",
+   "rewrite": "Shoplifting in Tulsa and Oklahoma City combined in 2024",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Tulsa Police Department",
+       "state": "OK"
+      },
+      {
+       "kind": "agency",
+       "name": "Oklahoma City Police Department",
+       "state": "OK"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "combine": "combined"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-318 (the rewrite is LS-318's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "gives one total of both agencies",
+     "names the agency (Tulsa Police Department)",
+     "names the agency (Oklahoma City Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-318's question. Guidance: F2, the same places as one total."
+   }
+  },
+  {
+   "id": "LS-410",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Aggravated assaults by juveniles in Memphis in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "what about Denver in 2023?",
+   "rewrite": "Aggravated assaults by juveniles in Denver in 2023",
+   "policy": [
+    "P69",
+    "P29",
+    "P30",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "offender age: under 18 (any offender of the incident)"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-399 (the rewrite is LS-399's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Denver Police Department)",
+     "reads \"by juveniles\" as offenders under 18 (P29, P30)",
+     "counts victims of incidents with at least one offender under 18, each once (P49)",
+     "says offenders of unknown age are not counted as juveniles",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-399's question. Guidance: F2 and F4, a new place and period replace the old."
+   }
+  },
+  {
+   "id": "LS-411",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Aggravated assaults in Memphis in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "by offender race",
+   "rewrite": "Aggravated assaults in Memphis in 2024 by offender race",
+   "policy": [
+    "P69",
+    "P29",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (crimes grouped by the incident's offenders' races; a crime with offenders in several races counts once in each)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-377 (the rewrite is LS-377's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Memphis Police Department)",
+     "counts victims (D18), each under the races of its incident's offenders",
+     "says a crime with offenders in more than one category counts once in each, so the categories can add up to more than the total (P49)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-377's question. Guidance: a breakdown added; nothing else changes."
+   }
+  },
+  {
+   "id": "LS-412",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Arrests in Denver in 2023 by arrestee race",
+     "tab": "auto"
+    }
+   ],
+   "question": "by ethnicity instead",
+   "rewrite": "Arrests in Denver in 2023 by arrestee ethnicity",
+   "policy": [
+    "P69",
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "arrestee ethnicity"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "all offenses",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-393 (the rewrite is LS-393's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Denver Police Department)",
+     "counts arrests by arrest date (P50)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice (P46)",
+     "says standalone Group B arrests (with no incident) are included in the count, and arrests with a Group B arrest offense count like any other",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-393's question. Guidance: a breakdown replaced."
+   }
+  },
+  {
+   "id": "LS-413",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Arrests in Denver in 2023 by arrestee race",
+     "tab": "auto"
+    }
+   ],
+   "question": "now by age",
+   "rewrite": "Arrests in Denver in 2023 by arrestee age",
+   "policy": [
+    "P69",
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "arrestee age"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "all offenses",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-394 (the rewrite is LS-394's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Denver Police Department)",
+     "counts arrests by arrest date (P50)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice (P46)",
+     "says standalone Group B arrests (with no incident) are included in the count, and arrests with a Group B arrest offense count like any other",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-394's question. Guidance: a breakdown replaced."
+   }
+  },
+  {
+   "id": "LS-414",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "According to NIBRS, murder victims in Rochester, New York in 2024 by offender race",
+     "tab": "auto"
+    }
+   ],
+   "question": "only the offenders linked to each victim",
+   "rewrite": "According to NIBRS, murder victims in Rochester, New York in 2024 by the race of the offender who killed them",
+   "policy": [
+    "P69",
+    "P01",
+    "P65",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (pair-linked: only the offenders the victim-offender relationship segment links to the victim; \"no relationship reported\" as its own category)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Rochester Police Department",
+       "state": "NY"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-402 (the rewrite is LS-402's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Rochester Police Department)",
+     "uses only the offenders linked to each victim by the relationship segment, and says so (P65)",
+     "shows victims with no relationship reported as their own category, separate from a linked offender whose race is unknown or not recorded",
+     "says a victim linked to offenders of more than one race counts once in each",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-402's question. Guidance: P65's pairing named by the follow-up."
+   }
+  },
+  {
+   "id": "LS-415",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting rate in Memphis by year from 2021 to 2025",
+     "tab": "auto"
+    }
+   ],
+   "question": "remove 2025",
+   "rewrite": "Shoplifting rate in Memphis by year from 2021 to 2024",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2021-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "rate",
+     "denominator": "residents of the Memphis Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-321 (the rewrite is LS-321's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "gives each year's rate over that year's population",
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-321's question. Guidance: F4/F11, \"remove 2025\" shortens the period."
+   }
+  },
+  {
+   "id": "LS-416",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Juvenile arrests for robbery in Detroit in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "same for 2023",
+   "rewrite": "Juvenile arrests for robbery in Detroit in 2023",
+   "policy": [
+    "P69",
+    "P30",
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "arrestee age: under 18"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 12): as LS-386 (V142) for 2023: robbery arrests (own arrest offense) of arrestees under 18, P68, P50"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Detroit Police Department)",
+     "counts arrests with robbery as the arrest offense, by arrest date (P50)",
+     "reads juvenile as an arrestee under 18 (P30); arrestees of unknown age are not counted",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice (P46)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Guidance: F4, a new period replaces the old."
+   }
+  },
+  {
+   "id": "LS-417",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Female juvenile victims of aggravated assault in Memphis in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "male",
+   "rewrite": "Male juvenile victims of aggravated assault in Memphis in 2024",
+   "policy": [
+    "P69",
+    "P30",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "victim sex: male",
+      "victim age: under 18"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 12): as LS-395 (V145) with victim sex M: both attributes on the same victim"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Memphis Police Department)",
+     "counts victims who are both male and under 18 (both on the same victim)",
+     "says victims of unknown age or sex are not counted",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Guidance: Jeff's example (P69): the follow-up names the one part that changes."
+   }
+  },
+  {
+   "id": "LS-418",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Aggravated assaults against juveniles in Memphis in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "now murders instead",
+   "rewrite": "Murders against juveniles in Memphis in 2024",
+   "policy": [
+    "P69",
+    "P29",
+    "P30",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "victim age: under 18"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 12): murder victims under 18 (01-17 and NN, NB, BB), Memphis 2024"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Memphis Police Department)",
+     "reads \"against juveniles\" as victims under 18 (P29, P30)",
+     "counts victims under 18 (D18)",
+     "says victims of unknown age are not counted",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Guidance: F3, a new crime replaces the old."
+   }
+  },
+  {
+   "id": "LS-419",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "simple assault victims in Detroit by month in 2023",
+     "tab": "auto"
+    }
+   ],
+   "question": "make it a bar chart",
+   "rewrite": "simple assault victims in Detroit by month in 2023",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same cells as LS-227 (the rewrite is LS-227's question)"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Detroit Police Department)",
+     "names any months with no data as missing, not zero",
+     "names its source at the end",
+     "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Rewrite is LS-227's question. Guidance: P69: presentation never reaches the data engine."
+   }
+  },
+  {
+   "id": "LS-420",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "carjackings in Memphis TN by month in 2025",
+     "tab": "auto"
+    }
+   ],
+   "question": "make it quarterly",
+   "rewrite": "Carjackings in Memphis, Tennessee by quarter in 2025",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P16"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "carjacking",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "quarter"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the sums of LS-225's months by quarter (its V file); a quarter with an unknown month has no value"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "names the agency (Memphis Police Department)",
+     "names its source at the end",
+     "gives each quarter as the sum of its three months, blank when a month is not known"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Guidance: F8 (coordinator recommendation, not Jeff's decision; flagged): quarters are sums of months, flagged when incomplete."
+   }
+  },
+  {
+   "id": "LS-421",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting rate in Wichita in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "add a column for population",
+   "rewrite": "Shoplifting rate in Wichita in 2024, with the population",
+   "policy": [
+    "P69",
+    "D18",
+    "D30",
+    "P01",
+    "P15",
+    "P16",
+    "P58"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Wichita Police Department",
+       "state": "KS"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "shoplifting",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "rate",
+     "denominator": "residents of the Wichita Police Department's jurisdiction (the FBI's agency population), per 100,000"
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "the same rate cells as LS-320, and the population its V file used"
+    },
+    "statements": [
+     "shows the rewritten question above the answer, as the question answered (P69)",
+     "gives the rate per 100,000 residents and names the population and its year",
+     "names the agency (Wichita Police Department)",
+     "names its source at the end",
+     "gives the population the rate divides by (the FBI's agency population for 2024, P59) beside the rate, without changing the rate"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "Guidance: F10 (coordinator recommendation, flagged): a population column is allowed; no number changes."
+   }
+  },
+  {
+   "id": "LS-422",
+   "group": "designed:inc7b-follow-up",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [
+    {
+     "question": "Shoplifting in Tulsa and Oklahoma City in 2024",
+     "tab": "auto"
+    }
+   ],
+   "question": "what about Wichita?",
+   "rewrite": null,
+   "policy": [
+    "P69",
+    "P22"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "whether Wichita replaces Tulsa and Oklahoma City or is added to them",
+    "options": [
+     {
+      "label": "Wichita only",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Wichita Police Department",
+         "state": "KS"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "Tulsa, Oklahoma City and Wichita",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Tulsa Police Department",
+         "state": "OK"
+        },
+        {
+         "kind": "agency",
+         "name": "Oklahoma City Police Department",
+         "state": "OK"
+        },
+        {
+         "kind": "agency",
+         "name": "Wichita Police Department",
+         "state": "KS"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "shoplifting",
+         "unit": "offense"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-inc7b",
+    "reviewed_by": null,
+    "notes": "P69: uncertain (two places before, one named now, no add or replace word): ask instead of guessing."
+   }
   }
  ]
 }
