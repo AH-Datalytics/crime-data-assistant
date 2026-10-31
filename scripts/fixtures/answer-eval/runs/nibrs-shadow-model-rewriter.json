@@ -1,0 +1,4560 @@
+{
+ "candidate": "nibrs-shadow",
+ "rewriter": "gemini-3.8-flash",
+ "cacheMisses": [],
+ "release": {
+  "id": "20261028-test5",
+  "firstMonth": "2017-01",
+  "lastMonth": "2026-09",
+  "asOf": "2026-10-29"
+ },
+ "coverage": {
+  "outside the shadow slice": [
+   "LS-001",
+   "LS-002",
+   "LS-003",
+   "LS-004",
+   "LS-006",
+   "LS-007",
+   "LS-008",
+   "LS-010",
+   "LS-011",
+   "LS-013",
+   "LS-014",
+   "LS-015",
+   "LS-016",
+   "LS-017",
+   "LS-018",
+   "LS-019",
+   "LS-021",
+   "LS-022",
+   "LS-023",
+   "LS-024",
+   "LS-025",
+   "LS-026",
+   "LS-027",
+   "LS-028",
+   "LS-029",
+   "LS-030",
+   "LS-031",
+   "LS-032",
+   "LS-033",
+   "LS-034",
+   "LS-035",
+   "LS-036",
+   "LS-037",
+   "LS-038",
+   "LS-039",
+   "LS-040",
+   "LS-041",
+   "LS-042",
+   "LS-044",
+   "LS-045",
+   "LS-046",
+   "LS-047",
+   "LS-048",
+   "LS-049",
+   "LS-050",
+   "LS-051",
+   "LS-052",
+   "LS-053",
+   "LS-054",
+   "LS-055",
+   "LS-056",
+   "LS-057",
+   "LS-058",
+   "LS-059",
+   "LS-060",
+   "LS-061",
+   "LS-062",
+   "LS-063",
+   "LS-064",
+   "LS-065",
+   "LS-066",
+   "LS-067",
+   "LS-068",
+   "LS-069",
+   "LS-070",
+   "LS-071",
+   "LS-072",
+   "LS-073",
+   "LS-074",
+   "LS-075",
+   "LS-076",
+   "LS-077",
+   "LS-078",
+   "LS-079",
+   "LS-080",
+   "LS-081",
+   "LS-082",
+   "LS-083",
+   "LS-084",
+   "LS-085",
+   "LS-086",
+   "LS-087",
+   "LS-088",
+   "LS-089",
+   "LS-090",
+   "LS-091",
+   "LS-092",
+   "LS-093",
+   "LS-094",
+   "LS-095",
+   "LS-096",
+   "LS-097",
+   "LS-098",
+   "LS-099",
+   "LS-100",
+   "LS-101",
+   "LS-102",
+   "LS-103",
+   "LS-104",
+   "LS-105",
+   "LS-106",
+   "LS-107",
+   "LS-108",
+   "LS-109",
+   "LS-110",
+   "LS-111",
+   "LS-112",
+   "LS-113",
+   "LS-114",
+   "LS-115",
+   "LS-116",
+   "LS-117",
+   "LS-118",
+   "LS-119",
+   "LS-120",
+   "LS-121",
+   "LS-122",
+   "LS-123",
+   "LS-125",
+   "LS-126",
+   "LS-127",
+   "LS-128",
+   "LS-129",
+   "LS-130",
+   "LS-131",
+   "LS-132",
+   "LS-133",
+   "LS-134",
+   "LS-136",
+   "LS-137",
+   "LS-138",
+   "LS-139",
+   "LS-142",
+   "LS-143",
+   "LS-144",
+   "LS-145",
+   "LS-147",
+   "LS-148",
+   "LS-149",
+   "LS-152",
+   "LS-153",
+   "LS-154",
+   "LS-155",
+   "LS-157",
+   "LS-158",
+   "LS-159",
+   "LS-161",
+   "LS-162",
+   "LS-163",
+   "LS-164",
+   "LS-165",
+   "LS-166",
+   "LS-167",
+   "LS-168",
+   "LS-169",
+   "LS-170",
+   "LS-171",
+   "LS-172",
+   "LS-173",
+   "LS-174",
+   "LS-175",
+   "LS-176",
+   "LS-177",
+   "LS-178",
+   "LS-179",
+   "LS-180",
+   "LS-181",
+   "LS-182",
+   "LS-183",
+   "LS-184",
+   "LS-185",
+   "LS-186",
+   "LS-187",
+   "LS-188",
+   "LS-189",
+   "LS-190",
+   "LS-191",
+   "LS-192",
+   "LS-193",
+   "LS-194",
+   "LS-195",
+   "LS-196",
+   "LS-197",
+   "LS-198",
+   "LS-199",
+   "LS-200",
+   "LS-201",
+   "LS-202",
+   "LS-203",
+   "LS-204",
+   "LS-205",
+   "LS-206",
+   "LS-207",
+   "LS-208",
+   "LS-209",
+   "LS-210",
+   "LS-211",
+   "LS-212",
+   "LS-213",
+   "LS-214",
+   "LS-215",
+   "LS-216",
+   "LS-217",
+   "LS-218"
+  ],
+  "run by this candidate": [
+   "LS-005",
+   "LS-009",
+   "LS-012",
+   "LS-020",
+   "LS-043",
+   "LS-124",
+   "LS-135",
+   "LS-140",
+   "LS-141",
+   "LS-146",
+   "LS-150",
+   "LS-151",
+   "LS-156",
+   "LS-160",
+   "LS-219",
+   "LS-220",
+   "LS-221",
+   "LS-222",
+   "LS-223",
+   "LS-224",
+   "LS-225",
+   "LS-226",
+   "LS-227",
+   "LS-228",
+   "LS-229",
+   "LS-230",
+   "LS-231",
+   "LS-232",
+   "LS-233",
+   "LS-234",
+   "LS-235",
+   "LS-236",
+   "LS-237",
+   "LS-238",
+   "LS-239",
+   "LS-240",
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245",
+   "LS-246",
+   "LS-247",
+   "LS-248",
+   "LS-249",
+   "LS-250",
+   "LS-251",
+   "LS-252",
+   "LS-253",
+   "LS-254",
+   "LS-255",
+   "LS-256",
+   "LS-257",
+   "LS-258",
+   "LS-259",
+   "LS-260",
+   "LS-261",
+   "LS-262",
+   "LS-263",
+   "LS-264",
+   "LS-265",
+   "LS-266",
+   "LS-267",
+   "LS-268",
+   "LS-269",
+   "LS-270",
+   "LS-271",
+   "LS-272",
+   "LS-273",
+   "LS-274",
+   "LS-275",
+   "LS-276",
+   "LS-277",
+   "LS-278",
+   "LS-279",
+   "LS-280",
+   "LS-281",
+   "LS-282",
+   "LS-283",
+   "LS-284",
+   "LS-285",
+   "LS-286",
+   "LS-287",
+   "LS-288",
+   "LS-289",
+   "LS-290",
+   "LS-291",
+   "LS-292",
+   "LS-293",
+   "LS-294",
+   "LS-295",
+   "LS-296",
+   "LS-297",
+   "LS-298",
+   "LS-299",
+   "LS-300",
+   "LS-301",
+   "LS-302",
+   "LS-303",
+   "LS-304",
+   "LS-305",
+   "LS-306",
+   "LS-307",
+   "LS-308",
+   "LS-309",
+   "LS-310",
+   "LS-311",
+   "LS-312",
+   "LS-313",
+   "LS-314",
+   "LS-315",
+   "LS-316",
+   "LS-317",
+   "LS-318",
+   "LS-319",
+   "LS-320",
+   "LS-321",
+   "LS-322",
+   "LS-323",
+   "LS-324",
+   "LS-325",
+   "LS-326",
+   "LS-327",
+   "LS-328",
+   "LS-329",
+   "LS-330",
+   "LS-331",
+   "LS-332",
+   "LS-333",
+   "LS-334",
+   "LS-335",
+   "LS-336",
+   "LS-337",
+   "LS-338",
+   "LS-339",
+   "LS-340",
+   "LS-341",
+   "LS-342",
+   "LS-343",
+   "LS-344",
+   "LS-345",
+   "LS-346",
+   "LS-347",
+   "LS-348",
+   "LS-349",
+   "LS-350",
+   "LS-351",
+   "LS-352",
+   "LS-353",
+   "LS-354",
+   "LS-355",
+   "LS-356",
+   "LS-357",
+   "LS-358",
+   "LS-359",
+   "LS-360",
+   "LS-361",
+   "LS-362",
+   "LS-363",
+   "LS-364",
+   "LS-365",
+   "LS-366",
+   "LS-367",
+   "LS-368",
+   "LS-369",
+   "LS-370",
+   "LS-371",
+   "LS-372",
+   "LS-373",
+   "LS-374",
+   "LS-375",
+   "LS-376",
+   "LS-377",
+   "LS-378",
+   "LS-379",
+   "LS-380",
+   "LS-381",
+   "LS-382",
+   "LS-383",
+   "LS-384",
+   "LS-385",
+   "LS-386",
+   "LS-387",
+   "LS-388",
+   "LS-389",
+   "LS-390",
+   "LS-391",
+   "LS-392",
+   "LS-393",
+   "LS-394",
+   "LS-395",
+   "LS-396",
+   "LS-397",
+   "LS-398",
+   "LS-399",
+   "LS-400",
+   "LS-401",
+   "LS-402",
+   "LS-403",
+   "LS-404",
+   "LS-405",
+   "LS-406",
+   "LS-407",
+   "LS-408",
+   "LS-409",
+   "LS-410",
+   "LS-411",
+   "LS-412",
+   "LS-413",
+   "LS-414",
+   "LS-415",
+   "LS-416",
+   "LS-417",
+   "LS-418",
+   "LS-419",
+   "LS-420",
+   "LS-421",
+   "LS-422",
+   "LS-423",
+   "LS-424",
+   "LS-425",
+   "LS-426"
+  ]
+ },
+ "eligibility": {
+  "scorable (reviewed, decided policy)": [
+   "LS-001",
+   "LS-002",
+   "LS-003",
+   "LS-004",
+   "LS-005",
+   "LS-006",
+   "LS-007",
+   "LS-008",
+   "LS-009",
+   "LS-010",
+   "LS-011",
+   "LS-012",
+   "LS-013",
+   "LS-014",
+   "LS-015",
+   "LS-016",
+   "LS-017",
+   "LS-018",
+   "LS-019",
+   "LS-020",
+   "LS-021",
+   "LS-022",
+   "LS-023",
+   "LS-025",
+   "LS-027",
+   "LS-028",
+   "LS-030",
+   "LS-031",
+   "LS-033",
+   "LS-034",
+   "LS-035",
+   "LS-036",
+   "LS-038",
+   "LS-039",
+   "LS-040",
+   "LS-041",
+   "LS-042",
+   "LS-043",
+   "LS-046",
+   "LS-047",
+   "LS-048",
+   "LS-051",
+   "LS-054",
+   "LS-055",
+   "LS-056",
+   "LS-057",
+   "LS-058",
+   "LS-059",
+   "LS-060",
+   "LS-062",
+   "LS-063",
+   "LS-064",
+   "LS-065",
+   "LS-066",
+   "LS-068",
+   "LS-069",
+   "LS-071",
+   "LS-073",
+   "LS-075",
+   "LS-076",
+   "LS-078",
+   "LS-079",
+   "LS-081",
+   "LS-082",
+   "LS-084",
+   "LS-085",
+   "LS-086",
+   "LS-087",
+   "LS-091",
+   "LS-092",
+   "LS-093",
+   "LS-094",
+   "LS-095",
+   "LS-096",
+   "LS-097",
+   "LS-098",
+   "LS-099",
+   "LS-101",
+   "LS-105",
+   "LS-107",
+   "LS-109",
+   "LS-110",
+   "LS-111",
+   "LS-113",
+   "LS-116",
+   "LS-119",
+   "LS-124",
+   "LS-126",
+   "LS-128",
+   "LS-129",
+   "LS-131",
+   "LS-133",
+   "LS-135",
+   "LS-137",
+   "LS-138",
+   "LS-140",
+   "LS-141",
+   "LS-142",
+   "LS-143",
+   "LS-146",
+   "LS-148",
+   "LS-149",
+   "LS-150",
+   "LS-151",
+   "LS-152",
+   "LS-153",
+   "LS-154",
+   "LS-155",
+   "LS-156",
+   "LS-157",
+   "LS-158",
+   "LS-159",
+   "LS-160",
+   "LS-161",
+   "LS-163",
+   "LS-164",
+   "LS-165",
+   "LS-166",
+   "LS-167",
+   "LS-168",
+   "LS-169",
+   "LS-170",
+   "LS-171",
+   "LS-172",
+   "LS-173",
+   "LS-174",
+   "LS-175",
+   "LS-176",
+   "LS-177",
+   "LS-178",
+   "LS-179",
+   "LS-180",
+   "LS-181",
+   "LS-182",
+   "LS-183",
+   "LS-184",
+   "LS-185",
+   "LS-186",
+   "LS-187",
+   "LS-188",
+   "LS-189",
+   "LS-190",
+   "LS-192",
+   "LS-194",
+   "LS-195",
+   "LS-196",
+   "LS-197",
+   "LS-198",
+   "LS-199",
+   "LS-201",
+   "LS-202",
+   "LS-203",
+   "LS-204",
+   "LS-205",
+   "LS-206",
+   "LS-207",
+   "LS-209",
+   "LS-211",
+   "LS-212",
+   "LS-213",
+   "LS-214",
+   "LS-215",
+   "LS-216",
+   "LS-217",
+   "LS-219",
+   "LS-220",
+   "LS-221",
+   "LS-222",
+   "LS-223",
+   "LS-224",
+   "LS-225",
+   "LS-226",
+   "LS-227",
+   "LS-228",
+   "LS-229",
+   "LS-230",
+   "LS-231",
+   "LS-232",
+   "LS-233",
+   "LS-234",
+   "LS-235",
+   "LS-236",
+   "LS-237",
+   "LS-238",
+   "LS-239",
+   "LS-240",
+   "LS-241",
+   "LS-242",
+   "LS-243",
+   "LS-244",
+   "LS-245",
+   "LS-246",
+   "LS-247",
+   "LS-248",
+   "LS-249",
+   "LS-250",
+   "LS-251",
+   "LS-252",
+   "LS-253",
+   "LS-254",
+   "LS-255",
+   "LS-256",
+   "LS-257",
+   "LS-258",
+   "LS-259",
+   "LS-260",
+   "LS-261",
+   "LS-262",
+   "LS-263",
+   "LS-264",
+   "LS-265",
+   "LS-266",
+   "LS-267",
+   "LS-268",
+   "LS-269",
+   "LS-270",
+   "LS-271",
+   "LS-272",
+   "LS-273",
+   "LS-274",
+   "LS-275",
+   "LS-276",
+   "LS-277",
+   "LS-278",
+   "LS-279",
+   "LS-280",
+   "LS-281",
+   "LS-282",
+   "LS-283",
+   "LS-284",
+   "LS-285",
+   "LS-286",
+   "LS-287",
+   "LS-288",
+   "LS-289",
+   "LS-290",
+   "LS-291",
+   "LS-292",
+   "LS-293",
+   "LS-294",
+   "LS-295",
+   "LS-296",
+   "LS-297",
+   "LS-298",
+   "LS-299",
+   "LS-300",
+   "LS-301",
+   "LS-302",
+   "LS-303",
+   "LS-304",
+   "LS-305",
+   "LS-306",
+   "LS-307",
+   "LS-308",
+   "LS-309",
+   "LS-310",
+   "LS-311",
+   "LS-312",
+   "LS-313",
+   "LS-314",
+   "LS-315",
+   "LS-316",
+   "LS-317",
+   "LS-318",
+   "LS-319",
+   "LS-320",
+   "LS-321",
+   "LS-322",
+   "LS-323",
+   "LS-324",
+   "LS-325",
+   "LS-326",
+   "LS-327",
+   "LS-328",
+   "LS-329",
+   "LS-330",
+   "LS-331",
+   "LS-332",
+   "LS-333",
+   "LS-334",
+   "LS-335",
+   "LS-336",
+   "LS-337",
+   "LS-338",
+   "LS-339",
+   "LS-340",
+   "LS-341",
+   "LS-342",
+   "LS-343",
+   "LS-344",
+   "LS-345",
+   "LS-346",
+   "LS-347",
+   "LS-348",
+   "LS-349",
+   "LS-350",
+   "LS-351",
+   "LS-352",
+   "LS-353",
+   "LS-354",
+   "LS-355",
+   "LS-356",
+   "LS-357",
+   "LS-358",
+   "LS-359",
+   "LS-360",
+   "LS-361",
+   "LS-362",
+   "LS-363",
+   "LS-364",
+   "LS-365",
+   "LS-366",
+   "LS-367",
+   "LS-368",
+   "LS-369",
+   "LS-370",
+   "LS-371",
+   "LS-372",
+   "LS-373",
+   "LS-374",
+   "LS-375",
+   "LS-376",
+   "LS-377",
+   "LS-378",
+   "LS-379",
+   "LS-380",
+   "LS-381",
+   "LS-382",
+   "LS-383",
+   "LS-384",
+   "LS-385",
+   "LS-386",
+   "LS-387",
+   "LS-388",
+   "LS-389",
+   "LS-390",
+   "LS-391",
+   "LS-392",
+   "LS-393",
+   "LS-394",
+   "LS-395",
+   "LS-396",
+   "LS-397",
+   "LS-398",
+   "LS-399",
+   "LS-400",
+   "LS-401",
+   "LS-402",
+   "LS-403",
+   "LS-404",
+   "LS-405",
+   "LS-406",
+   "LS-407",
+   "LS-408",
+   "LS-409",
+   "LS-410",
+   "LS-411",
+   "LS-412",
+   "LS-413",
+   "LS-414",
+   "LS-415",
+   "LS-416",
+   "LS-417",
+   "LS-418",
+   "LS-420",
+   "LS-421",
+   "LS-422",
+   "LS-423",
+   "LS-424",
+   "LS-425",
+   "LS-426"
+  ],
+  "label unresolved": [
+   "LS-024",
+   "LS-026",
+   "LS-029",
+   "LS-032",
+   "LS-037",
+   "LS-044",
+   "LS-045",
+   "LS-049",
+   "LS-050",
+   "LS-052",
+   "LS-053",
+   "LS-061",
+   "LS-067",
+   "LS-070",
+   "LS-072",
+   "LS-074",
+   "LS-077",
+   "LS-080",
+   "LS-083",
+   "LS-088",
+   "LS-089",
+   "LS-090",
+   "LS-100",
+   "LS-102",
+   "LS-103",
+   "LS-104",
+   "LS-106",
+   "LS-108",
+   "LS-112",
+   "LS-114",
+   "LS-115",
+   "LS-117",
+   "LS-118",
+   "LS-120",
+   "LS-121",
+   "LS-122",
+   "LS-123",
+   "LS-125",
+   "LS-127",
+   "LS-130",
+   "LS-132",
+   "LS-134",
+   "LS-136",
+   "LS-139",
+   "LS-144",
+   "LS-145",
+   "LS-147",
+   "LS-162",
+   "LS-191",
+   "LS-193",
+   "LS-200",
+   "LS-208",
+   "LS-210",
+   "LS-218"
+  ],
+  "label drafted": [
+   "LS-419"
+  ]
+ },
+ "notBuilt": [
+  "LS-237: refused as not built: This build holds January 2017 through September 2026, so it does not cover 2012."
+ ],
+ "groups": {
+  "LS-005": "near",
+  "LS-009": "near",
+  "LS-012": "near",
+  "LS-020": "near",
+  "LS-043": "near",
+  "LS-124": "near",
+  "LS-135": "near",
+  "LS-140": "replay",
+  "LS-141": "near",
+  "LS-146": "near",
+  "LS-150": "near",
+  "LS-151": "replay",
+  "LS-156": "near",
+  "LS-160": "near",
+  "LS-219": "designed",
+  "LS-220": "designed",
+  "LS-221": "designed",
+  "LS-222": "designed",
+  "LS-223": "designed",
+  "LS-224": "designed",
+  "LS-225": "designed",
+  "LS-226": "designed",
+  "LS-227": "designed",
+  "LS-228": "designed",
+  "LS-229": "designed",
+  "LS-230": "designed",
+  "LS-231": "designed",
+  "LS-232": "designed",
+  "LS-233": "designed",
+  "LS-234": "designed",
+  "LS-235": "designed",
+  "LS-236": "designed",
+  "LS-238": "designed",
+  "LS-239": "designed",
+  "LS-240": "designed",
+  "LS-241": "designed",
+  "LS-242": "designed",
+  "LS-243": "designed",
+  "LS-244": "designed",
+  "LS-245": "designed",
+  "LS-246": "designed",
+  "LS-247": "designed",
+  "LS-248": "designed",
+  "LS-249": "designed",
+  "LS-250": "designed",
+  "LS-251": "designed",
+  "LS-252": "designed",
+  "LS-253": "designed",
+  "LS-254": "designed",
+  "LS-255": "designed",
+  "LS-256": "designed",
+  "LS-257": "designed",
+  "LS-258": "designed",
+  "LS-259": "designed",
+  "LS-260": "designed",
+  "LS-261": "designed",
+  "LS-262": "designed",
+  "LS-263": "designed",
+  "LS-264": "designed",
+  "LS-265": "designed",
+  "LS-266": "designed",
+  "LS-267": "designed",
+  "LS-268": "designed",
+  "LS-269": "designed",
+  "LS-270": "designed",
+  "LS-271": "designed",
+  "LS-272": "designed",
+  "LS-273": "designed",
+  "LS-274": "designed",
+  "LS-275": "designed",
+  "LS-276": "designed",
+  "LS-277": "designed",
+  "LS-278": "designed",
+  "LS-279": "designed",
+  "LS-280": "designed",
+  "LS-281": "designed",
+  "LS-282": "designed",
+  "LS-283": "designed",
+  "LS-284": "designed",
+  "LS-285": "designed",
+  "LS-286": "designed",
+  "LS-287": "designed",
+  "LS-288": "designed",
+  "LS-289": "designed",
+  "LS-290": "designed",
+  "LS-291": "designed",
+  "LS-292": "designed",
+  "LS-293": "designed",
+  "LS-294": "designed",
+  "LS-295": "designed",
+  "LS-296": "designed",
+  "LS-297": "designed",
+  "LS-298": "designed",
+  "LS-299": "designed",
+  "LS-300": "designed",
+  "LS-301": "designed",
+  "LS-302": "designed",
+  "LS-303": "designed",
+  "LS-304": "designed",
+  "LS-305": "designed",
+  "LS-306": "designed",
+  "LS-307": "designed",
+  "LS-308": "designed",
+  "LS-309": "designed",
+  "LS-310": "designed",
+  "LS-311": "designed",
+  "LS-312": "designed",
+  "LS-313": "designed",
+  "LS-314": "designed",
+  "LS-315": "designed",
+  "LS-316": "designed",
+  "LS-317": "designed",
+  "LS-318": "designed",
+  "LS-319": "designed",
+  "LS-320": "designed",
+  "LS-321": "designed",
+  "LS-322": "designed",
+  "LS-323": "designed",
+  "LS-324": "designed",
+  "LS-325": "designed",
+  "LS-326": "designed",
+  "LS-327": "designed",
+  "LS-328": "designed",
+  "LS-329": "designed",
+  "LS-330": "designed",
+  "LS-331": "designed",
+  "LS-332": "designed",
+  "LS-333": "designed",
+  "LS-334": "designed",
+  "LS-335": "designed",
+  "LS-336": "designed",
+  "LS-337": "designed",
+  "LS-338": "designed",
+  "LS-339": "designed",
+  "LS-340": "designed",
+  "LS-341": "designed",
+  "LS-342": "designed",
+  "LS-343": "designed",
+  "LS-344": "designed",
+  "LS-345": "designed",
+  "LS-346": "designed",
+  "LS-347": "designed",
+  "LS-348": "designed",
+  "LS-349": "designed",
+  "LS-350": "designed",
+  "LS-351": "designed",
+  "LS-352": "designed",
+  "LS-353": "designed",
+  "LS-354": "designed",
+  "LS-355": "designed",
+  "LS-356": "designed",
+  "LS-357": "designed",
+  "LS-358": "designed",
+  "LS-359": "designed",
+  "LS-360": "designed",
+  "LS-361": "designed",
+  "LS-362": "designed",
+  "LS-363": "designed",
+  "LS-364": "designed",
+  "LS-365": "designed",
+  "LS-366": "designed",
+  "LS-367": "designed",
+  "LS-368": "designed",
+  "LS-369": "designed",
+  "LS-370": "designed",
+  "LS-371": "designed",
+  "LS-372": "designed",
+  "LS-373": "designed",
+  "LS-374": "designed",
+  "LS-375": "designed",
+  "LS-376": "designed",
+  "LS-377": "designed",
+  "LS-378": "designed",
+  "LS-379": "designed",
+  "LS-380": "designed",
+  "LS-381": "designed",
+  "LS-382": "designed",
+  "LS-383": "designed",
+  "LS-384": "designed",
+  "LS-385": "designed",
+  "LS-386": "designed",
+  "LS-387": "designed",
+  "LS-388": "designed",
+  "LS-389": "designed",
+  "LS-390": "designed",
+  "LS-391": "designed",
+  "LS-392": "designed",
+  "LS-393": "designed",
+  "LS-394": "designed",
+  "LS-395": "designed",
+  "LS-396": "designed",
+  "LS-397": "designed",
+  "LS-398": "designed",
+  "LS-399": "designed",
+  "LS-400": "designed",
+  "LS-401": "designed",
+  "LS-402": "designed",
+  "LS-403": "designed",
+  "LS-404": "designed",
+  "LS-405": "designed",
+  "LS-406": "designed",
+  "LS-407": "designed",
+  "LS-408": "designed",
+  "LS-409": "designed",
+  "LS-410": "designed",
+  "LS-411": "designed",
+  "LS-412": "designed",
+  "LS-413": "designed",
+  "LS-414": "designed",
+  "LS-415": "designed",
+  "LS-416": "designed",
+  "LS-417": "designed",
+  "LS-418": "designed",
+  "LS-419": "designed",
+  "LS-420": "designed",
+  "LS-421": "designed",
+  "LS-422": "designed",
+  "LS-423": "designed",
+  "LS-424": "designed",
+  "LS-425": "designed",
+  "LS-426": "designed"
+ },
+ "scored": [
+  {
+   "id": "LS-005",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-009",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-012",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"ZIP code\". I haven't answered with a number that leaves it out."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-020",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"zip code\". I haven't answered with a number that leaves it out."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-043",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "period",
+     "expected": "{\"rule\":\"2018-01 through the latest month in the data (requested end 2026)\"}",
+     "actual": "2018-01..2026-09",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names any missing years or months inside the span as missing, not zero",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names the months the partial 2026 figure covers",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names the Houston Police Department as the agency counted",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names its source at the end",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Houston, Texas: theft from motor vehicle offenses by year and clearance status, January 2018 through September 2026. / Reported by the Houston Police Department. / No total is established for Cleared (2018); Uncleared (2018); Cleared (2026)"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "period not mapped",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-124",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution\". I haven't answered with a number that leaves it "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-135",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-140",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"St. Louis city, Missouri\" option \"Every year available\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2026-09",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"St. Louis County, Missouri\" option \"Every year available\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2026-09",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"St. Louis County, Missouri\" option \"Every year available\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri"
+   ],
+   "capability": "clarify:no meaning",
+   "era": "no period",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-141",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"ZIP code\". I haven't answered with a number that leaves it out."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-146",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-150",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Last 10 complete years\" ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Every year available\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which range of years: The last 10 complete years | Every year available | Another range"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "spans 2021",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-151",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which Baltimore: Baltimore city, Maryland | Baltimore County, Maryland"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-156",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-160",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I couldn't interpret \"weapons were used in\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-219",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-220",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-221",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-222",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Property crimes are counted by offense, not by victim. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-223",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which Baltimore: Baltimore city, Maryland | Baltimore County, Maryland"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-224",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-225",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: carjacking offenses by month, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-226",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: 16,163 simple assault victims in 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-227",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-228",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Columbus, Ohio: 9,439 theft from motor vehicle offenses in 2022. / Reported by the Columbus Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-229",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Drug crimes are drug/narcotic violations plus drug equipment violations. / Detroit, Michigan, 2024: 746 drug/narcotic violation offenses; 75 drug equipment violation offenses. / Reported by the Detroit Police Department. / Together: 821 dru"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-230",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 3,916 shoplifting offenses in January through September 2026. / Reported by the Memphis Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-231",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which Kansas City: Kansas City, Missouri | Kansas City, Kansas"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-232",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"The United States\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"The United States\" button \"Show only agencies that reported every month\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2024-01..2024-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"The United States\" button \"Show only agencies that reported every month\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which place: The United States | A state | A city or agency"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-233",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which period: The latest complete year (2025) | This year so far | Another year"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-234",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"The last 10 complete years\" ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which range of years: The last 10 complete years | Every year available | Another range"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "spans 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-235",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Violent crime\" ",
+     "expected": "historical answer",
+     "actual": "routed to historical: not run by this NIBRS shadow",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Property crime\" ",
+     "expected": "historical answer",
+     "actual": "routed to historical: not run by this NIBRS shadow",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Both\" ",
+     "expected": "historical answer",
+     "actual": "routed to historical: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which kind of crime: Violent crime | Property crime | Both"
+   ],
+   "capability": "clarify:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-236",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (outside_release_coverage): 2027 is not in the data; the latest month available is September 2026."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-238",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"ZIP code\". I haven't answered with a number that leaves it out."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-239",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-240",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-241",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-242",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which Baltimore: Baltimore city, Maryland | Baltimore County, Maryland"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-243",
+   "split": "dev",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Washington state\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2024-01..2024-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which Washington: Washington, D.C. | Washington state | Washington County, Oregon | Washington County, Maryland"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-244",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "asked which Columbus: Columbus, Ohio | Columbus, Georgia"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-245",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"New York state\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"New York state\" button \"Show only agencies that reported every month\" meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2024-01..2024-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"New York state\" button \"Show only agencies that reported every month\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which New York: New York City | New York state"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-246",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: 6,533 shoplifting offenses in 2024. / Reported by the Metropolitan Nashville Police Department. / Read \"Shopliftng\" as shoplifting. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-247",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 6,211 simple assault victims in 2023. / Reported by the Denver Police Department. / Read \"asaults\" as assaults. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-248",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Atlanta, Georgia: carjacking offenses by month, 2024. / Reported by the Atlanta Police Department. / Read \"carjackngs\" as carjackings. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-249",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: 6,533 shoplifting offenses in 2024. / Reported by the Metropolitan Nashville Police Department. / Read \"Tennesee\" as tennessee. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-250",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Portland, Oregon: 7,951 theft from motor vehicle offenses in 2023. / Reported by the Portland Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-251",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Atlanta, Georgia: 7,104 theft from motor vehicle offenses in 2023. / Reported by the Atlanta Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-252",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: 7,793 theft from motor vehicle offenses in 2022. / Reported by the Metropolitan Nashville Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-253",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 6,383 theft from motor vehicle offenses in 2024. / Reported by the Denver Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-254",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 2,501 shoplifting offenses in January through September 2026. / Reported by the Denver Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-255",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Atlanta, Georgia: 1,650 shoplifting offenses in January through September 2026. / Reported by the Atlanta Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-256",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: 29 carjacking offenses in January through September 2026. / Reported by the Metropolitan Nashville Police Department. / The data runs through September 2026: this covers January through September 2026. / Source: FBI NI"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-257",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Portland, Oregon: the available evidence does not establish the number of simple assault victims in January through September 2026, so no number is given. / Reported by the Portland Police Department. / The data runs through September 2026:"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-258",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Portland, Oregon: simple assault victims by month, 2022. / Reported by the Portland Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-259",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: 234 carjacking offenses in 2023. / Reported by the Metropolitan Nashville Police Department. / Property crimes are counted by offense, not by victim. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-260",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-261",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-262",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-263",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (forecast): The data records past crime and cannot predict the future."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "spans 2021"
+  },
+  {
+   "id": "LS-264",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-265",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-266",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (unsupported_capability): Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-267",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reader): NIBRS does not track shootings as a category, so I can't apply \"Shootings\". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a f"
+   ],
+   "capability": "clarify:shr count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-268",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: shoplifting offenses, January through September 2025 against January through September 2026. / Reported by the Denver Police Department. / Compares the same months of each year: January through September. / 2,696 in Januar"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-269",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I couldn't interpret \"will\" in this question, so I haven't answered it with a number that ignores it."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-270",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "decline",
+   "outcome": "wrong_action",
+   "diffs": [],
+   "notes": [
+    "declined (reader): The question could not be read: no typed reading."
+   ],
+   "capability": "clarify:historical count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-271",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Milwaukee, Wisconsin: simple assault victims by race, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-272",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by sex, 2022. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in 2022. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-273",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Louisville, Kentucky: simple assault victims by ethnicity, 2024. / Reported by the Louisville Metro Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-274",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tucson, Arizona: shoplifting offenses by location type, 2024. / Reported by the Tucson Police Department. / Each share is that category's part of all shoplifting offenses in 2024. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-275",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Austin, Texas: theft from motor vehicle offenses by location type, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all theft from motor vehicle offenses in 2023. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-276",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Kansas City, Missouri: murder victims by race, 2023. / Reported by the Kansas City Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-277",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Albuquerque, New Mexico: simple assault victims by race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all simple assault victims in 2021 to 2023. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-278",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Austin, Texas: murder victims by sex, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-279",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by year and race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in the same year. / Source: FBI NIBR"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-280",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Milwaukee, Wisconsin: simple assault victims by age group, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-281",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Albuquerque, New Mexico: robbery offenses by weapon, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime with several of these categories counts once under e"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-282",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-283",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Kansas City, Missouri: carjacking offenses by location type, 2024. / Reported by the Kansas City Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-284",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Oklahoma City, Oklahoma, 2024: 3,972 theft from motor vehicle offenses; 4,375 shoplifting offenses. / Reported by the Oklahoma City Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-285",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Drug crimes are drug/narcotic violations plus drug equipment violations. / Wichita, Kansas, 2023: 2,797 drug/narcotic violation offenses; 2,213 drug equipment violation offenses. / Reported by the Wichita Police Department. / Together: 5,01"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-286",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Raleigh, North Carolina: carjacking offenses and shoplifting offenses by month, 2024. / Reported by the Raleigh Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-287",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Fort Worth, Texas: robbery offenses by weapon, 2023. / Reported by the Fort Worth Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime with several of these categories counts once under each, so"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-288",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Mesa, Arizona: aggravated assault victims by age group, 2024. / Reported by the Mesa Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under one "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-289",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Colorado Springs, Colorado: murder victims by relationship to the offender, 2023. / Reported by the Colorado Springs Police Department. / Each share is that category's part of all murder victims in 2023. / A crime with several of these cate"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-290",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Virginia Beach, Virginia: 4 murder victims by a stranger in 2024. / Reported by the Virginia Beach Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-291",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Wichita, Kansas: carjacking offenses by location type, 2024. / Reported by the Wichita Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-292",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime with several of these categories"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-293",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024. / Offenders are counted as NIBRS offender records, not peo"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-294",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "decline",
+   "outcome": "avoidable_decline",
+   "diffs": [],
+   "notes": [
+    "declined (reader): I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-295",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Gun crime here is murder victims, robbery offenses and aggravated assault victims with a firearm. / Fort Worth, Texas, 2023: 75 murder victims with a firearm; 362 robbery offenses with a firearm; 1,826 aggravated assault victims with a fire"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-296",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument. / Oklahoma City, Oklahoma, 2024: 9 murder victims with a knife or cutting instrument; 606 aggravated assault victims with a knife or cuttin"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-297",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Colorado Springs, Colorado: 1,284 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-298",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Wichita, Kansas: robbery arrests by month, 2023. / Reported by the Wichita Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-299",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Raleigh, North Carolina: 161 burglary arrests in 2024. / Reported by the Raleigh Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-300",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-301",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): \"Shooters\" is not a term the data defines: it records offenders and the weapons used, not who fired a gun."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-302",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-303",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Columbus, Ohio: shoplifting offenses by year, 2019 and 2024. / Reported by the Columbus Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "spans 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-304",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Austin, Texas: simple assault victims, 2022 against 2024. / Reported by the Austin Police Department. / 10,045 in 2022 and 9,688 in 2024: a change of -357 (-3.6%). / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-305",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Minneapolis, Minnesota: theft from motor vehicle offenses, 2023 against 2024. / Reported by the Minneapolis Police Department. / 3,755 in 2023 and 4,240 in 2024: a change of +485 (+12.9%). / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-306",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Aurora, Colorado: drug/narcotic violation offenses, 2024 against 2025. / Reported by the Aurora Police Department. / 578 in 2024 and 718 in 2025: a change of +140 (+24.2%). / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-307",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: carjacking offenses, January through September 2025 against January through September 2026. / Reported by the Dallas Police Department. / Compares the same months of each year: January through September. / 207 in January thro"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-308",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Charlotte, North Carolina: robbery offenses with a firearm, 2021 against 2025. / Reported by the Charlotte-Mecklenburg Police Department. / 739 in 2021 and 440 in 2025: a change of -299 (-40.5%). / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-309",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Austin, Texas: shoplifting offenses, January through June 2023 against January through June 2024. / Reported by the Austin Police Department. / Compares the same months of each year: January through June. / 819 in January through June 2023 "
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-310",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Frisco, Texas: carjacking offenses, 2022 against 2023. / Reported by the Frisco Police Department. / 0 in 2022 and 6 in 2023: a change of +6. / The percent change cannot be computed from a zero base. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-311",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Greensboro, North Carolina: shoplifting offenses, 2024 against 2025. / Reported by the Greensboro Police Department. / 2,559 in 2024. / No report is known for November 2025 to December 2025, so the 2025 total is not established and no chang"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-312",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Seattle, Washington: shoplifting offenses, January through September 2025 against January through September 2026. / Reported by the Seattle Police Department. / Compares the same months of each year: January through September. / 2,254 in Ja"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-313",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Arlington, Texas: carjacking offenses, rolling 12-month totals by month, January 2023 through September 2026. / Reported by the Arlington Police Department. / Each month's figure is the total of that month and the 11 months before it. / Sou"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-314",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Arlington, Texas: 11 carjacking offenses in October 2025 through September 2026. / Reported by the Arlington Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-315",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Greensboro, North Carolina: shoplifting offenses, rolling 12-month totals by month, January 2025 through September 2026. / Reported by the Greensboro Police Department. / Each month's figure is the total of that month and the 11 months befo"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-316",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Greensboro, North Carolina: shoplifting offenses, rolling 12-month totals by month, January through September 2026. / Reported by the Greensboro Police Department. / Each month's figure is the total of that month and the 11 months before it"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-317",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses by agency, 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-318",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 7,779 shoplifting offenses in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-319",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Greensboro, North Carolina and Raleigh, North Carolina: shoplifting offenses by agency, 2025. / Reported by the Greensboro Police Department and the Raleigh Police Department. / No report is known for November 2025 to December 2025 for the "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-320",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Wichita, Kansas: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / "
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-321",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 61"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-322",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: 11.3 carjacking offenses per 100,000 residents in January through September 2026. / Reported by the Dallas Police Department. / Rates are per 100,000 residents, using the FBI's 2026 population of the agency: Dallas Police Dep"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-323",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Greensboro, North Carolina: no rate is given for 2025, because not every month is known. / Reported by the Greensboro Police Department. / Rates are per 100,000 residents, using the FBI's 2025 population of the agency: Greensboro Police Dep"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-324",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas city agencies: the 20 with the most carjacking offenses, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of 2024: 83 agencies, the la"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-325",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Ohio city agencies: the 10 with the highest shoplifting offenses per 100,000 residents, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of "
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-326",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas city agencies of 250,000 residents or more: the 12 with the highest shoplifting offenses per 100,000 residents, 2024. / Large means 250,000 residents or more (the FBI's agency population). / Ranked: agencies that reported all 12 month"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-327",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Colorado city agencies: the 20 with the fewest carjacking offenses, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of 2024: 67 agencies, t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-328",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 7,779 shoplifting offenses in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-329",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Greensboro, North Carolina and Raleigh, North Carolina, combined: no total is given for 2025, because not every month is known for every agency counted. / Reported by the Greensboro Police Department and the Raleigh Police Department. / No "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-330",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses per 100,000 residents by agency, 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Rates are per 100,000 residents, using the FBI's 2"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-331",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 694.1 shoplifting offenses per 100,000 residents in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / The rate is both agencies' offenses over b"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-332",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Greensboro, North Carolina and Raleigh, North Carolina, combined: no rate is given for 2025, because not every month is known for every agency counted. / Reported by the Greensboro Police Department and the Raleigh Police Department. / No r"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-333",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas city agencies: the 20 with the most carjacking offenses, January through September 2026. / This covers January through September 2026. / Ranked: agencies that reported every month of January through September 2026; ties are ordered by"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-334",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 19,935 robberies in 2024. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-335",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: United States: 19,935 murders in 2023. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-336",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Ohio: 259.5 burglaries per 100,000 residents in 2022. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-337",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Florida: motor vehicle thefts by year, 2015 to 2024. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-338",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: California: 187,414 violent crimes in 2024. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-339",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Georgia: robberies, 2024 against 2025. / 4,426 in 2024 and 3,799 in 2025: a change of -627 (-14.2%). / Source: FBI SRS."
+   ],
+   "capability": "answer:historical change",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-340",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: United States: 57.8% of murders were cleared in 2023. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-341",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 re"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-342",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the 1,439 agencies that reported every month (99.1% of the state's residents). / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-343",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / 441 agencies reported at least one month of 2024, covering 93.4% of the state's residents; 63 of them reported only some months and are includ"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-344",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / 14,945 agencies reported at least one month of 2024, covering 89.0% of the nation's residents; 1,933 of "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-345",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Agencies counted and share of the state's residents covered: 2018 561 (86.8%, 167 reporting only some months); 2019 578 (88.6%, 178 report"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "spans 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-346",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 repo"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-347",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-348",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "rtci answer",
+     "actual": "routed to rtci: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends."
+   ],
+   "capability": "answer:rtci count",
+   "era": "period not mapped"
+  },
+  {
+   "id": "LS-349",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "shr answer",
+     "actual": "routed to shr: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run H"
+   ],
+   "capability": "answer:shr count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-350",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): There is no state clearance rate in the data (the FBI publishes clearance for agencies and the nation, not states), and how to compute a clearance rate for a NIBRS-only offense is not yet decided."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-351",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (outside_release_coverage): State figures in the data cover 1960 through 2025, so 1955 is outside them."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-352",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: robberies by year, 1960 to 1965. / State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "before 2021",
+   "values": "match"
+  },
+  {
+   "id": "LS-353",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Arizona: 143,974 property crimes in 2023. / Source: FBI SRS."
+   ],
+   "capability": "answer:historical count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-354",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-355",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: 6.3 carjacking offenses per 100,000 residents of the reporting agencies in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them report"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-356",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance status, 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-357",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance type, 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not at"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-358",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,065 shoplifting offenses cleared in 2024, in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's a"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-359",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,065 of the 10,149 shoplifting offenses in 2024 were cleared (20.3%); the cleared shoplifting offenses were in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared "
+   ],
+   "capability": "answer:nibrs share",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-360",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: carjacking offenses by clearance type, 2024. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables count instea"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-361",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims with a firearm by clearance status, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-362",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 1,994 shoplifting offenses cleared by arrest in 2024, in 1,994 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-363",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "historical answer",
+     "actual": "routed to historical: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Hist"
+   ],
+   "capability": "answer:historical rate",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-364",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 1,508 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-365",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 9 burglary offenses where a firearm was recovered in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offens"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-366",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: 7,219 motor vehicle theft offenses where the vehicle was recovered in 2024. / Reported by the Dallas Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a si"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-367",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 112 arrests on incidents where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offe"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-368",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-369",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: 292 carjacking offenses not cleared in 2024, in 292 incidents. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-370",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: 1 carjacking offense cleared by exceptional means in 2024, in 1 incident. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-371",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: aggravated assault victims by clearance type, 2024. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-372",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 351 arrests on incidents that included a robbery in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Arrests with no incident "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-373",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 328 robbery arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-374",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: aggravated assault victims by clearance type, 2024. / Reported by the Detroit Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-375",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims by clearance type, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables co"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-376",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS records property for the incident, not for one offense, so the propert"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-377",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime with several of these categories c"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-378",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / Each share is that category's part of all robbery offenses in 2024. / Age groups: Under 18 (ages 1-17 and infants under one year"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-379",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 555 aggravated assault victims with an offender under 18 in the incident in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-380",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,541 aggravated assault victims under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-381",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 5,162 aggravated assault victims with a firearm who were female in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-382",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories counts once under each, s"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-383",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: murder victims by the race of the linked offenders, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories counts"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-384",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: aggravated assault offenders who were strangers to the victim by offender sex, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault offenders who were stranger"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-385",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: arrests by arrestee race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than o"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-386",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: 71 robbery arrests of arrestees under 18 in 2024. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / An unknown or unrecorded value doe"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-387",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime with several of these categories "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-388",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenders in 2023. / Age groups: Under 18 (ages 1-17 and infants un"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-389",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"18 to 24\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"18 to 29\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked which ages \"young adults\" means: 18 to 24 | 18 to 29"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-390",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Offenders\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"People arrested\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "asked what \"attackers\" means: Offenders | People arrested"
+   ],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-391",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-392",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "reason",
+     "expected": "Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.",
+     "actual": "unsupported_capability",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (unsupported_capability): Offender breakdowns for a whole state or the nation are not built yet; they are for one agency or several named agencies."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
+  },
+  {
+   "id": "LS-393",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-394",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Age groups: Under 18 (ages 1-17 and infants under one year), 18-24, 25-34, 35-"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-395",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 1,169 aggravated assault victims who were female under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Sou"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-396",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) by race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggrav"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-397",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime with several of these categories coun"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-398",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime with several of th"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-399",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not co"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-400",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 254 aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) in 2023. / Reported by the Denver Police Department. / The condition on the offender applies only to the off"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-401",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories counts once under each"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-402",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories cou"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-403",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Wichita, Kansas: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / "
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-404",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Shoplifting rate in Memphis by year from 2021 to 2024",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the follow-up's statistic (count) is missing); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-405",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Change in simple assaults in Austin from 2022 to 2024",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the follow-up's change (change:neutral) is missing); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-406",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Percent change in robberies with a firearm in Charlotte, North Carolina from 2021 to 2025",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the follow-up's share (share) is missing); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs change",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-407",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-408",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses by agency, 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-409",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 7,779 shoplifting offenses in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-410",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not co"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-411",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime with several of these categories c"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-412",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Arrests in Denver in 2023 by arrestee ethnicity",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the follow-up's breakdown (ethnicity) is missing); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-413",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Arrests in Denver in 2023 by arrestee age",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the follow-up's breakdown (age) is missing); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-414",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "According to NIBRS, murder victims in Rochester, New York in 2024 by the race of the offender who killed them",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-415",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Shoplifting rate in Memphis by year from 2021 to 2024",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite named a number that is not in the conversation; ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-416",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: 54 robbery arrests of arrestees under 18 in 2023. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / An unknown or unrecorded value doe"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-417",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Male juvenile victims of aggravated assault in Memphis in 2024",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked It is unclear whether \"male\" replaces female victims, adds male victims, or specifies the sex of the offender. Please clarify. ואפשרויות: replace female with male, include both sexes, or specify offender sex. Only English. Let's make options clean. Wait, keep it simple. It is unclear whether \"male\" : Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-418",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 17 murder victims under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-420",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: carjacking offenses by quarter, 2025. / Reported by the Memphis Police Department. / Each quarter's figure is the sum of its three months. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-421",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "answer:nibrs rate",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-422",
+   "split": "heldout",
+   "expected": "clarify",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2024-01..2024-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "rewrite",
+     "expected": "(ask: the rewrite is uncertain)",
+     "actual": "Shoplifting in Wichita in 2024",
+     "kind": "material"
+    }
+   ],
+   "notes": [],
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-423",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: 16,163 simple assault victims in 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-424",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Wichita, Kansas: 5,773 shoplifting offenses in 2024. / Reported by the Wichita Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-425",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 10,149 shoplifting offenses in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-426",
+   "split": "heldout",
+   "expected": "decline",
+   "actual": "clarify",
+   "outcome": "wrong_action",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "People charged with robbery in Detroit in 2024",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over"
+   ],
+   "capability": "decline:nibrs count",
+   "era": "2021 and later"
+  }
+ ],
+ "provisional": [
+  {
+   "id": "LS-419",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "statement",
+     "expected": "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Changes the existing chart to bars using the existing result; makes no data-engine request.",
+     "actual": "Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  }
+ ]
+}

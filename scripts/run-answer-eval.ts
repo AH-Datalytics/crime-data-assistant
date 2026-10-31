@@ -36,6 +36,8 @@ import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { matchNibrsType } from "../lib/nibrs-question-types";
 import { quarterCells, scoreShadow, sliceGroup, sliceValues, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
 import { shadowAnswer, shadowFollowUp, type FollowUpOutcome, type ShadowDeps } from "../lib/nibrs-shadow/answer";
+import { bindingOf, cachedModelRewriter, GUARD_VERSION, MODEL_ID, type RewriteCache } from "../lib/nibrs-shadow/model-rewriter";
+import { SYSTEM_PROMPT } from "../lib/nibrs-shadow/model-rewriter-prompt";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
@@ -45,6 +47,13 @@ const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(na
 const CANDIDATE = arg("--candidate", "nibrs-reader")!;
 if (!["nibrs-reader", "nibrs-shadow"].includes(CANDIDATE)) throw new Error(`unknown candidate ${CANDIDATE}`);
 const SHADOW = CANDIDATE === "nibrs-shadow";
+// The model rewriter test (shadow only): follow-ups rewritten from the cached model answers; its own run files.
+const MODEL = SHADOW && arg("--rewriter") === "model" ? (() => {
+  const cache = JSON.parse(fs.readFileSync(path.join(ROOT, `scripts/fixtures/answer-eval/model-rewrites/${MODEL_ID}.json`), "utf8")) as RewriteCache;
+  const binding = bindingOf(SYSTEM_PROMPT);
+  return { binding, rewriter: cachedModelRewriter(cache, binding) };
+})() : null;
+const RUN_NAME = MODEL ? `${CANDIDATE}-model-rewriter` : CANDIDATE;
 const release: Release & { id: string; asOf: string } = SHADOW
   // P52: the FBI uploaded the 2026 file on 2026-10-15; the upload month is partial and not reported, so data runs through 2026-09.
   ? { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }
@@ -141,7 +150,7 @@ for (const c of cases) {
   if (nr || !c.expected) continue;
   let res: CaseResult | null;
   if (deps) {
-    const outcome = followUp ? shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps) : shadowAnswer(c.question, deps);
+    const outcome = followUp ? shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps, MODEL?.rewriter) : shadowAnswer(c.question, deps);
     // A follow-up whose rewrite is another case's question reuses that case's independent values.
     // P71: a quarterly rewrite of a monthly case sums that case's months.
     const src = c.expected.action === "answer" ? c.expected.values.source ?? "" : "";
@@ -207,8 +216,10 @@ const md = [
   ...(SHADOW ? ["## Refused as not built (not scored)", "", ...(notBuilt.length ? notBuilt.map((x) => `- ${x}`) : ["None."]), ""] : []),
   (SHADOW ? byGroup : bySplit)("Scored (reviewed labels, decided policy)", scored, true),
   (SHADOW ? byGroup : bySplit)("PROVISIONAL: drafted labels (never a gate)", provisional, false),
+  ...(MODEL ? ["## Model rewriter", "", `Follow-ups rewritten by the cached ${MODEL_ID} rewriter (binding ${MODEL.binding.slice(0, 16)}, guards ${GUARD_VERSION}). Cache misses (asked, never guessed): ${MODEL.rewriter.misses.length}.`,
+    ...MODEL.rewriter.misses.map((m) => `- ${m}`), ""] : []),
 ].join("\n");
 fs.mkdirSync(OUT, { recursive: true });
-fs.writeFileSync(path.join(OUT, `${CANDIDATE}.md`), md);
-fs.writeFileSync(path.join(OUT, `${CANDIDATE}.json`), JSON.stringify({ candidate: CANDIDATE, release, coverage, eligibility, ...(SHADOW ? { notBuilt, groups: Object.fromEntries(groupOf) } : {}), scored, provisional }, null, 1) + "\n");
+fs.writeFileSync(path.join(OUT, `${RUN_NAME}.md`), md);
+fs.writeFileSync(path.join(OUT, `${RUN_NAME}.json`), JSON.stringify({ candidate: CANDIDATE, ...(MODEL ? { rewriter: MODEL_ID, cacheMisses: MODEL.rewriter.misses } : {}), release, coverage, eligibility, ...(SHADOW ? { notBuilt, groups: Object.fromEntries(groupOf) } : {}), scored, provisional }, null, 1) + "\n");
 console.log(`${CANDIDATE}: scored ${scored.length}, provisional ${provisional.length}; run ${coverage["run by this candidate"]?.length ?? 0} of ${cases.length}`);
