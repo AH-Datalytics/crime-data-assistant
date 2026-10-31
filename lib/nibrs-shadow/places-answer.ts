@@ -26,8 +26,10 @@ type Decline = (explanation: string) => ShadowOutcome;
 const knownMonths = (cells: MonthCell[]) => cells.filter((c) => c.status === "VALUE" || c.status === "REPORTED_ZERO").length;
 
 export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string }, deps: ShadowDeps, statements: AnswerStatement[], readings: string[], decline: Decline): ShadowOutcome {
-  const st = plan.statistics[0];
-  if (plan.statistics.length !== 1 || (st.kind !== "count" && st.kind !== "rate")) return decline("Not in the slice yet: this statistic for several agencies.");
+  // P72: the population a rate divides by may stand beside it, a supporting column.
+  const popStat = plan.statistics.find((s) => s.kind === "population");
+  const st = plan.statistics.filter((s) => s !== popStat)[0];
+  if (plan.statistics.length !== (popStat ? 2 : 1) || (st.kind !== "count" && st.kind !== "rate")) return decline("Not in the slice yet: this statistic for several agencies.");
   const isRate = st.kind === "rate";
   const yearG = plan.groupings.some((g) => g.dimension === "time.year");
   const geoG = plan.groupings.find((g) => g.dimension.startsWith("geo."));
@@ -39,6 +41,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
   if (isRate && years.length > 1 && !yearG) return decline("Not in the slice yet: a rate over several years without a year grouping (each year has its own population).");
   const rankT = plan.transforms.find((t) => t.kind === "rank");
+  if (popStat && rankT) return decline("Not in the slice yet: a population column beside a ranking.");
   const set = plan.geography.places[0].kind === "agency_set" ? plan.geography.places[0] : null;
   const root = deps.target.root;
 
@@ -92,6 +95,9 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const partLine = () => { if (partYear) lines.push(`This covers ${when}${isRate ? "; the rate is for those months and is not annualized" : ""}.`); };
   const year = years[years.length - 1];
   const reporter = reportedBy(agencies.map((a) => a.name));
+  // P72: the population column's cells, UNAVAILABLE where the FBI gives none.
+  const popCell = (n: number | null | undefined) => (n ? { value: n, status: "VALUE" } : { value: null, status: "UNAVAILABLE" });
+  const support = (cells: { value: number | null; status: string }[]) => (popStat ? { as: popStat.as, header: "Population", cells } : undefined);
 
   // A ranking of a state's city agencies (P60).
   if (set && rankT && rankT.kind === "rank") {
@@ -139,7 +145,8 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     if (missing.length) lines.push(`No report is known for ${runs(missing)}: that year's ${isRate ? "rate" : "total"} is not given.`);
     const noPopYears = rows.filter((r) => r.status === "UNAVAILABLE").map((r) => r.key);
     if (noPopYears.length) lines.push(`The FBI gives no population for ${noPopYears.join(", ")}, so no rate is given for ${noPopYears.length > 1 ? "those years" : "that year"}.`);
-    const delivered = deliverTable(plan, { dimension: "time.year", header: "Year" }, { as: st.as, header: statHeader }, rows, lines, statements, deps.release.id, readings);
+    const delivered = deliverTable(plan, { dimension: "time.year", header: "Year" }, { as: st.as, header: statHeader }, rows, lines, statements, deps.release.id, readings,
+      support(years.map((y) => popCell(pops.get(`${a.ori}|${y}`)))));
     return done(plan, period, c.query.sql, delivered, decline);
   }
 
@@ -160,7 +167,8 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     if (isRate && v.value !== null) lines.push(`The rate is ${all} offenses over ${all} populations (the FBI's ${year} figures: ${agencies.map((a) => `${a.name} ${fmt(pops.get(`${a.ori}|${year}`)!)}`).join("; ")}).`);
     for (const a of agencies) { const miss = rollup(byOri.get(a.ori) ?? []).missing; if (miss.length) lines.push(`No report is known for ${runs(miss)} for ${a.label}.`); }
     partLine();
-    const delivered = deliverTable(plan, null, { as: st.as, header: statHeader }, [{ key: null, value: v.value, status: v.status }], lines, statements, deps.release.id, readings);
+    const delivered = deliverTable(plan, null, { as: st.as, header: statHeader }, [{ key: null, value: v.value, status: v.status }], lines, statements, deps.release.id, readings,
+      support([popCell(popSum)]));
     return done(plan, period, c.query.sql, delivered, decline);
   }
 
@@ -182,7 +190,8 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   if (agencies.length > 1) for (const r of rows) if (r.status === "UNAVAILABLE") lines.push(`The FBI gives no ${year} population for the ${r.key}, so its rate is not given.`);
   partLine();
   const delivered = deliverTable(plan, geoG ? { dimension: geoG.dimension, header: "Agency" } : null, { as: st.as, header: statHeader },
-    rows.map((r) => ({ key: r.key, value: r.value, status: r.status })), lines, statements, deps.release.id, readings);
+    rows.map((r) => ({ key: r.key, value: r.value, status: r.status })), lines, statements, deps.release.id, readings,
+    support(agencies.map((a) => popCell(pops.get(`${a.ori}|${year}`)))));
   return done(plan, period, c.query.sql, delivered, decline);
 }
 

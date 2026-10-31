@@ -124,7 +124,8 @@ export function validatePlanShape(plan: NibrsPlan): PlanProblem[] {
   // P6: statistics name declared measures; share partitions are distinct groupings.
   plan.statistics.forEach((s, i) => {
     const path = `statistics[${i}]`;
-    const refs = s.kind === "ratio" ? [s.numerator, s.denominator] : [s.measure, ...(s.kind === "share" && s.denominator ? [s.denominator] : [])];
+    // A population names its rate statistic (checked in S12), not a measure.
+    const refs = s.kind === "ratio" ? [s.numerator, s.denominator] : s.kind === "population" ? [] : [s.measure, ...(s.kind === "share" && s.denominator ? [s.denominator] : [])];
     for (const r of refs) if (!measureNames.includes(r)) add("P6", path, `unknown measure "${r}"`);
     if (s.kind === "share") {
       for (const d of s.within) if (!groupDims.includes(d)) add("P6", `${path}.within`, `"${d}" is not a grouping`);
@@ -278,6 +279,9 @@ export function validatePlanSemantics(plan: NibrsPlan, layer: SemanticLayer): Pl
     if (s.kind === "rate" && sm(s.measure) && !sm(s.measure)!.additive.acrossAgencies) add("S12", `statistics[${i}]`, "a rate needs a measure that adds across agencies");
     const unit = s.kind === "incidents" ? plan.measures.find((m) => m.as === s.measure)?.unit : null;
     if (s.kind === "incidents" && unit !== "offense" && unit !== "victim") add("S12", `statistics[${i}]`, "the incidents of a measure count offenses' or victims' incidents");
+    // P72: a population belongs to a rate of the plan; agencies reporting to a state or national total.
+    if (s.kind === "population" && !plan.statistics.some((r) => r.kind === "rate" && r.as === s.of)) add("S12", `statistics[${i}]`, "a population column belongs to a rate statistic of the plan");
+    if (s.kind === "agencies" && !plan.geography.places.every((p) => p.kind === "state" || p.kind === "national")) add("S12", `statistics[${i}]`, "agencies reporting go with a state or national total");
   });
   return out;
 }

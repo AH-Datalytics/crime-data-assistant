@@ -34,8 +34,8 @@ import { validateResolved } from "../lib/nibrs-plan/resolve";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { matchNibrsType } from "../lib/nibrs-question-types";
-import { scoreShadow, sliceGroup, sliceValues, type ExpectedValues } from "../lib/answer-eval/shadow";
-import { shadowAnswer, type ShadowDeps } from "../lib/nibrs-shadow/answer";
+import { quarterCells, scoreShadow, sliceGroup, sliceValues, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
+import { shadowAnswer, shadowFollowUp, type FollowUpOutcome, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
@@ -134,14 +134,26 @@ for (const c of cases) {
   const s = scorable(c, openPolicy);
   (eligibility[s.scored ? "scorable (reviewed, decided policy)" : s.why!.replace(/ P\d.*$/, " (open rows)")] ??= []).push(c.id);
   const group = SHADOW ? sliceGroup(c) : null;
-  const nr = SHADOW ? (!group ? "outside the shadow slice" : c.setup.length || c.button ? "a follow-up or button case: options are scored on their parent" : null) : notRun(c);
+  // Increment 7b (P69): a follow-up with an expected rewrite runs as one, from its last setup turn.
+  const followUp = c.setup.length > 0 && c.rewrite !== undefined;
+  const nr = SHADOW ? (!group ? "outside the shadow slice" : (c.setup.length && !followUp) || c.button ? "a follow-up or button case: options are scored on their parent" : null) : notRun(c);
   (coverage[nr ?? "run by this candidate"] ??= []).push(c.id);
   if (nr || !c.expected) continue;
   let res: CaseResult | null;
   if (deps) {
-    const sc = scoreShadow(c, shadowAnswer(c.question, deps), release, { capability: capability(c), era: era(c) }, expectedValues);
+    const outcome = followUp ? shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps) : shadowAnswer(c.question, deps);
+    // A follow-up whose rewrite is another case's question reuses that case's independent values.
+    // P71: a quarterly rewrite of a monthly case sums that case's months.
+    const src = c.expected.action === "answer" ? c.expected.values.source ?? "" : "";
+    // A rate case's count: its file's total ("<case>|count").
+    const reuse = /^the same (?:rate )?cells as (LS-\d{3})\b/.exec(src)?.[1], quarters = /^the sums of (LS-\d{3})'s months by quarter/.exec(src)?.[1];
+    const countOf = /^the count in (LS-\d{3})'s values\b/.exec(src)?.[1];
+    const ref = reuse ?? quarters ?? (countOf ? `${countOf}|count` : undefined);
+    const values: ExpectedValues | undefined = ref && expectedValues?.has(ref) && !expectedValues.has(c.id)
+      ? new Map([...expectedValues, [c.id, quarters ? quarterCells(expectedValues.get(ref)!) : expectedValues.get(ref)!]]) : expectedValues;
+    const sc = scoreShadow(c, outcome, release, { capability: capability(c), era: era(c) }, values);
     if (sc.excluded) notBuilt.push(`${c.id}: ${sc.excluded}`);
-    res = sc.result;
+    res = sc.result && followUp ? withRewrite(sc.result, c, outcome as FollowUpOutcome) : sc.result;
     if (res) groupOf.set(c.id, group!);
   } else res = score(c, run(c));
   if (res) (s.scored ? scored : provisional).push(res);

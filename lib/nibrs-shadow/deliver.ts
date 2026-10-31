@@ -145,7 +145,7 @@ export function runs(periods: string[]): string {
 export const fmt = (n: number) => n.toLocaleString("en-US");
 /** "1 carjacking offense", not "1 carjacking offenses": the unit word in the singular for a count of one. */
 const one = (n: number, words: string) => (n === 1 ? words.replace(/\b(offense|incident|victim|offender|arrest)s\b/, "$1") : words);
-const GROUPING_HEADER: Record<string, string> = { "time.month": "Month", "time.year": "Year" };
+const GROUPING_HEADER: Record<string, string> = { "time.month": "Month", "time.quarter": "Quarter", "time.year": "Year" };
 const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "UNAVAILABLE"];
 
 // P63 (Jeff 2026-10-30): the source line names the source plainly. The release stays in the outcome's metadata (the
@@ -211,7 +211,7 @@ function ageSentence(bins: { label: string; from: number; to: number }[]): strin
  * category's part of all units of its own period).
  */
 /** Time forms (increment 3): a set of years, or rolling windows (each row a window ending that month). */
-export type TimeOptions = { years?: number[]; rolling?: { months: number; missing: string[] } };
+export type TimeOptions = { years?: number[]; rolling?: { months: number; missing: string[] }; quarters?: { incomplete: string[] } };
 /** P66: the incidents beside a count (answer.ts): their statistic, or null. */
 export function incidentsBeside(plan: NibrsPlan): string | null {
   return plan.statistics.find((s) => s.kind === "incidents")?.as ?? null;
@@ -288,6 +288,12 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     text.push(`Each month's figure is the total of that month and the ${n - 1} months before it.`);
     if (rows.some((r) => statusOf(r) !== "VALUE" && statusOf(r) !== "REPORTED_ZERO") && opts.rolling.missing.length)
       text.push(`No report is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter total.`);
+  } else if (!cats.length && opts.quarters) {
+    // P71: each quarter the sum of its three months; an incomplete quarter is marked, never shown as a whole quarter.
+    text.push(`${agency}: ${what} by quarter, ${when}.`);
+    text.push("Each quarter's figure is the sum of its three months.");
+    const q = (k: string) => `Q${k.slice(6)} ${k.slice(0, 4)}`;
+    if (opts.quarters.incomplete.length) text.push(`Incomplete: ${opts.quarters.incomplete.map(q).join(", ")}. The agency did not report every month of ${opts.quarters.incomplete.length === 1 ? "that quarter" : "those quarters"}, so ${opts.quarters.incomplete.length === 1 ? "it is" : "they are"} shown blank, not as a whole quarter.`);
   } else if (!cats.length) {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
     const missing = rows.filter((r) => statusOf(r) === "UNKNOWN" || statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
@@ -470,7 +476,9 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
  * last. The columns are exactly the plan's groupings and statistic (the answer contract).
  */
 export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; header: string } | null, stat: { as: string; header: string },
-  rows: { key: string | null; value: number | null; status: string }[], lines: string[], statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
+  rows: { key: string | null; value: number | null; status: string }[], lines: string[], statements: AnswerStatement[], release: string, readings: string[] = [],
+  /** P72: a supporting statistic beside the value (the population a rate divides by; the agencies reporting), row by row. */
+  support?: { as: string; header: string; cells: { value: number | null; status: string }[] }): Delivered {
   const labels: Record<string, string> = { [`statistic:${stat.as}`]: stat.header };
   const tableCols: ResultColumn[] = [];
   if (grouping) {
@@ -478,10 +486,13 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
     tableCols.push({ binding: { kind: "grouping", dimension: grouping.dimension }, header: grouping.header });
   }
   tableCols.push({ binding: { kind: "statistic", as: stat.as }, header: stat.header });
-  const evidence: CellEvidence[] = rows.map((r, i) => ({ row: i, statistic: stat.as, status: r.status as CellStatus }));
-  const table: ResultTable = { columns: tableCols, rows: rows.map((r) => [...(grouping ? [r.key ?? ""] : []), r.value]) };
+  if (support) { labels[`statistic:${support.as}`] = support.header; tableCols.push({ binding: { kind: "statistic", as: support.as }, header: support.header }); }
+  const evidence: CellEvidence[] = rows.flatMap((r, i) => [{ row: i, statistic: stat.as, status: r.status as CellStatus },
+    ...(support ? [{ row: i, statistic: support.as, status: support.cells[i].status as CellStatus }] : [])]);
+  const table: ResultTable = { columns: tableCols, rows: rows.map((r, i) => [...(grouping ? [r.key ?? ""] : []), r.value, ...(support ? [support.cells[i].value] : [])]) };
   const text = [...lines, ...readings, ...statements.map((s) => ANSWER_STATEMENTS[s]), SOURCE_STATEMENT(release)];
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
+  if (support) support.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${support.as}: value and status disagree`); });
   return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
 }

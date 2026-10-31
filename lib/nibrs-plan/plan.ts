@@ -205,6 +205,13 @@ export const Statistic = z.discriminatedUnion("kind", [
    * incidents are the sum of its months'.
    */
   z.strictObject({ kind: z.literal("incidents"), as: Name, measure: Name }),
+  /**
+   * P72 (Jeff 2026-10-31: "Show it"): the population the rate `of` divides by, in each cell, beside the rate. A supporting
+   * number: it never changes the rate.
+   */
+  z.strictObject({ kind: z.literal("population"), as: Name, of: Name }),
+  /** P72: the number of agencies reporting in each cell of a state or national total of `measure` (P61's cohort). */
+  z.strictObject({ kind: z.literal("agencies"), as: Name, measure: Name }),
 ]);
 
 /* ------------------------------------------------------------------ transforms ----------------------------------- */

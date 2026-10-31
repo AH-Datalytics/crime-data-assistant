@@ -66,7 +66,7 @@ request accounting checked by path and value; examples for every case and form, 
 | `measures` | id, counting unit, name, optional own filters | units: victim, victim-offense pair, victim-offender pair, offense, incident, offender, arrestee, arrest, Group B arrest, property segment, dollars, vehicles |
 | `filters` | attribute filters; **scoped existence filters** | `exists` over `entity` from `scope` (the unit itself or an entity it belongs to); every condition belongs to `entity`; property needs `attribution: "incident_level_only"` |
 | `groupings` | any number | `bins` for numerically decoded dimensions, special codes kept apart; `multiValue: "each_value"` for one-to-many dimensions; unknown always visible |
-| `statistics` | `count`, `share`, `rate`, `ratio`, each named | see below |
+| `statistics` | `count`, `share`, `rate`, `ratio`, `incidents`, and the supporting `population` and `agencies` (P72), each named | see below |
 | `transforms` | `rolling`, `period_comparison`, `rank`, in that order, each naming its statistics | counts are summed; shares, rates and ratios are always recomputed from transformed parts |
 | `coverage` | `all_reporting` or `same_agencies`; unknown months shown; filtered zeros need evidence | the last two are fixed |
 | `defaults`, `bindings` | every default applied; every part of the question with the path that applies it | provenance and request accounting |
@@ -89,6 +89,13 @@ request accounting checked by path and value; examples for every case and form, 
 - **ratio** of two measures evaluated independently at the full grain (clearance rate, a subset share such as
   "rapes cleared because prosecution was declined over rapes", average property value). A zero or unknown
   denominator gives a null cell with a reason.
+- **population** (P72, Jeff 2026-10-31: "Show it") of the rate `of`: in each cell, the population that rate divides by,
+  shown beside it on request. A supporting number: it never changes the rate, a cell without one is blank
+  (UNAVAILABLE) as the rate is, and it is the rate's own denominator, never the Crime Index population used for
+  coverage shares (S12: `of` names a rate of the plan).
+- **agencies** (P72) reporting in each cell of a state or national total of `measure`: the answer's own reporting
+  cohort (P61), so the agencies that reported at least one month, or, in the every-month view, the fixed set that
+  reported every month (S12: state or national places only).
 
 ### Transforms
 
@@ -161,7 +168,10 @@ request accounting checked by path and value; examples for every case and form, 
     Each statement belongs to one source (`STATEMENT_SOURCE`, G8): both are NIBRS's, authorized and required only for
     NIBRS plans, unchanged.
 - Status, reasons, a share's parts, a rate's cohort figures and coverage stay server-side (`ResultEnvelope.evidence`
-  and the provenance below). They are never columns, never answer text and never exported to users.
+  and the provenance below). They are never columns, never answer text and never exported to users. The one
+  exception is P72: a rate's population and a state or national total's agencies reporting, each delivered as a
+  named `population` or `agencies` statistic, with its own cell evidence, only when the question asks for it. P72
+  opens no other annotation column (D08, D29).
 - The current app is being given the same contract (plan `docs/superpowers/specs/2026-10-28-answer-columns-and-chart-
   labels.md`, branch `fix/answer-columns-only-data`; implementation pending). Its guard tests will cover the engine's
   tables once it produces them.

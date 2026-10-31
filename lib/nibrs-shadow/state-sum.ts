@@ -46,7 +46,9 @@ export type StateSumMeta = { years: StateSumYear[]; everyAgencies: number; crime
 export function answerStateSum(plan: NibrsPlan, period: { from: string; to: string }, yearSet: number[] | null, deps: ShadowDeps, statements: AnswerStatement[],
   readings: string[], consistent: boolean, decline: Decline): ShadowOutcome {
   const place = plan.geography.places[0];
-  const st = plan.statistics[0];
+  // P72: the agencies reporting, or the population a rate divides by, may stand beside the value.
+  const supportStat = plan.statistics.find((s) => s.kind === "agencies" || s.kind === "population");
+  const st = plan.statistics.filter((s) => s !== supportStat)[0];
   const isRate = st.kind === "rate";
   const yearG = plan.groupings.some((g) => g.dimension === "time.year");
   if (plan.groupings.some((g) => g.dimension !== "time.year")) return decline("Not in the slice yet: a state or national sum by month or by category.");
@@ -122,7 +124,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const nationNote = place.kind === "national" ? ["The nation here is the 50 states and D.C.; territories and federal agencies are not included."] : [];
   const residents = place.kind === "national" ? "the nation's residents" : "the state's residents";
 
-  const view = (every: boolean): { lines: string[]; rows: { key: string | null; value: number | null; status: string }[] } => {
+  type Row = { key: string | null; value: number | null; status: string };
+  const view = (every: boolean): { lines: string[]; rows: Row[]; support: Row[] } => {
     const lines: string[] = [];
     if (years.length === 1) {
       const y = byYear[0];
@@ -141,7 +144,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       if (y.conflicts) lines.push(`${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose records conflict with the agency's reporting status ${y.conflicts === 1 ? "is" : "are"} not counted.`);
       if (isRate && v !== null) lines.push(`The rate is the sum per 100,000 residents of the agencies ${every ? "that reported every month" : "counted"}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
-      return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }] };
+      const support = supportStat?.kind === "population" ? (noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" })
+        : { value: every ? y.every.agencies : y.agencies, status: "VALUE" };
+      return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }], support: [{ key: null, ...support }] };
     }
     lines.push(every
       ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`
@@ -152,11 +157,13 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     const conflicted = byYear.filter((y) => y.conflicts);
     if (conflicted.length) lines.push(`Agency-months whose records conflict with the agency's reporting status are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
     if (!every) lines.push(`Which agencies report changed over these years, so part of a change can be agencies joining or leaving; the button shows one fixed set of ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`);
-    return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })) };
+    return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
+      support: byYear.map((y) => ({ key: null, value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })) };
   };
   const deliver = (p: NibrsPlan, every: boolean) => {
     const v = view(every);
-    return deliverTable(p, yearG ? { dimension: "time.year", header: "Year" } : null, { as: st.as, header: Header }, v.rows, [...v.lines, ...nationNote], statements, deps.release.id, readings);
+    return deliverTable(p, yearG ? { dimension: "time.year", header: "Year" } : null, { as: st.as, header: Header }, v.rows, [...v.lines, ...nationNote], statements, deps.release.id, readings,
+      supportStat ? { as: supportStat.as, header: supportStat.kind === "agencies" ? (every ? "Agencies reporting every month" : "Agencies reporting") : "Population", cells: v.support } : undefined);
   };
   const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
   const everyDelivered = deliver(everyPlan, true);

@@ -573,6 +573,9 @@ const swapped = scoredTx(rankFile([["Dallas Police Department", "TXDPD0000", 84]
 assert.deepEqual([swapped.values, swapped.diffs.some((d) => d.field === "position Houston Police Department")], ["mismatch", true], "the order is checked");
 assert.equal(scoreShadow(wichitaLabel, wichita, r, ctx, v7({ grouping: "rate", agencies: [{ agency_name: "Wichita Police Department", total: { status: "VALUE", value: 60 }, rate: { status: "VALUE", value: 15 } }] })).result!.values, "match");
 assert.equal(scoreShadow(wichitaLabel, wichita, r, ctx, v7({ grouping: "rate", agencies: [{ agency_name: "Wichita Police Department", total: { status: "VALUE", value: 60 }, rate: { status: "VALUE", value: 15.1 } }] })).result!.values, "mismatch");
+// Increment 7b (LS-424): one agency's rate file also gives its count, for a follow-up that asks for the count.
+assert.deepEqual(v7({ grouping: "rate", agencies: [{ agency_name: "Wichita Police Department", total: { status: "VALUE", value: 60 }, rate: { status: "VALUE", value: 15 } }] }).get("LS-999|count"),
+  [{ key: "", value: 60, status: "VALUE" }]);
 
 // A label's agency in other words than the FBI's is the same agency; another agency is not.
 assert.equal(fbiNameFor("Portland Police Bureau", "OR0260200"), "Portland Police Department");
@@ -767,6 +770,43 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).
   assert.deepEqual(as(ask("Murders by young adults in Memphis in 2024"), "clarify").options.map((o) => o.label), ["18 to 24", "18 to 29"]);
   assert.deepEqual(as(ask("How many attackers were there in aggravated assaults in Detroit in 2024?"), "clarify").options.map((o) => o.label), ["Offenders", "People arrested"]);
+}
+
+// Increment 7b. P71: each quarter is the sum of its three months; a quarter with a month not known (March 2024 in the
+// stub) is blank and named incomplete, never shown as a whole quarter.
+{
+  const qa = as(ask("Shoplifting in Memphis by quarter in 2024"), "answer");
+  assert.deepEqual(qa.plan.groupings.map((g) => g.dimension), ["time.quarter"]);
+  assert.deepEqual(qa.delivered.table.rows, [["2024-Q1", null], ["2024-Q2", 21], ["2024-Q3", 21], ["2024-Q4", 21]]);
+  assert.ok(qa.delivered.text.includes("Each quarter's figure is the sum of its three months."));
+  assert.ok(qa.delivered.text.some((t) => /^Incomplete: Q1 2024/.test(t)), qa.delivered.text.join("\n"));
+  assert.equal(as(ask("Shoplifting rate in Memphis by quarter in 2024"), "decline").kind, "decline");
+  // Codex 7b-04.3: quarters never widen the period asked (a set of years; a period starting or ending inside a quarter).
+  assert.match(as(ask("Shoplifting in Memphis by quarter in 2021 and 2024"), "decline").explanation, /quarters of a set of years/);
+  assert.match(as(ask("Shoplifting in Memphis by quarter from February 2024 to December 2024"), "decline").explanation, /starts or ends inside a quarter/);
+  // Codex 7b-04.4: both supporting columns at once are declined, never one dropped.
+  assert.match(as(ask("Shoplifting rate in Kansas in 2024, with a column showing the population used to calculate the rate, with the number of agencies reporting"), "decline").explanation,
+    /population and the agencies reporting together/);
+  // P72: the population a rate divides by, in its own column beside the unchanged rate.
+  const pa = as(ask("Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate"), "answer");
+  const plain = as(ask("Shoplifting rate in Wichita in 2024"), "answer");
+  assert.deepEqual(pa.delivered.table.columns.map((c) => c.header), [...plain.delivered.table.columns.map((c) => c.header), "Population"]);
+  assert.deepEqual(pa.delivered.table.rows, [[plain.delivered.table.rows[0][0], 400_000]]);
+  assert.ok(pa.plan.statistics.some((s) => s.kind === "population" && s.of === plain.plan.statistics[0].as));
+  // Codex 7b-04.6: the population column is checked against the independent file's population, not found in the text.
+  const popFile = (population: number) => v7({ grouping: "rate", agencies: [{ agency_name: "Wichita Police Department", population, total: { status: "VALUE", value: 60 }, rate: { status: "VALUE", value: 15 } }] });
+  assert.equal(scoreShadow(wichitaLabel, pa, r, ctx, popFile(400_000)).result!.values, "match");
+  assert.equal(scoreShadow(wichitaLabel, pa, r, ctx, popFile(15)).result!.values, "mismatch");
+  assert.equal(as(ask("Shoplifting in Wichita in 2024, with a column showing the population used to calculate the rate"), "decline").explanation,
+    "A population column goes with a rate; this answer has no rate.");
+  // P72: the agencies reporting beside a state total, the answer's own cohort; never beside an agency.
+  const ka = as(ask("Shoplifting in Kansas in 2024, with the number of agencies reporting"), "answer");
+  assert.deepEqual(ka.delivered.table.columns.map((c) => c.header).at(-1), "Agencies reporting");
+  assert.equal(ka.delivered.table.rows[0].at(-1), ka.stateSum!.years[0].agencies);
+  const every = as(ka.buttons![0].continuation!, "answer");
+  assert.equal(every.delivered.table.rows[0].at(-1), ka.stateSum!.years[0].every.agencies);
+  assert.equal(as(ask("Shoplifting in Wichita in 2024, with the number of agencies reporting"), "decline").explanation,
+    "The number of agencies reporting goes with a state or national total.");
 }
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
