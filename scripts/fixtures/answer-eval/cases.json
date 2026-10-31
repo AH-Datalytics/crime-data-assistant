@@ -22881,7 +22881,7 @@
     },
     "values": {
      "status": "pending_build",
-     "source": "nibrs-model expected values (request 10): offender segments (sequence 00, no offender information, excluded) linked as stranger to an aggravated-assault victim, each once; must differ from admitting every offender of a qualifying incident"
+     "source": "nibrs-model expected values (request 10): offender segments linked by the relationship segment as stranger to an aggravated-assault victim, each once (a sequence 00 record has no relationship and cannot be linked); must differ from admitting every offender of a qualifying incident"
     },
     "statements": [
      "names the agency (Memphis Police Department)",
@@ -23131,12 +23131,13 @@
     },
     "values": {
      "status": "pending_build",
-     "source": "nibrs-model expected values (request 10): robbery offender segments (sequence 00 excluded) by age groups in the accepted victim-age mapping (as LS-288); must differ from robbery-offense counts"
+     "source": "nibrs-model expected values (request 10): robbery offender segments by age groups in the accepted victim-age mapping (as LS-288), sequence 00 (no offender information) included as its own category (Trap C, the segment convention, as LS-293/V59); must differ from robbery-offense counts"
     },
     "statements": [
      "names the agency (Albuquerque Police Department)",
      "counts offenders, each offender segment once",
      "shows unknown and not-recorded categories as their own rows, never dropped",
+     "says it counts offender records (segments), including records with no offender information as their own category, not people",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
    },
