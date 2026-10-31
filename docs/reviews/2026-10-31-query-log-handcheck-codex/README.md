@@ -3,3 +3,4 @@
 | # | Subject | Commit | Verdict | Applied in |
 |---|---|---|---|---|
 | 01 | the hand check (draft) | before the first commit | REVISE (6 P2) | the first commit |
+| 02 | narrow re-check | 53e6335 | ACCEPT | none needed |
