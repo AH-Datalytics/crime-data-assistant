@@ -22393,6 +22393,1282 @@
     "reviewed_by": null,
     "notes": "MUST ANSWER: property negative control present (nibrs-model search, NC0600100 2024: incidents with a recovered firearm but none stolen are excluded)."
    }
+  },
+  {
+   "id": "LS-377",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults in Memphis in 2024 by offender race",
+   "policy": [
+    "P29",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (crimes grouped by the incident's offenders' races; a crime with offenders in several races counts once in each)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): victims grouped by the incident offenders' races, each victim once per race; must differ from offender counts, from grouping by victim race and from the pair-linked grouping (LS-383's method), with an incident having two offenders of one race (counted once in that race)"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts victims (D18), each under the races of its incident's offenders",
+     "says a crime with offenders in more than one category counts once in each, so the categories can add up to more than the total (P49)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: offender race, P49 default (the incident's offenders)."
+   }
+  },
+  {
+   "id": "LS-378",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robberies in Detroit in 2024 by offender age",
+   "policy": [
+    "P29",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender age (crimes grouped by the incident's offenders' ages; a crime with offenders in several age groups counts once in each)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): robbery offenses by the incident offenders' age groups in the accepted victim-age mapping (as LS-288); each offense once per age group; must differ from counting offenders, with an incident having two offenders in one age group"
+    },
+    "statements": [
+     "names the agency (Detroit Police Department)",
+     "counts robbery offenses (D18), each under the age groups of its incident's offenders",
+     "says a crime with offenders in more than one category counts once in each, so the categories can add up to more than the total (P49)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: offender age groups in the same bins as victim age."
+   }
+  },
+  {
+   "id": "LS-379",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults by juveniles in Memphis in 2024",
+   "policy": [
+    "P29",
+    "P30",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "offender age: under 18 (any offender of the incident)"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): victims of incidents with any offender under 18, each victim once; must differ from LS-380 and from filtering only through victim-offender pairs; an incident with two juvenile offenders counts its victims once"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "reads \"by juveniles\" as offenders under 18 (P29, P30)",
+     "counts victims of incidents with at least one offender under 18, each once (P49)",
+     "says offenders of unknown age are not counted as juveniles",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: person filter on the offender."
+   }
+  },
+  {
+   "id": "LS-380",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults against juveniles in Memphis in 2024",
+   "policy": [
+    "P29",
+    "P30",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "victim age: under 18"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): victims under 18 only; an incident with a juvenile and an adult victim contributes only the juvenile; must differ from LS-379"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "reads \"against juveniles\" as victims under 18 (P29, P30)",
+     "counts victims under 18 (D18)",
+     "says victims of unknown age are not counted",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: person filter on the counted unit (the twin of the previous case)."
+   }
+  },
+  {
+   "id": "LS-381",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Female victims of aggravated assault with a firearm in Memphis in 2024",
+   "policy": [
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "victim sex: female",
+      "weapon: firearm"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): the female victim must be linked to the firearm aggravated-assault offense itself; negative control: an incident with a female victim and a firearm offense not linked to each other is excluded (an incident-wide filter would include it)"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts female victims whose aggravated assault involved a firearm (both conditions on the same victim and offense)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: two filters (inventory example)."
+   }
+  },
+  {
+   "id": "LS-382",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "According to NIBRS, murder victims in Memphis in 2024 by offender race",
+   "policy": [
+    "P01",
+    "P65",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (crimes grouped by the incident's offenders' races; a crime with offenders in several races counts once in each)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): murder victims by the incident offenders' races (P49); must differ by category from LS-383 (pair-linked)"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "uses the incident's offenders, not the pair-linked reading (P65 default)",
+     "says a crime with offenders in more than one category counts once in each, so the categories can add up to more than the total (P49)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: P65 default; discriminates against the pair-linked case below."
+   }
+  },
+  {
+   "id": "LS-383",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "According to NIBRS, murder victims in Memphis in 2024 by the race of the offender who killed them",
+   "policy": [
+    "P01",
+    "P65",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (pair-linked: only the offenders the victim-offender relationship segment links to the victim; \"no relationship reported\" as its own category)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): murder victims by the races of only the offenders the relationship segment links to them; a victim with two linked offenders of one race counts once in that race; victims with no relationship reported are their own category; must differ from LS-382"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "uses only the offenders linked to each victim by the relationship segment, and says so (P65)",
+     "shows victims with no relationship reported as their own category, separate from a linked offender whose race is unknown or not recorded",
+     "says a victim linked to offenders of more than one race counts once in each",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: the pair-linked reading, named by the question (\"who killed them\")."
+   }
+  },
+  {
+   "id": "LS-384",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Offenders in aggravated assaults in Memphis in 2024 by sex, where the victim was a stranger",
+   "policy": [
+    "P36",
+    "P44",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "relationship: stranger to an aggravated-assault victim (pair-linked to the offender)"
+     ],
+     "groupings": [
+      "offender sex"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "offender"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): offender segments (sequence 00, no offender information, excluded) linked as stranger to an aggravated-assault victim, each once; must differ from admitting every offender of a qualifying incident"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts offenders, each once, who are linked as a stranger to at least one aggravated-assault victim by the relationship segment",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: offender unit filtered through the pair (inventory example)."
+   }
+  },
+  {
+   "id": "LS-385",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Arrests in Denver in 2023 by arrestee race",
+   "policy": [
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "arrestee race"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "all offenses",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): arrestee segments marked C or N are counted, M is not (P68); arrests by arrest date (P50); standalone Group B arrests included; by arrestee race"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "counts arrests by arrest date (P50)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice (P46)",
+     "says standalone Group B arrests (with no incident) are included in the count, and arrests with a Group B arrest offense count like any other",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: arrestee attribute breakdown; says whether Group B arrests are included."
+   }
+  },
+  {
+   "id": "LS-386",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Juvenile arrests for robbery in Detroit in 2024",
+   "policy": [
+    "P30",
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "arrestee age: under 18"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): arrestee segments marked C or N are counted, M is not (P68); arrests by arrest date (P50); arrestee age under 18 at arrest; must differ from selecting by offender age or by incident date"
+    },
+    "statements": [
+     "names the agency (Detroit Police Department)",
+     "counts arrests with robbery as the arrest offense, by arrest date (P50)",
+     "reads juvenile as an arrestee under 18 (P30); arrestees of unknown age are not counted",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice (P46)",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: person filter on the arrestee."
+   }
+  },
+  {
+   "id": "LS-387",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Simple assaults in Milwaukee in 2024 by offender ethnicity",
+   "policy": [
+    "P29",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender ethnicity (crimes grouped by the incident's offenders' ethnicities; a crime with offenders in several counts once in each)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Milwaukee Police Department",
+       "state": "WI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): simple assault victims by the incident offenders' ethnicities, each once per ethnicity; must differ from victim ethnicity and from offender counts"
+    },
+    "statements": [
+     "names the agency (Milwaukee Police Department)",
+     "says a crime with offenders in more than one category counts once in each, so the categories can add up to more than the total (P49)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: ethnicity (often unreported; the category must show)."
+   }
+  },
+  {
+   "id": "LS-388",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Robbery offenders in Albuquerque in 2023 by age",
+   "policy": [
+    "P44",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender age"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Albuquerque Police Department",
+       "state": "NM"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offender"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): robbery offender segments (sequence 00 excluded) by age groups in the accepted victim-age mapping (as LS-288); must differ from robbery-offense counts"
+    },
+    "statements": [
+     "names the agency (Albuquerque Police Department)",
+     "counts offenders, each offender segment once",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: offender unit with an age breakdown."
+   }
+  },
+  {
+   "id": "LS-389",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "According to NIBRS, murders by young adults in Memphis in 2024",
+   "policy": [
+    "P01",
+    "P30",
+    "P29"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "which ages \"young adults\" means",
+    "options": [
+     {
+      "label": "18 to 24",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Memphis Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "murder",
+         "unit": "victim"
+        }
+       ],
+       "filters": [
+        "offender age: 18 to 24 (any offender of the incident)"
+       ],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "18 to 29",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Memphis Police Department",
+         "state": "TN"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "murder",
+         "unit": "victim"
+        }
+       ],
+       "filters": [
+        "offender age: 18 to 29 (any offender of the incident)"
+       ],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "P30: young adults has no fixed range; ask, with buttons."
+   }
+  },
+  {
+   "id": "LS-390",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "How many attackers were there in aggravated assaults in Detroit in 2024?",
+   "policy": [
+    "P44"
+   ],
+   "expected": {
+    "action": "clarify",
+    "about": "what \"attackers\" means",
+    "options": [
+     {
+      "label": "Offenders",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Detroit Police Department",
+         "state": "MI"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "aggravated assault",
+         "unit": "offender"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     },
+     {
+      "label": "People arrested",
+      "leads_to": "answer",
+      "meaning": {
+       "source": "nibrs",
+       "places": [
+        {
+         "kind": "agency",
+         "name": "Detroit Police Department",
+         "state": "MI"
+        }
+       ],
+       "period": {
+        "from": "2024-01",
+        "to": "2024-12"
+       },
+       "measures": [
+        {
+         "name": "aggravated assault",
+         "unit": "arrest"
+        }
+       ],
+       "filters": [],
+       "groupings": [],
+       "statistic": "count"
+      }
+     }
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "P44: attackers, criminals and assailants: ask what is meant."
+   }
+  },
+  {
+   "id": "LS-391",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "People charged with robbery in Memphis in 2024",
+   "policy": [
+    "P46"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "The data has no charging records, so people charged cannot be counted.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "P46: charged and booked are declined; offer arrests."
+   }
+  },
+  {
+   "id": "LS-392",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults in Tennessee in 2024 by offender sex",
+   "policy": [
+    "P29",
+    "P53",
+    "P01"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.",
+    "alternative": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "offender sex"
+     ],
+     "statistic": "count"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "NEGATIVE CONTROL: P29, an offender breakdown the engine cannot compute is declined with that reason, never answered as victims; state breakdowns are a confirmed gap."
+   }
+  },
+  {
+   "id": "LS-393",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Arrests in Denver in 2023 by arrestee ethnicity",
+   "policy": [
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "arrestee ethnicity"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "all offenses",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): arrestee segments marked C or N are counted, M is not (P68); arrests by arrest date (P50); standalone Group B arrests included; by arrestee ethnicity"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "counts arrests by arrest date (P50)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice (P46)",
+     "says standalone Group B arrests (with no incident) are included in the count, and arrests with a Group B arrest offense count like any other",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: arrestee ethnicity delivered."
+   }
+  },
+  {
+   "id": "LS-394",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Arrests in Denver in 2023 by arrestee age",
+   "policy": [
+    "P46",
+    "P50",
+    "P68",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "arrestee age"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "all offenses",
+       "unit": "arrest"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): arrestee segments marked C or N are counted, M is not (P68); arrests by arrest date (P50); standalone Group B arrests included; by arrestee age groups in the accepted victim-age mapping (as LS-288)"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "counts arrests by arrest date (P50)",
+     "says each arrest counts once and NIBRS cannot tell when one person was arrested twice (P46)",
+     "says standalone Group B arrests (with no incident) are included in the count, and arrests with a Group B arrest offense count like any other",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: arrestee age delivered as a grouping (LS-386 is a filter)."
+   }
+  },
+  {
+   "id": "LS-395",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Female juvenile victims of aggravated assault in Memphis in 2024",
+   "policy": [
+    "P30",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "victim sex: female",
+      "victim age: under 18"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): both attributes on the same victim; negative control: an incident with a female adult victim and a male juvenile victim contributes nothing"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts victims who are both female and under 18 (both on the same victim)",
+     "says victims of unknown age or sex are not counted",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: two person filters on one unit."
+   }
+  },
+  {
+   "id": "LS-396",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assault victims of offenders who were under 18, in Memphis in 2024, by victim race",
+   "policy": [
+    "P30",
+    "P65",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "offender age: under 18 (pair-linked to the victim)"
+     ],
+     "groupings": [
+      "victim race"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 10): victims linked by the relationship segment to at least one offender under 18, each once, by victim race; must differ from incident-wide offender filtering (LS-379's method)"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "counts each victim once, under the victim's own race",
+     "applies the offender's age through the victim-offender pairing the question names, and says so (P65); a victim with no relationship reported cannot meet the condition and is not counted",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7",
+    "reviewed_by": "codex:inc7-labels-1",
+    "notes": "MUST ANSWER: a victim breakdown filtered by a paired offender attribute."
+   }
   }
  ]
 }
