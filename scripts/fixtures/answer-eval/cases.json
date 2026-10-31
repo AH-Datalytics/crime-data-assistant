@@ -25264,7 +25264,8 @@
     "D18",
     "D30",
     "P01",
-    "P16"
+    "P16",
+    "P71"
    ],
    "expected": {
     "action": "answer",
@@ -25295,20 +25296,20 @@
     },
     "values": {
      "status": "pending_build",
-     "source": "the sums of LS-225's months by quarter (its V file); a quarter with an unknown month has no value"
+     "source": "the sums of LS-225's months by quarter (its V file); a quarter with an unreported month is marked incomplete (P71)"
     },
     "statements": [
      "shows the rewritten question above the answer, as the question answered (P69)",
      "names the agency (Memphis Police Department)",
      "names its source at the end",
-     "gives each quarter as the sum of its three months, and says explicitly when a quarter is incomplete (PROPOSAL: how an incomplete quarter is shown is not decided)"
+     "gives each quarter as the sum of its three months; a quarter in which the agency did not report all three months is marked incomplete, never shown as a whole quarter (P71)"
     ]
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-inc7b",
     "reviewed_by": null,
-    "notes": "Guidance: F8 (coordinator recommendation, not Jeff's decision; flagged): quarters are sums of months, flagged when incomplete. HELD as drafted (provisional, never scored), Codex 7b-01: held until quarterly aggregation and incomplete quarters are decided (a coordinator proposal, not Jeff's decision; it changes answer numbers)."
+    "notes": "Guidance: F8 (coordinator recommendation, not Jeff's decision; flagged): quarters are sums of months, flagged when incomplete. Decided by Jeff 2026-10-31 (P71: \"Add up months\")."
    }
   },
   {
@@ -25335,7 +25336,8 @@
     "P01",
     "P15",
     "P16",
-    "P58"
+    "P58",
+    "P72"
    ],
    "expected": {
     "action": "answer",
@@ -25372,14 +25374,14 @@
      "gives the rate per 100,000 residents and names the population and its year",
      "names the agency (Wichita Police Department)",
      "names its source at the end",
-     "gives the population the rate divides by (the FBI's agency population for 2024) beside the rate, without changing the rate"
+     "gives the population the rate divides by (the FBI agency population for 2024) in its own column beside the rate, without changing the rate (P72)"
     ]
    },
    "label": {
     "status": "drafted",
     "drafted_by": "claude-inc7b",
     "reviewed_by": null,
-    "notes": "Guidance: F10 (coordinator recommendation, flagged): a population column is allowed; no number changes. HELD as drafted (provisional, never scored), Codex 7b-01: held until the population column is decided (a coordinator proposal)."
+    "notes": "Guidance: F10 (coordinator recommendation, flagged): a population column is allowed; no number changes. Decided by Jeff 2026-10-31 (P72: \"Show it\")."
    }
   },
   {
