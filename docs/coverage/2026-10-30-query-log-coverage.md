@@ -10,7 +10,7 @@ r2 applies Codex review 01 (REVISE). Its changes:
 - D03 is applied;
 - status is judged by place level;
 - the gaps are re-sized;
-- the policy questions are cut to the one that is new;
+- the area question is decided by the coordinator's ruling (below), and follow-ups are planned as increment 7b;
 - the held-out readings are separated into policy reading, first action and today's status.
 
 ## Source and method
@@ -48,7 +48,7 @@ r2 applies Codex review 01 (REVISE). Its changes:
   - **Status, judged at the question's place level:**
     - **B:** built (a numeric answer, a named route or a decline);
     - **P:** planned (the increment, or that source's step in `docs/superpowers/specs/2026-10-28-engine-other-sources.md`, in the order SHR, Historical, Current Trends, Hate Crime);
-    - **G:** gap;
+    - **G:** gap (follow-ups are planned as increment 7b; area totals per the ruling below);
     - **C:** clarify first (no crime named; asking is the policy action).
 - **Accuracy (hand audits):**
   - **r1's rules:** Codex audited 50 rows and found shape 88%, source (then the tab) 86%, action 76%, shape-or-action 66%.
@@ -71,21 +71,21 @@ A built cell means built *for that place level*. The CSV's status column names t
 
 | Shape | NIBRS | Crime Index historical | Crime Index current | SHR | Hate Crime | unresolved | All |
 |---|---|---|---|---|---|---|---|
-| count | 113 (B 97, P 16) | 519 (B 87, P 432) | 27 (B 5, P 22) | 45 (P 45) | 12 (P 12) | 231 (C 231) | 947 |
+| count | 113 (B 96, P 17) | 519 (B 86, P 433) | 27 (B 5, P 22) | 45 (P 45) | 12 (P 12) | 231 (P 5, C 226) | 947 |
 | rate | 7 (B 7) | 228 (B 55, P 173) | 16 (B 5, P 11) | 5 (P 5) | 0 | 7 (C 7) | 263 |
-| trend | 180 (B 170, P 5, G 5) | 797 (B 185, P 612) | 195 (B 39, P 156) | 96 (B 2, P 94) | 32 (P 32) | 109 (C 109) | 1,409 |
+| trend | 180 (B 169, P 6, G 5) | 797 (B 185, P 612) | 195 (B 39, P 156) | 96 (B 2, P 94) | 32 (P 32) | 109 (P 2, C 107) | 1,409 |
 | period comparison | 4 (B 4) | 67 (B 7, P 60) | 19 (B 1, P 18) | 11 (P 11) | 0 | 16 (C 16) | 117 |
 | place comparison | 20 (B 15, P 1, G 4) | 182 (P 182) | 13 (B 1, P 12) | 16 (P 16) | 4 (P 4) | 22 (C 22) | 257 |
-| ranking | 23 (B 8, P 1, G 14) | 166 (P 166) | 22 (B 16, P 6) | 18 (P 18) | 7 (P 7) | 39 (C 39) | 275 |
+| ranking | 23 (B 8, P 1, G 14) | 166 (P 166) | 22 (B 16, P 6) | 18 (P 18) | 7 (P 7) | 39 (P 1, C 38) | 275 |
 | share/breakdown | 134 (B 16, P 92, G 26) | 81 (P 81) | 1 (P 1) | 153 (B 12, P 141) | 4 (P 4) | 34 (C 34) | 407 |
 | cross-segment | 28 (P 28) | 3 (P 3) | 0 | 22 (B 5, P 17) | 0 | 1 (C 1) | 54 |
 | lookup/list | 17 (G 17) | 14 (G 14) | 0 | 1 (G 1) | 3 (G 3) | 14 (G 14) | 49 |
 | method/definition | 6 (G 6) | 7 (G 7) | 0 | 0 | 0 | 7 (G 7) | 20 |
-| follow-up (needs context) | 40 (G 40) | 38 (G 38) | 1 (G 1) | 2 (G 2) | 2 (G 2) | 596 (G 596) | 679 |
+| follow-up (needs context) | 40 (P 40) | 38 (P 38) | 1 (P 1) | 2 (P 2) | 2 (P 2) | 596 (P 596) | 679 |
 | out of scope | 3 (B 3) | 22 (B 22) | 2 (B 2) | 1 (B 1) | 1 (B 1) | 27 (B 27) | 56 |
 | All | 575 | 2,124 | 296 | 370 | 65 | 1,103 | 4,533 |
 
-Totals: built 793, planned 2,484, gap 797, clarify first 459.
+Totals: built 790, planned 3,174 (679 of them follow-ups, now increment 7b, and 35 area totals), gap 118, clarify first 451.
 
 What the status means at each level:
 - **NIBRS:**
@@ -108,10 +108,9 @@ What the status means at each level:
 
 ## Gaps (for the coordinator)
 
-1. **Follow-ups, 679 (15% of questions), the largest gap.**
-   - Examples: "percent change", "make this a rate", "only show homicide now", "show this by year for 2023 to 2025", "stop counting in April 2026", chart edits.
-   - The shadow reads one question, and the scorer does not measure follow-up turns.
-   - No increment carries the conversation state these need: the previous plan, edited.
+1. **Follow-ups, 679 (15% of questions), the largest gap. Now planned as increment 7b (coordinator, 2026-10-30), right after 7 and ahead of 8.**
+   - Continuations of the previous answer: "percent change", "make this a rate", "only show homicide now", "show this by year for 2023 to 2025", "same for 2023", "stop counting in April 2026", chart edits.
+   - Each needs the previous plan, edited. The scorer will need follow-up turns too.
 2. **NIBRS for states and the nation, beyond plain sums, 49:**
    - breakdowns, 26 ("juvenile arrests by race nationally");
    - rankings of states or of cities nationally, 14;
@@ -126,10 +125,10 @@ What the status means at each level:
 4. **Methods and definitions, 20 (likely undercounted: the rules catch only definitional wording):**
    - examples: "what counts as personal weapons", "how is domestic defined", "where does this data come from";
    - text answers outside the plan language.
-5. **Areas that are not one agency:**
-   - **Explicit county-wide totals: 23.** "Calculate the countywide percent change in violent crimes in Cook County". A plain county name already has a rule (P25: the county police department, else the sheriff), so only an explicit request for every agency in the county is new.
-   - **Metro areas and regions: 17.**
-   - **Areas below the agency (zip code, neighborhood, district, beat, tract): 16.** No source has them: decline, with the reason.
+5. **Areas that are not one agency: decided (ruling below), now planned.**
+   - **Explicit county-wide totals: 22.** For example, "calculate the countywide percent change in violent crimes in Cook County".
+   - **Metro areas: 13**, after increment 8.
+   - **Areas below the agency (zip code, neighborhood, district, beat, tract): 16.** No source has them, so these stay a decline, with the reason.
 6. **Analysis across measures or sources, 18:** correlations, indexing to a base year, crime set against staffing. P31 composites cover only named crime totals.
 7. **National estimates, 3:**
    - "US murder rate per year with 2025 estimated" is Historical's published national figures (increment 5 for the years the file has);
@@ -138,9 +137,21 @@ What the status means at each level:
 
 Group rates ("murder rate for teenagers") are not a gap. D03 already decides them: rates only for places; offer counts or shares by group (23 questions).
 
-## Policy question for Jeff
+## Areas: decided (no question for Jeff)
 
-Should the engine answer a total across several agencies for an area, when the question asks for the whole area ("countywide", "all agencies in X County", a metro area)? It would sum every agency in the area, with a coverage note. The alternative is to decline. A plain county name keeps P25.
+Jeff, in the coordinator's session: "We could add up all the agencies in a county or metro area, just makes me nervous
+since it isn't formal. Still, we should have that data." The coordinator's ruling, which Jeff has seen, is to be
+recorded as a policy row the next time the policy file is touched:
+
+- **A plain county name:** the sheriff or county police (P25 stands), with a note that cities in the county are not included.
+- **An explicit county-wide request** ("countywide", "whole county", "all agencies in X County"):
+  - the answer is the sum of every agency whose primary county is X, labeled as a sum of reporting agencies;
+  - it lists the agencies and gives the reporting share as in P61;
+  - non-reporters are never estimated.
+  - Where no county agency exists (87 county equivalents in 2024, mostly Virginia's independent cities, Alaska's boroughs, Connecticut and Rhode Island), the engine asks whether all agencies or one is meant.
+- **Metro areas:** the same summed-agencies method over the Census CBSA counties, built after increment 8. Declined until then.
+
+Group rates stay declined (D03), which Jeff agreed.
 
 ## Proposed held-out cases (labels drafted and frozen before any scoring)
 

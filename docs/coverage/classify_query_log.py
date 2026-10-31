@@ -104,12 +104,19 @@ def action(q, sh, lvl, src):
     if not RANGE.search(q): return 'clarify'
     return 'answer'
 
+COUNTYWIDE = R(r"countywide|county-wide|all (?:the )?agencies in|entire county|whole county|county total|county as a whole")
+METRO = R(r"\bmetro|\bmsa\b|metropolitan")
 INC9 = R(r"circumstance|injur|drug type|meth|cocaine|fentanyl|heroin|marijuana|cannabis|opioid|\bvalue\b|dollar|number of (?:victims|offenders)|justifiable")
 PEOPLE = R(r"offender|arrestee|suspect|juvenile|adult|female victim|male victim|victims? under|relationship|stranger")
 def status(q, sh, lvl, src):
     """B = built (an answer, or a named route), P = planned (where), G = gap, C = clarify first."""
     if sh == 'out of scope': return 'B decline'
-    if sh in ('lookup/list', 'method/definition', 'follow-up (needs context)'): return 'G'
+    # Follow-ups are increment 7b (coordinator 2026-10-30): continuations of the previous answer.
+    if sh == 'follow-up (needs context)': return 'P inc 7b'
+    if sh in ('lookup/list', 'method/definition'): return 'G'
+    # Areas (ruling 2026-10-30): an explicit county-wide total sums the county's agencies; a metro area after increment 8.
+    if COUNTYWIDE.search(q): return 'P area totals (county-wide, ruling 2026-10-30)'
+    if METRO.search(q): return 'P area totals (metro, after inc 8; declined until then)'
     # No crime named: the policy action is to ask (D31), not a missing capability.
     if src == 'unresolved': return 'C clarify first (no crime named)'
     if src == 'NIBRS':
