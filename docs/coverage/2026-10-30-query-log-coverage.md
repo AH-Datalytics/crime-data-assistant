@@ -1,4 +1,4 @@
-# Query-log coverage review (NIBRS engine session, 2026-10-30, r3)
+# Query-log coverage review (NIBRS engine session, 2026-10-30, r4)
 
 How real users have asked for the data, against what the engine has built, what is planned and what nothing covers yet.
 Asked by the NIBRSAI coordinator after PR #78. Jeff approved the production read on 2026-10-30.
@@ -23,6 +23,8 @@ r3 applies Codex review 02 (REVISE, eight P2/P3). Its changes:
 - metro geography is told apart from agency names ("LAS VEGAS METRO PD"), and a metro request's action is the interim decline;
 - the planned demand and gap sizes are reconciled with their member rows;
 - held-out cases 4 and 25 are corrected.
+
+r4 applies Codex review 03 (REVISE, two P2): planned demand is split from rows whose route is built; below-agency requests decline in the action column too; Codex's fresh audit and the residual errors it found are disclosed (Limits).
 
 ## Source and method
 
@@ -67,7 +69,8 @@ r3 applies Codex review 02 (REVISE, eight P2/P3). Its changes:
   - **r3's rules (a fresh draw, seed 20261030):** shape 45/50, source 48/50, action 46/50, status bucket 44/50.
     - The misses: short standalone requests with no crime ("Edina Minnesota scorecard") read as follow-ups; "let's do murders then" read as a new question; "how many agencies report" read as a count; a mixed SHR and Historical request; a firearm robbery ranking left on Historical.
     - Drawn before two last fixes (metro and estimate wording; breakdowns with no place), which did not touch these rows.
-  - Read the counts as a size guide to within about a tenth, not as a score; they are not bounded per cell. Codex's re-check gives another draw.
+  - **r3's rules (Codex 03, a fresh draw, seed 2026103091):** shape 43/50 (86%), source 45/50 (90%), action 46/50 (92%), status bucket 42/50 (84%), full status 39/50 (78%).
+  - Read the counts as a size guide to within about a tenth to a seventh, not as a score; full status (the named increment or route) is less precise than the B/P/G/C bucket. They are not bounded per cell.
 - **Files:**
   - `2026-10-30-query-log-classification.csv`: every distinct real question, redacted, with times asked, tab, shape, place level, source, correct action, status and the actions logged for it.
   - `classify_query_log.py`: the rules.
@@ -127,7 +130,9 @@ What the status means at each level:
   - staffing, 123;
   - states or the nation beyond what increment 5 built, 50;
   - a national clearance series, 9.
-- **SHR, 361.** **Current Trends, 290.** **Hate Crime, 56.**
+- **SHR, 342** still to build (and 19 more with the relationship route built: 361 in all for the source step).
+- **Current Trends, 255** still to build (and 35 more with the state and national route built: 290 in all).
+- **Hate Crime, 56.**
 - **NIBRS:** person attributes (increment 7) 88; two-way (increments 7-8) 29; new fields (increment 9) 41.
 
 ## Gaps (for the coordinator)
@@ -150,7 +155,7 @@ Every row with status G, 122 in all:
    - text answers outside the plan language.
 
 Not gaps, because policy already decides them (status B decline):
-- **Areas below the agency (ZIP code, neighborhood, beat, tract), 16:** no source has them; the shadow declines with the reason.
+- **Areas below the agency (ZIP code, neighborhood, beat, tract), 16 by status, 18 by action** (two are follow-ups, which keep status 7b): no source has them; the shadow declines with the reason. One of the 16 is a false hit: "Ward, AR" is a town, not a police ward.
 - **Group rates, 23** ("murder rate for teenagers"): D03, rates only for places; offer counts or shares by group.
 - **State clearance rates, 12** (P18).
 
@@ -218,6 +223,17 @@ Labels are drafted from the policy reading and first action, reviewed by Codex a
 
 ## Limits of this review
 
-- The rules miss about one question in ten on each dimension (shape, source, action, status). Testing traffic is included.
+- The rules miss about one question in ten on shape, source and action, and about one in six on the status bucket. Testing traffic is included.
+- Known residual errors (Codex 03), left for disclosure rather than another rule pass:
+  - axis wording alone makes a standalone graph request a follow-up;
+  - a ranking of individual incidents in named cities is labeled a set-of-cities gap;
+  - "Ward, AR" is read as a police ward;
+  - standalone "May" is not read as a month, so "May 2025" stays on Historical;
+  - a calculation example containing "value" sends a question to NIBRS increment 9;
+  - victim-demographic breakdowns are given NIBRS as the source but a built status, without the demographic requirement;
+  - P18 is applied to an exceptional-clearance share and to county rates within a state;
+  - bare "metro" after a city name ("New Orleans metro") is read as the city;
+  - compound questions with an embedded causal part are not declined;
+  - the CSV rows for held-out cases 4 and 25 are less complete than the held-out table, which governs.
 - The log can't show questions people didn't ask because the site visibly couldn't answer them.
 - The log can't show whether a logged answer was right; that is the shadow scorer's job.

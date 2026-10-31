@@ -115,6 +115,8 @@ STATECLR = lambda q, lvl, src: src == 'Crime Index historical' and bool(R(r"clea
 
 def action(q, sh, lvl, src):
     if sh == 'out of scope': return 'decline'
+    # Below the agency is declined even when worded as a lookup (Codex 03.2), as the status says.
+    if SUBAGENCY.search(q): return 'decline (below the agency: no source)'
     if sh in ('method/definition', 'lookup/list'): return 'answer'
     if sh == 'follow-up (needs context)': return 'needs context'
     if SUBAGENCY.search(q): return 'decline (below the agency: no source)'

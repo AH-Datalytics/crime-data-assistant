@@ -58,7 +58,7 @@ now compare to violent crime in Oakland since 2008,14,historical,place compariso
 Show me the national murder trend from 2000 to 2020,14,historical,trend,national,Crime Index historical,answer,B inc 5,
 "violent crime in Alameda, California since 2008",14,historical,trend,agency,Crime Index historical,answer,P Historical,
 Big cities with highest share of murders via firearm in 2024,13,shr,ranking,several,SHR,answer,P SHR,
-crime by ZIP code in Chicago,13,nibrs,lookup/list,agency,Crime Index historical,answer,B decline (below the agency),decline_capability
+crime by ZIP code in Chicago,13,nibrs,lookup/list,agency,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 domestic homicides in Texas since 2000,13,shr,trend,state,SHR,answer,P SHR,decline_capability
 just anti-Asian incidents,13,hate_crime,follow-up (needs context),none,Hate Crime,needs context,P inc 7b,
 Murder rate in California since 1960,13,historical,trend,state,Crime Index historical,answer,B inc 5,
@@ -207,14 +207,14 @@ How bad is aggravated assaults with a firearm in America? Is it getting better?,
 how has gun violence changed in Cook County since 2015?,8,shr,trend,ambiguous,unresolved,clarify,C clarify first (no crime named),clarify
 How many vehicle burglaries per month in Boston in 2023?,8,nibrs,trend,agency,NIBRS,answer,B inc 3,answer
 "Murders across all agencies in Kern County, California in 2025",8,historical,count,state,Crime Index historical,answer,"P area totals (county-wide, ruling 2026-10-30)",
-murders by zip code in Chicago,8,historical,lookup/list,agency,Crime Index historical,answer,B decline (below the agency),decline_capability
+murders by zip code in Chicago,8,historical,lookup/list,agency,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 national murder per month,8,current,trend,national,Crime Index current,clarify,B route (inc 5); P Current Trends,
 New Orleans murders per year,8,historical,trend,agency,Crime Index historical,clarify,P Historical,
 nypd staffing in the 1950s,8,historical,count,agency,Crime Index historical,clarify,P Historical (staffing),
 San Francisco Aggravated Assaults per month,8,current,trend,agency,Crime Index current,clarify,P Current Trends,answer
 Show counts instead,8,historical,follow-up (needs context),none,unresolved,needs context,P inc 7b,
 show crime in Pennsylvania,8,nibrs,count,state,Crime Index historical,clarify,B inc 5,
-show me data for the new orleans msa by census tract,8,nibrs,lookup/list,agency,unresolved,answer,B decline (below the agency),decline_capability
+show me data for the new orleans msa by census tract,8,nibrs,lookup/list,agency,unresolved,decline (below the agency: no source),B decline (below the agency),decline_capability
 washington state,8,nibrs,follow-up (needs context),state,unresolved,needs context,P inc 7b,
 what are the national murder clearance rates for last five years?,8,nibrs,rate,national,Crime Index historical,clarify,B inc 5,decline_capability
 "What is the aggravated assault rate in White Plains, NY?",8,nibrs,rate,agency,Crime Index historical,decline (D03: offer counts or shares),B decline (D03),answer
@@ -279,7 +279,7 @@ Sex offense rates in Denver since 2019,6,nibrs,trend,agency,NIBRS,answer,B inc 3
 Show domestic homicide trends nationally since 2000,6,shr,trend,national,SHR,answer,P SHR,
 the 20 most populous cities in the dataset ranked by their 2026 murder rate,6,current,ranking,several,Crime Index current,answer,P Current Trends,decline_capability
 "violent crime in Mecklenburg County, North Carolina since 2018",6,historical,trend,agency,Crime Index historical,answer,P Historical,
-What are the crime rates in San Antonio Texas in 78203 zip code,6,hate_crime,lookup/list,agency,Crime Index historical,answer,B decline (below the agency),decline_capability
+What are the crime rates in San Antonio Texas in 78203 zip code,6,hate_crime,lookup/list,agency,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 what are the crime trends for Fairfax County Virginia Police Department for the past three years?,6,current,trend,agency,Crime Index historical,clarify,P Historical,
 What five cities are currently experiencing the greatest number of homicides?,6,current,count,several,Crime Index historical,answer,P Historical,
 What is the auto theft clearance rate in Omaha by year?,6,historical,trend,agency,Crime Index historical,clarify,P Historical,answer
@@ -336,7 +336,7 @@ murder rate in the 1990s,5,historical,rate,none,Crime Index historical,clarify,P
 murder rates by race and sex per 100000,5,shr,share/breakdown,none,SHR,clarify,P SHR,decline_capability
 "Murder rates in Baltimore, Washington DC, and Detroit",5,current,rate,ambiguous,Crime Index historical,clarify,P Historical,
 "Murders across all agencies in Cook County, Illinois in 2022",5,historical,count,agency,Crime Index historical,answer,"P area totals (county-wide, ruling 2026-10-30)",
-murders by neighborhood in Houston,5,current,lookup/list,agency,Crime Index historical,answer,B decline (below the agency),decline_capability
+murders by neighborhood in Houston,5,current,lookup/list,agency,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 Murders in Chicago in 2025,5,historical,count,agency,Crime Index historical,answer,P Historical,
 Murders in Tulsa in 2025,5,historical,count,agency,Crime Index historical,answer,P Historical,
 "Murders per 100,000 Black residents in Detroit, 2023",5,shr,rate,agency,Crime Index historical,decline (D03: offer counts or shares),B decline (D03),decline_capability
@@ -349,7 +349,7 @@ philadelphia,5,current,follow-up (needs context),agency,unresolved,needs context
 Provide current violent crime trends in Washington DC Ward 4,5,current,trend,agency,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 rate of violent crime in Washington DC from 2014 to today,5,historical,trend,agency,Crime Index historical,answer,P Historical,
 "Shoplfting in baltimore per month, 2021-2025",5,nibrs,trend,ambiguous,unresolved,clarify,C clarify first (no crime named),decline_capability
-Show me crimes in zip code 07040 from 1991 to the present,5,nibrs,lookup/list,none,unresolved,answer,B decline (below the agency),decline_capability
+Show me crimes in zip code 07040 from 1991 to the present,5,nibrs,lookup/list,none,unresolved,decline (below the agency: no source),B decline (below the agency),decline_capability
 Show me gang-related murders in Chicago by year since 2020,5,nibrs,trend,agency,SHR,answer,P SHR,
 show rolling 12-month totals by age group by month from December 2022 to December 2025,5,nibrs,share/breakdown,none,unresolved,clarify,C clarify first (no crime named),decline_capability
 sworn officers per capita in big cities,5,historical,rate,several,Crime Index historical,clarify,P Historical (staffing),
@@ -420,7 +420,7 @@ i want recent data but if you want yyou can use 2000-2026 from america and no no
 i want to know the counts of murder comited by blacks asians hispanics and white prople also seperated by sex for,4,shr,share/breakdown,none,SHR,clarify,P SHR,decline_capability
 In chesterfield mo how many gun cases claim in an interview to have unrestricted access to the gun,4,nibrs,count,agency,unresolved,clarify,C clarify first (no crime named),decline_capability
 Is there evidence for why an increase in 2025,4,current,out of scope,none,unresolved,decline,B decline,decline_capability
-Is there national crime data that includes the ZIP code where the crime occurred?,4,nibrs,method/definition,national,Crime Index historical,answer,B decline (below the agency),decline_capability
+Is there national crime data that includes the ZIP code where the crime occurred?,4,nibrs,method/definition,national,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 make a list of the 20 most populous cities and sort them by 2026 homicide rate,4,current,ranking,several,Crime Index current,answer,P Current Trends,decline_capability
 make each city a different color,4,historical,follow-up (needs context),none,unresolved,needs context,P inc 7b,answer;decline_capability
 MD0030100,4,historical,follow-up (needs context),none,unresolved,needs context,P inc 7b,
@@ -469,7 +469,7 @@ show me the same for murder,4,nibrs,follow-up (needs context),none,Crime Index h
 show me violent crimes by age group for agencies that reported every year from 2015 to 2025,4,nibrs,share/breakdown,several,Crime Index historical,answer,P Historical,
 "show me violent crimes by offender age for worcester county, md sheriff's office and pocomoke city, md police department",4,nibrs,share/breakdown,several,NIBRS,clarify,P inc 7,answer;decline_capability
 show murders per capita for the city of St. Louis city and the City of Chicago since 1950,4,historical,trend,several,Crime Index historical,answer,P Historical,answer;decline_capability
-Show the same data for the Sharon Heights neighborhood of Menlo Park,4,historical,follow-up (needs context),ambiguous,unresolved,needs context,P inc 7b,decline_capability
+Show the same data for the Sharon Heights neighborhood of Menlo Park,4,historical,follow-up (needs context),ambiguous,unresolved,decline (below the agency: no source),P inc 7b,decline_capability
 "these cities are too small, need large cities",4,historical,follow-up (needs context),several,unresolved,needs context,P inc 7b,
 "This is not even close, do Commercial robberies broken down by location type",4,nibrs,share/breakdown,none,NIBRS,clarify,"B inc 1, 6",answer
 top 10 us cities by homicide rate in 2021,4,historical,ranking,several,Crime Index historical,answer,P Historical,answer;clarify;decline_capability
@@ -503,7 +503,7 @@ Which states have the highest share of rapes cleared by exception in 2025?,4,nib
 Why are there no trend lines in the chart?,4,current,out of scope,none,unresolved,decline,B decline,answer
 Why do people commit crime?,4,historical,out of scope,none,Crime Index historical,decline,B decline,clarify;decline_capability
 "Why is cybercrime not included when we say ""crime""?",4,current,out of scope,none,Crime Index historical,decline,B decline,answer;clarify;decline_capability
-zip code 36832,4,shr,follow-up (needs context),none,unresolved,needs context,P inc 7b,decline_capability
+zip code 36832,4,shr,follow-up (needs context),none,unresolved,decline (below the agency: no source),P inc 7b,decline_capability
 10 cities with largest drops in murder from 2021 to 2025,3,current,trend,several,Crime Index historical,answer,P Historical,decline_capability
 2025,3,historical,follow-up (needs context),none,unresolved,needs context,P inc 7b,decline_capability
 3 month rolling % change in murder relative to same 3 months the previous year,3,current,follow-up (needs context),none,Crime Index current,needs context,P inc 7b,
@@ -732,7 +732,7 @@ Can you compare intimate partner homicides from 2022 to 2025 across rural and ur
 can you describe the last 10 years of baltimore city violent crime comparied to st louis,2,nibrs,trend,ambiguous,Crime Index historical,clarify,P Historical,decline_capability
 can you give me a rate per 100k?,2,historical,rate,none,unresolved,clarify,C clarify first (no crime named),decline_capability
 Can you give me historical crime reported by the University of California Berkeley,2,nibrs,trend,several,Crime Index historical,clarify,P Historical,
-can you give me murders by zip code,2,historical,lookup/list,none,Crime Index historical,answer,B decline (below the agency),decline_capability
+can you give me murders by zip code,2,historical,lookup/list,none,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 can you give me population and rate for each?,2,nibrs,rate,none,unresolved,clarify,C clarify first (no crime named),
 "Can you give me the population per year of New Orleans, New York City, Baltimore, Detroit, DC and Philadelphia from 1960 to 2024?",2,historical,trend,ambiguous,unresolved,clarify,C clarify first (no crime named),decline_capability
 "can you plot homicides involving a gun benchmarked to 2021 levels (i.e., % change year over year) for the cities Philadelphia, New York, Boston, Los Angeles, and Chicago?",2,shr,period comparison,ambiguous,SHR,clarify,P SHR,decline_capability
@@ -1288,7 +1288,7 @@ what is allentown's aggravated assault rate per capita for 2025,2,current,rate,n
 "What is Montgomery County, MD’s current homicide rate?",2,current,rate,agency,Crime Index historical,clarify,P Historical,decline_capability
 what is seattle 2026 per capita murder rate,2,historical,rate,agency,Crime Index current,answer,P Current Trends,
 What is SFPD rape clearance rate this year?,2,current,rate,none,Crime Index current,clarify,P Current Trends,decline_capability
-What is the best zip code level crime data?,2,current,lookup/list,none,Crime Index historical,answer,B decline (below the agency),decline_capability
+What is the best zip code level crime data?,2,current,lookup/list,none,Crime Index historical,decline (below the agency: no source),B decline (below the agency),decline_capability
 What is the clearance rate of burglaries in Berkeley California annually?,2,historical,rate,agency,Crime Index historical,clarify,"B route (inc 5, P57); P Historical",answer
 What is the correlation between police staffing and violent crime rates?,2,historical,rate,none,Crime Index historical,clarify,P Historical,decline_capability
 what is the historical trend in rapes if you use only the old 11A definition?,2,historical,method/definition,none,Crime Index historical,answer,G,decline_capability
@@ -2159,7 +2159,7 @@ exclude NYC,1,current,follow-up (needs context),agency,unresolved,needs context,
 "Excluding homicides, show me the current trends in DC crime data",1,shr,trend,agency,Crime Index historical,clarify,P Historical,
 "Excluding sexual offenses, what share of violent crimes involve an offender under age 18",1,nibrs,share/breakdown,none,NIBRS,clarify,P inc 7,
 Failure to Appear,1,current,follow-up (needs context),none,unresolved,needs context,P inc 7b,decline_capability
-fatal shootings by census tract in Chicago,1,shr,lookup/list,agency,Crime Index historical,answer,B decline (below the agency),
+fatal shootings by census tract in Chicago,1,shr,lookup/list,agency,Crime Index historical,decline (below the agency: no source),B decline (below the agency),
 "fatal shootings in Amarillo, TX from 2020 to 2022",1,shr,trend,agency,Crime Index historical,answer,P Historical,
 fatal shootings in Kansas City,1,shr,count,ambiguous,Crime Index historical,clarify,P Historical,
 "fatal shootings in Kansas City, Missouri",1,shr,count,agency,Crime Index historical,clarify,P Historical,
