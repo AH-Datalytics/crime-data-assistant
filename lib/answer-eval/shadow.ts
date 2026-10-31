@@ -116,7 +116,8 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       ? (v.rows ?? []).flatMap((r) => measures.map((m) => ({ key: String(r.year ?? r.month ?? ""), ...pick(cell(r[m])), ...definition(m) })))
       : (v.rows ?? []).map((r) => {
         const c = pick(cell(r[measures[0]]));
-        const code = catField ? (CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
+        // Increment 7: an offender record with sequence 00 is its own row, "seq_00" (the segment convention, V59 regenerated).
+        const code = catField ? (String(r[catField]) === "seq_00" ? "unknown_offender" : CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
         const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], code) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
         const p = String(r.year ?? r.month ?? "");
         // A known 0 denominator (P51) is evidence: its share is an expected blank (UNAVAILABLE). Only absent or unknown

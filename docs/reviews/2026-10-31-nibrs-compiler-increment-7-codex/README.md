@@ -7,3 +7,4 @@
 | 03 | confirmation | ACCEPT; labels frozen |
 | 04 | full review | REVISE (5 P2); seq 00 correction confirmed; LS-392 label corrected |
 | 05 | re-check of 04 | REVISE (1 P2: stale ledger after the victim-attribute rewrite) |
+| 06 | confirmation of 05 | ACCEPT |
