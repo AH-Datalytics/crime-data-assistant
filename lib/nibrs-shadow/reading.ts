@@ -56,7 +56,16 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
   /** "Only agencies that reported every month": P61's consistent-reporters view. */
   consistent: boolean;
   /** Murders by a Homicide Report detail (the victim-offender relationship): Homicide Reports' (P53). */
-  shrDetail: boolean };
+  shrDetail: boolean;
+  /** "Where a firearm was stolen": property on one segment, its description and loss type (increment 6). */
+  property: { what: string; loss: string } | null;
+  /** Increment 6: arrests reached through the incident ("arrests ... for incidents that included a robbery"). */
+  arrestsThrough: { offense: string | null } | null;
+  /**
+   * Clearance wording (P64, P66): a breakdown by status (cleared / uncleared) or type (by arrest / exceptional A-E /
+   * uncleared), a selection (cleared, by arrest, exceptionally, uncleared) or the share cleared. The shadow builds it.
+   */
+  clearance: { by: "status" | "type" | null; only: "cleared" | "arrest" | "exceptional" | "uncleared" | null; share: boolean } | null };
 export type ReadQuestion = Flags & { question: string; text: string; ledger: RequestLedger & Flags };
 
 const PHRASES: [RegExp, string][] = [
@@ -219,8 +228,40 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const consistent = CONSISTENT.test(own);
   if (consistent) text = text.replace(CONSISTENT, "");
   const shrDetail = /\b(?:murders?|homicides?)\b/i.test(own) && /\bvictim[-\s]offender\s+relationships?\b/i.test(own);
-  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail };
-  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent ? accountNibrsRequest(text) : first, flags);
+  // Increment 6: "where a firearm was stolen", "where the vehicle was recovered": one property segment's description
+  // and loss type. The reader is not asked to apply them.
+  const PROPERTY = /,?\s*\b(?:where|in\s+which|with)\s+(?:a|an|the)?\s*(firearms?|guns?|vehicles?|cars?)\s+(?:was|were|being)\s+(stolen|recovered|seized|damaged)\b/i;
+  const pm = PROPERTY.exec(own);
+  // A car is an automobile (03); a vehicle is any motor vehicle description (Codex increment-6 review 02.2).
+  const property = pm ? { what: /fire|gun/i.test(pm[1]) ? "firearm" : /car/i.test(pm[1]) ? "car" : "vehicle", loss: pm[2].toLowerCase() } : null;
+  if (property) text = text.replace(PROPERTY, "");
+  // Increment 6: arrests reached through the incident (P50, P68): every arrest on an incident with the condition,
+  // whatever its arrest offense; read as all-crime arrests, the condition applied by the shadow.
+  const THROUGH = /^\s*arrests\s+(.+?)\s+for\s+incidents(?:\s+(?:that|which)\s+(?:included|involved|had)\s+(?:a|an)\s+([a-z][a-z ]*?))?\s*\??\s*$/i;
+  const tm = THROUGH.exec(text);
+  const arrestsThrough = tm ? { offense: tm[2] ? tm[2].trim().toLowerCase().replace(/\s+/g, "_") : null } : null;
+  if (tm) text = `All crime arrests ${tm[1]}`;
+  // Increment 6: clearance wording (P64, P66) is read here, never by the reader (whose clearance tables are the live
+  // app's). "Clearance rate" stays the reader's (P57 routes a Part I rate to the historical figures).
+  let clearance: Flags["clearance"] = null;
+  const set = (c: Partial<NonNullable<Flags["clearance"]>>) => { clearance = { by: null, only: null, share: false, ...clearance, ...c }; };
+  let cm: RegExpExecArray | null;
+  if ((cm = /^\s*what\s+(?:share|percent(?:age)?|proportion|fraction)\s+of\s+(.+?)\s+(?:were|was)\s+cleared\b\s*\??\s*$/i.exec(text))) { text = cm[1]; set({ share: true, only: "cleared" }); }
+  if ((cm = /^\s*how\s+many\s+(.+?)\s+(?:were|was)\s+cleared(?:\s+by\s+(arrest|exceptional\s+means))?\s*\??\s*$/i.exec(text))) {
+    text = `how many ${cm[1]}`; set({ only: !cm[2] ? "cleared" : /arrest/i.test(cm[2]) ? "arrest" : "exceptional" });
+  }
+  text = text.replace(/,?\s*\b(?:that\s+were\s+|which\s+were\s+)?cleared\s+by\s+(arrest|exceptional\s+means)\b/i, (_m, how: string) => (set({ only: /arrest/i.test(how) ? "arrest" : "exceptional" }), ""));
+  text = text.replace(/\b(?:uncleared|unsolved|not\s+cleared)\s+/i, () => (set({ only: "uncleared" }), ""));
+  text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+not\s+cleared\b/i, () => (set({ only: "uncleared" }), ""));
+  // In a list with another breakdown: "by year and clearance status", "by clearance type and month".
+  const kind = (w: string) => (/type/i.test(w) ? "type" : "status");
+  text = text.replace(/(\bby\s+(?:year|month))\s+and\s+(?:by\s+)?clearance(\s+(?:status|type))?\b(?!\s+rate)/i, (_m, by: string, w = "") => (set({ by: kind(w) }), by));
+  text = text.replace(/\bby\s+clearance(\s+(?:status|type))?\s+and\s+(?:by\s+)?(year|month)\b/i, (_m, w = "", t: string) => (set({ by: kind(w) }), `by ${t}`));
+  text = text.replace(/,?\s*\bby\s+(?:clearance\s+type|type\s+of\s+clearance|how\s+(?:they\s+were|it\s+was)\s+cleared)\b/i, () => (set({ by: "type" }), ""));
+  text = text.replace(/,?\s*\bby\s+clearance(?:\s+status)?\b(?!\s+rate)/i, () => (set({ by: "status" }), ""));
+  text = text.replace(/,?\s*\b(?:that\s+were|which\s+were)\s+cleared\b/i, () => (set({ only: "cleared" }), ""));
+  const flags: Flags = { readings, forecast, court, offenders, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough };
+  const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }
 

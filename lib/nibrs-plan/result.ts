@@ -61,7 +61,10 @@ export type CellEvidence = {
  * - property_counted_by_offense: a question that asked for victims of a property crime, answered with offenses (P11).
  *   It depends on the question's words, not the plan, so checkEnvelope authorizes it but cannot require it.
  * - categories_overlap: a plan with a multi-valued grouping (the weapons of an offense, the relationships of a victim);
- * - arrests_counted_once: a plan that counts arrests (P46).
+ * - arrests_counted_once: a plan that counts arrests (P46);
+ * - arrests_through_incident: a plan that counts every arrest on an incident with a condition (increment 6);
+ * - clearance_as_of_file: a plan grouped or filtered by clearance (P64);
+ * - clearance_arrest_first: a plan that tells arrests from exceptional clearances (clearance type or method, P67).
  */
 export const ANSWER_STATEMENTS = {
   property_not_attributed: "NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offense.",
@@ -69,10 +72,19 @@ export const ANSWER_STATEMENTS = {
   property_counted_by_offense: "Property crimes are counted by offense, not by victim.",
   categories_overlap: "A crime with several of these categories counts once under each, so the categories can add up to more than the total.",
   arrests_counted_once: "Each arrest counts once; NIBRS cannot tell when one person was arrested more than once.",
+  arrests_through_incident: "Arrests with no incident (standalone Group B arrests) are not included; an arrest made on one of these incidents counts whatever its arrest offense.",
+  clearance_as_of_file: "A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables count instead the clearances reported during the year, for crimes of any year.",
+  clearance_arrest_first: "An incident cleared both by arrest and by exceptional means counts as cleared by arrest.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */
-export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs", categories_overlap: "nibrs", arrests_counted_once: "nibrs" };
+export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs", categories_overlap: "nibrs", arrests_counted_once: "nibrs", clearance_as_of_file: "nibrs", clearance_arrest_first: "nibrs", arrests_through_incident: "nibrs" };
+const CLEARANCE_DIMS = ["offense.clearance_status", "offense.clearance_type", "offense.clearance_method"];
+/** The clearance dimensions a plan groups or filters by (P64), in its groupings and attribute filters. */
+export function clearanceDims(plan: NibrsPlan): string[] {
+  const filters = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])];
+  return [...plan.groupings.map((g) => g.dimension), ...filters.map((f) => (f.kind === "attribute" ? f.dimension : ""))].filter((d) => CLEARANCE_DIMS.includes(d));
+}
 
 export type ResultEnvelope = {
   plan: NibrsPlan;
@@ -189,5 +201,11 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
   if (plan.source === "nibrs" && multi !== env.answerStatements.includes("categories_overlap")) out.push("categories_overlap is required exactly when a grouping is multi-valued");
   const arrests = plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee");
   if (plan.source === "nibrs" && arrests !== env.answerStatements.includes("arrests_counted_once")) out.push("arrests_counted_once is required exactly when the plan counts arrests");
+  const through = plan.measures.some((m) => m.id === "arrests.all_crime");
+  if (plan.source === "nibrs" && through !== env.answerStatements.includes("arrests_through_incident")) out.push("arrests_through_incident is required exactly when the plan counts every arrest on an incident");
+  const clr = clearanceDims(plan);
+  if (plan.source === "nibrs" && (clr.length > 0) !== env.answerStatements.includes("clearance_as_of_file")) out.push("clearance_as_of_file is required exactly when the plan groups or filters by clearance");
+  const byType = clr.some((d) => d !== "offense.clearance_status");
+  if (plan.source === "nibrs" && byType !== env.answerStatements.includes("clearance_arrest_first")) out.push("clearance_arrest_first is required exactly when the plan tells arrests from exceptional clearances");
   return out;
 }

@@ -40,6 +40,31 @@ const n2 = ok(compilePlan(X.N2, year(2024), t));
 assert.ok(n2.sql.includes("p.loss_type IN ('7') AND p.property_description IN ('13')"));
 assert.deepEqual(n2.statements, ["property_not_attributed"]);
 
+// Increment 6: N2 by clearance type (P64, P66, P67), with the incidents beside the count: the type from the incident's
+// own arrestee rows and exceptional clearance, both statements, and the incidents counted over the same rows.
+const n2as = X.N2.statistics[0].as, n2m = X.N2.measures[0].as;
+const byType = ok(compilePlan({ ...X.N2, groupings: [{ dimension: "offense.clearance_type", unknown: "visible", absent: "show" }],
+  statistics: [X.N2.statistics[0], { kind: "incidents", as: "inc", measure: n2m }] }, year(2024), t));
+assert.deepEqual(byType.columns, ["offense.clearance_type", n2as, `${n2as}_status`, "inc", "inc_status"]);
+for (const s of ["cleared_exceptionally", "COUNT(DISTINCT (u.data_year, u.ori, u.incident_num)) AS ni", 'sum(ni) END AS "inc"']) assert.ok(byType.sql.includes(s), s);
+assert.deepEqual(byType.statements, ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
+// A selection by status says P64 only; by arrest, P67 too.
+const sel = (dimension: string, v: string) => ok(compilePlan({ ...X.N2, filters: [...X.N2.filters, { kind: "attribute", dimension, op: "in", values: [v] }] }, year(2024), t)).statements;
+assert.deepEqual(sel("offense.clearance_status", "cleared"), ["property_not_attributed", "clearance_as_of_file"]);
+assert.deepEqual(sel("offense.clearance_method", "arrest"), ["property_not_attributed", "clearance_as_of_file", "clearance_arrest_first"]);
+// The incidents come right after the count of the counted measure.
+assert.equal(compilePlan({ ...X.N2, statistics: [{ kind: "incidents", as: "inc", measure: n2m }, X.N2.statistics[0]] }, year(2024), t).kind, "unsupported");
+// Increment 6: every arrest on an incident with a condition (P50, P68): any arrest offense, M left out, by arrest date,
+// with its statement; an incident's offense as the condition; never every arrest.
+const allArrests = { ...X.N2, timeBasis: "arrest_date" as const, measures: [{ id: "arrests.all_crime", unit: "arrest" as const, as: "arrests" }], statistics: [{ kind: "count" as const, as: "n", measure: "arrests" }] };
+const onStolen = ok(compilePlan(allArrests, year(2024), t));
+for (const s of ["FROM read_parquet", "multiple_arrestee_indicator, '') <> 'M'", "p.loss_type IN ('7')"]) assert.ok(onStolen.sql.includes(s), s);
+assert.ok(!onStolen.sql.includes("a.arrest_offense IN"), "any arrest offense");
+assert.deepEqual(onStolen.statements, ["property_not_attributed", "arrests_counted_once", "arrests_through_incident"]);
+const onRobbery = ok(compilePlan({ ...allArrests, filters: [{ kind: "exists", scope: "incident", entity: "offense", where: [{ kind: "attribute", dimension: "offense.offense", op: "in", values: ["120"] }] }] }, year(2024), t));
+assert.ok(onRobbery.sql.includes("o2.offense_code IN ('120')"));
+assert.equal(compilePlan({ ...allArrests, filters: [] }, year(2024), t).kind, "unsupported");
+
 // Everything outside v0 is refused, with its reason.
 const refuse = (p: Parameters<typeof compilePlan>[0], period: Parameters<typeof compilePlan>[1] = year(2025)) => { const r = compilePlan(p, period, t); assert.equal(r.kind, "unsupported"); return r.kind === "unsupported" ? r.reason : ""; };
 // Increment 3: a set of years, each year's months only (the last clipped to `through`), grouped by year.
@@ -103,6 +128,7 @@ assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS s
 // Arrests (P46, P50): by arrest date only, every built year scanned, and the once-each statement.
 const arrests = ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), year(2024), t));
 assert.ok(arrests.sql.includes("substr(a.arrest_date, 1, 6) AS ym") && arrests.sql.includes("a.arrest_offense IN ('23C')"));
+assert.ok(arrests.sql.includes("coalesce(a.multiple_arrestee_indicator, '') <> 'M'"), "P68: an M segment (the same apprehension on another incident) is not counted");
 assert.deepEqual(arrests.scanYears, t.builtYears);
 assert.deepEqual(arrests.statements, ["arrests_counted_once"]);
 assert.match(refuse(plan("arrests.shoplifting", "arrest")), /arrest date/);

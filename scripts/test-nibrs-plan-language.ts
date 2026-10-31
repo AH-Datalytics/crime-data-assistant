@@ -190,6 +190,9 @@ assert.deepEqual(sem({ ...X.N3, period: { kind: "absolute", from: "2018-01", to:
 assert.deepEqual(sem({ ...X.N1, filters: [{ kind: "attribute", dimension: "victim.race", op: "between", values: [1, 5] }] }), ["S11"], "between on a coded dimension");
 assert.deepEqual(sem({ ...X.AGE_BREAKDOWN, measures: [{ ...X.AGE_BREAKDOWN.measures[0], filters: [{ kind: "attribute", dimension: "offender.age", op: "between", values: [30, 18] }] }] }), ["S11"], "reversed bounds");
 assert.deepEqual(sem({ ...X.N1, groupings: [], measures: [...X.N1.measures, { id: "offenses.murder", unit: "offense", as: "murders" }], statistics: [{ kind: "share", as: "s", measure: "murder_victims", within: [], denominator: "murders" }] }), ["S12"]);
+// P66: the incidents of a measure count offenses' or victims' incidents (never incidents' or arrests').
+assert.deepEqual(sem({ ...X.H1, statistics: [...X.H1.statistics, { kind: "incidents", as: "inc", measure: X.H1.measures[0].as }] }), ["S12"]);
+assert.deepEqual(sem({ ...X.N1, groupings: [], statistics: [X.N1.statistics[0], { kind: "incidents", as: "inc", measure: X.N1.measures[0].as }] }), []);
 
 // A composite share needs the same composite as denominator.
 const robberyOnly: SemanticMeasure = { ...VIOLENT, id: "violent_crime.robbery_only", aggregation: { kind: "composite", components: ["offenses.robbery"] } };

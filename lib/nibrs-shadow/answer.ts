@@ -41,8 +41,8 @@ import { validateOutcome } from "../nibrs-plan/outcome";
 import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
-import type { AnswerStatement } from "../nibrs-plan/result";
-import { CATEGORY, deliver, deliverComparison, filterWords, monthName, periodWords, type Combined, type Delivered } from "./deliver";
+import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
+import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
@@ -72,7 +72,7 @@ export type ShadowOutcome =
   /** A Part I figure for a state or the nation, read from the historical file (P53; srs.ts). */
   | SrsAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
-  | { kind: "route"; source: "rtci" | "shr"; explanation: string }
+  | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
   | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean };
 
@@ -217,7 +217,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // (FBI SRS), Current Trends' this year; unless NIBRS is asked for in words (P01). Its clearance rate is the
   // historical clearances' for the nation (P57) and declined for a state (P18).
   // An every-month cohort (P61's button, typed) keeps the question in NIBRS: the historical file has no cohorts.
-  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent) {
+  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance) {
     const sp = d.spec;
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
@@ -250,6 +250,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
     }
   }
+  // P57 (increment 6): a Part I offense's clearance rate for an agency in a completed year is the historical
+  // clearances' (FBI SRS, Return A), not computed from NIBRS. The shadow's historical file has states and the nation
+  // only, so it names the route.
+  // Only the plain rate: a restriction the historical figures cannot apply (a property condition, a cohort, a
+  // breakdown or filter) is never dropped by the route (Codex increment-6 review 02.1).
+  const plainRate = !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).arrestsThrough && !flags(ledger0).consistent && !flags(ledger0).composite
+    && !ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+  if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && !flags(ledger0).nibrsAsked && d.spec.places.length === 1 && d.spec.places[0].kind === "agency"
+    && d.spec.measures.length === 1 && isSrsMeasure(d.spec.measures[0]) && !d.spec.filters.length && plainRate) {
+    const p = d.spec.period, last = p.form === "year" ? p.year : p.form === "range" ? p.to : null;
+    if (last !== null && last < Number(release.lastMonth.slice(0, 4)))
+      return { kind: "route", source: "historical", explanation: `The ${d.spec.measures[0].replace(/_/g, " ")} clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Historical.` };
+  }
   // A clearance rate for a state or the nation that is not a Part I offense's (P57): a state has none (P18); the method
   // for a NIBRS-only offense is not decided (P57).
   if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && d.spec.places.length === 1 && (d.spec.places[0].kind === "state" || d.spec.places[0].kind === "national"))
@@ -262,7 +275,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // the slice's own limits.
   // The reader's own change form ("did X increase from 2022 to 2023") is a plain count compared, under the same rule.
   const plainUnit = (u: string | null) => u === null || ["offenses", "victims", "incidents"].includes(u);
-  const noDetail = !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+  const noDetail = !flags(ledger0).property && !flags(ledger0).clearance && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
   const asked = flags(ledger0).composite || !noDetail ? []
     : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
     : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
@@ -272,6 +285,36 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const a = planFromSpec(d.spec, ledger, { semanticVersion: DRAFT_SEMANTIC_VERSION, resolvePlace: (v) => resolved.get(v) ?? null });
   if (a.kind === "unmapped") return decline("unsupported_capability", `No plan form for this reading: ${a.reason}`);
   const plan = a.plan;
+  // Increment 6: "where a firearm was stolen": the incident has one property segment with that description and loss
+  // type (one segment, so a stolen television and a recovered firearm never match; incident-level, N2).
+  const prop = flags(ledger0).property;
+  if (prop) {
+    const d = PROPERTY_CODES[prop.what], loss = LOSS_CODES[prop.loss];
+    if (!d || !loss) return decline("unsupported_capability", `Not in the slice yet: this property condition (${prop.what} ${prop.loss}).`);
+    plan.filters.push({ kind: "exists", scope: "incident", entity: "property", attribution: "incident_level_only",
+      where: [{ kind: "attribute", dimension: "property.loss_type", op: "in", values: [loss] }, { kind: "attribute", dimension: "property.description", op: "in", values: d.codes }] });
+  }
+  // Increment 6: arrests reached through the incident (P50, P68): every arrest on an incident with the condition (a
+  // property selection, or an offense of the incident), whatever its arrest offense; never all arrests.
+  const thr = flags(ledger0).arrestsThrough;
+  if (thr) {
+    if (plan.measures.length !== 1 || plan.measures[0].id !== "arrests.all_crime") return decline("unsupported_capability", "Not in the slice yet: arrests for incidents of this kind.");
+    if (thr.offense) {
+      const codes = MEASURE_CODES[thr.offense];
+      if (!codes) return decline("unsupported_capability", `Not in the slice yet: arrests for incidents with ${thr.offense.replace(/_/g, " ")}.`);
+      plan.filters.push({ kind: "exists", scope: "incident", entity: "offense", where: [{ kind: "attribute", dimension: "offense.offense", op: "in", values: codes }] });
+    }
+    if (!plan.filters.some((f) => f.kind === "exists")) return decline("unsupported_capability", "Not in the slice yet: arrests for incidents with no condition.");
+  }
+  // Increment 6: clearance (P64, P66, P67), each unit taking its incident's status as of the file: a breakdown by
+  // status or type, or a selection.
+  const clr = flags(ledger0).clearance;
+  if (clr) {
+    if (clr.by) plan.groupings.push({ dimension: clr.by === "type" ? "offense.clearance_type" : "offense.clearance_status", unknown: "visible", absent: "show" });
+    if (clr.only) plan.filters.push({ kind: "attribute", op: "in",
+      dimension: clr.only === "arrest" || clr.only === "exceptional" ? "offense.clearance_method" : "offense.clearance_status",
+      values: [clr.only === "cleared" ? "cleared" : clr.only === "uncleared" ? "none" : clr.only] });
+  }
   // Places (increment 4): named agencies, separate or combined, and a state's city agencies for a ranking. State and
   // national totals are increment 5.
   const citySet = (p: Place) => p.kind === "agency_set" && p.within.kind === "state"
@@ -441,6 +484,25 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     || (several && (catG.length || !counts)) || (combined && timeG.length))
     return decline("unsupported_capability", "Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares.");
 
+  // P66 (Jeff 2026-10-30): a clearance answer gives the number of incidents beside its count: the crime's incidents,
+  // with the same groupings and filters, as a second count. One agency only for now.
+  if (clearanceDims(plan).length && plan.measures[0].unit !== "incident") {
+    if (stateMode || placesMode || cmpFlag || rollingT || several)
+      return decline("unsupported_capability", "Not in the slice yet: clearance for a state, the nation or several agencies, for several crimes, or as a change or rolling windows.");
+    plan.statistics.splice(1, 0, { kind: "incidents", as: `${plan.measures[0].as}_incidents`, measure: plan.measures[0].as });
+  }
+  // Increment 6: the share cleared (P64, P66): the cleared units (with their incidents) over all units of the period,
+  // each counted independently, for one total.
+  if (clr?.share) {
+    if (timeG.length || catG.length || clr.by) return decline("unsupported_capability", "Not in the slice yet: the share cleared by period or by category; ask for one period.");
+    const m = plan.measures[0], i = plan.filters.findIndex((f) => f.kind === "attribute" && f.dimension === "offense.clearance_status");
+    const cleared = { ...m, as: `${m.as}_cleared`, filters: [...(m.filters ?? []), plan.filters[i]] };
+    plan.filters.splice(i, 1);
+    plan.measures = [cleared, m];
+    plan.statistics = [{ kind: "count", as: `${cleared.as}_count`, measure: cleared.as }, { kind: "incidents", as: `${cleared.as}_incidents`, measure: cleared.as },
+      { kind: "count", as: `${m.as}_count`, measure: m.as }, { kind: "ratio", as: "share_cleared", numerator: cleared.as, denominator: m.as }];
+  }
+
   // D31/P06: a missing period is asked about, for any reader form, once the question is known to be in the slice.
   const spec = d.spec as { period?: { form: string }; grain?: string };
   if (spec.period?.form === "none") {
@@ -571,13 +633,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     for (const st of c.query.statements) if (!statements.includes(st)) statements.push(st);
     sqls.push(c.query.sql);
     if (!columns.length) { columns = c.query.columns; rows = got; continue; }
-    // Several measures have no categories: the same period keys (or one total row) in the same order.
-    const ip = c.query.columns.indexOf("period");
-    const keys = (rs: unknown[][], i: number) => rs.map((r) => (i >= 0 ? String(r[i]) : "")).join(",");
-    if (got.length !== rows.length || keys(got, ip) !== keys(rows, columns.indexOf("period"))) return decline("unsupported_capability", "Not in the slice yet: measures whose periods do not line up.");
-    const stat = c.query.columns.map((col, i) => (col === "period" ? -1 : i)).filter((i) => i >= 0);
+    // Each row by its period and categories (one total row has none): the same keys for every measure. Several
+    // measures have no categories; the incidents beside a clearance count (P66) have the count's.
+    const keyCols = (cols: string[]) => cols.map((col, i) => (col === "period" || checked.groupings.some((g) => g.dimension === col) ? i : -1)).filter((i) => i >= 0);
+    const keyOf = (r: unknown[], idx: number[]) => idx.map((i) => String(r[i])).join("|");
+    const kGot = keyCols(c.query.columns), kRows = keyCols(columns);
+    const byKey = new Map(got.map((r) => [keyOf(r, kGot), r]));
+    if (got.length !== rows.length || byKey.size !== got.length || rows.some((r) => !byKey.has(keyOf(r, kRows)))) return decline("unsupported_capability", "Not in the slice yet: measures whose periods or categories do not line up.");
+    const stat = c.query.columns.map((_, i) => (kGot.includes(i) ? -1 : i)).filter((i) => i >= 0);
     columns = [...columns, ...stat.map((i) => c.query.columns[i])];
-    rows = rows.map((r, k) => [...r, ...stat.map((i) => got[k][i])]);
+    rows = rows.map((r) => [...r, ...stat.map((i) => byKey.get(keyOf(r, kRows))![i])]);
   }
   const delivered = deliver(checked, period, requestedTo, columns, rows, statements, release.id, notes0, combined, yearSet ? { years: yearSet } : {});
   if (delivered.contractProblems.length) return decline("unsupported_capability", `Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);

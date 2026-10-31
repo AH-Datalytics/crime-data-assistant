@@ -12,7 +12,7 @@
  */
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
-import { ANSWER_STATEMENTS, type AnswerStatement } from "../nibrs-plan/result";
+import { ANSWER_STATEMENTS, clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
@@ -24,7 +24,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -36,6 +36,8 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  * or a case's alternative ("LS-236|alternative").
  */
 export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null;
+  /** Increment 6 (P66): the distinct incidents of the cell's units, beside its count. */
+  incidents?: number | null;
   /** A file with several measures: the cell's measure, as "<key>: <definition>" (its codes and unit are matched to the plan's). */
   measure?: string;
   /** A ranking's row: its place in the order (1 = first row). */
@@ -67,6 +69,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     if (batch8) {
       // A state sum's button (the every-month view) is checked under "<case>|button" with the same cells.
       for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { out.set(m[0], batch8); out.set(`${m[0]}|button`, batch8); }
+      continue;
+    }
+    // Batch 9 (increment 6): clearances, property selections and arrests, each case reading its own part of the file.
+    const b9 = (v as unknown as { values?: ClearanceValues }).values;
+    if (b9 && !v.measures) {
+      for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { const c = clearanceCells(m[0], b9); if (c) out.set(m[0], c); }
       continue;
     }
     if (!v.measures) continue;   // a file of no form read here: no cells, never a crash
@@ -120,6 +128,34 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+/** Batch 9: units and their incidents (P66), per status or type, or for one selection. */
+type UnitsIncidents = { units: number; incidents: number };
+type ClearanceValues = { by_status?: Record<string, UnitsIncidents>; by_type?: Record<string, UnitsIncidents> } & Record<string, unknown>;
+/** The part of a batch-9 file a case reads, where the file serves several (V116, V117). */
+const CLEARANCE_PART: Record<string, string> = { "LS-358": "cleared", "LS-362": "cleared_by_arrest", "LS-369": "uncleared", "LS-370": "exceptional_excluding_ties" };
+/** A batch-9 key as the answer names its category: "exceptional_B" is type B, "arrest" and "uncleared" their own. */
+const CLEARANCE_CODE: Record<string, string> = { arrest: "arrest", uncleared: "none", cleared: "cleared" };
+/**
+ * Batch 9 (increment 6) as expected cells: a breakdown by clearance status or type, a cell per category named as the
+ * answer names it, with its incidents; a selection, one total with its incidents; offenses with a property selection,
+ * one total with its incidents; arrests, one total. Null for a case whose part the file does not give (the share
+ * cleared until the slice answers it).
+ */
+function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
+  const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
+    ({ key: dim ? categoryName(dim, CLEARANCE_CODE[key] ?? key.replace(/^exceptional_/, "")) : "", value: x.units, status: "VALUE", incidents: x.incidents });
+  // The share cleared (V116): the cleared count with its incidents, the total, and the share.
+  if (lsCase === "LS-359" && typeof v.share_cleared_percent === "number" && v.cleared)
+    return [{ key: "cleared", value: (v.cleared as UnitsIncidents).units, status: "VALUE", incidents: (v.cleared as UnitsIncidents).incidents },
+      { key: "total", value: v.total_offenses as number, status: "VALUE" }, { key: "share", value: v.share_cleared_percent, status: "VALUE" }];
+  const part = CLEARANCE_PART[lsCase];
+  if (part) return v[part] ? [ui(v[part] as UnitsIncidents, part)] : null;
+  if (v.by_status) return Object.entries(v.by_status).map(([k, x]) => ui(x, k, "offense.clearance_status"));
+  if (v.by_type) return Object.entries(v.by_type).map(([k, x]) => ui(x, k, "offense.clearance_type"));
+  if (typeof v.offenses === "number") return [{ key: "", value: v.offenses, status: "VALUE" }];
+  if (typeof v.arrests === "number") return [{ key: "", value: v.arrests, status: "VALUE" }];
+  return null;
+}
 type StatusValue = { status: string; value: number | null };
 type PlacesAgency = { ori?: string; agency_name: string | null; population_year?: number; total: StatusValue; rate: StatusValue };
 /** Batch 8, the historical file: each value with its row (uid), year and column; a change carries its cells. */
@@ -326,6 +362,20 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     else if (/^says drug crimes include/.test(s)) ok = /drug equipment/i.test(all);
     else if (/^says a unit with several categories counts once in each/.test(s)) ok = text.includes(ANSWER_STATEMENTS.categories_overlap);
     else if (/^says each arrest counts once/.test(s)) ok = text.includes(ANSWER_STATEMENTS.arrests_counted_once);
+    else if (/^says it counts the crimes of the period cleared as of the file date/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_as_of_file);
+    else if (/^says arrest takes precedence over exceptional clearance/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_arrest_first);
+    else if (/^gives the number of incidents beside the count/.test(s)) ok = o.plan.statistics.some((x) => x.kind === "incidents") && o.delivered.table.columns.some((c) => c.header === "Incidents");
+    // Increment 6: the breakdowns by name (P66), each unit taking its incident's status, property on the incident (N2),
+    // arrests by arrest date (P50), and an uncleared selection under P64's statement.
+    else if (/^breaks down into cleared and uncleared/.test(s)) ok = clearanceRows(o, "offense.clearance_status", ["Cleared", "Uncleared"]);
+    else if (/^breaks down into cleared by arrest, each exceptional clearance type by name, and uncleared/.test(s))
+      ok = clearanceRows(o, "offense.clearance_type", ["Cleared by arrest", "Uncleared"]) && o.delivered.table.rows.every((r) => typeof r[0] !== "string" || !/^Code /.test(r[0]));
+    else if (/^counts victims, each taking its incident's clearance status/.test(s)) ok = o.plan.measures[0].unit === "victim" && clearanceDims(o.plan).length > 0;
+    else if (/^says property belongs to the incident, not to one offense/.test(s)) ok = text.includes(ANSWER_STATEMENTS.property_not_attributed);
+    else if (/^counts arrests by arrest date/.test(s)) ok = o.plan.timeBasis === "arrest_date";
+    else if (/^says arrests with no incident \(standalone Group B arrests\) are not included/.test(s)) ok = text.includes(ANSWER_STATEMENTS.arrests_through_incident);
+    else if (/^gives the cleared count, the total and the share$/.test(s)) ok = o.plan.statistics.map((x) => x.kind).join(",") === "count,incidents,count,ratio" && o.delivered.table.columns.length === 4;
+    else if (/^says it counts the period's .* still uncleared as of the file date/.test(s)) ok = text.includes(ANSWER_STATEMENTS.clearance_as_of_file);
     else if (/^gives the .* total \(/.test(s)) {
       // The combined total: a "Together:" sentence whose number is the sum of the table's counts (all of them known).
       const cells = o.delivered.table.rows[0]?.filter((x) => typeof x === "number" || x === null) ?? [];
@@ -488,6 +538,20 @@ function matchMeasure(m: NibrsPlan["measures"][number], defs: string[]): string 
   const hits = defs.filter((d) => { const n = named(d); return n.size === codes.length && codes.every((c) => n.has(c)) && !!unit?.test(d); });
   return hits.length === 1 ? hits[0] : null;
 }
+/** Increment 6, the share cleared: its cleared count (and incidents), total and share against the expected cells. */
+function shareDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[]): { diffs: Diff[]; values: Values } {
+  const [cCount, cInc, aCount, ratio] = o.plan.statistics.map((x) => x.as);
+  const { columns, rows } = o.delivered.table;
+  const at = (as: string) => rows[0]?.[columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === as)] ?? null;
+  const got: Record<string, unknown> = { cleared: at(cCount), total: at(aCount), share: at(ratio) };
+  const diffs: Diff[] = [];
+  if (rows.length !== 1) diffs.push({ field: `${prefix}rows`, expected: "one row", actual: `${rows.length} rows`, kind: "material" });
+  for (const x of expected) {
+    if (got[x.key] !== x.value) diffs.push({ field: `${prefix}value ${x.key}`, expected: String(x.value), actual: String(got[x.key]), kind: "material" });
+    if (x.incidents !== undefined && at(cInc) !== x.incidents) diffs.push({ field: `${prefix}incidents ${x.key}`, expected: String(x.incidents), actual: String(at(cInc)), kind: "material" });
+  }
+  return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : "match" };
+}
 /** Several measures side by side (no categories): each measure's column against its own expected cells. */
 function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[]): { diffs: Diff[]; values: Values } {
   const { columns, rows } = o.delivered.table;
@@ -535,20 +599,22 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
     }
     return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
   }
+  if (o.plan.statistics.some((x) => x.kind === "ratio") && expected.some((x) => x.key === "share")) return shareDiffs(prefix, o, expected);
   if (o.plan.measures.length > 1 || expected.some((x) => x.measure)) {
     if (o.plan.measures.length > 1 && expected.every((x) => x.measure)) return severalDiffs(prefix, o, expected);
     return { values: "mismatch", diffs: [{ field: `${prefix}measures`, expected: `${new Set(expected.map((x) => x.measure)).size} measures`, actual: `${o.plan.measures.length} measures`, kind: "material" }] };
   }
-  // Each row by its grouping values (period, category), its count by the first statistic's column, its share (if any)
-  // by the second's.
+  // Each row by its grouping values (period, category), its count by the first statistic's column, its incidents (P66)
+  // and its share (if any) by theirs.
   const { columns, rows } = o.delivered.table;
   const groupCols = columns.map((c, i) => (c.binding.kind === "grouping" ? i : -1)).filter((i) => i >= 0);
   const statCol = (n: number) => columns.findIndex((c, i) => c.binding.kind === "statistic" && columns.slice(0, i).filter((x) => x.binding.kind === "statistic").length === n);
-  const [ci, si] = [statCol(0), statCol(1)];
+  const colOf = (kind: string) => { const st = o.plan.statistics.find((x) => x.kind === kind); return st ? columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === st.as) : -1; };
+  const [ci, si, ii] = [statCol(0), colOf("share"), colOf("incidents")];
   const countAs = (columns[ci].binding as { as: string }).as;
   const keys = rows.map((r) => groupCols.map((j) => String(r[j]).replace(RETURN_A, "")).join("|"));  // a Return A name matches the FBI text without its marker
   const got = new Map(rows.map((r, i) => [keys[i],
-    { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
+    { value: r[ci] as number | null, share: si >= 0 ? (r[si] as number | null) : undefined, incidents: ii >= 0 ? (r[ii] as number | null) : undefined, status: o.delivered.evidence.find((e) => e.row === i && e.statistic === countAs)?.status ?? "?" }]));
   const diffs: Diff[] = [];
   // A key delivered twice could hide a wrong row behind a right one: never compared, always wrong.
   const twice = keys.filter((k, i) => keys.indexOf(k) !== i);
@@ -566,6 +632,10 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
       diffs.push({ field: `${prefix}share ${x.key}`, expected: String(x.share), actual: String(g.share), kind: "material" });
     else if (g.share !== undefined && x.share === undefined)
       diffs.push({ field: `${prefix}share ${x.key}`, expected: "(no independent share)", actual: String(g.share), kind: "unverified" });
+    else if (g.incidents !== undefined && x.incidents !== undefined && g.incidents !== x.incidents)
+      diffs.push({ field: `${prefix}incidents ${x.key}`, expected: String(x.incidents), actual: String(g.incidents), kind: "material" });
+    else if (g.incidents !== undefined && x.incidents === undefined)
+      diffs.push({ field: `${prefix}incidents ${x.key}`, expected: "(no independent incident count)", actual: String(g.incidents), kind: "unverified" });
   }
   // P60 (Codex 02.6): a ranking with agencies left out names them, five or fewer each with its months reported, more
   // than five as their count and five of them, each named agency with its own months; none left out, no such line.
@@ -612,6 +682,12 @@ function deliveredCheck(prefix: string, key: string, c: Extract<ShadowOutcome, {
   return { diffs, values: [v.values], wrong, unverifiedAnswers: !wrong && diffs.some((x) => x.kind === "unverified") ? 1 : 0 };
 }
 
+/** A clearance breakdown (P66): grouped by `dimension`, its column holding each of `names` (the categories it has). */
+function clearanceRows(o: Extract<ShadowOutcome, { kind: "answer" }>, dimension: string, names: string[]): boolean {
+  const col = o.delivered.table.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension === dimension);
+  const shown = new Set(o.delivered.table.rows.map((r) => String(r[col])));
+  return col >= 0 && names.every((n) => shown.has(n));
+}
 /** The question and the answers already checked against a label, shared by one case's checks. */
 type Walk = { question: string; checked: Set<object> };
 
@@ -619,7 +695,8 @@ type Walk = { question: string; checked: Set<object> };
  * The fixed sentences an answer must carry where they apply (result.ts ANSWER_STATEMENTS), checked on its text:
  * property_counted_by_offense when the question asks for victims and the answer counts offenses (P11);
  * property_not_attributed for an incident-level property filter; reported_nibrs_counts for the nation;
- * categories_overlap for a multi-valued grouping; arrests_counted_once for arrests (P46).
+ * categories_overlap for a multi-valued grouping; arrests_counted_once for arrests (P46); clearance_as_of_file for a
+ * clearance grouping or selection (P64), and clearance_arrest_first where arrests and exceptional clearances are told apart (P67).
  */
 function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
   const plan = c.plan;
@@ -629,6 +706,10 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
   if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
+  if (plan.measures.some((m) => m.id === "arrests.all_crime")) want.push("arrests_through_incident");
+  const clr = clearanceDims(plan);
+  if (clr.length) want.push("clearance_as_of_file");
+  if (clr.some((d) => d !== "offense.clearance_status")) want.push("clearance_arrest_first");
   return want.filter((s) => !c.delivered.text.includes(ANSWER_STATEMENTS[s]))
     .map((s) => ({ field: "statement", expected: ANSWER_STATEMENTS[s], actual: c.delivered.text.join(" / ").slice(0, 200), kind: "material" as const }));
 }

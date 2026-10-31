@@ -9,7 +9,7 @@ import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-
 import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } from "../lib/nibrs-shadow/places";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { scoreShadow, sliceValues } from "../lib/answer-eval/shadow";
-import { fbiNameFor } from "../lib/answer-eval/compare";
+import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
 
@@ -642,6 +642,31 @@ assert.match(as(ask("Carjacking clearance rate in Texas in 2024"), "decline").ex
 // Routes (P53): the current year to Current Trends, murders by relationship to Homicide Reports; named, not run.
 assert.deepEqual([ask("Robberies in Texas this year").kind, (ask("Robberies in Texas this year") as { source: string }).source], ["route", "rtci"]);
 assert.equal((ask("Murders in the US by victim-offender relationship in 2023") as { source?: string }).source, "shr");
+// Increment 6 (P57): a Part I clearance rate for an agency in a completed year is Historical's, named, not run.
+assert.equal((ask("Robbery clearance rate in Atlanta in 2023") as { source?: string }).source, "historical");
+// Increment 6: plans. A clearance breakdown in a list with a period; the share cleared as the cleared units (with their
+// incidents) over all units; arrests through the incident as every arrest on an incident with the condition. The plans
+// only: the stub returns no rows.
+const planOf = (q: string) => { const o = shadowAnswer(q, { ...deps, execute: () => [] }); return o.kind === "answer" ? o.plan : (assert.fail(`${q}: ${JSON.stringify(o).slice(0, 300)}`) as never); };
+assert.deepEqual(planOf("Memphis shoplifting by year and clearance status, 2023 to 2024").groupings.map((g) => g.dimension), ["time.year", "offense.clearance_status"]);
+assert.deepEqual(planOf("Memphis shoplifting by clearance type and year, 2023 to 2024").groupings.map((g) => g.dimension), ["time.year", "offense.clearance_type"]);
+assert.deepEqual(planOf("What share of shoplifting offenses in Memphis in 2024 were cleared?").statistics.map((s) => s.kind), ["count", "incidents", "count", "ratio"]);
+const through = planOf("Arrests in Memphis in 2024 for incidents that included a robbery");
+assert.deepEqual([through.measures[0].id, through.timeBasis, JSON.stringify(through.filters[0])], ["arrests.all_crime", "arrest_date",
+  JSON.stringify({ kind: "exists", scope: "incident", entity: "offense", where: [{ kind: "attribute", dimension: "offense.offense", op: "in", values: ["120"] }] })]);
+assert.equal(planOf("Arrests in Memphis in 2024 for incidents where a firearm was stolen").measures[0].id, "arrests.all_crime");
+// Codex increment-6 review 02. (1) A restricted clearance rate never routes with its restriction dropped.
+assert.notEqual(ask("Robbery clearance rate in Atlanta in 2023 where a firearm was stolen").kind, "route");
+// (2) A car is an automobile (03), not every vehicle.
+const carWhere = (planOf("Motor vehicle thefts in Dallas in 2024 where a car was recovered").filters[0] as { where: { dimension: string; values: string[] }[] }).where;
+assert.deepEqual(carWhere.find((w) => w.dimension === "property.description")!.values, ["03"]);
+// (3) The share cleared's roles are read from the plan only against a denominator of the label's own measure.
+const shareView = planToMeaning(planOf("What share of shoplifting offenses in Memphis in 2024 were cleared?"), { kind: "absolute", from: "2024-01", to: "2024-12" });
+const shareLabel = (denominator: string) => ({ source: "nibrs", filters: ["cleared (by arrest or exceptional means)"], groupings: [], statistic: "share", denominator,
+  places: [{ kind: "agency", name: "Memphis Police Department", state: "TN" }], period: { from: "2024-01", to: "2024-12" }, measures: [{ name: "shoplifting", unit: "offense" }] }) as unknown as Parameters<typeof compareMeaning>[0];
+const rel = { firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" };
+assert.deepEqual(compareMeaning(shareLabel("all shoplifting offenses in the period"), shareView, rel), []);
+assert.ok(compareMeaning(shareLabel("all robbery offenses in the period"), shareView, rel).some((x) => x.field === "share roles" && x.kind === "unverified"));
 // A NIBRS-only crime for a state (P61), on the stub: every reported month summed (Austin's 11 months included), the
 // disclaimer, and the button's fixed every-month set; the rate over the agencies counted (P62); "according to NIBRS".
 const txCj = as(ask("Carjackings in Texas in 2024"), "answer");

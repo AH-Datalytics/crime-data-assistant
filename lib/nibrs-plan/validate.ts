@@ -276,6 +276,8 @@ export function validatePlanSemantics(plan: NibrsPlan, layer: SemanticLayer): Pl
       if (n && d && (n.aggregation.kind === "composite" || d.aggregation.kind === "composite") && n.id !== d.id) add("S12", `statistics[${i}]`, "a composite's share needs the same composite as its denominator");
     }
     if (s.kind === "rate" && sm(s.measure) && !sm(s.measure)!.additive.acrossAgencies) add("S12", `statistics[${i}]`, "a rate needs a measure that adds across agencies");
+    const unit = s.kind === "incidents" ? plan.measures.find((m) => m.as === s.measure)?.unit : null;
+    if (s.kind === "incidents" && unit !== "offense" && unit !== "victim") add("S12", `statistics[${i}]`, "the incidents of a measure count offenses' or victims' incidents");
   });
   return out;
 }

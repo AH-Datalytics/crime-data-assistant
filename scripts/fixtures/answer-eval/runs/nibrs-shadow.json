@@ -364,7 +364,28 @@
    "LS-352",
    "LS-353",
    "LS-354",
-   "LS-355"
+   "LS-355",
+   "LS-356",
+   "LS-357",
+   "LS-358",
+   "LS-359",
+   "LS-360",
+   "LS-361",
+   "LS-362",
+   "LS-363",
+   "LS-364",
+   "LS-365",
+   "LS-366",
+   "LS-367",
+   "LS-368",
+   "LS-369",
+   "LS-370",
+   "LS-371",
+   "LS-372",
+   "LS-373",
+   "LS-374",
+   "LS-375",
+   "LS-376"
   ]
  },
  "eligibility": {
@@ -669,7 +690,25 @@
    "LS-352",
    "LS-353",
    "LS-354",
-   "LS-355"
+   "LS-355",
+   "LS-356",
+   "LS-357",
+   "LS-358",
+   "LS-359",
+   "LS-360",
+   "LS-361",
+   "LS-362",
+   "LS-363",
+   "LS-364",
+   "LS-365",
+   "LS-366",
+   "LS-367",
+   "LS-368",
+   "LS-369",
+   "LS-370",
+   "LS-371",
+   "LS-372",
+   "LS-373"
   ],
   "label unresolved": [
    "LS-024",
@@ -726,6 +765,11 @@
    "LS-208",
    "LS-210",
    "LS-218"
+  ],
+  "label drafted": [
+   "LS-374",
+   "LS-375",
+   "LS-376"
   ]
  },
  "notBuilt": [
@@ -881,7 +925,28 @@
   "LS-352": "designed",
   "LS-353": "designed",
   "LS-354": "designed",
-  "LS-355": "designed"
+  "LS-355": "designed",
+  "LS-356": "designed",
+  "LS-357": "designed",
+  "LS-358": "designed",
+  "LS-359": "designed",
+  "LS-360": "designed",
+  "LS-361": "designed",
+  "LS-362": "designed",
+  "LS-363": "designed",
+  "LS-364": "designed",
+  "LS-365": "designed",
+  "LS-366": "designed",
+  "LS-367": "designed",
+  "LS-368": "designed",
+  "LS-369": "designed",
+  "LS-370": "designed",
+  "LS-371": "designed",
+  "LS-372": "designed",
+  "LS-373": "designed",
+  "LS-374": "designed",
+  "LS-375": "designed",
+  "LS-376": "designed"
  },
  "scored": [
   {
@@ -940,14 +1005,65 @@
    "id": "LS-043",
    "split": "dev",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "period",
+     "expected": "{\"rule\":\"2018-01 through the latest month in the data (requested end 2026)\"}",
+     "actual": "2018-01..2026-09",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "If the requested start or end falls outside the data, states where the data starts or ends for that place",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names any missing years or months inside the span as missing, not zero",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names the months the partial 2026 figure covers",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Does not annualize or project the partial year, and does not re-cut earlier years to match",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names the Houston Police Department as the agency counted",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Names its source at the end",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: this breakdown (two-way breakdowns, several measures broken down, a combined total by period), rates and other shares."
+    "delivered: Houston, Texas: theft from motor vehicle offenses by year and clearance status, January 2018 through September 2026. / Reported by the Houston Police Department. / No total is established for Cleared (2018); Uncleared (2018); Cleared (2026)"
    ],
    "capability": "answer:nibrs count",
-   "era": "period not mapped"
+   "era": "period not mapped",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-124",
@@ -1039,14 +1155,29 @@
    "id": "LS-150",
    "split": "dev",
    "expected": "clarify",
-   "actual": "decline",
-   "outcome": "wrong_action",
-   "diffs": [],
+   "actual": "clarify",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "option \"Last 10 complete years\" ",
+     "expected": "answer",
+     "actual": "refused: this build does not hold the months (not built)",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"Every year available\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (reader): I can't apply \"by month\": breakdowns come from yearly tables; monthly or rolling breakdowns aren't available. I haven't answered with a number that leaves it out."
+    "asked which range of years: The last 10 complete years | Every year available | Another range"
    ],
    "capability": "clarify:nibrs count",
-   "era": "spans 2021"
+   "era": "spans 2021",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-151",
@@ -1455,7 +1586,7 @@
     }
    ],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,087 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2314,7 +2445,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Colorado Springs, Colorado: 1,288 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Colorado Springs, Colorado: 1,284 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3137,7 +3268,308 @@
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
    "values": "match"
+  },
+  {
+   "id": "LS-356",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance status, 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-357",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance type, 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not at"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-358",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,065 shoplifting offenses cleared in 2024, in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's a"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-359",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,065 of the 10,149 shoplifting offenses in 2024 were cleared (20.3%); the cleared shoplifting offenses were in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared "
+   ],
+   "capability": "answer:nibrs share",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-360",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: carjacking offenses by clearance type, 2024. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables count instea"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-361",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims with a firearm by clearance status, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-362",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 1,994 shoplifting offenses cleared by arrest in 2024, in 1,994 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-363",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "historical answer",
+     "actual": "routed to historical: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Hist"
+   ],
+   "capability": "answer:historical rate",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-364",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 1,508 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-365",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 9 burglary offenses where a firearm was recovered in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offens"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-366",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: 7,219 motor vehicle theft offenses where the vehicle was recovered in 2024. / Reported by the Dallas Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a si"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-367",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 112 arrests on incidents where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offe"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-368",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-369",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: 292 carjacking offenses not cleared in 2024, in 292 incidents. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual t"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-370",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Dallas, Texas: 1 carjacking offense cleared by exceptional means in 2024, in 1 incident. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-371",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: aggravated assault victims by clearance type, 2024. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-372",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 351 arrests on incidents that included a robbery in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Arrests with no incident "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-373",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: 328 robbery arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
   }
  ],
- "provisional": []
+ "provisional": [
+  {
+   "id": "LS-374",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: aggravated assault victims by clearance type, 2024. / Reported by the Detroit Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-375",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims by clearance type, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables co"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-376",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS records property for the incident, not for one offense, so the propert"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  }
+ ]
 }

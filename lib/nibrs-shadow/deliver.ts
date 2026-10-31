@@ -10,7 +10,7 @@ import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
 import type { Comparison } from "../nibrs-plan/transforms";
 import { ANSWER_STATEMENTS, checkEnvelope, finalStatistics, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
-import { MEASURE_LABEL } from "../nibrs-question-types";
+import { MEASURE_CODES, MEASURE_LABEL } from "../nibrs-question-types";
 import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
 import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
 
@@ -43,8 +43,37 @@ const MEASURE_WORDS: Record<string, string> = { drug_possession: "drug/narcotic 
  * Handgun"); null for any other, or for a code with no name. The shadow declines a weapon or relationship filter this
  * cannot name, so no restricted count is shown under an unrestricted name (Codex review 02).
  */
+/** Property descriptions and loss types an answer can name (NIBRS data elements 15 and 14). */
+export const PROPERTY_CODES: Record<string, { codes: string[]; words: string }> = {
+  firearm: { codes: ["13"], words: "a firearm" },
+  vehicle: { codes: ["03", "05", "24", "28", "37"], words: "the vehicle" },
+  car: { codes: ["03"], words: "a car" },
+};
+const PROPERTY_WORDS: Record<string, string> = Object.fromEntries(Object.values(PROPERTY_CODES).map((x) => [[...x.codes].sort().join(","), x.words]));
+export const LOSS_CODES: Record<string, string> = { stolen: "7", recovered: "5", seized: "6", damaged: "4", burned: "2" };
+const LOSS_WORDS: Record<string, string> = Object.fromEntries(Object.entries(LOSS_CODES).map(([w, c]) => [c, w]));
 export function filterWords(f: NonNullable<Measure["filters"]>[number]): string | null {
+  // Increment 6: property on one segment, its description and loss type together ("where a firearm was stolen").
+  if (f.kind === "exists" && !f.negate && f.entity === "property") {
+    const at = (d: string) => f.where.find((w) => w.kind === "attribute" && w.dimension === d) as { values?: (string | number)[] } | undefined;
+    const loss = at("property.loss_type")?.values?.map(String), desc = at("property.description")?.values?.map(String);
+    const what = desc && PROPERTY_WORDS[[...desc].sort().join(",")], how = loss && loss.length === 1 ? LOSS_WORDS[loss[0]] : undefined;
+    return what && how && f.where.length === 2 ? `where ${what} was ${how}` : null;
+  }
+  // Increment 6: a clearance selection (P64, P66): "cleared", "not cleared", "cleared by arrest", "cleared by exceptional means".
+  if (f.kind === "attribute" && f.op === "in" && f.values?.length === 1) {
+    const v = String(f.values[0]);
+    if (f.dimension === "offense.clearance_status") return v === "cleared" ? "cleared" : v === "none" ? "not cleared" : null;
+    if (f.dimension === "offense.clearance_method") return v === "arrest" ? "cleared by arrest" : v === "exceptional" ? "cleared by exceptional means" : null;
+  }
   if (f.kind !== "exists" || f.negate || f.where.length !== 1 || f.where[0].kind !== "attribute" || f.where[0].op !== "in") return null;
+  // Increment 6: an offense of the incident ("that included a robbery"), named by the crime with exactly those codes.
+  if (f.entity === "offense" && f.where[0].dimension === "offense.offense") {
+    const v = (f.where[0].values ?? []).map(String).sort().join(",");
+    const name = Object.keys(MEASURE_CODES).find((k) => [...MEASURE_CODES[k]].sort().join(",") === v);
+    const words = name && (MEASURE_LABEL[name] ?? name.replace(/_/g, " "));
+    return words ? `that included ${/^[aeiou]/i.test(words) ? "an" : "a"} ${words}` : null;
+  }
   const codes = (f.where[0].values ?? []).map(String);
   const v = [...codes].sort().join(",");
   const named = (names: Record<string, string>) => (codes.length && codes.every((c) => names[c]) ? codes.map((c) => names[c]).join(" or ") : null);
@@ -65,6 +94,8 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
 export function measureWords(plan: NibrsPlan, m: Measure = plan.measures[0]): string {
   const name = m.id.replace(/^[a-z_]+\./, "");
   const filters = [...plan.filters, ...(m.filters ?? [])].map(filterWords).filter(Boolean);
+  // Increment 6: every arrest on an incident with the condition ("arrests on incidents where a firearm was stolen").
+  if (m.id === "arrests.all_crime") return ["arrests on incidents", ...filters].join(" ");
   return [`${MEASURE_WORDS[name] ?? MEASURE_LABEL[name] ?? name.replace(/_/g, " ")} ${UNIT_PLURAL[m.unit] ?? m.unit}`, ...filters].join(" ");
 }
 /** A combined total of several measures (D19, P31): what it is called, and the sentence that defines it. */
@@ -83,6 +114,8 @@ export function runs(periods: string[]): string {
   return out.join(", ");
 }
 export const fmt = (n: number) => n.toLocaleString("en-US");
+/** "1 carjacking offense", not "1 carjacking offenses": the unit word in the singular for a count of one. */
+const one = (n: number, words: string) => (n === 1 ? words.replace(/\b(offense|incident|victim|offender|arrest)s\b/, "$1") : words);
 const GROUPING_HEADER: Record<string, string> = { "time.month": "Month", "time.year": "Year" };
 const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZERO", "UNAVAILABLE"];
 
@@ -107,6 +140,11 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
   // A crime by its offenders' sexes (P49), or offenders by their own sex (P44).
   "offender.sex": { header: "Offender sex", plural: "offender sex", names: { ...SEX, unknown_offender: "Unknown offender" } },
+  // P66 (Jeff 2026-10-30): STATUS is cleared or uncleared; TYPE is by arrest, each exceptional type, or uncleared.
+  "offense.clearance_status": { header: "Clearance status", plural: "clearance status", names: { cleared: "Cleared", none: "Uncleared" } },
+  "offense.clearance_type": { header: "Clearance type", plural: "clearance type", names: {
+    arrest: "Cleared by arrest", A: "Exceptional: death of the offender", B: "Exceptional: prosecution declined",
+    C: "Exceptional: in custody of another jurisdiction", D: "Exceptional: victim refused to cooperate", E: "Exceptional: juvenile, no custody", none: "Uncleared" } },
 };
 /** A category's name: the code's name; a blank field is "Not recorded"; a code with no name keeps its code. */
 export function categoryName(dimension: string, code: unknown): string {
@@ -129,13 +167,19 @@ function ageSentence(bins: { label: string; from: number; to: number }[]): strin
  */
 /** Time forms (increment 3): a set of years, or rolling windows (each row a window ending that month). */
 export type TimeOptions = { years?: number[]; rolling?: { months: number; missing: string[] } };
+/** P66: the incidents beside a count (answer.ts): their statistic, or null. */
+export function incidentsBeside(plan: NibrsPlan): string | null {
+  return plan.statistics.find((s) => s.kind === "incidents")?.as ?? null;
+}
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null, opts: TimeOptions = {}): Delivered {
   const place = plan.geography.places[0];
   const agency = place.kind === "agency" ? place.label : "the place";
   // Several measures: a count each, side by side (no categories, no shares). One measure: a count and optionally its share.
+  const beside = incidentsBeside(plan);
+  if (plan.statistics.some((x) => x.kind === "ratio")) return deliverShare(plan, effective, requestedTo, columns, rows, statements, release, readings);
   if (plan.measures.length > 1) return deliverSeveral(plan, effective, requestedTo, columns, rows, statements, release, readings, combined);
-  const [countStat, shareStat] = plan.statistics;
+  const [countStat, shareStat] = plan.statistics.filter((x) => x.as !== beside);
   const count = countStat.as, share = shareStat?.as;
   const what = measureWords(plan);
   const header = `${what[0].toUpperCase()}${what.slice(1)}${opts.rolling ? `, rolling ${opts.rolling.months}-month total` : ""}`;
@@ -143,12 +187,14 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const cats = plan.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension);
   const labels: Record<string, string> = { [`statistic:${count}`]: header };
   if (share) labels[`statistic:${share}`] = `Share of all ${what} (%)`;
+  if (beside) labels[`statistic:${beside}`] = "Incidents";
   const tableCols: ResultColumn[] = [];
   for (const g of plan.groupings) {
     labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? CATEGORY[g.dimension]?.header ?? g.dimension;
     tableCols.push({ binding: { kind: "grouping", dimension: g.dimension }, header: labels[`grouping:${g.dimension}`] });
   }
   tableCols.push({ binding: { kind: "statistic", as: count }, header });
+  if (beside) tableCols.push({ binding: { kind: "statistic", as: beside }, header: labels[`statistic:${beside}`] });
   if (share) tableCols.push({ binding: { kind: "statistic", as: share }, header: labels[`statistic:${share}`] });
   const ip = columns.indexOf("period");
   const at = (name: string) => columns.indexOf(name);
@@ -167,6 +213,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const c = r[at(count)];
     out.push(c === null || c === undefined ? null : Number(c));
     evidence.push({ row: i, statistic: count, status: cStatus });
+    if (beside) {
+      const b = r[at(beside)];
+      out.push(b === null || b === undefined ? null : Number(b));
+      evidence.push({ row: i, statistic: beside, status: String(r[at(`${beside}_status`)]) as CellStatus });
+    }
     if (share) {
       const sStatus = String(r[at(`${share}_status`)]) as CellStatus;
       const s = r[at(share)];
@@ -184,7 +235,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const v = tableRows[0]?.[0] as number | null | undefined;
     text.push(v === null || v === undefined
       ? `${agency}: the available evidence does not establish the number of ${what} in ${when}, so no number is given.`
-      : `${agency}: ${fmt(v)} ${what} in ${when}.`);
+      : `${agency}: ${fmt(v)} ${one(v, what)} in ${when}${beside && typeof tableRows[0]?.[1] === "number" ? `, in ${fmt(tableRows[0][1] as number)} ${one(tableRows[0][1] as number, "incidents")}` : ""}.`);
   } else if (!cats.length && opts.rolling) {
     // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
     const n = opts.rolling.months;
@@ -222,6 +273,43 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (BLANK.includes(e.status) !== (table.rows[e.row][col] === null)) contractProblems.push(`row ${e.row}, ${e.statistic}: value and status disagree`);
   }
   return { table, evidence, chart, text, answerStatements: statements, contractProblems };
+}
+
+/**
+ * Increment 6: the share cleared, one total: the cleared count and its incidents (P66), the total, and the share in
+ * percent to one decimal, known only when both counts are (no total is UNAVAILABLE).
+ */
+function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
+  statements: AnswerStatement[], release: string, readings: string[]): Delivered {
+  const place = plan.geography.places[0];
+  const agency = place.kind === "agency" ? place.label : "the place";
+  const [cleared, all] = plan.measures;
+  const [cCount, cInc, aCount, ratio] = plan.statistics.map((s) => s.as);
+  const r = rows[0] ?? [];
+  const num = (as: string) => { const v = r[columns.indexOf(as)]; return v === null || v === undefined ? null : Number(v); };
+  // No row (never from a total's query) is unknown, never blank without a status.
+  const st = (as: string) => (rows.length ? String(r[columns.indexOf(`${as}_status`)]) : "UNKNOWN") as CellStatus;
+  const c = num(cCount), inc = num(cInc), t = num(aCount);
+  const known = (s: CellStatus) => s === "VALUE" || s === "REPORTED_ZERO";
+  const share = c !== null && t !== null && t > 0 ? Math.round((1000 * c) / t) / 10 : null;
+  const shareStatus: CellStatus = !known(st(cCount)) ? st(cCount) : !known(st(aCount)) ? st(aCount) : t === 0 ? "UNAVAILABLE" : "VALUE";
+  const what = measureWords(plan, cleared), whatAll = measureWords(plan, all);
+  const labels: Record<string, string> = { [`statistic:${cCount}`]: `${what[0].toUpperCase()}${what.slice(1)}`, [`statistic:${cInc}`]: "Incidents",
+    [`statistic:${aCount}`]: `All ${whatAll}`, [`statistic:${ratio}`]: "Share cleared (%)" };
+  const order = [cCount, cInc, aCount, ratio];
+  const table: ResultTable = { columns: order.map((as) => ({ binding: { kind: "statistic", as }, header: labels[`statistic:${as}`] })), rows: [[c, inc, t, share]] };
+  const evidence: CellEvidence[] = [{ row: 0, statistic: cCount, status: st(cCount) }, { row: 0, statistic: cInc, status: st(cInc) }, { row: 0, statistic: aCount, status: st(aCount) },
+    { row: 0, statistic: ratio, status: shareStatus }];
+  const when = periodWords(effective.from, effective.to);
+  const text = [share !== null && inc !== null
+    ? `${agency}: ${fmt(c!)} of the ${fmt(t!)} ${whatAll} in ${when} were cleared (${share}%); the cleared ${whatAll} were in ${fmt(inc)} ${one(inc, "incidents")}.`
+    : `${agency}: the available evidence does not establish the share of ${whatAll} cleared in ${when}, so no share is given.`];
+  if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
+  text.push(...readings);
+  for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
+  text.push(SOURCE_STATEMENT(release));
+  const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
+  return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
 }
 
 /** Several measures (no categories): a column per measure; a combined total (D19, P31) as a sentence, totals only. */
