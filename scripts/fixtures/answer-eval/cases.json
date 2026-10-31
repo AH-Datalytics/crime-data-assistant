@@ -22263,9 +22263,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-2",
     "notes": "MUST ANSWER: every exceptional type A-E present (nibrs-model search, MI8234900 2024; Los Angeles CA0194200 was the other option but reported only part of 2024)."
    }
   },
@@ -22329,9 +22329,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-2",
     "notes": "MUST ANSWER: P67 ties present (nibrs-model search, CODPD0000 2023: 3 incidents with both an arrest and an exceptional clearance)."
    }
   },
@@ -22379,7 +22379,7 @@
     },
     "values": {
      "status": "pending_build",
-     "source": "discriminating: give the negative-control exclusion count (firearm recovered, none stolen)"
+     "source": "discriminating: count theft-from-motor-vehicle offenses in incidents with stolen non-firearm property and a recovered firearm, but no stolen firearm; these are excluded because stolen loss type and firearm description must match on the same property segment; give the exclusion count and the contrast with matching those conditions independently across the incident's property segments"
     },
     "statements": [
      "names the agency (Charlotte-Mecklenburg Police Department)",
@@ -22388,9 +22388,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc6",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc6-labels-2",
     "notes": "MUST ANSWER: property negative control present (nibrs-model search, NC0600100 2024: incidents with a recovered firearm but none stolen are excluded)."
    }
   },
@@ -23645,6 +23645,384 @@
     "drafted_by": "claude-inc7",
     "reviewed_by": "codex:inc7-labels-1",
     "notes": "MUST ANSWER: a victim breakdown filtered by a paired offender attribute."
+   }
+  },
+  {
+   "id": "LS-397",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults in Denver in 2023 by offender race",
+   "policy": [
+    "P29",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (crimes grouped by the incident's offenders' races; a crime with offenders in several races counts once in each)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 11): aggravated assault victims by the incident offenders' races (P49), each victim once per race; must differ from the pair-linked grouping of the next case for the victims whose linked offenders' race set differs from their incident's (13 in Denver 2023, nibrs-model batch 10 report)"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "counts victims (D18), each under the races of its incident's offenders",
+     "says a crime with offenders in more than one category counts once in each, so the categories can add up to more than the total (P49)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7-denver",
+    "reviewed_by": "codex:inc7-denver-labels-1",
+    "notes": "MUST ANSWER: P49 in an agency where it differs from P65 (Codex increment-7 review 04 (a))."
+   }
+  },
+  {
+   "id": "LS-398",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "According to NIBRS, aggravated assault victims in Denver in 2023 by the race of the offender who attacked them",
+   "policy": [
+    "P01",
+    "P65",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (pair-linked: only the offenders the victim-offender relationship segment links to the victim; \"no relationship reported\" as its own category)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 11): aggravated assault victims by the races of only the offenders the relationship segment links to them (P65), each once per race; no relationship reported as its own category; must differ from the previous case's P49 cells"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "uses only the offenders linked to each victim by the relationship segment, and says so (P65)",
+     "shows victims with no relationship reported as their own category, separate from a linked offender whose race is unknown or not recorded",
+     "says a victim linked to offenders of more than one race counts once in each",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7-denver",
+    "reviewed_by": "codex:inc7-denver-labels-1",
+    "notes": "MUST ANSWER: P65's pairing named by the question, discriminating against P49 (Codex 04 (a))."
+   }
+  },
+  {
+   "id": "LS-399",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assaults by juveniles in Denver in 2023",
+   "policy": [
+    "P29",
+    "P30",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "offender age: under 18 (any offender of the incident)"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 11): victims of incidents with any offender under 18, each once; must differ from the next case (263 against 254, nibrs-model batch 10 report)"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "reads \"by juveniles\" as offenders under 18 (P29, P30)",
+     "counts victims of incidents with at least one offender under 18, each once (P49)",
+     "says offenders of unknown age are not counted as juveniles",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7-denver",
+    "reviewed_by": "codex:inc7-denver-labels-1",
+    "notes": "MUST ANSWER: P49's incident-wide offender condition, discriminating against the pair-linked one (Codex 04 (a))."
+   }
+  },
+  {
+   "id": "LS-400",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "Aggravated assault victims of offenders who were under 18, in Denver in 2023",
+   "policy": [
+    "P30",
+    "P65",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [
+      "offender age: under 18 (pair-linked to the victim)"
+     ],
+     "groupings": [],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Denver Police Department",
+       "state": "CO"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 11): victims linked by the relationship segment to at least one offender under 18, each once; must differ from the previous case's incident-wide count"
+    },
+    "statements": [
+     "names the agency (Denver Police Department)",
+     "applies the offender's age through the victim-offender pairing the question names, and says so (P65); a victim with no relationship reported cannot meet the condition and is not counted",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7-denver",
+    "reviewed_by": "codex:inc7-denver-labels-1",
+    "notes": "MUST ANSWER: P65's pair-linked offender condition, discriminating against P49 (Codex 04 (a))."
+   }
+  },
+  {
+   "id": "LS-401",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "According to NIBRS, murder victims in Rochester, New York in 2024 by offender race",
+   "policy": [
+    "P01",
+    "P65",
+    "P49",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (crimes grouped by the incident's offenders' races; a crime with offenders in several races counts once in each)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Rochester Police Department",
+       "state": "NY"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 11): murder victims by the incident offenders' races (P49), each once per race; must differ from the next case for the victims whose linked offenders' race set differs (6 of 46 in Rochester 2024, nibrs-model murder search)"
+    },
+    "statements": [
+     "names the agency (Rochester Police Department)",
+     "uses the incident's offenders, not the pair-linked reading (P65 default)",
+     "says a crime with offenders in more than one category counts once in each, so the categories can add up to more than the total (P49)",
+     "shows unknown and not-recorded categories as their own rows, never dropped",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7-denver",
+    "reviewed_by": "codex:inc7-denver-labels-1",
+    "notes": "MUST ANSWER: P49 for murder in an agency where it differs from P65 (Codex increment-7 review 04 (a); nibrs-model search: Rochester 2024 the top murder candidate, 12 months reported)."
+   }
+  },
+  {
+   "id": "LS-402",
+   "group": "designed:inc7-people",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "auto",
+   "setup": [],
+   "question": "According to NIBRS, murder victims in Rochester, New York in 2024 by the race of the offender who killed them",
+   "policy": [
+    "P01",
+    "P65",
+    "D18",
+    "P63"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "filters": [],
+     "groupings": [
+      "offender race (pair-linked: only the offenders the victim-offender relationship segment links to the victim; \"no relationship reported\" as its own category)"
+     ],
+     "statistic": "count",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Rochester Police Department",
+       "state": "NY"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ]
+    },
+    "values": {
+     "status": "pending_build",
+     "source": "nibrs-model expected values (request 11): murder victims by the races of only the offenders the relationship segment links to them (P65), each once per race; no relationship reported as its own category; must differ from the previous case's P49 cells"
+    },
+    "statements": [
+     "names the agency (Rochester Police Department)",
+     "uses only the offenders linked to each victim by the relationship segment, and says so (P65)",
+     "shows victims with no relationship reported as their own category, separate from a linked offender whose race is unknown or not recorded",
+     "says a victim linked to offenders of more than one race counts once in each",
+     "ends with the source line \"Source: FBI NIBRS.\" (P63)"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-inc7-denver",
+    "reviewed_by": "codex:inc7-denver-labels-1",
+    "notes": "MUST ANSWER: P65 for murder, discriminating against P49 (Codex 04 (a))."
    }
   }
  ]

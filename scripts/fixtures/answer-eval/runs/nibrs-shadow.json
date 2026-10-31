@@ -405,7 +405,13 @@
    "LS-393",
    "LS-394",
    "LS-395",
-   "LS-396"
+   "LS-396",
+   "LS-397",
+   "LS-398",
+   "LS-399",
+   "LS-400",
+   "LS-401",
+   "LS-402"
   ]
  },
  "eligibility": {
@@ -729,6 +735,9 @@
    "LS-371",
    "LS-372",
    "LS-373",
+   "LS-374",
+   "LS-375",
+   "LS-376",
    "LS-377",
    "LS-378",
    "LS-379",
@@ -748,7 +757,13 @@
    "LS-393",
    "LS-394",
    "LS-395",
-   "LS-396"
+   "LS-396",
+   "LS-397",
+   "LS-398",
+   "LS-399",
+   "LS-400",
+   "LS-401",
+   "LS-402"
   ],
   "label unresolved": [
    "LS-024",
@@ -805,11 +820,6 @@
    "LS-208",
    "LS-210",
    "LS-218"
-  ],
-  "label drafted": [
-   "LS-374",
-   "LS-375",
-   "LS-376"
   ]
  },
  "notBuilt": [
@@ -1006,7 +1016,13 @@
   "LS-393": "designed",
   "LS-394": "designed",
   "LS-395": "designed",
-  "LS-396": "designed"
+  "LS-396": "designed",
+  "LS-397": "designed",
+  "LS-398": "designed",
+  "LS-399": "designed",
+  "LS-400": "designed",
+  "LS-401": "designed",
+  "LS-402": "designed"
  },
  "scored": [
   {
@@ -3588,6 +3604,48 @@
    "values": "match"
   },
   {
+   "id": "LS-374",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: aggravated assault victims by clearance type, 2024. / Reported by the Detroit Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables "
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-375",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims by clearance type, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables co"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-376",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS records property for the incident, not for one offense, so the propert"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
    "id": "LS-377",
    "split": "heldout",
    "expected": "answer",
@@ -3908,50 +3966,91 @@
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "match"
+  },
+  {
+   "id": "LS-397",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime with several of these categories coun"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-398",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime with several of th"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-399",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not co"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-400",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Denver, Colorado: 254 aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) in 2023. / Reported by the Denver Police Department. / The condition on the offender applies only to the off"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-401",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories counts once under each"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-402",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories cou"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
   }
  ],
- "provisional": [
-  {
-   "id": "LS-374",
-   "split": "heldout",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [
-    "delivered: Detroit, Michigan: aggravated assault victims by clearance type, 2024. / Reported by the Detroit Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables "
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later",
-   "values": "match"
-  },
-  {
-   "id": "LS-375",
-   "split": "heldout",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by clearance type, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables co"
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later",
-   "values": "match"
-  },
-  {
-   "id": "LS-376",
-   "split": "heldout",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
-   "notes": [
-    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS records property for the incident, not for one offense, so the propert"
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later",
-   "values": "match"
-  }
- ]
+ "provisional": []
 }

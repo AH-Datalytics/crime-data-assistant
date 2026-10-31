@@ -1,19 +1,18 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 396 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 402 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 192: run by this candidate
+- 198: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 339: scorable (reviewed, decided policy)
+- 348: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 3: label drafted
 
 ## Refused as not built (not scored)
 
@@ -75,13 +74,13 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-152 cases. Correct 132; unverified 14; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+161 cases. Correct 141; unverified 14; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 126 | 0 | 4 | 0 |
+| answer | 135 | 0 | 4 | 0 |
 | clarify | 0 | 5 | 2 | 0 |
 | decline | 0 | 0 | 15 | 0 |
 
@@ -93,7 +92,7 @@ Expected (rows) by actual (columns):
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: pass (2/2 match) |
 | answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
-| answer:nibrs count | 2021 and later | 94 | pass | wrong answers: pass (0); initial action: pass (97% (91/94)); direct answers: pass (97%); numeric fixtures: pass (91/91 match) |
+| answer:nibrs count | 2021 and later | 103 | pass | wrong answers: pass (0); initial action: pass (97% (100/103)); direct answers: pass (97%); numeric fixtures: pass (100/100 match) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
@@ -271,20 +270,7 @@ No cases.
 
 ### Held out
 
-3 cases. Correct 3; unverified 0; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
-
-Expected (rows) by actual (columns):
-
-| | answer | clarify | decline | no reading |
-|---|---|---|---|---|
-| answer | 3 | 0 | 0 | 0 |
-
-| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
-|---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 3 | pass | wrong answers: pass (0); initial action: pass (100% (3/3)); direct answers: pass (100%); numeric fixtures: pass (3/3 match) |
-
-Discrepancies and unverified cases:
-
+No cases.
 
 ## PROVISIONAL: drafted labels (never a gate): replay cases inside the slice
 
