@@ -4,3 +4,4 @@
 |---|---|---|
 | 01 | labels LS-403..LS-422, P69, P70, rewrite field | 16 ACCEPT; LS-419..422 REVISE; LS-423..426 added |
 | 02 | re-check | ACCEPT; labels frozen (LS-419..421 held) |
+| 03 | P71, P72, LS-420, LS-421 | ACCEPT; frozen |

@@ -25306,9 +25306,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-3",
     "notes": "Guidance: F8 (coordinator recommendation, not Jeff's decision; flagged): quarters are sums of months, flagged when incomplete. Decided by Jeff 2026-10-31 (P71: \"Add up months\")."
    }
   },
@@ -25378,9 +25378,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-inc7b",
-    "reviewed_by": null,
+    "reviewed_by": "codex:inc7b-labels-3",
     "notes": "Guidance: F10 (coordinator recommendation, flagged): a population column is allowed; no number changes. Decided by Jeff 2026-10-31 (P72: \"Show it\")."
    }
   },
