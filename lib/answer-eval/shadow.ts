@@ -12,7 +12,7 @@
  */
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
-import { ANSWER_STATEMENTS, clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
+import { ANSWER_STATEMENTS, clearanceDims, peopleFacts, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
@@ -24,7 +24,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -71,6 +71,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) { out.set(m[0], batch8); out.set(`${m[0]}|button`, batch8); }
       continue;
     }
+    // Batch 10 (increment 7): people, a category map or one count per case.
+    const b10 = peopleCells((v as unknown as { values?: Record<string, unknown> }).values);
+    if (b10 && !v.measures) {
+      for (const m of v.nibrsai_cases.matchAll(/LS-\d{3}/g)) out.set(m[0], b10);
+      continue;
+    }
     // Batch 9 (increment 6): clearances, property selections and arrests, each case reading its own part of the file.
     const b9 = (v as unknown as { values?: ClearanceValues }).values;
     if (b9 && !v.measures) {
@@ -110,7 +116,8 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       ? (v.rows ?? []).flatMap((r) => measures.map((m) => ({ key: String(r.year ?? r.month ?? ""), ...pick(cell(r[m])), ...definition(m) })))
       : (v.rows ?? []).map((r) => {
         const c = pick(cell(r[measures[0]]));
-        const code = catField ? (CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
+        // Increment 7: an offender record with sequence 00 is its own row, "seq_00" (the segment convention, V59 regenerated).
+        const code = catField ? (String(r[catField]) === "seq_00" ? "unknown_offender" : CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
         const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], code) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
         const p = String(r.year ?? r.month ?? "");
         // A known 0 denominator (P51) is evidence: its share is an expected blank (UNAVAILABLE). Only absent or unknown
@@ -141,6 +148,30 @@ const CLEARANCE_CODE: Record<string, string> = { arrest: "arrest", uncleared: "n
  * one total with its incidents; arrests, one total. Null for a case whose part the file does not give (the share
  * cleared until the slice answers it).
  */
+/**
+ * Batch 10 (increment 7): a case's category map ("victims_by_offender_race", "by_category", ...) as cells keyed by the
+ * category's name as NIBRSAI shows it, or its one count ("victims", "count"). The file's own category names: "seq_00"
+ * (offender 00) is "Unknown offender"; "no_relationship_reported"; " " is not recorded; age groups by their labels.
+ */
+const PEOPLE_MAPS: [RegExp, string][] = [[/_race$/, "victim.race"], [/_ethnicity$/, "victim.ethnicity"], [/_sex$/, "victim.sex"], [/_age$/, "victim.age"]];
+function peopleCells(v: Record<string, unknown> | undefined): ExpectedCell[] | null {
+  if (!v) return null;
+  const key = Object.keys(v).find((k) => /^(?:victims|offenses|offenders)_by_|^by_category$/.test(k) && v[k] && typeof v[k] === "object");
+  if (!key) return typeof v.victims === "number" && Object.keys(v).some((k) => /contrast|negative_control/.test(k)) ? [{ key: "", value: v.victims, status: "VALUE" }]
+    : typeof v.count === "number" && "group_b_arrests_07" in v ? [{ key: "", value: v.count, status: "VALUE" }] : null;
+  const map = v[key] as Record<string, number>;
+  // Each category's share of the independent total, in percent to one decimal as the answer shows it: the file's own
+  // total for a crime by its offenders (categories overlap), else the categories' sum (each unit in one category).
+  const own = Object.keys(v).find((k) => /_total$/.test(k) && typeof v[k] === "number");
+  const total = own ? (v[own] as number) : Object.values(map).reduce((a, b) => a + b, 0);
+  const share = (n: number) => (total > 0 ? Math.round((1000 * n) / total) / 10 : null);
+  const age = Object.keys(map).some((k) => /^\d{2}-\d{2}$|^under_18$/.test(k));
+  const dim = age ? "victim.age" : PEOPLE_MAPS.find(([re]) => re.test(key))?.[1]
+    ?? (Object.keys(map).some((k) => ["H", "N"].includes(k)) ? "victim.ethnicity" : Object.keys(map).some((k) => ["F", "M"].includes(k)) ? "victim.sex" : "victim.race");
+  const name = (k: string) => k === "seq_00" ? "Unknown offender" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
+    : age ? (k === "under_18" ? "Under 18" : k === "00" ? "Unknown" : k) : categoryName(dim, k);
+  return Object.entries(map).map(([k, n]) => ({ key: name(k), value: n, status: "VALUE", share: share(n) }));
+}
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
   const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
     ({ key: dim ? categoryName(dim, CLEARANCE_CODE[key] ?? key.replace(/^exceptional_/, "")) : "", value: x.units, status: "VALUE", incidents: x.incidents });
@@ -342,6 +373,43 @@ function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean
   return text.every(allowed) && (changeLine === null || text.includes(changeLine)) && (cols.pct_change !== null || cols.change === null || text.includes("The percent change cannot be computed from a zero base."));
 }
 
+/** Increment 7: a label statement about people, judged against the answer; null when the statement is not one of these. */
+function peopleStatement(s: string, o: Extract<ShadowOutcome, { kind: "answer" }>): boolean | null {
+  const text = o.delivered.text, plan = o.plan;
+  const says = (k: keyof typeof ANSWER_STATEMENTS) => text.includes(ANSWER_STATEMENTS[k]);
+  const filters = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])];
+  const conds = (pred: (scope: string, entity: string, w: { dimension: string; op: string; values?: (string | number)[] }) => boolean) =>
+    filters.some((f) => (f.kind === "attribute" ? pred("unit", "unit", f) : !f.negate && f.where.some((w) => w.kind === "attribute" && pred(f.scope, f.entity, w))));
+  const under18 = (w: { op: string; values?: (string | number)[] }) => w.op === "between" && (w.values ?? []).map(String).join(",") === "1,17";
+  const unit = plan.measures[0]?.unit;
+  const grouped = (d: RegExp, multi?: boolean) => plan.groupings.some((g) => d.test(g.dimension) && (multi === undefined || !!g.multiValue === multi));
+  if (/^says a (?:crime with offenders|victim linked to offenders) (?:in|of) more than one (?:category|race) counts once in each/.test(s)) return says("categories_overlap");
+  if (/^uses the incident's offenders, not the pair-linked reading/.test(s)) return grouped(/^offender\./, true) && !says("pair_linked");
+  if (/^uses only the offenders linked to each victim by the relationship segment, and says so/.test(s)) return grouped(/^victim_offender\.offender_/) && says("pair_linked");
+  if (/^shows victims with no relationship reported as their own category/.test(s)) return says("pair_linked");
+  const each = /^counts (victims|robbery offenses|offenses) \(D18\), each under the (?:races|age groups|ethnicities) of its incident's offenders/.exec(s);
+  if (each) return unit === (each[1] === "victims" ? "victim" : "offense") && grouped(/^offender\./, true);
+  if (/^reads "by juveniles" as offenders under 18/.test(s) || /^counts victims of incidents with at least one offender under 18, each once/.test(s))
+    return conds((scope, entity, w) => scope === "incident" && entity === "offender" && w.dimension === "offender.age" && under18(w));
+  if (/^says (?:offenders|victims|arrestees) of unknown age(?: or sex)? are not counted/.test(s)) return says("unknown_not_counted");
+  if (/^reads "against juveniles" as victims under 18/.test(s) || /^counts victims under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
+  if (/^counts female victims whose aggravated assault involved a firearm/.test(s))
+    return unit === "victim" && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, e) => sc === "victim" && e === "offense_weapon");
+  if (/^counts victims who are both female and under 18/.test(s))
+    return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
+  if (/^counts offenders, each once, who are linked as a stranger/.test(s))
+    return unit === "offender" && conds((sc, e, w) => sc === "offender" && e === "victim_offender" && w.dimension === "victim_offender.relationship" && (w.values ?? []).join() === "ST");
+  if (/^counts offenders, each offender segment once/.test(s)) return unit === "offender" && !grouped(/./, true);
+  if (/^says it counts offender records \(segments\)/.test(s)) return says("offender_records");
+  if (/^says standalone Group B arrests \(with no incident\) are included/.test(s)) return says("arrests_include_group_b");
+  if (/^counts arrests with robbery as the arrest offense, by arrest date/.test(s)) return plan.measures[0]?.id === "arrests.robbery" && plan.timeBasis === "arrest_date";
+  if (/^reads juvenile as an arrestee under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "arrestee.age" && under18(w)) && says("unknown_not_counted");
+  if (/^counts each victim once, under the victim's own race/.test(s)) return unit === "victim" && grouped(/^victim\.race$/, false);
+  if (/^applies the offender's age through the victim-offender pairing the question names, and says so/.test(s))
+    return conds((sc, e, w) => sc === "victim" && e === "victim_offender" && w.dimension === "victim_offender.offender_age" && under18(w)) && says("pair_condition") && !says("pair_linked");
+  return null;
+}
+
 function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "answer" }>, o: Extract<ShadowOutcome, { kind: "answer" }>): Diff[] {
   const out: Diff[] = [];
   const text = o.delivered.text;
@@ -439,6 +507,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const cols = o.delivered.table.columns.map((c, i) => (c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") ? i : -1)).filter((i) => i >= 0);
       ok = cols.length > 0 && o.delivered.table.rows.every((r) => cols.every((i) => typeof r[i] === "string" && r[i] !== ""));
     }
+    // Increment 7: people (P29, P30, P44, P46, P49, P65). A statement about a fixed sentence checks the sentence; one
+    // about what is counted checks the plan's unit, condition or grouping.
+    else if ((ok = peopleStatement(s, o)) !== null) { /* judged by peopleStatement */ }
     // Increment 5: P63's source line, and P61's disclaimer and button on a state or national sum.
     else if (/^ends with the source line "(.+?)"/.test(s)) { const want = /^ends with the source line "(.+?)"/.exec(s)![1]; ok = text[text.length - 1] === want && text.filter((t) => /^Source: /.test(t)).length === 1; }
     else if (/^states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included/.test(s)) {
@@ -706,7 +777,15 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
   if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
-  if (plan.measures.some((m) => m.id === "arrests.all_crime")) want.push("arrests_through_incident");
+  // Increment 7: every arrest (Group B included) or arrests through an incident; the linked offenders; offender records;
+  // a condition on a person.
+  const people = peopleFacts(plan);
+  if (people.throughIncident) want.push("arrests_through_incident");
+  if (people.allArrests) want.push("arrests_include_group_b");
+  if (people.pair) want.push("pair_linked");
+  if (people.pairCondition) want.push("pair_condition");
+  if (people.offenders) want.push("offender_records");
+  if (people.personFilter) want.push("unknown_not_counted");
   const clr = clearanceDims(plan);
   if (clr.length) want.push("clearance_as_of_file");
   if (clr.some((d) => d !== "offense.clearance_status")) want.push("clearance_arrest_first");

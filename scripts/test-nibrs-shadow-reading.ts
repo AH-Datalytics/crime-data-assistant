@@ -34,7 +34,15 @@ assert.equal(read("robberies in Tulsa by weapon and year").readings.length, 0, "
 assert.equal(read("Simple assaults committed by men and women in Tulsa in 2023").readings.length, 0, "offenders, not victims: left alone");
 // P29 (Jeff): "by" names the offenders, "against" names the victims.
 assert.equal(read("robberies against men and women in Tulsa in 2022").text, "robberies by sex in Tulsa in 2022");
-for (const q of ["assaults by men and women in Tulsa", "burglaries committed by juveniles in Tulsa", "robberies by women in Tulsa"]) assert.equal(read(q).offenders, true, q);
+for (const q of ["assaults by men and women in Tulsa", "robberies by women in Tulsa"]) assert.equal(read(q).offenders, true, q);
+// Increment 7: "by juveniles" is read (an offender under 18 in the incident, P49), so it is no longer unsupported.
+assert.deepEqual([read("burglaries committed by juveniles in Tulsa").offenders, read("burglaries committed by juveniles in Tulsa").people?.where], [false, [{ who: "offender", attr: "age", range: [1, 17], paired: false }]]);
+// Codex increment-7 review 04.2: a victim's attribute on arrests is never read as the arrestee's.
+assert.deepEqual([read("Arrests in Denver in 2023 by victim race").people?.unsupported, read("Arrests in Denver in 2023 by victim race").people?.by], ["a victim's race for arrests", null]);
+assert.equal(read("Aggravated assault victims in Tulsa in 2024, by victim race").text, "Aggravated assault victims in Tulsa in 2024 by race");
+// Codex 05: the rewritten words are what the accounting reads ("by race" a breakdown, nothing left unread).
+{ const l = read("Aggravated assault victims in Tulsa in 2024, by victim race").ledger.parts.filter((p) => p.clause === 0);
+  assert.ok(l.some((p) => p.concept === "breakdown" && p.value === "race") && !l.some((p) => p.state === "not-interpreted"), JSON.stringify(l.map((p) => [p.concept, p.value, p.state]))); }
 for (const q of ["robberies by sex in Tulsa", "assaults against women in Tulsa", "robberies by month in Tulsa"]) assert.equal(read(q).offenders, false, q);
 assert.equal(read("Were male or female victims assaulted more in Tulsa?").readings.length, 0, "no 'victims ... were' form");
 

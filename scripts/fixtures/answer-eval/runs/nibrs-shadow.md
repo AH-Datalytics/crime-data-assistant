@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 376 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 396 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
 - 204: outside the shadow slice
-- 172: run by this candidate
+- 192: run by this candidate
 
 ## Label eligibility (can the case be scored)
 
-- 319: scorable (reviewed, decided policy)
+- 339: scorable (reviewed, decided policy)
 - 54: label unresolved
 - 3: label drafted
 
@@ -75,15 +75,15 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-132 cases. Correct 116; unverified 10; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+152 cases. Correct 132; unverified 14; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 110 | 0 | 4 | 0 |
-| clarify | 0 | 3 | 2 | 0 |
-| decline | 0 | 0 | 13 | 0 |
+| answer | 126 | 0 | 4 | 0 |
+| clarify | 0 | 5 | 2 | 0 |
+| decline | 0 | 0 | 15 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
@@ -93,18 +93,18 @@ Expected (rows) by actual (columns):
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: pass (2/2 match) |
 | answer:nibrs change | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
-| answer:nibrs count | 2021 and later | 78 | pass | wrong answers: pass (0); initial action: pass (96% (75/78)); direct answers: pass (96%); numeric fixtures: pass (75/75 match) |
+| answer:nibrs count | 2021 and later | 94 | pass | wrong answers: pass (0); initial action: pass (97% (91/94)); direct answers: pass (97%); numeric fixtures: pass (91/91 match) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 10 | pass | wrong answers: pass (0); initial action: pass (100% (10/10)); direct answers: pass (100%); numeric fixtures: pass (10/10 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (2/3 verified correct, 1 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/3 match, 1 not measured) |
+| clarify:nibrs count | 2021 and later | 5 | not measured | wrong answers: not measured (0, 3 answers unverified); clarifications: not measured (2/5 verified correct, 3 unverified); initial action: pass (100% (5/5)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/5 match, 3 not measured) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| decline:nibrs count | 2021 and later | 3 | not measured | wrong answers: not measured (0, 2 answers unverified); declines: not measured (1/3 verified correct, 2 unverified); initial action: pass (100% (3/3)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/3 match, 2 not measured) |
+| decline:nibrs count | 2021 and later | 4 | not measured | wrong answers: not measured (0, 3 answers unverified); declines: not measured (1/4 verified correct, 3 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/4 match, 3 not measured) |
 | decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: pass (0); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| decline:no meaning | no period | 6 | not measured | wrong answers: pass (0); declines: pass (6/6 verified correct); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 7 | not measured | wrong answers: pass (0); declines: not measured (6/7 verified correct, 1 unverified); initial action: pass (100% (7/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -152,6 +152,20 @@ Discrepancies and unverified cases:
 - **LS-363** (unverified; expected answer, got answer) "Robbery clearance rate in Atlanta in 2023"
   - unverified route: expected `historical answer`, got `routed to historical: not run by this NIBRS shadow`
   - routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Hi
+- **LS-389** (unverified; expected clarify, got clarify) "According to NIBRS, murders by young adults in Memphis in 2024"
+  - unverified option "18 to 24" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "18 to 29" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - asked which ages "young adults" means: 18 to 24 | 18 to 29
+- **LS-390** (unverified; expected clarify, got clarify) "How many attackers were there in aggravated assaults in Detroit in 2024?"
+  - unverified option "Offenders" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "People arrested" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - asked what "attackers" means: Offenders | People arrested
+- **LS-391** (unverified; expected decline, got decline) "People charged with robbery in Memphis in 2024"
+  - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.
+- **LS-392** (unverified; expected decline, got decline) "Aggravated assaults in Tennessee in 2024 by offender sex"
+  - unverified reason: expected `Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.`, got `unsupported_capability`
+  - declined (unsupported_capability): Offender breakdowns for a whole state or the nation are not built yet; they are for one agency or several named agencies.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 

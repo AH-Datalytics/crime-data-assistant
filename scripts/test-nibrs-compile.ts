@@ -63,7 +63,45 @@ assert.ok(!onStolen.sql.includes("a.arrest_offense IN"), "any arrest offense");
 assert.deepEqual(onStolen.statements, ["property_not_attributed", "arrests_counted_once", "arrests_through_incident"]);
 const onRobbery = ok(compilePlan({ ...allArrests, filters: [{ kind: "exists", scope: "incident", entity: "offense", where: [{ kind: "attribute", dimension: "offense.offense", op: "in", values: ["120"] }] }] }, year(2024), t));
 assert.ok(onRobbery.sql.includes("o2.offense_code IN ('120')"));
-assert.equal(compilePlan({ ...allArrests, filters: [] }, year(2024), t).kind, "unsupported");
+// Increment 7: every arrest with no incident condition: Group A (M left out) and standalone Group B, by the arrestee's
+// own columns only.
+const every = ok(compilePlan({ ...allArrests, filters: [] }, year(2024), t));
+for (const s of ["group_b_arrest", "UNION ALL", "identical_to_line_no IS NULL", "<> 'M'"]) assert.ok(every.sql.includes(s), s);
+assert.deepEqual(every.statements, ["arrests_counted_once", "arrests_include_group_b"]);
+const byArrestee = ok(compilePlan({ ...allArrests, filters: [], groupings: [{ dimension: "arrestee.race", unknown: "visible", absent: "show" }] }, year(2024), t));
+assert.ok(byArrestee.sql.includes("a.race AS g0"));
+// Codex increment-7 review 04.1: a condition only on the arrestee ("juvenile arrests") still counts every arrest, with
+// the condition on the Group A and the Group B branch alike.
+const juvAll = ok(compilePlan({ ...allArrests, filters: [{ kind: "attribute", dimension: "arrestee.age", op: "between", values: [1, 17] }] }, year(2024), t));
+assert.ok(juvAll.sql.includes("group_b_arrest") && juvAll.sql.split("TRY_CAST(a.age AS INTEGER) BETWEEN 1 AND 17").length === 3, "both branches");
+assert.deepEqual(juvAll.statements, ["arrests_counted_once", "arrests_include_group_b", "unknown_not_counted"]);
+
+// Increment 7: people. Victims by the incident's offenders' races (P49, multi-valued, 00 its own category); by the
+// linked offenders' races (P65, "no_relationship"); a victim's own age; an offender of the incident; a linked offender;
+// offenders linked as strangers to a victim of the crime.
+const vic = { ...X.N2, filters: [], groupings: [], measures: [{ id: "victims.aggravated_assault", unit: "victim" as const, as: "v" }], statistics: [{ kind: "count" as const, as: "n", measure: "v" }] };
+const byOffRace = ok(compilePlan({ ...vic, groupings: [{ dimension: "offender.race", unknown: "visible", absent: "show", multiValue: "each_value" }] }, year(2024), t));
+assert.ok(byOffRace.sql.includes("CASE WHEN f2.offender_seq = '00' THEN 'unknown_offender' ELSE f2.race END"));
+assert.deepEqual(byOffRace.statements, ["categories_overlap"]);
+const byPair = ok(compilePlan({ ...vic, groupings: [{ dimension: "victim_offender.offender_race", unknown: "visible", absent: "show", multiValue: "each_value" }] }, year(2024), t));
+for (const s of ["'no_relationship'", "f3.offender_seq = r.offender_number"]) assert.ok(byPair.sql.includes(s), s);
+assert.deepEqual(byPair.statements, ["categories_overlap", "pair_linked"]);
+const pairAge = ok(compilePlan({ ...vic, groupings: [{ dimension: "victim_offender.offender_age", unknown: "visible", absent: "show", multiValue: "each_value", bins: [{ label: "Under 18", from: 1, to: 17 }, { label: "18+", from: 18, to: 99 }] }] }, year(2024), t));
+assert.ok(pairAge.sql.includes("CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE CASE WHEN f3.age IS NULL"));
+const juvVic = ok(compilePlan({ ...vic, filters: [{ kind: "attribute", dimension: "victim.age", op: "between", values: [1, 17] }] }, year(2024), t));
+assert.ok(juvVic.sql.includes("(v.age IN ('NN', 'NB', 'BB') OR TRY_CAST(v.age AS INTEGER) BETWEEN 1 AND 17)"));
+assert.deepEqual(juvVic.statements, ["unknown_not_counted"]);
+const byJuv = ok(compilePlan({ ...vic, filters: [{ kind: "exists", scope: "incident", entity: "offender", where: [{ kind: "attribute", dimension: "offender.age", op: "between", values: [1, 17] }] }] }, year(2024), t));
+assert.ok(byJuv.sql.includes("f4.offender_seq <> '00'") && byJuv.sql.includes("TRY_CAST(f4.age AS INTEGER) BETWEEN 1 AND 17"));
+const ofJuv = ok(compilePlan({ ...vic, filters: [{ kind: "exists", scope: "victim", entity: "victim_offender", where: [{ kind: "attribute", dimension: "victim_offender.offender_age", op: "between", values: [1, 17] }] }] }, year(2024), t));
+assert.ok(ofJuv.sql.includes("f4.offender_seq = r4.offender_number") && ofJuv.sql.includes("r4.victim_seq = v.victim_seq"));
+assert.deepEqual(ofJuv.statements, ["pair_condition", "unknown_not_counted"]);
+const off = { ...vic, measures: [{ id: "offenders.aggravated_assault", unit: "offender" as const, as: "v" }] };
+const offStrangers = ok(compilePlan({ ...off, filters: [{ kind: "exists", scope: "offender", entity: "victim_offender", where: [{ kind: "attribute", dimension: "victim_offender.relationship", op: "in", values: ["ST"] }] }] }, year(2024), t));
+for (const s of ["r4.offender_number = f.offender_seq", "r4.offender_relationship IN ('ST')", "vo4.connected_offense IN ('13A')"]) assert.ok(offStrangers.sql.includes(s), s);
+assert.deepEqual(offStrangers.statements, ["offender_records"]);
+// A victim's age condition on offense counts, or an unsupported operator, is refused.
+assert.equal(compilePlan({ ...vic, filters: [{ kind: "attribute", dimension: "victim.age", op: "in", values: ["17"] }] }, year(2024), t).kind, "unsupported");
 
 // Everything outside v0 is refused, with its reason.
 const refuse = (p: Parameters<typeof compilePlan>[0], period: Parameters<typeof compilePlan>[1] = year(2025)) => { const r = compilePlan(p, period, t); assert.equal(r.kind, "unsupported"); return r.kind === "unsupported" ? r.reason : ""; };
@@ -89,7 +127,7 @@ assert.ok(cjOff.sql.includes("o.offense_code || ':' || o.key_occurrence AS sub")
 assert.match(refuse({ ...X.H2, measures: [{ ...X.H2.measures[0], id: "offenses.carjacking", unit: "incident" }] }), /counted by offense/);
 // New forms' limits: an attribute the counted entity does not hold; a share without categories; a negated or
 // non-property existence; a property condition v0 cannot apply.
-assert.match(refuse({ ...X.N1, groupings: [X.N1.groupings[0], { ...X.N1.groupings[1], dimension: "offender.race" }] }), /cannot group victim by offender.race/);
+assert.match(refuse({ ...X.N1, groupings: [X.N1.groupings[0], { ...X.N1.groupings[1], dimension: "victim.resident_status" }] }), /cannot group victim by victim.resident_status/);
 assert.match(refuse({ ...X.N1, groupings: [X.N1.groupings[0]] }), /share only/);
 assert.match(refuse({ ...X.N2, filters: [{ ...X.N2.filters[0], negate: true } as never] }), /existences over incident property/);
 assert.match(refuse({ ...X.N2, filters: [{ ...X.N2.filters[0], where: [{ kind: "attribute", dimension: "property.value", op: "in", values: [1] }] } as never] }), /property condition/);
@@ -124,7 +162,7 @@ assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.age
 assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.sex", { bins })])), /bins ages only/);
 // Offenders (P44): offender segments of incidents with the codes, by their own sex.
 const offenders = ok(compilePlan(plan("offenders.robbery", "offender", [by("offender.sex")]), year(2024), t));
-assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS sub") && offenders.sql.includes("o.offense_code IN ('120')") && offenders.sql.includes("f.sex AS g0"));
+assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS sub") && offenders.sql.includes("o.offense_code IN ('120')") && offenders.sql.includes("CASE WHEN f.offender_seq = '00' THEN 'unknown_offender' ELSE f.sex END AS g0"));
 // Arrests (P46, P50): by arrest date only, every built year scanned, and the once-each statement.
 const arrests = ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), year(2024), t));
 assert.ok(arrests.sql.includes("substr(a.arrest_date, 1, 6) AS ym") && arrests.sql.includes("a.arrest_offense IN ('23C')"));

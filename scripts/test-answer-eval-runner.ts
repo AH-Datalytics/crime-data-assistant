@@ -52,7 +52,7 @@ assert.deepEqual(kinds({ ...label, filters: ["weapon: knife"] }, weapon(["20"], 
 assert.deepEqual(kinds({ ...label, filters: ["weapon: knife"] }, weapon(["20"], "in", true)), ["unverified:filters"], "a negated existence is not the value");
 // Codex probe: two different unknowns never match.
 assert.deepEqual(kinds({ ...label, filters: ["victim race: White"] }, planToMeaning({ ...X.H2, filters: [{ kind: "exists", scope: "incident", entity: "victim", where: [{ kind: "attribute", dimension: "victim.race", op: "in", values: ["B"] }] }] }, year(2025))), ["unverified:filters"]);
-assert.deepEqual(kinds({ ...label, groupings: ["victim ethnicity"] }, planToMeaning({ ...X.H2, groupings: [{ dimension: "offender.ethnicity", unknown: "visible", absent: "show" }] }, year(2025))), ["unverified:groupings"]);
+assert.deepEqual(kinds({ ...label, groupings: ["victim ethnicity"] }, planToMeaning({ ...X.H2, groupings: [{ dimension: "victim.resident_status", unknown: "visible", absent: "show" }] }, year(2025))), ["unverified:groupings"]);
 // Codex probe: month boundaries hold for a year selection; comparison baselines and native shares are unverified.
 const yrs = planToMeaning({ ...X.SEPARATE_YEARS, period: { kind: "years", years: [2025] } }, { kind: "years", years: [2025] });
 assert.ok(compareMeaning({ ...label, places: yrs.meaning.places, measures: yrs.meaning.measures, groupings: yrs.meaning.groupings, period: { from: "2025-06", to: "2025-08" } }, yrs, r).some((d) => d.kind === "material" && d.field === "period"), "June-August is not 2025");
