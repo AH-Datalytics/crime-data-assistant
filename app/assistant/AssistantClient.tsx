@@ -90,12 +90,23 @@ export default function AssistantClient() {
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        let cur: number | null = null;
+        // The lowest question line that has passed the line just under the box; before any has, the one nearest the top.
+        const line = (document.querySelector(".cda .Dock")?.getBoundingClientRect().bottom ?? 180) + 40;
+        let cur: number | null = null, curTop = -Infinity, first: number | null = null, firstTop = Infinity;
         for (const t of turnsRef.current) {
-          const el = document.getElementById(`me${t.id}`);
-          if (el && el.getBoundingClientRect().top <= 220) cur = t.id;
+          const top = document.getElementById(`me${t.id}`)?.getBoundingClientRect().top;
+          if (top === undefined) continue;
+          if (top <= line && top > curTop) { cur = t.id; curTop = top; }
+          if (top < firstTop) { first = t.id; firstTop = top; }
         }
-        setInView(cur ?? turnsRef.current[0]?.id ?? null);
+        // At the very bottom of the page the last question can't reach that line: take the lowest one on screen.
+        if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) {
+          for (const t of turnsRef.current) {
+            const top = document.getElementById(`me${t.id}`)?.getBoundingClientRect().top;
+            if (top !== undefined && top < innerHeight - 120 && top > curTop) { cur = t.id; curTop = top; }
+          }
+        }
+        setInView(cur ?? first);
       });
     };
     onScroll();
@@ -104,6 +115,18 @@ export default function AssistantClient() {
   }, [turns.length]);
   turnsRef.current = turns;
   const box = useRef<HTMLInputElement>(null);
+  // "/" puts the cursor in the question box from anywhere on the page (not while typing in a field).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable))) return;
+      e.preventDefault();
+      box.current?.focus({ preventScroll: true });
+      box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, []);
 
   async function run(typed: string, opts: { question?: string; path?: string[]; previous?: string | null; chart?: ChartMode; viaButton?: boolean } = {}) {
     const id = next.current++;
@@ -157,20 +180,10 @@ export default function AssistantClient() {
     ? void run(b.question)
     : void run(b.label, { question: t.question, path: b.path, viaButton: true }));
 
-  // The new question goes to the top of the view, with its answer below it, once the answer has rendered.
+  // The newest answer is just under the box (Jeff, 2026-11-01: box at the top, newest first): go back up to it.
   useEffect(() => {
     if (!scrollTo) return;
-    // Only when the new question line is not already in view (Jeff: no jump on the first question), and then only far
-    // enough to bring that line to the top, below the header.
-    const raf = requestAnimationFrame(() => {
-      const el = document.getElementById(`me${scrollTo.id}`);
-      if (!el) return;
-      const r = el.getBoundingClientRect(), dock = document.querySelector(".cda .Dock")?.getBoundingClientRect().top ?? innerHeight;
-      // In view: the question line, and room below it for the start of its answer.
-      const replyTop = el.parentElement?.querySelector(".Re")?.getBoundingClientRect().top ?? r.bottom;
-      if (r.top >= 80 && replyTop <= dock - 160) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    const raf = requestAnimationFrame(() => { if (scrollY > 0) window.scrollTo({ top: 0, behavior: "smooth" }); });
     return () => cancelAnimationFrame(raf);
   }, [scrollTo]);
 
@@ -194,6 +207,12 @@ export default function AssistantClient() {
       <p className="Hint">{hint}</p>
     </form>
   );
+  const dock = (
+    <div className="Dock">
+      {form}
+      <p className="fine">Answers come from FBI data and can be wrong. Check important figures against the FBI Crime Data Explorer.</p>
+    </div>
+  );
   return (
     <div className="cda">
       <header className="Header"><div className="HeaderInner">
@@ -207,8 +226,9 @@ export default function AssistantClient() {
       </div></header>
 
       {start ? <StartPage form={form} onAsk={(q) => { setInput(""); ask(q); }} onFill={(q) => { setInput(q); window.scrollTo({ top: 0, behavior: "smooth" }); box.current?.focus(); }} /> : (<>
+        {dock}
         <main className="Chat">
-          {turns.map((t) => (
+          {[...turns].reverse().map((t) => (
             <div key={t.id}>
               <div className="Me" id={`me${t.id}`}><p>{t.typed}</p></div>
               <div className="Re">{t.reply ? <ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })} /> : <div className="wait">Answering</div>}</div>
@@ -216,10 +236,6 @@ export default function AssistantClient() {
           ))}
         </main>
         <QuestionStrip items={strip} active={inView} onGo={(id) => document.getElementById(`me${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
-        <div className="Dock">
-          {form}
-          <p className="fine">Answers come from FBI data and can be wrong. Check important figures against the FBI Crime Data Explorer.</p>
-        </div>
       </>)}
     </div>
   );

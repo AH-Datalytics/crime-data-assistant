@@ -21,12 +21,15 @@ export default function QuestionStrip({ items, active, onGo }: { items: StripIte
       const h = nav.current?.clientHeight ?? 0, doc = document.documentElement.scrollHeight;
       if (!h || !doc) return;
       const next: Record<number, number> = {};
-      let last = -MIN;
-      for (const q of items) {
+      // In page order (the newest is first when the box is at the top), each at least MIN below the one above it.
+      const at = items.map((q, i) => {
         const el = document.getElementById(`me${q.id}`);
-        const y = el ? Math.round(((el.getBoundingClientRect().top + window.scrollY) / doc) * (h - MIN)) : last + MIN;
+        return { id: q.id, y: el ? Math.round(((el.getBoundingClientRect().top + window.scrollY) / doc) * (h - MIN)) : i * MIN };
+      }).sort((a, b) => a.y - b.y);
+      let last = -MIN;
+      for (const { id, y } of at) {
         last = Math.min(h - MIN, Math.max(y, last + MIN));
-        next[q.id] = last;
+        next[id] = last;
       }
       setPos(next);
     };

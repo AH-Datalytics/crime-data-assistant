@@ -67,9 +67,15 @@ Top to bottom:
 
 ## The conversation (`24-chat.html`)
 
-One straight scroll, like any chat. Crime Index header at the top; no band. The question box is pinned to the bottom
-(input, Source menu, teal Ask), with one fine-print line under it ("Answers come from FBI and Crime Index data and can
-be wrong. Check important figures against the FBI Crime Data Explorer."). The column is at most 76rem wide.
+One straight scroll. Crime Index header at the top; no band. The question box is pinned just under the header
+(input, Source menu, teal Ask), compact, with a one-line hint and one fine-print line under it ("Answers come from FBI
+data and can be wrong. Check important figures against the FBI Crime Data Explorer."; dropped on a phone). Each new
+answer appears directly beneath the box, newest first; older answers move down, and the page returns to the top when a
+question is asked. "/" puts the cursor in the box from anywhere. The column is at most 76rem wide.
+
+Decision (Jeff, 2026-11-01): the box sits at the top, not pinned to the bottom. The bottom bar was distracting and made
+you go to the bottom of the screen to move forward. Tried against an inline box after the newest answer; Jeff chose the
+top.
 
 Each turn:
 - **The question as typed**, right-aligned on the teal tint, square-ish corners (Crime Index's 6px input radius).

@@ -32,8 +32,8 @@
 .cda .Preview { margin-left: auto; font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); }
 
 /* The conversation */
-.cda .Chat { max-width: 76rem; margin: 0 auto; padding: 1rem var(--gutter) 10rem; }
-.cda .Me { scroll-margin-top: calc(var(--header) + 1rem); display: flex; justify-content: flex-end; margin: 2.25rem 0 1rem; }
+.cda .Chat { max-width: 76rem; margin: 0 auto; padding: 1.5rem var(--gutter) 4rem; }
+.cda .Me { scroll-margin-top: calc(var(--header) + 8rem); display: flex; justify-content: flex-end; margin: 2.25rem 0 1rem; }
 .cda .Me p { margin: 0; max-width: 40rem; background: var(--teal-tint); color: var(--darker); border-radius: .375rem; padding: .6rem 1rem; font-size: 1rem; line-height: 1.45; }
 .cda .Re { padding-bottom: 1.5rem; border-bottom: 1px solid var(--divider); scroll-margin-top: calc(var(--header) + 1rem); }
 .cda .read { font-size: .875rem; color: var(--dark); margin: 0 0 1rem; line-height: 1.5; }
@@ -131,9 +131,10 @@
 .cda table.T tbody tr:nth-child(odd) { background: var(--row-1); }
 .cda table.T tbody tr.hl td { background: var(--nibrs-tint); color: var(--nibrs); }
 
-/* The question box, pinned at the bottom */
-.cda .Dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: #fff; border-top: 1px solid var(--divider); box-shadow: 0 -4px 16px rgba(0,0,0,.04); }
-.cda .Dock .AskForm { max-width: 76rem; margin: 0 auto; padding: 1rem var(--gutter) 0; }
+/* The question box, pinned under the header; the newest answer comes first, just below it (Jeff, 2026-11-01) */
+.cda .Dock { position: sticky; top: var(--header); z-index: 25; background: #fff; border-bottom: 1px solid var(--divider); box-shadow: 0 4px 16px rgba(0,0,0,.04); }
+.cda .Dock .AskForm { max-width: 76rem; margin: 0 auto; padding: .75rem var(--gutter) 0; }
+.cda .Dock .AskRow input, .cda .Dock .Src, .cda .Dock .Ask { height: 2.75rem; }
 .cda .AskRow { display: flex; gap: .75rem; align-items: center; }
 .cda .AskRow input { flex: 1; height: 3.25rem; border: 1px solid var(--input); border-radius: .375rem; padding: 0 1.1rem; font-size: 1.05rem; color: var(--darker); }
 .cda .AskRow input::placeholder { color: var(--input); }
@@ -152,7 +153,7 @@
 .cda .fine { max-width: 76rem; margin: 0 auto; padding: 0 var(--gutter) .6rem; font-size: .75rem; color: var(--light); }
 
 /* Question history: a thin strip on the right edge, one mark per question (follow-ups shorter, under their question) */
-.cda .Strip { position: fixed; right: 1.25rem; top: calc(var(--header) + 2rem); bottom: 9rem; z-index: 20; width: 1.5rem; overflow: visible; border-right: 1px solid var(--divider); }
+.cda .Strip { position: fixed; right: 1.25rem; top: calc(var(--header) + 8.5rem); bottom: 2rem; z-index: 20; width: 1.5rem; overflow: visible; border-right: 1px solid var(--divider); }
 .cda .Mark { position: absolute; right: .35rem; width: 1.5rem; height: .75rem; padding: 0; border: 0; background: none; cursor: pointer; }
 .cda .Mark span { position: absolute; right: 0; top: 50%; width: 1.1rem; height: 3px; margin-top: -1.5px; background: var(--index); }
 .cda .Mark.sub span { width: .6rem; height: 2px; margin-top: -1px; background: var(--input); }
@@ -165,8 +166,8 @@
 
 @media (max-width: 760px) {
   .cda .Strip, .cda .StripTip { display: none; }
-  .cda .StripOpen { display: block; position: fixed; right: 1rem; top: calc(var(--header) + .5rem); z-index: 26; background: #fff; border: 1px solid var(--button-border); border-radius: .375rem; padding: .4rem .8rem; font-size: .8rem; color: var(--dark); }
-  .cda .StripList { display: flex; flex-direction: column; position: fixed; left: 1rem; right: 1rem; top: calc(var(--header) + 3rem); max-height: 60vh; overflow: auto; z-index: 27; background: #fff; border: 1px solid var(--divider); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .cda .StripOpen { display: block; position: fixed; right: 1rem; bottom: 1rem; z-index: 26; background: #fff; border: 1px solid var(--button-border); border-radius: .375rem; padding: .4rem .8rem; font-size: .8rem; color: var(--dark); }
+  .cda .StripList { display: flex; flex-direction: column; position: fixed; left: 1rem; right: 1rem; bottom: 3.75rem; max-height: 60vh; overflow: auto; z-index: 27; background: #fff; border: 1px solid var(--divider); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
   .cda .StripList button { text-align: left; background: none; border: 0; border-bottom: 1px solid var(--divider); padding: .7rem 1rem; font-size: .9rem; color: var(--darker); }
   .cda .StripList button.sub { padding-left: 2rem; font-size: .85rem; color: var(--dark); }
   .cda .StripList button.on { color: var(--teal); }
@@ -175,6 +176,14 @@
   .cda .AskRow { flex-wrap: wrap; }
   .cda .AskRow input { flex-basis: 100%; }
   .cda .AskRow .Ask { flex: 1; }
+  /* On a phone the pinned box is one row (input and Ask) and its hint */
+  .cda .Dock .AskRow { flex-wrap: nowrap; }
+  .cda .Dock .AskRow input { flex: 1; flex-basis: auto; min-width: 0; }
+  .cda .Dock .AskRow .Ask { flex: 0 0 auto; padding: 0 1.1rem; }
+  .cda .Dock .fine { display: none; }
+  .cda .ToolRow { flex-wrap: wrap; row-gap: .5rem; }
+  .cda .Seg button { white-space: nowrap; padding: .3rem .6rem; }
+  .cda .Me { scroll-margin-top: calc(var(--header) + 6.5rem); }
   .cda .Src { display: none; }
 }
 
@@ -243,3 +252,4 @@
   .cda .TwoCol { grid-template-columns: 1fr; gap: 2rem; }
   .cda .BandInner { padding: 2.5rem var(--gutter); }
 }
+
