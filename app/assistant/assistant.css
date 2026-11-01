@@ -57,12 +57,34 @@
 .cda .unavailable { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); margin: 0 0 .4rem; }
 .cda .acts { display: flex; gap: .5rem; margin-top: .9rem; }
 .cda .capTitle { display: none; }
+/* One row above the chart: the chart type, then "Download PNG CSV" right after it (Jeff) */
+.cda .ToolRow { display: flex; align-items: center; gap: 1rem; margin: 0 0 .6rem; min-height: 1.9rem; }
+.cda .ToolRow .Seg { margin: 0; }
+.cda .Dl { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; color: var(--dark); }
+.cda .Dl .lbl { margin-right: .15rem; }
+.cda .Dl button { background: #fff; border: 1px solid var(--button-border); border-radius: .375rem; padding: .2rem .55rem; font-family: inherit; font-size: .75rem; color: var(--dark); }
+.cda .Dl button:hover { color: var(--teal); border-color: var(--teal); }
+.cda .pngOnly { display: none; }
+.cda .cap.exporting { box-sizing: content-box; padding: 1.25rem 1.5rem; background: #fff; }
+.cda .cap.exporting .pngOnly { display: block; }
+.cda .pngHead h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.25rem; color: var(--darker); }
+.cda .pngHead p { margin: .2rem 0 .8rem; font-size: .875rem; color: var(--dark); }
+.cda .pngSource { margin: .6rem 0 0; font-size: .8rem; color: var(--light); }
+.cda .ChartTitle { margin: 0 0 1rem; }
+.cda .ChartTitle h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.25rem; line-height: 1.3; color: var(--darker); }
+.cda .ChartTitle p { margin: .2rem 0 0; font-size: .875rem; color: var(--dark); }
 .cda .cap.exporting { padding: 1.5rem; background: #fff; }
 .cda .cap.exporting .capTitle { display: block; font-family: var(--display); font-weight: 600; font-size: 1.25rem; color: var(--darker); margin: 0 0 1rem; }
 .cda .cap.exporting .TableScroll { max-height: none; overflow: visible; }
 .cda .Legend { list-style: none; margin: 0 0 .5rem; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; font-size: .8rem; color: var(--darker); }
 .cda .Legend li, .cda .Tip .row span:first-child { display: inline-flex; align-items: center; gap: .4rem; }
 .cda .sw { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; flex: none; }
+/* Chart type: a small segmented control (Crime Index buttons), the active type in teal */
+.cda .Seg { display: inline-flex; margin: 0 0 .6rem; border: 1px solid var(--button-border); border-radius: .375rem; overflow: hidden; }
+.cda .Seg button { background: #fff; border: 0; padding: .3rem .85rem; font-size: .8rem; color: var(--dark); }
+.cda .Seg button + button { border-left: 1px solid var(--button-border); }
+.cda .Seg button:hover { color: var(--teal); }
+.cda .Seg button.on { background: var(--teal-tint); color: var(--teal); font-weight: 600; }
 .cda .chartnote { font-size: .8rem; color: var(--light); margin: .5rem 0 0; }
 .cda .ms { font-family: var(--mono); font-size: .65rem; color: var(--index); margin-top: .6rem; }
 
@@ -104,6 +126,14 @@
 .cda table.T th:first-child, .cda table.T td:first-child, .cda table.T .txt { text-align: left; }
 .cda table.T td { height: 3rem; padding: .75rem 1rem; font-size: .875rem; color: var(--darker); text-align: right; font-variant-numeric: tabular-nums; }
 .cda table.T td:first-child { font-weight: 600; }
+.cda table.T .sortBtn { background: none; border: 0; padding: 0 0 .35rem; font: inherit; color: inherit; text-align: inherit; cursor: pointer; position: relative; }
+.cda table.T .sortBtn:hover { color: var(--teal); }
+.cda table.T th.sorted .sortBtn { color: var(--teal); }
+.cda table.T th.sorted .sortBtn::after { content: ""; position: absolute; left: 0; bottom: 0; width: 1.25rem; height: 2px; background: var(--teal); }
+.cda table.T th:not(.txt) .sortBtn::after { left: auto; right: 0; }
+.cda table.T .dir { display: inline-block; width: 0; height: 0; margin-left: .35rem; vertical-align: middle; border-left: 4px solid transparent; border-right: 4px solid transparent; }
+.cda table.T .dir.up { border-bottom: 5px solid currentColor; }
+.cda table.T .dir.down { border-top: 5px solid currentColor; }
 .cda table.T tbody tr:nth-child(odd) { background: var(--row-1); }
 .cda table.T tbody tr.hl td { background: var(--nibrs-tint); color: var(--nibrs); }
 

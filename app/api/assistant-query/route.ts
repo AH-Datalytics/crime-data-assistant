@@ -16,6 +16,7 @@ import { loadPlaceIndex } from "@/lib/nibrs-shadow/places";
 import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
 import { deterministicRewriter } from "@/lib/nibrs-shadow/follow-up";
 import { MAX_QUESTION, follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
+import { titlesFor } from "@/app/assistant/title";
 
 export const dynamic = "force-dynamic";
 const notFound = () => new NextResponse("Not Found", { status: 404 });
@@ -58,7 +59,11 @@ export async function POST(req: Request) {
     }
     const at = follow(shadowAnswer(asked, shadowDeps()), clicked);
     if (!at) return NextResponse.json({ error: "That button is no longer offered for this question." }, { status: 409 });
-    return NextResponse.json({ ...toPreview(at, clicked), asked, rewrite, ms: Date.now() - started });
+    // The chart title and subtitle, from the plan's place, measures, groupings and period (Jeff's convention).
+    const titles = at.kind === "answer"
+      ? titlesFor(at.plan, at.period, { rolling: at.plan.transforms.find((t) => t.kind === "rolling")?.months ?? null })
+      : null;
+    return NextResponse.json({ ...toPreview(at, clicked), ...(titles ?? {}), asked, rewrite, ms: Date.now() - started });
   } catch (e) {
     return NextResponse.json({ error: `The preview engine failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
   }

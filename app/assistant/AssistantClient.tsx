@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PreviewButton, PreviewResponse } from "@/lib/nibrs-shadow/preview";
-import AnswerChart, { type Line, type Point } from "./AnswerChart";
+import AnswerChart, { type ChartKind, type Line, type Point } from "./AnswerChart";
 import Logo from "./Logo";
 import QuestionStrip, { type StripItem } from "./QuestionStrip";
 
@@ -14,13 +14,13 @@ import QuestionStrip, { type StripItem } from "./QuestionStrip";
  */
 type Option = { label: string; question: string };
 type Reply =
-  | (PreviewResponse & { asked: string; rewrite?: string | null; ms?: number })
+  | (PreviewResponse & { asked: string; rewrite?: string | null; title?: string; subtitle?: string | null; partialYear?: string | null; ms?: number })
   | { kind: "rewrite-ask"; why: string; options: Option[]; ms?: number }
   | { kind: "presentation"; asked: string; how: string; ms?: number }
   // The engine's coming confirm-before-run outcome for a model rewrite (stubbed until the engine returns it).
   | { kind: "proposal"; asked: string; question: string; ms?: number }
   | { kind: "error"; error: string };
-type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: "line" | "bar"; viaButton?: boolean };
+type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: ChartMode; viaButton?: boolean };
 
 const EXAMPLES = [
   "Shoplifting in Memphis by month in 2024",
@@ -38,9 +38,35 @@ const label = (v: unknown) => {
 const cell = (v: unknown, pct = false) => (v === null || v === undefined ? "" : typeof v === "number"
   ? v.toLocaleString("en-US", pct ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : { maximumFractionDigits: 1 }) : label(v));
 const MAX_BARS = 15;
+type ChartMode = ChartKind | "table";
+const KIND_LABEL: Record<ChartKind, string> = { line: "Line", bar: "Bar", hbar: "Horizontal bars", stacked: "Stacked bars", stacked100: "100% stacked", area: "Stacked area" };
+/**
+ * A chart-type command the page handles itself (P69, P73: a presentation change never asks the data engine again):
+ * "bar graph", "show as bars", "make it a line chart", "stacked", "100% stacked", "vertical", "horizontal", "area",
+ * "table only". Returns null for anything else. A type that doesn't fit the answer falls back to its default.
+ */
+function chartCommand(text: string): ChartMode | null {
+  const t = text.toLowerCase().replace(/%/g, " percent ").replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\b(?:bars?|columns?)\b/g, " bar ")
+    .replace(/\b(?:please|can|could|you|show|make|display|draw|turn|change|switch|put|give|me|it|this|that|them|the|chart|graph|instead|as|into|to|in|a|an|just|only)\b/g, " ")
+    .replace(/\s+/g, " ").trim();
+  if (/^(?:bar|vertical(?: bar)?|grouped(?: bar)?)$/.test(t)) return "bar";
+  if (/^horizontal(?: bar)?$/.test(t)) return "hbar";
+  if (/^lines?$/.test(t)) return "line";
+  if (/^(?:100 percent|percent|100) stacked(?: bar)?$|^stacked(?: bar)? (?:100 percent|percent)$/.test(t)) return "stacked100";
+  if (/^(?:stacked )?area$/.test(t)) return "area";
+  if (/^stacked(?: bar)?$/.test(t)) return "stacked";
+  return /^(?:tables?|no|data)$/.test(t) ? "table" : null;
+}
 // The dataviz skill's validated categorical order (references/palette.md, light mode): a category keeps its slot.
 const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"];
 const PERIOD = /^\d{4}(-\d{2}|-?Q[1-4])?$/;
+/**
+ * Whether a category-by-time answer's categories are exclusive (each unit in exactly one), so stacked forms are honest.
+ * From the engine's flag when it lands; until then never, except the local preview's ?stacked=1 test switch.
+ */
+const exclusive = (r: object) => (r as { exclusive?: boolean }).exclusive === true
+  || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("stacked") === "1");
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}${/[?.]$/.test(s) ? "" : "?"}`;
 
@@ -86,7 +112,7 @@ export default function AssistantClient() {
   turnsRef.current = turns;
   const box = useRef<HTMLInputElement>(null);
 
-  async function run(typed: string, opts: { question?: string; path?: string[]; previous?: string | null; chart?: "line" | "bar"; viaButton?: boolean } = {}) {
+  async function run(typed: string, opts: { question?: string; path?: string[]; previous?: string | null; chart?: ChartMode; viaButton?: boolean } = {}) {
     const id = next.current++;
     const question = opts.question ?? typed, path = opts.path ?? [];
     setTurns((ts) => [...ts, { id, typed, question, path, reply: null, chart: opts.chart, viaButton: opts.viaButton }]);
@@ -121,7 +147,16 @@ export default function AssistantClient() {
       setTurns((ts) => [...ts, { id, typed: text, question: text, path: [], reply: { kind: "decline", reason: `route:${source}`, text: "This source is not available yet in the preview; it is added to the new engine before launch.", buttons: [], notBuilt: false, asked: text } }]);
       return;
     }
-    const chart = /\bbar\b/i.test(text) ? "bar" : /\bline\b/i.test(text) ? "line" : undefined;
+    // A chart-type command redraws the last answer here, with no call to the engine.
+    const mode = chartCommand(text);
+    const last = [...turnsRef.current].reverse().find((t) => t.reply?.kind === "answer");
+    if (mode && last?.reply) {
+      const id = next.current++;
+      setTurns((ts) => [...ts, { id, typed: text.trim(), question: last.question, path: [], reply: { ...(last.reply as Extract<Reply, { kind: "answer" }>), ms: 0 }, chart: mode }]);
+      scroll(id);
+      return;
+    }
+    const chart = /\bbar\b/i.test(text) ? "bar" : /\bline\b/i.test(text) ? "line" : /\btable\b/i.test(text) ? "table" : undefined;
     void run(text.trim(), { previous: lastAsked(), chart });
   };
   // A continuation follows the button's path; a question-only choice (P74) is asked as a new question.
@@ -132,7 +167,17 @@ export default function AssistantClient() {
   // The new question goes to the top of the view, with its answer below it, once the answer has rendered.
   useEffect(() => {
     if (!scrollTo) return;
-    const raf = requestAnimationFrame(() => document.getElementById(`me${scrollTo.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    // Only when the new question line is not already in view (Jeff: no jump on the first question), and then only far
+    // enough to bring that line to the top, below the header.
+    const raf = requestAnimationFrame(() => {
+      const el = document.getElementById(`me${scrollTo.id}`);
+      if (!el) return;
+      const r = el.getBoundingClientRect(), dock = document.querySelector(".cda .Dock")?.getBoundingClientRect().top ?? innerHeight;
+      // In view: the question line, and room below it for the start of its answer.
+      const replyTop = el.parentElement?.querySelector(".Re")?.getBoundingClientRect().top ?? r.bottom;
+      if (r.top >= 80 && replyTop <= dock - 160) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     return () => cancelAnimationFrame(raf);
   }, [scrollTo]);
 
@@ -247,8 +292,16 @@ function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButto
   );
 }
 
-function AnswerView({ r, chartKind, headline, title, onButton }: { r: Extract<PreviewResponse, { kind: "answer" }>; chartKind?: "line" | "bar"; headline: boolean; title: string; onButton: (b: PreviewButton) => void }) {
+function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton }: { r: Extract<PreviewResponse, { kind: "answer" }> & { title?: string; subtitle?: string | null; partialYear?: string | null }; chartKind?: ChartMode; headline: boolean; title: string; onButton: (b: PreviewButton) => void }) {
+  // The chart title (from the engine's plan, Jeff's convention) names the answer on screen and in both exports; the
+  // question as asked is the fallback for an answer without one (the historical file's).
+  const title = r.title ?? asked, subtitle = r.subtitle ?? null;
+  const yearLabel = (v: unknown) => (r.partialYear && String(v) === r.partialYear ? `${r.partialYear} (Partial)` : label(v));
+  // The chart type: chosen with the Line | Bar control beside the chart, or preselected by a typed command.
+  const [chartKind, setChartKind] = useState<ChartMode | undefined>(typedKind);
   const [hover, setHover] = useState<number | null>(null);
+  // Click a header to sort this answer's table by it; again to reverse. Blanks (unknown) always sort last.
+  const [sort, setSort] = useState<{ col: string; dir: 1 | -1 } | null>(null);
   const cap = useRef<HTMLDivElement>(null);
   const { columns, text } = r;
   // A series that begins with periods no agency reported starts at the first reported one (owner, 2026-10-31): the
@@ -282,13 +335,18 @@ function AnswerView({ r, chartKind, headline, title, onButton }: { r: Extract<Pr
   }
 
   // The chart: the engine's time series, or a bar chart drawn from a breakdown's table (one category, first number column).
-  let kind: "line" | "bar" | "hbar" | null = null, points: Point[] = [], series = "", lines: Line[] | undefined, moreLines = 0;
+  let kind: ChartKind | null = null, points: Point[] = [], series = "", lines: Line[] | undefined, moreLines = 0;
+  // The chart types this answer offers (Jeff, 2026-11-01): a series Line | Bar; a breakdown horizontal | vertical bars;
+  // category by time Line | Grouped bars, plus stacked forms only when the engine marks the categories as exclusive
+  // (overlapping categories, such as a crime under each weapon, would show false shares).
+  let options: ChartKind[] = [];
   // Which chart point a table row belongs to: its own index, or (time by category) its period's.
   let pointOf = (i: number) => i;
   if (r.chart && r.chart.xAxis && r.chart.yAxis?.[0]) {
-    kind = chartKind ?? (r.chart.type === "bar" ? "bar" : "line");
+    options = ["line", "bar"];
+    kind = r.chart.type === "bar" ? "bar" : "line";
     series = r.chart.yAxis[0];
-    points = rows.map((row) => ({ x: String(row[r.chart!.xAxis]), label: label(row[r.chart!.xAxis]), y: row[series] as number | null }));
+    points = rows.map((row) => ({ x: String(row[r.chart!.xAxis]), label: yearLabel(row[r.chart!.xAxis]), y: row[series] as number | null }));
   } else if (groupCols.length === 2 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
     // Time by category (no engine chart): one line per category over the periods, the first number column; at most
     // eight lines, in the engine's order (largest first in the first period), each keeping its color.
@@ -296,74 +354,132 @@ function AnswerView({ r, chartKind, headline, title, onButton }: { r: Extract<Pr
     series = numberCols[0];
     const periods = [...new Set(rows.map((row) => String(row[tc])))];
     const cats = [...new Set(rows.map((row) => String(row[cc])))];
-    points = periods.map((pd) => ({ x: pd, label: label(pd), y: null }));
+    points = periods.map((pd) => ({ x: pd, label: yearLabel(pd), y: null }));
     lines = cats.slice(0, SERIES.length).map((c, k) => ({ name: c, color: SERIES[k],
       ys: periods.map((pd) => { const hit = rows.find((row) => String(row[tc]) === pd && String(row[cc]) === c); return hit ? (hit[series] as number | null) : null; }) }));
-    kind = periods.length > 1 ? "line" : null;
+    options = ["line", "bar", ...(exclusive(r) ? (["stacked", "stacked100", "area"] as ChartKind[]) : [])];
+    kind = periods.length < 2 ? null : "line";
     pointOf = (i: number) => periods.indexOf(String(rows[i][tc]));
     if (cats.length > SERIES.length) moreLines = cats.length;
   } else if (rows.length > 1 && groupCols.length === 1 && numberCols.length >= 1) {
-    kind = chartKind === "line" ? "line" : "hbar";
+    // A breakdown is bars, never a line (a line across categories would imply an order they don't have).
+    options = ["hbar", "bar", ...(exclusive(r) && rows.length <= SERIES.length ? (["stacked100"] as ChartKind[]) : [])];
+    kind = "hbar";
     series = numberCols[0];
     points = rows.map((row) => ({ x: String(row[groupCols[0]]), label: label(row[groupCols[0]]), y: row[series] as number | null }));
+    if (chartKind === "stacked100" && options.includes("stacked100")) {
+      // One bar of shares: each category a part, in the table's order, each in its own color.
+      lines = rows.map((row, k) => ({ name: label(row[groupCols[0]]), color: SERIES[k], ys: [row[series] as number | null] }));
+      points = [{ x: "all", label: "", y: null }];
+      pointOf = () => 0;
+    }
   }
+  // The chosen type, when this answer offers it; otherwise the default above.
+  if (kind && chartKind && chartKind !== "table" && options.includes(chartKind)) kind = chartKind;
+  const breakdown = groupCols.length === 1 && !r.chart; // bars of categories, or their one 100% bar
   // A long breakdown: the largest categories are drawn (the engine sorts them, largest first); the table has all.
-  const drawn = kind === "hbar" && points.length > MAX_BARS ? points.slice(0, MAX_BARS) : points;
+  const drawn = breakdown && points.length > MAX_BARS ? points.slice(0, MAX_BARS) : points;
   const sub = (text[0] ?? "").split(":")[0];
+  // "Table only" hides the chart; the control stays, with nothing chosen, to bring it back.
+  const hidden = chartKind === "table";
+  const name = (m: ChartKind) => (lines && !breakdown && m === "bar" ? "Grouped bars" : breakdown && m === "bar" ? "Vertical bars" : KIND_LABEL[m]);
+  const seg = kind && options.length > 1 ? (
+    <div className="Seg noexport" role="group" aria-label="Chart type">
+      {options.map((m) => <button key={m} type="button" className={!hidden && kind === m ? "on" : ""} aria-pressed={!hidden && kind === m} onClick={() => setChartKind(m)}>{name(m)}</button>)}
+    </div>
+  ) : null;
 
+  const charted = !!kind && !hidden;
+  // The source line under the chart in its PNG (the engine's source statement, always its last line).
+  const source = [...text].reverse().find((t) => /^Source:/.test(t)) ?? "Source: FBI NIBRS.";
   return (<>
-    <div className="cap" ref={cap}>
-    <p className="capTitle">{title}</p>
-    {rows.length === 1 || headline ? <p className="say">{text[0]}</p> : null}
-    <div className={`Answer${kind ? "" : " tableOnly"}`}>
-      {kind ? (
-        <div>
-          <AnswerChart kind={kind} points={drawn} series={series} sub={sub} hover={hover} onHover={setHover} lines={lines} />
+    {r.title ? <div className="ChartTitle"><h3>{r.title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div> : null}
+    {rows.length === 1 || (headline && !r.title) ? <p className="say">{text[0]}</p> : null}
+    <div className="ToolRow">
+      {seg}
+      {/* Downloads (Jeff): small, right after the chart type. PNG is the chart alone; CSV is the table alone. */}
+      <span className="Dl" role="group" aria-label="Download">
+        <span className="lbl">Download</span>
+        {charted ? <button type="button" onClick={() => void downloadPng(cap.current, title)}>PNG</button> : null}
+        <button type="button" onClick={() => downloadCsv(columns, order(rows, sort).map((i) => rows[i]), numberCols, yearLabel, title)}>CSV</button>
+      </span>
+    </div>
+    <div className={`Answer${charted ? "" : " tableOnly"}`}>
+      {charted ? (
+        <div className="cap" ref={cap}>
+          {/* Only in the PNG: the chart's title and subtitle above it, its source under it. */}
+          <div className="pngOnly pngHead"><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div>
+          <AnswerChart kind={kind!} points={drawn} series={series} sub={sub} hover={hover} onHover={setHover} lines={lines} />
           {moreLines ? <p className="chartnote">The {SERIES.length} largest of {moreLines} are drawn; the table lists all.</p> : null}
           {drawn.length < points.length ? <p className="chartnote">The {drawn.length} largest of {points.length} are drawn; the table lists all {points.length}.</p> : null}
+          <p className="pngOnly pngSource">{source}</p>
         </div>
       ) : null}
       <div className="TableScroll">
         <table className="T">
-          <thead><tr>{columns.map((c) => <th key={c} className={numberCols.includes(c) ? "" : "txt"}>{c}</th>)}</tr></thead>
-          <tbody>{rows.map((row, i) => (
+          <thead><tr>{columns.map((c) => (
+            <th key={c} className={`${numberCols.includes(c) ? "" : "txt"}${sort?.col === c ? " sorted" : ""}`} aria-sort={sort?.col === c ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
+              <button type="button" className="sortBtn" onClick={() => setSort((s) => (s?.col === c ? { col: c, dir: s.dir === 1 ? -1 : 1 } : { col: c, dir: numberCols.includes(c) ? -1 : 1 }))}>
+                {c}{sort?.col === c ? <span className={`dir ${sort.dir === 1 ? "up" : "down"}`} aria-hidden="true" /> : null}
+              </button>
+            </th>
+          ))}</tr></thead>
+          <tbody>{order(rows, sort).map((i) => { const row = rows[i]; return (
             <tr key={i} className={hover !== null && pointOf(i) === hover ? "hl" : ""} onMouseEnter={() => setHover(pointOf(i))} onMouseLeave={() => setHover(null)}>
-              {columns.map((c) => <td key={c} className={numberCols.includes(c) ? "" : "txt"}>{cell(row[c], /\(%\)/.test(c))}</td>)}
+              {columns.map((c) => <td key={c} className={numberCols.includes(c) ? "" : "txt"}>{numberCols.includes(c) ? cell(row[c], /\(%\)/.test(c)) : yearLabel(row[c])}</td>)}
             </tr>
-          ))}</tbody>
+          ); })}</tbody>
         </table>
       </div>
     </div>
     <Notes lines={notes} />
-    </div>
-    <div className="acts">
-      <button type="button" className="Btn" onClick={() => downloadCsv(columns, rows, title)}>Download CSV</button>
-      <button type="button" className="Btn" onClick={() => void downloadPng(cap.current, title)}>Download PNG</button>
-    </div>
     <Choices buttons={r.buttons} onButton={onButton} />
   </>);
+}
+
+/** Row indexes in display order: as delivered, or sorted by one column (numbers by value, text alphabetically), blanks last. */
+function order(rows: Record<string, string | number | null>[], sort: { col: string; dir: 1 | -1 } | null): number[] {
+  const idx = rows.map((_, i) => i);
+  if (!sort) return idx;
+  return idx.sort((a, b) => {
+    const x = rows[a][sort.col], y = rows[b][sort.col];
+    if (x === null || x === undefined) return y === null || y === undefined ? a - b : 1;
+    if (y === null || y === undefined) return -1;
+    const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "en-US", { numeric: true });
+    return c === 0 ? a - b : c * sort.dir;
+  });
 }
 
 const fileName = (title: string, ext: string) => `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "answer"}.${ext}`;
 const save = (href: string, name: string) => { const a = document.createElement("a"); a.href = href; a.download = name; a.click(); };
 
-/** The table exactly as delivered: its columns, its values, a blank for an unknown number. */
-function downloadCsv(columns: string[], rows: Record<string, string | number | null>[], title: string) {
+/**
+ * The table alone as a CSV (Jeff): its columns and rows exactly as shown, in the order shown; numbers as numbers, a
+ * blank for an unknown one; no title, notes or question.
+ */
+function downloadCsv(columns: string[], rows: Record<string, string | number | null>[], numberCols: string[], shown: (v: unknown) => string, title: string) {
   const q = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const lines = [columns.map(q).join(","), ...rows.map((row) => columns.map((c) => q(row[c] === null || row[c] === undefined ? "" : String(row[c]))).join(","))];
-  save(URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" })), fileName(title, "csv"));
+  const lines = [columns.map(q).join(","), ...rows.map((row) => columns.map((c) => {
+    const v = row[c];
+    return v === null || v === undefined ? "" : numberCols.includes(c) ? String(v) : q(shown(v));
+  }).join(","))];
+  // A UTF-8 byte order mark, so spreadsheet programs read the en dashes and accents correctly.
+  save(URL.createObjectURL(new Blob(["﻿" + lines.join("\n") + "\n"], { type: "text/csv;charset=utf-8" })), fileName(title, "csv"));
 }
 
 /** The answer as a picture: the question, the chart beside the full table, and the notes with the source last. */
 async function downloadPng(el: HTMLDivElement | null, title: string) {
   if (!el) return;
   const { toPng } = await import("html-to-image");
+  // The chart is drawn at the column's pixel width; the PNG's margin goes outside it, so nothing is cut off.
+  el.style.width = `${el.clientWidth}px`;
   el.classList.add("exporting");
   try {
     await new Promise((r) => requestAnimationFrame(() => r(null)));
-    save(await toPng(el, { backgroundColor: "#ffffff", pixelRatio: 2 }), fileName(title, "png"));
+    save(await toPng(el, { backgroundColor: "#ffffff", pixelRatio: 2, filter: (n) => !(n instanceof HTMLElement && n.classList.contains("noexport")) }), fileName(title, "png"));
   } finally {
     el.classList.remove("exporting");
+    el.style.width = "";
   }
 }
 
