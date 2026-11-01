@@ -15,7 +15,8 @@ import { pct1 } from "../nibrs-plan/transforms";
 import { fmt, periodWords, SRS_SOURCE } from "./deliver";
 import { stateName } from "./places";
 
-const DIR = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/crimeindex");
+// From the working directory (the repository root): a Next bundle has no source __dirname.
+const DIR = path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/crimeindex");
 type Row = Record<string, string>;
 function readCsv(file: string): Row[] {
   const [head, ...lines] = fs.readFileSync(path.join(DIR, file), "utf8").trim().split("\n");

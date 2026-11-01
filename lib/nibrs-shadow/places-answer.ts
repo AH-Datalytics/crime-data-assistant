@@ -19,7 +19,7 @@ import { agencyPopulationSql, compilePlan } from "../nibrs-plan/compile";
 import { combineMonths, rankAgencies, rate, rollup, type Cell, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { agencyName, reportedBy, stateName } from "./places";
-import { deliverTable, fmt, measureWords, monthName, periodWords, runs } from "./deliver";
+import { deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 
 type Decline = (explanation: string) => ShadowOutcome;
@@ -160,7 +160,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const together = names.length > 2 ? `${names.slice(0, -1).join("; ")} and ${names[names.length - 1]}` : names.join(" and ");
     // A blank says why: months not known (UNKNOWN), or no FBI population for an agency (UNAVAILABLE) (Codex 02.8).
     const noPop = agencies.filter((a) => !pops.get(`${a.ori}|${year}`)).map((a) => `the ${a.name}`);
-    lines.push(v.value !== null ? `${together}, combined: ${isRate ? `${v.value} ${what} per 100,000 residents` : `${fmt(v.value)} ${what}`} in ${when}.`
+    lines.push(v.value !== null ? `${together}, combined: ${isRate ? `${fmtRate(v.value)} ${what} per 100,000 residents` : `${fmt(v.value)} ${what}`} in ${when}.`
       : v.status === "UNAVAILABLE" ? `${together}, combined: no rate is given for ${when}, because the FBI gives no ${year} population for ${noPop.join(" or ")}.`
       : `${together}, combined: no ${isRate ? "rate" : "total"} is given for ${when}, because not every month is known for every agency counted.`, reporter);
     const all = agencies.length === 2 ? "both agencies'" : `all ${agencies.length} agencies'`;
@@ -177,7 +177,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const rows = agencies.map((a) => { const v = valueOf(byOri.get(a.ori) ?? [], a.ori, year); return { key: a.name, value: v.value, status: v.status, missing: v.missing, a }; });
   if (agencies.length === 1) {
     const r = rows[0];
-    lines.push(r.value !== null ? `${r.a.label}: ${isRate ? `${r.value} ${what} per 100,000 residents` : `${fmt(r.value)} ${what}`} in ${when}.`
+    lines.push(r.value !== null ? `${r.a.label}: ${isRate ? `${fmtRate(r.value)} ${what} per 100,000 residents` : `${fmt(r.value)} ${what}`} in ${when}.`
       : r.status === "UNAVAILABLE" ? `${r.a.label}: no rate is given for ${when}, because the FBI gives no ${year} population for the ${r.a.name}.`
       : `${r.a.label}: no ${isRate ? "rate" : "number"} is given for ${when}, because not every month is known.`, reporter);
   } else {

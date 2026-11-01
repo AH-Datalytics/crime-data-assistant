@@ -143,6 +143,8 @@ export function runs(periods: string[]): string {
   return out.join(", ");
 }
 export const fmt = (n: number) => n.toLocaleString("en-US");
+/** A rate as shown: one decimal, with thousands separators ("1,459.7"; assistant preview findings, 2026-10-31). */
+export const fmtRate = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 /** "1 carjacking offense", not "1 carjacking offenses": the unit word in the singular for a count of one. */
 const one = (n: number, words: string) => (n === 1 ? words.replace(/\b(offense|incident|victim|offender|arrest)s\b/, "$1") : words);
 const GROUPING_HEADER: Record<string, string> = { "time.month": "Month", "time.quarter": "Quarter", "time.year": "Year" };

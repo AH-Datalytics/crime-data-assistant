@@ -18,7 +18,7 @@ import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan } from "../nibrs-plan/compile";
 import { rate, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { deliverTable, fmt, measureWords, periodWords } from "./deliver";
+import { deliverTable, fmt, fmtRate, measureWords, periodWords } from "./deliver";
 import { stateName, STATE_NAMES } from "./places";
 import { srsPopulation } from "./srs";
 import type { ShadowDeps, ShadowOption, ShadowOutcome } from "./answer";
@@ -137,8 +137,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       lines.push(isRate && v === null
         ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of the agencies ${every ? "that reported every month" : "counted"} have no FBI population` : `the FBI population of the agencies ${every ? "that reported every month" : "counted"} is 0`}.`
         : every
-        ? `${Where}: ${isRate ? `${v} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`
-        : `${Where}: ${isRate ? `${v} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
+        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`
+        : `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
       if (!every) lines.push(`${fmt(y.agencies)} agencies reported at least one month of ${when}, covering ${atLeast(y.noPopulation)}${pc(y.share)} of ${residents}; ${fmt(y.partial)} of them reported only some months and are included. ${fmt(y.every.agencies)} reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`);
       if (y.noPopulation && !every) lines.push(`${fmt(y.noPopulation)} of the agencies counted have no FBI population, so the share covered is a lower bound.`);
       if (y.conflicts) lines.push(`${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose records conflict with the agency's reporting status ${y.conflicts === 1 ? "is" : "are"} not counted.`);
