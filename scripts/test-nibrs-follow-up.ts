@@ -93,6 +93,8 @@ assert.equal(q(rw(M, "Past 5 years")), "Shoplifting in Memphis by year over the 
 asked(rw("Shoplifting in Memphis in January 2024", "show 10 years"));
 asked(rw(P, "can you go back further in time?"));
 assert.equal(rw(M, "Make the graph green").kind, "presentation");
+// Codex full review 1: a previous period of several years is not one phrase to replace: asked.
+asked(rw("Shoplifting in Memphis in 2023 and 2024", "show 5 years"));
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);

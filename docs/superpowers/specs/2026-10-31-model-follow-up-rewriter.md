@@ -160,10 +160,16 @@ The deterministic count is 110, up from 103, because of the period default.
 - 21 correct.
 - 1 wrong action: LS-422 was proposed, nothing ran, but the label asks.
 - 1 unverified: LS-426, no independent values for its alternative.
-- **0 wrong answers.**
+- **0 wrong answers among the 23 scored cases.**
 - LS-422 is the only proposal among the cases. No other case changed.
+- LS-419 is separate: it is held as drafted, so provisional and never scored. It is recorded as a wrong answer because a presentation-only follow-up ("make it a bar chart") reruns the data question. That is the existing, deferred presentation behavior from 7b; neither rewriter changed it.
 
-Zero wrong answers here is not zero meaning errors. Of the hand-checked accepted model rewrites, 4 of 63 (g-1 sample plus g-3 admissions) change the meaning. That is why each one is proposed, never run directly.
+Zero wrong answers here is not zero meaning errors. Corrected after Codex full review 3:
+- The hand checks hold 62 judgments: the g-1 sample of 50 and the 12 g-3 admissions.
+- Under the current guards (g-3), 61 of those are accepted. One g-1 failure, "since 2019", is now blocked.
+- Of the 61, 3 change the meaning: "Please do that!", "new orleans ori" and "what rate is this?".
+
+That is why each model rewrite is proposed, never run directly.
 
 **The 60-row sort of unplaced follow-ups** (unplaced-sample.json):
 

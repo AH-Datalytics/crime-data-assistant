@@ -166,7 +166,9 @@ export const deterministicRewriter: FollowUpRewriter = {
     if (lastN) {
       const n = /^\d+$/.test(lastN[1]) ? Number(lastN[1]) : ["two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"].indexOf(lastN[1].toLowerCase()) + 2;
       const period = /\s+(?:from\s+(?:19|20)\d{2}\s+(?:to|through)\s+(?:19|20)\d{2}|in\s+(?:19|20)\d{2})\b/i.exec(prev);
-      if (n < 2 || n > 20 || !period || /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|since|so far|year to date|this year|last year)\b/i.test(prev))
+      // The previous period must be exactly the one phrase replaced: one year or one range ("in 2023 and 2024" asks).
+      const whole = prevParts.periods.length === 1 && /^(?:year|range):/.test(String(prevParts.periods[0].value));
+      if (n < 2 || n > 20 || !period || !whole || /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|since|so far|year to date|this year|last year)\b/i.test(prev))
         return ask(`Which ${n}-year period to show.`);
       const body = prev.replace(period[0], "").replace(/\s+by\s+(?:month|year|quarter)\b/i, "").replace(/[?.]\s*$/, "");
       return ok(`${body} by year over the last ${n} years`, "the last N complete years, by year");

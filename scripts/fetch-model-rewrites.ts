@@ -23,9 +23,14 @@ export const costOf = (u: CacheEntry["usage"]) => (u.input * PRICE.input + (u.ou
 /** An attempt's worst case: input estimated at one token per two characters, and the whole output cap. */
 const worstCase = (previous: string, followUp: string, cap: number) => ((SYSTEM_PROMPT.length + userPrompt(previous, followUp).length) / 2 * PRICE.input + cap * PRICE.output) / 1e6;
 
-type Store = RewriteCache & { spent: number };
+/**
+ * `spent`: the cost of responses whose usage is known. `unresolved`: the worst case of attempts whose cost is not known
+ * (an error response, a lost response, a crash before saving), kept against the budget and across resumes (Codex full
+ * review 2): an attempt is reserved and saved before it is sent, and released only when its usage comes back.
+ */
+type Store = RewriteCache & { spent: number; unresolved?: number };
 
-async function call(previous: string, followUp: string, key: string, cap: number, reserve: () => boolean): Promise<Omit<CacheEntry, "previous" | "followUp"> & { billed: number }> {
+async function call(previous: string, followUp: string, key: string, cap: number, reserve: () => boolean, settle: () => void): Promise<Omit<CacheEntry, "previous" | "followUp"> & { billed: number }> {
   const body = {
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents: [{ role: "user", parts: [{ text: userPrompt(previous, followUp) }] }],
@@ -49,6 +54,7 @@ async function call(previous: string, followUp: string, key: string, cap: number
     let answer: ModelAnswer | null = null;
     try { answer = JSON.parse(raw) as ModelAnswer; } catch { answer = null; }
     const usage = { input: u.promptTokenCount ?? 0, output: u.candidatesTokenCount ?? 0, thinking: u.thoughtsTokenCount ?? 0 };
+    settle();   // this attempt's usage is known: its reservation is released and its cost counted
     return { answer, raw, usage, billed: costOf(usage) };
   }
 }
@@ -69,13 +75,18 @@ async function main() {
   const cap = retry ? GENERATION.retryTruncatedMaxOutputTokens : GENERATION.maxOutputTokens;
   const todo = [...new Map(pairs.map((p) => [cacheKey(p.previous, p.followUp), p])).entries()]
     .filter(([k]) => (retry ? !!store.entries[k] && !store.entries[k].answer && !store.entries[k].retried : !store.entries[k]));
-  console.log(`pairs ${pairs.length}, distinct to fetch ${todo.length}, cached ${Object.keys(store.entries).length}, spent so far $${store.spent.toFixed(4)} of $${budget}`);
+  store.unresolved ??= 0;
+  console.log(`pairs ${pairs.length}, distinct to fetch ${todo.length}, cached ${Object.keys(store.entries).length}, spent so far $${store.spent.toFixed(4)} (+ $${store.unresolved.toFixed(4)} unresolved) of $${budget}`);
   let sent = 0;
   try {
     for (const [k, p] of todo) {
       if (sent >= limit) break;
-      // Each attempt (retries included) is sent only if its worst case fits; one request at a time, so nothing is outstanding.
-      const r = await call(p.previous, p.followUp, key, cap, () => store.spent + worstCase(p.previous, p.followUp, cap) <= budget);
+      // Each attempt (retries included) is sent only if its worst case fits beside what is spent and unresolved; it is
+      // reserved and saved first, and released when its usage comes back. One request at a time.
+      const worst = worstCase(p.previous, p.followUp, cap);
+      const reserve = () => { if (store.spent + store.unresolved! + worst > budget) return false; store.unresolved! += worst; save(); return true; };
+      const settle = () => { store.unresolved = Math.max(0, store.unresolved! - worst); };
+      const r = await call(p.previous, p.followUp, key, cap, reserve, settle);
       // A retry keeps the first attempt's usage in the total (both were billed).
       const first = store.entries[k];
       store.entries[k] = { previous: p.previous, followUp: p.followUp, answer: r.answer, raw: r.raw, usage: r.usage,
@@ -87,7 +98,7 @@ async function main() {
   } catch (e) {
     save();
     const m = String(e instanceof Error ? e.message : e);
-    console.log(m === "BUDGET" ? `stopped before the budget: $${store.spent.toFixed(4)} spent of $${budget}` : `stopped: ${m}`);
+    console.log(m === "BUDGET" ? `stopped before the budget: $${store.spent.toFixed(4)} spent and $${store.unresolved!.toFixed(4)} unresolved of $${budget}` : `stopped: ${m}`);
   }
   const all = Object.values(store.entries);
   const tok = all.reduce((t, e) => ({ input: t.input + e.usage.input, output: t.output + e.usage.output, thinking: t.thinking + e.usage.thinking }), { input: 0, output: 0, thinking: 0 });
