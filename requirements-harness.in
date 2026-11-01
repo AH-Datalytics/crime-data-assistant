@@ -61,3 +61,8 @@ openpyxl
 # every harness-reachable invocation of those two tools passes --print-target. The closure checker
 # enforces exactly that, so a reachable invocation without the flag invalidates the exclusion and makes
 # anthropic required.
+
+# scripts/test_build_crimeindex.py builds a synthetic Crime Index build with scripts/build-crimeindex.py, which reads
+# and writes Parquet through DuckDB (module-level import). Pinned to the version the Crime Index build and the shadow's
+# executor run with (nibrs-model's venv), so the harness tests the same engine.
+duckdb==1.5.6
