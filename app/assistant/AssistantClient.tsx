@@ -196,7 +196,9 @@ export default function AssistantClient() {
     try {
       const res = await fetch("/api/assistant-query", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, path, session: session.current, ...(previous ? { previous } : {}) }) });
-      const j = await res.json();
+      // Never "residents" (Jeff, 2026-11-01): "per 100,000 residents" is "per 100,000" in every header, label and
+      // sentence of the reply, until the engine's own text drops it.
+      const j = JSON.parse((await res.text()).replace(/(per [\d,]+) residents\b/gi, "$1"));
       return "error" in j ? { kind: "error", error: j.error } : (j as Reply);
     } catch (e) {
       return { kind: "error", error: e instanceof Error ? e.message : String(e) };

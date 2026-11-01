@@ -59,7 +59,7 @@ export function titlesFor(plan: NibrsPlan, period: { from: string; to: string },
     ? join((plan.period as { years: number[] }).years.map(String))
     : yearly ? (period.from.slice(0, 4) === period.to.slice(0, 4) ? period.from.slice(0, 4) : `${period.from.slice(0, 4)}–${period.to.slice(0, 4)}`)
     : periodWords(period.from, period.to).replace(/ (?:to|through) /g, "–");
-  const title = `${places} ${measures}${rate ? ` per ${rate.kind === "rate" ? rate.per.toLocaleString("en-US") : "100,000"} Residents` : ""}${groups.length ? ` by ${titleCase(join(groups))}` : ""}, ${titleCase(when)}`;
+  const title = `${places} ${measures}${rate ? ` per ${rate.kind === "rate" ? rate.per.toLocaleString("en-US") : "100,000"}` : ""}${groups.length ? ` by ${titleCase(join(groups))}` : ""}, ${titleCase(when)}`;
 
   // The last year is partial when the period ends before December (the data runs through the release's last month).
   const partialYear = yearly && !period.to.endsWith("-12") ? period.to.slice(0, 4) : null;
