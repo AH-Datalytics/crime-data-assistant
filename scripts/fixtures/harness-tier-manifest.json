@@ -1926,6 +1926,15 @@
       "note": "P1.3-R registration. Rollup builder unittest; builds its own source.db and rollups.db. Tier F: self-fixturing."
     },
     {
+      "id": "test_build_crimeindex",
+      "tier": "F",
+      "script": "scripts/test_build_crimeindex.py",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Historical in the new engine: the Crime Index build (scripts/build-crimeindex.py) on synthetic snapshots it writes itself (hashes, typed values with blank as NULL, set-aside rows, duplicate place-years refused, diagnostics). Needs duckdb; skipped without it (CI's harness Python has none), so it passes in a clean clone. Tier F: self-fixturing."
+    },
+    {
       "id": "test-python-dependency-closure",
       "tier": "F",
       "script": "scripts/test-python-dependency-closure.js",
