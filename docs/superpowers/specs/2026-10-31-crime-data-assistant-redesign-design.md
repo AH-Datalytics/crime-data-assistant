@@ -1,6 +1,7 @@
 # Crime Data Assistant redesign: design
 
-Date: 2026-10-31. Owner: Jeff Asher. Status: direction approved ("chat it is"); this document is the build reference.
+Date: 2026-10-31. Owner: Jeff Asher. Status: approved (direction, breakdown charts and the click-to-ask list); this
+document is the build reference.
 Mockups (static HTML, served by `docs/superpowers/mockups/nibrsai-redesign/serve.py` on port 8765; they do not open
 from disk): `20-start.html` (start page) and `24-chat.html` (the conversation). The other files in that folder are
 rejected or superseded rounds, kept for reference.
@@ -142,10 +143,14 @@ logging. Not carried over: the left rail, source badges, plan chips, the colored
   Until a source is in the engine, its questions come back as the engine's `route` or `decline` (`notBuilt`) and are
   shown that way; the start page's sources table can mark such a source "Not yet" in the private preview.
 - **Single number:** the answer sentence in the chat, nothing else.
-- **Click-to-ask list:** a fixed list in the UI for the first build, drafted below; replaced by an engine-supplied list
-  when the engine has one.
+- **Click-to-ask list:** a fixed list in the UI for the first build, below (approved); replaced by an engine-supplied
+  list when the engine has one.
+- **Charts for breakdowns:** yes. The engine sets `delivered.chart` to null for category breakdowns (victim race,
+  weapon, location); the page draws a bar chart from the table when the answer has one category grouping, no time
+  grouping and one number column besides any P72 supporting column. The bars use that number column, in the source's
+  color, in the table's order; supporting columns are not charted.
 
-## Click-to-ask list (draft for review)
+## Click-to-ask list
 
 The menu offers only questions that the source records (the sources table) and that the engine answers; it never offers
 a "why" question (the engine declines causes). The clicked slice is a period (a month, quarter or year) or a category
@@ -166,11 +171,7 @@ yet) are left out rather than shown and declined.
 
 ## Open items for the owner
 
-1. **Charts for breakdowns.** The engine sets `delivered.chart` to null for category breakdowns (victim race, weapon,
-   location) and draws only time series. This design draws a bar chart from the table when the answer has one category
-   grouping, no time grouping and one number column besides any P72 supporting column (the bars use that number
-   column; supporting columns are not charted). To confirm.
-2. **Sources table contents.** The years and the dots are drafted from today's app and the engine; each needs checking
+1. **Sources table contents.** The years and the dots are drafted from today's app and the engine; each needs checking
    against the source before launch (for example whether Current Trends records clearances for every agency).
 
 ## Calls made in this design (for the owner to check)
