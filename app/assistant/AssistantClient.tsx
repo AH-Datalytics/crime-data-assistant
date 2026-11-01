@@ -57,10 +57,9 @@ const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"
 const PERIOD = /^\d{4}(-\d{2}|-?Q[1-4])?$/;
 /**
  * Whether a category-by-time answer's categories are exclusive (each unit in exactly one), so stacked forms are honest.
- * From the engine's flag when it lands; until then never, except the local preview's ?stacked=1 test switch.
+ * From the engine's flag (top-level `exclusive`: the charted count's categories sum to its total).
  */
-const exclusive = (r: object) => (r as { exclusive?: boolean }).exclusive === true
-  || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("stacked") === "1");
+const exclusive = (r: object) => (r as { exclusive?: boolean }).exclusive === true;
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}${/[?.]$/.test(s) ? "" : "?"}`;
 
