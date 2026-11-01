@@ -33,7 +33,7 @@
 import { NOT_YET, plainReaderExplanation } from "./wording";
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
-import { deterministicRewriter, type FollowUpRewriter, type Rewrite } from "./follow-up";
+import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
@@ -149,6 +149,25 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
 export type ProposalOutcome = { kind: "proposal"; question: string; proposed: string; how: string; rewrite: string; rewriteKind: "propose" };
 export type FollowUpOutcome = (ShadowOutcome & { rewrite: string | null; rewriteKind: Exclude<Rewrite["kind"], "propose">; presentation?: true }) | ProposalOutcome;
 export function shadowFollowUp(previous: string, followUp: string, deps: ShadowDeps, rewriter: FollowUpRewriter = deterministicRewriter): FollowUpOutcome {
+  // A turn that stands on its own (its own crime and place, nothing pointing back) is a new question: answered as a
+  // first question would be, the previous turn ignored (Jeff 2026-11-01). When the rules would have read it as a
+  // follow-up meaning something else, that reading is offered as a button, run only when chosen.
+  if (standsAlone(followUp)) {
+    const o = shadowAnswer(followUp, deps);
+    const r0 = deterministicRewriter.rewrite(previous, followUp);
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    // A new question with no period of its own, after a question with one, may have meant that period (real turns:
+    // "murder count in richmond" after "richmond virginia murders 2020-2025"): offered, never assumed.
+    const year = Number(deps.release.lastMonth.slice(0, 4));
+    const prevPeriod = readQuestion(previous, year).ledger.parts.find((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized")?.text.trim();
+    const ownPeriod = readQuestion(followUp, year).ledger.parts.some((p) => p.clause === 0 && p.concept === "period" && p.state === "recognized");
+    const withPeriod = !ownPeriod && prevPeriod ? `${followUp.trim().replace(/[?.!]+$/, "")} ${prevPeriod}` : null;
+    const other = r0.kind === "rewrite" && norm(r0.question) !== norm(followUp) ? r0.question : withPeriod;
+    const offer: ShadowOption | null = other ? { label: `Did you mean a follow-up to your last question? "${other}"`, question: other } : null;
+    const withOffer = !offer ? o : o.kind === "answer" ? { ...o, buttons: [...(o.buttons ?? []), offer] }
+      : o.kind === "clarify" ? { ...o, options: [offer, ...o.options] } : o.kind === "decline" && !o.alternative ? { ...o, alternative: offer } : o;
+    return { ...withOffer, rewrite: followUp, rewriteKind: "new" };
+  }
   const r = rewriter.rewrite(previous, followUp);
   // A proposal returns before anything runs.
   if (r.kind === "propose") return { kind: "proposal", question: followUp, proposed: r.question, how: r.how, rewrite: r.question, rewriteKind: "propose" };
