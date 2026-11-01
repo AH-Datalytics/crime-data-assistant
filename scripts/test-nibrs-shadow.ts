@@ -24,6 +24,16 @@ function stub(sql: string): unknown[][] {
   sqls.push(sql);
   // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
   if (sql.includes("agency/data.parquet")) return popRows(sql);
+  // A state sum's grid summed by agency and year (state-sum.ts): the stub sums its own monthly grid the same way.
+  if (/repsum/.test(sql)) {
+    const by = new Map<string, unknown[]>();
+    for (const [ori, ym, n, st] of gridRows(sql) as [string, string, number | null, string][]) {
+      const k = `${ori}|${ym.slice(0, 4)}`, rep = st === "VALUE" || st === "REPORTED_ZERO";
+      const a = (by.get(k) ?? by.set(k, [ori, Number(ym.slice(0, 4)), 0, 0, 0, 0]).get(k)!) as number[];
+      a[2]++; if (rep) { a[3]++; a[4] += n ?? 0; } if (st === "EVIDENCE_CONFLICT") a[5]++;
+    }
+    return [...by.values()];
+  }
   if (/unnest\(\[.*\]\) AS ori/.test(sql)) return gridRows(sql);
   // A one-category breakdown over a period: F 30 (share 0.6), M 20 (0.4), U unknown.
   // The same with the incidents beside the count (P66): one incident had a female and a male victim (12 + 9 > 20).
