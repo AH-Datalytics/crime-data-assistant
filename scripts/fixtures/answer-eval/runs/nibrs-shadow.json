@@ -873,7 +873,7 @@
   ]
  },
  "notBuilt": [
-  "LS-237: refused as not built: This build holds January 2017 through September 2026, so it does not cover 2012."
+  "LS-237: refused as not built: The data here covers January 2017 through September 2026, so it doesn't include 2012."
  ],
  "groups": {
   "LS-005": "near",
@@ -1107,7 +1107,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1120,7 +1120,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1133,7 +1133,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"ZIP code\". I haven't answered with a number that leaves it out."
+    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"ZIP code\" can't be counted."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1146,7 +1146,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"zip code\". I haven't answered with a number that leaves it out."
+    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"zip code\" can't be counted."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1223,7 +1223,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution\". I haven't answered with a number that leaves it "
+    "declined (reader): NIBRS doesn't include drug distribution or sales as its own measure (drug possession and drug offenses are counted), so \"or distribution\" can't be counted."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -1236,7 +1236,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
+    "declined (reader): NIBRS doesn't include drug distribution or sales as its own measure (drug possession and drug offenses are counted), so \"or distribution of\" can't be counted."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -1283,7 +1283,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"ZIP code\". I haven't answered with a number that leaves it out."
+    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"ZIP code\" can't be counted."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1296,7 +1296,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
+    "declined (reader): NIBRS doesn't include drug distribution or sales as its own measure (drug possession and drug offenses are counted), so \"or distribution of\" can't be counted."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -1351,7 +1351,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): NIBRS doesn't record drug distribution or sales as its own measure (drug possession and drug offenses are counted), so I can't apply \"or distribution of\". I haven't answered with a number that leaves "
+    "declined (reader): NIBRS doesn't include drug distribution or sales as its own measure (drug possession and drug offenses are counted), so \"or distribution of\" can't be counted."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -1364,7 +1364,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"weapons were used in\" in this question, so I haven't answered it with a number that ignores it."
+    "declined (reader): I didn't understand \"weapons were used in\". Try asking it another way."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -1674,7 +1674,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (below_agency_level): NIBRS doesn't record anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so I can't apply \"ZIP code\". I haven't answered with a number that leaves it out."
+    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"ZIP code\" can't be counted."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1694,7 +1694,7 @@
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later",
@@ -1736,7 +1736,7 @@
     }
    ],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2130,7 +2130,7 @@
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later",
@@ -2152,7 +2152,7 @@
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later",
@@ -2167,7 +2167,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (unsupported_capability): Not in the slice yet: counts of this crime come from Historical or Current Trends (P01), which this NIBRS shadow does not run."
+    "declined (unsupported_capability): The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it."
    ],
    "capability": "answer:historical count",
    "era": "2021 and later"
@@ -2180,7 +2180,7 @@
    "outcome": "wrong_action",
    "diffs": [],
    "notes": [
-    "declined (reader): NIBRS does not track shootings as a category, so I can't apply \"Shootings\". For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a f"
+    "declined (reader): NIBRS doesn't count shootings as a category, so \"Shootings\" can't be counted. For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a"
    ],
    "capability": "clarify:shr count",
    "era": "2021 and later"
@@ -2207,7 +2207,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I couldn't interpret \"will\" in this question, so I haven't answered it with a number that ignores it."
+    "declined (reader): I didn't understand \"will\". Try asking it another way."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -2220,7 +2220,7 @@
    "outcome": "wrong_action",
    "diffs": [],
    "notes": [
-    "declined (reader): The question could not be read: no typed reading."
+    "declined (reader): I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example \"robberies in Denver in 2024\"."
    ],
    "capability": "clarify:historical count",
    "era": "2021 and later"
@@ -2373,7 +2373,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: robbery offenses by weapon, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime with several of these categories counts once under e"
+    "delivered: Albuquerque, New Mexico: robbery offenses by weapon, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime that falls in several of these categories is counted"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2387,7 +2387,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+    "declined (reader): I can break the numbers down one way at a time; \"and sex\" would be a second breakdown."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -2456,7 +2456,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Fort Worth, Texas: robbery offenses by weapon, 2023. / Reported by the Fort Worth Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime with several of these categories counts once under each, so"
+    "delivered: Fort Worth, Texas: robbery offenses by weapon, 2023. / Reported by the Fort Worth Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime that falls in several of these categories is counted once i"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2484,7 +2484,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Colorado Springs, Colorado: murder victims by relationship to the offender, 2023. / Reported by the Colorado Springs Police Department. / Each share is that category's part of all murder victims in 2023. / A crime with several of these cate"
+    "delivered: Colorado Springs, Colorado: murder victims by relationship to the offender, 2023. / Reported by the Colorado Springs Police Department. / Each share is that category's part of all murder victims in 2023. / A crime that falls in several of t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2526,7 +2526,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime with several of these categories"
+    "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime that falls in several of these c"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2540,7 +2540,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024. / Offenders are counted as NIBRS offender records, not peo"
+    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024. / Offenders are counted as listed in each incident report,"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2554,7 +2554,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I can't apply \"and sex\": I give one breakdown per answer; ask for one breakdown at a time. I haven't answered with a number that leaves it out."
+    "declined (reader): I can break the numbers down one way at a time; \"and sex\" would be a second breakdown."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -2595,7 +2595,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Colorado Springs, Colorado: 1,284 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Colorado Springs, Colorado: 1,284 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2609,7 +2609,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: robbery arrests by month, 2023. / Reported by the Wichita Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Wichita, Kansas: robbery arrests by month, 2023. / Reported by the Wichita Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2623,7 +2623,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: 161 burglary arrests in 2024. / Reported by the Raleigh Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Raleigh, North Carolina: 161 burglary arrests in 2024. / Reported by the Raleigh Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2637,7 +2637,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later",
@@ -2651,7 +2651,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): \"Shooters\" is not a term the data defines: it records offenders and the weapons used, not who fired a gun."
+    "declined (not_recorded_in_nibrs): The data lists offenders and the weapons used, not who fired a gun, so \"shooters\" can't be counted."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -2915,7 +2915,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / "
+    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. /"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -3313,7 +3313,7 @@
     }
    ],
    "notes": [
-    "routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. This NIBRS shadow does not run Current Trends."
+    "routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet."
    ],
    "capability": "answer:rtci count",
    "era": "period not mapped"
@@ -3333,7 +3333,7 @@
     }
    ],
    "notes": [
-    "routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. This NIBRS shadow does not run H"
+    "routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't availabl"
    ],
    "capability": "answer:shr count",
    "era": "2021 and later"
@@ -3427,7 +3427,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance status, 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not "
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance status, 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the prope"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3441,7 +3441,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance type, 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not at"
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance type, 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the propert"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3455,7 +3455,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,065 shoplifting offenses cleared in 2024, in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's a"
+    "delivered: Memphis, Tennessee: 2,065 shoplifting offenses cleared in 2024, in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's y"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3483,7 +3483,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Dallas, Texas: carjacking offenses by clearance type, 2024. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables count instea"
+    "delivered: Dallas, Texas: carjacking offenses by clearance type, 2024. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's yearly tables instead coun"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3532,7 +3532,7 @@
     }
    ],
    "notes": [
-    "routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. This NIBRS shadow does not run Hist"
+    "routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. Historical isn't available here yet"
    ],
    "capability": "answer:historical rate",
    "era": "2021 and later"
@@ -3545,7 +3545,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 1,508 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed t"
+    "delivered: Memphis, Tennessee: 1,508 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3559,7 +3559,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 9 burglary offenses where a firearm was recovered in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offens"
+    "delivered: Memphis, Tennessee: 9 burglary offenses where a firearm was recovered in 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied to a single"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3573,7 +3573,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Dallas, Texas: 7,219 motor vehicle theft offenses where the vehicle was recovered in 2024. / Reported by the Dallas Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a si"
+    "delivered: Dallas, Texas: 7,219 motor vehicle theft offenses where the vehicle was recovered in 2024. / Reported by the Dallas Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3587,7 +3587,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 112 arrests on incidents where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offe"
+    "delivered: Memphis, Tennessee: 112 arrests on incidents where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied to a sing"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3601,7 +3601,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3615,7 +3615,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Dallas, Texas: 292 carjacking offenses not cleared in 2024, in 292 incidents. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual t"
+    "delivered: Dallas, Texas: 292 carjacking offenses not cleared in 2024, in 292 incidents. / Reported by the Dallas Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's yearly t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3643,7 +3643,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims by clearance type, 2024. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables"
+    "delivered: Memphis, Tennessee: aggravated assault victims by clearance type, 2024. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's yearly tables"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3657,7 +3657,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 351 arrests on incidents that included a robbery in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Arrests with no incident "
+    "delivered: Memphis, Tennessee: 351 arrests on incidents that included a robbery in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Arrests with no crime"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3671,7 +3671,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 328 robbery arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 328 robbery arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3685,7 +3685,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: aggravated assault victims by clearance type, 2024. / Reported by the Detroit Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables "
+    "delivered: Detroit, Michigan: aggravated assault victims by clearance type, 2024. / Reported by the Detroit Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's yearly tables "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3699,7 +3699,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by clearance type, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables co"
+    "delivered: Denver, Colorado: aggravated assault victims by clearance type, 2023. / Reported by the Denver Police Department. / A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's yearly tables in"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3713,7 +3713,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS records property for the incident, not for one offense, so the propert"
+    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3727,7 +3727,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime with several of these categories c"
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime that falls in several of these cat"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3755,7 +3755,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 555 aggravated assault victims with an offender under 18 in the incident in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not"
+    "delivered: Memphis, Tennessee: 555 aggravated assault victims with an offender under 18 in the incident in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, s"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3769,7 +3769,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,541 aggravated assault victims under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 2,541 aggravated assault victims under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted. /"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3783,7 +3783,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 5,162 aggravated assault victims with a firearm who were female in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted."
+    "delivered: Memphis, Tennessee: 5,162 aggravated assault victims with a firearm who were female in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that pe"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3797,7 +3797,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories counts once under each, s"
+    "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categories is counted once "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3811,7 +3811,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: murder victims by the race of the linked offenders, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories counts"
+    "delivered: Memphis, Tennessee: murder victims by the race of the linked offenders, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categori"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3839,7 +3839,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than o"
+    "delivered: Denver, Colorado: arrests by arrestee race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested more th"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3853,7 +3853,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: 71 robbery arrests of arrestees under 18 in 2024. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / An unknown or unrecorded value doe"
+    "delivered: Detroit, Michigan: 71 robbery arrests of arrestees under 18 in 2024. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / A person whose detail is unkno"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3867,7 +3867,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime with several of these categories "
+    "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime that falls in several of these ca"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3958,7 +3958,7 @@
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later",
@@ -3980,7 +3980,7 @@
     }
    ],
    "notes": [
-    "declined (unsupported_capability): Offender breakdowns for a whole state or the nation are not built yet; they are for one agency or several named agencies."
+    "declined (unsupported_capability): Offender breakdowns for a whole state or the nation aren't available yet; they are for one agency or several named agencies."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -3993,7 +3993,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more t"
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested mo"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4021,7 +4021,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 1,169 aggravated assault victims who were female under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Sou"
+    "delivered: Memphis, Tennessee: 1,169 aggravated assault victims who were female under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person i"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4049,7 +4049,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime with several of these categories coun"
+    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime that falls in several of these catego"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4063,7 +4063,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime with several of th"
+    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime that falls in seve"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4077,7 +4077,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not co"
+    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4091,7 +4091,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 254 aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) in 2023. / Reported by the Denver Police Department. / The condition on the offender applies only to the off"
+    "delivered: Denver, Colorado: 254 aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) in 2023. / Reported by the Denver Police Department. / The condition on the offender is checked only for the"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4105,7 +4105,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories counts once under each"
+    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categories is counted on"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4119,7 +4119,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories cou"
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categ"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4133,7 +4133,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / "
+    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. /"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -4231,7 +4231,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not co"
+    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4245,7 +4245,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime with several of these categories c"
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime that falls in several of these cat"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4259,7 +4259,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more t"
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested mo"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4287,7 +4287,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories cou"
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categ"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4315,7 +4315,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: 54 robbery arrests of arrestees under 18 in 2023. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS cannot tell when one person was arrested more than once. / An unknown or unrecorded value doe"
+    "delivered: Detroit, Michigan: 54 robbery arrests of arrestees under 18 in 2023. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / A person whose detail is unkno"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4329,7 +4329,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 1,372 aggravated assault victims who were male under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Sourc"
+    "delivered: Memphis, Tennessee: 1,372 aggravated assault victims who were male under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4343,7 +4343,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 17 murder victims under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 17 murder victims under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted. / Source: FBI NI"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4371,7 +4371,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / "
+    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. /"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -4462,7 +4462,7 @@
     }
    ],
    "notes": [
-    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
+    "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:nibrs count",
    "era": "2021 and later",

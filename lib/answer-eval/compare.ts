@@ -18,7 +18,7 @@ import path from "node:path";
 
 /** The agencies' FBI names (scripts/fixtures/nibrs-shadow/agency-names.json), read once. */
 let NAMES: Map<string, string> | null = null;
-const fbiNames = () => (NAMES ??= new Map(Object.entries(JSON.parse(fs.readFileSync(path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agency-names.json"), "utf8")).names as Record<string, string>)));
+const fbiNames = () => (NAMES ??= new Map(Object.entries(JSON.parse(fs.readFileSync(path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agency-names.json"), "utf8")).names as Record<string, string>)));
 
 export type Diff = { field: string; expected: string; actual: string; kind: "material" | "unverified" };
 

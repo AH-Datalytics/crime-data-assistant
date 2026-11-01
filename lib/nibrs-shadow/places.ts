@@ -52,8 +52,10 @@ export const PLACE_ALIASES: Record<string, string> = {
  * Return A's 24-character short name, not a department name.
  */
 export type PlaceIndex = { byName: Map<string, Agency[]>; names: Map<string, string>; returnA: Set<string> };
-const NAMES_FILE = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agency-names.json");
-export function loadPlaceIndex(file = path.join(__dirname, "../../scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
+// Fixtures resolve from the working directory (the repository root), as the routes resolve agencies.json: a Next bundle
+// has no source __dirname (assistant preview findings, 2026-10-31).
+const NAMES_FILE = path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agency-names.json");
+export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
   const namesFile = JSON.parse(fs.readFileSync(NAMES_FILE, "utf8")) as { names: Record<string, string>; return_a?: string[] };
   const names = new Map<string, string>(Object.entries(namesFile.names));
   const returnA = new Set(namesFile.return_a ?? []);

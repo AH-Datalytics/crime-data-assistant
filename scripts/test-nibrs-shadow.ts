@@ -5,7 +5,9 @@
  * numbers (scripts/nibrs-compile-gate.ts and the runner do that against a canonical build). No database, no model.
  */
 import assert from "node:assert/strict";
-import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import fs from "node:fs";
+import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } from "../lib/nibrs-shadow/places";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
@@ -202,7 +204,7 @@ const bySexes = as(ask("Simple assaults by men and women in Detroit in 2023"), "
 assert.deepEqual([bySexes.plan.filters, bySexes.plan.groupings.map((g) => `${g.dimension}:${g.multiValue}`)], [[], ["offender.sex:each_value"]]);
 assert.deepEqual(bySexes.delivered.table.rows.map((r) => r[0]), ["Female", "Male", "Unknown"]);
 assert.ok(sqls.at(-1)!.includes("'unknown_offender'"));
-assert.match(as(ask("Simple assaults by women in Detroit in 2023"), "decline").explanation, /P29/);
+assert.match(as(ask("Simple assaults by women in Detroit in 2023"), "decline").explanation, /^"By" a group of people means the offenders/);
 // P44: offenders themselves, by their own sex.
 assert.equal(as(ask("Robbery offenders in Detroit by sex in 2023"), "answer").plan.groupings[0].multiValue, undefined);
 // P36: murders by strangers say so in their words.
@@ -216,7 +218,7 @@ assert.ok(sqls.slice(-3).every((q) => q.includes("w2.weapon IN ('11', '12', '13'
 const stab = as(ask("Stabbings in Detroit in 2023"), "answer");
 assert.deepEqual([stab.plan.measures.length, stab.delivered.text[0]], [2, "Stabbings here are murder victims and aggravated assault victims with a knife or cutting instrument."]);
 assert.match(as(ask("Gun violence in Detroit in 2023"), "decline").explanation, /non-fatal shootings/);
-assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "decline").explanation, /^"Shooters" is not a term/);
+assert.match(as(ask("How many shooters were there in Detroit in 2023?"), "decline").explanation, /not who fired a gun, so "shooters" can.t be counted/);
 // P46, P48, P50: arrests by arrest date, counted once each; "people arrested for" is arrests; "charged" is declined with
 // the arrests offered.
 const arr = as(ask("How many people were arrested for burglary in Detroit in 2023?"), "answer");
@@ -334,7 +336,10 @@ const ct = as(ask("How many shoplifting arrests in Memphis in 2024 led to convic
 assert.deepEqual([ct.reason, ct.alternative!.label], ["court_outcome", "Arrests for the same crime, place and period"]);
 const typo = as(ask("Shoplfting in Memphis in 2023"), "answer");
 assert.equal(typo.delivered.text.at(-2), 'Read "Shoplfting" as shoplifting.');
-assert.match(as(ask("Burglaries in Memphis in 2023"), "decline").explanation, /P01/);
+const burg = as(ask("Burglaries in Memphis in 2023"), "decline");
+assert.match(burg.explanation, /^The official counts of this crime come from the Historical and Current Trends data/);
+// P74: the nearest answerable question, shown whole on the button, run only when chosen.
+assert.deepEqual(burg.alternative, { label: 'Ask instead: "Burglaries in Memphis in 2023 according to NIBRS"', question: "Burglaries in Memphis in 2023 according to NIBRS" });
 
 // Breakdown scoring: rows keyed by category name, counts and statuses compared, shares checked against the independent
 // count over the independent total; nibrs-model's category rows load under those keys.
@@ -378,7 +383,7 @@ assert.deepEqual(monthly.map((x) => [x.key, x.value, x.measure]), [["2024-01", 2
 
 // Codex review 02: compositions that would silently change what was asked are declined or kept whole.
 assert.match(as(ask("Female simple assault victims by men and women in Detroit in 2023"), "decline").explanation, /victims restricted by sex/);
-assert.match(as(ask("Drug crimes and shoplifting in Detroit in 2024"), "decline").explanation, /D19/);
+assert.match(as(ask("Drug crimes and shoplifting in Detroit in 2024"), "decline").explanation, /drug equipment violations. beside other crimes/);
 for (const q of ["Gun crimes and murders in Detroit in 2024", "Stabbings and murders in Detroit in 2024"]) assert.match(as(ask(q), "decline").explanation, /beside other crimes/, q);
 assert.match(as(ask("Robberies with a handgun in Detroit in 2023"), "answer").delivered.text[0], /robbery offenses with a weapon recorded as Handgun/);
 assert.equal(ask("Simple assaults by men and men in Detroit in 2023").kind, "decline");
@@ -449,7 +454,7 @@ const fcCmp = as(ask("Will shoplifting increase in Detroit in 2027 compared with
 assert.equal(fcCmp.reason, "forecast");
 const fcAltCmp = as(fcCmp.alternative!.continuation!, "decline");
 assert.deepEqual([fcAltCmp.notBuilt, /2016 to 2025/.test(fcAltCmp.explanation)], [true, true], "the trend alternative is the last 10 complete years (before this build), not the forecast's comparison");
-assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /P01/);
+assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /^The official counts of this crime come from/);
 // Scoring: the comparison's periods are checked against the label; prose must be the templates with the table's numbers;
 // a rolling answer must show every displayed month.
 const lab309 = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2022-01", to: "2023-06" },
@@ -589,7 +594,7 @@ assert.deepEqual(setYears.delivered.table.rows.map((x) => x[0]), ["2019", "2023"
 assert.ok(setYears.delivered.text[0].includes("2019 and 2023"));
 // 2. A conflict refuses a ranking (D6); it is never read as a month not reported.
 CONFLICT = { ori: "TXHPD0000", ym: "2024-02" };
-assert.match(as(ask("Which Texas cities had the most shoplifting in 2024?"), "decline").explanation, /conflict/);
+assert.match(as(ask("Which Texas cities had the most shoplifting in 2024?"), "decline").explanation, /disagree with its record of which months it reported, so no ranking is given/);
 CONFLICT = null;
 // 3. The same agency twice, by month: the time grouping keeps its binding.
 assert.equal(ask("Shoplifting in Tulsa Police Department and Tulsa by month in 2023").kind, "answer");
@@ -718,7 +723,7 @@ assert.notEqual(ask("Murder incidents in Texas in 2024").kind, "srs");
 CONFLICT = { ori: "TXHPD0000", ym: "2024-02" };
 const txConflict = as(ask("Carjackings in Texas in 2024"), "answer");
 assert.deepEqual([txConflict.delivered.table.rows, txConflict.stateSum!.years[0].conflicts, txConflict.stateSum!.years[0].every.agencies], [[[298]], 1, 2]);
-assert.ok(txConflict.delivered.text.includes("1 agency-month whose records conflict with the agency's reporting status is not counted."));
+assert.ok(txConflict.delivered.text.includes("1 agency-month whose reports disagree with the agency's record of which months it reported is not counted."), txConflict.delivered.text.join(" / "));
 CONFLICT = null;
 // 5. A missing population is never 0: no rate, and the share covered is a lower bound.
 assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /no rate is given for 2024, because 1 of the agencies counted have no FBI population/);
@@ -766,7 +771,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // Codex 04.2: a victim's attribute on arrests is declined, never answered as the arrestee's.
   assert.match(as(ask("Arrests in Denver in 2023 by victim race"), "decline").explanation, /a victim's race for arrests/);
   // A people breakdown for a state is declined with P29's reason, never answered from the historical file.
-  assert.match(as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "decline").explanation, /^Offender breakdowns for a whole state or the nation are not built yet/);
+  assert.match(as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "decline").explanation, /^Offender breakdowns for a whole state or the nation aren't available yet/);
   // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).
   assert.deepEqual(as(ask("Murders by young adults in Memphis in 2024"), "clarify").options.map((o) => o.label), ["18 to 24", "18 to 29"]);
   assert.deepEqual(as(ask("How many attackers were there in aggravated assaults in Detroit in 2024?"), "clarify").options.map((o) => o.label), ["Offenders", "People arrested"]);
@@ -807,6 +812,55 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(every.delivered.table.rows[0].at(-1), ka.stateSum!.years[0].every.agencies);
   assert.equal(as(ask("Shoplifting in Wichita in 2024, with the number of agencies reporting"), "decline").explanation,
     "The number of agencies reporting goes with a state or national total.");
+}
+
+// P74 (Jeff 2026-11-01: "much, much more crystal clear"): every case question, setup and follow-up, and every button
+// behind them three levels deep, on the stub: no user-facing string (a decline, a question back, a button, an answer's
+// text, a column header, a table's text cell) holds engine words, and no reader sentence went unmapped. An exception is
+// a failure of its own, never a passing string.
+{
+  const casesFile = JSON.parse(fs.readFileSync("scripts/fixtures/answer-eval/cases.json", "utf8"));
+  const all = (casesFile.cases ?? casesFile) as Case[];
+  const bad: string[] = [], errors: string[] = [];
+  const seen = new Set<string>();
+  const check = (text: string | undefined, where: string) => {
+    if (!text || seen.has(text)) return;
+    seen.add(text);
+    const j = jargon(text);
+    if (j.length) bad.push(`${where}: [${j.join(", ")}] ${text}`);
+  };
+  const walk = (o: ShadowOutcome | undefined, where: string, depth: number): void => {
+    if (!o) return;
+    const opts = o.kind === "clarify" ? o.options : o.kind === "decline" ? (o.alternative ? [o.alternative] : []) : o.kind === "answer" ? o.buttons ?? [] : [];
+    if (o.kind === "decline" || o.kind === "route") check(o.explanation, where);
+    if (o.kind === "clarify") check(o.about, where);
+    if (o.kind === "answer") {
+      for (const t of o.delivered.text) check(t, where);
+      for (const c of o.delivered.table.columns) check(c.header, where);
+      for (const r of o.delivered.table.rows) for (const v of r) if (typeof v === "string") check(v, where);
+    }
+    for (const x of opts) { check(x.label, where); check(x.question, where); if (depth < 3) walk(x.continuation, `${where} > ${x.label}`, depth + 1); }
+  };
+  UNMAPPED.length = 0;
+  for (const c of all) {
+    const turns: [string, () => ShadowOutcome][] = [...(c.setup ?? []).map((s): [string, () => ShadowOutcome] => [`${c.id} setup`, () => ask(s.question)]),
+      [c.id, () => (c.setup?.length && c.rewrite !== undefined ? (shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps) as ShadowOutcome) : ask(c.question))]];
+    for (const [where, run] of turns) {
+      try { walk(run(), where, 0); } catch (e) { errors.push(`${where}: ${String(e).slice(0, 160)}`); }
+    }
+  }
+  // Questions no case asks: the preview findings' and the Codex review's inputs.
+  for (const q of ["Rape clearances by type by victim in Memphis in 2024", "Robberies where a firearm was seized in Memphis in 2024", "Burglaries in Memphis in 2023",
+    "Shoplifting and carjackings combined in Memphis in 2024", "aggravated assault victims by weapon in Detroit in 2023", "murders rolling over 12 months in Detroit in 2024",
+    "fentanyl offenses in Detroit in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", "Simple assault victims in Detroit by race and sex in 2023"]) {
+    try { walk(ask(q), q, 0); } catch (e) { errors.push(`${q}: ${String(e).slice(0, 160)}`); }
+  }
+  assert.ok(seen.size > 300, `the walk covers the strings (${seen.size})`);
+  assert.deepEqual(errors, [], "no case question throws");
+  assert.deepEqual(bad, [], "no engine words reach a user");
+  assert.deepEqual(UNMAPPED, [], "every reader sentence has a plain wording");
+  // Jeff's example (Codex preview-blockers review 1): the reader's own reason, reworded, never "didn't understand".
+  assert.match(as(ask("Rape clearances by type by victim in Memphis in 2024"), "decline").explanation, /^Clearances are recorded for each offense, not for each person, so they can't be counted by "victim"\./);
 }
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

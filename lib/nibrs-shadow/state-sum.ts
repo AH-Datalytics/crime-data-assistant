@@ -14,16 +14,17 @@
  *                month weighting); the button's view: per 100,000 residents of the agencies that reported every month
  *   button       one fixed set of agencies that reported every month of the whole period (P03, P61)
  */
+import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan } from "../nibrs-plan/compile";
 import { rate, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { deliverTable, fmt, measureWords, periodWords } from "./deliver";
+import { deliverTable, fmt, fmtRate, measureWords, periodWords } from "./deliver";
 import { stateName, STATE_NAMES } from "./places";
 import { srsPopulation } from "./srs";
 import type { ShadowDeps, ShadowOption, ShadowOutcome } from "./answer";
 
-type Decline = (explanation: string) => ShadowOutcome;
+type Decline = (explanation: string, detail?: string) => ShadowOutcome;
 /** The nation's header states: the 50 states and DC; Nebraska's header code is NB. */
 const NATION = [...Object.keys(STATE_NAMES).filter((c) => c !== "NE"), "NB"];
 const headerCodes = (code: string) => (code === "NE" ? ["NB", "NE"] : [code]);
@@ -51,10 +52,10 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const st = plan.statistics.filter((s) => s !== supportStat)[0];
   const isRate = st.kind === "rate";
   const yearG = plan.groupings.some((g) => g.dimension === "time.year");
-  if (plan.groupings.some((g) => g.dimension !== "time.year")) return decline("Not in the slice yet: a state or national sum by month or by category.");
+  if (plan.groupings.some((g) => g.dimension !== "time.year")) return decline("This isn't available yet: a state or national sum by month or by category.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
-  if (years.length > 1 && !yearG) return decline("Not in the slice yet: a state or national total over several years without a year grouping (each year has its own agencies).");
-  if (isRate && yearG) return decline("Not in the slice yet: a state or national rate by year.");
+  if (years.length > 1 && !yearG) return decline("This isn't available yet: a state or national total over several years without \"by year\" (each year has its own reporting agencies).");
+  if (isRate && yearG) return decline("This isn't available yet: a state or national rate by year.");
   const where = place.kind === "national" ? "the United States" : stateName((place as { code: string }).code);
   const Where = place.kind === "national" ? "United States" : where;
   // A share always with its one decimal ("89.0%").
@@ -78,7 +79,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const sub: NibrsPlan = { ...plan, measures: [{ ...m, filters: undefined }], filters: [...plan.filters, ...(m.filters ?? [])], transforms: [],
     groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }], statistics: [{ kind: "count", as: "n", measure: m.as }] };
   const c = compilePlan(sub, { kind: "absolute", ...period }, { ...deps.target, agencies: oris });
-  if (c.kind === "unsupported") return decline(`Not in the slice yet: ${c.reason}`);
+  if (c.kind === "unsupported") return decline(NOT_YET, c.reason);
   for (const s of c.query.statements) if (!statements.includes(s)) statements.push(s);
   const cells = new Map<string, MonthCell[]>();
   for (const r of deps.execute(c.query.sql)) {
@@ -137,11 +138,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       lines.push(isRate && v === null
         ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of the agencies ${every ? "that reported every month" : "counted"} have no FBI population` : `the FBI population of the agencies ${every ? "that reported every month" : "counted"} is 0`}.`
         : every
-        ? `${Where}: ${isRate ? `${v} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`
-        : `${Where}: ${isRate ? `${v} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
+        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`
+        : `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
       if (!every) lines.push(`${fmt(y.agencies)} agencies reported at least one month of ${when}, covering ${atLeast(y.noPopulation)}${pc(y.share)} of ${residents}; ${fmt(y.partial)} of them reported only some months and are included. ${fmt(y.every.agencies)} reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`);
       if (y.noPopulation && !every) lines.push(`${fmt(y.noPopulation)} of the agencies counted have no FBI population, so the share covered is a lower bound.`);
-      if (y.conflicts) lines.push(`${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose records conflict with the agency's reporting status ${y.conflicts === 1 ? "is" : "are"} not counted.`);
+      if (y.conflicts) lines.push(`${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose reports disagree with the agency's record of which months it reported ${y.conflicts === 1 ? "is" : "are"} not counted.`);
       if (isRate && v !== null) lines.push(`The rate is the sum per 100,000 residents of the agencies ${every ? "that reported every month" : "counted"}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
       const support = supportStat?.kind === "population" ? (noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" })
@@ -155,7 +156,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       ? `Residents covered by those agencies: ${byYear.map((y) => `${y.year} ${y.every.noPopulation ? "at least " : ""}${pc(y.every.share)}`).join("; ")}.${byYear.some((y) => y.every.noPopulation) ? " Some of them have no FBI population, so those shares are lower bounds." : ""}`
       : `Agencies counted and share of ${residents} covered: ${byYear.map((y) => `${y.year} ${fmt(y.agencies)} (${y.noPopulation ? "at least " : ""}${pc(y.share)}, ${fmt(y.partial)} reporting only some months)`).join("; ")}. Agencies reporting only some months are included.`);
     const conflicted = byYear.filter((y) => y.conflicts);
-    if (conflicted.length) lines.push(`Agency-months whose records conflict with the agency's reporting status are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
+    if (conflicted.length) lines.push(`Agency-months whose reports disagree with the agency's record of which months it reported are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
     if (!every) lines.push(`Which agencies report changed over these years, so part of a change can be agencies joining or leaving; the button shows one fixed set of ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`);
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
       support: byYear.map((y) => ({ key: null, value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })) };
@@ -168,9 +169,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
   const everyDelivered = deliver(everyPlan, true);
   const everyOutcome: ShadowOutcome = { kind: "answer", plan: everyPlan, period, sql: c.query.sql, delivered: everyDelivered, stateSum: meta };
-  if (consistent) return everyDelivered.contractProblems.length ? decline(`Not in the slice yet: the answer would not meet the answer contract (${everyDelivered.contractProblems.join("; ")}).`) : everyOutcome;
+  if (consistent) return everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
   const delivered = deliver(plan, false);
-  if (delivered.contractProblems.length) return decline(`Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
+  if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
   const button: ShadowOption = { label: "Show only agencies that reported every month", continuation: everyOutcome };
   return { kind: "answer", plan, period, sql: c.query.sql, delivered, buttons: [button], stateSum: meta };
 }

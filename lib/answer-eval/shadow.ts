@@ -10,6 +10,7 @@
  *                   label's alternative meaning.
  * A refusal because this build does not hold the months (`notBuilt`) is not scored: it is listed apart.
  */
+import { NOT_YET } from "../nibrs-shadow/wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
 import { ANSWER_STATEMENTS, clearanceDims, peopleFacts, type AnswerStatement } from "../nibrs-plan/result";
@@ -855,10 +856,13 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
     return { ...none(), diffs: nextAbout && !sameAbout(asked, nextAbout) ? [d("next part", nextAbout, asked, "material")] : [] };
   }
   if (got.entry) return one(d("", wantLeads, `opens an entry (${got.entry})`, "material"));
+  // P74: a complete question offered on the button, run only when chosen: nothing ran, so nothing is scored behind it.
+  if (got.question) return one(d("", wantLeads, `offers the question "${got.question}", run only when chosen`, "unverified"));
   if (got.otherSource) return one(want && want.source === got.otherSource ? d("", `${want.source} answer`, `routed to ${got.otherSource}: not run by this NIBRS shadow`, "unverified") : d("source", want?.source ?? wantLeads, got.otherSource, "material"));
   const c = got.continuation!;
   if (c.kind === "decline" && c.notBuilt) return one(d("", wantLeads, "refused: this build does not hold the months (not built)", "unverified"));
-  if (c.kind === "decline" && /^Not in the slice yet/.test(c.explanation)) return one(d("", wantLeads, c.explanation, "unverified"));
+  // Not available yet (a capability the shadow doesn't have): the plain prefix, or the plain sentence for an internal reason (P74).
+  if (c.kind === "decline" && (/^This isn't available yet/.test(c.explanation) || c.explanation === NOT_YET)) return one(d("", wantLeads, c.explanation, "unverified"));
   // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
   if (c.kind === "srs" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
   if (wantLeads === "answer") {
