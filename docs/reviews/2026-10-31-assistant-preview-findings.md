@@ -25,7 +25,13 @@ to the shadow engine on the pinned build `20261028-test5`, local dev server only
    never see it (a first version that always declared `webpack` broke the Turbopack production build; caught by
    `scripts/test-nibrs-preview-production.sh`). Fix in the engine: resolve from `process.cwd()` as the routes do for
    `agencies.json`, then the hook can go.
-2. **Internal wording reaches users.** "Not in the slice yet: counts of this crime come from Historical or Current
+2. **Jeff: "The answers need to be much, much more crystal clear for users."** His example: "I can't apply "victim":
+   clearance figures count offense records, not other units. I haven't answered with a number that leaves it out."
+   Every decline and clarify should say in plain words what the data records, why the question can't be answered as
+   asked, and offer the nearest answerable question as a button ("Clearances are recorded for each offense, not for
+   each victim, so this can't be counted by victim. Here is the same question counted by offense:"), with no engine
+   vocabulary (units, records, slice, shadow, P-numbers, "apply", "interpret", dimension names).
+2b. **Internal wording reaches users.** "Not in the slice yet: counts of this crime come from Historical or Current
    Trends (P01), which this NIBRS shadow does not run." (Burglaries in Memphis); "Not in the slice yet: v0 cannot group
    victim by offense_weapon.weapon" (aggravated assault victims by weapon, Detroit); "The question could not be read:
    no typed reading." (LS-113); "Not in the slice yet: a state or the nation together with other places." (LS-060).
