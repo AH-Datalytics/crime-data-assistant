@@ -471,6 +471,12 @@ ROWS = [
      "Show the population used and, for state and national totals, the agencies reporting.",
      "Users ask what a rate divides by and how many agencies a sum covers.",
      "Decided 2026-10-31 (Jeff: \"Show it\")", NEW),
+    ("P73", "A follow-up the rule-based rewriter cannot place, rewritten by a model: \"Can you do rates instead of counts?\", \"show the same chart for Chicago\"",
+     "P69: a follow-up the rewriter cannot place is asked about.",
+     "Amends P69. A rewrite the rule-based rewriter places with certainty runs directly. A model's rewrite is proposed instead: \"Did you mean: <question>?\", with Run and Edit; nothing runs until the user confirms or edits it, and an edited question runs as a new question. A follow-up neither can place is still asked about. A model never changes only the presentation: chart and table edits are the rule-based rewriter's.",
+     "Propose model rewrites for confirmation; run rule-based rewrites directly.",
+     "Tested in the shadow (Gemini 3.8 Flash): 4 of 50 hand-checked model rewrites changed the meaning (\"Please do that!\", \"new orleans ori\", \"what rate is this?\", \"since 2019\"), and on LS-422 the model replaced two places where the label asks. Shown first, each is a suggestion the user can fix, not a wrong answer.",
+     "Decided 2026-10-31 (Jeff, through the coordinator: \"yes to both\")", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
