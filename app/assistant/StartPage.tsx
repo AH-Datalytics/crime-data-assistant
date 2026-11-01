@@ -120,6 +120,7 @@ export function StartPage({ form, onAsk, onFill }: { form: ReactNode; onAsk: (q:
           <dt>Name a crime, a place and a period</dt><dd>"Carjacking in Memphis by month in 2024" gets a better answer than "crime in Tennessee."</dd>
           <dt>Say the years</dt><dd>Say "2019 to 2024" instead of "recently."</dd>
           <dt>Ask a follow-up</dt><dd>"Same for 2023" or "as a bar chart" changes the last answer. A new crime and place starts a new question.</dd>
+          <dt>Choose a source</dt><dd>Add "according to NIBRS" to the question. Each answer names its source and offers any other source that answers the same question.</dd>
           <dt>Downloads</dt><dd>PNG downloads the chart; CSV downloads the table.</dd>
         </dl></div>
         <div><h3>Disclaimers</h3><hr /><ul>

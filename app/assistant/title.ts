@@ -3,7 +3,7 @@
  * answer sentence: "Memphis, TN Shoplifting Offenses by Month & Clearance Status, 2024".
  *   place first (a city with its two-letter state, a state by name, "United States"), no colon;
  *   Title Case with short words lowercase ("by", "of", "per", "in"); "&" for "and"; ", <period>" last; no period.
- * The subtitle says only what the title doesn't: a rate's basis, a rolling window, a partial last year, a summed place.
+ * The subtitle says only what the title doesn't and is essential: a rolling window, a partial last year.
  * Savant (nibrs-savant, Spotlight) also puts the place first ("Nashville, TN Carjacking"); its year cells read
  * "2026 (Partial)".
  */
@@ -64,8 +64,8 @@ export function titlesFor(plan: NibrsPlan, period: { from: string; to: string },
   // The last year is partial when the period ends before December (the data runs through the release's last month).
   const partialYear = yearly && !period.to.endsWith("-12") ? period.to.slice(0, 4) : null;
   const sub: string[] = [];
-  const summed = plan.geography.places.some((p) => p.kind === "state" || p.kind === "national");
-  if (summed) sub.push(rate ? "Sum of Reporting Agencies, per 100,000 of Their Residents" : "Sum of Reporting Agencies");
+  // No "Sum of Reporting Agencies" (Jeff, 2026-11-01): the lead says what is summed; a subtitle only for something short
+  // and essential.
   if (opts.rolling) sub.push(`Rolling ${opts.rolling}-Month Totals`);
   if (partialYear) sub.push(`${partialYear} (Partial): ${titleCase(periodWords(`${partialYear}-01`, period.to).replace(/ (?:to|through) /g, "–"))}`);
   return { title, subtitle: sub.length ? sub.join(", ") : null, partialYear };

@@ -9,7 +9,7 @@ import { StartPage } from "./StartPage";
 
 /**
  * The Crime Data Assistant chat (spec: docs/superpowers/specs/2026-10-31-crime-data-assistant-redesign-design.md).
- * One straight scroll: the question as typed on the right, the reply below, the question box pinned at the bottom.
+ * One straight scroll: the question box pinned at the top, the newest question and its answer under it, one per screen.
  * Every typed question after the first is sent with the last answer's standalone question (`previous`), so the
  * engine's rewriter (P69) decides whether it is a follow-up; the read line shows what was answered.
  */
@@ -21,7 +21,16 @@ type Reply =
   // The engine's coming confirm-before-run outcome for a model rewrite (stubbed until the engine returns it).
   | { kind: "proposal"; asked: string; question: string; ms?: number }
   | { kind: "error"; error: string };
-type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: ChartMode; viaButton?: boolean };
+type Src = "nibrs" | "historical" | "rtci" | "shr";
+type Asking = { question: string; path: string[] };
+/**
+ * Choices made inside an answer that rerun it in place (Jeff, 2026-11-01), in the same slot, with no new question:
+ * all reporting agencies or only those that reported every month (P61), and the source.
+ */
+type Scope = { all: Asking; every: Asking; on: boolean };
+type Sources = { on: Src; list: { source: Src; asking: Asking; available: boolean }[] };
+type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: ChartMode; viaButton?: boolean;
+  scope?: Scope; sources?: Sources; loading?: boolean };
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const label = (v: unknown) => {
@@ -63,10 +72,42 @@ const exclusive = (r: object) => (r as { exclusive?: boolean }).exclusive === tr
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}${/[?.]$/.test(s) ? "" : "?"}`;
 
+const SRC_NAME: Record<Src, string> = { nibrs: "NIBRS", historical: "Historical", rtci: "Current Trends", shr: "Homicide Reports" };
+const LIVE: Src[] = ["nibrs"];
+// How the lead names another source's data, as a link.
+const SRC_DATA: Record<Src, string> = { nibrs: "the FBI's NIBRS data", historical: "Crime Index's historical data", rtci: "Crime Index's Current Trends data", shr: "the FBI's Supplementary Homicide Reports" };
+// The engine's role for a button, or (until the engine sends one) read from its label.
+type Roled = PreviewButton & { role?: "consistent-agencies" | "source"; source?: Src };
+const isScope = (b: Roled) => b.role === "consistent-agencies" || (!b.role && /reported every month/i.test(b.label));
+const sourceOfButton = (b: Roled): Src | null => (b.role === "source" ? b.source ?? null
+  : !b.role && b.question && /\baccording to NIBRS$/i.test(b.question) ? "nibrs" : null);
+/** The source an engine reply belongs to: the engine's, a route's, or (P01's NIBRS alternative) the official counts'. */
+function sourceOf(r: PreviewResponse): Src {
+  const own = (r as { source?: Src }).source;
+  if (own) return own;
+  if (r.kind === "decline" && r.reason.startsWith("route:")) return r.reason.slice(6) as Src;
+  if (r.kind === "decline" && r.buttons.some((b) => sourceOfButton(b) === "nibrs")) return "historical";
+  return "nibrs";
+}
+const scopeOf = (r: Reply | null, at: Asking): Scope | undefined => {
+  const b = r && (r.kind === "answer") ? (r.buttons as Roled[]).find(isScope) : undefined;
+  return b ? { all: at, every: { question: at.question, path: [...at.path, b.label] }, on: false } : undefined;
+};
+const sourcesOf = (r: Reply | null, at: Asking): Sources | undefined => {
+  if (!r || (r.kind !== "answer" && r.kind !== "decline")) return undefined;
+  const on = sourceOf(r);
+  const others = (r.buttons as Roled[]).flatMap((b) => {
+    const s = sourceOfButton(b);
+    return s && s !== on ? [{ source: s, asking: b.question ? { question: b.question, path: [] } : { question: at.question, path: [...at.path, b.label] }, available: LIVE.includes(s) }] : [];
+  });
+  return { on, list: [{ source: on, asking: at, available: LIVE.includes(on) }, ...others] };
+};
+/** The buttons left under an answer once the scope and source choices have moved into its control row. */
+const rest = (bs: PreviewButton[]) => (bs as Roled[]).filter((b) => !isScope(b) && !sourceOfButton(b));
+
 export default function AssistantClient() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
-  const [source, setSource] = useState("auto");
   const [busy, setBusy] = useState(false);
   const next = useRef(1);
   const turnsRef = useRef<Turn[]>([]);
@@ -115,6 +156,15 @@ export default function AssistantClient() {
   }, [turns.length]);
   turnsRef.current = turns;
   const box = useRef<HTMLInputElement>(null);
+  // The box's height, for the CSS that sizes each answer to the screen under it (--dock).
+  const dockEl = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = dockEl.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty("--dock", `${el.offsetHeight}px`));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [turns.length === 0]); // eslint-disable-line react-hooks/exhaustive-deps
   // "/" puts the cursor in the question box from anywhere on the page (not while typing in a field).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -128,41 +178,79 @@ export default function AssistantClient() {
     return () => removeEventListener("keydown", onKey);
   }, []);
 
+  async function fetchReply(question: string, path: string[], previous?: string | null): Promise<Reply> {
+    try {
+      const res = await fetch("/api/assistant-query", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, path, ...(previous ? { previous } : {}) }) });
+      const j = await res.json();
+      return "error" in j ? { kind: "error", error: j.error } : (j as Reply);
+    } catch (e) {
+      return { kind: "error", error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
   async function run(typed: string, opts: { question?: string; path?: string[]; previous?: string | null; chart?: ChartMode; viaButton?: boolean } = {}) {
     const id = next.current++;
     const question = opts.question ?? typed, path = opts.path ?? [];
     setTurns((ts) => [...ts, { id, typed, question, path, reply: null, chart: opts.chart, viaButton: opts.viaButton }]);
     scroll(id);
     setBusy(true);
-    let reply: Reply;
-    try {
-      const res = await fetch("/api/assistant-query", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, path, ...(opts.previous ? { previous: opts.previous } : {}) }) });
-      const j = await res.json();
-      reply = "error" in j ? { kind: "error", error: j.error } : (j as Reply);
-    } catch (e) {
-      reply = { kind: "error", error: e instanceof Error ? e.message : String(e) };
-    }
+    let reply = await fetchReply(question, path, opts.previous);
     // A presentation-only follow-up ("make it a bar chart") redraws the last answer; no data question is asked (P69).
     if (reply.kind === "presentation") {
       const last = [...turnsRef.current].reverse().find((t) => t.reply?.kind === "answer");
       if (last && last.reply) reply = { ...(last.reply as Extract<Reply, { kind: "answer" }>), ms: reply.ms };
     }
     const shown = reply;
-    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, reply: shown, question: "asked" in shown && shown.asked ? shown.asked : t.question } : t)));
+    setTurns((ts) => ts.map((t) => {
+      if (t.id !== id) return t;
+      const q = "asked" in shown && shown.asked ? shown.asked : t.question, at = { question: q, path };
+      return { ...t, reply: shown, question: q, scope: scopeOf(shown, at), sources: sourcesOf(shown, at) };
+    }));
     scroll(id);
     setBusy(false);
   }
+
+  // A scope or source choice reruns the answer in place: the same slot, the same question line, the new reply.
+  async function rerun(id: number, asking: Asking, change: (t: Turn, r: Reply) => Partial<Turn>) {
+    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, loading: true } : t)));
+    const reply = await fetchReply(asking.question, asking.path);
+    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...change(t, reply), reply, path: asking.path, loading: false } : t)));
+  }
+  const setScope = (t: Turn, on: boolean) => t.scope && t.scope.on !== on
+    && void rerun(t.id, on ? t.scope.every : t.scope.all, (u) => ({ scope: { ...u.scope!, on } }));
+  // The lead's own sentences for the agencies counted and the source (Jeff, 2026-11-01: part of the description, as
+  // links in plain words, not controls). Each link reruns the answer in place. Nothing is said about other sources when
+  // no other source answers the question.
+  const suggestions = (t: Turn): Suggestion[] => {
+    const out: Suggestion[] = [];
+    // Jeff's wording (2026-11-01); the number in the fixed set is read from the engine's answer sentence.
+    const every = t.reply?.kind === "answer" ? /\bthe ([\d,]+) agencies that reported every month\b/.exec(t.reply.text[0] ?? "")?.[1] : undefined;
+    if (t.scope) out.push(t.scope.on
+      ? { before: `This counts only the ${every ? `${every} ` : ""}Consistent Reporting Agencies that reported every month. `, link: "See all reporting agencies", after: " instead.", run: () => setScope(t, false) }
+      : { before: "Not every agency reported in every year, so part of this change could come from agencies starting or stopping reporting. To compare the same agencies across years, see only the ",
+          link: "Consistent Reporting Agencies", after: " that reported every month.", run: () => setScope(t, true) });
+    const others = t.sources ? t.sources.list.filter((s) => s.source !== t.sources!.on) : [];
+    if (t.reply?.kind === "decline") {
+      for (const o of others) out.push({ before: "The same question can be answered from ", link: SRC_DATA[o.source], after: ".", run: () => setSource(t, o.source) });
+    } else {
+      others.forEach((o, k) => out.push({ before: k ? "Or from " : `These are ${SRC_NAME[t.sources!.on]} figures from the FBI. The same question can also be answered from `,
+        link: SRC_DATA[o.source], after: ".", run: () => setSource(t, o.source) }));
+    }
+    return out;
+  };
+  const setSource = (t: Turn, s: Src) => {
+    const to = t.sources?.list.find((x) => x.source === s);
+    if (!to || t.sources!.on === s) return;
+    // A new source is a new answer: its own scope choice, if it offers one.
+    void rerun(t.id, to.asking, (u, r) => ({ sources: { ...u.sources!, on: s }, scope: scopeOf(r, to.asking),
+      question: "asked" in r && r.asked ? r.asked : to.asking.question }));
+  };
 
   // A typed question follows up on the last answer the engine read (P69).
   const lastAsked = () => [...turns].reverse().find((t) => t.reply && "asked" in t.reply && t.reply.kind !== "presentation")?.question ?? null;
   const ask = (text: string) => {
     if (!text.trim() || busy) return;
-    if (source !== "auto" && source !== "nibrs") {
-      const id = next.current++;
-      setTurns((ts) => [...ts, { id, typed: text, question: text, path: [], reply: { kind: "decline", reason: `route:${source}`, text: "This source is not available yet in the preview; it is added to the new engine before launch.", buttons: [], notBuilt: false, asked: text } }]);
-      return;
-    }
     // A chart-type command redraws the last answer here, with no call to the engine.
     const mode = chartCommand(text);
     const last = [...turnsRef.current].reverse().find((t) => t.reply?.kind === "answer");
@@ -196,19 +284,13 @@ export default function AssistantClient() {
     <form className="AskForm" onSubmit={(e) => { e.preventDefault(); ask(input); setInput(""); }}>
       <div className="AskRow">
         <input ref={box} value={input} onChange={(e) => setInput(e.target.value)} placeholder={start ? "Shoplifting in Memphis by month in 2024" : "Ask a question or a follow-up"} aria-label="Question" />
-        <label className="Src"><span className="k">Source</span>
-          <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Source">
-            <option value="auto">Auto</option><option value="nibrs">NIBRS</option><option value="current">Current Trends</option>
-            <option value="historical">Historical</option><option value="shr">Homicide Reports</option><option value="hate">Hate Crime</option>
-          </select>
-        </label>
         <button className="Ask" type="submit" disabled={busy}>Ask</button>
       </div>
       <p className="Hint">{hint}</p>
     </form>
   );
   const dock = (
-    <div className="Dock"><div className="DockIn">
+    <div className="Dock" ref={dockEl}><div className="DockIn">
       {form}
       <p className="fine">Answers come from FBI data and can be wrong. Check important figures against the FBI Crime Data Explorer.</p>
     </div></div>
@@ -228,20 +310,24 @@ export default function AssistantClient() {
       {start ? <StartPage form={form} onAsk={(q) => { setInput(""); ask(q); }} onFill={(q) => { setInput(q); window.scrollTo({ top: 0, behavior: "smooth" }); box.current?.focus(); }} /> : (<>
         {dock}
         <main className="Chat">
+          {/* One answer per screen (Jeff, 2026-11-01): each question and its answer fill the space under the box. */}
           {[...turns].reverse().map((t) => (
-            <div key={t.id}>
+            <section className="Turn" key={t.id} id={`turn${t.id}`}>
               <div className="Me" id={`me${t.id}`}><p>{t.typed}</p></div>
-              <div className="Re">{t.reply ? <ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })} /> : <div className="wait">Answering</div>}</div>
-            </div>
+              <div className={`Re${t.loading ? " loading" : ""}`}>{t.reply
+                ? <ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })}
+                    suggest={suggestions(t)} />
+                : <div className="wait">Answering</div>}</div>
+            </section>
           ))}
         </main>
-        <QuestionStrip items={strip} active={inView} onGo={(id) => document.getElementById(`me${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+        <QuestionStrip items={strip} active={inView} onGo={(id) => document.getElementById(`turn${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
       </>)}
     </div>
   );
 }
 
-function ReplyView({ t, onButton, onAsk }: { t: Turn; onButton: (b: PreviewButton) => void; onAsk: (q: string, previous: string | null) => void }) {
+function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: PreviewButton) => void; onAsk: (q: string, previous: string | null) => void; suggest: Suggestion[] }) {
   const r = t.reply!;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -285,11 +371,11 @@ function ReplyView({ t, onButton, onAsk }: { t: Turn; onButton: (b: PreviewButto
   if (r.kind === "decline") return (<>
     {r.reason.startsWith("route:") ? <p className="unavailable">Not available yet in this preview</p> : r.notBuilt ? <p className="unavailable">Not in this test build</p> : null}
     {read}
-    <p className="say">{r.text}</p>
-    <Choices buttons={r.buttons} onButton={onButton} primary />
+    <Lead lines={[r.text]} suggest={suggest} />
+    <Choices buttons={rest(r.buttons)} onButton={onButton} primary />
     {ms}
   </>);
-  return (<>{read}<AnswerView r={r} chartKind={t.chart} headline={!read} title={asked ?? t.typed} onButton={onButton} />{ms}</>);
+  return (<>{read}<AnswerView r={r} chartKind={t.chart} title={asked ?? t.typed} onButton={onButton} scoped={!!t.scope} suggest={suggest} />{ms}</>);
 }
 
 function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButton[]; onButton: (b: PreviewButton) => void; primary?: boolean }) {
@@ -306,7 +392,7 @@ function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButto
   );
 }
 
-function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton }: { r: Extract<PreviewResponse, { kind: "answer" }> & { title?: string; subtitle?: string | null; partialYear?: string | null }; chartKind?: ChartMode; headline: boolean; title: string; onButton: (b: PreviewButton) => void }) {
+function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, suggest }: { r: Extract<PreviewResponse, { kind: "answer" }> & { title?: string; subtitle?: string | null; partialYear?: string | null }; chartKind?: ChartMode; title: string; onButton: (b: PreviewButton) => void; scoped: boolean; suggest: Suggestion[] }) {
   // The chart title (from the engine's plan, Jeff's convention) names the answer on screen and in both exports; the
   // question as asked is the fallback for an answer without one (the historical file's).
   const title = r.title ?? asked, subtitle = r.subtitle ?? null;
@@ -333,7 +419,9 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
   const rows = firstKnown > 0 ? r.rows.slice(firstKnown) : r.rows;
   const numberCols = columns.filter((c) => rows.every((row) => row[c] === null || typeof row[c] === "number"));
   const groupCols = columns.filter((c) => !numberCols.includes(c));
-  let notes = text.slice(1);
+  const lead = composeLead(text, scoped);
+  // The notes keep the finer points: whatever the lead did not say.
+  let notes = text.filter((_, i) => !lead.used.has(i));
   if (firstKnown > 0) {
     // The engine's note for exactly the left-out run ("No report is known for January 2017 to May 2018: shown blank,
     // not zero.") would no longer be true; it becomes one sentence saying where the series starts.
@@ -347,12 +435,11 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
   if (rows.length === 1 && numberCols.length === 1) {
     const v = rows[0][numberCols[0]];
     const shown = typeof v === "number" ? v.toLocaleString("en-US", { maximumFractionDigits: 1 }) : null;
-    const s = text[0] ?? "";
-    const i = shown ? s.indexOf(shown) : -1;
     return (<>
-      <p className="say">{i >= 0 ? <>{s.slice(0, i)}<b>{shown}</b>{s.slice(i + shown!.length)}</> : s}</p>
+      {r.title ? <div className="ChartTitle"><h3>{r.title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div> : null}
+      <Lead lines={lead.lines} bold={shown} suggest={suggest} />
       <Notes lines={notes} />
-      <Choices buttons={r.buttons} onButton={onButton} />
+      <Choices buttons={rest(r.buttons)} onButton={onButton} />
     </>);
   }
 
@@ -369,6 +456,12 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
     kind = r.chart.type === "bar" ? "bar" : "line";
     series = r.chart.yAxis[0];
     points = rows.map((row) => ({ x: String(row[r.chart!.xAxis]), label: yearLabel(row[r.chart!.xAxis]), y: row[series] as number | null }));
+  } else if (rows.length > 1 && groupCols.length === 1 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
+    // A series without an engine chart (a state or national sum by year): time, so Line | Bar, never category bars.
+    options = ["line", "bar"];
+    kind = "bar";
+    series = numberCols[0];
+    points = rows.map((row) => ({ x: String(row[groupCols[0]]), label: yearLabel(row[groupCols[0]]), y: row[series] as number | null }));
   } else if (groupCols.length === 2 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
     // Time by category (no engine chart): one line per category over the periods, the first number column; at most
     // eight lines, in the engine's order (largest first in the first period), each keeping its color.
@@ -398,7 +491,7 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
   }
   // The chosen type, when this answer offers it; otherwise the default above.
   if (kind && chartKind && chartKind !== "table" && options.includes(chartKind)) kind = chartKind;
-  const breakdown = groupCols.length === 1 && !r.chart; // bars of categories, or their one 100% bar
+  const breakdown = groupCols.length === 1 && !r.chart && options[0] === "hbar"; // bars of categories, or their one 100% bar
   // A long breakdown: the largest categories are drawn (the engine sorts them, largest first); the table has all.
   const drawn = breakdown && points.length > MAX_BARS ? points.slice(0, MAX_BARS) : points;
   const sub = (text[0] ?? "").split(":")[0];
@@ -416,10 +509,10 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
   const source = [...text].reverse().find((t) => /^Source:/.test(t)) ?? "Source: FBI NIBRS.";
   return (<>
     {r.title ? <div className="ChartTitle"><h3>{r.title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div> : null}
-    {rows.length === 1 || (headline && !r.title) ? <p className="say">{text[0]}</p> : null}
+    <Lead lines={lead.lines} suggest={suggest} />
     <div className="ToolRow">
       {seg}
-      {/* Downloads (Jeff): small, right after the chart type. PNG is the chart alone; CSV is the table alone. */}
+      {/* Downloads (Jeff): small, at the right of the row. PNG is the chart alone; CSV is the table alone. */}
       <span className="Dl" role="group" aria-label="Download">
         <span className="lbl">Download</span>
         {charted ? <button type="button" onClick={() => void downloadPng(cap.current, title)}>PNG</button> : null}
@@ -455,7 +548,7 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
       </div>
     </div>
     <Notes lines={notes} />
-    <Choices buttons={r.buttons} onButton={onButton} />
+    <Choices buttons={rest(r.buttons)} onButton={onButton} />
   </>);
 }
 
@@ -503,6 +596,52 @@ async function downloadPng(el: HTMLDivElement | null, title: string) {
     el.classList.remove("exporting");
     el.style.width = "";
   }
+}
+
+type Suggestion = { before: string; link: string; after: string; run: () => void };
+const cap = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
+/**
+ * The lead (Jeff, 2026-11-01): one to three plain sentences under the title, on the page only (never in the chart, the
+ * table or either download). Until the engine sends its own lead, it is stitched from the engine's text:
+ *   1. what is shown: the answer sentence ("Memphis, Tennessee: carjacking offenses by clearance status, 2024."), recast
+ *      with the reporting agency line ("Reported by the Memphis Police Department.") into one sentence;
+ *   2. the main caveat, when the engine states one: categories that overlap, or agencies joining and leaving over the years;
+ * and the suggestions follow as buttons. The lines it uses are left out of the notes below.
+ */
+function composeLead(text: string[], scoped: boolean): { lines: string[]; used: Set<number> } {
+  const used = new Set([0]);
+  const ri = text.findIndex((l, i) => i > 0 && /^Reported by .+\.$/.test(l));
+  const reporter = ri > 0 ? text[ri].slice("Reported by ".length, -1) : null;
+  let first = text[0] ?? "";
+  const one = /^(.+?): ([\d,.]+) (.+) in (\d{4})\.$/.exec(first);
+  const many = /^(.+?): (.+?)(?: by (.+?))?, (\d{4})(?: to (\d{4}))?(, .+)?\.$/.exec(first);
+  if (one && reporter) {
+    first = `${cap(reporter)} reported ${one[2]} ${one[3]} in ${one[4]}.`;
+    used.add(ri);
+  } else if (many) {
+    const [, place, what, by, y0, y1, rest] = many;
+    const each = by && /^(?:year|quarter|month)$/.test(by) ? `, ${by} by ${by}` : by ? `, split by ${by}` : "";
+    first = `${cap(what)} ${reporter ? `reported by ${reporter}` : `in ${place}`} ${y1 ? `from ${y0} to ${y1}` : `in ${y0}`}${each}${rest ?? ""}.`;
+    if (reporter) used.add(ri);
+  }
+  // The fixed set is said in the lead's own sentence about it ("This counts only the 248 Consistent Reporting Agencies…").
+  const lines = [first.replace(/, counting only the [\d,]+ agencies that reported every month[^.]*\./, ".")];
+  const overlap = text.findIndex((l) => /counted once in each/.test(l));
+  const change = text.findIndex((l) => /^Which agencies report changed/.test(l));
+  if (overlap > 0) { lines.push(text[overlap]); used.add(overlap); }
+  // With the consistent-agencies choice, the lead's own sentence about it says this; the engine's goes.
+  else if (change > 0) { if (!scoped) lines.push(`${text[change].split(";")[0]}.`); used.add(change); }
+  return { lines, used };
+}
+
+function Lead({ lines, bold, suggest }: { lines: string[]; bold?: string | null; suggest: Suggestion[] }) {
+  const em = (s: string) => { const i = bold ? s.indexOf(bold) : -1; return i >= 0 ? <>{s.slice(0, i)}<b>{bold}</b>{s.slice(i + bold!.length)}</> : s; };
+  return (
+    <p className="Lead">
+      {lines.map((l, i) => <span key={i}>{i ? " " : ""}{em(l)}</span>)}
+      {suggest.map((s) => <span key={s.link}> {s.before}<button type="button" className="sug" onClick={s.run}>{s.link}</button>{s.after}</span>)}
+    </p>
+  );
 }
 
 function Notes({ lines }: { lines: string[] }) {
