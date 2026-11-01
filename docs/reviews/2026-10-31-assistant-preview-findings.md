@@ -35,16 +35,21 @@ to the shadow engine on the pinned build `20261028-test5`, local dev server only
    "Did shoplifting go up in Detroit from 2022 to 2023?" returns "The follow-up could not be placed in the previous
    question with certainty; ask the full question." It names its own crime and place, so it should be `new`. The page
    now offers "Ask ... as a new question" on every rewriter question back.
-5. **"go up" is not read**: asked on its own, the same question returns "I couldn't interpret 'go up in' ...". Change
+5. **Jeff, on the unread-phrase decline:** "I couldn't interpret "rolling over 12 months" in this question, so I
+   haven't answered it with a number that ignores it." is "not something we say"; the "so I haven't answered it with a
+   number that ignores it" part is not obvious to a reader. Plainer: say which words were not understood and ask for the
+   question another way. And **"rolling over 12 months" must be read**: rolling totals are needed (the engine already
+   computes rolling windows; this phrasing is not recognized).
+6. **"go up" is not read**: asked on its own, the same question returns "I couldn't interpret 'go up in' ...". Change
    questions in that form ("did X go up/down from A to B") are common.
-6. **"female" as a follow-up** returns `ask` with the fragment "Whether "female" means victims, offenders or
+7. **"female" as a follow-up** returns `ask` with the fragment "Whether "female" means victims, offenders or
    arrestees." and no options; it should be a question with three options (victims, offenders, arrestees).
-7. **"by year" after a one-year question** rewrites to "Shoplifting in Memphis by year in 2024": one row. Fine as a
+8. **"by year" after a one-year question** rewrites to "Shoplifting in Memphis by year in 2024": one row. Fine as a
    reading; the page shows it as the sentence.
-8. **LS labels against the engine** (sample of 14): LS-156 and LS-135 (possession or distribution arrests) labeled
+9. **LS labels against the engine** (sample of 14): LS-156 and LS-135 (possession or distribution arrests) labeled
    answer, engine declines; LS-060 and LS-113 labeled clarify, engine declines; LS-030 labeled decline, engine asks
    which place. For the label owners to check.
-9. **Clarify labels carry no description.** "Baltimore city, Maryland" and "Baltimore County, Maryland" are the whole
+10. **Clarify labels carry no description.** "Baltimore city, Maryland" and "Baltimore County, Maryland" are the whole
    buttons; the spec's mono description (city police; county police, does not include the city) needs the engine to
    say which agency type each option is.
 
@@ -55,6 +60,12 @@ to the shadow engine on the pinned build `20261028-test5`, local dev server only
 - A long breakdown drew every category and ran far below its table; the 15 largest are drawn, with a line saying the
   table has all.
 - Percent columns dropped a trailing zero ("13"); they now show one decimal ("13.0").
+- A series that starts with periods no agency reported now starts at the first reported period (Jeff): the leading
+  blank rows are left out of the chart, the table and the CSV, and the engine's note for that run becomes "No report is
+  known for January 2017 to May 2018, so the chart and table start at June 2018." (Houston shoplifting, 2017 to 2019).
+- Each answer with a table has "Download CSV" (the delivered columns and values) and "Download PNG" (the question, the
+  chart beside the full table, the notes with the source); a new answer scrolls its question to the top of the view.
+- The chart is drawn with SVG attributes, not stylesheet classes, so the PNG keeps its colors (it exported solid black).
 - After a button, the read line repeated the original question above an answer to a different one; it is now hidden
   after a button (the engine's headline says what was answered).
 

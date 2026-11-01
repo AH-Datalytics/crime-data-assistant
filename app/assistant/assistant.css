@@ -55,6 +55,11 @@
 .cda .wait { font-family: var(--mono); font-size: .75rem; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); }
 .cda .err { color: #9e1b1b; font-size: .95rem; }
 .cda .unavailable { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); margin: 0 0 .4rem; }
+.cda .acts { display: flex; gap: .5rem; margin-top: .9rem; }
+.cda .capTitle { display: none; }
+.cda .cap.exporting { padding: 1.5rem; background: #fff; }
+.cda .cap.exporting .capTitle { display: block; font-family: var(--display); font-weight: 600; font-size: 1.25rem; color: var(--darker); margin: 0 0 1rem; }
+.cda .cap.exporting .TableScroll { max-height: none; overflow: visible; }
 .cda .chartnote { font-size: .8rem; color: var(--light); margin: .5rem 0 0; }
 .cda .ms { font-family: var(--mono); font-size: .65rem; color: var(--index); margin-top: .6rem; }
 

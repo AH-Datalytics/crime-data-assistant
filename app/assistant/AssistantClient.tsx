@@ -47,6 +47,8 @@ export default function AssistantClient() {
   const [busy, setBusy] = useState(false);
   const next = useRef(1);
   const turnsRef = useRef<Turn[]>([]);
+  const [scrollTo, setScrollTo] = useState<{ id: number; n: number } | null>(null);
+  const scroll = (id: number) => setScrollTo((s) => ({ id, n: (s?.n ?? 0) + 1 }));
   turnsRef.current = turns;
   const box = useRef<HTMLInputElement>(null);
 
@@ -54,6 +56,7 @@ export default function AssistantClient() {
     const id = next.current++;
     const question = opts.question ?? typed, path = opts.path ?? [];
     setTurns((ts) => [...ts, { id, typed, question, path, reply: null, chart: opts.chart, viaButton: opts.viaButton }]);
+    scroll(id);
     setBusy(true);
     let reply: Reply;
     try {
@@ -71,6 +74,7 @@ export default function AssistantClient() {
     }
     const shown = reply;
     setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, reply: shown, question: "asked" in shown && shown.asked ? shown.asked : t.question } : t)));
+    scroll(id);
     setBusy(false);
   }
 
@@ -88,10 +92,12 @@ export default function AssistantClient() {
   };
   const click = (t: Turn, b: PreviewButton) => void run(b.label, { question: t.question, path: b.path, viaButton: true });
 
+  // The new question goes to the top of the view, with its answer below it, once the answer has rendered.
   useEffect(() => {
-    const last = turns[turns.length - 1];
-    if (last) document.getElementById(`me${last.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [turns.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!scrollTo) return;
+    const raf = requestAnimationFrame(() => document.getElementById(`me${scrollTo.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    return () => cancelAnimationFrame(raf);
+  }, [scrollTo]);
 
   return (
     <div className="cda">
@@ -186,7 +192,7 @@ function ReplyView({ t, onButton, onAsk }: { t: Turn; onButton: (b: PreviewButto
     <Choices buttons={r.buttons} onButton={onButton} primary />
     {ms}
   </>);
-  return (<>{read}<AnswerView r={r} chartKind={t.chart} headline={!read} onButton={onButton} />{ms}</>);
+  return (<>{read}<AnswerView r={r} chartKind={t.chart} headline={!read} title={asked ?? t.typed} onButton={onButton} />{ms}</>);
 }
 
 function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButton[]; onButton: (b: PreviewButton) => void; primary?: boolean }) {
@@ -203,12 +209,26 @@ function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButto
   );
 }
 
-function AnswerView({ r, chartKind, headline, onButton }: { r: Extract<PreviewResponse, { kind: "answer" }>; chartKind?: "line" | "bar"; headline: boolean; onButton: (b: PreviewButton) => void }) {
+function AnswerView({ r, chartKind, headline, title, onButton }: { r: Extract<PreviewResponse, { kind: "answer" }>; chartKind?: "line" | "bar"; headline: boolean; title: string; onButton: (b: PreviewButton) => void }) {
   const [hover, setHover] = useState<number | null>(null);
-  const { columns, rows, text } = r;
+  const cap = useRef<HTMLDivElement>(null);
+  const { columns, text } = r;
+  // A series that begins with periods no agency reported starts at the first reported one (owner, 2026-10-31): the
+  // leading blank rows are left out of the chart, the table and the export, and a note says where it starts.
+  const isSeries = !!r.chart?.xAxis;
+  const firstKnown = isSeries ? r.rows.findIndex((row) => columns.some((c) => typeof row[c] === "number")) : 0;
+  const rows = firstKnown > 0 ? r.rows.slice(firstKnown) : r.rows;
   const numberCols = columns.filter((c) => rows.every((row) => row[c] === null || typeof row[c] === "number"));
   const groupCols = columns.filter((c) => !numberCols.includes(c));
-  const notes = text.slice(1);
+  let notes = text.slice(1);
+  if (firstKnown > 0) {
+    // The engine's note for exactly the left-out run ("No report is known for January 2017 to May 2018: shown blank,
+    // not zero.") would no longer be true; it becomes one sentence saying where the series starts.
+    const x = r.chart!.xAxis, start = label(rows[0][x]);
+    const run = `${label(r.rows[0][x])}${firstKnown > 1 ? ` to ${label(r.rows[firstKnown - 1][x])}` : ""}`;
+    const replaced = notes.map((n) => (n === `No report is known for ${run}: shown blank, not zero.` ? `No report is known for ${run}, so the chart and table start at ${start}.` : n));
+    notes = replaced.some((n, i) => n !== notes[i]) ? replaced : [`The chart and table start at ${start}, the first period with a report.`, ...notes];
+  }
 
   // One number: the answer sentence only (owner, 2026-10-31), including a one-row series ("2024: 10,149").
   if (rows.length === 1 && numberCols.length === 1) {
@@ -239,6 +259,8 @@ function AnswerView({ r, chartKind, headline, onButton }: { r: Extract<PreviewRe
   const sub = (text[0] ?? "").split(":")[0];
 
   return (<>
+    <div className="cap" ref={cap}>
+    <p className="capTitle">{title}</p>
     {rows.length === 1 || headline ? <p className="say">{text[0]}</p> : null}
     <div className={`Answer${kind ? "" : " tableOnly"}`}>
       {kind ? (
@@ -258,9 +280,37 @@ function AnswerView({ r, chartKind, headline, onButton }: { r: Extract<PreviewRe
         </table>
       </div>
     </div>
-    <Notes lines={rows.length === 1 ? notes : text.slice(1)} />
+    <Notes lines={notes} />
+    </div>
+    <div className="acts">
+      <button type="button" className="Btn" onClick={() => downloadCsv(columns, rows, title)}>Download CSV</button>
+      <button type="button" className="Btn" onClick={() => void downloadPng(cap.current, title)}>Download PNG</button>
+    </div>
     <Choices buttons={r.buttons} onButton={onButton} />
   </>);
+}
+
+const fileName = (title: string, ext: string) => `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "answer"}.${ext}`;
+const save = (href: string, name: string) => { const a = document.createElement("a"); a.href = href; a.download = name; a.click(); };
+
+/** The table exactly as delivered: its columns, its values, a blank for an unknown number. */
+function downloadCsv(columns: string[], rows: Record<string, string | number | null>[], title: string) {
+  const q = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const lines = [columns.map(q).join(","), ...rows.map((row) => columns.map((c) => q(row[c] === null || row[c] === undefined ? "" : String(row[c]))).join(","))];
+  save(URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" })), fileName(title, "csv"));
+}
+
+/** The answer as a picture: the question, the chart beside the full table, and the notes with the source last. */
+async function downloadPng(el: HTMLDivElement | null, title: string) {
+  if (!el) return;
+  const { toPng } = await import("html-to-image");
+  el.classList.add("exporting");
+  try {
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    save(await toPng(el, { backgroundColor: "#ffffff", pixelRatio: 2 }), fileName(title, "png"));
+  } finally {
+    el.classList.remove("exporting");
+  }
 }
 
 function Notes({ lines }: { lines: string[] }) {
