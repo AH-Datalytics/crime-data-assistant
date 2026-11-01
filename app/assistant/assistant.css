@@ -43,7 +43,20 @@
 .cda .Re { padding-bottom: 1rem; transition: opacity .15s; }
 .cda .Re.loading { opacity: .45; pointer-events: none; }
 /* The lead: what the answer shows, its main caveat and a suggestion, in plain words under the title (no box) */
-.cda .Lead { font-size: 1rem; line-height: 1.5; color: var(--darker); margin: 0 0 .55rem; max-width: 62rem; }
+.cda .Lead { font-size: 1rem; line-height: 1.5; color: var(--darker); margin: 0 0 .85rem; max-width: 62rem; }
+.cda .Lead .ghost { visibility: hidden; }
+/* The data block: a square hairline in Crime Index's rule color, around the title, controls, chart, table and notes */
+.cda .Frame { border: 1px solid #E1E1D8; padding: 1rem 1.15rem; }
+.cda .Frame .notes { margin-bottom: 0; }
+.cda .Frame + .Choices { margin-top: .75rem; }
+@media (max-width: 760px) { .cda .Frame { padding: .6rem .65rem; } }
+/* How a new answer appears (?appear=type|fade|none, for Jeff to compare) */
+@keyframes cdaFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.cda .Lead.fade { animation: cdaFadeIn .4s ease-out both; }
+.cda .Body.appear-fade { animation: cdaFadeIn .4s ease-out .3s both; }
+.cda .Body.appear-type { transition: opacity .4s ease-out; }
+.cda .Body.appear-type.pending { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .cda .Lead.fade, .cda .Body.appear-fade { animation: none; } .cda .Body.appear-type { transition: none; } }
 .cda .Lead b { font-weight: 700; }
 .cda .Lead .sug { background: none; border: 0; padding: 0; font: inherit; color: var(--teal); text-decoration: underline; text-underline-offset: .15em; cursor: pointer; }
 .cda .Lead .sug:hover { color: var(--teal-dark); }

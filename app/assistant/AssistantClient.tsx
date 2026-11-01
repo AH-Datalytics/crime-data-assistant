@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { PreviewButton, PreviewResponse } from "@/lib/nibrs-shadow/preview";
 import AnswerChart, { type ChartKind, type Line, type Point } from "./AnswerChart";
 import Logo from "./Logo";
@@ -30,7 +30,9 @@ type Asking = { question: string; path: string[] };
 type Scope = { all: Asking; every: Asking; on: boolean };
 type Sources = { on: Src; list: { source: Src; asking: Asking; available: boolean }[] };
 type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: ChartMode; viaButton?: boolean;
-  scope?: Scope; sources?: Sources; loading?: boolean };
+  scope?: Scope; sources?: Sources; loading?: boolean;
+  /** The sources already spelled out earlier in the session when this answer came: said short here ("NIBRS"). */
+  short?: string[] };
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const label = (v: unknown) => {
@@ -74,6 +76,16 @@ const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}${/[?.]$/.tes
 
 const SRC_NAME: Record<Src, string> = { nibrs: "NIBRS", historical: "Historical", rtci: "Current Trends", shr: "Homicide Reports" };
 const LIVE: Src[] = ["nibrs"];
+/**
+ * Spelled out only the first time in a session (Jeff, 2026-11-01), then short. Until the engine marks the long form,
+ * these exact strings are matched; "to the FBI's National Incident-Based Reporting System (NIBRS)" becomes "to NIBRS".
+ */
+const ABBR = [
+  { abbr: "NIBRS", long: "the FBI's National Incident-Based Reporting System (NIBRS)" },
+  { abbr: "SHR", long: "the FBI's Supplementary Homicide Reports (SHR)" },
+];
+const Short = createContext<string[]>([]);
+const shorten = (s: string, short: string[]) => ABBR.reduce((t, a) => (short.includes(a.abbr) ? t.split(a.long).join(a.abbr) : t), s);
 // How the lead names another source's data, as a link.
 const SRC_DATA: Record<Src, string> = { nibrs: "the FBI's NIBRS data", historical: "Crime Index's historical data", rtci: "Crime Index's Current Trends data", shr: "the FBI's Supplementary Homicide Reports" };
 // The engine's role for a button, or (until the engine sends one) read from its label.
@@ -202,20 +214,34 @@ export default function AssistantClient() {
       if (last && last.reply) reply = { ...(last.reply as Extract<Reply, { kind: "answer" }>), ms: reply.ms };
     }
     const shown = reply;
+    if (shown.kind !== "error" && "asked" in shown && shown.asked) seen.current.set(JSON.stringify([shown.asked, path]), shown);
+    const short = [...spelled.current];
+    // Every NIBRS answer's lead names NIBRS; anything else is spelled out where the engine's text spells it out.
+    for (const a of ABBR) if ((a.abbr === "NIBRS" && shown.kind === "answer") || JSON.stringify(shown).includes(a.long)) spelled.current.add(a.abbr);
     setTurns((ts) => ts.map((t) => {
       if (t.id !== id) return t;
       const q = "asked" in shown && shown.asked ? shown.asked : t.question, at = { question: q, path };
-      return { ...t, reply: shown, question: q, scope: scopeOf(shown, at), sources: sourcesOf(shown, at) };
+      return { ...t, reply: shown, question: q, scope: scopeOf(shown, at), sources: sourcesOf(shown, at), short };
     }));
     scroll(id);
     setBusy(false);
   }
 
   // A scope or source choice reruns the answer in place: the same slot, the same question line, the new reply.
+  // Replies already fetched, by question and path, so going back to a view (all agencies, a source) is instant.
+  const seen = useRef(new Map<string, Reply>());
+  // The sources spelled out so far in this session.
+  const spelled = useRef(new Set<string>());
   async function rerun(id: number, asking: Asking, change: (t: Turn, r: Reply) => Partial<Turn>) {
-    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, loading: true } : t)));
-    const reply = await fetchReply(asking.question, asking.path);
-    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...change(t, reply), reply, path: asking.path, loading: false } : t)));
+    const key = JSON.stringify([asking.question, asking.path]);
+    let reply = seen.current.get(key);
+    if (!reply) {
+      setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, loading: true } : t)));
+      reply = await fetchReply(asking.question, asking.path);
+      if (reply.kind !== "error") seen.current.set(key, reply);
+    }
+    const shown = reply;
+    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...change(t, shown), reply: shown, path: asking.path, loading: false } : t)));
   }
   const setScope = (t: Turn, on: boolean) => t.scope && t.scope.on !== on
     && void rerun(t.id, on ? t.scope.every : t.scope.all, (u) => ({ scope: { ...u.scope!, on } }));
@@ -226,15 +252,18 @@ export default function AssistantClient() {
     const out: Suggestion[] = [];
     // Jeff's wording (2026-11-01); the number in the fixed set is read from the engine's answer sentence.
     const every = t.reply?.kind === "answer" ? /\bthe ([\d,]+) agencies that reported every month\b/.exec(t.reply.text[0] ?? "")?.[1] : undefined;
+    // Every month of the whole period asked, not of each year (Jeff): "every month from January 2021 through December 2025".
+    const p = t.reply?.kind === "answer" ? t.reply.period : null;
+    const months = p ? `every month from ${label(p.from.slice(0, 7))} through ${label(p.to.slice(0, 7))}` : "every month of the period";
     if (t.scope) out.push(t.scope.on
-      ? { before: `This counts only the ${every ? `${every} ` : ""}Consistent Reporting Agencies that reported every month. `, link: "See all reporting agencies", after: " instead.", run: () => setScope(t, false) }
+      ? { before: `This counts only the ${every ? `${every} ` : ""}Consistent Reporting Agencies that reported ${months}. `, link: "See all reporting agencies", after: " instead.", run: () => setScope(t, false) }
       : { before: "Not every agency reported in every year, so part of this change could come from agencies starting or stopping reporting. To compare the same agencies across years, see only the ",
-          link: "Consistent Reporting Agencies", after: " that reported every month.", run: () => setScope(t, true) });
+          link: "Consistent Reporting Agencies", after: ` that reported ${months}.`, run: () => setScope(t, true) });
     const others = t.sources ? t.sources.list.filter((s) => s.source !== t.sources!.on) : [];
     if (t.reply?.kind === "decline") {
       for (const o of others) out.push({ before: "The same question can be answered from ", link: SRC_DATA[o.source], after: ".", run: () => setSource(t, o.source) });
     } else {
-      others.forEach((o, k) => out.push({ before: k ? "Or from " : `These are ${SRC_NAME[t.sources!.on]} figures from the FBI. The same question can also be answered from `,
+      others.forEach((o, k) => out.push({ before: k ? "Or from " : "The same question can also be answered from ",
         link: SRC_DATA[o.source], after: ".", run: () => setSource(t, o.source) }));
     }
     return out;
@@ -315,8 +344,8 @@ export default function AssistantClient() {
             <section className="Turn" key={t.id} id={`turn${t.id}`}>
               <div className="Me" id={`me${t.id}`}><p>{t.typed}</p></div>
               <div className={`Re${t.loading ? " loading" : ""}`}>{t.reply
-                ? <ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })}
-                    suggest={suggestions(t)} />
+                ? <Short.Provider value={t.short ?? []}><ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })}
+                    suggest={suggestions(t)} /></Short.Provider>
                 : <div className="wait">Answering</div>}</div>
             </section>
           ))}
@@ -330,6 +359,7 @@ export default function AssistantClient() {
 function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: PreviewButton) => void; onAsk: (q: string, previous: string | null) => void; suggest: Suggestion[] }) {
   const r = t.reply!;
   const [editing, setEditing] = useState(false);
+  const [bodyIn, reveal] = useReveal();
   const [draft, setDraft] = useState("");
   // The answer's time is for testing only: the console, never the page (Jeff, 2026-11-01).
   useEffect(() => { if ("ms" in r && r.ms !== undefined) console.debug(`answer ${t.id}: ${(r.ms / 1000).toFixed(1)} s`); }, [r, t.id]);
@@ -370,8 +400,8 @@ function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: Pre
   if (r.kind === "decline") return (<>
     {r.reason.startsWith("route:") ? <p className="unavailable">Not available yet in this preview</p> : r.notBuilt ? <p className="unavailable">Not in this test build</p> : null}
     {read}
-    <Lead lines={[r.text]} suggest={suggest} />
-    <Choices buttons={rest(r.buttons)} onButton={onButton} primary />
+    <Lead lines={[r.text]} suggest={suggest} onDone={reveal} />
+    <div className={bodyClass(bodyIn)}><Choices buttons={rest(r.buttons)} onButton={onButton} primary /></div>
   </>);
   return (<>{read}<AnswerView r={r} chartKind={t.chart} title={asked ?? t.typed} onButton={onButton} scoped={!!t.scope} suggest={suggest} /></>);
 }
@@ -397,6 +427,7 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
   const yearLabel = (v: unknown) => (r.partialYear && String(v) === r.partialYear ? `${r.partialYear} (Partial)` : label(v));
   // The chart type: chosen with the Line | Bar control beside the chart, or preselected by a typed command.
   const [chartKind, setChartKind] = useState<ChartMode | undefined>(typedKind);
+  const [bodyIn, reveal] = useReveal();
   const [hover, setHover] = useState<number | null>(null);
   // Click a header to sort this answer's table by it; again to reverse. Blanks (unknown) always sort last.
   const [sort, setSort] = useState<{ col: string; dir: 1 | -1 } | null>(null);
@@ -417,7 +448,7 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
   const rows = firstKnown > 0 ? r.rows.slice(firstKnown) : r.rows;
   const numberCols = columns.filter((c) => rows.every((row) => row[c] === null || typeof row[c] === "number"));
   const groupCols = columns.filter((c) => !numberCols.includes(c));
-  const lead = composeLead(text, scoped);
+  const lead = composeLead(text, scoped, rows.length === 1 && numberCols.length === 1);
   // The notes keep the finer points: whatever the lead did not say.
   let notes = text.filter((_, i) => !lead.used.has(i));
   if (firstKnown > 0) {
@@ -434,10 +465,12 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     const v = rows[0][numberCols[0]];
     const shown = typeof v === "number" ? v.toLocaleString("en-US", { maximumFractionDigits: 1 }) : null;
     return (<>
-      {r.title ? <div className="ChartTitle"><h3>{r.title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div> : null}
-      <Lead lines={lead.lines} bold={shown} suggest={suggest} />
-      <Notes lines={notes} />
-      <Choices buttons={rest(r.buttons)} onButton={onButton} />
+      {/* The sentence is the answer; the title would only repeat it. */}
+      <Lead lines={lead.lines} bold={shown} suggest={suggest} onDone={reveal} />
+      <div className={bodyClass(bodyIn)}>
+        <Notes lines={notes} />
+        <Choices buttons={rest(r.buttons)} onButton={onButton} />
+      </div>
     </>);
   }
 
@@ -506,8 +539,12 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
   // The source line under the chart in its PNG (the engine's source statement, always its last line).
   const source = [...text].reverse().find((t) => /^Source:/.test(t)) ?? "Source: FBI NIBRS.";
   return (<>
+    <Lead lines={lead.lines} suggest={suggest} onDone={reveal} />
+    {/* The chart's block: its title (as in the PNG), the chart type and downloads, the chart beside the table, the notes. */}
+    <div className={bodyClass(bodyIn)}>
+    {/* A hairline frame around the data, apart from the sentence above it (Jeff, 2026-11-01, to try). */}
+    <div className="Frame">
     {r.title ? <div className="ChartTitle"><h3>{r.title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div> : null}
-    <Lead lines={lead.lines} suggest={suggest} />
     <div className="ToolRow">
       {seg}
       {/* Downloads (Jeff): small, at the right of the row. PNG is the chart alone; CSV is the table alone. */}
@@ -546,7 +583,9 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
       </div>
     </div>
     <Notes lines={notes} />
+    </div>
     <Choices buttons={rest(r.buttons)} onButton={onButton} />
+    </div>
   </>);
 }
 
@@ -598,32 +637,44 @@ async function downloadPng(el: HTMLDivElement | null, title: string) {
 
 type Suggestion = { before: string; link: string; after: string; run: () => void };
 const cap = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
+// Where every answer in this preview comes from (the NIBRS engine), as the lead says it.
+const VIA = "to the FBI's National Incident-Based Reporting System (NIBRS)";
 /**
- * The lead (Jeff, 2026-11-01): one to three plain sentences under the title, on the page only (never in the chart, the
- * table or either download). Until the engine sends its own lead, it is stitched from the engine's text:
- *   1. what is shown: the answer sentence ("Memphis, Tennessee: carjacking offenses by clearance status, 2024."), recast
- *      with the reporting agency line ("Reported by the Memphis Police Department.") into one sentence;
- *   2. the main caveat, when the engine states one: categories that overlap, or agencies joining and leaving over the years;
- * and the suggestions follow as buttons. The lines it uses are left out of the notes below.
+ * The lead (Jeff, 2026-11-01): plain sentences above the chart's title, on the page only (never in the chart, the table
+ * or either download). Nothing analytical and no figures picked out: the first sentence says what the data is, in Jeff's
+ * pattern "These are [what] [who] reported to [source], [when], [how it's counted]."; then the factual caveats;
+ * then the offers (Consistent Reporting Agencies, another source). A single number's sentence is the answer, and the
+ * title is left out instead. INTERIM, until the engine sends its own lead: read from the engine's answer sentence
+ * ("Tennessee: carjacking offenses by year, 2021 to 2025, summed over the agencies that reported each year.") and the
+ * reporting agency line ("Reported by the Memphis Police Department."), giving "These are carjacking offenses
+ * Tennessee law enforcement agencies reported to the FBI's National Incident-Based Reporting System (NIBRS) each year
+ * from 2021 to 2025, added up across the agencies that reported."; the caveat is the overlap of categories, or (without
+ * the consistent-agencies sentence) agencies joining and leaving. The lines it uses are left out of the notes below; the
+ * source line stays.
  */
-function composeLead(text: string[], scoped: boolean): { lines: string[]; used: Set<number> } {
+function composeLead(text: string[], scoped: boolean, single: boolean): { lines: string[]; used: Set<number> } {
   const used = new Set([0]);
+  const lines: string[] = [];
+  const first = text[0] ?? "";
   const ri = text.findIndex((l, i) => i > 0 && /^Reported by .+\.$/.test(l));
   const reporter = ri > 0 ? text[ri].slice("Reported by ".length, -1) : null;
-  let first = text[0] ?? "";
+  if (ri > 0) used.add(ri);
   const one = /^(.+?): ([\d,.]+) (.+) in (\d{4})\.$/.exec(first);
   const many = /^(.+?): (.+?)(?: by (.+?))?, (\d{4})(?: to (\d{4}))?(, .+)?\.$/.exec(first);
-  if (one && reporter) {
-    first = `${cap(reporter)} reported ${one[2]} ${one[3]} in ${one[4]}.`;
-    used.add(ri);
+  const agencies = (place: string) => (place === "United States" ? "law enforcement agencies across the United States" : `${place} law enforcement agencies`);
+  if (single) {
+    lines.push(one ? `${cap(reporter ?? agencies(one[1]))} reported ${one[2]} ${one[3]} ${VIA} in ${one[4]}.` : first);
   } else if (many) {
     const [, place, what, by, y0, y1, rest] = many;
-    const each = by && /^(?:year|quarter|month)$/.test(by) ? `, ${by} by ${by}` : by ? `, split by ${by}` : "";
-    first = `${cap(what)} ${reporter ? `reported by ${reporter}` : `in ${place}`} ${y1 ? `from ${y0} to ${y1}` : `in ${y0}`}${each}${rest ?? ""}.`;
-    if (reporter) used.add(ri);
+    // A period breakdown is part of when ("each year from 2021 to 2025"); a category is part of how it's counted.
+    const each = by && /^(?:year|quarter|month)$/.test(by) ? `each ${by} ` : "";
+    const when = `${each}${y1 ? `from ${y0} to ${y1}` : `in ${y0}`}`;
+    const how = [
+      ...(by && !each ? [`broken down by ${by}`] : []),
+      ...(rest && /^, summed over the agencies that reported/.test(rest) ? ["added up across the agencies that reported"] : []),
+    ];
+    lines.push(`These are ${what} ${reporter ?? agencies(place)} reported ${VIA} ${when}${how.map((h) => `, ${h}`).join("")}.`);
   }
-  // The fixed set is said in the lead's own sentence about it ("This counts only the 248 Consistent Reporting Agencies…").
-  const lines = [first.replace(/, counting only the [\d,]+ agencies that reported every month[^.]*\./, ".")];
   const overlap = text.findIndex((l) => /counted once in each/.test(l));
   const change = text.findIndex((l) => /^Which agencies report changed/.test(l));
   if (overlap > 0) { lines.push(text[overlap]); used.add(overlap); }
@@ -632,17 +683,68 @@ function composeLead(text: string[], scoped: boolean): { lines: string[]; used: 
   return { lines, used };
 }
 
-function Lead({ lines, bold, suggest }: { lines: string[]; bold?: string | null; suggest: Suggestion[] }) {
+/**
+ * How a new answer appears, for Jeff to compare (local switch, 2026-11-01): ?appear=type streams the lead word by word
+ * (about a second in all), then fades in the chart's block; ?appear=fade fades the lead in (0.4 s), then the block 0.3 s later; ?appear=none
+ * (the default) shows it all at once. Reduced motion always shows it all at once.
+ */
+type Appear = "type" | "fade" | "none";
+let appearMode: Appear | null = null;
+function appear(): Appear {
+  if (appearMode) return appearMode;
+  if (typeof window === "undefined") return "none";
+  const m = new URLSearchParams(location.search).get("appear");
+  appearMode = matchMedia("(prefers-reduced-motion: reduce)").matches ? "none" : m === "type" || m === "fade" ? m : "none";
+  return appearMode;
+}
+/** Whether the chart's block is shown yet: at once, except while a typed lead is still streaming. */
+function useReveal(): [boolean, () => void] {
+  const [bodyIn, setBodyIn] = useState(() => appear() !== "type");
+  return [bodyIn, () => setBodyIn(true)];
+}
+const bodyClass = (bodyIn: boolean) => `Body appear-${appear()}${bodyIn ? "" : " pending"}`;
+
+type Tok = { t: string; s?: Suggestion };
+function Lead({ lines: given, bold, suggest: offered, onDone }: { lines: string[]; bold?: string | null; suggest: Suggestion[]; onDone?: () => void }) {
+  const short = useContext(Short);
+  const lines = given.map((l) => shorten(l, short));
+  const suggest = offered.map((s) => ({ ...s, before: shorten(s.before, short), link: shorten(s.link, short), after: shorten(s.after, short) }));
+  // Whole words (a figure such as "1,004" is one word, so it never shows half typed), and each link whole.
+  const toks: Tok[] = [];
+  const words = (s: string) => { for (const w of s.split(/(?<=\s)/)) if (w) toks.push({ t: w }); };
+  lines.forEach((l, i) => words(`${i ? " " : ""}${l}`));
+  for (const s of suggest) { words(` ${s.before}`); toks.push({ t: s.link, s }); words(s.after); }
+  const n = toks.length;
+  const [k, setK] = useState(() => (appear() === "type" ? 0 : Infinity));
+  useEffect(() => {
+    if (appear() !== "type") return;
+    let i = 0, over = false;
+    const finish = () => {
+      if (over) return;
+      over = true; clearInterval(id);
+      removeEventListener("pointerdown", finish, true); removeEventListener("keydown", finish, true);
+      setK(Infinity); onDone?.();
+    };
+    // About a second for the whole lead, never slower than 60 ms a word; any click or key completes it.
+    const id = setInterval(() => { i += 1; if (i >= n) finish(); else setK(i); }, Math.min(60, 1000 / Math.max(1, n)));
+    addEventListener("pointerdown", finish, true); addEventListener("keydown", finish, true);
+    return () => { over = true; clearInterval(id); removeEventListener("pointerdown", finish, true); removeEventListener("keydown", finish, true); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!n) return null;
   const em = (s: string) => { const i = bold ? s.indexOf(bold) : -1; return i >= 0 ? <>{s.slice(0, i)}<b>{bold}</b>{s.slice(i + bold!.length)}</> : s; };
+  const tok = (x: Tok, i: number) => (x.s ? <button key={i} type="button" className="sug" onClick={x.s.run}>{x.t}</button> : <span key={i}>{em(x.t)}</span>);
   return (
-    <p className="Lead">
-      {lines.map((l, i) => <span key={i}>{i ? " " : ""}{em(l)}</span>)}
-      {suggest.map((s) => <span key={s.link}> {s.before}<button type="button" className="sug" onClick={s.run}>{s.link}</button>{s.after}</span>)}
+    <p className={`Lead${appear() === "fade" ? " fade" : ""}`}>
+      {toks.slice(0, Math.min(k, n)).map(tok)}
+      {/* The words still to come hold their place, so nothing below moves while the lead is typed. */}
+      {k < n ? <span className="ghost" aria-hidden="true">{toks.slice(k).map((x, i) => tok(x, k + i))}</span> : null}
     </p>
   );
 }
 
-function Notes({ lines }: { lines: string[] }) {
+function Notes({ lines: given }: { lines: string[] }) {
+  const short = useContext(Short);
+  const lines = given.map((l) => shorten(l, short));
   if (!lines.length) return null;
   return <div className="notes">{lines.map((l, i) => <p key={i} className={i === lines.length - 1 && /^Source:/.test(l) ? "src" : ""}>{l}</p>)}</div>;
 }
