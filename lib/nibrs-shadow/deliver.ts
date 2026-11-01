@@ -143,6 +143,10 @@ export function runs(periods: string[]): string {
   return out.join(", ");
 }
 export const fmt = (n: number) => n.toLocaleString("en-US");
+/** A grouping's column; a category grouping says whether its categories are exclusive (sum to the total). */
+const groupingColumn = (g: NibrsPlan["groupings"][number], header: string): ResultColumn =>
+  g.dimension.startsWith("time.") || g.dimension.startsWith("geo.") ? { binding: { kind: "grouping", dimension: g.dimension }, header }
+    : { binding: { kind: "grouping", dimension: g.dimension }, header, exclusive: !g.multiValue };
 /** A rate as shown: one decimal, with thousands separators ("1,459.7"; assistant preview findings, 2026-10-31). */
 export const fmtRate = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 /** "1 carjacking offense", not "1 carjacking offenses": the unit word in the singular for a count of one. */
@@ -238,7 +242,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const tableCols: ResultColumn[] = [];
   for (const g of plan.groupings) {
     labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? CATEGORY[g.dimension]?.header ?? g.dimension;
-    tableCols.push({ binding: { kind: "grouping", dimension: g.dimension }, header: labels[`grouping:${g.dimension}`] });
+    tableCols.push(groupingColumn(g, labels[`grouping:${g.dimension}`]));
   }
   tableCols.push({ binding: { kind: "statistic", as: count }, header });
   if (beside) tableCols.push({ binding: { kind: "statistic", as: beside }, header: labels[`statistic:${beside}`] });
@@ -378,7 +382,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
   const tableCols: ResultColumn[] = [];
   for (const g of plan.groupings) {
     labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? g.dimension;
-    tableCols.push({ binding: { kind: "grouping", dimension: g.dimension }, header: labels[`grouping:${g.dimension}`] });
+    tableCols.push(groupingColumn(g, labels[`grouping:${g.dimension}`]));
   }
   for (const s of stats) {
     labels[`statistic:${s.as}`] = `${s.what[0].toUpperCase()}${s.what.slice(1)}`;

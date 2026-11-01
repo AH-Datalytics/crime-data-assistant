@@ -887,4 +887,22 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   }
 }
 
+// Jeff (2026-11-01): stacked and 100% charts only when honest. A category grouping says whether its categories are
+// exclusive (sum to the total): one per kind. Time and place groupings carry no flag.
+{
+  const flag = (q: string) => as(ask(q), "answer").delivered.table.columns.filter((c) => c.binding.kind === "grouping").map((c) => [(c.binding as { dimension: string }).dimension, "exclusive" in c ? c.exclusive : "none"]);
+  assert.deepEqual(flag("Simple assault victims in Detroit by sex in 2023"), [["victim.sex", true]]);
+  assert.deepEqual(flag("Aggravated assault victims in Memphis in 2024 by race"), [["victim.race", true]]);
+  assert.deepEqual(flag("Robberies in Memphis in 2024 by weapon"), [["offense_weapon.weapon", false]]);                 // a crime can have several weapons
+  assert.deepEqual(flag("Aggravated assault victims in Memphis in 2024 by offender race"), [["offender.race", false]]);  // an incident's several offenders (P49)
+  assert.deepEqual(flag("Simple assault victims in Detroit in 2023 by relationship to the offender"), [["victim_offender.relationship", false]]);
+  assert.deepEqual(flag("Shoplifting in Memphis by month in 2024"), [["time.month", "none"]]);
+  // Exclusive exactly when the overlap note is not given.
+  for (const q of ["Robberies in Memphis in 2024 by weapon", "Simple assault victims in Detroit by sex in 2023"]) {
+    const a = as(ask(q), "answer");
+    const cat = a.delivered.table.columns.find((c) => c.binding.kind === "grouping" && "exclusive" in c) as { exclusive: boolean };
+    assert.equal(cat.exclusive, !a.delivered.answerStatements.includes("categories_overlap"), q);
+  }
+}
+
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

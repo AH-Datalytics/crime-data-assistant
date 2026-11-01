@@ -21,7 +21,14 @@ import type { AbsolutePeriod, NibrsPlan, Source } from "./plan";
 
 /** A user-facing column, bound to exactly one grouping or one statistic of the plan. */
 export type ResultColumn =
-  | { binding: { kind: "grouping"; dimension: string }; header: string }
+  /**
+   * `exclusive` (category groupings only, Jeff 2026-11-01: stacked and 100% charts only when honest): true when each
+   * counted unit falls in exactly one category, so the categories sum to the total; false for a multi-valued grouping
+   * (a crime with several weapons or locations, an incident's several offenders), whose categories can add up to more.
+   * Taken from the layer: a one-to-many dimension must be grouped with `multiValue: "each_value"` (P3). Absent for
+   * time and place groupings.
+   */
+  | { binding: { kind: "grouping"; dimension: string }; header: string; exclusive?: boolean }
   | { binding: { kind: "statistic"; as: string }; header: string };
 
 /** What users see and export: grouping values and numbers. A null number is unknown and shows blank. */
