@@ -192,8 +192,8 @@ assert.ok(sqls.at(-1)!.includes("WHEN v.age IN ('NN', 'NB', 'BB') THEN 'Under 18
 const bySex = as(ask("Simple assault victims in Detroit by sex in 2023"), "answer");
 assert.deepEqual(bySex.delivered.table.columns.map((c) => c.header), ["Victim sex", "Simple assault victims", "Share of all simple assault victims (%)"]);
 assert.deepEqual(bySex.delivered.table.rows, [["Female", 30, 60], ["Male", 20, 40], ["Unknown", null, null]]);
-assert.ok(bySex.delivered.text.includes("Each share is that category's part of all simple assault victims in 2023."));
-assert.match(bySex.delivered.text.find((t) => /^No total is established/.test(t))!, /Unknown/);
+assert.ok(bySex.delivered.text.includes("Each share is that category's part of all simple assault victims in 2023: a percent, not a rate per resident."));
+assert.ok(bySex.delivered.text.includes("Shown blank, not zero, because reporting isn't complete: Unknown."));
 assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], null]);
 assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").kind === "answer", false, "two-way breakdowns are not built");
 // Weapons: multi-valued, with the overlap sentence; carjacking by offense has one location (not multi-valued, D18).
@@ -843,20 +843,27 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     }
     for (const x of opts) { check(x.label, where); check(x.question, where); if (depth < 3) walk(x.continuation, `${where} > ${x.label}`, depth + 1); }
   };
+  const noNextStep: string[] = [];
+  const nextStep = (o: ShadowOutcome, where: string) => {
+    if (o.kind === "decline" && !o.notBuilt && !o.alternative && !/\bfor example\b|\bask for\b|\bname the\b|\btry\b/i.test(o.explanation)) noNextStep.push(`${where}: ${o.explanation}`);
+  };
   UNMAPPED.length = 0;
   for (const c of all) {
     const turns: [string, () => ShadowOutcome][] = [...(c.setup ?? []).map((s): [string, () => ShadowOutcome] => [`${c.id} setup`, () => ask(s.question)]),
       [c.id, () => (c.setup?.length && c.rewrite !== undefined ? (shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps) as ShadowOutcome) : ask(c.question))]];
     for (const [where, run] of turns) {
-      try { walk(run(), where, 0); } catch (e) { errors.push(`${where}: ${String(e).slice(0, 160)}`); }
+      try { const o = run(); walk(o, where, 0); nextStep(o, where); } catch (e) { errors.push(`${where}: ${String(e).slice(0, 160)}`); }
     }
   }
-  // Questions no case asks: the preview findings' and the Codex review's inputs.
+  // Questions no case asks: the preview findings' and the Codex review's inputs, and the coordinator's weak declines.
   for (const q of ["Rape clearances by type by victim in Memphis in 2024", "Robberies where a firearm was seized in Memphis in 2024", "Burglaries in Memphis in 2023",
     "Shoplifting and carjackings combined in Memphis in 2024", "aggravated assault victims by weapon in Detroit in 2023", "murders rolling over 12 months in Detroit in 2024",
-    "fentanyl offenses in Detroit in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", "Simple assault victims in Detroit by race and sex in 2023"]) {
-    try { walk(ask(q), q, 0); } catch (e) { errors.push(`${q}: ${String(e).slice(0, 160)}`); }
+    "fentanyl offenses in Detroit in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", "Simple assault victims in Detroit by race and sex in 2023",
+    "Shoplifting in Memphis in 2024 and in 2025", "Which Texas cities had the biggest increase in robberies in 2024?", "robberies in Denver compared with peer agencies in 2024"]) {
+    try { const o = ask(q); walk(o, q, 0); nextStep(o, q); } catch (e) { errors.push(`${q}: ${String(e).slice(0, 160)}`); }
   }
+  // Jeff's rule (coordinator, 2026-11-01): every decline offers a concrete next step, a button or a working example.
+  assert.deepEqual(noNextStep, [], "every decline offers a button or an example");
   assert.ok(seen.size > 300, `the walk covers the strings (${seen.size})`);
   assert.deepEqual(errors, [], "no case question throws");
   assert.deepEqual(bad, [], "no engine words reach a user");
@@ -914,4 +921,10 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   }
 }
 
+// Jeff (Savant lesson, 2026-11-01): a percent says it is not a rate per resident, where it could be taken for one.
+{
+  const text = (q: string) => as(ask(q), "answer").delivered.text.join(" / ");
+  assert.match(text("Simple assault victims in Detroit by sex in 2023"), /part of all simple assault victims in 2023: a percent, not a rate per resident\./);
+  assert.doesNotMatch(text("Shoplifting in Memphis in 2024"), /rate per resident/);
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

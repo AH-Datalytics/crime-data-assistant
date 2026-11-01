@@ -81,10 +81,65 @@ function askInstead(question: string, parts: Part[], year: number): ShadowOption
   // A linking word the unread words ended with stays ("rolling over 12 months in" leaves "in": "murders in Detroit").
   for (const [a, b] of spans) t = `${t.slice(0, a)} ${/\b(in|for|of|from|during)\s*$/i.exec(question.slice(a, b))?.[1] ?? ""} ${t.slice(b)}`;
   t = t.replace(/\s+([,?.!])/g, "$1").replace(/,\s*,/g, ",").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
+  // A joining word left dangling by the removal goes too ("in 2024 and in 2025" without "in 2025").
+  t = t.replace(/\s+(?:and|or)(?=\s*[?.!]?$)/i, "").replace(/\s+(?:and|or)\s+(?:and|or)\s+/gi, " and ").trim();
   if (!t || t.toLowerCase() === question.trim().toLowerCase()) return null;
   const r = readQuestion(t, year);
   if (r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") || matchNibrsType(r.ledger).kind !== "spec") return null;
   return { label: `Ask instead: "${t}"`, question: t };
+}
+/** A question the reader reads completely, every word, as a complete question (no data is read). */
+function readsWhole(t: string, year: number): boolean {
+  const r = readQuestion(t, year);
+  return !r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") && matchNibrsType(r.ledger).kind === "spec";
+}
+const tidy = (t: string) => t.replace(/\s+([,?.!])/g, "$1").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
+/** A plain example of a question that works, for a decline with no button (Jeff's rule: every decline a next step). */
+export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
+
+/**
+ * Jeff's rule (coordinator, 2026-11-01): every decline offers a concrete next step, a button where one is possible and
+ * otherwise an example that works. Applied to a decline that has no button yet, in this order; each button's question
+ * is read completely by the reader first (no data is read) and runs only when chosen:
+ *   - two periods ("in 2024 and in 2025"): a question back, one button per period, each the question with that period;
+ *   - a ranking by a change ("the biggest increase in"): the ranking by the numbers ("the most");
+ *   - otherwise the simplest form of the question: its crime, its place and its period (or the latest complete year);
+ *   - and when no button reads, an example in the text.
+ */
+function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps, asked: string): ShadowOutcome {
+  if (o.kind !== "decline" || o.notBuilt) return o;
+  const year = Number(deps.release.lastMonth.slice(0, 4));
+  const question = ledger.question;
+  const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
+  const periods = own.filter((p) => p.concept === "period" && p.span);
+  if (periods.length > 1 && /would be a second one/.test(o.explanation)) {
+    const options = periods.map((keep) => {
+      let t = question;
+      // Each other period goes with the "and"/"or" that joined it, on whichever side.
+      for (const p of [...periods].filter((x) => x !== keep).sort((a, b) => b.span[0] - a.span[0])) {
+        const left = t.slice(0, p.span[0]), right = t.slice(p.span[1]);
+        t = /,?\s(?:and|or)\s*$/i.test(left) ? `${left.replace(/,?\s(?:and|or)\s*$/i, " ")}${right}` : `${left} ${right.replace(/^\s*,?\s*(?:and|or)\b/i, "")}`;
+      }
+      t = tidy(t);
+      return readsWhole(t, year) ? { label: `"${t}"`, question: t } : null;
+    });
+    if (options.every(Boolean)) return { kind: "clarify", about: "which period", question, options: options as ShadowOption[] };
+  }
+  const level = question.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
+  if (level !== question && readsWhole(level, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
+  // The two specific steps above come first; a button the decline already has (the question without the words the
+  // reader couldn't use) is kept over the generic ones below.
+  if (o.alternative) return o;
+  const text =(c: string) => own.find((p) => p.concept === c && p.state === "recognized")?.text.trim();
+  const measure = text("measure"), place = text("place");
+  if (measure && place) {
+    const period = text("period") ?? `in ${Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1)}`;
+    const simple = tidy(`${measure} in ${place} ${/^(?:in|from|since|during)\b/i.test(period) ? period : `in ${period}`}`);
+    // Compared with what the user typed (the reader's text may have dropped words it set aside, such as a column).
+    if (simple.toLowerCase() !== asked.trim().replace(/[?.!]+$/, "").toLowerCase() && readsWhole(simple, year))
+      return { ...o, alternative: { label: `Ask instead: "${simple}"`, question: simple } };
+  }
+  return /\bfor example\b/i.test(o.explanation) ? o : { ...o, explanation: `${o.explanation} ${EXAMPLE}` };
 }
 export type ShadowOutcome =
   /** `buttons`: continuations offered beside the answer (P61's consistent-reporters view). */
@@ -134,7 +189,8 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 }
 
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
-  return fromLedger(readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger, deps);
+  const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
+  return withNextStep(fromLedger(ledger, deps), ledger, deps, question);
 }
 
 /**
