@@ -86,7 +86,7 @@ Prompt version `rw-1`.
    - The 50-rewrite sample is drawn uniformly from every accepted pair-level output, all kinds, with a fixed seed.
    - LS-403..LS-426 are regression evidence, not unseen data: the prompt states lessons learned on that work.
    - Wrong actions, unverified cases and cache misses are reported apart from wrong answers.
-5. **Budget enforced before dispatch.**
+5. **Budget enforced before dispatch.** After Codex full review 2, each attempt is also reserved and saved before it is sent. An attempt whose cost is unknown stays counted as unresolved against the budget, across resumes.
    - The output is capped at 512 tokens, thinking included.
    - Each attempt, retries included, is sent only if the spend so far plus its worst case fits within $4.50. The worst case is the input estimated high plus the full output cap at the output price.
    - Requests go one at a time.
