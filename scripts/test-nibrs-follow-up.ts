@@ -101,6 +101,9 @@ asked(rw("Make it per capita", "Show counts instead"));
 // The sweep of the real turns: a complete new question after an incomplete previous turn still runs as itself.
 assert.equal(q(rw("where is it", "How many murders in Chicago in 2024")), "How many murders in Chicago in 2024");
 assert.equal(q(rw("show me springfield murders", "Missouri")), "show me springfield, Missouri murders");
+// Codex review of the rule fixes, 1: "instead" still replaces; "what about" after an ambiguous city asks.
+assert.equal(q(rw("show me springfield murders", "Missouri instead")), "show me Missouri murders");
+asked(rw("show me springfield murders", "what about Missouri?"));
 asked(rw("murders in Chicago in 2024", "Illinois"));
 assert.equal(q(rw("Shoplifting in Missouri in 2024", "Kansas")), "Shoplifting in Kansas in 2024");
 // Every placed rewrite is certain; there is no "probably".

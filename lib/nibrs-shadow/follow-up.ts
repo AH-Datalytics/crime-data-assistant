@@ -271,10 +271,11 @@ export const deterministicRewriter: FollowUpRewriter = {
             { label: `${newPlace} only`, question: clean(`${prev.slice(0, pw.at)}${newPlace}${prev.slice(pw.at + pw.text.length)}`.replace(/\s+combined\b/i, "")) },
             { label: `Add ${newPlace}; show all ${n} separately`, question: clean(withNew.replace(/\s+combined\b/i, "")) },
             ...(combinedPrev ? [{ label: `Add ${newPlace} to the combined total`, question: clean(withNew) }] : [])]);
-        } else if (/^state:/.test(String(t.places[0].value)) && !adding && !/^state:|^national/.test(String(prevParts.places[0].value))) {
-          // A bare state after a city (real conversations: "Missouri" answering "which Springfield?"): it names the
-          // city's state when the city was ambiguous; after a city already placed, which is meant is asked.
-          if (/^ambiguous:/.test(String(prevParts.places[0].value)) && !newYear)
+        } else if (/^state:/.test(String(t.places[0].value)) && !adding && !/\binstead\b/i.test(raw) && !/^state:|^national/.test(String(prevParts.places[0].value))) {
+          // A state after a city, with no "instead" (which replaces, as before; Codex review of the rule fixes, 1): a bare
+          // state names an ambiguous city's state (real conversations: "Missouri" answering "which Springfield?"); any
+          // other wording ("what about Missouri"), a year, or a city already placed asks which is meant.
+          if (bare !== null && /^ambiguous:/.test(String(prevParts.places[0].value)) && !newYear)
             q = `${q.slice(0, pw.at)}${pw.text}, ${newPlace}${q.slice(pw.at + pw.text.length)}`;
           else return ask(`Whether ${newPlace} means the state or ${pw.text} in ${newPlace}.`);
         } else q = `${q.slice(0, pw.at)}${newPlace}${q.slice(pw.at + pw.text.length)}`;

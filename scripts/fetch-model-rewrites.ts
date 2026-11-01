@@ -74,6 +74,10 @@ async function main() {
   if (!key) { console.error("GEMINI_API_KEY is not set in this process; stopping."); process.exit(2); }
   const pairs = JSON.parse(fs.readFileSync(arg("--pairs")!, "utf8")) as Pair[];
   const cachePath = arg("--cache") ?? CACHE_PATH;
+  // Real conversations hold question and answer text: their cache must be named, and outside the repository, before
+  // any request or write (Codex review of the rule fixes, 2). The synthetic default is unchanged.
+  const inRepo = !path.relative(path.resolve(__dirname, ".."), path.resolve(cachePath)).startsWith("..");
+  if (WITH_ANSWER && (!arg("--cache") || inRepo)) { console.error("--with-answer needs --cache <path outside the repository>; stopping."); process.exit(4); }
   const budget = Number(arg("--budget", "4.50")), limit = Number(arg("--limit", "1000000"));
   const binding = bindingOf(SYSTEM);
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });
