@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PreviewButton, PreviewResponse } from "@/lib/nibrs-shadow/preview";
-import AnswerChart, { type Point } from "./AnswerChart";
+import AnswerChart, { type Line, type Point } from "./AnswerChart";
 import Logo from "./Logo";
 
 /**
@@ -37,6 +37,9 @@ const label = (v: unknown) => {
 const cell = (v: unknown, pct = false) => (v === null || v === undefined ? "" : typeof v === "number"
   ? v.toLocaleString("en-US", pct ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : { maximumFractionDigits: 1 }) : label(v));
 const MAX_BARS = 15;
+// The dataviz skill's validated categorical order (references/palette.md, light mode): a category keeps its slot.
+const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"];
+const PERIOD = /^\d{4}(-\d{2}|-?Q[1-4])?$/;
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}${/[?.]$/.test(s) ? "" : "?"}`;
 
@@ -244,11 +247,26 @@ function AnswerView({ r, chartKind, headline, title, onButton }: { r: Extract<Pr
   }
 
   // The chart: the engine's time series, or a bar chart drawn from a breakdown's table (one category, first number column).
-  let kind: "line" | "bar" | "hbar" | null = null, points: Point[] = [], series = "";
+  let kind: "line" | "bar" | "hbar" | null = null, points: Point[] = [], series = "", lines: Line[] | undefined, moreLines = 0;
+  // Which chart point a table row belongs to: its own index, or (time by category) its period's.
+  let pointOf = (i: number) => i;
   if (r.chart && r.chart.xAxis && r.chart.yAxis?.[0]) {
     kind = chartKind ?? (r.chart.type === "bar" ? "bar" : "line");
     series = r.chart.yAxis[0];
     points = rows.map((row) => ({ x: String(row[r.chart!.xAxis]), label: label(row[r.chart!.xAxis]), y: row[series] as number | null }));
+  } else if (groupCols.length === 2 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
+    // Time by category (no engine chart): one line per category over the periods, the first number column; at most
+    // eight lines, in the engine's order (largest first in the first period), each keeping its color.
+    const [tc, cc] = groupCols;
+    series = numberCols[0];
+    const periods = [...new Set(rows.map((row) => String(row[tc])))];
+    const cats = [...new Set(rows.map((row) => String(row[cc])))];
+    points = periods.map((pd) => ({ x: pd, label: label(pd), y: null }));
+    lines = cats.slice(0, SERIES.length).map((c, k) => ({ name: c, color: SERIES[k],
+      ys: periods.map((pd) => { const hit = rows.find((row) => String(row[tc]) === pd && String(row[cc]) === c); return hit ? (hit[series] as number | null) : null; }) }));
+    kind = periods.length > 1 ? "line" : null;
+    pointOf = (i: number) => periods.indexOf(String(rows[i][tc]));
+    if (cats.length > SERIES.length) moreLines = cats.length;
   } else if (rows.length > 1 && groupCols.length === 1 && numberCols.length >= 1) {
     kind = chartKind === "line" ? "line" : "hbar";
     series = numberCols[0];
@@ -265,16 +283,17 @@ function AnswerView({ r, chartKind, headline, title, onButton }: { r: Extract<Pr
     <div className={`Answer${kind ? "" : " tableOnly"}`}>
       {kind ? (
         <div>
-          <AnswerChart kind={kind} points={drawn} series={series} sub={sub} hover={hover} onHover={setHover} />
+          <AnswerChart kind={kind} points={drawn} series={series} sub={sub} hover={hover} onHover={setHover} lines={lines} />
+          {moreLines ? <p className="chartnote">The {SERIES.length} largest of {moreLines} are drawn; the table lists all.</p> : null}
           {drawn.length < points.length ? <p className="chartnote">The {drawn.length} largest of {points.length} are drawn; the table lists all {points.length}.</p> : null}
         </div>
       ) : null}
       <div className="TableScroll">
         <table className="T">
-          <thead><tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+          <thead><tr>{columns.map((c) => <th key={c} className={numberCols.includes(c) ? "" : "txt"}>{c}</th>)}</tr></thead>
           <tbody>{rows.map((row, i) => (
-            <tr key={i} className={hover === i ? "hl" : ""} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-              {columns.map((c) => <td key={c}>{cell(row[c], /\(%\)/.test(c))}</td>)}
+            <tr key={i} className={hover !== null && pointOf(i) === hover ? "hl" : ""} onMouseEnter={() => setHover(pointOf(i))} onMouseLeave={() => setHover(null)}>
+              {columns.map((c) => <td key={c} className={numberCols.includes(c) ? "" : "txt"}>{cell(row[c], /\(%\)/.test(c))}</td>)}
             </tr>
           ))}</tbody>
         </table>

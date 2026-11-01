@@ -8,7 +8,9 @@ import { useEffect, useRef, useState } from "react";
  * breakdown, one bar per category in the table's order (spec: breakdown charts). `hover` links it to the table.
  */
 export type Point = { x: string; label: string; y: number | null };
-type Props = { kind: "line" | "bar" | "hbar"; points: Point[]; series: string; sub: string; hover: number | null; onHover: (i: number | null) => void };
+/** One line of a time-by-category chart: its category, its color, and a value per period (aligned to `points`). */
+export type Line = { name: string; color: string; ys: (number | null)[] };
+type Props = { kind: "line" | "bar" | "hbar"; points: Point[]; series: string; sub: string; hover: number | null; onHover: (i: number | null) => void; lines?: Line[] };
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 // Drawn with SVG attributes, not stylesheet classes, so a PNG export (html-to-image) keeps every color.
@@ -23,7 +25,7 @@ function ticks(max: number): number[] {
   return out.length > 1 ? out : [0, step];
 }
 
-export default function AnswerChart({ kind, points, series, sub, hover, onHover }: Props) {
+export default function AnswerChart({ kind, points, series, sub, hover, onHover, lines }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(0);
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function AnswerChart({ kind, points, series, sub, hover, onHover 
     return () => ro.disconnect();
   }, []);
 
-  const vals = points.map((p) => p.y).filter((v): v is number => v !== null);
+  const vals = (lines ? lines.flatMap((l) => l.ys) : points.map((p) => p.y)).filter((v): v is number => v !== null);
   const max = vals.length ? Math.max(...vals) : 1;
   const tk = ticks(max || 1), yMax = tk[tk.length - 1];
   const n = points.length;
@@ -92,9 +94,19 @@ export default function AnswerChart({ kind, points, series, sub, hover, onHover 
         <g>
           {tk.map((t) => <g key={t}><text x={L - 10} y={y(t) + 5} textAnchor="end" {...T14}>{fmt(t)}</text><line x1={L - 6} y1={y(t)} x2={L} y2={y(t)} stroke={C.axis} /></g>)}
           <line x1={L} y1={T} x2={L} y2={H - B} stroke={C.axis} />
-          {xl.map((i) => <text key={i} x={x(i)} y={H - B + 22} textAnchor={monthly && !oneYear ? "start" : "middle"} {...T14}>{xText(i)}</text>)}
+          {xl.map((i) => <text key={i} x={x(i)} y={H - B + 22} textAnchor={monthly && !oneYear ? (x(i) > W - R - 40 ? "end" : "start") : x(i) > W - R - 24 ? "end" : "middle"} {...T14}>{xText(i)}</text>)}
         </g>
-        {kind === "bar"
+        {lines
+          ? <>
+              {lines.map((l) => {
+                const parts: string[] = []; let pen = false;
+                l.ys.forEach((v, i) => { if (v === null) { pen = false; return; } parts.push(`${pen ? "L" : "M"}${x(i)},${y(v)}`); pen = true; });
+                return <path key={l.name} fill="none" stroke={l.color} strokeWidth={2} d={parts.join("")} />;
+              })}
+              {hover !== null ? <line stroke="#575757" strokeWidth={1} x1={x(hover)} y1={T} x2={x(hover)} y2={H - B} /> : null}
+              {hover !== null ? lines.map((l) => (l.ys[hover] === null ? null : <circle key={l.name} fill="#fff" stroke={l.color} strokeWidth={2} r={4} cx={x(hover)} cy={y(l.ys[hover] as number)} />)) : null}
+            </>
+          : kind === "bar"
           ? points.map((p, i) => (p.y === null ? null : <rect key={i} fill={C.mark} opacity={hover !== null && hover !== i ? 0.35 : 1} x={x(i) - bw / 2} y={y(p.y)} width={bw} height={y(0) - y(p.y)} rx={2} />))
           : <>
               {segs.map((s, k) => <path key={`a${k}`} fill="url(#cda-area)" stroke="none" d={`M${s[0][0]},${y(0)} L${s.map((q) => q.join(",")).join("L")} L${s[s.length - 1][0]},${y(0)} Z`} />)}
@@ -109,11 +121,14 @@ export default function AnswerChart({ kind, points, series, sub, hover, onHover 
   const p = hover !== null ? points[hover] : null;
   return (
     <div className="Chart" ref={box}>
+      {lines && lines.length > 1 ? <ul className="Legend">{lines.map((l) => <li key={l.name}><i className="sw" style={{ background: l.color }} />{l.name}</li>)}</ul> : null}
       {svg}
       {p && kind !== "hbar" ? (
-        <div className="Tip" style={{ left: tipX + 304 > W ? tipX - 304 : tipX + 16, top: 24 }}>
+        <div className={`Tip${lines ? " wide" : ""}`} style={{ left: tipX + (lines ? 368 : 304) > W ? tipX - (lines ? 368 : 304) : tipX + 16, top: 24 }}>
           <div className="head"><div className="t">{p.label}</div><div className="s">{sub}</div></div>
-          <div className="row"><span>{series}</span><span className="v">{p.y === null ? "No report" : fmt(p.y)}</span></div>
+          {lines
+            ? lines.map((l) => <div className="row" key={l.name}><span><i className="sw" style={{ background: l.color }} />{l.name}</span><span className="v">{l.ys[hover!] === null ? "None known" : fmt(l.ys[hover!] as number)}</span></div>)
+            : <div className="row"><span>{series}</span><span className="v">{p.y === null ? "No report" : fmt(p.y)}</span></div>}
         </div>
       ) : null}
     </div>
