@@ -37,6 +37,13 @@ export function agencyHeaderSql(root: string, states: string[], years: number[])
     FROM read_parquet('${root.replace(/'/g, "''")}/agency/data.parquet'), unnest(by_year) AS t(u)
     WHERE u.state_abbr IN (${list(states)}) AND u.data_year IN (${years.map(Number).join(", ")}) ORDER BY ori, u.data_year`;
 }
+/**
+ * The population covered as shown (Jeff 2026-11-01): a percent, "≥" when some agencies have no FBI population, and
+ * never above 100%. The agencies' FBI populations are their own estimates and can sum a little above the Crime Index
+ * estimate for the place (Tennessee 2021: 6,995,842 against 6,968,351, city and county agencies only): that is all the
+ * residents, shown as 100.0%. The share computed stays in the answer's metadata for checking.
+ */
+export const coveredText = (share: number, lower: boolean) => `${lower ? "≥" : ""}${Math.min(share, 100).toFixed(1)}%`;
 export const universeStates = (p: NibrsPlan["geography"]["places"][number]) => (p.kind === "national" ? NATION : p.kind === "state" ? headerCodes(p.code) : []);
 
 /** `noPopulation`: agencies counted with no FBI population (coverage is then a lower bound, and no rate is given). */
@@ -128,7 +135,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   type Cell = { value: number | string | null; status: string };
   // Jeff (2026-11-01): the agencies and the population they cover are table columns, not prose; a lower bound (some
   // agencies have no FBI population) is marked "≥" in its cell. P80: the fixed set is "Consistent Reporting Agencies".
-  const covered = (share: number, lower: number): Cell => ({ value: `${lower ? "≥" : ""}${pc(share)}`, status: "VALUE" });
+  const covered = (share: number, lower: number): Cell => ({ value: coveredText(share, lower > 0), status: "VALUE" });
   const CRA = "Consistent Reporting Agencies";
   const view = (every: boolean): { lines: string[]; rows: Row[]; agencies: Cell[]; coverage: Cell[]; population: Cell[] } => {
     const lines: string[] = [];
@@ -164,7 +171,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     lines.push(...lowerNote(byYear.some((y) => (every ? y.every.noPopulation : y.noPopulation))));
     const conflicted = byYear.filter((y) => y.conflicts);
     if (conflicted.length) lines.push(`Agency-months whose reports disagree with the agency's record of which months it reported are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
-    if (!every) lines.push(`Which agencies report changed over these years; the ${CRA} button keeps one set of ${fmt(meta.everyAgencies)} agencies.`);
+    if (!every) lines.push(`Which agencies report changed over these years; the ${CRA} keep one set of ${fmt(meta.everyAgencies)} agencies.`);
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
       agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),
       coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),

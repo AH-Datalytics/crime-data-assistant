@@ -143,6 +143,12 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     });
     if (options.every(Boolean)) return { kind: "clarify", about: "which period", question, options: options as ShadowOption[] };
   }
+  // P83 (Jeff 2026-11-01): gun violence stays declined (P31), with the same question as gun crime offered, every
+  // condition kept (Codex coverage review 01.1: a cohort, "that were cleared", "by quarter").
+  if (o.explanation === UNDEFINED_TERM["gun violence"]) {
+    const gun = tidy(said.replace(/\bgun\s+violence\b/i, (m) => (/^G/.test(m) ? "Gun crime" : "gun crime")).replace(/[?.!]+$/, ""));
+    if (gun !== tidy(said.replace(/[?.!]+$/, "")) && keeps(gun, said, year, ["undefinedTerm", "composite"])) return { ...o, alternative: { label: `Ask instead: "${gun}"`, question: gun } };
+  }
   const level = said.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
   if (level !== said && keeps(level, said, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
   // The nearest question that works (coordinator, 2026-11-01), the user's breakdown kept:
@@ -318,11 +324,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
   const term = flags(ledger0).undefinedTerm;
   if (term) {
-    // P83 (Jeff 2026-11-01): gun violence stays declined (P31), with gun crime offered for the same question.
-    // The reader's text lowercases the phrase: a question that starts with it keeps its capital.
-    const gunCrime = term === "gun violence" ? ledger0.question.replace(/\bgun\s+violence\b/i, "gun crime").replace(/[?.!\s]+$/, "").replace(/^gun crime/, "Gun crime") : null;
-    return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term], gunCrime && gunCrime !== ledger0.question.replace(/[?.!\s]+$/, "") && readsWhole(gunCrime, Number(deps.release.lastMonth.slice(0, 4)))
-      ? { alternative: { label: `Ask instead: "${gunCrime}"`, question: gunCrime } } : {});
+    // P83: gun crime is offered in withNextStep, from the words asked (the reader's text has set conditions aside).
+    return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term]);
   }
   // P29: "by <group>" asks about offenders. "By men and women" is answered by the offenders' sexes (P49, below); any
   // other group (one sex, juveniles) is declined, never answered as victims.

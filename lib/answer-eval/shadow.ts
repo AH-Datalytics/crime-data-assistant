@@ -20,6 +20,7 @@ import type { Case, Meaning } from "./case";
 import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type PlanView, type Release } from "./compare";
 import { RETURN_A } from "../nibrs-shadow/places";
 import { readQuestion } from "../nibrs-shadow/reading";
+import { coveredText } from "../nibrs-shadow/state-sum";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
 /** The slice: its designed group, the replay cases inside it, and replay cases next to it (action and reason only). */
@@ -1098,7 +1099,7 @@ function coverageColumnsMatch(o: Extract<ShadowOutcome, { kind: "answer" }>, wan
   const ia = cols.indexOf(agenciesHeader), ic = cols.indexOf("Population covered");
   const rows = o.delivered.table.rows;
   return ia >= 0 && ic >= 0 && rows.length === want.length
-    && want.every((w, i) => rows[i][ia] === w.agencies && rows[i][ic] === `${w.lower ? "≥" : ""}${w.share.toFixed(1)}%`);
+    && want.every((w, i) => rows[i][ia] === w.agencies && rows[i][ic] === coveredText(w.share, w.lower));
 }
 function stateSumDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[]): { diffs: Diff[]; values: Values } {
   const every = o.plan.coverage.cohort === "same_agencies";
@@ -1119,6 +1120,12 @@ function stateSumDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer
   }
   const meta = o.stateSum;
   if (!meta) diffs.push({ field: `${prefix}coverage`, expected: "the disclaimer's figures", actual: "none carried", kind: "material" });
+  // The columns shown, whatever the label asks (Codex coverage review 01.2): each row's agencies and population covered
+  // are the answer's own figures, in either view.
+  else if (!coverageColumnsMatch(o, meta.years.map((y) => every
+    ? { agencies: meta.years.length > 1 ? meta.everyAgencies : y.every.agencies, share: y.every.share, lower: y.every.noPopulation > 0 }
+    : { agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 }), every ? "Consistent Reporting Agencies" : "Agencies reporting"))
+    diffs.push({ field: `${prefix}coverage columns`, expected: "the answer's agencies and population covered", actual: JSON.stringify(o.delivered.table.rows).slice(0, 160), kind: "material" });
   else for (const x of expected.filter((c) => c.view === "meta")) {
     const [what, y] = x.key.split("|");
     const yr = meta.years.find((m) => m.year === Number(y));

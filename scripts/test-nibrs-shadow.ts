@@ -9,6 +9,7 @@ import fs from "node:fs";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } from "../lib/nibrs-shadow/places";
+import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { scoreShadow, sliceValues } from "../lib/answer-eval/shadow";
@@ -967,5 +968,15 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(gv.alternative?.question, "Gun crime in Memphis in 2024");
   assert.ok(as(ask("Car break-ins in Memphis in 2024"), "answer").delivered.text.includes("Car break-ins are counted as theft from motor vehicles."));
   assert.ok(!as(ask("Theft from motor vehicles in Memphis in 2024"), "answer").delivered.text.some((t) => /Car break-ins/.test(t)));
+  // Codex coverage review 01.1: the gun-crime button keeps every condition asked, or is not offered.
+  const gvc = as(ask("Gun violence in Texas in 2024, only agencies that reported every month"), "decline");
+  assert.ok(!gvc.alternative || /only agencies that reported every month/.test(gvc.alternative.question ?? ""), JSON.stringify(gvc.alternative));
+  // Never more than 100% covered (Jeff 2026-11-01): the agencies' own population estimates can sum past the place's.
+  assert.equal(coveredText(100.1, false), "100.0%");
+  assert.equal(coveredText(84.06, true), "≥84.1%");
+  // Codex coverage review 01.2: the button's coverage columns are checked too, whatever the label asks.
+  const tampered = { ...txCj, buttons: txCj.buttons!.map((x) => ({ ...x, continuation: { ...(x.continuation as Extract<ShadowOutcome, { kind: "answer" }>),
+    delivered: { ...(x.continuation as Extract<ShadowOutcome, { kind: "answer" }>).delivered, table: { ...(x.continuation as Extract<ShadowOutcome, { kind: "answer" }>).delivered.table, rows: [[252, 999, "99.9%"]] } } } })) };
+  assert.equal(scoreShadow(sumLabel, tampered as ShadowOutcome, r, ctx, sumV(307)).result!.values, "mismatch");
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
