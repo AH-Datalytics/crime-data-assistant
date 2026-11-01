@@ -36,10 +36,12 @@ export function parseRequest(body: unknown): { question: string; path: string[] 
 export type PreviewButton = { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built" | "question"; note?: string; question?: string };
 export type PreviewResponse =
   /**
-   * `exclusive` (Jeff 2026-11-01: stacked and 100% charts only when honest): present when the table has a category
-   * grouping; true when every category grouping's categories sum to the total for every statistic shown.
+   * Jeff 2026-11-01: stacked and 100% charts only when honest. Present when the table has a category grouping:
+   * `exclusive`, true when the categories sum to the primary count's total (the charted measure); `exclusiveByColumn`,
+   * the same for each number column by header (the incidents beside a count, P66, can overlap when the primary count
+   * does not). A column is stacked only when its own entry is true.
    */
-  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[]; exclusive?: boolean }
+  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[]; exclusive?: boolean; exclusiveByColumn?: Record<string, boolean> }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }
   | { kind: "decline"; reason: string; text: string; buttons: PreviewButton[]; notBuilt: boolean };
 
@@ -74,9 +76,12 @@ export function toPreview(o: ShadowOutcome, path: string[] = []): PreviewRespons
   const chart = o.kind === "answer" ? o.delivered.chart : null;
   const columns = table.columns.map((c) => c.header);
   const rows = table.rows.map((r) => Object.fromEntries(columns.map((c, i) => [c, r[i] ?? null])));
-  const flags = table.columns.flatMap((c) => ("exclusive" in c && c.exclusive !== undefined ? [c.exclusive] : []));
+  const flags = table.columns.flatMap((c) => (c.binding.kind === "grouping" && c.exclusive !== undefined ? [c.exclusive] : []));
+  const exclusive = flags.length ? flags.every(Boolean) : undefined;
+  const byColumn = exclusive === undefined ? undefined
+    : Object.fromEntries(table.columns.filter((c) => c.binding.kind === "statistic").map((c) => [c.header, exclusive && (c.exclusive ?? true)]));
   return {
-    kind: "answer", columns, rows, text, period: o.period, ...(flags.length ? { exclusive: flags.every(Boolean) } : {}),
+    kind: "answer", columns, rows, text, period: o.period, ...(exclusive === undefined ? {} : { exclusive, exclusiveByColumn: byColumn }),
     chart: chart ? { type: chart.kind, xAxis: chart.x, yAxis: chart.y, title: text[0] ?? "" } : null,
     buttons: o.kind === "answer" ? (o.buttons ?? []).map((x) => button(x, path)) : [],
   };

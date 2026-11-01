@@ -144,16 +144,19 @@ export function runs(periods: string[]): string {
   return out.join(", ");
 }
 export const fmt = (n: number) => n.toLocaleString("en-US");
-/**
- * A grouping's column; a category grouping says whether its categories are exclusive (sum to the total) for every
- * statistic in the table. The incidents beside a count (P66) can fall in several categories of a grouping below the
- * incident (one incident with a female and a male victim), so those are not exclusive; a grouping of the incident
- * itself (its clearance) gives each incident one category, so they still are.
- */
-const groupingColumn = (plan: NibrsPlan, g: NibrsPlan["groupings"][number], header: string): ResultColumn =>
+/** A grouping's column; a category grouping says whether its categories are exclusive for the primary count. */
+const groupingColumn = (g: NibrsPlan["groupings"][number], header: string): ResultColumn =>
   g.dimension.startsWith("time.") || g.dimension.startsWith("geo.") ? { binding: { kind: "grouping", dimension: g.dimension }, header }
-    : { binding: { kind: "grouping", dimension: g.dimension }, header,
-      exclusive: !g.multiValue && (!incidentsBeside(plan) || DRAFT_LAYER.dimension(g.dimension)?.entity === "incident") };
+    : { binding: { kind: "grouping", dimension: g.dimension }, header, exclusive: !g.multiValue };
+/**
+ * The incidents beside a count (P66) by category: they sum to their total only when every category grouping is
+ * exclusive and of the incident itself (clearance); below the incident, one incident can have victims in several
+ * categories (Codex review 01, P1). Null with no category grouping.
+ */
+const incidentsExclusive = (plan: NibrsPlan): boolean | null => {
+  const cats = plan.groupings.filter((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo."));
+  return cats.length ? cats.every((g) => !g.multiValue && DRAFT_LAYER.dimension(g.dimension)?.entity === "incident") : null;
+};
 /** A rate as shown: one decimal, with thousands separators ("1,459.7"; assistant preview findings, 2026-10-31). */
 export const fmtRate = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 /** "1 carjacking offense", not "1 carjacking offenses": the unit word in the singular for a count of one. */
@@ -249,10 +252,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const tableCols: ResultColumn[] = [];
   for (const g of plan.groupings) {
     labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? CATEGORY[g.dimension]?.header ?? g.dimension;
-    tableCols.push(groupingColumn(plan, g, labels[`grouping:${g.dimension}`]));
+    tableCols.push(groupingColumn(g, labels[`grouping:${g.dimension}`]));
   }
   tableCols.push({ binding: { kind: "statistic", as: count }, header });
-  if (beside) tableCols.push({ binding: { kind: "statistic", as: beside }, header: labels[`statistic:${beside}`] });
+  const besideExclusive = beside ? incidentsExclusive(plan) : null;
+  if (beside) tableCols.push({ binding: { kind: "statistic", as: beside }, header: labels[`statistic:${beside}`], ...(besideExclusive === null ? {} : { exclusive: besideExclusive }) });
   if (share) tableCols.push({ binding: { kind: "statistic", as: share }, header: labels[`statistic:${share}`] });
   const ip = columns.indexOf("period");
   const at = (name: string) => columns.indexOf(name);
@@ -389,7 +393,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
   const tableCols: ResultColumn[] = [];
   for (const g of plan.groupings) {
     labels[`grouping:${g.dimension}`] = GROUPING_HEADER[g.dimension] ?? g.dimension;
-    tableCols.push(groupingColumn(plan, g, labels[`grouping:${g.dimension}`]));
+    tableCols.push(groupingColumn(g, labels[`grouping:${g.dimension}`]));
   }
   for (const s of stats) {
     labels[`statistic:${s.as}`] = `${s.what[0].toUpperCase()}${s.what.slice(1)}`;

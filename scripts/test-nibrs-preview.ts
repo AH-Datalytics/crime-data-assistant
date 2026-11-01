@@ -19,6 +19,11 @@ function stub(sql: string): unknown[][] {
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
   for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
+  // With the incidents beside the count (P66): a clearance breakdown, or cleared victims by sex.
+  if (/cats AS/.test(sql) && /_incidents"/.test(sql)) {
+    const [a, b] = /'cleared'/.test(sql) && !/sex/.test(sql) ? ["cleared", "none"] : ["F", "M"];
+    return [[a, 14, "VALUE", 12, "VALUE", 0.6, "VALUE"], [b, 10, "VALUE", 9, "VALUE", 0.4, "VALUE"]];
+  }
   if (/cats AS/.test(sql)) return [["F", 30, "VALUE", 0.6, "VALUE"], ["M", 20, "VALUE", 0.4, "VALUE"]];
   if (/AS period/.test(sql)) return months.map((m) => [m, 7, "VALUE"]);
   return [[7 * months.length, "VALUE"]];
@@ -44,7 +49,13 @@ assert.ok(bySex.kind === "answer" && bySex.chart === null && bySex.rows[0]["Vict
 assert.ok(bySex.kind === "answer" && bySex.exclusive === true);
 const byWeapon = toPreview(shadowAnswer("Robberies in Memphis in 2024 by weapon", deps));
 assert.ok(byWeapon.kind === "answer" && byWeapon.exclusive === false);
-assert.ok(monthly.kind === "answer" && !("exclusive" in monthly));
+assert.ok(monthly.kind === "answer" && !("exclusive" in monthly) && !("exclusiveByColumn" in monthly));
+assert.ok(bySex.kind === "answer" && Object.values(bySex.exclusiveByColumn ?? {}).every((v) => v === true));
+// Jeff's example: a clearance breakdown stacks, Incidents column included; cleared victims by sex stack only the count.
+const carjack = toPreview(shadowAnswer("Carjacking offenses in Memphis by clearance status in 2024", deps));
+assert.ok(carjack.kind === "answer" && carjack.exclusive === true && carjack.exclusiveByColumn?.Incidents === true, JSON.stringify(carjack).slice(0, 300));
+const clearedSex = toPreview(shadowAnswer("Simple assault victims in Detroit by sex in 2023 that were cleared", deps));
+assert.ok(clearedSex.kind === "answer" && clearedSex.exclusive === true && clearedSex.exclusiveByColumn?.Incidents === false, JSON.stringify(clearedSex).slice(0, 300));
 
 // A clarification: one button per option, each a path; following a path gives that continuation's outcome.
 const first = shadowAnswer("How many shoplifting offenses were there in Memphis?", deps);
