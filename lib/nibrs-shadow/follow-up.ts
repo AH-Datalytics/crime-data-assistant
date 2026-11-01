@@ -50,6 +50,10 @@ const PRESENTATION = [
   /^sort(?:ed)?\s+(?:it\s+|them\s+)?(?:by\s+)?(?:value|count|size|name|(?:largest|smallest|highest|lowest)(?:\s+first)?|ascending|descending)$/,
   // A color only ("make the lines quarterly" is not one: Codex 7b-04 re-check 2).
   /^(?:change|make)\s+(?:the\s+)?(?:colou?rs?|bars|lines?|graph|chart)\s+(?:to\s+)?(?:red|orange|yellow|green|blue|purple|pink|brown|black|gr[ae]y|teal|navy|dark|darker|light|lighter)$/,
+  // Chart and table commands from the preview (coordinator, 2026-11-01): "as bars", "show as a line", "table only".
+  /^(?:(?:show|display|make|put|draw)\s+(?:it\s+|this\s+|that\s+|them\s+)?)?(?:as|in)\s+(?:a\s+)?(?:bars?|lines?|columns?|a\s+table|table|pie)$/,
+  /^(?:(?:show|display)\s+(?:the\s+|a\s+)?)?(?:table|chart|graph)(?:\s+only)?$|^(?:just|only)\s+(?:the\s+)?(?:table|chart|graph)$/,
+  /^(?:hide|remove|no)\s+(?:the\s+)?(?:chart|graph|table)$/,
 ];
 
 /** The clause-0 parts the reader finds in a question: measures, places, periods (their words as asked). */
@@ -83,7 +87,9 @@ function placeWords(q: string, places: { text: string }[]): { at: number; text: 
  * follow-up.
  */
 const BACK_LEAD = /^(?:(?:ok(?:ay)?|so|then|please|but)\b[,\s]*)*(?:same|and|also|plus|instead|what about|how about|compare|vs\.?|versus|add|now|make (?:it|this|that)|show (?:it|this|that|them|the same)|do (?:the same|that|it)|for that|by)\b/i;
-const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|again|too|as well|also|alongside|side by side|for comparison)\b/i;
+// A comparison anywhere ("How does that compare to shoplifting in Nashville?") relates the turn to the previous answer:
+// answered on its own it would drop the comparison (Codex review of the new-question default, 1).
+const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|again|too|as well|also|alongside|side by side|for comparison|compar(?:e|ed|es|ing|ison)|vs\.?|versus|against|relative to|than)\b/i;
 export function standsAlone(turn: string): boolean {
   const t = turn.trim();
   if (BACK_LEAD.test(t) || BACK_WORD.test(t)) return false;

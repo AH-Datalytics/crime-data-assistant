@@ -879,6 +879,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.ok(offered.some((b) => b.question === "Shoplifting in Detroit in 2023" && !b.continuation), JSON.stringify(offered));
   // A turn that points back stays a follow-up.
   assert.equal(shadowFollowUp("Shoplifting in Memphis in 2024", "what about Nashville?", deps).rewriteKind, "rewrite");
+  // Codex review 1: a comparison is never answered as a single place; it stays on the follow-up path (asked or proposed).
+  for (const f of ["How does that compare to shoplifting in Nashville in 2024?", "Can you compare shoplifting in Nashville in 2024?"]) {
+    const cmp = shadowFollowUp("Shoplifting in Memphis in 2024", f, deps);
+    assert.notEqual(cmp.rewriteKind, "new", f);
+    assert.ok(cmp.kind !== "answer" || cmp.plan.geography.places.length > 1, `no single-place answer: ${f}`);
+  }
 }
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

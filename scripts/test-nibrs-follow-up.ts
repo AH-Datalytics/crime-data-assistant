@@ -93,6 +93,10 @@ assert.equal(q(rw(M, "Past 5 years")), "Shoplifting in Memphis by year over the 
 asked(rw("Shoplifting in Memphis in January 2024", "show 10 years"));
 asked(rw(P, "can you go back further in time?"));
 assert.equal(rw(M, "Make the graph green").kind, "presentation");
+// The preview's chart and table commands (coordinator, 2026-11-01): presentation, never "could not be placed".
+for (const f of ["as bars", "show as a line", "table only", "show it as bars", "as a table", "just the table", "chart only", "hide the chart", "in a table"]) assert.equal(rw(M, f).kind, "presentation", f);
+// A data change in the same words stays a data change.
+assert.notEqual(rw(M, "as bars by year").kind, "presentation");
 // Codex full review 1: a previous period of several years is not one phrase to replace: asked.
 asked(rw("Shoplifting in Memphis in 2023 and 2024", "show 5 years"));
 // Real conversations (hand check of the production log's follow-up turns): a previous turn that was itself a follow-up
@@ -111,7 +115,8 @@ assert.equal(q(rw("Shoplifting in Missouri in 2024", "Kansas")), "Shoplifting in
 for (const t of ["Murders in Chicago in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", "violent crime in Kansas City", "How many simple assaults were there in Detroit in 2023?"])
   assert.ok(standsAlone(t), `new: ${t}`);
 for (const t of ["what about Denver in 2023?", "now murders instead", "male", "compare to Dallas", "Nashville", "2024", "by month", "same for Houston",
-  "show it for Memphis", "and robberies in Detroit in 2023", "robberies in Detroit in 2023 too"])
+  "show it for Memphis", "and robberies in Detroit in 2023", "robberies in Detroit in 2023 too",
+  "How does that compare to shoplifting in Nashville in 2024?", "Can you compare shoplifting in Nashville in 2024?", "shoplifting in Nashville in 2024 versus Memphis", "Is shoplifting in Nashville higher than that?"])
   assert.ok(!standsAlone(t), `follow-up: ${t}`);
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
