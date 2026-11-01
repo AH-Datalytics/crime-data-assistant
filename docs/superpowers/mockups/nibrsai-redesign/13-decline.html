@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crime Data Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"><link rel="stylesheet" href="app.css"></head>
+<body>
+<script type="module">
+  import { work, EXCHANGES } from "./_work.js";
+  work({ screen: "13-decline", active: 2, exchanges: [...EXCHANGES,
+    { src: "nibrs", q: "Shoplifting in Memphis in 2027", wait: "Not in the data" }],
+    stage: `
+    <div class="StageMsg">
+      <span class="overline dot">Not in the data</span>
+      <h2>2027 is not in the data; the latest month available is September 2026.</h2>
+      <p>The closest question that can be answered:</p>
+      <div class="Choices">
+        <button class="Choice primary"><span>Shoplifting in Memphis, January through September 2026</span><span class="arr">Ask &rarr;</span></button>
+        <button class="Choice"><span>Shoplifting in Memphis in 2025</span><span class="arr">Ask &rarr;</span></button>
+      </div>
+    </div>` });
+</script>
+</body></html>

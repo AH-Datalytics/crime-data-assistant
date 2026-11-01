@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Follow-up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"></head>
+<body>
+<main><div class="Container">
+  <div class="Prev">
+    <span class="overline" style="color:var(--color-light)">Earlier</span>
+    <span><span class="pq">Motor vehicle theft offenses in Baltimore, Maryland, by month, January 2022 through June 2026</span></span>
+    <button class="Btn Btn-outlined">Back to it</button>
+  </div>
+
+  <div class="Top">
+    <div>
+      <span class="overline dot">Answering</span>
+      <p class="Sentence" id="sentence">
+        <span class="slot" data-slot="crime">Motor vehicle theft</span> <span class="slot" data-slot="stat" data-lower>rate per 100,000 residents</span> in <span class="slot" data-slot="place">Baltimore, Maryland</span>, <span class="slot" data-slot="by" data-lower>by year</span>, <span class="slot" data-slot="period">2022 to 2026</span><span class="slot add" data-slot="filter">+ condition</span>
+      </p>
+      <p class="how">Your words "make it a rate by year" changed two parts of the earlier question: the statistic and the grouping. If that is not what you meant, change the underlined parts.</p>
+    </div>
+  </div>
+
+  <div class="Toolbar" style="justify-content:flex-start"><span class="mono">Baltimore Police Department, 4 complete years</span></div>
+
+  <div class="Answer">
+    <div class="AnswerChart"><div class="Chart" id="chart"></div></div>
+    <div class="AnswerTable"><div class="TableScroll" id="table"></div></div>
+  </div>
+
+  <div class="AnswerNotes">
+    <span class="overline">Notes</span>
+    <div class="Notes">
+      <p>Not every month of 2026 is known: shown blank, not zero. The data runs through September 2026.</p>
+      <p>Each rate divides the year's offenses by the agency's FBI population for that year, in the Population column.</p>
+      <p><span class="mono">Mockup</span> &nbsp; the counts are real; the populations and rates are illustrative until the engine computes them.</p>
+      <p class="src">Source: FBI NIBRS. <a href="#">View data sources</a></p>
+    </div>
+  </div>
+</div></main>
+<script type="module">
+  import { shell } from "./_shell.js"; import { barChart, table, slots, BALTIMORE_MVT } from "./mock.js";
+  shell({ ask: "make it a rate by year", screen: "04-follow-up", downloads: true });
+  const years = {}; for (const r of BALTIMORE_MVT) years[r.x.slice(0, 4)] = (years[r.x.slice(0, 4)] ?? 0) + r.y;
+  const pop = { 2022: 569931, 2023: 565239, 2024: 563455, 2025: 562811 };
+  const rows = ["2022", "2023", "2024", "2025", "2026"].map((y) => {
+    const full = y !== "2026";
+    return { year: y, count: full ? years[y] : null, pop: full ? pop[y] : null, rate: full ? Math.round((years[y] / pop[y]) * 1000000) / 10 : null };
+  });
+  barChart(document.getElementById("chart"), rows.map((r) => ({ x: r.year, y: r.rate })), "Rate per 100,000 residents", "Baltimore, Maryland");
+  table(document.getElementById("table"), ["Year", "Offenses", "Population", "Per 100,000"], rows.map((r) => [r.year, r.count, r.pop, r.rate]));
+  slots(document.getElementById("sentence"));
+</script>
+</body></html>

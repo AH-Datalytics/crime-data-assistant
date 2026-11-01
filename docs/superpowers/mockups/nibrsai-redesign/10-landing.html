@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crime Data Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"><link rel="stylesheet" href="app.css"></head>
+<body>
+<main style="padding-bottom:0">
+  <section class="HomeHero"><div class="HomeHeroInner">
+    <h1 class="gradient-text">Crime Data Assistant</h1>
+    <p class="blurb">Ask a question about U.S. crime data in plain English. Each answer is a chart and a table from FBI and Crime Index data, with its source.</p>
+    <form class="HomeAsk" onsubmit="location.href='11-answer.html';return false">
+      <input placeholder="Car thefts in Baltimore by month since 2022">
+      <span id="src"></span>
+      <button class="Btn Btn-dark Btn-big">Ask</button>
+    </form>
+  </div></section>
+
+  <section class="Section">
+    <span class="overline dot">Five sources</span>
+    <h2 class="gradient-text" style="margin-top:.75rem">The data</h2>
+    <p class="lede">A question goes to the source that answers it. Choose one in the Source menu to keep every question there.</p>
+    <div class="SrcGrid" id="grid"></div>
+  </section>
+
+  <section class="Section">
+    <span class="overline dot">Side by side</span>
+    <h2 class="gradient-text" style="margin-top:.75rem">How the sources differ</h2>
+    <p class="lede">Each covers a different period and level of detail.</p>
+    <div class="TableScroll" style="max-height:none" id="cmp"></div>
+  </section>
+
+  <section class="Section">
+    <div class="TwoCol">
+      <div><h3>Tips for better answers</h3><hr><dl>
+        <dt>Be specific</dt><dd>"Murder rate in Houston, 2020 to 2024" gets a better answer than "crime in Texas."</dd>
+        <dt>Name a period</dt><dd>Say "2019 to 2024" instead of "recently."</dd>
+        <dt>Ask follow-ups</dt><dd>The assistant keeps the last question. Try "now show that as a rate per 100,000" or "same for Dallas."</dd>
+        <dt>Check the question it answered</dt><dd>Every answer shows the question it was read as. Edit it if that is not what you meant.</dd>
+      </dl></div>
+      <div><h3>Before you use the numbers</h3><hr><ul>
+        <li>An agency missing from the data may not report; it does not mean zero crime. Months an agency did not report are shown blank, never zero.</li>
+        <li>NIBRS participation varied widely by state and year before 2021. An increase may reflect more agencies reporting, not more crime.</li>
+        <li>The FBI changed the definition of rape in 2013. Compare rape figures across that change with care.</li>
+        <li>Current Trends data is preliminary, collected directly from police departments, and subject to revision.</li>
+        <li>Hate crime reporting is voluntary. Zero does not mean zero hate crimes.</li>
+        <li>Populations are for the whole jurisdiction only, so rates by race, sex or age cannot be calculated.</li>
+      </ul></div>
+    </div>
+  </section>
+  <p class="Fine">Answers are generated from the data by a language model and can be wrong. Check important figures against the <a href="#">FBI Crime Data Explorer</a>. Questions are logged to improve accuracy; no personally identifying information is collected. Not affiliated with or endorsed by the FBI.</p>
+</main>
+<script type="module">
+  import { app, SOURCES, sourceSelect } from "./_app.js"; import { table } from "./mock.js";
+  app({ screen: "10-landing" });
+  document.getElementById("src").outerHTML = sourceSelect();
+  const cards = [
+    ["current", "500+", "agencies reporting monthly", "Monthly, 2017 to present", "Monthly counts from hundreds of police departments, updated on a rolling basis.", ["How have murders trended nationally since 2020?", "Compare robbery in Chicago and Houston, 2022 to 2024"]],
+    ["historical", "1930", "to 2024, annual FBI data", "Annual, 1930 to 2024", "Annual agency, state and national figures, with police staffing.", ["What was the murder rate in New York City from 1960 to 2024?", "Which cities had the most police officers per capita in 2023?"]],
+    ["nibrs", "1 billion+", "incident-level records", "Incident-level, 1991 to present", "Victims, offenders, weapons, locations, property, clearances and arrests for every incident.", ["What share of murder victims in Texas were female in 2023?", "Car thefts in Baltimore by month since 2022"]],
+    ["shr", "890,000+", "homicide victims since 1976", "Incident-level, 1976 to present", "Victim and offender demographics, weapon, circumstance and relationship for every reported homicide.", ["What share of murders involved a firearm by year since 1990?", "Break down homicide circumstances in Texas in 2023"]],
+    ["hate", "285,000+", "hate crime incidents since 1991", "Incident-level, 1991 to present", "Bias motivation, offense, location and offender demographics, with agency participation.", ["How have reported hate crimes trended since 2015?", "Which states reported the most hate crimes in 2023?"]],
+  ];
+  document.getElementById("grid").innerHTML = cards.map(([id, stat, statl, range, desc, ex]) => `
+    <div class="Src" style="--src:${SOURCES[id].color}">
+      <span class="overline dot" style="color:${SOURCES[id].color}">${range}</span>
+      <h3>${SOURCES[id].name}</h3><hr>
+      <div class="stat" style="color:${SOURCES[id].color}">${stat}</div><div class="statl">${statl}</div>
+      <p>${desc}</p>
+      <ul class="ex">${ex.map((q) => `<li><a href="11-answer.html">${q}</a></li>`).join("")}</ul>
+      <a class="go" href="#">Ask in ${SOURCES[id].name} &rarr;</a>
+    </div>`).join("");
+  table(document.getElementById("cmp"), ["", ...["current", "historical", "nibrs", "shr", "hate"].map((id) => `<span class="d" style="background:${SOURCES[id].color}"></span>${SOURCES[id].name}`)], [
+    ["Source", "Crime Index agency data", "FBI Uniform Crime Reports", "FBI NIBRS master files", "FBI Supplementary Homicide Reports", "FBI Hate Crime Statistics"],
+    ["Years", "2017 to present", "1930 to 2024", "1991 to present", "1976 to present", "1991 to present"],
+    ["Detail", "Monthly", "Annual", "Incident", "Incident", "Incident"],
+    ["Coverage", "Hundreds of large agencies", "10,000+ agencies", "Varies by year; nearly 90% of residents since 2021", "Varies by year", "About 15,000 agencies, voluntary"],
+    ["Crimes", "Seven Part I offenses", "Part I offenses and staffing", "52+ NIBRS offenses", "Homicides", "Bias-motivated crimes"],
+    ["Best for", "Recent trends", "Long-term trends", "Detailed breakdowns", "Homicide detail", "Hate crime trends"],
+  ]);
+  document.querySelector("#cmp table").classList.add("cmp");
+</script>
+</body></html>

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "redesign-mockups",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["docs/superpowers/mockups/nibrsai-redesign/serve.py", "8765"],
+      "port": 8765
+    }
+  ]
+}

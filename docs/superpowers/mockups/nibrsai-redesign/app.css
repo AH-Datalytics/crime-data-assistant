@@ -1,0 +1,110 @@
+/* Reskinned NIBRSAI app (10-13): the current app's structure in Crime Index's styling. Loaded after ci.css. */
+.SrcSel{height:2.75rem;display:inline-flex;align-items:center;gap:.5rem;padding:0 1rem;border:1px solid var(--color-divider);border-radius:.375rem;background:#fff;white-space:nowrap}
+.SrcSel .k{font-family:var(--font-mono);font-size:.7rem;letter-spacing:var(--tracking-mono);text-transform:uppercase;color:var(--color-darker)}
+.SrcSel .v{font-family:var(--font-display);font-weight:700;font-size:.9rem;color:var(--color-darker)}
+.SrcSel .chev{width:.7rem;height:.7rem;stroke:var(--color-dark);fill:none;stroke-width:2}
+.SrcSel:hover{border-color:var(--color-dark)}
+.Btn-dark{padding:.375rem 1.25rem;border-radius:.5rem;background:var(--color-dark);color:#fff;height:2.75rem}
+.Btn-dark:hover{background:var(--color-darker)}
+.Btn-big{height:3.5rem;padding:0 2rem;font-size:1rem}
+
+/* Landing: Crime Index home hero (light band, gradient display title) */
+.HomeHero{background:var(--color-hero);border-bottom:1px solid var(--color-divider)}
+.HomeHeroInner{max-width:var(--container-lg);margin:0 auto;padding:4rem var(--gutter) 3.5rem}
+.HomeHero h1{margin:0;font-family:var(--font-display);font-weight:600;font-size:3.75rem;line-height:1.05;letter-spacing:.01em}
+.HomeHero .blurb{font-family:var(--font-display);font-weight:500;font-size:1.5rem;line-height:1.35;color:var(--color-darker);max-width:46rem;margin:1rem 0 2.25rem}
+.HomeAsk{display:flex;gap:.75rem;max-width:62rem}
+.HomeAsk input{flex:1;height:3.5rem;border:1px solid var(--color-input);border-radius:.375rem;padding:0 1.25rem;font-size:1.125rem;color:var(--color-darker);background:#fff}
+.HomeAsk input::placeholder{color:var(--color-input)}
+.HomeAsk input:focus{outline:none;border-color:var(--color-darker)}
+.HomeAsk .SrcSel{height:3.5rem}
+.Section{max-width:var(--container-lg);margin:0 auto;padding:5rem var(--gutter) 0}
+.Section > h2{margin:0 0 .5rem;font-family:var(--font-display);font-weight:600;font-size:2.5rem;line-height:1.2}
+.Section > .lede{font-size:1rem;color:var(--color-dark);margin:0 0 2.5rem;max-width:48rem;line-height:1.5}
+.SrcGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:2.5rem}
+.Src .overline{font-size:.75rem}
+.Src h3{margin:.5rem 0 0;font-family:var(--font-display);font-weight:600;font-size:1.25rem;color:var(--color-darker)}
+.Src hr{border:0;border-top:1px solid var(--color-divider);margin:.75rem 0 1rem}
+.Src .stat{font-family:var(--font-display);font-weight:700;font-size:2.125rem;line-height:1}
+.Src .statl{font-size:.875rem;color:var(--color-dark);margin:.4rem 0 1rem}
+.Src p{font-size:.875rem;color:var(--color-dark);line-height:1.5;margin:0 0 1rem}
+.Src .ex{list-style:none;margin:0 0 1rem;padding:0;border-top:1px solid var(--color-divider)}
+.Src .ex li{border-bottom:1px solid var(--color-divider)}
+.Src .ex a{display:block;padding:.6rem 0;font-size:.875rem;color:var(--color-darker);line-height:1.4}
+.Src .ex a:hover{color:var(--src)}
+.Src .go{font-size:.875rem;color:var(--src);font-weight:600}
+table.T.cmp{table-layout:auto}
+table.T.cmp td{text-align:left;font-variant-numeric:normal;vertical-align:top}
+table.T.cmp th{text-align:left}
+table.T.cmp th .d{display:inline-block;width:.75rem;height:.75rem;border-radius:50%;margin-right:.5rem;vertical-align:-1px}
+.TwoCol{display:grid;grid-template-columns:1fr 1fr;gap:4rem}
+.TwoCol h3{margin:0;font-family:var(--font-display);font-weight:600;font-size:1.5rem;color:var(--color-darker)}
+.TwoCol hr{border:0;border-top:1px solid var(--color-divider);margin:.75rem 0 1.25rem}
+.TwoCol ul{margin:0;padding-left:1.1rem}
+.TwoCol li{font-size:.9rem;color:var(--color-dark);line-height:1.55;margin:0 0 .6rem}
+.TwoCol dt{font-weight:600;color:var(--color-darker);font-size:.95rem}
+.TwoCol dd{margin:.15rem 0 1rem;font-size:.9rem;color:var(--color-dark);line-height:1.5}
+.Fine{max-width:var(--container-lg);margin:0 auto;padding:4rem var(--gutter) 5rem;font-size:.8rem;color:var(--color-light);line-height:1.5}
+.Fine a{text-decoration:underline}
+
+/* Workspace: the ask bar (Crime Index controls row), then the rail and the stage */
+.Bar{position:sticky;top:var(--header);z-index:20;height:var(--explorer-controls);background:#fff;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider)}
+.BarInner{height:100%;padding:0 var(--gutter);display:flex;align-items:center;gap:.75rem}
+.BarInner .home{width:2.75rem;height:2.75rem;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--color-divider);border-radius:.375rem;color:var(--color-dark)}
+.BarInner input{flex:0 1 46rem;height:2.75rem;border:1px solid var(--color-divider);border-radius:.375rem;padding:0 1rem;font-size:1rem;color:var(--color-darker)}
+.BarInner input::placeholder{color:var(--color-input)}
+.BarInner input:focus{outline:none;border-color:var(--color-darker)}
+.BarInner .tut{margin-left:auto}
+.Work{display:grid;grid-template-columns:24rem 1fr;height:calc(100vh - var(--header) - var(--explorer-controls));min-height:44rem}
+.Rail{border-right:1px solid var(--color-divider);display:flex;flex-direction:column;min-height:0;background:#fff}
+.RailList{flex:1;overflow:auto;padding:1rem 0}
+.Ex{padding:1rem 1.5rem 1.1rem;border-left:3px solid transparent;cursor:pointer}
+.Ex + .Ex{border-top:1px solid var(--color-divider)}
+.Ex.past{opacity:.6}
+.Ex.past:hover{opacity:1}
+.Ex.on{border-left-color:var(--src);background:var(--color-lighter)}
+.Ex .overline{font-size:.7rem;color:var(--src)}
+.Ex .typed{font-size:.8rem;color:var(--color-light);margin:.5rem 0 0}
+.Ex .q{font-family:var(--font-display);font-weight:600;font-size:1.05rem;line-height:1.35;color:var(--color-darker);margin:.35rem 0 0}
+.Ex .q .edit{font-family:var(--font-body);font-weight:400;font-size:.8rem;color:var(--src);text-decoration:underline;text-underline-offset:2px;margin-left:.35rem;white-space:nowrap}
+.Ex .a{font-size:.875rem;color:var(--color-dark);line-height:1.5;margin:.6rem 0 0}
+.Ex .a p{margin:0 0 .45rem}
+.Ex .wait{font-family:var(--font-mono);font-size:.7rem;letter-spacing:var(--tracking-mono);text-transform:uppercase;color:var(--src);margin-top:.6rem}
+.RailFoot{border-top:1px solid var(--color-divider);padding:1rem 1.5rem 1.25rem;background:#fff}
+.RailFoot .overline{font-size:.7rem}
+.RailFoot .in{display:flex;gap:.5rem;margin-top:.5rem}
+.RailFoot input{flex:1;min-width:0;height:2.75rem;border:1px solid var(--color-input);border-radius:.375rem;padding:0 .9rem;font-size:.95rem;color:var(--color-darker)}
+.RailFoot input::placeholder{color:var(--color-input)}
+.RailFoot .clear{display:block;margin-top:.75rem;font-family:var(--font-mono);font-size:.65rem;letter-spacing:var(--tracking-mono);text-transform:uppercase;color:var(--color-light);background:none;border:0;padding:0}
+.Stage{display:flex;flex-direction:column;min-height:0;min-width:0;padding:1.75rem 2rem 1rem;overflow:auto}
+.StageHead{display:flex;justify-content:space-between;align-items:flex-end;gap:2rem;margin-bottom:1.25rem}
+.StageHead .overline{font-size:.75rem;color:var(--src)}
+.StageHead h2{margin:.4rem 0 0;font-family:var(--font-display);font-weight:600;font-size:1.5rem;line-height:1.3;color:var(--color-darker)}
+.StageHead .d{font-size:.875rem;color:var(--color-dark);margin-top:.2rem}
+.StageTools{display:flex;align-items:center;gap:.5rem;font-size:.875rem;white-space:nowrap}
+.Toggle{display:inline-flex;margin-right:1rem}
+.Toggle button{background:none;border:0;padding:.4rem .75rem;font-size:.875rem;color:var(--color-dark)}
+.Toggle button.on{color:var(--src);box-shadow:inset 0 -2px 0 var(--src)}
+.Stage .Answer{flex:1;min-height:0}
+.Stage .AnswerTable .TableScroll{max-height:calc(100vh - 21rem)}
+.Disc{font-size:.75rem;color:var(--color-light);text-align:center;margin:1rem 0 0}
+.StageMsg{max-width:48rem;padding-top:1rem}
+.StageMsg .overline{color:var(--src)}
+.StageMsg h2{margin:.6rem 0 .75rem;font-family:var(--font-display);font-weight:600;font-size:1.75rem;line-height:1.3;color:var(--color-darker)}
+.StageMsg p{font-size:1rem;line-height:1.55;color:var(--color-dark);margin:0 0 1.25rem}
+.Choices{display:flex;flex-direction:column;gap:.6rem;max-width:34rem}
+.Choice{display:flex;justify-content:space-between;align-items:center;gap:1rem;text-align:left;padding:.9rem 1.1rem;border:1px solid var(--color-divider);border-radius:.375rem;background:#fff;font-size:1rem;color:var(--color-darker)}
+.Choice:hover{border-color:var(--src);color:var(--src)}
+.Choice .k{font-family:var(--font-mono);font-size:.7rem;letter-spacing:var(--tracking-mono);text-transform:uppercase;color:var(--color-light)}
+.Choice.primary{border-color:var(--src)}
+.Choice .arr{color:var(--src);font-weight:600}
+
+/* The assistant is teal in the Crime Index header, as Current Trends is blue and Historical orange */
+.HeaderNav a.active{color:#0E6E7A}
+.HeaderNav a:hover{color:#0E6E7A}
+
+.Hero.Assist{background:radial-gradient(circle at 1px 1px,#13808D 1px,transparent 1.5px) 0 0/18px 18px,linear-gradient(to bottom,#0A4D57,#11727F)}
+.Hero.Assist h1{background:linear-gradient(to bottom,#fff,rgba(255,255,255,.6));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;padding-bottom:.25rem}
+.Hero.Assist .HeroInner{align-self:flex-end;padding-bottom:1.25rem}
+.Btn-teal{background:#0E6E7A !important;color:#fff}
+.Btn-teal:hover{background:#094B54 !important}

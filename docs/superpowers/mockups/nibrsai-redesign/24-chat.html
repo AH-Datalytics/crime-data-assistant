@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crime Data Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="wb.css"><link rel="stylesheet" href="chat.css"></head>
+<body>
+<main style="padding:0"><div class="Chat" id="chat"></div></main>
+<div class="Dock"><div class="DockInner"><input id="q" placeholder="Ask a question or a follow-up"><span id="src"></span><button class="Btn Btn-dark Btn-teal" id="ask">Ask</button></div>
+  <p class="fine">Answers come from FBI and Crime Index data and can be wrong. Check important figures against the FBI Crime Data Explorer.</p></div>
+<script type="module">
+  import { app, sourceSelect } from "./_app.js";
+  import { BALTIMORE_MVT, barChart, lineChart, table } from "./mock.js";
+  app({ screen: "24-chat", footer: false });
+  document.querySelector(".Mock").innerHTML = `<a href="20-start.html">Start</a><a href="24-chat.html" class="on">Chat</a><a href="23-tabs.html">Tabs</a><a href="21-workbook.html">List</a>`;
+  document.getElementById("src").outerHTML = sourceSelect("Auto");
+  const yearly = []; { const y = {}; for (const r of BALTIMORE_MVT) if (r.x < "2026") y[r.x.slice(0, 4)] = (y[r.x.slice(0, 4)] ?? 0) + r.y; for (const [x, v] of Object.entries(y)) yearly.push({ x, y: v }); }
+
+  // The conversation. `me` is what was typed; `q` the question the engine answered (P69), shown as one plain line
+  // with Edit. Notes are the engine's text lines after the first, the source last.
+  const turns = [
+    { me: "Car thefts in Baltimore by month since 2022", kind: "month", q: "motor vehicle theft offenses in Baltimore, Maryland, by month, January 2022 through June 2026",
+      notes: ["\"Car thefts\" read as motor vehicle theft (NIBRS offense 240), completed and attempted."] },
+    { me: "by year", kind: "year", q: "motor vehicle theft offenses in Baltimore, Maryland, by year, 2022 to 2025", notes: [] },
+    { me: "how many in 2025", kind: "number", q: "motor vehicle theft offenses in Baltimore, Maryland, in 2025",
+      say: "Baltimore, Maryland: <b>4,418</b> motor vehicle theft offenses in 2025.", notes: [] },
+    { me: "shoplifting in baltimore by month from 2022 to 2025", kind: "clarify" },
+  ];
+  const chat = document.getElementById("chat");
+  const read = (t, i) => `<p class="read" data-read="${i}">Answering <b>${t.q}</b>. <a href="#" data-edit="${i}">Edit</a></p>`;
+  const notes = (t) => `<div class="notes">${t.notes.map((n) => `<p>${n}</p>`).join("")}<p class="src">Source: FBI NIBRS.</p></div>`;
+  function reply(t, i) {
+    if (t.kind === "clarify") return `<p class="say">Two agencies match. Which one?</p>
+      <div class="Choices"><button class="Choice"><span>Baltimore, Maryland</span><span class="k">City police</span></button><button class="Choice"><span>Baltimore County, Maryland</span><span class="k">County police; does not include the city</span></button></div>`;
+    if (t.kind === "pending") return `${t.q ? read(t, i) : ""}<div class="wait">Answering</div>`;
+    if (t.kind === "number") return `${read(t, i)}<p class="say">${t.say}</p>${notes(t)}<div class="acts"><a href="#">Copy link</a></div>`;
+    return `${read(t, i)}<div class="Answer"><div class="AnswerChart"><div class="Chart" id="c${i}"></div></div><div class="AnswerTable"><div class="TableScroll" id="t${i}"></div></div></div>
+      ${notes(t)}<div class="acts"><a href="#">Download data</a><a href="#">Download image</a><a href="#">Copy link</a></div>`;
+  }
+  function render(scrollTo = null) {
+    chat.innerHTML = turns.map((t, i) => `<div class="Me"><p>${t.me}</p></div><div class="Re" id="r${i}">${reply(t, i)}</div>`).join("");
+    turns.forEach((t, i) => {
+      if (t.kind !== "month" && t.kind !== "year") return;
+      const rows = t.kind === "year" ? yearly : BALTIMORE_MVT, tEl = document.getElementById(`t${i}`);
+      table(tEl, [t.kind === "year" ? "Year" : "Month", "Motor vehicle theft offenses"], rows.map((r) => [r.x, r.y]));
+      const trs = [...tEl.querySelectorAll("tbody tr")];
+      const mark = (j) => trs.forEach((tr, k) => tr.classList.toggle("hl", k === j));
+      const c = (t.kind === "year" ? barChart : lineChart)(document.getElementById(`c${i}`), rows, "Motor vehicle theft offenses", "Baltimore, Maryland", 400, (r, e) => pick(r.x, e), mark);
+      trs.forEach((tr, j) => { tr.addEventListener("mouseenter", () => { c.highlight(j); mark(j); }); tr.addEventListener("mouseleave", () => { c.highlight(null); mark(null); }); tr.addEventListener("click", (e) => pick(rows[j].x, e)); });
+    });
+    // Edit the read question in place; running it adds it to the conversation as a new question.
+    chat.querySelectorAll("[data-edit]").forEach((a) => a.addEventListener("click", (e) => {
+      e.preventDefault(); const i = Number(a.dataset.edit), p = a.closest(".read");
+      p.outerHTML = `<div class="EditQ"><input value="${turns[i].q}"><button class="Btn Btn-dark Btn-teal">Ask this</button><button class="Btn Btn-outlined" style="height:2.5rem">Cancel</button></div>`;
+      const box = document.querySelector(`#r${i} .EditQ`), [run, cancel] = box.querySelectorAll("button");
+      run.addEventListener("click", () => add(box.querySelector("input").value));
+      cancel.addEventListener("click", () => render());
+    }));
+    if (scrollTo !== null) document.getElementById(`r${scrollTo}`).previousElementSibling.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  const add = (text) => { turns.push({ me: text, kind: "pending" }); render(turns.length - 1); };
+
+  // Click-to-ask: questions this source can answer for this measure (a property crime: no victim breakdowns, P11).
+  const M = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  function pick(x, e) {
+    document.querySelector(".Pick")?.remove();
+    const w = x.length === 7 ? `${M[Number(x.slice(5)) - 1]} ${x.slice(0, 4)}` : x, year = x.length === 4;
+    const opts = [year ? ["By month", `Car thefts in Baltimore by month in ${w}`] : [`All of ${x.slice(0, 4)} by month`, `Car thefts in Baltimore by month in ${x.slice(0, 4)}`],
+      ["By location type", `Car thefts in Baltimore by location type, ${w}`], ["Share cleared", `Share of car thefts cleared in Baltimore, ${w}`],
+      ["Arrests", `Car theft arrests in Baltimore, ${w}`], ["Rate per 100,000 residents", `Car theft rate in Baltimore, ${w}`],
+      ["Compare with Baltimore County", `Car thefts in Baltimore and Baltimore County, ${w}`], ["Maryland", `Car thefts in Maryland, ${w}`]];
+    const box = document.createElement("div"); box.className = "Pick";
+    box.innerHTML = `<div class="head"><div class="t">Baltimore, ${w}</div><div class="s">Motor vehicle theft offenses</div></div><ul>${opts.map(([l], k) => `<li data-k="${k}">${l}</li>`).join("")}</ul>`;
+    document.body.appendChild(box);
+    const r = box.getBoundingClientRect(); box.style.left = `${Math.min(e.clientX + 12, innerWidth - r.width - 12)}px`; box.style.top = `${Math.min(e.clientY + 12, innerHeight - r.height - 12)}px`;
+    box.querySelectorAll("li").forEach((li) => li.addEventListener("click", () => { box.remove(); add(opts[Number(li.dataset.k)][1]); }));
+    setTimeout(() => addEventListener("click", function off(ev) { if (!box.contains(ev.target)) { box.remove(); removeEventListener("click", off); } }), 0);
+  }
+  document.getElementById("ask").addEventListener("click", () => { const v = document.getElementById("q").value.trim(); if (v) { document.getElementById("q").value = ""; add(v); } });
+  document.getElementById("q").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("ask").click(); });
+  render();
+</script>
+</body></html>

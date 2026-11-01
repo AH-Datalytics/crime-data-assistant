@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"></head>
+<body>
+<div class="Nav"><div class="NavInner">
+  <div class="NavList"><span class="lbl">Topic</span><a href="#" class="on">Reported Crime</a><a href="#">Victims</a><a href="#">Offenders</a><a href="#">Arrests</a><a href="#">Clearances</a><a href="#">Property</a><a href="#">Homicides</a></div>
+  <div class="NavList view"><span class="lbl">View</span><a href="#" class="on">Chart and Table</a><a href="#">Chart</a><a href="#">Table</a><a href="#">Notes</a></div>
+</div></div>
+<div class="Controls"><div class="ControlsInner" id="controls">
+  <div class="Ctl" data-slot="source"><span class="k">Source</span><span class="val">FBI NIBRS</span><svg class="chev" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></div>
+  <div class="Ctl" data-slot="crime"><span class="k">Crime</span><span class="val">Motor Vehicle Theft</span><svg class="chev" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></div>
+  <div class="Ctl" data-slot="place"><span class="k">Geography</span><span class="val">Baltimore, MD</span><svg class="chev" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></div>
+  <div class="Ctl" data-slot="period"><span class="k">Period</span><span class="val">Jan 2022 - Jun 2026</span><svg class="chev" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></div>
+  <div class="Ctl" data-slot="by"><span class="k">Breakdown</span><span class="val">By Month</span><svg class="chev" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></div>
+  <div class="Ctl" data-slot="stat"><span class="k">Measure</span><span class="val">Count</span><svg class="chev" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></div>
+  <div class="Ctl add" data-slot="filter"><span class="k">Filter</span><span class="val">None</span><svg class="chev" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3"/></svg></div>
+</div></div>
+
+<main><div class="Container" style="padding-top:0">
+  <div class="Title">
+    <div><h2>Motor Vehicle Theft Offenses by Month</h2><div class="d">Baltimore, Maryland &nbsp; Jan 2022 - Jun 2026</div></div>
+    <div class="Downloads">Download <button class="Btn Btn-outlined">Data</button><button class="Btn Btn-outlined">Image</button></div>
+  </div>
+  <div class="Answer">
+    <div class="AnswerChart"><div class="Chart" id="chart"></div></div>
+    <div class="AnswerTable"><div class="TableScroll" id="table"></div></div>
+  </div>
+  <div class="Source">
+    <p>Motor vehicle theft includes completed and attempted thefts (NIBRS offense 240). Months with no report are shown blank, not zero.</p>
+    <p>Source: FBI NIBRS, Baltimore Police Department. <a href="#">View data sources</a></p>
+  </div>
+</div></main>
+<script type="module">
+  import { shell } from "./_shell.js"; import { lineChart, table, slots, BALTIMORE_MVT } from "./mock.js";
+  shell({ ask: "", screen: "05-explorer" });
+  // The shell puts the ask bar under the hero; the topic nav and the controls follow it, as on Crime Index.
+  const ask = document.querySelector(".Ask"); ask.after(document.querySelector(".Nav")); document.querySelector(".Nav").after(document.querySelector(".Controls"));
+  lineChart(document.getElementById("chart"), BALTIMORE_MVT, "Motor vehicle theft offenses", "Baltimore, Maryland");
+  table(document.getElementById("table"), ["Month", "Offenses"], BALTIMORE_MVT.map((r) => [r.x, r.y]));
+  slots(document.getElementById("controls"));
+</script>
+</body></html>

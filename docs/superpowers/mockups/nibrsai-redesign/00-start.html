@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Start</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"></head>
+<body>
+<main><div class="Container">
+  <div class="Top">
+    <div>
+      <span class="overline dot">Start here</span>
+      <p class="Sentence" id="sentence">
+        <span class="slot" data-slot="crime">Motor vehicle theft</span> offenses in <span class="slot" data-slot="place">Baltimore, Maryland</span>, <span class="slot" data-slot="by" data-lower>by month</span>, <span class="slot" data-slot="period">January 2022 through June 2026</span><span class="slot add" data-slot="filter">+ condition</span>
+      </p>
+      <p class="how">This is a question and its answer. Change any underlined part to ask your own, or type a question in the box above. Every answer is a chart and a table, with its source.</p>
+    </div>
+  </div>
+
+  <div class="Toolbar" style="justify-content:flex-start"><span class="mono">26,702 offenses, 54 months, Baltimore Police Department</span></div>
+
+  <div class="Answer">
+    <div class="AnswerChart"><div class="Chart" id="chart"></div></div>
+    <div class="AnswerTable"><div class="TableScroll" id="table"></div></div>
+  </div>
+
+  <div class="AnswerNotes">
+    <span class="overline">Notes</span>
+    <div class="Notes">
+      <p>A month with no report known is shown blank, not zero. Every month here has a report.</p>
+      <p class="src">Source: FBI NIBRS. <a href="#">View data sources</a></p>
+    </div>
+  </div>
+
+  <div class="Cols" style="border-top:1px solid var(--color-divider);margin-top:3rem">
+    <div><h3>What this answers</h3><hr><p>Counts, trends by month, quarter or year, breakdowns by victim, offender, weapon, location or relationship, rates per 100,000 residents, shares, clearances and arrests, for any of 23,739 reporting agencies, any state, or the nation, January 2017 through September 2026.</p></div>
+    <div><h3>What it does not</h3><hr><p>Anything below the agency: neighborhoods, ZIP codes, addresses. Court outcomes. Causes and explanations. Agencies that do not report NIBRS, and months they did not report, are shown blank, never estimated.</p></div>
+    <div><h3>Other Crime Index tools</h3><hr><p>Monthly totals for 700 large agencies since 2017 are in <a href="#" style="color:var(--color-explorer-primary);text-decoration:underline">Current Trends</a>. Annual figures for every agency since 1960 are in the <a href="#" style="color:var(--color-explorer-primary);text-decoration:underline">Historical Data Library</a>. A question those answer is sent there.</p></div>
+  </div>
+</div></main>
+<script type="module">
+  import { shell } from "./_shell.js"; import { lineChart, table, slots, BALTIMORE_MVT } from "./mock.js";
+  shell({ ask: null, screen: "00-start", downloads: true });
+  lineChart(document.getElementById("chart"), BALTIMORE_MVT, "Motor vehicle theft offenses", "Baltimore, Maryland");
+  table(document.getElementById("table"), ["Month", "Motor vehicle theft offenses"], BALTIMORE_MVT.map((r) => [r.x, r.y]));
+  slots(document.getElementById("sentence"));
+</script>
+</body></html>

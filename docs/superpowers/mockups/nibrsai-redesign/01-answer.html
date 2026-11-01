@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Answer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"></head>
+<body>
+<main><div class="Container">
+  <div class="Top">
+    <div>
+      <span class="overline dot">Answering</span>
+      <p class="Sentence" id="sentence">
+        <span class="slot" data-slot="crime">Motor vehicle theft</span> offenses in <span class="slot" data-slot="place">Baltimore, Maryland</span>, <span class="slot" data-slot="by" data-lower>by month</span>, <span class="slot" data-slot="period">January 2022 through June 2026</span><span class="slot add" data-slot="filter">+ condition</span>
+      </p>
+      <p class="how">"Car thefts" read as motor vehicle theft (NIBRS offense 240), completed and attempted. Change any underlined part; the new question runs at once.</p>
+    </div>
+  </div>
+
+  <div class="Toolbar" style="justify-content:flex-start"><span class="mono">26,702 offenses, 54 months, Baltimore Police Department</span></div>
+
+  <div class="Answer">
+    <div class="AnswerChart"><div class="Chart" id="chart"></div></div>
+    <div class="AnswerTable"><div class="TableScroll" id="table"></div></div>
+  </div>
+
+  <div class="AnswerNotes">
+    <span class="overline">Notes</span>
+    <div class="Notes">
+      <p>A month with no report known is shown blank, not zero. Every month here has a report.</p>
+      <p class="src">Source: FBI NIBRS. <a href="#">View data sources</a></p>
+    </div>
+  </div>
+</div></main>
+<script type="module">
+  import { shell } from "./_shell.js"; import { lineChart, table, slots, BALTIMORE_MVT } from "./mock.js";
+  shell({ ask: "", screen: "01-answer", downloads: true });
+  lineChart(document.getElementById("chart"), BALTIMORE_MVT, "Motor vehicle theft offenses", "Baltimore, Maryland");
+  table(document.getElementById("table"), ["Month", "Motor vehicle theft offenses"], BALTIMORE_MVT.map((r) => [r.x, r.y]));
+  slots(document.getElementById("sentence"));
+</script>
+</body></html>

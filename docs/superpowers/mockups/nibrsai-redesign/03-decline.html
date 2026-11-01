@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"></head>
+<body>
+<main><div class="Container">
+  <div class="Top">
+    <div>
+      <span class="overline dot">Reading your question</span>
+      <p class="Sentence" id="sentence">
+        <span class="slot" data-slot="crime">Shoplifting</span> offenses in <span class="slot" data-slot="place">Memphis, Tennessee</span>, <span class="slot" data-slot="by" data-lower>in total</span>, <span class="slot" data-slot="period" style="color:var(--color-change-up);border-bottom-color:var(--color-change-up)">2027</span><span class="slot add" data-slot="filter">+ condition</span>
+      </p>
+      <p class="how">One part cannot be answered as asked.</p>
+    </div>
+  </div>
+
+  <div class="Outcome">
+    <span class="overline">Not in the data</span>
+    <p class="q">2027 is not in the data; the latest month available is September 2026.</p>
+    <span></span><p class="why">The data runs from January 2017 through September 2026. The closest question that can be answered:</p>
+    <div class="Options"><button class="Btn Btn-explorer">January through September 2026</button><button class="Btn Btn-outlined">2025</button><button class="Btn Btn-outlined">Pick another period</button></div>
+  </div>
+
+  <div class="Outcome" style="border-bottom:0">
+    <span class="overline">Another kind of no</span>
+    <p class="q">There is no state clearance rate in the data.</p>
+    <span></span><p class="why">For "Carjacking clearance rate in Texas in 2024": the FBI publishes clearance for agencies and the nation, not states, and a percentage built from reporting agencies is not a state rate. The place part is what has to change.</p>
+    <div class="Options"><button class="Btn Btn-explorer">Houston, Texas</button><button class="Btn Btn-explorer">The United States</button><button class="Btn Btn-outlined">Pick another place</button></div>
+  </div>
+</div></main>
+<script type="module">
+  import { shell } from "./_shell.js"; import { slots } from "./mock.js";
+  shell({ ask: "Shoplifting in Memphis in 2027", screen: "03-decline", downloads: false });
+  slots(document.getElementById("sentence"));
+</script>
+</body></html>

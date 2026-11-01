@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Assistant Color</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="home.css"><link rel="stylesheet" href="matrix.css">
+<style>
+  .Opt{margin:0 0 3rem;border-bottom:1px solid var(--color-divider)}
+  .OptLabel{max-width:var(--container-lg);margin:0 auto;padding:1.25rem var(--gutter) .75rem;font-family:var(--font-mono);font-size:.8rem;letter-spacing:var(--tracking-mono);text-transform:uppercase;color:var(--color-darker)}
+  .OptLabel span{color:var(--color-light);margin-left:1rem}
+  .Strip{max-width:var(--container-lg);margin:0 auto;padding:1rem var(--gutter);display:flex;gap:1.5rem;font-size:.8rem;color:var(--color-dark)}
+  .Strip i{display:inline-block;width:.75rem;height:.75rem;border-radius:50%;margin-right:.4rem;vertical-align:-1px}
+</style></head>
+<body>
+<main id="opts" style="padding:0"></main>
+<script type="module">
+  import { app, SOURCES } from "./_app.js";
+  app({ screen: "", footer: false });
+  document.querySelector(".Mock").innerHTML = `<a href="20-start.html">Start</a><a href="21-workbook.html">Workbook</a><a href="22-colors.html" class="on">Colors</a>`;
+  // Candidates for the assistant's own color, one per hue family; none blue (Current Trends) or orange (Historical).
+  const opts = [
+    ["Green", "#1F7A4D", ["#2A9160", "#1F7A4D", "#145536"], "#EFF7F2"],
+    ["Teal", "#0E6E7A", ["#178595", "#0E6E7A", "#094B54"], "#EEF7F8"],
+    ["Purple", "#6B3FA0", ["#7E52B5", "#6B3FA0", "#4A2A72"], "#F4F0FA"],
+    ["Magenta", "#A3236F", ["#BA3484", "#A3236F", "#72164D"], "#FBF0F6"],
+    ["Gold", "#A87A12", ["#BF8E1F", "#A87A12", "#7A570A"], "#FBF6EA"],
+  ];
+  const strip = `<div class="Strip">Source colors: ${Object.values(SOURCES).map((s) => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join("")}</div>`;
+  document.getElementById("opts").innerHTML = opts.map(([name, c, [g1, g2, g3], tint]) => `
+    <section class="Opt">
+      <div class="OptLabel">${name}<span>${c}</span></div>
+      <section class="Hero" style="background:linear-gradient(135deg,${g1},${g2} 55%,${g3})"><div class="HeroInner"><h1>Crime Data Assistant</h1></div></section>
+      <div class="AskBand" style="background:${tint}"><div class="AskBandInner">
+        <p>Questions about U.S. crime data, answered from five FBI and Crime Index datasets with a chart, a table and the source.</p>
+        <form class="HAsk" onsubmit="return false"><input placeholder="Car thefts in Baltimore by month since 2022" style="border-color:var(--color-input)"><button class="Btn Btn-dark Btn-big" style="background:${c}">Ask</button></form>
+      </div></div>
+      
+    </section>`).join("");
+</script>
+</body></html>

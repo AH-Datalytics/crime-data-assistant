@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clarify</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"></head>
+<body>
+<main><div class="Container">
+  <div class="Top">
+    <div>
+      <span class="overline dot">Reading your question</span>
+      <p class="Sentence" id="sentence">
+        <span class="slot" data-slot="crime">Shoplifting</span> offenses in <span class="slot empty" data-slot="place" style="color:var(--color-explorer-primary);border-bottom-color:var(--color-explorer-primary)">which Baltimore?</span>, <span class="slot" data-slot="by" data-lower>by month</span>, <span class="slot" data-slot="period">2022 to 2025</span><span class="slot add" data-slot="filter">+ condition</span>
+      </p>
+      <p class="how">One part is not settled yet. Everything else was read from your words.</p>
+    </div>
+  </div>
+
+  <div class="Outcome">
+    <span class="overline">Which Baltimore?</span>
+    <p class="q">Two agencies match.</p>
+    <div class="Options">
+      <button class="Btn Btn-explorer">Baltimore, Maryland <span class="mono" style="margin-left:.5rem;color:var(--color-light)">city police, pop. 562,811</span></button>
+      <button class="Btn Btn-explorer">Baltimore County, Maryland <span class="mono" style="margin-left:.5rem;color:var(--color-light)">county police, pop. 849,486</span></button>
+    </div>
+    <span></span><p class="why">The county police department does not include the city. Your choice fills the sentence above and is kept for your next questions.</p>
+  </div>
+
+  <div class="Outcome" style="border-bottom:0;opacity:.55">
+    <span class="overline">When the period is missing</span>
+    <p class="q">Which period?</p>
+    <div class="Options">
+      <button class="Btn Btn-outlined" disabled>The latest complete year (2025)</button><button class="Btn Btn-outlined" disabled>This year so far</button>
+      <div class="entry"><span class="Btn Btn-outlined" style="opacity:.7">Another year</span><input placeholder="2019" disabled></div>
+    </div>
+    <span></span><p class="why">Shown for reference: the same pattern, one question at a time, for a crime, a place or a period left out. The period is given above, so this one is skipped.</p>
+  </div>
+</div></main>
+<script type="module">
+  import { shell } from "./_shell.js"; import { slots } from "./mock.js";
+  shell({ ask: "Shoplifting in Baltimore by month from 2022 to 2025", screen: "02-clarify", downloads: false });
+  slots(document.getElementById("sentence"));
+</script>
+</body></html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crime Data Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"><link rel="stylesheet" href="app.css"></head>
+<body>
+<script type="module">
+  import { work, EXCHANGES } from "./_work.js";
+  work({ screen: "12-clarify", active: 2, exchanges: [...EXCHANGES,
+    { src: "nibrs", q: "Shoplifting in Baltimore by month from 2022 to 2025", wait: "Choose one to continue" }],
+    stage: `
+    <div class="StageMsg">
+      <span class="overline dot">Which Baltimore?</span>
+      <h2>Two agencies match.</h2>
+      <p>The county police department does not include the city. Your choice is kept for your next questions.</p>
+      <div class="Choices">
+        <button class="Choice"><span>Baltimore, Maryland</span><span class="k">City police, pop. 562,811</span></button>
+        <button class="Choice"><span>Baltimore County, Maryland</span><span class="k">County police, pop. 849,486</span></button>
+      </div>
+    </div>` });
+</script>
+</body></html>

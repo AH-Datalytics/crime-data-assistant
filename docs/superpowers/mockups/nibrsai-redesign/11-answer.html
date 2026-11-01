@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crime Data Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://use.typekit.net/gqy0ylh.css"><link rel="stylesheet" href="ci.css"><link rel="stylesheet" href="app.css"></head>
+<body>
+<script type="module">
+  import { work, EXCHANGES, answerStage, drawAnswer } from "./_work.js";
+  // Click a past exchange to bring its answer back to the stage, as in the current app.
+  const show = (i) => {
+    document.querySelectorAll(".Work").forEach((n) => n.remove()); document.querySelectorAll(".Bar,.Header,.Mock").forEach((n) => n.remove());
+    work({ screen: "11-answer", exchanges: EXCHANGES, active: i, stage: answerStage(i === 1 ? "year" : "month") });
+    drawAnswer(i === 1 ? "year" : "month");
+    document.querySelectorAll(".Ex").forEach((el, j) => el.addEventListener("click", () => show(j)));
+  };
+  show(1);
+</script>
+</body></html>
