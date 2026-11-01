@@ -2484,6 +2484,15 @@
       "note": "NIBRS shadow slice: question to answer, clarification or decline under the decided policy, with a stubbed DuckDB step and the checked-in place index; the runner scores it locally against a canonical build"
     },
     {
+      "id": "test-nibrs-historical",
+      "tier": "F",
+      "script": "scripts/test-nibrs-historical.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Historical in the new engine (P75-P79): agencies' Part I figures from the Crime Index build, as published, blanks never zero, P77's source line; a stub executor stands in for DuckDB over the build"
+    },
+    {
       "id": "test-nibrs-preview",
       "tier": "F",
       "script": "scripts/test-nibrs-preview.ts",

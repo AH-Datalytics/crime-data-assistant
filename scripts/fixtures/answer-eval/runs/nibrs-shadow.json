@@ -2163,14 +2163,22 @@
    "id": "LS-266",
    "split": "heldout",
    "expected": "answer",
-   "actual": "decline",
-   "outcome": "avoidable_decline",
-   "diffs": [],
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
    "notes": [
-    "declined (unsupported_capability): The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it."
+    "delivered: Denver, Colorado: 12,457 motor vehicle thefts in 2023. / Figures for the Denver Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this data, not zero. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured"
   },
   {
    "id": "LS-267",
@@ -3111,7 +3119,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 19,935 robberies in 2024. / Source: FBI SRS."
+    "delivered: Texas: 19,935 robberies in 2024. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "2021 and later",
@@ -3125,7 +3133,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: United States: 19,935 murders in 2023. / Source: FBI SRS."
+    "delivered: United States: 19,935 murders in 2023. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "2021 and later",
@@ -3139,7 +3147,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Ohio: 259.5 burglaries per 100,000 residents in 2022. / Source: FBI SRS."
+    "delivered: Ohio: 259.5 burglaries per 100,000 residents in 2022. / Source: Crime Index."
    ],
    "capability": "answer:historical rate",
    "era": "2021 and later",
@@ -3153,7 +3161,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Florida: motor vehicle thefts by year, 2015 to 2024. / Source: FBI SRS."
+    "delivered: Florida: motor vehicle thefts by year, 2015 to 2024. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
@@ -3167,7 +3175,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: California: 187,414 violent crimes in 2024. / Source: FBI SRS."
+    "delivered: California: 187,414 violent crimes in 2024. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "2021 and later",
@@ -3181,7 +3189,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Georgia: robberies, 2024 against 2025. / 4,426 in 2024 and 3,799 in 2025: a change of -627 (-14.2%). / Source: FBI SRS."
+    "delivered: Georgia: robberies, 2024 against 2025. / 4,426 in 2024 and 3,799 in 2025: a change of -627 (-14.2%). / Source: Crime Index."
    ],
    "capability": "answer:historical change",
    "era": "2021 and later",
@@ -3195,7 +3203,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: United States: 57.8% of murders were cleared in 2023. / Source: FBI SRS."
+    "delivered: United States: 57.8% of murders were cleared in 2023. / Source: Crime Index."
    ],
    "capability": "answer:historical rate",
    "era": "2021 and later",
@@ -3372,7 +3380,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: robberies by year, 1960 to 1965. / State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them. / Source: FBI SRS."
+    "delivered: Texas: robberies by year, 1960 to 1965. / State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "before 2021",
@@ -3386,7 +3394,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Arizona: 143,974 property crimes in 2023. / Source: FBI SRS."
+    "delivered: Arizona: 143,974 property crimes in 2023. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "2021 and later",
@@ -3525,17 +3533,24 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "route",
-     "expected": "historical answer",
-     "actual": "routed to historical: not run by this NIBRS shadow",
+     "field": "measures",
+     "expected": "?",
+     "actual": "?",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. Historical isn't available here yet"
+    "delivered: Atlanta, Georgia: 26.7% of robberies were cleared in 2023 (161 of 602). / Figures for the Atlanta Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this data, not zero. / Source: Crime In"
    ],
    "capability": "answer:historical rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured"
   },
   {
    "id": "LS-364",

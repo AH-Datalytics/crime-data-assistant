@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { shadowAnswer, type ShadowDeps } from "@/lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "@/lib/nibrs-shadow/places";
 import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
+import { historicalBuildAt } from "@/lib/nibrs-shadow/historical";
 import { follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,8 @@ function shadowDeps(): ShadowDeps {
     release: { id: process.env.NIBRS_SHADOW_RELEASE ?? "20261028-test5", firstMonth: "2017-01", lastMonth: process.env.NIBRS_SHADOW_LAST_MONTH ?? "2026-09", asOf: new Date().toISOString().slice(0, 10) },
     target: { root: process.env.NIBRS_SHADOW_ROOT!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
     execute: duckdbExecutor(process.env.NIBRS_SHADOW_PYTHON ?? "python"),
+    // Historical (P75-P79): the Crime Index build, when NIBRS_HISTORICAL_ROOT names one.
+    historical: historicalBuildAt(process.env.NIBRS_HISTORICAL_ROOT),
   };
   return deps;
 }

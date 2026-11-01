@@ -2,7 +2,7 @@
  * Part I offenses for a state or the nation, completed years (P53): read from the Crime Index snapshot's historical
  * file (scripts/fixtures/nibrs-shadow/crimeindex, byte-pinned to nibrs-model's manifest, snapshot 20261030), never
  * summed from NIBRS agencies and never spliced with another source (P14). The national clearance rate comes from the
- * snapshot's historical clearances (P57); there is no state clearance rate (P18). Answers end "Source: FBI SRS." (P63).
+ * snapshot's historical clearances (P57); there is no state clearance rate (P18). Answers end "Source: Crime Index." (P77, amending P63).
  *
  * The file has the seven offenses' totals, year-over-year change and rates per 100,000 (its "capita" columns) for each
  * state and the nation, 1960-2025, and its own violent and property sums, which are read as given, never re-added.

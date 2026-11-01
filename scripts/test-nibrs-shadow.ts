@@ -635,11 +635,11 @@ assert.equal(withLine(`Not ranked because they didn't report all 12 months of 20
 // 8. A blank rate says why: no population is not months unknown.
 assert.match(raleigh.delivered.text[0], /because the FBI gives no 2024 population for the /);
 
-// Increment 5. A Part I offense for a state or the nation, completed years: the historical file (P53), "Source: FBI SRS."
+// Increment 5. A Part I offense for a state or the nation, completed years: the historical file (P53), "Source: Crime Index."
 // (P63), with what it read; the covered part of a span with the rest named (D04, P14); a change (P54).
 const srs = (q: string) => { const o = ask(q); assert.equal(o.kind, "srs", `${q}: ${JSON.stringify(o).slice(0, 200)}`); return o as Extract<ShadowOutcome, { kind: "srs" }>; };
 const txRob = srs("Robberies in Texas in 2024");
-assert.deepEqual([txRob.delivered.table.rows, txRob.delivered.text, txRob.read.column, txRob.read.uids], [[[19935]], ["Texas: 19,935 robberies in 2024.", "Source: FBI SRS."], "robbery_total", ["tx_2024"]]);
+assert.deepEqual([txRob.delivered.table.rows, txRob.delivered.text, txRob.read.column, txRob.read.uids], [[[19935]], ["Texas: 19,935 robberies in 2024.", "Source: Crime Index."], "robbery_total", ["tx_2024"]]);
 assert.deepEqual(srs("Burglary rate in Ohio in 2022").delivered.table.rows, [[259.5]]);
 assert.equal(srs("Violent crime in California in 2024").read.column, "violent_total", "the file's own sum, never re-added");
 assert.deepEqual(srs("Did robberies go up in Georgia in 2025?").delivered.table.rows, [[4426, 3799, -627, -14.2]]);
@@ -693,7 +693,7 @@ assert.equal(as(ask("Robberies in Texas in 2024 according to NIBRS"), "answer").
 // sum's view, rows and disclaimer figures.
 const year24b = { from: "2024-01", to: "2024-12" };
 const srsLabel = label({ action: "answer", meaning: { source: "historical", places: [{ kind: "state", name: "Texas", state: "TX" }], period: year24b, measures: [{ name: "robbery", unit: "offense" }], filters: [], groupings: [], statistic: "count" },
-  values: { status: "pending_build" }, statements: ["names the state (Texas)", "ends with the source line \"Source: FBI SRS.\" (P63)"] });
+  values: { status: "pending_build" }, statements: ["names the state (Texas)", "ends with the source line \"Source: Crime Index.\" (P63)"] });
 const srsV = (value: number, column = "robbery_total") => sliceValues([{ name: "V", json: JSON.stringify({ basis: "crime_index_snapshot", nibrsai_cases: "LS-999", values: [{ uid: "tx_2024", year: 2024, column, value: String(value) }] }) }]);
 assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19935)).result!.outcome, "correct");
 assert.equal(scoreShadow(srsLabel, txRob, r, ctx, srsV(19936)).result!.outcome, "wrong_answer");
