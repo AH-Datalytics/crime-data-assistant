@@ -59,6 +59,19 @@ to the shadow engine on the pinned build `20261028-test5`, local dev server only
    buttons; the spec's mono description (city police; county police, does not include the city) needs the engine to
    say which agency type each option is.
 
+## After engine PR #86 (dev 802dace, 2026-11-01)
+
+- Item 1 is fixed: fixture paths come from `process.cwd()`. The dev-only webpack hook and `--webpack` are removed;
+  the preview runs on the default bundler, and `next.config.ts` matches dev.
+- Item 3 is fixed ("1,459.7"). Item 2b's strings are rewritten in plain words (P74), and declines now offer a
+  question-only choice ("Ask instead: ...") that the page asks as a new question.
+- Still unclear, from the follow-up rewriter (not covered by P74): "Whether "female" means victims, offenders or
+  arrestees." (no options) and "The follow-up could not be placed in the previous question with certainty; ask the
+  full question." (a complete new question). "I can't answer this combination yet. Try a simpler version, for example
+  one crime in one place for one year." (victims cleared; victims by weapon) is plain but offers no button.
+- The rewriter's new `propose` result (P73) is returned by the route as a "Did you mean ...?" reply and never run
+  until confirmed; the deterministic rewriter the preview uses does not propose.
+
 ## Page findings (fixed in this round)
 
 - A one-row series ("2024: 10,149") showed as a table; it is now the answer sentence.

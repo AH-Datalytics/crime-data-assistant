@@ -93,7 +93,10 @@ export default function AssistantClient() {
     const chart = /\bbar\b/i.test(text) ? "bar" : /\bline\b/i.test(text) ? "line" : undefined;
     void run(text.trim(), { previous: lastAsked(), chart });
   };
-  const click = (t: Turn, b: PreviewButton) => void run(b.label, { question: t.question, path: b.path, viaButton: true });
+  // A continuation follows the button's path; a question-only choice (P74) is asked as a new question.
+  const click = (t: Turn, b: PreviewButton) => (b.kind === "question" && b.question
+    ? void run(b.question)
+    : void run(b.label, { question: t.question, path: b.path, viaButton: true }));
 
   // The new question goes to the top of the view, with its answer below it, once the answer has rendered.
   useEffect(() => {
@@ -203,7 +206,7 @@ function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButto
   return (
     <div className="Choices">
       {buttons.map((b, i) => (
-        <button key={b.label} type="button" className={`Choice${primary && i === 0 && b.kind === "continuation" ? " primary" : ""}`} disabled={b.kind !== "continuation"} onClick={() => onButton(b)}>
+        <button key={b.label} type="button" className={`Choice${primary && i === 0 && (b.kind === "continuation" || b.kind === "question") ? " primary" : ""}`} disabled={b.kind !== "continuation" && b.kind !== "question"} onClick={() => onButton(b)}>
           <span>{b.label}</span>
           {b.kind === "not-built" ? <span className="k">Not in this build</span> : b.kind === "other-source" ? <span className="k">Not available yet</span> : b.kind === "entry" ? <span className="k">Type it in the question</span> : null}
         </button>

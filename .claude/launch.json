@@ -10,7 +10,7 @@
     {
       "name": "assistant-dev",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev", "--webpack", "-p", "3210"],
+      "runtimeArgs": ["next", "dev", "-p", "3210"],
       "port": 3210
     }
   ]

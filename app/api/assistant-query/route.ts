@@ -6,7 +6,8 @@
  * A follow-up (P69): with `previous` (the standalone question of the last answer), the engine's follow-up rewriter
  * turns the two into one standalone question first, and that question is what is answered and shown ("asked"). The
  * rewriter's question back is returned as a clarify; a presentation-only follow-up is returned as such, for the page
- * to redraw the chart with no data turn. Buttons carry `path` against `asked`, with no `previous`.
+ * to redraw the chart with no data turn; a proposed rewrite (P73) is returned for the user to confirm, never run. Buttons
+ * carry `path` against `asked`, with no `previous`. A decline's `detail` (for logs) is never sent: toPreview omits it.
  */
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -50,6 +51,8 @@ export async function POST(req: Request) {
       const r = deterministicRewriter.rewrite(previous, question);
       if (r.kind === "ask") return NextResponse.json({ kind: "rewrite-ask", why: r.why, options: r.options, ms: Date.now() - started });
       if (r.kind === "presentation") return NextResponse.json({ kind: "presentation", asked: r.question, how: r.how, ms: Date.now() - started });
+      // P73: a proposed rewrite is shown as "Did you mean ...?" and runs only when the user confirms it.
+      if (r.kind === "propose") return NextResponse.json({ kind: "proposal", asked: r.question, question: r.question, ms: Date.now() - started });
       asked = r.question;
     }
     const at = follow(shadowAnswer(asked, shadowDeps()), clicked);
