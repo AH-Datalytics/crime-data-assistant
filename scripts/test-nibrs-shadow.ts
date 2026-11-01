@@ -863,4 +863,22 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.match(as(ask("Rape clearances by type by victim in Memphis in 2024"), "decline").explanation, /^Clearances are recorded for each offense, not for each person, so they can't be counted by "victim"\./);
 }
 
+// Jeff (2026-11-01): "it assumes everything is a follow up." A turn that stands on its own is a new question, answered
+// as a first question would be, whatever came before; never "could not be placed ... ask the full question".
+{
+  const chicago = shadowFollowUp("Shoplifting in Memphis by year from 2021 to 2024", "Murders in Chicago in 2024", deps);
+  assert.equal(chicago.rewriteKind, "new");
+  assert.deepEqual({ ...chicago, rewrite: undefined, rewriteKind: undefined }, { ...ask("Murders in Chicago in 2024"), rewrite: undefined, rewriteKind: undefined });
+  const det = shadowFollowUp("Murder victims in Houston by race in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", deps);
+  assert.equal(det.rewriteKind, "new");
+  assert.ok(det.kind !== "clarify" || !/could not be placed/.test(det.about), "never 'could not be placed' for a question of its own");
+  // A new question with no period, after one with a period: that period is offered as a button, never assumed.
+  const shop = shadowFollowUp("Shoplifting in Memphis in 2023", "Shoplifting in Detroit", deps);
+  assert.equal(shop.rewriteKind, "new");
+  const offered = shop.kind === "answer" ? shop.buttons ?? [] : shop.kind === "clarify" ? shop.options : shop.kind === "decline" && shop.alternative ? [shop.alternative] : [];
+  assert.ok(offered.some((b) => b.question === "Shoplifting in Detroit in 2023" && !b.continuation), JSON.stringify(offered));
+  // A turn that points back stays a follow-up.
+  assert.equal(shadowFollowUp("Shoplifting in Memphis in 2024", "what about Nashville?", deps).rewriteKind, "rewrite");
+}
+
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

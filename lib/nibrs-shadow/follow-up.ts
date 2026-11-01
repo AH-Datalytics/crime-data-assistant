@@ -73,6 +73,24 @@ function placeWords(q: string, places: { text: string }[]): { at: number; text: 
   return first < 0 || last < 0 ? null : { at: first, text: q.slice(first, last + lastP.length) };
 }
 
+/**
+ * Jeff (2026-11-01, testing the preview): "The follow up doesn't work well, it assumes everything is a follow up." A turn
+ * is a NEW question unless there is evidence it is a follow-up (real conversations: most later turns are complete new
+ * questions). It stands alone when the reader finds a crime and a place in it (the period defaults as a first
+ * question's does) and nothing in it points back at the previous answer: no opening such as "same", "and", "also",
+ * "instead", "what about", "now", "make it", "show it", "compare", and no "same", "instead", "those", "them", "again",
+ * "too", "as well" or "alongside" anywhere. A turn missing the crime or the place (a bare place, year or category) is a
+ * follow-up.
+ */
+const BACK_LEAD = /^(?:(?:ok(?:ay)?|so|then|please|but)\b[,\s]*)*(?:same|and|also|plus|instead|what about|how about|compare|vs\.?|versus|add|now|make (?:it|this|that)|show (?:it|this|that|them|the same)|do (?:the same|that|it)|for that|by)\b/i;
+const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|again|too|as well|also|alongside|side by side|for comparison)\b/i;
+export function standsAlone(turn: string): boolean {
+  const t = turn.trim();
+  if (BACK_LEAD.test(t) || BACK_WORD.test(t)) return false;
+  const own = partsOf(t);
+  return own.measures.length > 0 && own.places.length > 0;
+}
+
 export const deterministicRewriter: FollowUpRewriter = {
   rewrite(previous: string, followUp: string): Rewrite {
     const prev = previous.trim();

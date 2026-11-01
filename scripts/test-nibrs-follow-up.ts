@@ -5,7 +5,7 @@
  * Offline: no database, no model.
  */
 import assert from "node:assert/strict";
-import { deterministicRewriter as R, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
+import { deterministicRewriter as R, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
 import { shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
@@ -106,6 +106,13 @@ assert.equal(q(rw("show me springfield murders", "Missouri instead")), "show me 
 asked(rw("show me springfield murders", "what about Missouri?"));
 asked(rw("murders in Chicago in 2024", "Illinois"));
 assert.equal(q(rw("Shoplifting in Missouri in 2024", "Kansas")), "Shoplifting in Kansas in 2024");
+// Jeff (2026-11-01): "it assumes everything is a follow up." A turn with its own crime and place, pointing back at
+// nothing, is a new question; one missing the crime or the place, or pointing back, is a follow-up.
+for (const t of ["Murders in Chicago in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", "violent crime in Kansas City", "How many simple assaults were there in Detroit in 2023?"])
+  assert.ok(standsAlone(t), `new: ${t}`);
+for (const t of ["what about Denver in 2023?", "now murders instead", "male", "compare to Dallas", "Nashville", "2024", "by month", "same for Houston",
+  "show it for Memphis", "and robberies in Detroit in 2023", "robberies in Detroit in 2023 too"])
+  assert.ok(!standsAlone(t), `follow-up: ${t}`);
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);
