@@ -95,6 +95,12 @@ asked(rw(P, "can you go back further in time?"));
 assert.equal(rw(M, "Make the graph green").kind, "presentation");
 // Codex full review 1: a previous period of several years is not one phrase to replace: asked.
 asked(rw("Shoplifting in Memphis in 2023 and 2024", "show 5 years"));
+// Real conversations (hand check of the production log's follow-up turns): a previous turn that was itself a follow-up
+// is not a question to change (#13); a bare state names an ambiguous city's state (#46), and after a placed city it asks.
+asked(rw("Make it per capita", "Show counts instead"));
+assert.equal(q(rw("show me springfield murders", "Missouri")), "show me springfield, Missouri murders");
+asked(rw("murders in Chicago in 2024", "Illinois"));
+assert.equal(q(rw("Shoplifting in Missouri in 2024", "Kansas")), "Shoplifting in Kansas in 2024");
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);

@@ -85,6 +85,9 @@ export const deterministicRewriter: FollowUpRewriter = {
     if (additive) f = `add ${f}`;
     const fl = f.toLowerCase();
     const prevParts = partsOf(prev);
+    // The previous turn must be a question of its own: a follow-up ("Make it per capita") names no crime or place, and
+    // only the turn before it would say what it changes (real conversations, hand check #13).
+    if (!prevParts.measures.length && !prevParts.places.length) return ask("The previous question was itself a change to an earlier one; ask the full question.");
 
     // Every form below must take the whole follow-up: a form found inside longer words ("make it a bar chart for 2023")
     // would drop the rest, so it is asked about (Codex 7b-04.1).
@@ -266,6 +269,12 @@ export const deterministicRewriter: FollowUpRewriter = {
             { label: `${newPlace} only`, question: clean(`${prev.slice(0, pw.at)}${newPlace}${prev.slice(pw.at + pw.text.length)}`.replace(/\s+combined\b/i, "")) },
             { label: `Add ${newPlace}; show all ${n} separately`, question: clean(withNew.replace(/\s+combined\b/i, "")) },
             ...(combinedPrev ? [{ label: `Add ${newPlace} to the combined total`, question: clean(withNew) }] : [])]);
+        } else if (/^state:/.test(String(t.places[0].value)) && !adding && !/^state:|^national/.test(String(prevParts.places[0].value))) {
+          // A bare state after a city (real conversations: "Missouri" answering "which Springfield?"): it names the
+          // city's state when the city was ambiguous; after a city already placed, which is meant is asked.
+          if (/^ambiguous:/.test(String(prevParts.places[0].value)) && !newYear)
+            q = `${q.slice(0, pw.at)}${pw.text}, ${newPlace}${q.slice(pw.at + pw.text.length)}`;
+          else return ask(`Whether ${newPlace} means the state or ${pw.text} in ${newPlace}.`);
         } else q = `${q.slice(0, pw.at)}${newPlace}${q.slice(pw.at + pw.text.length)}`;
       }
       if (newYear) {
