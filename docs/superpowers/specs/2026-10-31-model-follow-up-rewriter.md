@@ -92,3 +92,88 @@ Prompt version `rw-1`.
    - Requests go one at a time.
    - Spend persists in the cache across resumes.
    - A response with no usage stops the run.
+
+## Amendment: confirm before run (Jeff, 2026-10-31, through the coordinator: "yes to both")
+
+**Why confirmation is needed.** Measured on the cached responses:
+- Hand check: 4 of 50 accepted model rewrites (8%) changed the meaning: "Please do that!", "new orleans ori", "what rate is this?", "since 2019".
+- LS-422: the model returned "Wichita only" as certain where the label requires asking.
+A model rewrite run directly would have answered the wrong question in each case. Shown to the user first, each becomes a visible suggestion the user can fix.
+
+**P69 amendment (proposed policy row text).** Only a rewrite the deterministic rewriter places with certainty runs directly. A model rewrite is proposed: "Did you mean: <question>?", with Run and Edit. Nothing runs until the user confirms or edits it, and an edited question runs as a new question. A follow-up neither rewriter can place still clarifies. Presentation-only edits still never reach the engine.
+
+**Design.**
+1. **A fifth kind on `Rewrite`: `propose`** = `{ kind: "propose"; question; how }`.
+   - `cachedModelRewriter` now returns `propose` where it returned `rewrite`, and also for model `presentation`.
+   - A model `new` is used only when the baseline's check agrees. It is the baseline's own result, and it runs directly as before.
+   - The deterministic rewriter is unchanged.
+2. **A new outcome for a proposal: `{ kind: "proposal", question, proposed, how, rewrite: proposed, rewriteKind: "propose" }`.**
+   - It joins the union `shadowFollowUp` returns (`FollowUpOutcome`).
+   - Nothing is compiled or run for it: there is no plan, no SQL and no precomputed continuation. The "Run" option carries the question text only.
+   - `ShadowOutcome` is unchanged, so no other path sees the new kind.
+3. **Composing the two rewriters (`hybridRewriter`).**
+   - The deterministic rewriter goes first. Its rewrite, new and presentation results run directly.
+   - When it asks, the model's guarded answer is used: a proposal, the baseline-confirmed new, or an ask.
+   - An ask from both is the baseline's ask, which keeps its options.
+4. **Scoring a proposal (runner and scorer).** The scorer simulates the user confirming: it runs `shadowAnswer(proposed)` and scores that as the case's answer. The case is reported as "proposed, then confirmed".
+   - **Expected answer, and the proposal matches the label's rewrite** (`sameRewrite`): the confirmed answer is scored as usual. A wrong number there is a **wrong answer**, an engine fault.
+   - **Expected answer, and the proposal does not match:** **wrong action**. The user saw the wrong question before anything ran, so it is never a wrong answer.
+   - **Expected clarify (LS-422):** a proposal is a **wrong action**. Nothing ran, but the user was offered one reading where two were possible.
+   - **Expected decline:** the confirmed run is scored, so a court question still declines after confirmation.
+   - The report counts proposals apart from direct answers.
+5. **Guards, loosened only where the 60-row sort showed correct rewrites were blocked (13%).**
+   - A statistic or unit the follow-up names only as a contrast ("this is a count, show a rate"; "rate trend, not the incident trend") is no longer required in the rewrite. A previous one must still be kept unless the follow-up names one.
+   - A breakdown named for people ("by ethnicity instead" for arrests) also counts when the reader's people flag carries it.
+   - A share or change added on a "% change" or "change" follow-up is allowed.
+   - A follow-up place counts by its name when the follow-up gives no state (the reader can resolve a bare "Philadelphia" to another state).
+   - A year inside the span of the conversation's years, or the data's latest year, is no longer an invented number ("remove 2025" gives 2024).
+   - Presentation: a follow-up whose only recognized parts are chart words is still presentation ("Make the graph green").
+
+   With proposals confirmed, these are rewordings the user sees, not answers the user doesn't.
+6. **Period default (deterministic, no model).** "show N years", "N-year trend" and "past/last N years" become "by year over the last N years", which the reader reads relative to the release. "go back further" asks how far.
+7. **Re-measure on the cached responses, with no new model spend.** Reported:
+   - placed: direct, proposed, asked;
+   - the hand-check sample re-judged under the new guards;
+   - LS-403..LS-426 with the hybrid rewriter: zero wrong answers required, with proposals reported apart.
+
+## Results (guards g-3, cached responses only; spend $4.16 of $5, nothing new after the amendment)
+
+The previous questions are synthetic, so these counts measure recognition, not real-session correctness.
+
+**693 logged follow-ups:**
+
+| | Run directly | Proposed for confirmation | Asked |
+|---|---|---|---|
+| Deterministic | 110 (15.9%) | 0 | 583 (84.1%) |
+| Hybrid | 110 (15.9%) | 183 (26.4%) | 400 (57.7%) |
+
+The deterministic count is 110, up from 103, because of the period default.
+
+**Hand checks:**
+- The original sample (guards g-1): 46 of 50 correct and 4 meaning changed, kept as judged.
+- The outputs that the narrowed exceptions newly admitted, all of them:
+  - under g-2: 13, of which 12 were correct and 1 changed the meaning ("since 2020" given an end year);
+  - g-3 adds the "since" guard, which blocks that one and the g-1 "since 2019" failure;
+  - under g-3: 12, all correct.
+
+**LS-403..LS-426 with the hybrid rewriter:**
+- 21 correct.
+- 1 wrong action: LS-422 was proposed, nothing ran, but the label asks.
+- 1 unverified: LS-426, no independent values for its alternative.
+- **0 wrong answers.**
+- LS-422 is the only proposal among the cases. No other case changed.
+
+Zero wrong answers here is not zero meaning errors. Of the hand-checked accepted model rewrites, 4 of 63 (g-1 sample plus g-3 admissions) change the meaning. That is why each one is proposed, never run directly.
+
+**The 60-row sort of unplaced follow-ups** (unplaced-sample.json):
+
+| Category | Share |
+|---|---|
+| Engine can't answer yet | 28% |
+| Needs the real conversation | 27% |
+| Not a data question | 18% |
+| Guards too strict | 13% |
+| Genuinely ambiguous | 8% |
+| Model too cautious | 5% |
+
+The guard exceptions and the period default cover the parts of the last three that have evidence. The "not available yet" and help replies are a separate follow-up. Real conversations exist in the production log: session_id, 1,425 same-tab follow-up turns. Measuring on them waits for Jeff's OK to copy redacted text and send it to the model.

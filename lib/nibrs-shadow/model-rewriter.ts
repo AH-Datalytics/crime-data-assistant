@@ -15,7 +15,7 @@ import { readQuestion } from "./reading";
 
 export const MODEL_ID = "gemini-3.8-flash";
 export const PROMPT_VERSION = "rw-1";
-export const GUARD_VERSION = "g-1";
+export const GUARD_VERSION = "g-3";
 /** The generation settings the cache is bound to (with the prompt's hash). */
 // An answer cut off at the output cap (thinking counts toward it) is fetched once more with the larger cap.
 export const GENERATION = { temperature: 0, maxOutputTokens: 512, retryTruncatedMaxOutputTokens: 2048, thinkingLevel: "low" } as const;
@@ -71,17 +71,40 @@ const ADDITIVE = /^(?:(?:ok(?:ay)?|now|then|so|please)\b[,\s]*)*(?:add|also|and|
  *   - a place brought to a combined group is asked about;
  *   - the rewrite reads completely (no unread words).
  */
-export function meaningProblem(previous: string, followUp: string, rewrite: string): string | null {
+export function meaningProblem(previous: string, followUp: string, rewrite: string, opts: { exceptions?: boolean } = {}): string | null {
+  const allow = opts.exceptions !== false;
   const P = signature(previous), F = signature(followUp), O = signature(rewrite);
   if (O.unread) return "the rewrite has words the reader does not read";
   if (P.combined && F.by.has("place")) return "a place brought to a combined group";
+  // Exceptions, each from a correct rewrite the 60-row sort found blocked (Codex amendment check 4); no others.
+  const pBy = JSON.parse(P.flags).people?.by, oBy = JSON.parse(O.flags).people?.by;
+  // "by ethnicity instead" for arrests: the reader carries the person's breakdown in its people flag, its role kept.
+  const peopleBreakdown = (v: string) => allow && !!pBy && !!oBy && oBy.attr === v && oBy.who === pBy.who && oBy.paired === pBy.paired;
+  // "This is a count. Is it possible to show a rate?": the follow-up names the old statistic only as the contrast.
+  const contrast = (c: string, v: string) => allow && ((c === "statistic" && v === "count") || (c === "unit" && v === "incidents"))
+    && !!F.by.get("statistic")?.has("rate") && !!O.by.get("statistic")?.has("rate");
+  let peopleChanged = false;
   for (const [c, vs] of F.by) {
-    if (c === "period") { const oy = years(O.by.get("period")); if (![...years(vs)].every((y) => oy.has(y))) return "a year the follow-up names is missing"; continue; }
-    for (const v of vs) if (!O.by.get(c)?.has(v)) return `the follow-up's ${c} (${v}) is missing`;
+    if (c === "period") {
+      const oy = years(O.by.get("period"));
+      if (![...years(vs)].every((y) => oy.has(y))) return "a year the follow-up names is missing";
+      // "since 2019" runs through the latest data: a rewrite that ends at a fixed year cuts it short (hand checks g-1 #44, g-2 #8).
+      if ([...vs].some((v) => v.startsWith("since:")) && ![...vs].every((v) => !v.startsWith("since:") || O.by.get("period")?.has(v))) return "a \"since\" period was given an end year";
+      continue;
+    }
+    for (const v of vs) {
+      if (O.by.get(c)?.has(v) || contrast(c, v)) continue;
+      if (c === "breakdown" && peopleBreakdown(v)) { peopleChanged = true; continue; }
+      return `the follow-up's ${c} (${v}) is missing`;
+    }
   }
   for (const [c, vs] of P.by) if (!F.by.has(c) && !same(vs, O.by.get(c))) return `the previous ${c} changed although the follow-up does not change it`;
-  for (const c of O.by.keys()) if (!P.by.has(c) && !F.by.has(c) && c !== "unit") return `a ${c} neither question asked for`;
-  if (F.flags === NO_FLAGS() && O.flags !== P.flags) return "a breakdown, quarters or a column changed although the follow-up names none";
+  // "y/y % change": a percent change is read as a share with a change; allowed only for a follow-up that says percent.
+  const percentChange = allow && /%|\bpercent/i.test(followUp) && O.by.has("change");
+  for (const c of O.by.keys()) if (!P.by.has(c) && !F.by.has(c) && c !== "unit" && !(c === "share" && percentChange)) return `a ${c} neither question asked for`;
+  const flagsWithout = (f: string) => JSON.stringify({ ...JSON.parse(f), people: { ...(JSON.parse(f).people ?? {}), by: null } });
+  if (F.flags === NO_FLAGS() && (peopleChanged ? flagsWithout(O.flags) !== flagsWithout(P.flags) : O.flags !== P.flags))
+    return "a breakdown, quarters or a column changed although the follow-up names none";
   if (F.flags !== NO_FLAGS()) {
     const f = JSON.parse(F.flags), o = JSON.parse(O.flags), none = JSON.parse(NO_FLAGS());
     for (const k of Object.keys(f)) if (JSON.stringify(f[k]) !== JSON.stringify(none[k]) && JSON.stringify(f[k]) !== JSON.stringify(o[k])) return `the follow-up's ${k} is not in the rewrite`;
@@ -102,20 +125,33 @@ export function guarded(a: ModelAnswer | null, previous: string, followUp: strin
     const d = deterministicRewriter.rewrite(previous, followUp);
     return d.kind === "new" ? { ...d, how: `model ${MODEL_ID} (${PROMPT_VERSION}), new question confirmed by the baseline's check` } : ask("Whether this is a question of its own or a change to the previous one.");
   }
-  // Presentation: the follow-up names no data part and sets no flag, and the data question is kept exactly.
-  if (a.kind === "presentation") {
-    const F = signature(followUp);
-    return F.by.size === 0 && F.flags === NO_FLAGS() && !F.unread
-      ? { kind: "presentation", question: previous.trim(), confidence: "certain", how: `model ${MODEL_ID} (${PROMPT_VERSION}), presentation only` }
-      : ask("The follow-up changes more than the presentation; ask the full question.");
-  }
+  // Presentation is the baseline's: only its supported wording keeps the data question (unread words could hold a data
+  // change; Codex amendment check 4). A model's presentation reading is asked about.
+  if (a.kind === "presentation") return ask("Which change to the chart or table is meant; ask the full question.");
   const q = a.question;
   if (typeof q !== "string" || !q.trim() || q.length > 300) return ask("The model's rewrite could not be used; ask the full question.");
   const allowed = new Set([...numbers(previous), ...numbers(followUp)]);
   if (numbers(q).some((n) => !allowed.has(n))) return ask("The rewrite named a number that is not in the conversation; ask the full question.");
   const problem = meaningProblem(previous, followUp, q);
   if (problem) return ask(`The rewrite was not used (${problem}); ask the full question.`);
-  return { kind: "rewrite", question: q.trim(), confidence: "certain", how: `model ${MODEL_ID} (${PROMPT_VERSION}), guards ${GUARD_VERSION}` };
+  // P69 amendment (Jeff 2026-10-31): a model rewrite is proposed, never run before the user confirms it.
+  return { kind: "propose", question: q.trim(), how: `model ${MODEL_ID} (${PROMPT_VERSION}), guards ${GUARD_VERSION}` };
+}
+
+/**
+ * The hybrid (P69 amendment): the deterministic rewriter first, its certain rewrites run directly; where it asks, the
+ * model's guarded answer (a proposal, or a new question the baseline's check confirms); where both ask, the baseline's
+ * ask, with its options.
+ */
+export function hybridRewriter(model: FollowUpRewriter): FollowUpRewriter {
+  return {
+    rewrite(previous: string, followUp: string): Rewrite {
+      const d = deterministicRewriter.rewrite(previous, followUp);
+      if (d.kind !== "ask") return d;
+      const m = model.rewrite(previous, followUp);
+      return m.kind === "ask" ? d : m;
+    },
+  };
 }
 
 /** The cached model rewriter: offline and synchronous, for a cache of this binding. A miss is asked about, and counted. */

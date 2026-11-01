@@ -880,9 +880,11 @@ const rwNorm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").repla
 // The reader's parts and the pre-pass flags that change the answer without a part (quarters, P72's columns): monthly
 // and quarterly, or a rate with and without its population column, are different questions (Codex 7b-04.5).
 const readingKey = (q: string) => {
-  const l = readQuestion(q, 2026).ledger as ReturnType<typeof readQuestion>["ledger"] & { quarter?: boolean; column?: string | null };
+  // The people flag too: whose race or age, and which persons' conditions (Codex model-rewriter amendment check 3).
+  const l = readQuestion(q, 2026).ledger as ReturnType<typeof readQuestion>["ledger"] & { quarter?: boolean; column?: string | null; people?: unknown };
   return [...l.parts.filter((p) => p.clause === 0 && !["filler", "context"].includes(p.concept) && p.state !== "context")
-    .map((p) => `${p.concept}=${String(p.value).toLowerCase().replace(/[^a-z0-9:=]+/g, " ").trim()}`).sort(), `quarter=${!!l.quarter}`, `column=${l.column ?? ""}`].join("|");
+    .map((p) => `${p.concept}=${String(p.value).toLowerCase().replace(/[^a-z0-9:=]+/g, " ").trim()}`).sort(), `quarter=${!!l.quarter}`, `column=${l.column ?? ""}`,
+    `people=${JSON.stringify(l.people ?? null)}`].join("|");
 };
 /**
  * P71: a monthly series' expected cells summed into quarters ("2025-Q1"): a quarter is known only when all three of its

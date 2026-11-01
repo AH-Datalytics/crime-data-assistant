@@ -27,6 +27,8 @@ import { readQuestion } from "./reading";
 /** A rewrite: the standalone question and how sure the rewriter is; or a question back when it is not sure. */
 export type Rewrite =
   | { kind: "rewrite" | "new" | "presentation"; question: string; confidence: "certain"; how: string }
+  /** P69 amendment (Jeff 2026-10-31): a model's rewrite, shown as "Did you mean ...?"; nothing runs until it is confirmed. */
+  | { kind: "propose"; question: string; how: string }
   | { kind: "ask"; why: string; options: { label: string; question: string }[] };
 export interface FollowUpRewriter { rewrite(previous: string, followUp: string): Rewrite }
 
@@ -47,7 +49,7 @@ const PRESENTATION = [
   /^(?:add|show|remove|hide|include|drop)\s+(?:the\s+)?(?:data\s+|axis\s+)?(?:labels?|legend|gridlines?)$/,
   /^sort(?:ed)?\s+(?:it\s+|them\s+)?(?:by\s+)?(?:value|count|size|name|(?:largest|smallest|highest|lowest)(?:\s+first)?|ascending|descending)$/,
   // A color only ("make the lines quarterly" is not one: Codex 7b-04 re-check 2).
-  /^(?:change|make)\s+(?:the\s+)?(?:colou?rs?|bars|lines?)\s+(?:to\s+)?(?:red|orange|yellow|green|blue|purple|pink|brown|black|gr[ae]y|teal|navy|dark|darker|light|lighter)$/,
+  /^(?:change|make)\s+(?:the\s+)?(?:colou?rs?|bars|lines?|graph|chart)\s+(?:to\s+)?(?:red|orange|yellow|green|blue|purple|pink|brown|black|gr[ae]y|teal|navy|dark|darker|light|lighter)$/,
 ];
 
 /** The clause-0 parts the reader finds in a question: measures, places, periods (their words as asked). */
@@ -156,6 +158,20 @@ export const deterministicRewriter: FollowUpRewriter = {
       if (/\bby (?:month|year|quarter)\b/i.test(prev)) return ok(prev.replace(/\bby (?:month|year|quarter)\b/i, `by ${g}`), "the time grain replaced");
       return ok(beforePeriod(prev, `by ${g}`), "the time grain added");
     }
+
+    // "show 10 years", "the seven-year trend", "past 5 years": the last N complete years by year, from the release
+    // (the reader reads "over the last N years"); the previous period and time grain are replaced, the rest kept.
+    // Only whole-year periods are replaced; months, "since" or relative words are asked about. "go back further" asks.
+    const lastN = /^(?:(?:show|give)(?:\s+me)?\s+)?(?:the\s+)?(?:(?:last|past)\s+)?(\d{1,2}|two|three|four|five|six|seven|eight|nine|ten)[\s-]+years?(?:\s+trend)?$/i.exec(f);
+    if (lastN) {
+      const n = /^\d+$/.test(lastN[1]) ? Number(lastN[1]) : ["two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"].indexOf(lastN[1].toLowerCase()) + 2;
+      const period = /\s+(?:from\s+(?:19|20)\d{2}\s+(?:to|through)\s+(?:19|20)\d{2}|in\s+(?:19|20)\d{2})\b/i.exec(prev);
+      if (n < 2 || n > 20 || !period || /\b(?:january|february|march|april|may|june|july|august|september|october|november|december|since|so far|year to date|this year|last year)\b/i.test(prev))
+        return ask(`Which ${n}-year period to show.`);
+      const body = prev.replace(period[0], "").replace(/\s+by\s+(?:month|year|quarter)\b/i, "").replace(/[?.]\s*$/, "");
+      return ok(`${body} by year over the last ${n} years`, "the last N complete years, by year");
+    }
+    if (/^(?:can you\s+)?(?:go|show)\s+(?:me\s+)?(?:back\s+)?further(?:\s+back)?(?:\s+in\s+time)?$/i.test(f)) return ask("How far back to go.");
 
     // "remove 2025": a range shortened at either end (P69's guidance; F4).
     const rm = /^(?:remove|drop|exclude|without|take out|leave out)\s+((?:19|20)\d{2})$/i.exec(f);

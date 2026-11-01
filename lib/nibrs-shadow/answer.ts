@@ -119,9 +119,16 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
  * editable) or null when the app asks instead. `presentation`: a chart-only edit; the data question is unchanged and the
  * page's controls change the chart.
  */
-export type FollowUpOutcome = ShadowOutcome & { rewrite: string | null; rewriteKind: Rewrite["kind"]; presentation?: true };
+/**
+ * P69 amendment (Jeff 2026-10-31): a model's rewrite, proposed as "Did you mean: <proposed>?" with Run and Edit. Nothing
+ * is read, compiled or run for it: no plan, no SQL, no continuation; Run asks the proposed question as a new one.
+ */
+export type ProposalOutcome = { kind: "proposal"; question: string; proposed: string; how: string; rewrite: string; rewriteKind: "propose" };
+export type FollowUpOutcome = (ShadowOutcome & { rewrite: string | null; rewriteKind: Exclude<Rewrite["kind"], "propose">; presentation?: true }) | ProposalOutcome;
 export function shadowFollowUp(previous: string, followUp: string, deps: ShadowDeps, rewriter: FollowUpRewriter = deterministicRewriter): FollowUpOutcome {
   const r = rewriter.rewrite(previous, followUp);
+  // A proposal returns before anything runs.
+  if (r.kind === "propose") return { kind: "proposal", question: followUp, proposed: r.question, how: r.how, rewrite: r.question, rewriteKind: "propose" };
   if (r.kind === "ask") {
     // P69: uncertain, so ask; each option is a complete question, run as a new one. With none, the user rephrases.
     const options: ShadowOption[] = r.options.length ? r.options.map((o) => ({ label: o.label, continuation: shadowAnswer(o.question, deps) }))

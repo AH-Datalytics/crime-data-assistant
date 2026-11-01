@@ -1,6 +1,9 @@
 {
  "candidate": "nibrs-shadow",
- "rewriter": "gemini-3.8-flash",
+ "rewriter": "hybrid: deterministic, then gemini-3.8-flash proposals",
+ "proposals": [
+  "LS-422"
+ ],
  "cacheMisses": [],
  "release": {
   "id": "20261028-test5",
@@ -4145,61 +4148,43 @@
    "id": "LS-404",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Shoplifting rate in Memphis by year from 2021 to 2024",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite was not used (the follow-up's statistic (count) is missing); ask the full question.: Ask the full question | Start over"
+    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 61"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-405",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Change in simple assaults in Austin from 2022 to 2024",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite was not used (the follow-up's change (change:neutral) is missing); ask the full question.: Ask the full question | Start over"
+    "delivered: Austin, Texas: simple assault victims, 2022 against 2024. / Reported by the Austin Police Department. / 10,045 in 2022 and 9,688 in 2024: a change of -357 (-3.6%). / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs change",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-406",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Percent change in robberies with a firearm in Charlotte, North Carolina from 2021 to 2025",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite was not used (the follow-up's share (share) is missing); ask the full question.: Ask the full question | Start over"
+    "delivered: Charlotte, North Carolina: robbery offenses with a firearm, 2021 against 2025. / Reported by the Charlotte-Mecklenburg Police Department. / 739 in 2021 and 440 in 2025: a change of -299 (-40.5%). / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs change",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-407",
@@ -4275,81 +4260,57 @@
    "id": "LS-412",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Arrests in Denver in 2023 by arrestee ethnicity",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite was not used (the follow-up's breakdown (ethnicity) is missing); ask the full question.: Ask the full question | Start over"
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS cannot tell when one person was arrested more t"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-413",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Arrests in Denver in 2023 by arrestee age",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite was not used (the follow-up's breakdown (age) is missing); ask the full question.: Ask the full question | Start over"
+    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Age groups: Under 18 (ages 1-17 and infants under one year), 18-24, 25-34, 35-"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-414",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "According to NIBRS, murder victims in Rochester, New York in 2024 by the race of the offender who killed them",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over"
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime with several of these categories cou"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-415",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Shoplifting rate in Memphis by year from 2021 to 2024",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite named a number that is not in the conversation; ask the full question.: Ask the full question | Start over"
+    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 61"
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-416",
@@ -4369,21 +4330,15 @@
    "id": "LS-417",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Male juvenile victims of aggravated assault in Memphis in 2024",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked It is unclear whether \"male\" replaces female victims, adds male victims, or specifies the sex of the offender. Please clarify. ואפשרויות: replace female with male, include both sexes, or specify offender sex. Only English. Let's make options clean. Wait, keep it simple. It is unclear whether \"male\" : Ask the full question | Start over"
+    "delivered: Memphis, Tennessee: 1,372 aggravated assault victims who were male under 18 in 2024. / Reported by the Memphis Police Department. / An unknown or unrecorded value does not meet a condition on a person, so that person is not counted. / Sourc"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-418",
@@ -4417,53 +4372,35 @@
    "id": "LS-421",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over"
+    "delivered: Wichita, Kansas: 1459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / "
    ],
    "capability": "answer:nibrs rate",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-422",
    "split": "heldout",
    "expected": "clarify",
-   "actual": "answer",
-   "outcome": "wrong_answer",
+   "actual": "clarify",
+   "outcome": "wrong_action",
+   "capability": "clarify:nibrs count",
+   "era": "2021 and later",
    "diffs": [
     {
-     "field": "meaning",
-     "expected": "(the label gives no meaning past this button)",
-     "actual": "offenses.shoplifting 2024-01..2024-12",
-     "kind": "unverified"
-    },
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
-     "field": "rewrite",
+     "field": "proposal",
      "expected": "(ask: the rewrite is uncertain)",
      "actual": "Shoplifting in Wichita in 2024",
      "kind": "material"
     }
    ],
-   "notes": [],
-   "capability": "clarify:nibrs count",
-   "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "notes": [
+    "proposed (nothing ran): Shoplifting in Wichita in 2024"
+   ]
   },
   {
    "id": "LS-423",
@@ -4511,21 +4448,23 @@
    "id": "LS-426",
    "split": "heldout",
    "expected": "decline",
-   "actual": "clarify",
-   "outcome": "wrong_action",
+   "actual": "decline",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "rewrite",
-     "expected": "People charged with robbery in Detroit in 2024",
-     "actual": "(none: asked)",
-     "kind": "material"
+     "field": "alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
-    "asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over"
+    "declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances."
    ],
    "capability": "decline:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   }
  ],
  "provisional": [

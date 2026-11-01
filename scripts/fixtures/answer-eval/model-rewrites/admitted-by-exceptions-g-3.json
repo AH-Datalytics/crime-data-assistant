@@ -1,0 +1,86 @@
+[
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "show rates instead of counts",
+  "question": "Shoplifting rate in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "show rates instead of counts",
+  "question": "Rate of female aggravated assault victims in Memphis in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "show rates instead of counts",
+  "question": "Simple assault victim rate in Detroit by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "Can you do rates instead of counts?",
+  "question": "Shoplifting rate in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "Can you do rates instead of counts?",
+  "question": "Female aggravated assault victim rate in Memphis in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Can you do rates instead of counts?",
+  "question": "Simple assault victim rate in Detroit by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "can you show me the rate trend, not the incident trend",
+  "question": "Shoplifting rate in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "how about y/y% change by month since 2020?",
+  "question": "Year-over-year percent change in shoplifting in Memphis by month since 2020",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "how about y/y% change by month since 2020?",
+  "question": "Year-over-year percent change in simple assault victims in Detroit by month since 2020",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "This is a count. Is it possible to show a rate?",
+  "question": "Shoplifting rate in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "This is a count. Is it possible to show a rate?",
+  "question": "Rate of female aggravated assault victims in Memphis in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "This is a count. Is it possible to show a rate?",
+  "question": "simple assault victim rate in Detroit by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ }
+]

@@ -4,7 +4,7 @@
  * places it after any of them). Offline: it reads the model's cached answers.
  *
  *   npx tsx scripts/measure-model-rewriter.ts --pairs-out <file>   # writes the pairs to fetch (log x 3, and LS-403..LS-426)
- *   npx tsx scripts/measure-model-rewriter.ts                      # the comparison, and the hand-check sample of 50
+ *   npx tsx scripts/measure-model-rewriter.ts                      # the comparison (run directly, proposed, asked) and the outputs the guard exceptions admit
  *
  * Like the baseline's report, this measures recognition, not real-session correctness: the previous questions are
  * synthetic. The hand-checked sample is what judges the model's rewrites.
@@ -12,7 +12,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { deterministicRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
-import { bindingOf, cachedModelRewriter, GUARD_VERSION, type RewriteCache } from "../lib/nibrs-shadow/model-rewriter";
+import { bindingOf, cachedModelRewriter, GUARD_VERSION, hybridRewriter, meaningProblem, type RewriteCache } from "../lib/nibrs-shadow/model-rewriter";
 import { SYSTEM_PROMPT } from "../lib/nibrs-shadow/model-rewriter-prompt";
 import { createHash } from "node:crypto";
 import { CACHE_PATH } from "./fetch-model-rewrites";
@@ -47,41 +47,41 @@ if (out) {
   process.exit(0);
 }
 
+
 const cacheText = fs.readFileSync(CACHE_PATH, "utf8");
 const cache = JSON.parse(cacheText) as RewriteCache & { spent: number };
 const model = cachedModelRewriter(cache, bindingOf(SYSTEM_PROMPT));
+const hybrid = hybridRewriter(model);
 // Provenance: which cache and guards these results come from.
 console.log(`Cache ${path.basename(CACHE_PATH)} sha256 ${createHash("sha256").update(cacheText).digest("hex").slice(0, 16)}; binding ${cache.binding.slice(0, 16)}; guards ${GUARD_VERSION}; ${Object.keys(cache.entries).length} entries; spent $${cache.spent.toFixed(4)}`);
-const best = (rs: Rewrite[]) => rs.find((r) => r.kind !== "ask") ?? rs[0];
-const kinds = (label: string, list: Rewrite[]) => {
-  const k = new Map<string, number>();
-  for (const r of list) k.set(r.kind, (k.get(r.kind) ?? 0) + 1);
-  const placed = list.filter((r) => r.kind !== "ask").length;
-  console.log(`${label}: placed ${placed} (${((100 * placed) / list.length).toFixed(1)}%), asked ${list.length - placed}; ${[...k].sort().map(([a, n]) => `${a} ${n}`).join(", ")}`);
+console.log(`Logged follow-up turns: ${follow.length}; each tried against ${PREVIOUS.length} synthetic previous questions, in this order; recognition, not correctness.`);
+
+// Per row, as the baseline's report: the first context (in order) that places it; a direct rewrite before a proposal.
+const rowOutcome = (rw: (p: string, f: string) => Rewrite) => follow.map((f) => {
+  const rs = PREVIOUS.map((p) => rw(p, f));
+  return rs.find((r) => r.kind !== "ask" && r.kind !== "propose") ?? rs.find((r) => r.kind === "propose") ?? rs[0];
+});
+const report = (label: string, list: Rewrite[]) => {
+  const direct = list.filter((r) => r.kind !== "ask" && r.kind !== "propose").length, proposed = list.filter((r) => r.kind === "propose").length;
+  const pc = (n: number) => `${n} (${((100 * n) / list.length).toFixed(1)}%)`;
+  console.log(`${label}: run directly ${pc(direct)}; proposed for confirmation ${pc(proposed)}; asked ${pc(list.length - direct - proposed)}.`);
 };
-const det = follow.map((f) => best(PREVIOUS.map((p) => deterministicRewriter.rewrite(p, f))));
-const mod = follow.map((f) => best(PREVIOUS.map((p) => model.rewrite(p, f))));
-console.log(`Logged follow-up turns: ${follow.length}; each tried against ${PREVIOUS.length} synthetic previous questions; recognition, not correctness.`);
-kinds("Deterministic", det);
-kinds("Model", mod);
-const both = follow.filter((_, i) => det[i].kind !== "ask" && mod[i].kind !== "ask").length;
-const detOnly = follow.filter((_, i) => det[i].kind !== "ask" && mod[i].kind === "ask").length;
-const modOnly = follow.filter((_, i) => det[i].kind === "ask" && mod[i].kind !== "ask").length;
-console.log(`Placed by both ${both}; deterministic only ${detOnly}; model only ${modOnly}; neither ${follow.length - both - detOnly - modOnly}.`);
+report("Deterministic", rowOutcome((p, f) => deterministicRewriter.rewrite(p, f)));
+report("Hybrid (deterministic first, then model proposals)", rowOutcome((p, f) => hybrid.rewrite(p, f)));
 console.log(`Cache misses: ${model.misses.length}`);
 
-// The hand-check sample: 50 drawn uniformly, by a fixed seed, from every accepted (placed) model output over all
-// (previous, follow-up) pairs, of every kind (rewrite, new, presentation), not only each row's best context.
-const placedPairs = follow.flatMap((f) => PREVIOUS.map((p) => ({ previous: p, followUp: f, r: model.rewrite(p, f) }))).filter((x) => x.r.kind !== "ask");
-let seed = 20261031;
-const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
-const pool = [...placedPairs];
-const sample: typeof pool = [];
-while (sample.length < 50 && pool.length) sample.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
-const samplePath = path.join(__dirname, "fixtures/answer-eval/model-rewrites/hand-check-sample.json");
-const prior = fs.existsSync(samplePath) ? (JSON.parse(fs.readFileSync(samplePath, "utf8")) as { followUp: string; previous: string; verdict?: string; note?: string }[]) : [];
-const verdictOf = (x: { previous: string; followUp: string }) => prior.find((p) => p.previous === x.previous && p.followUp === x.followUp);
-fs.writeFileSync(samplePath, JSON.stringify(sample.map((x) => ({ previous: x.previous, followUp: x.followUp, kind: x.r.kind,
-  question: (x.r as { question: string }).question, verdict: verdictOf(x)?.verdict ?? "unchecked", note: verdictOf(x)?.note ?? "" })), null, 1));
-const v = sample.map((x) => verdictOf(x)?.verdict ?? "unchecked");
-console.log(`Hand-check sample: ${sample.length} of ${placedPairs.length} placed model rewrites; correct ${v.filter((x) => x === "correct").length}, meaning changed ${v.filter((x) => x === "meaning_changed").length}, unchecked ${v.filter((x) => x === "unchecked").length}.`);
+// Codex amendment check 6: the original 50 judgments (guards g-1) are kept as they were; the new guards' accepted
+// outputs are drawn afresh, and those the exceptions newly admit are listed for inspection.
+const g1 = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/answer-eval/model-rewrites/hand-check-sample-g1.json"), "utf8")) as { verdict: string }[];
+console.log(`Original hand check (guards g-1): ${g1.filter((x) => x.verdict === "correct").length} correct, ${g1.filter((x) => x.verdict === "meaning_changed").length} meaning changed, of ${g1.length}.`);
+const pairs = follow.flatMap((f) => PREVIOUS.map((p) => ({ previous: p, followUp: f })));
+const accepted = pairs.map((x) => ({ ...x, r: model.rewrite(x.previous, x.followUp) })).filter((x) => x.r.kind !== "ask");
+const admitted = accepted.filter((x) => x.r.kind === "propose" && meaningProblem(x.previous, x.followUp, (x.r as { question: string }).question, { exceptions: false }) !== null);
+console.log(`Model outputs accepted under ${GUARD_VERSION}: ${accepted.length} pairs; admitted only by the exceptions: ${admitted.length}.`);
+const admittedPath = path.join(__dirname, `fixtures/answer-eval/model-rewrites/admitted-by-exceptions-${GUARD_VERSION}.json`);
+const priorAdmitted = fs.existsSync(admittedPath) ? (JSON.parse(fs.readFileSync(admittedPath, "utf8")) as { previous: string; followUp: string; verdict: string; note: string }[]) : [];
+const judged = (x: { previous: string; followUp: string }) => priorAdmitted.find((p) => p.previous === x.previous && p.followUp === x.followUp);
+fs.writeFileSync(admittedPath, JSON.stringify(admitted.map((x) => ({ previous: x.previous, followUp: x.followUp, question: (x.r as { question: string }).question,
+  verdict: judged(x)?.verdict ?? "unchecked", note: judged(x)?.note ?? "" })), null, 1));
+const av = admitted.map((x) => judged(x)?.verdict ?? "unchecked");
+console.log(`Admitted by the exceptions, hand-checked: correct ${av.filter((x) => x === "correct").length}, meaning changed ${av.filter((x) => x === "meaning_changed").length}, unchecked ${av.filter((x) => x === "unchecked").length}.`);

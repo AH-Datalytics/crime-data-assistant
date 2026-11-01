@@ -75,15 +75,15 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-184 cases. Correct 153; unverified 14; wrong answers 1; avoidable declines 4; unnecessary clarifications 9; wrong actions 3; incomplete 0. Severity score 240 (trend only).
+184 cases. Correct 162; unverified 15; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 3; incomplete 0. Severity score 95 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 147 | 9 | 4 | 0 |
-| clarify | 1 | 5 | 2 | 0 |
-| decline | 0 | 1 | 15 | 0 |
+| answer | 156 | 0 | 4 | 0 |
+| clarify | 0 | 6 | 2 | 0 |
+| decline | 0 | 0 | 16 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
@@ -92,17 +92,17 @@ Expected (rows) by actual (columns):
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: pass (2/2 match) |
-| answer:nibrs change | 2021 and later | 12 | fail | wrong answers: pass (0); initial action: fail (83% (10/12)); direct answers: fail (83% (0 unverified)); numeric fixtures: pass (10/10 match) |
-| answer:nibrs count | 2021 and later | 118 | fail | wrong answers: pass (0); initial action: fail (94% (111/118)); direct answers: fail (94% (0 unverified)); numeric fixtures: pass (111/111 match) |
+| answer:nibrs change | 2021 and later | 12 | pass | wrong answers: pass (0); initial action: pass (100% (12/12)); direct answers: pass (100%); numeric fixtures: pass (12/12 match) |
+| answer:nibrs count | 2021 and later | 118 | pass | wrong answers: pass (0); initial action: pass (97% (115/118)); direct answers: pass (97%); numeric fixtures: pass (115/115 match) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
-| answer:nibrs rate | 2021 and later | 14 | fail | wrong answers: pass (0); initial action: fail (79% (11/14)); direct answers: fail (79% (0 unverified)); numeric fixtures: pass (11/11 match) |
+| answer:nibrs rate | 2021 and later | 14 | pass | wrong answers: pass (0); initial action: pass (100% (14/14)); direct answers: pass (100%); numeric fixtures: pass (14/14 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| clarify:nibrs count | 2021 and later | 6 | fail | wrong answers: fail (1, 3 answers unverified); clarifications: fail (2/6 verified correct, 3 unverified, 1 failing); initial action: fail (83% (5/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/6 match, 4 not measured) |
+| clarify:nibrs count | 2021 and later | 6 | fail | wrong answers: not measured (0, 3 answers unverified); clarifications: fail (2/6 verified correct, 3 unverified, 1 failing); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/5 match, 3 not measured) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-| decline:nibrs count | 2021 and later | 5 | fail | wrong answers: not measured (0, 3 answers unverified); declines: fail (1/5 verified correct, 3 unverified, 1 failing); initial action: fail (80% (4/5)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/4 match, 3 not measured) |
+| decline:nibrs count | 2021 and later | 5 | not measured | wrong answers: not measured (0, 4 answers unverified); declines: not measured (1/5 verified correct, 4 unverified); initial action: pass (100% (5/5)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/5 match, 4 not measured) |
 | decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: pass (0); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:no meaning | no period | 7 | not measured | wrong answers: pass (0); declines: not measured (6/7 verified correct, 1 unverified); initial action: pass (100% (7/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
@@ -166,40 +166,12 @@ Discrepancies and unverified cases:
 - **LS-392** (unverified; expected decline, got decline) "Aggravated assaults in Tennessee in 2024 by offender sex"
   - unverified reason: expected `Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.`, got `unsupported_capability`
   - declined (unsupported_capability): Offender breakdowns for a whole state or the nation are not built yet; they are for one agency or several named agencies.
-- **LS-404** (unnecessary_clarify; expected answer, got clarify) "show rates instead of counts"
-  - material rewrite: expected `Shoplifting rate in Memphis by year from 2021 to 2024`, got `(none: asked)`
-  - asked The rewrite was not used (the follow-up's statistic (count) is missing); ask the full question.: Ask the full question | Start over
-- **LS-405** (unnecessary_clarify; expected answer, got clarify) "how much did it change?"
-  - material rewrite: expected `Change in simple assaults in Austin from 2022 to 2024`, got `(none: asked)`
-  - asked The rewrite was not used (the follow-up's change (change:neutral) is missing); ask the full question.: Ask the full question | Start over
-- **LS-406** (unnecessary_clarify; expected answer, got clarify) "percent change"
-  - material rewrite: expected `Percent change in robberies with a firearm in Charlotte, North Carolina from 2021 to 2025`, got `(none: asked)`
-  - asked The rewrite was not used (the follow-up's share (share) is missing); ask the full question.: Ask the full question | Start over
-- **LS-412** (unnecessary_clarify; expected answer, got clarify) "by ethnicity instead"
-  - material rewrite: expected `Arrests in Denver in 2023 by arrestee ethnicity`, got `(none: asked)`
-  - asked The rewrite was not used (the follow-up's breakdown (ethnicity) is missing); ask the full question.: Ask the full question | Start over
-- **LS-413** (unnecessary_clarify; expected answer, got clarify) "now by age"
-  - material rewrite: expected `Arrests in Denver in 2023 by arrestee age`, got `(none: asked)`
-  - asked The rewrite was not used (the follow-up's breakdown (age) is missing); ask the full question.: Ask the full question | Start over
-- **LS-414** (unnecessary_clarify; expected answer, got clarify) "only the offenders linked to each victim"
-  - material rewrite: expected `According to NIBRS, murder victims in Rochester, New York in 2024 by the race of the offender who killed them`, got `(none: asked)`
-  - asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over
-- **LS-415** (unnecessary_clarify; expected answer, got clarify) "remove 2025"
-  - material rewrite: expected `Shoplifting rate in Memphis by year from 2021 to 2024`, got `(none: asked)`
-  - asked The rewrite named a number that is not in the conversation; ask the full question.: Ask the full question | Start over
-- **LS-417** (unnecessary_clarify; expected answer, got clarify) "male"
-  - material rewrite: expected `Male juvenile victims of aggravated assault in Memphis in 2024`, got `(none: asked)`
-  - asked It is unclear whether "male" replaces female victims, adds male victims, or specifies the sex of the offender. Please clarify. ואפשרויות: replace female with male, include both sexes, or specify offender sex. Only 
-- **LS-421** (unnecessary_clarify; expected answer, got clarify) "add a column for population"
-  - material rewrite: expected `Shoplifting rate in Wichita in 2024, with a column showing the population used to calculate the rate`, got `(none: asked)`
-  - asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over
-- **LS-422** (wrong_answer; expected clarify, got answer) "what about Wichita?"
-  - unverified meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - material rewrite: expected `(ask: the rewrite is uncertain)`, got `Shoplifting in Wichita in 2024`
-- **LS-426** (wrong_action; expected decline, got clarify) "what about Detroit?"
-  - material rewrite: expected `People charged with robbery in Detroit in 2024`, got `(none: asked)`
-  - asked The rewrite was not used (the rewrite has words the reader does not read); ask the full question.: Ask the full question | Start over
+- **LS-422** (wrong_action; expected clarify, got clarify) "what about Wichita?"
+  - material proposal: expected `(ask: the rewrite is uncertain)`, got `Shoplifting in Wichita in 2024`
+  - proposed (nothing ran): Shoplifting in Wichita in 2024
+- **LS-426** (unverified; expected decline, got decline) "what about Detroit?"
+  - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - declined (court_outcome): NIBRS doesn't record charges or court outcomes (prosecutions, trials, convictions, sentences or defendants); it records crimes reported to police, arrests and clearances.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
@@ -346,4 +318,4 @@ No cases.
 
 ## Model rewriter
 
-Follow-ups rewritten by the cached gemini-3.8-flash rewriter (binding faada371d08a1606, guards g-1). Cache misses (asked, never guessed): 0.
+Follow-ups rewritten by the hybrid rewriter: deterministic first, then the cached gemini-3.8-flash model's proposals (binding faada371d08a1606, guards g-3). Proposed (nothing ran before a simulated confirmation): 1 (LS-422). Cache misses (asked, never guessed): 0.
