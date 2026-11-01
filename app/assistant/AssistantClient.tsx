@@ -5,6 +5,7 @@ import type { PreviewButton, PreviewResponse } from "@/lib/nibrs-shadow/preview"
 import AnswerChart, { type ChartKind, type Line, type Point } from "./AnswerChart";
 import Logo from "./Logo";
 import QuestionStrip, { type StripItem } from "./QuestionStrip";
+import { StartPage } from "./StartPage";
 
 /**
  * The Crime Data Assistant chat (spec: docs/superpowers/specs/2026-10-31-crime-data-assistant-redesign-design.md).
@@ -22,13 +23,6 @@ type Reply =
   | { kind: "error"; error: string };
 type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: ChartMode; viaButton?: boolean };
 
-const EXAMPLES = [
-  "Shoplifting in Memphis by month in 2024",
-  "Murder victims in Houston by race in 2024",
-  "How many carjackings were there in Memphis in 2024?",
-  "Vehicle burglaries in Baltimore in 2024",
-  "Shoplifting in Memphis in 2027",
-];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const label = (v: unknown) => {
   const s = String(v ?? "");
@@ -181,6 +175,26 @@ export default function AssistantClient() {
     return () => cancelAnimationFrame(raf);
   }, [scrollTo]);
 
+  const start = turns.length === 0;
+  // One hint under the box: how to ask, then (after an answer) that a follow-up or a new question both work.
+  const hint = start
+    ? <>Name a crime, a place and a year, for example &ldquo;carjacking in Memphis in 2024&rdquo;.</>
+    : <>Ask a follow-up, like &ldquo;same for 2023&rdquo;, or a new question.</>;
+  const form = (
+    <form className="AskForm" onSubmit={(e) => { e.preventDefault(); ask(input); setInput(""); }}>
+      <div className="AskRow">
+        <input ref={box} value={input} onChange={(e) => setInput(e.target.value)} placeholder={start ? "Shoplifting in Memphis by month in 2024" : "Ask a question or a follow-up"} aria-label="Question" />
+        <label className="Src"><span className="k">Source</span>
+          <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Source">
+            <option value="auto">Auto</option><option value="nibrs">NIBRS</option><option value="current">Current Trends</option>
+            <option value="historical">Historical</option><option value="shr">Homicide Reports</option><option value="hate">Hate Crime</option>
+          </select>
+        </label>
+        <button className="Ask" type="submit" disabled={busy}>Ask</button>
+      </div>
+      <p className="Hint">{hint}</p>
+    </form>
+  );
   return (
     <div className="cda">
       <header className="Header"><div className="HeaderInner">
@@ -193,36 +207,21 @@ export default function AssistantClient() {
         <span className="Preview">Local preview, NIBRS only</span>
       </div></header>
 
-      <main className="Chat">
-        {turns.length === 0 ? (
-          <div className="Empty">
-            <h1>Crime Data Assistant</h1>
-            <p>Questions about U.S. crime data, answered with a chart, a table and the source. This preview answers NIBRS questions; the other sources are added before launch.</p>
-            <div className="Examples">{EXAMPLES.map((q) => <button key={q} type="button" onClick={() => ask(q)}>{q}</button>)}</div>
-          </div>
-        ) : null}
-        {turns.map((t) => (
-          <div key={t.id}>
-            <div className="Me" id={`me${t.id}`}><p>{t.typed}</p></div>
-            <div className="Re">{t.reply ? <ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })} /> : <div className="wait">Answering</div>}</div>
-          </div>
-        ))}
-      </main>
-      <QuestionStrip items={strip} active={inView} onGo={(id) => document.getElementById(`me${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
-
-      <div className="Dock">
-        <form className="DockInner" onSubmit={(e) => { e.preventDefault(); ask(input); setInput(""); }}>
-          <input ref={box} value={input} onChange={(e) => setInput(e.target.value)} placeholder={turns.length ? "Ask a question or a follow-up" : "Shoplifting in Memphis by month in 2024"} aria-label="Question" />
-          <label className="Src"><span className="k">Source</span>
-            <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Source">
-              <option value="auto">Auto</option><option value="nibrs">NIBRS</option><option value="current">Current Trends</option>
-              <option value="historical">Historical</option><option value="shr">Homicide Reports</option><option value="hate">Hate Crime</option>
-            </select>
-          </label>
-          <button className="Ask" type="submit" disabled={busy}>Ask</button>
-        </form>
-        <p className="fine">Answers come from FBI data and can be wrong. Check important figures against the FBI Crime Data Explorer.</p>
-      </div>
+      {start ? <StartPage form={form} onAsk={(q) => { setInput(""); ask(q); }} onFill={(q) => { setInput(q); window.scrollTo({ top: 0, behavior: "smooth" }); box.current?.focus(); }} /> : (<>
+        <main className="Chat">
+          {turns.map((t) => (
+            <div key={t.id}>
+              <div className="Me" id={`me${t.id}`}><p>{t.typed}</p></div>
+              <div className="Re">{t.reply ? <ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })} /> : <div className="wait">Answering</div>}</div>
+            </div>
+          ))}
+        </main>
+        <QuestionStrip items={strip} active={inView} onGo={(id) => document.getElementById(`me${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+        <div className="Dock">
+          {form}
+          <p className="fine">Answers come from FBI data and can be wrong. Check important figures against the FBI Crime Data Explorer.</p>
+        </div>
+      </>)}
     </div>
   );
 }

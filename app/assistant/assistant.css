@@ -33,12 +33,6 @@
 
 /* The conversation */
 .cda .Chat { max-width: 76rem; margin: 0 auto; padding: 1rem var(--gutter) 10rem; }
-.cda .Empty { padding: 3rem 0 1rem; max-width: 46rem; }
-.cda .Empty h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 2.5rem; line-height: 1.15; color: var(--darker); }
-.cda .Empty p { font-size: 1.05rem; line-height: 1.5; color: var(--dark); margin: .75rem 0 1.75rem; }
-.cda .Examples { border-top: 1px solid var(--divider); }
-.cda .Examples button { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--divider); padding: .75rem 0; font-size: .95rem; color: var(--darker); }
-.cda .Examples button:hover { color: var(--teal); }
 .cda .Me { scroll-margin-top: calc(var(--header) + 1rem); display: flex; justify-content: flex-end; margin: 2.25rem 0 1rem; }
 .cda .Me p { margin: 0; max-width: 40rem; background: var(--teal-tint); color: var(--darker); border-radius: .375rem; padding: .6rem 1rem; font-size: 1rem; line-height: 1.45; }
 .cda .Re { padding-bottom: 1.5rem; border-bottom: 1px solid var(--divider); scroll-margin-top: calc(var(--header) + 1rem); }
@@ -139,10 +133,11 @@
 
 /* The question box, pinned at the bottom */
 .cda .Dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: #fff; border-top: 1px solid var(--divider); box-shadow: 0 -4px 16px rgba(0,0,0,.04); }
-.cda .DockInner { max-width: 76rem; margin: 0 auto; padding: 1rem var(--gutter) .5rem; display: flex; gap: .75rem; align-items: center; }
-.cda .DockInner input { flex: 1; height: 3.25rem; border: 1px solid var(--input); border-radius: .375rem; padding: 0 1.1rem; font-size: 1.05rem; color: var(--darker); }
-.cda .DockInner input::placeholder { color: var(--input); }
-.cda .DockInner input:focus { outline: none; border-color: var(--teal); }
+.cda .Dock .AskForm { max-width: 76rem; margin: 0 auto; padding: 1rem var(--gutter) 0; }
+.cda .AskRow { display: flex; gap: .75rem; align-items: center; }
+.cda .AskRow input { flex: 1; height: 3.25rem; border: 1px solid var(--input); border-radius: .375rem; padding: 0 1.1rem; font-size: 1.05rem; color: var(--darker); }
+.cda .AskRow input::placeholder { color: var(--input); }
+.cda .AskRow input:focus { outline: none; border-color: var(--teal); }
 .cda .Src { height: 3.25rem; display: inline-flex; align-items: center; gap: .5rem; padding: 0 1rem; border: 1px solid var(--divider); border-radius: .375rem; background: #fff; white-space: nowrap; }
 .cda .Src .k { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--darker); }
 .cda .Src select { border: 0; background: none; font-family: var(--display); font-weight: 700; font-size: .9rem; color: var(--darker); }
@@ -151,7 +146,10 @@
 .cda .Ask:disabled { background: var(--index); }
 .cda .Btn { padding: .4rem 1rem; border: 1px solid var(--button-border); border-radius: .375rem; background: #fff; color: var(--dark); font-size: .875rem; }
 .cda .Btn.teal { background: var(--teal); border-color: var(--teal); color: #fff; }
-.cda .fine { max-width: 76rem; margin: 0 auto; padding: 0 var(--gutter) .75rem; font-size: .75rem; color: var(--light); }
+/* The one-line hint under the box: how to ask on the start page; follow-up or new question after an answer */
+.cda .Hint { margin: .45rem 0 0; font-size: .8rem; color: var(--dark); }
+.cda .Dock .Hint { margin: .35rem 0 .15rem; }
+.cda .fine { max-width: 76rem; margin: 0 auto; padding: 0 var(--gutter) .6rem; font-size: .75rem; color: var(--light); }
 
 /* Question history: a thin strip on the right edge, one mark per question (follow-ups shorter, under their question) */
 .cda .Strip { position: fixed; right: 1.25rem; top: calc(var(--header) + 2rem); bottom: 9rem; z-index: 20; width: 1.5rem; overflow: visible; border-right: 1px solid var(--divider); }
@@ -174,6 +172,74 @@
   .cda .StripList button.on { color: var(--teal); }
   .cda .Answer { grid-template-columns: 1fr; }
   .cda .Nav, .cda .Preview { display: none; }
-  .cda .DockInner { flex-wrap: wrap; }
+  .cda .AskRow { flex-wrap: wrap; }
+  .cda .AskRow input { flex-basis: 100%; }
+  .cda .AskRow .Ask { flex: 1; }
   .cda .Src { display: none; }
+}
+
+/* The start page (spec 20-start.html): Crime Index's explorer hero in teal, the ask band, the sources table, examples,
+   and the Tips and Disclaimers band */
+.cda .Start { --wide: 1420px; }
+.cda .Hero { height: 8rem; display: flex; background: radial-gradient(circle at 1px 1px, #13808d 1px, transparent 1.5px) 0 0/18px 18px, linear-gradient(to bottom, #0a4d57, #11727f); }
+.cda .HeroInner { width: 100%; max-width: var(--wide); margin: 0 auto; padding: 0 var(--gutter) 1.25rem; align-self: flex-end; }
+.cda .Hero h1 { margin: 0; padding-bottom: .25rem; font-family: var(--display); font-weight: 600; font-size: 3.75rem; line-height: 1; background: linear-gradient(to bottom, #fff, rgba(255,255,255,.6)); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.cda .AskBand { background: var(--teal-tint); border-bottom: 1px solid var(--divider); }
+.cda .AskBandInner { max-width: var(--wide); margin: 0 auto; padding: 2rem var(--gutter) 2rem; }
+.cda .AskBandInner > p { font-size: 1.125rem; line-height: 1.5; color: var(--darker); margin: 0 0 1.25rem; max-width: 44rem; }
+.cda .AskBand .AskForm { max-width: 62rem; }
+.cda .AskBand .AskRow input, .cda .AskBand .Src, .cda .AskBand .Ask { height: 3.5rem; }
+.cda .AskBand .AskRow input { font-size: 1.125rem; background: #fff; }
+.cda .Sec { max-width: var(--wide); margin: 0 auto; padding: 3.5rem var(--gutter) 0; }
+.cda .SecTitle { font-family: var(--display); font-weight: 600; font-size: 1.5rem; color: var(--darker); margin: 0; }
+.cda .SecSub { font-size: .875rem; color: var(--dark); margin: .3rem 0 1.5rem; max-width: 40rem; line-height: 1.5; }
+.cda .MxScroll { overflow-x: auto; }
+.cda table.Mx { width: 100%; min-width: 68rem; border-collapse: collapse; table-layout: fixed; }
+.cda table.Mx th { font-family: var(--display); font-weight: 600; font-size: .8rem; white-space: nowrap; color: var(--darker); text-align: center; padding: .5rem .25rem 1rem; vertical-align: bottom; line-height: 1.2; box-shadow: inset 0 -1px 0 var(--divider); background: #fff; }
+.cda table.Mx th.l { text-align: left; padding-left: 1rem; }
+.cda table.Mx tr.grp th { text-align: left; font-family: var(--mono); font-weight: 400; font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--dark); padding: 0 .25rem .5rem; box-shadow: inset 0 -1px 0 var(--darker); }
+.cda table.Mx tr.grp th.gap { box-shadow: none; }
+.cda table.Mx td { height: 5rem; text-align: center; padding: .5rem .25rem; }
+.cda table.Mx tbody tr:nth-child(odd) { background: var(--row-1); }
+.cda table.Mx td.src { text-align: left; padding: .75rem 1rem; }
+.cda table.Mx td.src b { display: block; font-family: var(--display); font-weight: 600; font-size: 1.125rem; line-height: 1.2; }
+.cda table.Mx td.src span { display: block; font-size: .8rem; color: var(--dark); margin-top: .2rem; }
+.cda table.Mx td.src em { font-style: normal; font-family: var(--mono); font-size: .65rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); margin-left: .5rem; }
+.cda table.Mx .tl { position: relative; height: .375rem; background: var(--divider); margin-top: .5rem; }
+.cda table.Mx .tl i { position: absolute; top: 0; bottom: 0; }
+.cda table.Mx .m { display: inline-block; width: 1rem; height: 1rem; padding: 0; border: 0; border-radius: 50%; vertical-align: middle; }
+.cda table.Mx button.m:hover, .cda table.Mx button.m:focus-visible { outline: none; box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--darker); }
+.cda table.Mx .m.open { border: 2px solid; background: transparent; }
+.cda table.Mx .no { display: inline-block; width: .75rem; height: 1px; background: var(--input); vertical-align: middle; }
+.cda table.Mx td.sep, .cda table.Mx th.sep { border-left: 1px solid var(--divider); }
+.cda table.Q { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.cda table.Q col.srcCol { width: 15rem; }
+.cda table.Q td { padding: .75rem 1rem; font-size: .875rem; vertical-align: top; line-height: 1.45; }
+.cda table.Q td:first-child { font-family: var(--display); font-weight: 600; font-size: 1rem; }
+.cda table.Q tbody tr:nth-child(odd) { background: var(--row-1); }
+.cda table.Q button { background: none; border: 0; padding: 0; text-align: left; font-size: .875rem; line-height: 1.45; border-bottom: 1px solid transparent; }
+.cda table.Q button:hover { border-bottom-color: currentColor; }
+.cda .Band { margin-top: 4rem; background: var(--lighter); border-top: 1px solid var(--divider); }
+.cda .BandInner { max-width: var(--wide); margin: 0 auto; padding: 4rem var(--gutter); }
+.cda .TwoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; }
+.cda .TwoCol h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.5rem; color: var(--darker); }
+.cda .TwoCol hr { border: 0; border-top: 1px solid var(--divider); margin: .75rem 0 1.25rem; }
+.cda .TwoCol ul { margin: 0; padding-left: 1.1rem; }
+.cda .TwoCol li { font-size: .9rem; color: var(--dark); line-height: 1.55; margin: 0 0 .6rem; }
+.cda .TwoCol dl { margin: 0; }
+.cda .TwoCol dt { font-weight: 600; color: var(--darker); font-size: .95rem; }
+.cda .TwoCol dd { margin: .15rem 0 1rem; font-size: .9rem; color: var(--dark); line-height: 1.5; }
+@media (max-width: 760px) {
+  .cda { --gutter: 1rem; }
+  .cda .Hero h1 { font-size: 2.5rem; }
+  .cda .AskBand .Src { display: none; }
+  /* The source names stay in view while the details scroll sideways */
+  .cda table.Mx th.l, .cda table.Mx td.src { position: sticky; left: 0; z-index: 1; background: inherit; box-shadow: 1px 0 0 var(--divider); }
+  .cda table.Mx th.l { background: #fff; }
+  .cda table.Mx tbody tr { background: #fff; }
+  .cda table.Mx col:first-child { width: 10rem !important; }
+  .cda table.Q, .cda table.Q tbody, .cda table.Q tr, .cda table.Q td { display: block; width: auto; }
+  .cda table.Q td:first-child:empty { display: none; }
+  .cda .TwoCol { grid-template-columns: 1fr; gap: 2rem; }
+  .cda .BandInner { padding: 2.5rem var(--gutter); }
 }
