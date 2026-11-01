@@ -25,6 +25,8 @@ function stub(sql: string): unknown[][] {
   if (sql.includes("agency/data.parquet")) return popRows(sql);
   if (/unnest\(\[.*\]\) AS ori/.test(sql)) return gridRows(sql);
   // A one-category breakdown over a period: F 30 (share 0.6), M 20 (0.4), U unknown.
+  // The same with the incidents beside the count (P66): one incident had a female and a male victim (12 + 9 > 20).
+  if (/cats AS/.test(sql) && !/AS period/.test(sql) && /_incidents"/.test(sql)) return [["F", 14, "VALUE", 12, "VALUE", 0.6, "VALUE"], ["M", 10, "VALUE", 9, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN", null, "UNKNOWN"]];
   if (/cats AS/.test(sql) && !/AS period/.test(sql)) return [["F", 30, "VALUE", 0.6, "VALUE"], ["M", 20, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN"]];
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
@@ -884,6 +886,31 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     const cmp = shadowFollowUp("Shoplifting in Memphis in 2024", f, deps);
     assert.notEqual(cmp.rewriteKind, "new", f);
     assert.ok(cmp.kind !== "answer" || cmp.plan.geography.places.length > 1, `no single-place answer: ${f}`);
+  }
+}
+
+// Jeff (2026-11-01): stacked and 100% charts only when honest. A category grouping says whether its categories are
+// exclusive (sum to the total): one per kind. Time and place groupings carry no flag.
+{
+  const flag = (q: string) => as(ask(q), "answer").delivered.table.columns.filter((c) => c.binding.kind === "grouping").map((c) => [(c.binding as { dimension: string }).dimension, "exclusive" in c ? c.exclusive : "none"]);
+  assert.deepEqual(flag("Simple assault victims in Detroit by sex in 2023"), [["victim.sex", true]]);
+  assert.deepEqual(flag("Aggravated assault victims in Memphis in 2024 by race"), [["victim.race", true]]);
+  assert.deepEqual(flag("Robberies in Memphis in 2024 by weapon"), [["offense_weapon.weapon", false]]);                 // a crime can have several weapons
+  assert.deepEqual(flag("Aggravated assault victims in Memphis in 2024 by offender race"), [["offender.race", false]]);  // an incident's several offenders (P49)
+  assert.deepEqual(flag("Simple assault victims in Detroit in 2023 by relationship to the offender"), [["victim_offender.relationship", false]]);
+  assert.deepEqual(flag("Shoplifting in Memphis by month in 2024"), [["time.month", "none"]]);
+  // The grouping's flag is for the primary count; the incidents beside it (P66) carry their own. Codex review 01 (P1):
+  // the cleared victims' incidents overlap across sexes; a clearance grouping is of the incident, so its incidents sum.
+  const incidents = (q: string) => (as(ask(q), "answer").delivered.table.columns.find((c) => c.header === "Incidents") as { exclusive?: boolean }).exclusive;
+  assert.deepEqual(flag("Simple assault victims in Detroit by sex in 2023 that were cleared"), [["victim.sex", true]]);
+  assert.equal(incidents("Simple assault victims in Detroit by sex in 2023 that were cleared"), false);
+  assert.deepEqual(flag("Carjacking offenses in Memphis by clearance status in 2024"), [["offense.clearance_status", true]]);
+  assert.equal(incidents("Carjacking offenses in Memphis by clearance status in 2024"), true);
+  // Exclusive exactly when the overlap note is not given.
+  for (const q of ["Robberies in Memphis in 2024 by weapon", "Simple assault victims in Detroit by sex in 2023"]) {
+    const a = as(ask(q), "answer");
+    const cat = a.delivered.table.columns.find((c) => c.binding.kind === "grouping" && "exclusive" in c) as { exclusive: boolean };
+    assert.equal(cat.exclusive, !a.delivered.answerStatements.includes("categories_overlap"), q);
   }
 }
 
