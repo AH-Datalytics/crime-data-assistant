@@ -212,3 +212,11 @@ The guard exceptions and the period default cover the parts of the last three th
   - Both are fixed in the rules: a previous turn with no crime and no place asks; a bare state after an ambiguous city qualifies it, and after a placed city it asks. Each has a test.
 
 Many consecutive turns in real sessions are complete new questions. The rules accept a new question only when it names a crime, a place and a period, which explains much of the 77% asked. Reading first questions is the next experiment (item 3).
+
+**Sweep of the two rule fixes over all 1,425 real turns** (coordinator, 2026-11-01). The old rules ran 209 turns directly. The fixes change exactly 10 outcomes, all instances of the two bugs:
+- 1 bare state answering "which Springfield?", now Springfield, Missouri;
+- 9 turns whose previous turn was itself a follow-up: 8 of "Make it per capita" then "Show counts instead", and 1 of "number instead of rate" then "Give me count". These produced fragments ("Make it") and now ask.
+
+That is 10 of 209 (4.8%) direct runs that silently changed the meaning. Nothing else changed.
+
+A first version of the fix asked before checking whether the follow-up was a complete new question of its own. That made 9 complete new questions ask, such as "How many murders in Chicago in 2024" after "where is it". The check now comes after the new-question test, and a test covers it.

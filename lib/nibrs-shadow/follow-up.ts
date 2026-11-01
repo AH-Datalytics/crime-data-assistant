@@ -85,9 +85,6 @@ export const deterministicRewriter: FollowUpRewriter = {
     if (additive) f = `add ${f}`;
     const fl = f.toLowerCase();
     const prevParts = partsOf(prev);
-    // The previous turn must be a question of its own: a follow-up ("Make it per capita") names no crime or place, and
-    // only the turn before it would say what it changes (real conversations, hand check #13).
-    if (!prevParts.measures.length && !prevParts.places.length) return ask("The previous question was itself a change to an earlier one; ask the full question.");
 
     // Every form below must take the whole follow-up: a form found inside longer words ("make it a bar chart for 2023")
     // would drop the rest, so it is asked about (Codex 7b-04.1).
@@ -108,6 +105,11 @@ export const deterministicRewriter: FollowUpRewriter = {
       // Words that point back at the previous answer ("alongside that") make it not a question of its own (Codex 7b-04 third pass).
       && !/\b(?:that|this|those|these|it|them|previous|before|above|alongside|compare[ds]?|versus|vs|against|instead|also|too|as well)\b/i.test(unled))
       return ok(raw, "a complete question of its own", "new");
+
+    // Only now, for a follow-up that changes the previous question: that question must be one of its own. A follow-up
+    // ("Make it per capita") names no crime or place, and only the turn before it would say what it changes (real
+    // conversations, hand check #13). A complete new question, above, does not depend on it.
+    if (!prevParts.measures.length && !prevParts.places.length) return ask("The previous question was itself a change to an earlier one; ask the full question.");
 
     // P72: supporting columns, one at a time (both together are not built: Codex 7b-04.4).
     const popCol = /^(?:(?:add|show|include|give)\s+(?:me\s+)?(?:a\s+|the\s+)?(?:column\s+(?:for|with|showing)\s+(?:the\s+)?)?population(?:\s+column)?|(?:with|and)\s+(?:the\s+)?population|what(?:'s| is| was) the population(?: used)?)$/.test(fl);
