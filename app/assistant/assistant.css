@@ -1,0 +1,121 @@
+/*
+ * Crime Data Assistant preview (/assistant): Crime Index's tokens and components (crimeindex/src/app/globals.css,
+ * explorer/ExplorerTable, vis/Timeline, explorer/ExplorerTooltip) as the approved mockup draws them
+ * (docs/superpowers/mockups/nibrsai-redesign/24-chat.html). Everything is scoped under .cda.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,600;0,700;1,400&family=Fragment+Mono&display=swap");
+@import url("https://use.typekit.net/gqy0ylh.css");
+
+.cda {
+  --darker: #2a2a2a; --dark: #575757; --light: #737373; --lighter: #f8f8f8; --index: #ababab; --input: #aeaeb2;
+  --divider: #e1e1d8; --button-border: #dcdcdc; --tooltip: #2f2f2f; --tooltip-dark: #adb3bd; --row-1: #f8f8f8;
+  --teal: #0e6e7a; --teal-dark: #094b54; --teal-tint: #eef7f8;
+  --nibrs: #6b3fa0; --nibrs-tint: #f4f0fa;
+  --body: "Hanken Grotesk", Helvetica, Arial, sans-serif;
+  --display: "neue-haas-grotesk-display", "Hanken Grotesk", Helvetica, Arial, sans-serif;
+  --mono: "Fragment Mono", Monaco, monospace;
+  --header: 5rem; --gutter: 2rem;
+  min-height: 100vh; background: #fff; color: var(--dark); font-family: var(--body); font-size: 16px; text-rendering: geometricPrecision;
+}
+.cda *, .cda *::before, .cda *::after { box-sizing: border-box; }
+.cda button { font: inherit; cursor: pointer; }
+.cda a { color: inherit; text-decoration: none; }
+
+/* Header (crimeindex site/Header) */
+.cda .Header { position: sticky; top: 0; z-index: 30; height: var(--header); background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.05); display: flex; align-items: center; }
+.cda .HeaderInner { width: 100%; max-width: 1420px; margin: 0 auto; padding: 0 var(--gutter); display: flex; align-items: center; gap: 3rem; }
+.cda .Logo svg { width: 7.5rem; height: auto; display: block; }
+.cda .Nav { display: flex; gap: 1.5rem; }
+.cda .Nav a { font-size: .875rem; padding: .75rem 1rem; border-radius: .5rem; color: var(--dark); }
+.cda .Nav a:hover { color: var(--teal); }
+.cda .Nav a.on { background: rgba(0,0,0,.07); color: var(--teal); }
+.cda .Preview { margin-left: auto; font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); }
+
+/* The conversation */
+.cda .Chat { max-width: 76rem; margin: 0 auto; padding: 1rem var(--gutter) 10rem; }
+.cda .Empty { padding: 3rem 0 1rem; max-width: 46rem; }
+.cda .Empty h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 2.5rem; line-height: 1.15; color: var(--darker); }
+.cda .Empty p { font-size: 1.05rem; line-height: 1.5; color: var(--dark); margin: .75rem 0 1.75rem; }
+.cda .Examples { border-top: 1px solid var(--divider); }
+.cda .Examples button { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--divider); padding: .75rem 0; font-size: .95rem; color: var(--darker); }
+.cda .Examples button:hover { color: var(--teal); }
+.cda .Me { scroll-margin-top: calc(var(--header) + 1rem); display: flex; justify-content: flex-end; margin: 2.25rem 0 1rem; }
+.cda .Me p { margin: 0; max-width: 40rem; background: var(--teal-tint); color: var(--darker); border-radius: .375rem; padding: .6rem 1rem; font-size: 1rem; line-height: 1.45; }
+.cda .Re { padding-bottom: 1.5rem; border-bottom: 1px solid var(--divider); scroll-margin-top: calc(var(--header) + 1rem); }
+.cda .read { font-size: .875rem; color: var(--dark); margin: 0 0 1rem; line-height: 1.5; }
+.cda .read b { font-weight: 600; color: var(--darker); }
+.cda .link { color: var(--teal); text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; padding: 0; font-size: inherit; }
+.cda .EditQ { display: flex; gap: .5rem; margin: 0 0 1rem; }
+.cda .EditQ input { flex: 1; height: 2.5rem; border: 1px solid var(--teal); border-radius: .375rem; padding: 0 .8rem; font-size: .95rem; color: var(--darker); }
+.cda .say { font-size: 1.125rem; line-height: 1.5; color: var(--darker); margin: 0 0 .75rem; max-width: 60rem; }
+.cda .say b { font-family: var(--display); font-weight: 700; }
+.cda .notes { font-size: .95rem; line-height: 1.55; color: var(--darker); margin-top: 1rem; max-width: 60rem; }
+.cda .notes p { margin: 0 0 .35rem; }
+.cda .notes .src { color: var(--dark); font-size: .875rem; }
+.cda .wait { font-family: var(--mono); font-size: .75rem; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); }
+.cda .err { color: #9e1b1b; font-size: .95rem; }
+.cda .unavailable { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); margin: 0 0 .4rem; }
+.cda .chartnote { font-size: .8rem; color: var(--light); margin: .5rem 0 0; }
+.cda .ms { font-family: var(--mono); font-size: .65rem; color: var(--index); margin-top: .6rem; }
+
+/* Choices (clarify, decline alternatives, P61 buttons, proposal) */
+.cda .Choices { display: flex; flex-direction: column; gap: .6rem; max-width: 36rem; margin-top: .25rem; }
+.cda .Choice { display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-align: left; padding: .85rem 1.1rem; border: 1px solid var(--divider); border-radius: .375rem; background: #fff; font-size: 1rem; color: var(--darker); }
+.cda .Choice:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+.cda .Choice:disabled { color: var(--index); cursor: default; }
+.cda .Choice .k { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); text-align: right; }
+.cda .Choice.primary { border-color: var(--teal); }
+
+/* Chart beside table */
+.cda .Answer { display: grid; grid-template-columns: 3fr 2fr; gap: 2.5rem; align-items: start; }
+.cda .Answer.tableOnly { grid-template-columns: 1fr; max-width: 52rem; }
+.cda .Chart { position: relative; min-width: 0; }
+.cda .Chart svg { display: block; max-width: 100%; font-family: var(--body); font-size: 14px; }
+.cda .Chart .axis text { fill: var(--light); }
+.cda .Chart .axis line { stroke: #ccc; }
+.cda .Chart .series { fill: none; stroke: var(--nibrs); stroke-width: 1.5; }
+.cda .Chart .area { fill: url(#cda-area); }
+.cda .Chart .bar { fill: var(--nibrs); }
+.cda .Chart .bar.dim { opacity: .35; }
+.cda .Chart .ptr { stroke: var(--nibrs); stroke-width: 1; pointer-events: none; }
+.cda .Chart .dot { fill: #fff; stroke: var(--nibrs); stroke-width: 2; pointer-events: none; }
+.cda .Chart .lab { fill: var(--darker); font-size: 13px; }
+.cda .Tip { position: absolute; pointer-events: none; width: 18rem; background: var(--tooltip); color: #fff; border-radius: .125rem; font-size: .875rem; z-index: 5; }
+.cda .Tip .head { padding: .75rem 1.25rem; }
+.cda .Tip .t { font-family: var(--display); font-weight: 600; }
+.cda .Tip .s { font-size: .75rem; color: var(--tooltip-dark); }
+.cda .Tip .row { border-top: .5px solid #3e3e3e; padding: .5rem 1.25rem; display: flex; justify-content: space-between; }
+.cda .Tip .v { font-family: var(--display); font-weight: 700; }
+
+/* Table (crimeindex explorer/ExplorerTable) */
+.cda .TableScroll { max-height: 26rem; overflow: auto; border-bottom: 1px solid var(--divider); min-width: 0; }
+.cda table.T { width: 100%; border-collapse: collapse; }
+.cda table.T th { position: sticky; top: 0; background: #fff; height: 3.5rem; padding: 1rem; text-align: right; font-family: var(--display); font-weight: 600; font-size: 1rem; color: var(--darker); box-shadow: inset 0 -1px 0 var(--divider); vertical-align: bottom; }
+.cda table.T th:first-child, .cda table.T td:first-child { text-align: left; }
+.cda table.T td { height: 3rem; padding: .75rem 1rem; font-size: .875rem; color: var(--darker); text-align: right; font-variant-numeric: tabular-nums; }
+.cda table.T td:first-child { font-weight: 600; }
+.cda table.T tbody tr:nth-child(odd) { background: var(--row-1); }
+.cda table.T tbody tr.hl td { background: var(--nibrs-tint); color: var(--nibrs); }
+
+/* The question box, pinned at the bottom */
+.cda .Dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: #fff; border-top: 1px solid var(--divider); box-shadow: 0 -4px 16px rgba(0,0,0,.04); }
+.cda .DockInner { max-width: 76rem; margin: 0 auto; padding: 1rem var(--gutter) .5rem; display: flex; gap: .75rem; align-items: center; }
+.cda .DockInner input { flex: 1; height: 3.25rem; border: 1px solid var(--input); border-radius: .375rem; padding: 0 1.1rem; font-size: 1.05rem; color: var(--darker); }
+.cda .DockInner input::placeholder { color: var(--input); }
+.cda .DockInner input:focus { outline: none; border-color: var(--teal); }
+.cda .Src { height: 3.25rem; display: inline-flex; align-items: center; gap: .5rem; padding: 0 1rem; border: 1px solid var(--divider); border-radius: .375rem; background: #fff; white-space: nowrap; }
+.cda .Src .k { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--darker); }
+.cda .Src select { border: 0; background: none; font-family: var(--display); font-weight: 700; font-size: .9rem; color: var(--darker); }
+.cda .Ask { height: 3.25rem; padding: 0 1.75rem; border-radius: .5rem; border: 0; background: var(--teal); color: #fff; font-size: .95rem; }
+.cda .Ask:hover { background: var(--teal-dark); }
+.cda .Ask:disabled { background: var(--index); }
+.cda .Btn { padding: .4rem 1rem; border: 1px solid var(--button-border); border-radius: .375rem; background: #fff; color: var(--dark); font-size: .875rem; }
+.cda .Btn.teal { background: var(--teal); border-color: var(--teal); color: #fff; }
+.cda .fine { max-width: 76rem; margin: 0 auto; padding: 0 var(--gutter) .75rem; font-size: .75rem; color: var(--light); }
+
+@media (max-width: 760px) {
+  .cda .Answer { grid-template-columns: 1fr; }
+  .cda .Nav, .cda .Preview { display: none; }
+  .cda .DockInner { flex-wrap: wrap; }
+  .cda .Src { display: none; }
+}

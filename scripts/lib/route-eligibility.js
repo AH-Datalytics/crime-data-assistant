@@ -958,6 +958,19 @@ const EXCLUSIONS = [
       "user-facing page, this exclusion must be revisited and the route sealed.",
     claims: { readsCrimeDb: false, returnsRows: false, invokesModel: false },
   },
+  {
+    route: "app/api/assistant-query/route.ts",
+    reason:
+      "The LOCAL preview of the Crime Data Assistant redesign (/assistant; coordinator and owner, " +
+      "2026-10-31), excluded deliberately on the same terms as app/api/nibrs-shadow-query: every " +
+      "handler returns 404 unless previewEnabled() (NODE_ENV not production AND NIBRS_SHADOW_ROOT " +
+      "set), proven by scripts/test-nibrs-preview-production.sh. On a developer's machine it returns " +
+      "crime counts from nibrs-model's canonical parquet through a local DuckDB subprocess, never the " +
+      "app's crime databases; the follow-up rewriter it calls is deterministic code, not a model. It " +
+      "is not the public question flow. Before /assistant is ever served in production this " +
+      "exclusion must be revisited and the route sealed.",
+    claims: { readsCrimeDb: false, returnsRows: false, invokesModel: false },
+  },
 ];
 
 function routeFiles(root) {
