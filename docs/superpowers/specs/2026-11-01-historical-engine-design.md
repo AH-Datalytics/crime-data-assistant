@@ -1,6 +1,6 @@
 # Historical in the new engine: design note
 
-**Status:** design only. Codex design check 01 (ACCEPT WITH CHANGES) is applied below. No build yet.
+**Status:** design, with Jeff's decisions recorded (section 7; policy rows P75–P79). Codex design check 01 (ACCEPT WITH CHANGES) is applied. No build yet.
 
 **Why now.** Jeff decided that all five sources join the new engine before launch. Historical agency-level is the most-asked of the four still missing, so it comes ahead of increment 8 (coordinator, 2026-11-01).
 
@@ -48,17 +48,17 @@ Agreement isn't required for correctness: the snapshot is the source. The live a
 **In (first increment):**
 - **Offenses.** Violent crime, property crime and the seven Part I offenses, as the file gives them. Sums are read, never re-added.
 - **Places.** One agency (an ORI from the place resolver), several named agencies side by side, a state, the nation.
-- **Periods.** Years 1960–2025: one year, a range by year, or two years compared. Months are declined plainly (P74).
+- **Periods.** Yearly, from the earliest year Crime Index publishes for that place (P76): agencies from the 1930s (Memphis from 1932), states and the nation from 1958, through 2025. One year, a range by year, or two years compared. Months are declined plainly (P74).
+  - The first increment answers what the archived snapshots hold. 20261030 covers 1960–2025; the years before 1960 come with nibrs-model's pre-1960 snapshot (section 7).
 - **Statistics:**
   - counts;
-  - rates per 100,000, either the file's stored `*_capita` or calculated from the file's population (section 3 says which and when);
+  - rates per 100,000 and populations exactly as Crime Index publishes them, blank where it has none (P75; section 3);
   - percent change between two years;
   - clearances where the file has counts, and the published clearance percentage where it has only that. A published percentage is shown as published, never averaged or turned into a count. There is no state clearance figure (P18).
 - **Rankings.** A state's cities by count or rate for one year. Only city rows with a value and, for a rate, a population that year are ranked. Cities without them are named as left out. P08's 250,000 floor applies only when the question says "large" or "big" cities.
 
 **Out:**
-- **1930–1959.** The snapshot starts in 1960. Section 7, decision 2.
-- **Agency staffing.** Historical includes staffing (owner, 2026-10-28), so it is part of Historical before launch, but it comes in the second increment, after crime and clearances. Section 7, decision 4.
+- **Agency staffing.** In the second increment, before launch, with its pre-1960 years (P78).
 - **Combining.** Combined totals across several agencies, every-month cohorts and a reporting cohort's "agencies counted" are out: the file has no month detail to build a cohort from. They are asked about or declined plainly, never guessed.
 - **Arson, demographics, and anything not in these files.** Declined plainly, with the nearest answerable question.
 
@@ -71,11 +71,10 @@ Corrected, Codex 01.2. The file says what Crime Index published, not how much an
 - **A missing row or a blank cell** is "not available in this data", never zero, and never claimed to be "not reported".
 - **A published zero** is shown as zero. It doesn't establish that the agency reported every month.
 
-**Rates and P58.** P58 gives a rate only when every month of the period is known, and this file has no months. So a Historical rate needs a rule of its own, which is decision 1 in section 7. Proposed:
-- a yearly rate is given only when the year's count is present and the file's population for that agency-year is present and above zero;
-- the stored `*_capita` is shown when present;
-- otherwise the rate is calculated from the same row's count and population, and the answer says it is calculated;
-- with no population or a zero population, no rate is given, and the answer says why (P59 is unchanged).
+**Rates (P75, decided by Jeff 2026-11-01).** P58's every-month rule can't apply to a yearly file, so Historical has its own rule:
+- the rate and the population are **exactly as Crime Index publishes them** (`*_capita` and `population`);
+- where Crime Index publishes none, the rate is blank and the answer says Crime Index has none for that year;
+- no rate is calculated by the engine.
 
 **Agencies.** The state and nation rows' `agencies` field is shown only on request (P72). The file can't tell complete reporters from partial ones, so P61's reporting-cohort wording is not used for Historical.
 
@@ -118,9 +117,9 @@ Corrected, Codex 01.3. These are the extensions the earlier design names (2026-1
 - **G3 time basis `data_year`.** The only grain is the year. Month grains and periods are refused by the compiler and declined by the reader.
 - **G4 units.** Aggregate units (`reported_count`), not NIBRS entities, so NIBRS unit rules don't reject or reinterpret a Historical plan.
 - **G7 `published_value`.** State and nation values, stored rates and published clearance percentages are read as published, never summed over agencies or averaged.
-  - A **calculated** rate is a separate statistic from a **stored** one, and the answer says which.
+  - Rates are only the published ones (P75); the engine calculates none.
   - A change against a missing or zero base gives no change, with the reason, not a number.
-- **G8 statements by source.** Historical's own statements ("as published by Crime Index", "a blank means not available in this data", "this rate is calculated from the file's count and population"). The NIBRS statements are never required for a Historical plan.
+- **G8 statements by source.** Historical's own statements ("as published by Crime Index", "a blank means not available in this data"). The NIBRS statements are never required for a Historical plan.
 - **Unsupported in this increment.** Combined totals, cohorts, two-way groupings and months. The compiler refuses them with a reason kept in `detail`; the user reads one plain sentence (P74).
 - **Shared with NIBRS:** the reader, the place resolver, plain wording (P74), delivery and the answer contract.
 - **Labels.** Held-out cases come from the query log's Historical-tab questions (the coverage classification) and its real Historical follow-up turns. Codex reviews the labels first.
@@ -139,10 +138,17 @@ Optional change Codex 01.7 is taken: the detail moves to its own design note.
   - the boundary between the 2025–2026 export and the 2017–2026 panel;
   - rolling rates under P58 and P59 (the earlier note's months-weighted rolling rates conflict with them).
 
-## 7. Decisions for Jeff (proposed, not assumed)
+## 7. Decisions (Jeff, 2026-11-01, through the coordinator), recorded as policy rows P75–P79
 
-1. **The rate rule for Historical.** A yearly rate is given when the year's count is present and the file's population is above zero. The stored rate is used when present, otherwise one is calculated and the answer says so. The file can't satisfy P58's every-month rule, so this replaces it for Historical.
-2. **1930–1959.** Snapshot those years from crimeindex.org (nibrs-model), or start the engine at 1960.
-3. **The source line.** Proposed: **"Source: Crime Index."** for Historical, the same as P63's Current Trends line. It replaces P63's "Source: FBI SRS." for Historical, and the P53 state and national answers change with it.
-4. **Staffing timing.** It is in the second increment of Historical, before launch, unless Jeff wants it in the first.
-5. **Switchover.** After the reconciliation report, Historical questions are routed to the engine at launch, and the live tables stay as they are for the live site until it is retired. Does Jeff want that, or the live tables physically replaced?
+Jeff's words: "Yes on 1, crime index data (staffing and offenses) should be available pre-1960 as well for agencies. 3 is fine, 4 is good, defer to you on 5" (5 was decided by the coordinator).
+
+1. **P75, the rate rule.** Crime Index's published rate and population, as is; blank where Crime Index has none. No calculated rate (section 3).
+2. **P76, coverage from the earliest published year.** Not "start at 1960". Agencies' offenses and staffing are available from the earliest year Crime Index publishes for them.
+   - Checked read-only on crimeindex.org's page API, 2026-11-01:
+     - agencies are published from the 1930s (Memphis from 1932);
+     - states and the nation are published from 1958 (the trend series for the nation and for Tennessee start at 1958; nothing for 1955 or earlier).
+   - The 20261030 snapshot covers 1960–2025, so nibrs-model archives the pre-1960 Crime Index data: agency offenses, and staffing for the second increment. Its archive step asks Jeff directly.
+   - Until that snapshot is in, the engine answers 1960–2025 and says plainly that earlier years aren't loaded yet. It never says they don't exist.
+3. **P77, the source line.** "Source: Crime Index." for Historical, including the P53 state and national answers. This amends P63.
+4. **P78, staffing.** The second increment, before launch, with its pre-1960 years.
+5. **P79, switchover.** By routing. At launch, Historical questions are routed to the engine. The old tables stay untouched, so a rollback is a route switch. The reconciliation report (section 1) comes before the switch.
