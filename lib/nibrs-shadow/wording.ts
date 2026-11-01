@@ -126,3 +126,14 @@ export function plainReaderText(parts: { text: string; explanation?: string }[])
   const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).map(q).join(", ")} or ${q(xs[xs.length - 1])}` : q(xs[0]));
   return [...(unread.length ? [`I didn't understand ${list(unread)}.`] : []), ...sentences, ...(unread.length ? ["Try asking it another way."] : [])].join(" ");
 }
+
+/**
+ * The reader's whole refusal text in plain words. The reader's matcher writes its reasons into the explanation, not
+ * onto the parts (Codex preview-blockers review 1), so the text is split at each sentence it begins and each is reworded.
+ */
+export function plainReaderExplanation(explanation: string): string {
+  // A sentence starts the text or follows a sentence end ("..., so I can't apply "X"" is inside one sentence).
+  const starts = /(?<=[.!?]\s+)(?=I can't apply "|I couldn't interpret "|NIBRS doesn't record |NIBRS does not track |Current Trends doesn't track |Historical doesn't record )/;
+  const sentences = explanation.split(starts).map((s) => s.trim()).filter(Boolean);
+  return plainReaderText(sentences.map((s) => ({ text: /"([^"]+)"/.exec(s)?.[1] ?? s, explanation: s })));
+}

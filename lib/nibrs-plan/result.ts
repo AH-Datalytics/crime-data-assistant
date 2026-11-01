@@ -73,7 +73,7 @@ export type CellEvidence = {
  * - unknown_not_counted: a plan with a condition on a person's sex, race, ethnicity or age (increment 7).
  */
 export const ANSWER_STATEMENTS = {
-  property_not_attributed: "NIBRS lists stolen or damaged property for the whole incident, not for each offense in it, so the property can't be tied to a single offense.",
+  property_not_attributed: "NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied to a single offense.",
   reported_nibrs_counts: "These are counts reported to NIBRS by the agencies that report to it.",
   property_counted_by_offense: "Property crimes are counted by offense, not by victim.",
   categories_overlap: "A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total.",

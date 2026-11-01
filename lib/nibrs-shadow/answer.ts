@@ -30,7 +30,7 @@
  *   P24/D04              a period after the data says where the data ends and offers this year so far; a period
  *                        before this build's first month is refused as not built (`notBuilt`).
  */
-import { NOT_YET, plainReaderText } from "./wording";
+import { NOT_YET, plainReaderExplanation } from "./wording";
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, type FollowUpRewriter, type Rewrite } from "./follow-up";
@@ -86,7 +86,6 @@ function askInstead(question: string, parts: Part[], year: number): ShadowOption
   if (r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") || matchNibrsType(r.ledger).kind !== "spec") return null;
   return { label: `Ask instead: "${t}"`, question: t };
 }
-const plainParts = (parts: Part[]) => plainReaderText(parts.map((p) => ({ text: p.text, explanation: p.explanation ?? undefined })));
 export type ShadowOutcome =
   /** `buttons`: continuations offered beside the answer (P61's consistent-reporters view). */
   | { kind: "answer"; plan: NibrsPlan; period: { from: string; to: string }; sql: string; delivered: Delivered; buttons?: ShadowOption[];
@@ -215,7 +214,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (unrecorded.length) {
     const why = unrecorded.map((p) => p.explanation ?? `"${p.text}" is not recorded.`).join(" ");
     // P74: in plain words, with the question without those words when it can be answered.
-    return decline(readerReason(why), plainParts(unrecorded), { alternative: askInstead(ledger0.question, unrecorded, Number(deps.release.lastMonth.slice(0, 4))), detail: why });
+    return decline(readerReason(why), plainReaderExplanation(why), { alternative: askInstead(ledger0.question, unrecorded, Number(deps.release.lastMonth.slice(0, 4))), detail: why });
   }
   // Increment 7: words policy asks about, a button per reading (P30 "young adults", P44 "attackers"), the rest of the
   // question kept (P22).
@@ -278,7 +277,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const d = matchNibrsType(ledger);
   if (d.kind === "none") return decline("reader", "I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example \"robberies in Denver in 2024\".");
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
-  if (d.kind === "decline") return decline(readerReason(d.explanation), plainParts(d.parts),
+  if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
     { alternative: askInstead(ledger.question, d.parts, Number(deps.release.lastMonth.slice(0, 4))), detail: d.explanation });
   if (d.kind === "clarify") return decline("reader", d.explanation);
   // P53 (increment 5): a Part I offense for a state or the nation is the historical file's in a completed year
@@ -448,7 +447,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Several names of one agency, combined, are that agency once (Codex 02 re-check B).
   if (flags(ledger0).combined && plan.geography.places.length > 1) plan.geography.combine = "combined";
   else if (flags(ledger0).combined && !flags(ledger0).composite && (namedPlaces.length <= 1 || plan.measures.length > 1))
-    return decline("unsupported_capability", `This isn't available yet: "combined" applies to several agencies here; a combined total of several crimes comes later. I haven't answered with separate numbers.`);
+    return decline("unsupported_capability", "I can combine the counts of several agencies, but not yet the counts of several crimes. Ask for each crime on its own, or for one crime in several places combined.");
   if (plan.geography.combine === "combined" || (plan.geography.places.length === 1 && plan.geography.places[0].kind === "agency")) {
     // Dropping the agency grouping renumbers the groupings after it: their bindings follow (Codex 02.3); a part bound
     // to the dropped grouping is bound to the places.

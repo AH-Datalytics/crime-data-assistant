@@ -849,10 +849,18 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       try { walk(run(), where, 0); } catch (e) { errors.push(`${where}: ${String(e).slice(0, 160)}`); }
     }
   }
+  // Questions no case asks: the preview findings' and the Codex review's inputs.
+  for (const q of ["Rape clearances by type by victim in Memphis in 2024", "Robberies where a firearm was seized in Memphis in 2024", "Burglaries in Memphis in 2023",
+    "Shoplifting and carjackings combined in Memphis in 2024", "aggravated assault victims by weapon in Detroit in 2023", "murders rolling over 12 months in Detroit in 2024",
+    "fentanyl offenses in Detroit in 2024", "Did shoplifting go up in Detroit from 2022 to 2023?", "Simple assault victims in Detroit by race and sex in 2023"]) {
+    try { walk(ask(q), q, 0); } catch (e) { errors.push(`${q}: ${String(e).slice(0, 160)}`); }
+  }
   assert.ok(seen.size > 300, `the walk covers the strings (${seen.size})`);
   assert.deepEqual(errors, [], "no case question throws");
   assert.deepEqual(bad, [], "no engine words reach a user");
   assert.deepEqual(UNMAPPED, [], "every reader sentence has a plain wording");
+  // Jeff's example (Codex preview-blockers review 1): the reader's own reason, reworded, never "didn't understand".
+  assert.match(as(ask("Rape clearances by type by victim in Memphis in 2024"), "decline").explanation, /^Clearances are recorded for each offense, not for each person, so they can't be counted by "victim"\./);
 }
 
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
