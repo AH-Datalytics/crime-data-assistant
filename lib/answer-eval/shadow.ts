@@ -443,7 +443,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       ok = o.plan.groupings.some((g) => g.dimension === "time.quarter") && text.includes("Each quarter's figure is the sum of its three months.")
         && o.delivered.table.rows.every((r) => { const [y, qn] = String(r[0]).split("-"); return (r[1] === null) === inc.includes(`${qn} ${y}`); });
     } else if (/^[A-Z].*\.$/.test(s) && !/^(names|says|states|labels)\b/.test(s)) ok = text.includes(s);   // a fixed sentence
-    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|No total is established for/.test(all);
+    else if (s === "names any months with no data as missing, not zero") ok = !blank || /No report is known for|Not every month of|were recorded for|does not establish|shown blank, not zero: reporting for|Shown blank, not zero, because reporting/.test(all);
     else if (s === "names the months covered") ok = all.includes(periodWords(o.period.from, o.period.to));
     else if (/^says drug crimes include/.test(s)) ok = /drug equipment/i.test(all);
     else if (/^says a unit with several categories counts once in each/.test(s)) ok = text.includes(ANSWER_STATEMENTS.categories_overlap);

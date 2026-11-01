@@ -235,7 +235,7 @@ Discrepancies and unverified cases:
   - unverified statement: expected `Names the Houston Police Department as the agency counted`, got `(no check defined)`
   - unverified statement: expected `Names its source at the end`, got `(no check defined)`
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Houston, Texas: theft from motor vehicle offenses by year and clearance status, January 2018 through September 2026. / Reported by the Houston Police Department. / No total is established for Cleared (2018); U
+  - delivered: Houston, Texas: theft from motor vehicle offenses by year and clearance status, January 2018 through September 2026. / Reported by the Houston Police Department. / 2018, 2026 are shown blank, not zero: reporti
 - **LS-124** (avoidable_decline; expected answer, got decline) "Narcotics possession or distribution arrests in tolleson Arizona in 2025"
   - declined (reader): NIBRS doesn't include drug distribution or sales as its own measure (drug possession and drug offenses are counted), so "or distribution" can't be counted.
 - **LS-135** (avoidable_decline; expected answer, got decline) "Posession or distribution of narcotics arrests in 2025 In Tucson az. Please provide total"
