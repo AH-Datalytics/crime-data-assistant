@@ -205,7 +205,11 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
     r.forEach((v, j) => {
       const c = table.columns[j];
       if (!c) return;
-      if (c.binding.kind === "statistic" && v !== null && (typeof v !== "number" || !Number.isFinite(v))) out.push(`row ${i}, "${c.header}": a number column holds ${JSON.stringify(v)}; unknown is null`);
+      // The population covered (P72, Jeff 2026-11-01) is a percent, "≥" marking a lower bound: that form only.
+      const as = c.binding.kind === "statistic" ? c.binding.as : null;
+      const coverage = as !== null && plan.statistics.some((s) => s.kind === "coverage" && s.as === as);
+      if (coverage && v !== null && !(typeof v === "string" && /^≥?\d+\.\d%$/.test(v))) out.push(`row ${i}, "${c.header}": a population-covered cell holds ${JSON.stringify(v)}; it is a percent, "≥" for a lower bound`);
+      if (!coverage && c.binding.kind === "statistic" && v !== null && (typeof v !== "number" || !Number.isFinite(v))) out.push(`row ${i}, "${c.header}": a number column holds ${JSON.stringify(v)}; unknown is null`);
       if (c.binding.kind === "grouping" && (v === null || v === "" || typeof v !== "string" && typeof v !== "number")) out.push(`row ${i}, "${c.header}": a grouping value is blank`);
     });
   });

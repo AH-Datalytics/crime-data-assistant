@@ -282,6 +282,7 @@ export function validatePlanSemantics(plan: NibrsPlan, layer: SemanticLayer): Pl
     // P72: a population belongs to a rate of the plan; agencies reporting to a state or national total.
     if (s.kind === "population" && !plan.statistics.some((r) => r.kind === "rate" && r.as === s.of)) add("S12", `statistics[${i}]`, "a population column belongs to a rate statistic of the plan");
     if (s.kind === "agencies" && !plan.geography.places.every((p) => p.kind === "state" || p.kind === "national")) add("S12", `statistics[${i}]`, "agencies reporting go with a state or national total");
+    if (s.kind === "coverage" && !plan.geography.places.every((p) => p.kind === "state" || p.kind === "national")) add("S12", `statistics[${i}]`, "population covered goes with a state or national total");
   });
   return out;
 }

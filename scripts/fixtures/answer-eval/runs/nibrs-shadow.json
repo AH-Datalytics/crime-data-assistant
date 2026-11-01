@@ -1565,13 +1565,13 @@
      "kind": "unverified"
     },
     {
-     "field": "option \"The United States\" button \"Show only agencies that reported every month\" meaning",
+     "field": "option \"The United States\" button \"Consistent Reporting Agencies\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.shoplifting 2024-01..2024-12",
      "kind": "unverified"
     },
     {
-     "field": "option \"The United States\" button \"Show only agencies that reported every month\" values",
+     "field": "option \"The United States\" button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"
@@ -1771,13 +1771,13 @@
      "kind": "unverified"
     },
     {
-     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" meaning",
+     "field": "option \"Washington state\" button \"Consistent Reporting Agencies\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.shoplifting 2024-01..2024-12",
      "kind": "unverified"
     },
     {
-     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" values",
+     "field": "option \"Washington state\" button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"
@@ -1819,13 +1819,13 @@
      "kind": "unverified"
     },
     {
-     "field": "option \"New York state\" button \"Show only agencies that reported every month\" meaning",
+     "field": "option \"New York state\" button \"Consistent Reporting Agencies\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.shoplifting 2024-01..2024-12",
      "kind": "unverified"
     },
     {
-     "field": "option \"New York state\" button \"Show only agencies that reported every month\" values",
+     "field": "option \"New York state\" button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"
@@ -1931,7 +1931,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Nashville, Tennessee: 7,793 theft from motor vehicle offenses in 2022. / Reported by the Metropolitan Nashville Police Department. / Source: FBI NIBRS."
+    "delivered: Nashville, Tennessee: 7,793 theft from motor vehicle offenses in 2022. / Reported by the Metropolitan Nashville Police Department. / Car break-ins are counted as theft from motor vehicles. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2672,7 +2672,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm. For example: \"robberies in Denver i"
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -3217,7 +3217,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 re"
+    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 94 of them reported only some months and are included. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3231,7 +3231,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the 1,439 agencies that reported every month (99.1% of the state's residents). / Source: FBI NIBRS."
+    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the Consistent Reporting Agencies (the agencies that reported every month of 2024). / The table shows how many there are and the population they cover. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3245,7 +3245,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / 441 agencies reported at least one month of 2024, covering 93.4% of the state's residents; 63 of them reported only some months and are includ"
+    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 63 of them reported only some months and are included. / Source: FBI"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3259,7 +3259,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / 14,945 agencies reported at least one month of 2024, covering 89.0% of the nation's residents; 1,933 of "
+    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 1,933 of them reported only so"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3273,7 +3273,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Agencies counted and share of the state's residents covered: 2018 561 (86.8%, 167 reporting only some months); 2019 578 (88.6%, 178 report"
+    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / These are sums of the agencies that reported; the table shows how many reported each year and the population they cover. Agencies that rep"
    ],
    "capability": "answer:nibrs count",
    "era": "spans 2021",
@@ -3287,7 +3287,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 repo"
+    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 94 of them reported only some months and are included. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3408,7 +3408,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm. For example: \"robberies in Denver i"
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -3421,7 +3421,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 6.3 carjacking offenses per 100,000 residents of the reporting agencies in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them report"
+    "delivered: Texas: 6.3 carjacking offenses per 100,000 residents of the reporting agencies in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 94 of them reported only some months"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",

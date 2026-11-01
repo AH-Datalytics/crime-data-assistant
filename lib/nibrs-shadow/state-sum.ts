@@ -123,55 +123,71 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const Header = `${what[0].toUpperCase()}${what.slice(1)}${isRate ? " per 100,000 residents of the reporting agencies" : ""}`;
   const when = yearSet && yearSet.length > 1 ? `${yearSet.slice(0, -1).join(", ")} and ${yearSet[yearSet.length - 1]}` : periodWords(period.from, period.to);
   const nationNote = place.kind === "national" ? ["The nation here is the 50 states and D.C.; territories and federal agencies are not included."] : [];
-  const residents = place.kind === "national" ? "the nation's residents" : "the state's residents";
 
   type Row = { key: string | null; value: number | null; status: string };
-  const view = (every: boolean): { lines: string[]; rows: Row[]; support: Row[] } => {
+  type Cell = { value: number | string | null; status: string };
+  // Jeff (2026-11-01): the agencies and the population they cover are table columns, not prose; a lower bound (some
+  // agencies have no FBI population) is marked "≥" in its cell. P80: the fixed set is "Consistent Reporting Agencies".
+  const covered = (share: number, lower: number): Cell => ({ value: `${lower ? "≥" : ""}${pc(share)}`, status: "VALUE" });
+  const CRA = "Consistent Reporting Agencies";
+  const view = (every: boolean): { lines: string[]; rows: Row[]; agencies: Cell[]; coverage: Cell[]; population: Cell[] } => {
     const lines: string[] = [];
+    const lowerNote = (any: boolean) => (any ? ["≥ means at least: some of the agencies have no FBI population."] : []);
     if (years.length === 1) {
       const y = byYear[0];
       const n = every ? y.every.sum : y.sum, P = every ? y.every.population : y.population;
       const noPop = every ? y.every.noPopulation : y.noPopulation;
-      // No rate over an incomplete denominator (P62, review 2.5); a lower-bound share says "at least".
+      // No rate over an incomplete denominator (P62, review 2.5).
       const v = isRate ? (noPop ? null : rate({ value: n, status: "VALUE" }, P).value) : n;
-      const atLeast = (k: number) => (k ? "at least " : "");
+      const counted = every ? `the ${CRA}` : "the agencies counted";
       lines.push(isRate && v === null
-        ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of the agencies ${every ? "that reported every month" : "counted"} have no FBI population` : `the FBI population of the agencies ${every ? "that reported every month" : "counted"} is 0`}.`
+        ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of ${counted} have no FBI population` : `the FBI population of ${counted} is 0`}.`
         : every
-        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} agencies that reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`
+        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${CRA} (the agencies that reported every month of ${when}).`
         : `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
-      if (!every) lines.push(`${fmt(y.agencies)} agencies reported at least one month of ${when}, covering ${atLeast(y.noPopulation)}${pc(y.share)} of ${residents}; ${fmt(y.partial)} of them reported only some months and are included. ${fmt(y.every.agencies)} reported every month (${atLeast(y.every.noPopulation)}${pc(y.every.share)} of ${residents}).`);
-      if (y.noPopulation && !every) lines.push(`${fmt(y.noPopulation)} of the agencies counted have no FBI population, so the share covered is a lower bound.`);
+      lines.push(every ? "The table shows how many there are and the population they cover."
+        : `The table shows how many agencies reported and the population they cover; ${fmt(y.partial)} of them reported only some months and are included.`);
+      lines.push(...lowerNote(!!noPop));
       if (y.conflicts) lines.push(`${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose reports disagree with the agency's record of which months it reported ${y.conflicts === 1 ? "is" : "are"} not counted.`);
-      if (isRate && v !== null) lines.push(`The rate is the sum per 100,000 residents of the agencies ${every ? "that reported every month" : "counted"}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
+      if (isRate && v !== null) lines.push(`The rate is the sum per 100,000 residents of ${counted}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
-      const support = supportStat?.kind === "population" ? (noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" })
-        : { value: every ? y.every.agencies : y.agencies, status: "VALUE" };
-      return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }], support: [{ key: null, ...support }] };
+      return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }],
+        agencies: [{ value: every ? y.every.agencies : y.agencies, status: "VALUE" }],
+        coverage: [covered(every ? y.every.share : y.share, noPop)],
+        population: [noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" }] };
     }
     lines.push(every
-      ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`
+      ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} ${CRA} (the agencies that reported every month of ${when}).`
       : `${Where}: ${what} by year, ${when}, summed over the agencies that reported each year.`);
-    lines.push(every
-      ? `Residents covered by those agencies: ${byYear.map((y) => `${y.year} ${y.every.noPopulation ? "at least " : ""}${pc(y.every.share)}`).join("; ")}.${byYear.some((y) => y.every.noPopulation) ? " Some of them have no FBI population, so those shares are lower bounds." : ""}`
-      : `Agencies counted and share of ${residents} covered: ${byYear.map((y) => `${y.year} ${fmt(y.agencies)} (${y.noPopulation ? "at least " : ""}${pc(y.share)}, ${fmt(y.partial)} reporting only some months)`).join("; ")}. Agencies reporting only some months are included.`);
+    lines.push(every ? "The table shows the population they cover each year."
+      : "These are sums of the agencies that reported; the table shows how many reported each year and the population they cover. Agencies that reported only some months are included.");
+    lines.push(...lowerNote(byYear.some((y) => (every ? y.every.noPopulation : y.noPopulation))));
     const conflicted = byYear.filter((y) => y.conflicts);
     if (conflicted.length) lines.push(`Agency-months whose reports disagree with the agency's record of which months it reported are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
-    if (!every) lines.push(`Which agencies report changed over these years, so part of a change can be agencies joining or leaving; the button shows one fixed set of ${fmt(meta.everyAgencies)} agencies that reported every month of ${when}.`);
+    if (!every) lines.push(`Which agencies report changed over these years; the ${CRA} button keeps one set of ${fmt(meta.everyAgencies)} agencies.`);
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
-      support: byYear.map((y) => ({ key: null, value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })) };
+      agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),
+      coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),
+      population: byYear.map(() => ({ value: null, status: "UNAVAILABLE" })) };
   };
+  // The plan names every column it shows (the answer contract): the agencies and the population covered, always; the
+  // population a rate divides by when asked (P72).
+  const measureOf = "measure" in st ? st.measure : "";
+  const withColumns = (p: NibrsPlan): NibrsPlan => ({ ...p, statistics: [...p.statistics.filter((x) => x.kind !== "agencies"),
+    { kind: "agencies", as: "agencies", measure: measureOf }, { kind: "coverage", as: "coverage", measure: measureOf }] });
   const deliver = (p: NibrsPlan, every: boolean) => {
     const v = view(every);
     return deliverTable(p, yearG ? { dimension: "time.year", header: "Year" } : null, { as: st.as, header: Header }, v.rows, [...v.lines, ...nationNote], statements, deps.release.id, readings,
-      supportStat ? { as: supportStat.as, header: supportStat.kind === "agencies" ? (every ? "Agencies reporting every month" : "Agencies reporting") : "Population", cells: v.support } : undefined);
+      [{ as: "agencies", header: every ? CRA : "Agencies reporting", cells: v.agencies }, { as: "coverage", header: "Population covered", cells: v.coverage },
+        ...(supportStat?.kind === "population" ? [{ as: supportStat.as, header: "Population", cells: v.population }] : [])]);
   };
+  plan = withColumns(plan);
   const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
   const everyDelivered = deliver(everyPlan, true);
   const everyOutcome: ShadowOutcome = { kind: "answer", plan: everyPlan, period, sql: c.query.sql, delivered: everyDelivered, stateSum: meta };
   if (consistent) return everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
   const delivered = deliver(plan, false);
   if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
-  const button: ShadowOption = { label: "Show only agencies that reported every month", continuation: everyOutcome };
+  const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome };
   return { kind: "answer", plan, period, sql: c.query.sql, delivered, buttons: [button], stateSum: meta };
 }

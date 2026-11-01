@@ -317,7 +317,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
   const term = flags(ledger0).undefinedTerm;
-  if (term) return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term]);
+  if (term) {
+    // P83 (Jeff 2026-11-01): gun violence stays declined (P31), with gun crime offered for the same question.
+    // The reader's text lowercases the phrase: a question that starts with it keeps its capital.
+    const gunCrime = term === "gun violence" ? ledger0.question.replace(/\bgun\s+violence\b/i, "gun crime").replace(/[?.!\s]+$/, "").replace(/^gun crime/, "Gun crime") : null;
+    return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term], gunCrime && gunCrime !== ledger0.question.replace(/[?.!\s]+$/, "") && readsWhole(gunCrime, Number(deps.release.lastMonth.slice(0, 4)))
+      ? { alternative: { label: `Ask instead: "${gunCrime}"`, question: gunCrime } } : {});
+  }
   // P29: "by <group>" asks about offenders. "By men and women" is answered by the offenders' sexes (P49, below); any
   // other group (one sex, juveniles) is declined, never answered as victims.
   const bySexes = !!flags(ledger0).offenders && BY_SEXES.test(ledger0.question);
@@ -888,7 +894,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "This isn't available yet: this weapon or relationship selection.");
-  const notes0 = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
+  const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
+    // P84 (Jeff 2026-11-01): how the phrase was read.
+    ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).
