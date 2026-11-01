@@ -25,6 +25,8 @@ function stub(sql: string): unknown[][] {
   if (sql.includes("agency/data.parquet")) return popRows(sql);
   if (/unnest\(\[.*\]\) AS ori/.test(sql)) return gridRows(sql);
   // A one-category breakdown over a period: F 30 (share 0.6), M 20 (0.4), U unknown.
+  // The same with the incidents beside the count (P66): one incident had a female and a male victim (12 + 9 > 20).
+  if (/cats AS/.test(sql) && !/AS period/.test(sql) && /_incidents"/.test(sql)) return [["F", 14, "VALUE", 12, "VALUE", 0.6, "VALUE"], ["M", 10, "VALUE", 9, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN", null, "UNKNOWN"]];
   if (/cats AS/.test(sql) && !/AS period/.test(sql)) return [["F", 30, "VALUE", 0.6, "VALUE"], ["M", 20, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN"]];
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
@@ -897,6 +899,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(flag("Aggravated assault victims in Memphis in 2024 by offender race"), [["offender.race", false]]);  // an incident's several offenders (P49)
   assert.deepEqual(flag("Simple assault victims in Detroit in 2023 by relationship to the offender"), [["victim_offender.relationship", false]]);
   assert.deepEqual(flag("Shoplifting in Memphis by month in 2024"), [["time.month", "none"]]);
+  // Codex review 01 (P1): the cleared victims' incidents (P66) overlap across sexes, so the table is not exclusive.
+  assert.deepEqual(flag("Simple assault victims in Detroit by sex in 2023 that were cleared"), [["victim.sex", false]]);
   // Exclusive exactly when the overlap note is not given.
   for (const q of ["Robberies in Memphis in 2024 by weapon", "Simple assault victims in Detroit by sex in 2023"]) {
     const a = as(ask(q), "answer");

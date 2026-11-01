@@ -25,8 +25,9 @@ export type ResultColumn =
    * `exclusive` (category groupings only, Jeff 2026-11-01: stacked and 100% charts only when honest): true when each
    * counted unit falls in exactly one category, so the categories sum to the total; false for a multi-valued grouping
    * (a crime with several weapons or locations, an incident's several offenders), whose categories can add up to more.
-   * Taken from the layer: a one-to-many dimension must be grouped with `multiValue: "each_value"` (P3). Absent for
-   * time and place groupings.
+   * Taken from the layer: a one-to-many dimension must be grouped with `multiValue: "each_value"` (P3). It holds for
+   * every statistic in the table, so a table with incidents beside a count (P66) is false: one incident can have
+   * victims in several categories. Absent for time and place groupings.
    */
   | { binding: { kind: "grouping"; dimension: string }; header: string; exclusive?: boolean }
   | { binding: { kind: "statistic"; as: string }; header: string };
