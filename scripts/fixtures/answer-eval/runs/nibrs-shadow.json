@@ -3217,7 +3217,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 94 of them reported only some months and are included. / Source: FBI NIBRS."
+    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / Agencies that reported only some months are included. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3231,7 +3231,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the Consistent Reporting Agencies (the agencies that reported every month of 2024). / The table shows how many there are and the population they cover. / Source: FBI NIBRS."
+    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the 1,439 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3245,7 +3245,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 63 of them reported only some months and are included. / Source: FBI"
+    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / Agencies that reported only some months are included. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3259,7 +3259,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 1,933 of them reported only so"
+    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / Agencies that reported only some months are included. Excludes territories and federal agencies. / Sourc"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3273,7 +3273,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / These are sums of the agencies that reported; the table shows how many reported each year and the population they cover. Agencies that rep"
+    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Which agencies report changed over these years, and agencies that reported only some months are included. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "spans 2021",
@@ -3287,7 +3287,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 94 of them reported only some months and are included. / Source: FBI NIBRS."
+    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / Agencies that reported only some months are included. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3421,7 +3421,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 6.3 carjacking offenses per 100,000 residents of the reporting agencies in 2024, summed over the agencies that reported. / The table shows how many agencies reported and the population they cover; 94 of them reported only some months"
+    "delivered: Texas: 6.3 carjacking offenses per 100,000 residents of the reporting agencies in 2024, summed over the agencies that reported. / Agencies that reported only some months are included. / The rate is the sum per 100,000 residents of the agenc"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",

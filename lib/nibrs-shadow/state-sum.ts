@@ -19,7 +19,7 @@ import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan } from "../nibrs-plan/compile";
 import { rate, type MonthCell } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { deliverTable, fmt, fmtRate, measureWords, periodWords } from "./deliver";
+import { deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
 import { stateName, STATE_NAMES } from "./places";
 import { srsPopulation } from "./srs";
 import type { ShadowDeps, ShadowOption, ShadowOutcome } from "./answer";
@@ -125,11 +125,13 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   });
   const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop };
 
-  if (place.kind === "national" && !statements.includes("reported_nibrs_counts")) statements.push("reported_nibrs_counts");
+  // Jeff (2026-11-01, "WAAAAY too much disclaimer"): no "counts reported to NIBRS" line; the lead says where they come from.
   const what = measureWords(plan);
   const Header = `${what[0].toUpperCase()}${what.slice(1)}${isRate ? " per 100,000 residents of the reporting agencies" : ""}`;
   const when = yearSet && yearSet.length > 1 ? `${yearSet.slice(0, -1).join(", ")} and ${yearSet[yearSet.length - 1]}` : periodWords(period.from, period.to);
-  const nationNote = place.kind === "national" ? ["The nation here is the 50 states and D.C.; territories and federal agencies are not included."] : [];
+  // Jeff (2026-11-01): the Consistent Reporting Agencies are one fixed set, complete for every month of the whole span
+  // asked (never per year), and the span is always named.
+  const span = yearSet && yearSet.length > 1 ? `in ${when}` : `from ${monthName(period.from)} through ${monthName(period.to)}`;
 
   type Row = { key: string | null; value: number | null; status: string };
   type Cell = { value: number | string | null; status: string };
@@ -137,9 +139,12 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // agencies have no FBI population) is marked "≥" in its cell. P80: the fixed set is "Consistent Reporting Agencies".
   const covered = (share: number, lower: number): Cell => ({ value: coveredText(share, lower > 0), status: "VALUE" });
   const CRA = "Consistent Reporting Agencies";
+  // At most one note line besides the title and the source (Jeff 2026-11-01): only what would mislead if left out.
+  const note = (...parts: (string | false)[]) => { const t = parts.filter(Boolean).join(" "); return t ? [t] : []; };
+  const nation = place.kind === "national" && "Excludes territories and federal agencies.";
+  const lower = (any: boolean) => any && "≥ means at least: some agencies have no FBI population.";
   const view = (every: boolean): { lines: string[]; rows: Row[]; agencies: Cell[]; coverage: Cell[]; population: Cell[] } => {
     const lines: string[] = [];
-    const lowerNote = (any: boolean) => (any ? ["≥ means at least: some of the agencies have no FBI population."] : []);
     if (years.length === 1) {
       const y = byYear[0];
       const n = every ? y.every.sum : y.sum, P = every ? y.every.population : y.population;
@@ -150,12 +155,10 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       lines.push(isRate && v === null
         ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of ${counted} have no FBI population` : `the FBI population of ${counted} is 0`}.`
         : every
-        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${CRA} (the agencies that reported every month of ${when}).`
+        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
         : `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
-      lines.push(every ? "The table shows how many there are and the population they cover."
-        : `The table shows how many agencies reported and the population they cover; ${fmt(y.partial)} of them reported only some months and are included.`);
-      lines.push(...lowerNote(!!noPop));
-      if (y.conflicts) lines.push(`${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose reports disagree with the agency's record of which months it reported ${y.conflicts === 1 ? "is" : "are"} not counted.`);
+      lines.push(...note(!every && y.partial > 0 && "Agencies that reported only some months are included.", lower(!!noPop), nation,
+        y.conflicts > 0 && `${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose reports disagree with the agency's record of which months it reported ${y.conflicts === 1 ? "is" : "are"} not counted.`));
       if (isRate && v !== null) lines.push(`The rate is the sum per 100,000 residents of ${counted}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
       return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }],
@@ -164,14 +167,12 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
         population: [noPop ? { value: null, status: "UNAVAILABLE" } : { value: P, status: "VALUE" }] };
     }
     lines.push(every
-      ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} ${CRA} (the agencies that reported every month of ${when}).`
+      ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} ${CRA} that reported every month ${span}.`
       : `${Where}: ${what} by year, ${when}, summed over the agencies that reported each year.`);
-    lines.push(every ? "The table shows the population they cover each year."
-      : "These are sums of the agencies that reported; the table shows how many reported each year and the population they cover. Agencies that reported only some months are included.");
-    lines.push(...lowerNote(byYear.some((y) => (every ? y.every.noPopulation : y.noPopulation))));
     const conflicted = byYear.filter((y) => y.conflicts);
-    if (conflicted.length) lines.push(`Agency-months whose reports disagree with the agency's record of which months it reported are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`);
-    if (!every) lines.push(`Which agencies report changed over these years; the ${CRA} keep one set of ${fmt(meta.everyAgencies)} agencies.`);
+    lines.push(...note(!every && "Which agencies report changed over these years, and agencies that reported only some months are included.",
+      lower(byYear.some((y) => (every ? y.every.noPopulation : y.noPopulation))), nation,
+      conflicted.length > 0 && `Agency-months whose reports disagree with the agency's record of which months it reported are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`));
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
       agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),
       coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),
@@ -184,7 +185,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     { kind: "agencies", as: "agencies", measure: measureOf }, { kind: "coverage", as: "coverage", measure: measureOf }] });
   const deliver = (p: NibrsPlan, every: boolean) => {
     const v = view(every);
-    return deliverTable(p, yearG ? { dimension: "time.year", header: "Year" } : null, { as: st.as, header: Header }, v.rows, [...v.lines, ...nationNote], statements, deps.release.id, readings,
+    return deliverTable(p, yearG ? { dimension: "time.year", header: "Year" } : null, { as: st.as, header: Header }, v.rows, v.lines, statements, deps.release.id, readings,
       [{ as: "agencies", header: every ? CRA : "Agencies reporting", cells: v.agencies }, { as: "coverage", header: "Population covered", cells: v.coverage },
         ...(supportStat?.kind === "population" ? [{ as: supportStat.as, header: "Population", cells: v.population }] : [])]);
   };

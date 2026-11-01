@@ -543,7 +543,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const b = (o.buttons ?? []).find((x) => x.label === "Consistent Reporting Agencies")?.continuation;
       const same = (p: NibrsPlan) => JSON.stringify([p.geography, p.measures, p.filters, p.period, p.groupings, p.statistics]) === JSON.stringify([o.plan.geography, o.plan.measures, o.plan.filters, o.plan.period, o.plan.groupings, o.plan.statistics]);
       ok = !!b && b.kind === "answer" && b.plan.coverage.cohort === "same_agencies" && same(b.plan) && !!b.stateSum && b.delivered.table.rows.length === o.delivered.table.rows.length
-        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} Consistent Reporting Agencies \\(the agencies that reported every month of`).test(b.delivered.text[0] ?? ""));
+        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} Consistent Reporting Agencies that reported every month (?:from |in )`).test(b.delivered.text[0] ?? ""));
     } else if (/^states how many agencies reported every month and what share of residents they cover/.test(s))
       ok = o.plan.coverage.cohort === "same_agencies" && !!o.stateSum && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: o.stateSum!.years.length > 1 ? o.stateSum!.everyAgencies : y.every.agencies, share: y.every.share, lower: y.every.noPopulation > 0 })), "Consistent Reporting Agencies");
     else if (/^gives each year's agencies counted and share of residents covered/.test(s))
@@ -798,7 +798,6 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   const want: AnswerStatement[] = [];
   if (/\bvictims?\b/i.test(question) && plan.measures.every((m) => m.unit === "offense")) want.push("property_counted_by_offense");
   if ([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "property")) want.push("property_not_attributed");
-  if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
   if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
   // Increment 7: every arrest (Group B included) or arrests through an incident; the linked offenders; offender records;
