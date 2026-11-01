@@ -167,8 +167,8 @@ const BLANK: CellStatus[] = ["UNKNOWN", "NOT_REPORTED", "UNKNOWN_UNEVIDENCED_ZER
 // P63 (Jeff 2026-10-30): the source line names the source plainly. The release stays in the outcome's metadata (the
 // caller's deps.release), not in the text.
 export const SOURCE_STATEMENT = (_release: string) => "Source: FBI NIBRS.";
-/** P63's line for the FBI's Summary Reporting System figures (the Crime Index historical file). */
-export const SRS_SOURCE = "Source: FBI SRS.";
+/** P77 (Jeff 2026-11-01, amends P63): the line for Historical's figures, the Crime Index files (states and nation, P53; agencies). */
+export const SRS_SOURCE = "Source: Crime Index.";
 
 const SEX = { F: "Female", M: "Male", U: "Unknown", X: "Non-binary" };
 /**

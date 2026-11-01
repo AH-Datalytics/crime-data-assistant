@@ -837,7 +837,7 @@ function walkAnswers(prefix: string, key: string, o: ShadowOutcome, r: Release, 
     const own = ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
     return (o.buttons ?? []).reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}button "${x.label}" `, `${key}|button`, x.continuation, r, ev, ctx)) : acc), own);
   }
-  if (o.kind === "srs" || o.kind === "route") return none();
+  if (o.kind === "srs" || o.kind === "historical" || o.kind === "route") return none();
   if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}option "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev, ctx)) : acc), none());
   return o.alternative?.continuation ? walkAnswers(`${prefix}alternative `, `${key}|alternative`, o.alternative.continuation, r, ev, ctx) : none();
 }
@@ -864,7 +864,7 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   // Not available yet (a capability the shadow doesn't have): the plain prefix, or the plain sentence for an internal reason (P74).
   if (c.kind === "decline" && (/^This isn't available yet/.test(c.explanation) || c.explanation === NOT_YET)) return one(d("", wantLeads, c.explanation, "unverified"));
   // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
-  if (c.kind === "srs" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
+  if (c.kind === "srs" || c.kind === "historical" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
   if (wantLeads === "answer") {
     if (c.kind !== "answer") return one(d("", "answer", `${c.kind}: ${c.kind === "decline" ? c.explanation.slice(0, 160) : c.about}`, "material"));
     return deliveredCheck(prefix, key, c, want, r, ev, ctx);
@@ -920,7 +920,7 @@ export function withRewrite(res: CaseResult, c: Case, o: { rewrite: string | nul
 
 export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capability: string; era: string }, expectedValues?: ExpectedValues): ShadowScore {
   const e = c.expected!;
-  if (o.kind === "srs" || o.kind === "route") return { result: scoreOther(c, o, r, ctx, expectedValues) };
+  if (o.kind === "srs" || o.kind === "historical" || o.kind === "route") return { result: scoreOther(c, o, r, ctx, expectedValues) };
   const actual: ActualAction = o.kind;
   const notes: string[] = [];
   let diffs: Diff[] = [];
@@ -987,7 +987,8 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
 
 /* ------------------------------------------------------------------ increment 5: the historical file and routes ---- */
 
-type SrsOutcome = Extract<ShadowOutcome, { kind: "srs" }>;
+/** A figure read from a Crime Index file: the states and nation file (P53) or the agencies build (Historical). */
+type SrsOutcome = Extract<ShadowOutcome, { kind: "srs" | "historical" }>;
 /** A historical-file answer as the comparator's view: its own meaning (it has no NIBRS plan). */
 function srsView(o: SrsOutcome): PlanView {
   const m = o.meaning;
@@ -1006,12 +1007,16 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     let ok: boolean | null = null;
     const src = /^ends with the source line "(.+?)"/.exec(s);
     const st = /^names the state \((.+)\)$/.exec(s);
+    const ag = /^names the agency \((.+)\)$/.exec(s);
     if (src) ok = text[text.length - 1] === src[1] && text.filter((t) => /^Source: /.test(t)).length === 1;
     else if (st) ok = (text[0] ?? "").startsWith(`${st[1]}:`);
+    // Historical's agencies, named by their FBI names ("Figures for the Denver Police Department.").
+    else if (ag) ok = all.includes(ag[1]);
+    else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
     else if (/^gives the rate per 100,000 residents/.test(s)) ok = /_capita$/.test(o.read.column) && all.includes("per 100,000 residents");
     else if (/^gives (\w+) yearly totals from one source/.test(s)) ok = rows.length === ({ ten: 10 } as Record<string, number>)[/^gives (\w+)/.exec(s)![1]] && /_total$/.test(o.read.column);
     // Provenance (Codex label review): the file's own aggregate column, read as given, never its parts re-added.
-    else if (/^gives the file's (violent|property) crime total, not a re-added sum/.test(s)) ok = o.read.column === `${/(violent|property)/.exec(s)![1]}_total` && o.read.uids.length === 1;
+    else if (/^gives the file's (violent|property) crime total, not a re-added sum/.test(s)) ok = o.read.column === `${/(violent|property)/.exec(s)![1]}_total` && (!("uids" in o.read) || o.read.uids.length === 1);
     else if (/^gives both counts, the change and the percent change, with no adjectives/.test(s)) {
       const [ev, lv, ch, pc] = rows[0] as (number | null)[];
       const f = (n: number) => n.toLocaleString("en-US");
@@ -1037,11 +1042,21 @@ function srsValueDiffs(o: SrsOutcome, expected: ExpectedCell[] | undefined): { d
   const got = (k: string): number | null | undefined => isChange ? (rows[0] as (number | null)[])[["earlier", "later", "change", "pct_change"].indexOf(k)]
     : k === "" ? (rows.length === 1 && rows[0].length === 1 ? (rows[0][0] as number) : undefined) : (rows.find((r) => r[0] === k)?.[1] as number | null | undefined);
   if (!isChange && rows.length !== expected.length) diffs.push({ field: "values", expected: `${expected.length} cells`, actual: `${rows.length} rows`, kind: "material" });
+  // One figure: the sentence must give the table's number (Codex review 01.6), in any of the forms an answer writes it.
+  const lone = rows.length === 1 && rows[0].length === 1 && typeof rows[0][0] === "number" ? (rows[0][0] as number) : null;
+  if (lone !== null) {
+    const forms = [String(lone), lone.toLocaleString("en-US"), lone.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })];
+    // The whole number: nothing numeric continues it ("351" is not "351,000" or "351.9"; Codex confirmation 01).
+    if (!forms.some((f) => new RegExp(`(^|[^0-9.,])${f.replace(/[.,]/g, "\\$&")}(?![0-9]|[.,][0-9])`).test(o.delivered.text[0] ?? "")))
+      diffs.push({ field: "value in the sentence", expected: forms[1], actual: (o.delivered.text[0] ?? "").slice(0, 160), kind: "material" });
+  }
   for (const x of expected) {
     const g = got(x.key);
     if (g !== x.value) diffs.push({ field: `value ${x.key || "total"}`, expected: String(x.value), actual: String(g), kind: "material" });
     if (x.column && x.column !== o.read.column) diffs.push({ field: `column ${x.key || "total"}`, expected: x.column, actual: o.read.column, kind: "material" });
-    if (x.uid && !o.read.uids.includes(x.uid)) diffs.push({ field: `row ${x.key || "total"}`, expected: x.uid, actual: o.read.uids.join(", "), kind: "material" });
+    // The states and nation file names its rows (uid); the agencies build is checked by value and column.
+    const uids = "uids" in o.read ? o.read.uids : [];
+    if (x.uid && "uids" in o.read && !uids.includes(x.uid)) diffs.push({ field: `row ${x.key || "total"}`, expected: x.uid, actual: uids.join(", "), kind: "material" });
   }
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : "match" };
 }

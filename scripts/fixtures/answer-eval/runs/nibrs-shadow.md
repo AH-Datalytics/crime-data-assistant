@@ -75,23 +75,23 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-184 cases. Correct 162; unverified 16; wrong answers 0; avoidable declines 4; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 90 (trend only).
+184 cases. Correct 162; unverified 17; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 156 | 0 | 4 | 0 |
+| answer | 157 | 0 | 3 | 0 |
 | clarify | 0 | 6 | 2 | 0 |
 | decline | 0 | 0 | 16 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:historical change | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:historical count | 2021 and later | 5 | fail | wrong answers: pass (0); initial action: fail (80% (4/5)); direct answers: fail (80% (0 unverified)); numeric fixtures: pass (4/4 match) |
+| answer:historical count | 2021 and later | 5 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (5/5)); direct answers: not measured (80% verified, 1 unverified); numeric fixtures: not measured (4/5 match, 1 not measured) |
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: pass (2/2 match) |
+| answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: not measured (2/3 match, 1 not measured) |
 | answer:nibrs change | 2021 and later | 12 | pass | wrong answers: pass (0); initial action: pass (100% (12/12)); direct answers: pass (100%); numeric fixtures: pass (12/12 match) |
 | answer:nibrs count | 2021 and later | 118 | pass | wrong answers: pass (0); initial action: pass (97% (115/118)); direct answers: pass (97%); numeric fixtures: pass (115/115 match) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
@@ -131,8 +131,9 @@ Discrepancies and unverified cases:
 - **LS-265** (unverified; expected decline, got decline) "How many shoplifting cases in Nashville went to trial in 2024?"
   - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants).
-- **LS-266** (avoidable_decline; expected answer, got decline) "Motor vehicle thefts in Denver in 2023"
-  - declined (unsupported_capability): The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it.
+- **LS-266** (unverified; expected answer, got answer) "Motor vehicle thefts in Denver in 2023"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Denver, Colorado: 12,457 motor vehicle thefts in 2023. / Figures for the Denver Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this data, not zero. / Sou
 - **LS-267** (wrong_action; expected clarify, got decline) "Shootings in Nashville in 2024"
   - declined (reader): NIBRS doesn't count shootings as a category, so "Shootings" can't be counted. For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a
 - **LS-269** (avoidable_decline; expected answer, got decline) "How many shoplifting offenses will Denver's 2024 numbers show?"
@@ -150,8 +151,9 @@ Discrepancies and unverified cases:
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't availabl
 - **LS-363** (unverified; expected answer, got answer) "Robbery clearance rate in Atlanta in 2023"
-  - unverified route: expected `historical answer`, got `routed to historical: not run by this NIBRS shadow`
-  - routed to historical: The robbery clearance rate of an agency for a completed year comes from Historical (the FBI's SRS clearances, as the agency reported them), not computed from NIBRS. Historical isn't available here y
+  - unverified measures: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Atlanta, Georgia: 26.7% of robberies were cleared in 2023 (161 of 602). / Figures for the Atlanta Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this dat
 - **LS-389** (unverified; expected clarify, got clarify) "According to NIBRS, murders by young adults in Memphis in 2024"
   - unverified option "18 to 24" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "18 to 29" values: expected `independent expected values`, got `none given: NOT MEASURED`
