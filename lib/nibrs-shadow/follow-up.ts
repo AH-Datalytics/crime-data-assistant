@@ -39,6 +39,8 @@ const ucFirst = (s: string) => s.replace(/^([a-z])/, (c) => c.toUpperCase());
 const clean = (s: string) => s.replace(/\s{2,}/g, " ").replace(/\s+([,?.!])/g, "$1").trim();
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const ask = (why: string, options: { label: string; question: string }[] = []): Rewrite => ({ kind: "ask", why, options });
+/** A follow-up that changes the last question in no way the rules can tell (plain wording, P74). */
+export const PLACE_ASK = "I couldn't tell how this changes your last question. Ask the whole question, for example \"robberies in Denver in 2024\".";
 const ok = (question: string, how: string, kind: "rewrite" | "new" | "presentation" = "rewrite"): Rewrite => ({ kind, question: clean(question), confidence: "certain", how });
 /** Filler words a complete question of its own may hold; any other unrecognized word makes it a follow-up to ask about. */
 const NEW_FILLER = new Set(["in", "of", "were", "was", "there", "the", "a", "an", "is", "are", "did", "during", "total"]);
@@ -235,7 +237,17 @@ export const deterministicRewriter: FollowUpRewriter = {
       const want = /^(male|men)$/i.test(sx[1]) ? "male" : "female";
       const has = /\b(male|female)\b/i.exec(prev);
       // One sex word only: with two ("female victims with female offenders") which one is meant is asked (Codex 7b-04 seventh pass).
-      if (!has || (prev.match(/\b(?:male|female|men|women|boys|girls)\b/gi) ?? []).length > 1) return ask(`Whether "${sx[1]}" means victims, offenders or arrestees.`);
+      // Asked with a button for each reading, each a complete question (coordinator, 2026-11-01).
+      const sexes = [...prev.matchAll(/\b(?:male|female)\b/gi)];
+      if (sexes.length > 1) return ask(`Which "${sexes.map((w) => w[0]).join('" or "')}" should be ${want}?`, sexes.map((w) => {
+        const q = `${prev.slice(0, w.index)}${w[0][0] === w[0][0].toUpperCase() ? ucFirst(want) : want}${prev.slice(w.index! + w[0].length)}`;
+        return { label: q, question: q };
+      }));
+      if (!has || (prev.match(/\b(?:men|women|boys|girls)\b/gi) ?? []).length) {
+        const base = prev.trim().replace(/[?.!]+$/, "");
+        return ask(`Do you mean ${want} victims, offenders or arrestees?`,
+          (["victim", "offender", "arrestee"] as const).map((who) => ({ label: `${ucFirst(want)} ${who}s`, question: `${base} with a ${want} ${who}` })));
+      }
       const word = has[1][0] === has[1][0].toUpperCase() ? ucFirst(want) : want;
       return ok(prev.replace(has[0], word), "the sex replaced");
     }
@@ -333,6 +345,6 @@ export const deterministicRewriter: FollowUpRewriter = {
       const word = /^[A-Z]/.test(prev.slice(prev.indexOf(m.text))) ? ucFirst(f) : f;
       return ok(prev.replace(m.text, word), "the crime replaced");
     }
-    return ask("The follow-up could not be placed in the previous question with certainty; ask the full question.");
+    return ask(PLACE_ASK);
   },
 };

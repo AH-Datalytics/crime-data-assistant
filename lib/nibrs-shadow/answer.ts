@@ -127,6 +127,19 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   }
   const level = question.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
   if (level !== question && readsWhole(level, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
+  // The nearest question that works (coordinator, 2026-11-01), the user's breakdown kept:
+  //   - "cleared" read into the crime's name ("homicide victims cleared in Memphis"): the same question "that were cleared";
+  //   - victims by weapon (a weapon is recorded for each offense): the same question about offenses.
+  const nearest = (alt: string, explanation = o.explanation) =>
+    readsWhole(alt, year) ? { ...o, explanation, alternative: { label: `Ask instead: "${alt}"`, question: alt } } : null;
+  const cleared = /_cleared" has no executable definition|does not apply "victims"/.test(o.detail ?? "") && /\bcleared\b/i.test(question)
+    && !/\bwere cleared\b/i.test(question)
+    ? nearest(tidy(`${question.replace(/\s+cleared\b/i, "").replace(/[?.!]+$/, "")} that were cleared`), "I couldn't read \"cleared\" there. Put \"that were cleared\" at the end instead.") : null;
+  if (cleared) return cleared;
+  const byWeapon = /group victim by offense_weapon/.test(o.detail ?? "") && /\bvictims?\b/i.test(question)
+    ? nearest(tidy(question.replace(/\bvictim(s?)\b/i, (_m, s: string) => `offense${s}`)), "Weapons are recorded for each offense, not for each victim, so victims can't be counted by weapon. Offenses can be.")
+    : null;
+  if (byWeapon) return byWeapon;
   // The two specific steps above come first; a button the decline already has (the question without the words the
   // reader couldn't use) is kept over the generic ones below.
   if (o.alternative) return o;

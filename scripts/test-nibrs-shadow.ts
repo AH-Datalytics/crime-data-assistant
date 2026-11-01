@@ -927,4 +927,15 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.match(text("Simple assault victims in Detroit by sex in 2023"), /part of all simple assault victims in 2023: a percent, not a rate per resident\./);
   assert.doesNotMatch(text("Shoplifting in Memphis in 2024"), /rate per resident/);
 }
+
+// The nearest question that works, the breakdown kept (coordinator, 2026-11-01): victims by weapon as offenses by
+// weapon; "cleared" read into the crime's name asked as "that were cleared".
+{
+  const weapon = as(ask("Murder victims in Memphis in 2024 by weapon"), "decline");
+  assert.match(weapon.explanation, /^Weapons are recorded for each offense, not for each victim/);
+  assert.equal(weapon.alternative?.question, "Murder offenses in Memphis in 2024 by weapon");
+  const cleared = as(ask("Homicide victims cleared in Memphis 2024"), "decline");
+  assert.equal(cleared.alternative?.question, "Homicide victims in Memphis 2024 that were cleared");
+  assert.equal(as(ask("Aggravated assaults cleared in Memphis in 2024"), "decline").alternative?.question, "Aggravated assaults in Memphis in 2024 that were cleared");
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
