@@ -40,6 +40,11 @@ if (monthly.kind === "answer") {
 // A breakdown with shares: no chart (category charts wait), rows keyed by headers.
 const bySex = toPreview(shadowAnswer("Simple assault victims in Memphis by sex in 2024", deps));
 assert.ok(bySex.kind === "answer" && bySex.chart === null && bySex.rows[0]["Victim sex"] === "Female");
+// Exclusive categories (stacked and 100% charts only when honest): passed through; absent with no category grouping.
+assert.ok(bySex.kind === "answer" && bySex.exclusive === true);
+const byWeapon = toPreview(shadowAnswer("Robberies in Memphis in 2024 by weapon", deps));
+assert.ok(byWeapon.kind === "answer" && byWeapon.exclusive === false);
+assert.ok(monthly.kind === "answer" && !("exclusive" in monthly));
 
 // A clarification: one button per option, each a path; following a path gives that continuation's outcome.
 const first = shadowAnswer("How many shoplifting offenses were there in Memphis?", deps);

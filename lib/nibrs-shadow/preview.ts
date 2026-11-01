@@ -35,7 +35,11 @@ export function parseRequest(body: unknown): { question: string; path: string[] 
 /** `question` (kind "question", P74): a complete question shown on the button; the page asks it as a new question when chosen. */
 export type PreviewButton = { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built" | "question"; note?: string; question?: string };
 export type PreviewResponse =
-  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[] }
+  /**
+   * `exclusive` (Jeff 2026-11-01: stacked and 100% charts only when honest): present when the table has a category
+   * grouping; true when every category grouping's categories sum to the total for every statistic shown.
+   */
+  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[]; exclusive?: boolean }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }
   | { kind: "decline"; reason: string; text: string; buttons: PreviewButton[]; notBuilt: boolean };
 
@@ -70,8 +74,9 @@ export function toPreview(o: ShadowOutcome, path: string[] = []): PreviewRespons
   const chart = o.kind === "answer" ? o.delivered.chart : null;
   const columns = table.columns.map((c) => c.header);
   const rows = table.rows.map((r) => Object.fromEntries(columns.map((c, i) => [c, r[i] ?? null])));
+  const flags = table.columns.flatMap((c) => ("exclusive" in c && c.exclusive !== undefined ? [c.exclusive] : []));
   return {
-    kind: "answer", columns, rows, text, period: o.period,
+    kind: "answer", columns, rows, text, period: o.period, ...(flags.length ? { exclusive: flags.every(Boolean) } : {}),
     chart: chart ? { type: chart.kind, xAxis: chart.x, yAxis: chart.y, title: text[0] ?? "" } : null,
     buttons: o.kind === "answer" ? (o.buttons ?? []).map((x) => button(x, path)) : [],
   };
