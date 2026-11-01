@@ -49,7 +49,7 @@ class CrimeIndexBuild(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = self.tmp.name
         self.b = load_builder()
-        v = {"violent": 30, "murder": 2, "rape": 3, "robbery": 5, "assault": 20, "property": 100, "burglary": 20, "theft": 70, "motor": 10}
+        v = self.v = {"violent": 30, "murder": 2, "rape": 3, "robbery": 5, "assault": 20, "property": 100, "burglary": 20, "theft": 70, "motor": 10}
         self.crime = [CRIME_HEAD,
                       crime_row("Memphis", "city", "TNMPD0000", 2022, 100000, v, capita={"violent": 30.0}),
                       # The rate is wrong in the file (outside its rounding): a diagnostic, never corrected.
@@ -128,6 +128,26 @@ class CrimeIndexBuild(unittest.TestCase):
         with self.assertRaises(SystemExit) as e:
             self.run_build()
         self.assertIn("SHA-256 mismatch", str(e.exception))
+
+    def test_a_count_that_is_not_a_whole_number_stops_the_build(self):
+        # Codex review 01.4: "0.4" would cast to 0 and "1,234" to NULL; neither may pass silently.
+        for bad in ("0.4", "1 234"):
+            p = os.path.join(self.root, "snapshots", "20261101", "historical_crime", "historical_crime_1930-2025.csv")
+            lines = list(self.crime)
+            lines[3] = crime_row("Knoxville", "city", "TN0470500", 2023, 50000, {**self.v, "murder": bad})
+            with open(p, "w", encoding="utf-8", newline="\n") as f:
+                f.write("\n".join(lines) + "\n")
+            self.files[("20261101", "historical_crime")][0]["sha256"] = digest(p)
+            self.write_manifest()
+            with self.assertRaises(SystemExit) as e:
+                self.run_build()
+            self.assertIn("not exactly a number", str(e.exception))
+
+    def test_out_inside_the_repository_is_refused_whatever_its_case(self):
+        repo = os.path.dirname(HERE)
+        with self.assertRaises(SystemExit) as e:
+            self.b.main(["--manifest", self.manifest, "--snapshots", os.path.join(self.root, "snapshots"), "--out", os.path.join(repo.swapcase() if os.name == "nt" else repo, "review-output")])
+        self.assertIn("outside the repository", str(e.exception))
 
     def test_duplicate_place_year_stops_the_build(self):
         p = os.path.join(self.root, "snapshots", "20261101", "historical_crime", "historical_crime_1930-2025.csv")

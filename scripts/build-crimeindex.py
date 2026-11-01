@@ -89,10 +89,14 @@ def typed(con, dataset, path, where):
             f"FROM read_csv('{path}', all_varchar=true, header=true, delim=',', strict_mode=true) WHERE {where}")
 
 
+# The text a typed column accepts, exactly (Codex review 01.4): a cast would round "0.4" into a count or null "1,234".
+PATTERN = {"INTEGER": r"^-?[0-9]+$", "BIGINT": r"^-?[0-9]+$", "DOUBLE": r"^-?[0-9]+(\.[0-9]+)?$"}
+
+
 def unparsed(con, dataset, path):
-    """Cells that are not blank but did not parse as their type: none expected; each column's count is reported."""
+    """Non-blank cells whose text is not exactly their type's form, by column: any stops the build."""
     cols = [("year", "INTEGER"), ("population", "BIGINT")] + COLUMNS[dataset]
-    sums = ", ".join(f"sum(CASE WHEN NULLIF(trim(\"{c}\"), '') IS NOT NULL AND TRY_CAST(trim(\"{c}\") AS {t}) IS NULL THEN 1 ELSE 0 END) AS \"{c}\"" for c, t in cols)
+    sums = ", ".join(f"sum(CASE WHEN NULLIF(trim(\"{c}\"), '') IS NOT NULL AND NOT regexp_full_match(trim(\"{c}\"), '{PATTERN[t]}') THEN 1 ELSE 0 END) AS \"{c}\"" for c, t in cols)
     row = con.execute(f"SELECT {sums} FROM read_csv('{path}', all_varchar=true, header=true, delim=',', strict_mode=true)").fetchone()
     return {c: n for (c, _), n in zip(cols, row) if n}
 
@@ -154,7 +158,11 @@ def build(manifest_path, snapshots_dir, out_dir):
 
     for dataset, stem in (("historical_crime", "crime"), ("historical_clearances", "clearances"), ("historical_staffing", "staffing")):
         agencies, sn = files[dataset]["agencies"]["path"], files[dataset]["states_nation"]["path"]
-        record["unparsed_cells"][dataset] = unparsed(con, dataset, agencies)
+        for which, path in (("agencies", agencies), ("states_nation", sn)):
+            bad = unparsed(con, dataset, path)
+            if bad:
+                raise SystemExit(f"{dataset} {which}: cells that are not exactly a number of their column's type: {bad}")
+        record["unparsed_cells"][dataset] = {}
         if dataset == "historical_staffing":
             # Rows with no name or type are agencies (ORI-keyed) all the same: kept, type NULL, and counted.
             write("agency_staffing", f"SELECT upper(substr(id, 1, 2)) AS state, id AS ori, * EXCLUDE (id) FROM ({typed(con, dataset, agencies, staffing_where)})")
@@ -193,7 +201,10 @@ def main(argv=None):
     ap.add_argument("--snapshots", required=True, help="the folder holding the snapshots (<snapshot>/<dataset>/<file>)")
     ap.add_argument("--out", required=True, help="the output folder (outside the repository)")
     a = ap.parse_args(argv)
-    if os.path.abspath(a.out).startswith(os.path.abspath(os.path.dirname(os.path.dirname(__file__)))):
+    # Component-wise and case-folded on Windows (Codex review 01.5): "c:\\users\\..." is the same folder as "C:\\Users\\...".
+    repo = os.path.normcase(os.path.realpath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    out = os.path.normcase(os.path.realpath(a.out))
+    if os.path.splitdrive(repo)[0] == os.path.splitdrive(out)[0] and os.path.commonpath([repo, out]) == repo:
         raise SystemExit("--out must be outside the repository")
     rec = build(a.manifest, a.snapshots, a.out)
     print(json.dumps({"release": rec["release"], "tables": rec["tables"], "set_aside": {k: len(v["rows"]) for k, v in rec["set_aside"].items()},

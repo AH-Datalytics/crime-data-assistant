@@ -1042,6 +1042,13 @@ function srsValueDiffs(o: SrsOutcome, expected: ExpectedCell[] | undefined): { d
   const got = (k: string): number | null | undefined => isChange ? (rows[0] as (number | null)[])[["earlier", "later", "change", "pct_change"].indexOf(k)]
     : k === "" ? (rows.length === 1 && rows[0].length === 1 ? (rows[0][0] as number) : undefined) : (rows.find((r) => r[0] === k)?.[1] as number | null | undefined);
   if (!isChange && rows.length !== expected.length) diffs.push({ field: "values", expected: `${expected.length} cells`, actual: `${rows.length} rows`, kind: "material" });
+  // One figure: the sentence must give the table's number (Codex review 01.6), in any of the forms an answer writes it.
+  const lone = rows.length === 1 && rows[0].length === 1 && typeof rows[0][0] === "number" ? (rows[0][0] as number) : null;
+  if (lone !== null) {
+    const forms = [String(lone), lone.toLocaleString("en-US"), lone.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })];
+    if (!forms.some((f) => new RegExp(`(^|[^0-9.,])${f.replace(/[.,]/g, "\\$&")}([^0-9]|$)`).test(o.delivered.text[0] ?? "")))
+      diffs.push({ field: "value in the sentence", expected: forms[1], actual: (o.delivered.text[0] ?? "").slice(0, 160), kind: "material" });
+  }
   for (const x of expected) {
     const g = got(x.key);
     if (g !== x.value) diffs.push({ field: `value ${x.key || "total"}`, expected: String(x.value), actual: String(g), kind: "material" });

@@ -48,7 +48,7 @@ import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthNam
 import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
-import { answerHistorical, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 
 export type ShadowDeps = {
@@ -439,8 +439,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
       || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
     const yrs = sp.period.form === "year" ? [sp.period.year, sp.period.year] : sp.period.form === "range" ? [sp.period.from, sp.period.to] : null;
+    const historicalShape = agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
+      && (sp.statistic === "count" || sp.statistic === "rate");
+    // A unit the file doesn't count this crime in ("robbery victims"): said plainly, with NIBRS's count of that unit offered.
+    if (historicalShape && !historicalUnitFits(sp.measures[0], sp.unit)) {
+      const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
+      return decline("unsupported_capability", `Historical counts ${historicalCounts(sp.measures[0])}, not ${sp.unit}. NIBRS counts ${sp.unit} for the agencies that report to it.`,
+        { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs } });
+    }
     if (agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
-      && (sp.unit === null || ["offenses", "victims"].includes(sp.unit)) && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate")) {
+      && historicalUnitFits(sp.measures[0], sp.unit) && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate")) {
+      // Codex review 01.2: the file has no cohort to combine agencies with (design note 2): asked, it is declined.
+      if (flags(ledger0).combined && agencies.length > 1) {
+        const apart = ledger0.question.replace(/\s*,?\s*\b(?:combined|together|as one total)\b/i, "").replace(/[?.!\s]+$/, "");
+        return decline("unsupported_capability", "Historical figures can't be combined across agencies yet. Ask for each agency; they are shown side by side.",
+          { alternative: { label: `Ask instead: "${apart}"`, question: apart } });
+      }
       const cmp = flags(ledger0).comparison;
       const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") && s.to.endsWith("-12");
       if ((sp.grain !== "total" && sp.grain !== "year") || (cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later))))
@@ -465,7 +479,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Historical answer as "<crime> in <agency>, <earlier> against <later>" (P54, P55).
   if (deps.historical && d.spec.type === "change" && d.spec.statistic === "count" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
     && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite && d.spec.place.kind === "agency"
-    && isHistoricalMeasure(d.spec.measure) && (d.spec.unit === null || ["offenses", "victims"].includes(d.spec.unit))
+    && isHistoricalMeasure(d.spec.measure) && historicalUnitFits(d.spec.measure, d.spec.unit)
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec, pl = sp.place as Extract<typeof sp.place, { kind: "agency" }>;
     const a = resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`);
