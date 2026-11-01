@@ -73,19 +73,19 @@ export type CellEvidence = {
  * - unknown_not_counted: a plan with a condition on a person's sex, race, ethnicity or age (increment 7).
  */
 export const ANSWER_STATEMENTS = {
-  property_not_attributed: "NIBRS records property for the incident, not for one offense, so the property is not attributed to a single offense.",
-  reported_nibrs_counts: "These are reported NIBRS counts.",
+  property_not_attributed: "NIBRS lists stolen or damaged property for the whole incident, not for each offense in it, so the property can't be tied to a single offense.",
+  reported_nibrs_counts: "These are counts reported to NIBRS by the agencies that report to it.",
   property_counted_by_offense: "Property crimes are counted by offense, not by victim.",
-  categories_overlap: "A crime with several of these categories counts once under each, so the categories can add up to more than the total.",
-  arrests_counted_once: "Each arrest counts once; NIBRS cannot tell when one person was arrested more than once.",
-  arrests_through_incident: "Arrests with no incident (standalone Group B arrests) are not included; an arrest made on one of these incidents counts whatever its arrest offense.",
-  clearance_as_of_file: "A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's annual tables count instead the clearances reported during the year, for crimes of any year.",
-  clearance_arrest_first: "An incident cleared both by arrest and by exceptional means counts as cleared by arrest.",
-  arrests_include_group_b: "Standalone Group B arrests (arrests with no incident) are included; each arrest is counted under its own arrest offense.",
-  pair_linked: "Each victim is counted under the offenders its victim-offender relationship links to it, not every offender in the incident; victims with no relationship reported are shown as their own category.",
-  pair_condition: "The condition on the offender applies only to the offenders the victim-offender relationship links to each victim; a victim with no relationship reported cannot meet it and is not counted.",
-  offender_records: "Offenders are counted as NIBRS offender records, not people; an incident with no information about its offender has one record with no details.",
-  unknown_not_counted: "An unknown or unrecorded value does not meet a condition on a person, so that person is not counted.",
+  categories_overlap: "A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total.",
+  arrests_counted_once: "Each arrest counts once; NIBRS can't tell when the same person was arrested more than once.",
+  arrests_through_incident: "Arrests with no crime report of their own (for minor offenses the FBI calls Group B) are not included; an arrest made for one of these incidents counts whatever the person was arrested for.",
+  clearance_as_of_file: "A crime counts as cleared if it was cleared by the date of the data file, whenever that happened; the FBI's yearly tables instead count the clearances reported during the year, for crimes from any year.",
+  clearance_arrest_first: "An incident cleared both by an arrest and by other means (exceptional clearance) counts as cleared by arrest.",
+  arrests_include_group_b: "Arrests with no crime report of their own (for minor offenses the FBI calls Group B) are included; each arrest is counted under what the person was arrested for.",
+  pair_linked: "Each victim is counted under the offenders the report links to that victim, not every offender in the incident; victims whose relationship to the offender wasn't reported are shown as their own group.",
+  pair_condition: "The condition on the offender is checked only for the offenders the report links to each victim; a victim whose relationship to the offender wasn't reported can't meet it and is not counted.",
+  offender_records: "Offenders are counted as listed in each incident report, not as distinct people; an incident with no information about its offender counts one unknown offender.",
+  unknown_not_counted: "A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */

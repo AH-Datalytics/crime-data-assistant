@@ -477,6 +477,12 @@ ROWS = [
      "Propose model rewrites for confirmation; run rule-based rewrites directly.",
      "Tested in the shadow (Gemini 3.8 Flash): 4 of 50 hand-checked model rewrites changed the meaning (\"Please do that!\", \"new orleans ori\", \"what rate is this?\", \"since 2019\"), and on LS-422 the model replaced two places where the label asks. Shown first, each is a suggestion the user can fix, not a wrong answer.",
      "Decided 2026-10-31 (Jeff, through the coordinator: \"yes to both\")", NEW),
+    ("P74", "Every decline, question back, button and note the user reads: \"I can't apply 'victim': clearance figures count offense records, not other units.\"",
+     "Engine wording reached users: \"Not in the slice yet\", policy ids, \"I can't apply\", \"I couldn't interpret\", code names.",
+     "Every user-facing string says in plain words what the data records, says why the question can't be answered as asked, and offers the nearest answerable question as a button whenever one exists (the full question is shown on the button, and it runs only when chosen). It never uses engine vocabulary: units, records as a noun, slice, shadow, policy ids, \"apply\", \"interpret\", dimension or field names, code names, \"reading\", \"plan\", \"v0\". Example: \"Clearances are recorded for each offense, not for each person, so they can't be counted by 'victim'.\" A test fails if any engine word reaches user-facing text.",
+     "Plain words; why it can't be answered; the nearest answerable question as a button.",
+     "Jeff, on the engine's text in the preview: \"The answers need to be much, much more crystal clear for users.\"",
+     "Decided 2026-11-01 (Jeff, through the coordinator)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),

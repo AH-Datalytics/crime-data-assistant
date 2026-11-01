@@ -32,7 +32,8 @@ export function parseRequest(body: unknown): { question: string; path: string[] 
   return { question, path: path as string[] };
 }
 
-export type PreviewButton = { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built"; note?: string };
+/** `question` (kind "question", P74): a complete question shown on the button; the page asks it as a new question when chosen. */
+export type PreviewButton = { label: string; path: string[]; kind: "continuation" | "entry" | "other-source" | "not-built" | "question"; note?: string; question?: string };
 export type PreviewResponse =
   | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[] }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }
@@ -41,11 +42,12 @@ export type PreviewResponse =
 // A continuation this build cannot answer (its years are outside the build) is shown, not offered: the build is the
 // limit, not the question. The preview has no follow-up turns, so an entry asks for the whole question again.
 const button = (o: ShadowOption, path: string[]): PreviewButton => o.continuation && o.continuation.kind === "decline" && o.continuation.notBuilt
-  ? { label: o.label, path: [...path, o.label], kind: "not-built", note: `Not in this test build: ${o.continuation.explanation}` }
+  ? { label: o.label, path: [...path, o.label], kind: "not-built", note: `Not in the data this preview uses: ${o.continuation.explanation}` }
+  : o.question ? { label: o.label, path: [...path, o.label], kind: "question", question: o.question }
   : o.continuation
   ? { label: o.label, path: [...path, o.label], kind: "continuation" }
-  : o.otherSource ? { label: o.label, path: [...path, o.label], kind: "other-source", note: `Answered by ${o.otherSource}, which this preview does not run.` }
-  : { label: o.label, path: [...path, o.label], kind: "entry", note: o.entry ? `Asks ${o.entry}: ask the whole question again with it (a reply on its own starts a new question).` : undefined };
+  : o.otherSource ? { label: o.label, path: [...path, o.label], kind: "other-source", note: `Answered from ${o.otherSource}, which isn't available here yet.` }
+  : { label: o.label, path: [...path, o.label], kind: "entry", note: o.entry ? `Asks for ${o.entry}: ask the whole question again with it.` : undefined };
 
 /** The outcome reached by following a path of button labels from the first outcome; null when a label is not offered. */
 export function follow(o: ShadowOutcome, path: string[]): ShadowOutcome | null {

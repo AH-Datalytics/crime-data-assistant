@@ -58,14 +58,14 @@ assert.ok(decP.kind === "decline" && decP.buttons.length === 1 && decP.buttons[0
 if (decP.kind === "decline") assert.equal(follow(dec, decP.buttons[0].path)?.kind, "answer");
 // A button to another source is shown but not run.
 const other = toPreview(shadowAnswer("How many crimes were there in Detroit in 2024?", deps));
-assert.ok(other.kind === "clarify" && other.buttons.every((b) => b.kind === "other-source" && /does not run/.test(b.note ?? "")));
+assert.ok(other.kind === "clarify" && other.buttons.every((b) => b.kind === "other-source" && /isn.t available here yet/.test(b.note ?? "")));
 // A button whose years this build does not hold is shown with the reason, never offered ("the last 10 complete
 // years" is 2016-2025; the build starts in 2017). An entry asks for the whole question again (no follow-up turns).
 const range = toPreview(shadowAnswer("Shoplifting in Memphis by month", deps));
 assert.ok(range.kind === "clarify");
 if (range.kind === "clarify") {
   assert.deepEqual(range.buttons.map((b) => [b.label, b.kind]), [["The last 10 complete years", "not-built"], ["Every year available", "continuation"], ["Another range", "entry"]]);
-  assert.match(range.buttons[0].note ?? "", /^Not in this test build: This build holds January 2017 through September 2026, so it does not cover 2016 to 2025.$/);
+  assert.match(range.buttons[0].note ?? "", /^Not in the data this preview uses: The data here covers January 2017 through September 2026, so it doesn.t include 2016 to 2025.$/);
   assert.match(range.buttons[2].note ?? "", /ask the whole question again/);
 }
 const forecast = toPreview(shadowAnswer("Will shoplifting rise in Denver next year?", deps));

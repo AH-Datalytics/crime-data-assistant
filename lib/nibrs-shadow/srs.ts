@@ -81,7 +81,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   // P57: the national clearance rate, from the historical clearances (the file states it as a percent).
   if (q.statistic === "clearance_rate") {
     if (q.place.kind !== "national") return { kind: "srs-decline", explanation: "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate." };
-    if (covered.length !== 1 || q.byYear) return { kind: "srs-decline", explanation: "Not in the slice yet: national clearance rates for more than one year." };
+    if (covered.length !== 1 || q.byYear) return { kind: "srs-decline", explanation: "This isn't available yet: national clearance rates for more than one year." };
     const y = covered[0], col = `${m.col}_cleared_rate`, row = rowFor(clearances(), q.place, y);
     const v = row?.[col] ? Number(row[col]) : null;
     if (v === null) return { kind: "srs-decline", explanation: `The data has no national ${m.name} clearance rate for ${y}.` };

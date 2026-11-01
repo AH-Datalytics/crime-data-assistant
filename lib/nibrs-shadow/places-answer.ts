@@ -14,6 +14,7 @@
  *              one line names those left out with their months reported (more than five: the count and the five
  *              largest by population)
  */
+import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { agencyPopulationSql, compilePlan } from "../nibrs-plan/compile";
 import { combineMonths, rankAgencies, rate, rollup, type Cell, type MonthCell } from "../nibrs-plan/transforms";
@@ -22,26 +23,26 @@ import { agencyName, reportedBy, stateName } from "./places";
 import { deliverTable, fmt, fmtRate, measureWords, monthName, periodWords, runs } from "./deliver";
 import type { ShadowDeps, ShadowOutcome } from "./answer";
 
-type Decline = (explanation: string) => ShadowOutcome;
+type Decline = (explanation: string, detail?: string) => ShadowOutcome;
 const knownMonths = (cells: MonthCell[]) => cells.filter((c) => c.status === "VALUE" || c.status === "REPORTED_ZERO").length;
 
 export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string }, deps: ShadowDeps, statements: AnswerStatement[], readings: string[], decline: Decline): ShadowOutcome {
   // P72: the population a rate divides by may stand beside it, a supporting column.
   const popStat = plan.statistics.find((s) => s.kind === "population");
   const st = plan.statistics.filter((s) => s !== popStat)[0];
-  if (plan.statistics.length !== (popStat ? 2 : 1) || (st.kind !== "count" && st.kind !== "rate")) return decline("Not in the slice yet: this statistic for several agencies.");
+  if (plan.statistics.length !== (popStat ? 2 : 1) || (st.kind !== "count" && st.kind !== "rate")) return decline("This isn't available yet: this statistic for several agencies.");
   const isRate = st.kind === "rate";
   const yearG = plan.groupings.some((g) => g.dimension === "time.year");
   const geoG = plan.groupings.find((g) => g.dimension.startsWith("geo."));
   if (plan.groupings.some((g) => !g.dimension.startsWith("geo.") && g.dimension !== "time.year") || (geoG && yearG))
-    return decline("Not in the slice yet: several agencies by month, by year or by category.");
+    return decline("This isn't available yet: several agencies by month, by year or by category.");
   // A set of years ("2019 and 2023") is those years only, each its own row; never the years between (Codex 02.1).
   const yearSet = plan.period.kind === "years" ? [...plan.period.years].sort((a, b) => a - b) : null;
-  if (yearSet && !yearG) return decline("Not in the slice yet: separate years for several agencies or a ranking; ask for each year, or by year.");
+  if (yearSet && !yearG) return decline("This isn't available yet: separate years for several agencies or a ranking; ask for each year, or by year.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
-  if (isRate && years.length > 1 && !yearG) return decline("Not in the slice yet: a rate over several years without a year grouping (each year has its own population).");
+  if (isRate && years.length > 1 && !yearG) return decline("This isn't available yet: a rate over several years without \"by year\" (each year has its own population).");
   const rankT = plan.transforms.find((t) => t.kind === "rank");
-  if (popStat && rankT) return decline("Not in the slice yet: a population column beside a ranking.");
+  if (popStat && rankT) return decline("This isn't available yet: a population column beside a ranking.");
   const set = plan.geography.places[0].kind === "agency_set" ? plan.geography.places[0] : null;
   const root = deps.target.root;
 
@@ -49,7 +50,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   // each by its FBI name (a ranking lists agencies).
   let agencies: { ori: string; label: string; name: string; population: number | null }[];
   if (set) {
-    if (set.within.kind !== "state") return decline("Not in the slice yet: this set of agencies.");
+    if (set.within.kind !== "state") return decline("This isn't available yet: this set of agencies.");
     const floor = set.where.find((w) => w.field === "agency.population" && w.op === ">=");
     const lastYear = years[years.length - 1];
     const rows = deps.execute(agencyPopulationSql(root, { state: set.within.code, city: true }, [lastYear]));
@@ -68,15 +69,15 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const sub: NibrsPlan = { ...plan, measures: [{ ...m, filters: undefined }], filters: [...plan.filters, ...(m.filters ?? [])], transforms: [],
     groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }], statistics: [{ kind: "count", as: "n", measure: m.as }] };
   const c = compilePlan(sub, { kind: "absolute", ...period }, { ...deps.target, agencies: oris });
-  if (c.kind === "unsupported") return decline(`Not in the slice yet: ${c.reason}`);
+  if (c.kind === "unsupported") return decline(NOT_YET, c.reason);
   for (const s of c.query.statements) if (!statements.includes(s)) statements.push(s);
   const byOri = new Map<string, MonthCell[]>(oris.map((o) => [o, []]));
   const inYears = (ym: string) => !yearSet || yearSet.includes(Number(ym.slice(0, 4)));
   for (const r of deps.execute(c.query.sql)) if (inYears(String(r[1]))) byOri.get(String(r[0]))?.push({ ym: String(r[1]), value: r[2] === null || r[2] === undefined ? null : Number(r[2]), status: String(r[3]) });
   // A conflict refuses the answer (D6), a ranking included: it is never read as a month not reported (Codex 02.2).
   if ([...byOri.values()].some((cells) => cells.some((x) => x.status === "EVIDENCE_CONFLICT")))
-    return decline(set ? "The records of an agency in this ranking conflict with its monthly reporting status for this period, so no ranking is given."
-      : "The records for this agency and period conflict with its monthly reporting status, so no number is given.");
+    return decline(set ? "One agency's reports for this period disagree with its record of which months it reported, so no ranking is given."
+      : "This agency's reports for this period disagree with its record of which months it reported, so no number is given.");
 
   const what = measureWords(plan);
   const Header = `${what[0].toUpperCase()}${what.slice(1)}`;
@@ -129,10 +130,10 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
       ranked.map((a) => ({ key: a.label, value: a.value, status: "VALUE" })), lines, statements, deps.release.id, readings);
     return done(plan, period, c.query.sql, delivered, decline);
   }
-  if (set) return decline("Not in the slice yet: a set of agencies without a ranking.");
+  if (set) return decline("This isn't available yet: a set of agencies without a ranking.");
 
   // One agency's values by year. Several agencies by year (combined or not) come later (Codex 02 re-check A).
-  if (yearG && agencies.length > 1) return decline("Not in the slice yet: several agencies by year; ask for each year, or each agency.");
+  if (yearG && agencies.length > 1) return decline("This isn't available yet: several agencies by year; ask for each year, or each agency.");
   if (yearG) {
     const a = agencies[0], cells = byOri.get(a.ori) ?? [];
     const rows = years.map((y) => {
@@ -196,7 +197,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
 }
 
 function done(plan: NibrsPlan, period: { from: string; to: string }, sql: string, delivered: ReturnType<typeof deliverTable>, decline: Decline): ShadowOutcome {
-  if (delivered.contractProblems.length) return decline(`Not in the slice yet: the answer would not meet the answer contract (${delivered.contractProblems.join("; ")}).`);
+  if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
   return { kind: "answer", plan, period, sql, delivered };
 }
 
