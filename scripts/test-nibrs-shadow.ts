@@ -901,6 +901,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(flag("Shoplifting in Memphis by month in 2024"), [["time.month", "none"]]);
   // Codex review 01 (P1): the cleared victims' incidents (P66) overlap across sexes, so the table is not exclusive.
   assert.deepEqual(flag("Simple assault victims in Detroit by sex in 2023 that were cleared"), [["victim.sex", false]]);
+  // ...but a clearance grouping is of the incident: each incident has one status, so incidents beside it still sum.
+  assert.deepEqual(flag("Carjacking offenses in Memphis by clearance status in 2024"), [["offense.clearance_status", true]]);
   // Exclusive exactly when the overlap note is not given.
   for (const q of ["Robberies in Memphis in 2024 by weapon", "Simple assault victims in Detroit by sex in 2023"]) {
     const a = as(ask(q), "answer");
