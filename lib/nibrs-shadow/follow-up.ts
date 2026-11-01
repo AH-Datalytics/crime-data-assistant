@@ -245,8 +245,11 @@ export const deterministicRewriter: FollowUpRewriter = {
       }));
       if (!has || (prev.match(/\b(?:men|women|boys|girls)\b/gi) ?? []).length) {
         const base = prev.trim().replace(/[?.!]+$/, "");
+        // Each button says what it counts: "with a female offender" counts the female offenders (Codex decline review 01).
+        // The shadow offers only the ones the reader reads whole.
+        const label = { victim: `Count ${want} victims`, offender: `Count ${want} offenders`, arrestee: `Count arrests of ${want}s` };
         return ask(`Do you mean ${want} victims, offenders or arrestees?`,
-          (["victim", "offender", "arrestee"] as const).map((who) => ({ label: `${ucFirst(want)} ${who}s`, question: `${base} with a ${want} ${who}` })));
+          (["victim", "offender", "arrestee"] as const).map((who) => ({ label: label[who], question: `${base} with a ${want} ${who}` })));
       }
       const word = has[1][0] === has[1][0].toUpperCase() ? ucFirst(want) : want;
       return ok(prev.replace(has[0], word), "the sex replaced");

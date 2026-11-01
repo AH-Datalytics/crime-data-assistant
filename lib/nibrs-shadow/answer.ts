@@ -94,6 +94,18 @@ function readsWhole(t: string, year: number): boolean {
   return !r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") && matchNibrsType(r.ledger).kind === "spec";
 }
 const tidy = (t: string) => t.replace(/\s+([,?.!])/g, "$1").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
+/** The conditions the reader sets aside from its text (clearance, people, property...): a button must keep them. */
+const CONDITIONS = ["clearance", "people", "property", "arrestsThrough", "consistent", "offenders", "composite", "quarter", "combined",
+  "largeCities", "last12", "nibrsAsked", "shrDetail", "court", "forecast", "undefinedTerm"] as const;
+/**
+ * A button's question that reads whole and keeps every condition of the question asked, but the ones the step changes
+ * on purpose (Codex decline review 01: a period button that dropped "that were cleared").
+ */
+function keeps(t: string, asked: string, year: number, except: (typeof CONDITIONS)[number][] = []): boolean {
+  if (!readsWhole(t, year)) return false;
+  const a = readQuestion(asked, year), b = readQuestion(t, year);
+  return CONDITIONS.every((k) => except.includes(k) || JSON.stringify(a[k] ?? null) === JSON.stringify(b[k] ?? null));
+}
 /** A plain example of a question that works, for a decline with no button (Jeff's rule: every decline a next step). */
 export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
 
@@ -112,32 +124,35 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   const question = ledger.question;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
   const periods = own.filter((p) => p.concept === "period" && p.span);
-  if (periods.length > 1 && /would be a second one/.test(o.explanation)) {
-    const options = periods.map((keep) => {
-      let t = question;
+  // Each button is built from the words asked (the reader's text has set aside conditions such as "that were cleared").
+  const said = asked.trim();
+  const at = periods.map((p) => ({ p, i: said.toLowerCase().indexOf(p.text.trim().toLowerCase()), n: p.text.trim().length }));
+  if (periods.length > 1 && /would be a second one/.test(o.explanation) && at.every((x) => x.i >= 0)) {
+    const options = at.map((keep) => {
+      let t = said;
       // Each other period goes with the "and"/"or" that joined it, on whichever side.
-      for (const p of [...periods].filter((x) => x !== keep).sort((a, b) => b.span[0] - a.span[0])) {
-        const left = t.slice(0, p.span[0]), right = t.slice(p.span[1]);
+      for (const x of at.filter((y) => y !== keep).sort((a, b) => b.i - a.i)) {
+        const left = t.slice(0, x.i), right = t.slice(x.i + x.n);
         t = /,?\s(?:and|or)\s*$/i.test(left) ? `${left.replace(/,?\s(?:and|or)\s*$/i, " ")}${right}` : `${left} ${right.replace(/^\s*,?\s*(?:and|or)\b/i, "")}`;
       }
       t = tidy(t);
-      return readsWhole(t, year) ? { label: `"${t}"`, question: t } : null;
+      return keeps(t, said, year) ? { label: `"${t}"`, question: t } : null;
     });
     if (options.every(Boolean)) return { kind: "clarify", about: "which period", question, options: options as ShadowOption[] };
   }
-  const level = question.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
-  if (level !== question && readsWhole(level, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
+  const level = said.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
+  if (level !== said && keeps(level, said, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
   // The nearest question that works (coordinator, 2026-11-01), the user's breakdown kept:
   //   - "cleared" read into the crime's name ("homicide victims cleared in Memphis"): the same question "that were cleared";
   //   - victims by weapon (a weapon is recorded for each offense): the same question about offenses.
-  const nearest = (alt: string, explanation = o.explanation) =>
-    readsWhole(alt, year) ? { ...o, explanation, alternative: { label: `Ask instead: "${alt}"`, question: alt } } : null;
-  const cleared = /_cleared" has no executable definition|does not apply "victims"/.test(o.detail ?? "") && /\bcleared\b/i.test(question)
-    && !/\bwere cleared\b/i.test(question)
-    ? nearest(tidy(`${question.replace(/\s+cleared\b/i, "").replace(/[?.!]+$/, "")} that were cleared`), "I couldn't read \"cleared\" there. Put \"that were cleared\" at the end instead.") : null;
+  const nearest = (alt: string, explanation: string, except: (typeof CONDITIONS)[number][] = []) =>
+    keeps(alt, said, year, except) ? { ...o, explanation, alternative: { label: `Ask instead: "${alt}"`, question: alt } } : null;
+  const cleared = /_cleared" has no executable definition|does not apply "victims"/.test(o.detail ?? "") && /\bcleared\b/i.test(said)
+    && !/\bwere cleared\b/i.test(said)
+    ? nearest(tidy(`${said.replace(/\s+cleared\b/i, "").replace(/[?.!]+$/, "")} that were cleared`), "I couldn't read \"cleared\" there. Put \"that were cleared\" at the end instead.", ["clearance"]) : null;
   if (cleared) return cleared;
-  const byWeapon = /group victim by offense_weapon/.test(o.detail ?? "") && /\bvictims?\b/i.test(question)
-    ? nearest(tidy(question.replace(/\bvictim(s?)\b/i, (_m, s: string) => `offense${s}`)), "Weapons are recorded for each offense, not for each victim, so victims can't be counted by weapon. Offenses can be.")
+  const byWeapon = /group victim by offense_weapon/.test(o.detail ?? "") && /\bvictims?\b/i.test(said)
+    ? nearest(tidy(said.replace(/\bvictim(s?)\b/i, (_m, s: string) => `offense${s}`)), "Weapons are recorded for each offense, not for each victim, so victims can't be counted by weapon. Offenses can be.")
     : null;
   if (byWeapon) return byWeapon;
   // The two specific steps above come first; a button the decline already has (the question without the words the
@@ -241,8 +256,11 @@ export function shadowFollowUp(previous: string, followUp: string, deps: ShadowD
   // A proposal returns before anything runs.
   if (r.kind === "propose") return { kind: "proposal", question: followUp, proposed: r.question, how: r.how, rewrite: r.question, rewriteKind: "propose" };
   if (r.kind === "ask") {
-    // P69: uncertain, so ask; each option is a complete question, run as a new one. With none, the user rephrases.
-    const options: ShadowOption[] = r.options.length ? r.options.map((o) => ({ label: o.label, continuation: shadowAnswer(o.question, deps) }))
+    // P69: uncertain, so ask; each option is a complete question, run as a new one. With none, the user rephrases. An
+    // option is offered only when the reader reads it whole (Codex decline review 01: "...victims with a female offender"
+    // is two counting units).
+    const offered = r.options.filter((o) => readsWhole(o.question, Number(deps.release.lastMonth.slice(0, 4))));
+    const options: ShadowOption[] = offered.length ? offered.map((o) => ({ label: o.label, continuation: shadowAnswer(o.question, deps) }))
       : [{ label: "Ask the full question", entry: "the full question" }, { label: "Start over", entry: "a new question" }];
     return { kind: "clarify", about: r.why, question: followUp, options, rewrite: null, rewriteKind: "ask" };
   }

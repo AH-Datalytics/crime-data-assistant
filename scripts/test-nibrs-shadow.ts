@@ -937,5 +937,14 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const cleared = as(ask("Homicide victims cleared in Memphis 2024"), "decline");
   assert.equal(cleared.alternative?.question, "Homicide victims in Memphis 2024 that were cleared");
   assert.equal(as(ask("Aggravated assaults cleared in Memphis in 2024"), "decline").alternative?.question, "Aggravated assaults in Memphis in 2024 that were cleared");
+  // Codex decline review 01 (P2): a button keeps the conditions the reader set aside from its text.
+  const two = ask("Shoplifting in Memphis in 2024 and in 2025 that were cleared");
+  const twoQs = two.kind === "clarify" ? two.options.map((x) => x.question) : two.kind === "decline" && two.alternative ? [two.alternative.question] : [];
+  assert.ok(twoQs.every((t) => !t || /that were cleared/.test(t)), JSON.stringify(twoQs));
+  const wc = ask("Murder victims in Memphis in 2024 by weapon that were cleared");
+  assert.ok(wc.kind !== "decline" || !wc.alternative?.question || /cleared/.test(wc.alternative.question), JSON.stringify(wc).slice(0, 300));
+  // Follow-up options: only those the reader reads whole ("...victims with a female offender" is two counting units).
+  const fem = shadowFollowUp("Simple assault victims in Memphis in 2024", "female", deps);
+  assert.ok(fem.kind === "clarify" && fem.options.every((x) => x.label !== "Count female offenders"), JSON.stringify(fem).slice(0, 400));
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

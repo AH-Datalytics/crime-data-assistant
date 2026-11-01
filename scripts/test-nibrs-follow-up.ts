@@ -148,9 +148,9 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   const who = asked(rw("Aggravated assaults in Memphis in 2024", "female"));
   assert.equal(who.why, "Do you mean female victims, offenders or arrestees?");
   assert.deepEqual(who.options, [
-    { label: "Female victims", question: "Aggravated assaults in Memphis in 2024 with a female victim" },
-    { label: "Female offenders", question: "Aggravated assaults in Memphis in 2024 with a female offender" },
-    { label: "Female arrestees", question: "Aggravated assaults in Memphis in 2024 with a female arrestee" }]);
+    { label: "Count female victims", question: "Aggravated assaults in Memphis in 2024 with a female victim" },
+    { label: "Count female offenders", question: "Aggravated assaults in Memphis in 2024 with a female offender" },
+    { label: "Count arrests of females", question: "Aggravated assaults in Memphis in 2024 with a female arrestee" }]);
   const two = asked(rw("Female simple assault victims with female offenders in Memphis in 2024", "male"));
   assert.deepEqual(two.options.map((o) => o.question), ["Male simple assault victims with female offenders in Memphis in 2024", "Female simple assault victims with male offenders in Memphis in 2024"]);
   assert.equal(q(rw("Female simple assault victims in Memphis in 2024", "male")), "Male simple assault victims in Memphis in 2024");
