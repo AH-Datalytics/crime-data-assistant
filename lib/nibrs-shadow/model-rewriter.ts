@@ -10,7 +10,7 @@
  * (7b's rule 2). The model's own options are not used (each would be run as a continuation).
  */
 import { createHash } from "node:crypto";
-import { deterministicRewriter, type FollowUpRewriter, type Rewrite } from "./follow-up";
+import { deterministicRewriter, PLACE_ASK, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { readQuestion } from "./reading";
 
 export const MODEL_ID = "gemini-3.8-flash";
@@ -118,8 +118,8 @@ export function meaningProblem(previous: string, followUp: string, rewrite: stri
 
 /** The model's answer as a Rewrite, after the guards; anything that fails a guard is asked about, with no options. */
 export function guarded(a: ModelAnswer | null, previous: string, followUp: string): Rewrite {
-  if (!a || typeof a !== "object" || !["rewrite", "new", "presentation", "ask"].includes(a.kind)) return ask("The model's answer could not be read; ask the full question.");
-  if (a.kind === "ask") return ask(typeof a.why === "string" && a.why.trim() ? a.why.trim().slice(0, 300) : "The follow-up could not be placed with certainty.");
+  if (!a || typeof a !== "object" || !["rewrite", "new", "presentation", "ask"].includes(a.kind)) return ask(PLACE_ASK);
+  if (a.kind === "ask") return ask(typeof a.why === "string" && a.why.trim() ? a.why.trim().slice(0, 300) : PLACE_ASK);
   // A complete question of its own: only when the baseline's whole-question check agrees, and then the follow-up itself.
   if (a.kind === "new") {
     const d = deterministicRewriter.rewrite(previous, followUp);

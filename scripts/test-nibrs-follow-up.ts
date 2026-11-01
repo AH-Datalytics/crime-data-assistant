@@ -5,7 +5,7 @@
  * Offline: no database, no model.
  */
 import assert from "node:assert/strict";
-import { deterministicRewriter as R, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
+import { deterministicRewriter as R, PLACE_ASK, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
 import { shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
@@ -142,5 +142,20 @@ const before = ran, b = shadowFollowUp(P, "why did it go up?", deps);
 assert.equal(b.kind, "clarify");
 assert.equal(b.rewrite, null);
 assert.equal(ran, before, "an ask with no options runs nothing");
+
+// The other sex (coordinator, 2026-11-01): a button for each reading, each a complete question; the plain ask otherwise.
+{
+  const who = asked(rw("Aggravated assaults in Memphis in 2024", "female"));
+  assert.equal(who.why, "Do you mean female victims, offenders or arrestees?");
+  assert.deepEqual(who.options, [
+    { label: "Count female victims", question: "Aggravated assaults in Memphis in 2024 with a female victim" },
+    { label: "Count female offenders", question: "Aggravated assaults in Memphis in 2024 with a female offender" },
+    { label: "Count arrests of females", question: "Aggravated assaults in Memphis in 2024 with a female arrestee" }]);
+  const two = asked(rw("Female simple assault victims with female offenders in Memphis in 2024", "male"));
+  assert.deepEqual(two.options.map((o) => o.question), ["Male simple assault victims with female offenders in Memphis in 2024", "Female simple assault victims with male offenders in Memphis in 2024"]);
+  assert.equal(q(rw("Female simple assault victims in Memphis in 2024", "male")), "Male simple assault victims in Memphis in 2024");
+  assert.equal(asked(rw(P, "hmm that seems off")).why, PLACE_ASK);
+  assert.doesNotMatch(PLACE_ASK, /could not be placed|follow-up/);
+}
 
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");

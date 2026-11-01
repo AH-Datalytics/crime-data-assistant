@@ -319,11 +319,20 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
   } else {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
-    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}.`);
+    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}: a percent, not a rate per resident.`);
     // A category's total is known only when every month of it is: a month without reporting evidence leaves it unknown.
-    const blank = tableRows.filter((_, i) => evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status)))
-      .map((r) => r.slice(ip >= 0 ? 1 : 0, (ip >= 0 ? 1 : 0) + cats.length).join(", ") + (ip >= 0 ? ` (${r[0]})` : ""));
-    if (blank.length) text.push(`No total is established for ${blank.join("; ")}: reporting evidence is incomplete. Shown blank, not zero.`);
+    // Said once per period (coordinator, 2026-11-01): a period with every category blank is one plain sentence.
+    const isBlank = (i: number) => !!evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status));
+    const periodOf = (r: (string | number | null)[]) => (ip >= 0 ? String(r[0]) : "");
+    const catsOf = (r: (string | number | null)[]) => r.slice(ip >= 0 ? 1 : 0, (ip >= 0 ? 1 : 0) + cats.length).join(", ");
+    const periods = [...new Set(tableRows.map(periodOf))];
+    const whole = periods.filter((p) => tableRows.every((r, i) => periodOf(r) !== p || isBlank(i)));
+    const partial = periods.filter((p) => !whole.includes(p)).map((p) => [p, tableRows.filter((r, i) => periodOf(r) === p && isBlank(i)).map(catsOf)] as const)
+      .filter(([, cs]) => cs.length);
+    if (whole.length) text.push(ip >= 0
+      ? `${runs(whole)} ${whole.length === 1 ? "is" : "are"} shown blank, not zero: reporting for ${whole.length === 1 ? runs(whole) : "those periods"} isn't complete.`
+      : `Every category is shown blank, not zero: reporting for ${when} isn't complete.`);
+    if (partial.length) text.push(`Shown blank, not zero, because reporting isn't complete: ${partial.map(([p, cs]) => (p ? `${p}: ${cs.join("; ")}` : cs.join("; "))).join(". ")}.`);
     const binned = plan.groupings.find((g) => g.bins);
     if (binned?.bins) text.push(ageSentence(binned.bins));
   }
@@ -372,6 +381,8 @@ function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, 
   const text = [share !== null && inc !== null
     ? `${agency}: ${fmt(c!)} of the ${fmt(t!)} ${whatAll} in ${when} were cleared (${share}%); the cleared ${whatAll} were in ${fmt(inc)} ${one(inc, "incidents")}.`
     : `${agency}: the available evidence does not establish the share of ${whatAll} cleared in ${when}, so no share is given.`];
+  // Jeff (Savant lesson, 2026-11-01): say what a percent is where it could be taken for a rate per resident.
+  if (share !== null) text.push(`This is the percent of ${whatAll} cleared, not a rate per resident.`);
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
   for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
