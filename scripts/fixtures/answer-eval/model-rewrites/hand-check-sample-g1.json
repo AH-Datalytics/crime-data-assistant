@@ -1,0 +1,402 @@
+[
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "NIBRS",
+  "kind": "rewrite",
+  "question": "NIBRS shoplifting in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": "the source named; the meaning is unchanged."
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "show this from 2019 to present",
+  "kind": "rewrite",
+  "question": "Shoplifting in Memphis by year from 2019 to present",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "can you show me the rate",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victim rate in Memphis in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "Show the trend by year from 2019 to 2026",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis by offender race by year from 2019 to 2026",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "Queen creek",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Queen Creek in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "compare to Tacoma, wa",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit and Tacoma, WA by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "now 2020",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit by month in 2020",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Cottonwood Az",
+  "kind": "rewrite",
+  "question": "simple assault victims in Cottonwood, AZ by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "Park county Wyoming",
+  "kind": "rewrite",
+  "question": "Shoplifting in Park County Wyoming by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "Give me this data but for 2025",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis in 2025 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "show me the same for murder",
+  "kind": "rewrite",
+  "question": "murder victims in Detroit by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "can you show me the rate",
+  "kind": "rewrite",
+  "question": "Simple assault victim rate in Detroit by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "Mecklenburg County, NC",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Mecklenburg County, NC in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "El Paso, Texas",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in El Paso, Texas in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Nopd",
+  "kind": "rewrite",
+  "question": "simple assault victims in NOPD by month in 2023",
+  "verdict": "correct",
+  "note": "\"in NOPD\" names the New Orleans Police Department; meaning kept (the place resolver reads it or asks)."
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "ok; let's do 2020 through 2024",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit by month from 2020 through 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "washington state",
+  "kind": "rewrite",
+  "question": "simple assault victims in Washington state by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "make it rate",
+  "kind": "rewrite",
+  "question": "simple assault victim rate in Detroit by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Please do that!",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit by month in 2023",
+  "verdict": "meaning_changed",
+  "note": "\"Please do that!\" accepts something offered earlier, which only the conversation shows; the rewrite reruns the previous question. Should ask."
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "Mesa",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Mesa in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "What about Orlando",
+  "kind": "rewrite",
+  "question": "Shoplifting in Orlando by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "now give me as a rate",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victimization rate in Memphis in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "show by year",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit by year in 2023",
+  "verdict": "correct",
+  "note": "one year by year: faithful, if degenerate."
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "show this by year for 2023 to 2025",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis by offender race and by year from 2023 to 2025",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "now show me 2017",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis in 2017 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "Now give me Dallas",
+  "kind": "rewrite",
+  "question": "Shoplifting in Dallas by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "Gilbert",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Gilbert in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "Past 5 years",
+  "kind": "rewrite",
+  "question": "Shoplifting in Memphis by year for the past 5 years",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "show the same chart and table for Chicago",
+  "kind": "rewrite",
+  "question": "simple assault victims in Chicago by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "can you show me the rate",
+  "kind": "rewrite",
+  "question": "Shoplifting rate in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "add in 2026",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis in 2024 and 2026 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "now show me 2020",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis in 2020 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "takoma park maryland",
+  "kind": "rewrite",
+  "question": "simple assault victims in Takoma Park Maryland by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "show me the same for dallas county, texas",
+  "kind": "rewrite",
+  "question": "simple assault victims in Dallas County, Texas by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "what about robbery",
+  "kind": "rewrite",
+  "question": "Female robbery victims in Memphis in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "new orleans ori",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in New Orleans in 2024 by offender race",
+  "verdict": "meaning_changed",
+  "note": "\"new orleans ori\" most likely asks for the agency's ORI code; the rewrite asks for New Orleans data. Should ask."
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "now show it for property crime",
+  "kind": "rewrite",
+  "question": "Property crime in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "now show carjackings only",
+  "kind": "rewrite",
+  "question": "Female carjacking victims in Memphis in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "now by year",
+  "kind": "rewrite",
+  "question": "Shoplifting in Memphis by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": "already by year: unchanged, faithful."
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "what rate is this?",
+  "kind": "rewrite",
+  "question": "Shoplifting rate in Memphis by year from 2021 to 2024",
+  "verdict": "meaning_changed",
+  "note": "\"what rate is this?\" reads as a question about the figure shown, not a request for a rate. Should ask."
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "now 1995",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis in 1995 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Can you give me the same chart for Los Angeles?",
+  "kind": "rewrite",
+  "question": "simple assault victims in Los Angeles by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "takoma park maryland",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Takoma Park, Maryland in 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Female aggravated assault victims in Memphis in 2024 by offender race",
+  "followUp": "ok; let's do 2020 through 2024",
+  "kind": "rewrite",
+  "question": "Female aggravated assault victims in Memphis from 2020 through 2024 by offender race",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "since 2019",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit by month from 2019 to 2023",
+  "verdict": "meaning_changed",
+  "note": "\"since 2019\" runs through the latest data; the rewrite ends at 2023, the previous question's year."
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Jefferson County WV",
+  "kind": "rewrite",
+  "question": "simple assault victims in Jefferson County WV by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Can you give me the same chart for Chicago?",
+  "kind": "rewrite",
+  "question": "simple assault victims in Chicago by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "Shoplifting in Memphis by year from 2021 to 2024",
+  "followUp": "now give me detroit",
+  "kind": "rewrite",
+  "question": "Shoplifting in Detroit by year from 2021 to 2024",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "Compare to San Francisco",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit and San Francisco by month in 2023",
+  "verdict": "correct",
+  "note": ""
+ },
+ {
+  "previous": "simple assault victims in Detroit by month in 2023",
+  "followUp": "now show me 2017",
+  "kind": "rewrite",
+  "question": "simple assault victims in Detroit by month in 2017",
+  "verdict": "correct",
+  "note": ""
+ }
+]

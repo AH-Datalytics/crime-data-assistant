@@ -1,0 +1,302 @@
+[
+ {
+  "n": 0,
+  "followUp": "NIBRS definition",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 1,
+  "followUp": "break down by cities",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 2,
+  "followUp": "Jefferson county oregon scorecard",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 3,
+  "followUp": "yes motor vehicle theft",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 4,
+  "followUp": "only include agencies that provided data for all four years from 2022 to 2025",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 5,
+  "followUp": "include only incidents when the offender age is known",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 6,
+  "followUp": "This chart does not have independent lines for each city",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 7,
+  "followUp": "Use Option 1",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 8,
+  "followUp": "county agency only",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 9,
+  "followUp": "YTD victims in Philadlephia",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 10,
+  "followUp": "\"Is the 2026 data complete?\"",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 11,
+  "followUp": "tacoma crime trends",
+  "category": "ambiguous_ask_is_right"
+ },
+ {
+  "n": 12,
+  "followUp": "Yes, please show that.",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 13,
+  "followUp": "separate it by city",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 14,
+  "followUp": "Can you show me the data tables on which this finding is based?",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 15,
+  "followUp": "adjust for incomplete reporting",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 16,
+  "followUp": "County wide",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 17,
+  "followUp": "out of how many",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 18,
+  "followUp": "weekly county level",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 19,
+  "followUp": "show subcategories of property crime",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 20,
+  "followUp": "remove unknown",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 21,
+  "followUp": "zip code 36832",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 22,
+  "followUp": "Now add Los Angeles to Philadelphia to the chart",
+  "category": "ambiguous_ask_is_right"
+ },
+ {
+  "n": 23,
+  "followUp": "how about y/y% change by month since 2020?",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 24,
+  "followUp": "#1 is good",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 25,
+  "followUp": "Time periods",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 26,
+  "followUp": "All",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 27,
+  "followUp": "show national and chicago over this time horizon",
+  "category": "ambiguous_ask_is_right"
+ },
+ {
+  "n": 28,
+  "followUp": "Is this in California?",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 29,
+  "followUp": "can i download this by state?",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 30,
+  "followUp": "put them on two axis so the trends are more apparent",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 31,
+  "followUp": "remove the 2026 data since it doesn't exist yet",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 32,
+  "followUp": "Tell me what this chart is showing.",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 33,
+  "followUp": "show the seven-year trend",
+  "category": "model_too_cautious"
+ },
+ {
+  "n": 34,
+  "followUp": "srs",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 35,
+  "followUp": "remove 2025 as it has missing data",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 36,
+  "followUp": "both",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 37,
+  "followUp": "can you create a chart from this showing the number of offenders by age for the full period (2021 to 2025)?",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 38,
+  "followUp": "murder clearances by type in 2025 in these cities Chicago, IL, New York City, NY, Houston, TX, Philadelphia, PA, Los Angeles, CA, Memphis, T",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 39,
+  "followUp": "Now, show 10 years",
+  "category": "model_too_cautious"
+ },
+ {
+  "n": 40,
+  "followUp": "can you show me the rate trend, not the incident trend",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 41,
+  "followUp": "by age group",
+  "category": "ambiguous_ask_is_right"
+ },
+ {
+  "n": 42,
+  "followUp": "show me something surprising",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 43,
+  "followUp": "can we do a rolling 12 months for this data for the time period you have it?",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 44,
+  "followUp": "This is a count. Is it possible to show a rate?",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 45,
+  "followUp": "Kansas City, Missouri scorecard",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 46,
+  "followUp": "yes, three separate queries",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 47,
+  "followUp": "Failure to Appear",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 48,
+  "followUp": "make this for mecklenburg county as a whole",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 49,
+  "followUp": "county",
+  "category": "needs_real_conversation"
+ },
+ {
+  "n": 50,
+  "followUp": "Boo",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 51,
+  "followUp": "staffing over time",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 52,
+  "followUp": "never mind, go back",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 53,
+  "followUp": "can you go back further in time?",
+  "category": "model_too_cautious"
+ },
+ {
+  "n": 54,
+  "followUp": "prince george's maryland property",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 55,
+  "followUp": "Minneapolis scorecard",
+  "category": "engine_cannot_answer_yet"
+ },
+ {
+  "n": 56,
+  "followUp": "can you tell me the caveat on these number for 2021?",
+  "category": "not_a_data_question"
+ },
+ {
+  "n": 57,
+  "followUp": "Make the graph green",
+  "category": "guard_too_strict"
+ },
+ {
+  "n": 58,
+  "followUp": "Add San Francscio PD to the table and chart and add break out clearance rate by arrest vs exception",
+  "category": "ambiguous_ask_is_right"
+ },
+ {
+  "n": 59,
+  "followUp": "where is april and may",
+  "category": "not_a_data_question"
+ }
+]

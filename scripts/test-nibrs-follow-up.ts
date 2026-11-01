@@ -85,10 +85,20 @@ asked(rw("Shoplifting in Memphis and Nashville in 2024", "combined with Knoxvill
 assert.equal(q(rw(Y, "what about Knoxville in 2023?")), "Shoplifting in Knoxville in 2023");
 // Codex 7b-04 seventh pass: with two sex words, which one "male" replaces is asked.
 asked(rw("Female murder victims with female offenders in Memphis in 2024", "male"));
+// P69 amendment: "show 10 years" and its kin are the last N complete years by year, from the release (the reader reads
+// "over the last N years"); a month period asks; "go back further" asks how far. "Make the graph green" is presentation.
+assert.equal(q(rw(P, "show 10 years")), "Shoplifting in Memphis by year over the last 10 years");
+assert.equal(q(rw(P, "show the seven-year trend")), "Shoplifting in Memphis by year over the last 7 years");
+assert.equal(q(rw(M, "Past 5 years")), "Shoplifting in Memphis by year over the last 5 years");
+asked(rw("Shoplifting in Memphis in January 2024", "show 10 years"));
+asked(rw(P, "can you go back further in time?"));
+assert.equal(rw(M, "Make the graph green").kind, "presentation");
+// Codex full review 1: a previous period of several years is not one phrase to replace: asked.
+asked(rw("Shoplifting in Memphis in 2023 and 2024", "show 5 years"));
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);
-  assert.ok(r.kind !== "ask" && r.confidence === "certain");
+  assert.ok(r.kind !== "ask" && r.kind !== "propose" && r.confidence === "certain");
 }
 
 // Rule 1: the interface. A stand-in rewriter is used by shadowFollowUp in place of the baseline; an ask becomes a

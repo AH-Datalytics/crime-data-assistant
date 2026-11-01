@@ -2439,6 +2439,15 @@
       "note": "NIBRS shadow increment 7b (P69): the follow-up rewriter's standalone rewrites, its asks, and the replaceable rewriter interface; offline"
     },
     {
+      "id": "test-nibrs-model-rewriter",
+      "tier": "F",
+      "script": "scripts/test-nibrs-model-rewriter.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "NIBRS shadow model follow-up rewriter test: guards, cache binding, confirm-before-run proposals (P73) and the hybrid rewriter, on hand-written model answers; offline, no model call"
+    },
+    {
       "id": "test-nibrs-transforms",
       "tier": "F",
       "script": "scripts/test-nibrs-transforms.ts",

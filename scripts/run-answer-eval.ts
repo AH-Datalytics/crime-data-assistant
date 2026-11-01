@@ -34,8 +34,10 @@ import { validateResolved } from "../lib/nibrs-plan/resolve";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { matchNibrsType } from "../lib/nibrs-question-types";
-import { quarterCells, scoreShadow, sliceGroup, sliceValues, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
+import { quarterCells, scoreShadow, sliceGroup, sliceValues, sameRewrite, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
 import { shadowAnswer, shadowFollowUp, type FollowUpOutcome, type ShadowDeps } from "../lib/nibrs-shadow/answer";
+import { bindingOf, cachedModelRewriter, GUARD_VERSION, hybridRewriter, MODEL_ID, type RewriteCache } from "../lib/nibrs-shadow/model-rewriter";
+import { SYSTEM_PROMPT } from "../lib/nibrs-shadow/model-rewriter-prompt";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
@@ -45,6 +47,14 @@ const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(na
 const CANDIDATE = arg("--candidate", "nibrs-reader")!;
 if (!["nibrs-reader", "nibrs-shadow"].includes(CANDIDATE)) throw new Error(`unknown candidate ${CANDIDATE}`);
 const SHADOW = CANDIDATE === "nibrs-shadow";
+// The model rewriter test (shadow only): follow-ups rewritten from the cached model answers; its own run files.
+const MODEL = SHADOW && arg("--rewriter") === "model" ? (() => {
+  const cache = JSON.parse(fs.readFileSync(path.join(ROOT, `scripts/fixtures/answer-eval/model-rewrites/${MODEL_ID}.json`), "utf8")) as RewriteCache;
+  const binding = bindingOf(SYSTEM_PROMPT);
+  const model = cachedModelRewriter(cache, binding);
+  return { binding, model, rewriter: hybridRewriter(model) };
+})() : null;
+const RUN_NAME = MODEL ? `${CANDIDATE}-model-rewriter` : CANDIDATE;
 const release: Release & { id: string; asOf: string } = SHADOW
   // P52: the FBI uploaded the 2026 file on 2026-10-15; the upload month is partial and not reported, so data runs through 2026-09.
   ? { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }
@@ -128,6 +138,7 @@ const eligibility: Record<string, string[]> = {};
 const scored: CaseResult[] = [];
 const provisional: CaseResult[] = [];
 const notBuilt: string[] = [];
+const proposals: string[] = [];
 const groupOf = new Map<string, string>();
 const deps = SHADOW ? shadowDeps() : null;
 for (const c of cases) {
@@ -141,7 +152,21 @@ for (const c of cases) {
   if (nr || !c.expected) continue;
   let res: CaseResult | null;
   if (deps) {
-    const outcome = followUp ? shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps) : shadowAnswer(c.question, deps);
+    const first = followUp ? shadowFollowUp(c.setup[c.setup.length - 1].question, c.question, deps, MODEL?.rewriter) : shadowAnswer(c.question, deps);
+    // P69 amendment: a proposal is judged before any simulated confirmation (Codex amendment check 2). Where the label
+    // asks, or the proposal is not the label's rewrite, it is a wrong action: the user saw the wrong question before
+    // anything ran. A matching proposal is confirmed (simulated) and that answer is scored as usual.
+    if (first.kind === "proposal") {
+      proposals.push(c.id);
+      const wrong = c.rewrite === null ? "(ask: the rewrite is uncertain)" : c.rewrite && !sameRewrite(c.rewrite, first.proposed) ? c.rewrite : null;
+      if (wrong !== null || !c.rewrite) {
+        const r: CaseResult = { id: c.id, split: c.split, expected: c.expected.action, actual: "clarify", outcome: "wrong_action", capability: capability(c), era: era(c),
+          diffs: [{ field: "proposal", expected: wrong ?? "(no rewrite)", actual: first.proposed, kind: "material" }], notes: [`proposed (nothing ran): ${first.proposed}`] };
+        (s.scored ? scored : provisional).push(r); groupOf.set(c.id, group!);
+        continue;
+      }
+    }
+    const outcome = first.kind === "proposal" ? { ...shadowAnswer(first.proposed, deps), rewrite: first.proposed, rewriteKind: "rewrite" as const } : first;
     // A follow-up whose rewrite is another case's question reuses that case's independent values.
     // P71: a quarterly rewrite of a monthly case sums that case's months.
     const src = c.expected.action === "answer" ? c.expected.values.source ?? "" : "";
@@ -154,6 +179,7 @@ for (const c of cases) {
     const sc = scoreShadow(c, outcome, release, { capability: capability(c), era: era(c) }, values);
     if (sc.excluded) notBuilt.push(`${c.id}: ${sc.excluded}`);
     res = sc.result && followUp ? withRewrite(sc.result, c, outcome as FollowUpOutcome) : sc.result;
+    if (res && first.kind === "proposal") res = { ...res, notes: [`proposed, then confirmed (simulated): ${first.proposed}`, ...res.notes] };
     if (res) groupOf.set(c.id, group!);
   } else res = score(c, run(c));
   if (res) (s.scored ? scored : provisional).push(res);
@@ -207,8 +233,10 @@ const md = [
   ...(SHADOW ? ["## Refused as not built (not scored)", "", ...(notBuilt.length ? notBuilt.map((x) => `- ${x}`) : ["None."]), ""] : []),
   (SHADOW ? byGroup : bySplit)("Scored (reviewed labels, decided policy)", scored, true),
   (SHADOW ? byGroup : bySplit)("PROVISIONAL: drafted labels (never a gate)", provisional, false),
+  ...(MODEL ? ["## Model rewriter", "", `Follow-ups rewritten by the hybrid rewriter: deterministic first, then the cached ${MODEL_ID} model's proposals (binding ${MODEL.binding.slice(0, 16)}, guards ${GUARD_VERSION}). Proposed (nothing ran before a simulated confirmation): ${proposals.length} (${proposals.join(", ") || "none"}). Cache misses (asked, never guessed): ${MODEL.model.misses.length}.`,
+    ...MODEL.model.misses.map((m) => `- ${m}`), ""] : []),
 ].join("\n");
 fs.mkdirSync(OUT, { recursive: true });
-fs.writeFileSync(path.join(OUT, `${CANDIDATE}.md`), md);
-fs.writeFileSync(path.join(OUT, `${CANDIDATE}.json`), JSON.stringify({ candidate: CANDIDATE, release, coverage, eligibility, ...(SHADOW ? { notBuilt, groups: Object.fromEntries(groupOf) } : {}), scored, provisional }, null, 1) + "\n");
+fs.writeFileSync(path.join(OUT, `${RUN_NAME}.md`), md);
+fs.writeFileSync(path.join(OUT, `${RUN_NAME}.json`), JSON.stringify({ candidate: CANDIDATE, ...(MODEL ? { rewriter: `hybrid: deterministic, then ${MODEL_ID} proposals`, proposals, cacheMisses: MODEL.model.misses } : {}), release, coverage, eligibility, ...(SHADOW ? { notBuilt, groups: Object.fromEntries(groupOf) } : {}), scored, provisional }, null, 1) + "\n");
 console.log(`${CANDIDATE}: scored ${scored.length}, provisional ${provisional.length}; run ${coverage["run by this candidate"]?.length ?? 0} of ${cases.length}`);
