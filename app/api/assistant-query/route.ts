@@ -60,6 +60,8 @@ export async function POST(req: Request) {
       if (r.kind === "ask") {
         const m = await liveModelRewrite(previous, question, session);
         if (m === "capped") return NextResponse.json({ kind: "rewrite-ask", why: "Please ask the full question, with the crime, the place and the years.", options: r.options, ms: Date.now() - started });
+        // The model's question back with its checked choices: each a proposal, none run until clicked.
+        if (m && m.kind === "choices") return NextResponse.json({ kind: "proposal", asked: question, why: m.why, options: m.options, ms: Date.now() - started });
         if (m && m.kind !== "ask") r = m;
       }
       if (r.kind === "ask") return NextResponse.json({ kind: "rewrite-ask", why: r.why, options: r.options, ms: Date.now() - started });

@@ -19,7 +19,7 @@ type Reply =
   | { kind: "rewrite-ask"; why: string; options: Option[]; ms?: number }
   | { kind: "presentation"; asked: string; how: string; ms?: number }
   // The engine's coming confirm-before-run outcome for a model rewrite (stubbed until the engine returns it).
-  | { kind: "proposal"; asked: string; question: string; ms?: number }
+  | { kind: "proposal"; asked: string; question?: string; why?: string; options?: Option[]; ms?: number }
   | { kind: "error"; error: string };
 type Src = "nibrs" | "historical" | "rtci" | "shr";
 type Asking = { question: string; path: string[] };
@@ -382,10 +382,18 @@ function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: Pre
   ) : null;
 
   // The model's rewrite of a follow-up (P73): shown, never run until it is confirmed.
+  // The model's question back with its own choices (each checked by the guards): one click runs that question.
+  if (r.kind === "proposal" && r.options?.length) return (<>
+    <p className="Lead">{r.why}</p>
+    <div className="Choices">
+      {r.options.map((o) => <button key={o.label} className="Choice" type="button" onClick={() => onAsk(o.question, null)}><span>{o.label}</span></button>)}
+      <button className="Choice" type="button" onClick={() => onAsk(t.typed, null)}><span>Ask &ldquo;{t.typed}&rdquo; as a new question</span></button>
+    </div>
+  </>);
   if (r.kind === "proposal") return (<>
     <p className="Lead">Did you mean: <b>{r.question}</b></p>
-    <div className="Propose"><button className="Btn teal" type="button" onClick={() => onAsk(r.question, null)}>Run</button>
-      <button className="Btn" type="button" onClick={() => { setDraft(r.question); setEditing(true); }}>Edit</button></div>
+    <div className="Propose"><button className="Btn teal" type="button" onClick={() => onAsk(r.question!, null)}>Run</button>
+      <button className="Btn" type="button" onClick={() => { setDraft(r.question!); setEditing(true); }}>Edit</button></div>
     {editing ? <form className="EditQ" style={{ marginTop: "1rem" }} onSubmit={(e) => { e.preventDefault(); onAsk(draft, null); setEditing(false); }}><input value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus /><button className="Btn teal" type="submit">Ask this</button></form> : null}
   </>);
   if (r.kind === "rewrite-ask") return (<>
