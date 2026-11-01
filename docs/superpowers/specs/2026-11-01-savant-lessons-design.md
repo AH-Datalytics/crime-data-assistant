@@ -1,13 +1,28 @@
 # Two Savant lessons for the new engine: same agencies every year, everyday crime groups
 
-**Status:** design note for Jeff's decisions; nothing built. Shadow engine only; no live route or answer changes. Codex design check 01 (REVISE, P2 only) is applied; see the review record.
+**Status:** decided (Jeff, 2026-11-01, through the coordinator); recorded as policy rows P80-P84. Nothing built yet. Shadow engine only; no live route or answer changes. Codex design check 01 (REVISE, P2 only) is applied; see the review record.
 
 **Sources:**
 - Savant, read-only: `C:\Users\jeffm\nibrs-savant`, specifically `nibrs_savant/registry.py` `CRIME_TYPES`, `nibrs_savant/query.py` and `docs/superpowers/plans/2026-10-21-spotlight.md`.
 - The engine on dev (1151a5f) and the policy rows P03, P31, P58, P60, P61, P62, D18 and D20.
 - Each behavior below was checked by asking the shadow engine on the test5 build.
 
-## Decisions for Jeff
+## Decisions (Jeff, 2026-11-01)
+
+Jeff's answers, relayed by the coordinator:
+1. **P80:** the label is **"Consistent Reporting Agencies"** (Savant's term), not "Same agencies every year". It is used on the button and in the answer's statement, with the plain explanation beside it (the agencies that reported every month of the period).
+2. **P81:** yes. Each kind keeps its own row (P61, P58, P60), with one shared every-month test.
+3. **P82:** domestic violence:
+   - (a) any qualifying offender, each victim counted once;
+   - (b) the crimes listed, with 09C out;
+   - (c) robbery out;
+   - (d) cohabitants in "family or household".
+4. **P83:** yes. The gun-violence decline offers a "Gun crime in ..." button.
+5. **P84:** yes. Car break-in answers say "Car break-ins are counted as theft from motor vehicles."
+
+Domestic violence (P82) runs only after its held-out cases and nibrs-model's expected values are in (section 2).
+
+## The decisions as asked
 
 **Same agencies every year**
 1. Should the state and national sums' button read **"Same agencies every year"** instead of today's "Show only agencies that reported every month"? The rule stays the same.
