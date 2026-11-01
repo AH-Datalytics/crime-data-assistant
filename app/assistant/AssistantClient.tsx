@@ -208,10 +208,10 @@ export default function AssistantClient() {
     </form>
   );
   const dock = (
-    <div className="Dock">
+    <div className="Dock"><div className="DockIn">
       {form}
       <p className="fine">Answers come from FBI data and can be wrong. Check important figures against the FBI Crime Data Explorer.</p>
-    </div>
+    </div></div>
   );
   return (
     <div className="cda">
@@ -317,6 +317,14 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
   // Click a header to sort this answer's table by it; again to reverse. Blanks (unknown) always sort last.
   const [sort, setSort] = useState<{ col: string; dir: 1 | -1 } | null>(null);
   const cap = useRef<HTMLDivElement>(null);
+  const [tableMax, setTableMax] = useState<number | null>(null);
+  useEffect(() => {
+    const el = cap.current;
+    if (!el) { setTableMax(null); return; }
+    const ro = new ResizeObserver(() => setTableMax(Math.max(240, el.offsetHeight)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
   const { columns, text } = r;
   // A series that begins with periods no agency reported starts at the first reported one (owner, 2026-10-31): the
   // leading blank rows are left out of the chart, the table and the export, and a note says where it starts.
@@ -429,7 +437,7 @@ function AnswerView({ r, chartKind: typedKind, headline, title: asked, onButton 
           <p className="pngOnly pngSource">{source}</p>
         </div>
       ) : null}
-      <div className="TableScroll">
+      <div className="TableScroll" style={tableMax ? { maxHeight: tableMax } : undefined}>
         <table className="T">
           <thead><tr>{columns.map((c) => (
             <th key={c} className={`${numberCols.includes(c) ? "" : "txt"}${sort?.col === c ? " sorted" : ""}`} aria-sort={sort?.col === c ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>

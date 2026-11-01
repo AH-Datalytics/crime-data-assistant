@@ -32,27 +32,27 @@
 .cda .Preview { margin-left: auto; font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); }
 
 /* The conversation */
-.cda .Chat { max-width: 76rem; margin: 0 auto; padding: 1.5rem var(--gutter) 4rem; }
-.cda .Me { scroll-margin-top: calc(var(--header) + 8rem); display: flex; justify-content: flex-end; margin: 2.25rem 0 1rem; }
-.cda .Me p { margin: 0; max-width: 40rem; background: var(--teal-tint); color: var(--darker); border-radius: .375rem; padding: .6rem 1rem; font-size: 1rem; line-height: 1.45; }
-.cda .Re { padding-bottom: 1.5rem; border-bottom: 1px solid var(--divider); scroll-margin-top: calc(var(--header) + 1rem); }
-.cda .read { font-size: .875rem; color: var(--dark); margin: 0 0 1rem; line-height: 1.5; }
+.cda .Chat { max-width: 76rem; margin: 0 auto; padding: .25rem var(--gutter) 4rem; }
+.cda .Me { scroll-margin-top: calc(var(--header) + 5.5rem); display: flex; justify-content: flex-end; margin: 1rem 0 .4rem; }
+.cda .Me p { margin: 0; max-width: 40rem; background: var(--teal-tint); color: var(--darker); border-radius: .375rem; padding: .4rem .8rem; font-size: .9rem; line-height: 1.4; }
+.cda .Re { padding-bottom: 1rem; border-bottom: 1px solid var(--divider); scroll-margin-top: calc(var(--header) + 1rem); }
+.cda .read { font-size: .8rem; color: var(--dark); margin: 0 0 .4rem; line-height: 1.4; }
 .cda .read b { font-weight: 600; color: var(--darker); }
 .cda .link { color: var(--teal); text-decoration: underline; text-underline-offset: 2px; background: none; border: 0; padding: 0; font-size: inherit; }
 .cda .EditQ { display: flex; gap: .5rem; margin: 0 0 1rem; }
 .cda .EditQ input { flex: 1; height: 2.5rem; border: 1px solid var(--teal); border-radius: .375rem; padding: 0 .8rem; font-size: .95rem; color: var(--darker); }
-.cda .say { font-size: 1.125rem; line-height: 1.5; color: var(--darker); margin: 0 0 .75rem; max-width: 60rem; }
+.cda .say { font-size: 1rem; line-height: 1.45; color: var(--darker); margin: 0 0 .5rem; max-width: 60rem; }
 .cda .say b { font-family: var(--display); font-weight: 700; }
-.cda .notes { font-size: .95rem; line-height: 1.55; color: var(--darker); margin-top: 1rem; max-width: 60rem; }
-.cda .notes p { margin: 0 0 .35rem; }
-.cda .notes .src { color: var(--dark); font-size: .875rem; }
+.cda .notes { font-size: .8rem; line-height: 1.45; color: var(--dark); margin-top: .6rem; max-width: 64rem; }
+.cda .notes p { margin: 0 0 .2rem; }
+.cda .notes .src { color: var(--light); font-size: .75rem; }
 .cda .wait { font-family: var(--mono); font-size: .75rem; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); }
 .cda .err { color: #9e1b1b; font-size: .95rem; }
 .cda .unavailable { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); margin: 0 0 .4rem; }
 .cda .acts { display: flex; gap: .5rem; margin-top: .9rem; }
 .cda .capTitle { display: none; }
 /* One row above the chart: the chart type, then "Download PNG CSV" right after it (Jeff) */
-.cda .ToolRow { display: flex; align-items: center; gap: 1rem; margin: 0 0 .6rem; min-height: 1.9rem; }
+.cda .ToolRow { display: flex; align-items: center; gap: 1rem; margin: 0 0 .4rem; min-height: 1.75rem; }
 .cda .ToolRow .Seg { margin: 0; }
 .cda .Dl { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; color: var(--dark); }
 .cda .Dl .lbl { margin-right: .15rem; }
@@ -64,34 +64,34 @@
 .cda .pngHead h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.25rem; color: var(--darker); }
 .cda .pngHead p { margin: .2rem 0 .8rem; font-size: .875rem; color: var(--dark); }
 .cda .pngSource { margin: .6rem 0 0; font-size: .8rem; color: var(--light); }
-.cda .ChartTitle { margin: 0 0 1rem; }
-.cda .ChartTitle h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.25rem; line-height: 1.3; color: var(--darker); }
-.cda .ChartTitle p { margin: .2rem 0 0; font-size: .875rem; color: var(--dark); }
+.cda .ChartTitle { margin: 0 0 .45rem; }
+.cda .ChartTitle h3 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.1rem; line-height: 1.25; color: var(--darker); }
+.cda .ChartTitle p { margin: .1rem 0 0; font-size: .8rem; color: var(--dark); }
 .cda .cap.exporting { padding: 1.5rem; background: #fff; }
 .cda .cap.exporting .capTitle { display: block; font-family: var(--display); font-weight: 600; font-size: 1.25rem; color: var(--darker); margin: 0 0 1rem; }
 .cda .cap.exporting .TableScroll { max-height: none; overflow: visible; }
-.cda .Legend { list-style: none; margin: 0 0 .5rem; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; font-size: .8rem; color: var(--darker); }
+.cda .Legend { list-style: none; margin: 0 0 .3rem; padding: 0; display: flex; flex-wrap: wrap; gap: .2rem 1rem; font-size: .75rem; color: var(--darker); }
 .cda .Legend li, .cda .Tip .row span:first-child { display: inline-flex; align-items: center; gap: .4rem; }
 .cda .sw { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; flex: none; }
 /* Chart type: a small segmented control (Crime Index buttons), the active type in teal */
 .cda .Seg { display: inline-flex; margin: 0 0 .6rem; border: 1px solid var(--button-border); border-radius: .375rem; overflow: hidden; }
-.cda .Seg button { background: #fff; border: 0; padding: .3rem .85rem; font-size: .8rem; color: var(--dark); }
+.cda .Seg button { background: #fff; border: 0; padding: .25rem .75rem; font-size: .75rem; color: var(--dark); }
 .cda .Seg button + button { border-left: 1px solid var(--button-border); }
 .cda .Seg button:hover { color: var(--teal); }
 .cda .Seg button.on { background: var(--teal-tint); color: var(--teal); font-weight: 600; }
-.cda .chartnote { font-size: .8rem; color: var(--light); margin: .5rem 0 0; }
-.cda .ms { font-family: var(--mono); font-size: .65rem; color: var(--index); margin-top: .6rem; }
+.cda .chartnote { font-size: .75rem; color: var(--light); margin: .3rem 0 0; }
+.cda .ms { font-family: var(--mono); font-size: .65rem; color: var(--index); margin: .3rem 0 0; }
 
 /* Choices (clarify, decline alternatives, P61 buttons, proposal) */
 .cda .Choices { display: flex; flex-direction: column; gap: .6rem; max-width: 36rem; margin-top: .25rem; }
-.cda .Choice { display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-align: left; padding: .85rem 1.1rem; border: 1px solid var(--divider); border-radius: .375rem; background: #fff; font-size: 1rem; color: var(--darker); }
+.cda .Choice { display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-align: left; padding: .6rem .95rem; border: 1px solid var(--divider); border-radius: .375rem; background: #fff; font-size: .9rem; color: var(--darker); }
 .cda .Choice:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
 .cda .Choice:disabled { color: var(--index); cursor: default; }
 .cda .Choice .k { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; color: var(--light); text-align: right; }
 .cda .Choice.primary { border-color: var(--teal); }
 
 /* Chart beside table */
-.cda .Answer { display: grid; grid-template-columns: 3fr 2fr; gap: 2.5rem; align-items: start; }
+.cda .Answer { display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; align-items: start; }
 .cda .Answer.tableOnly { grid-template-columns: 1fr; max-width: 52rem; }
 .cda .Chart { position: relative; min-width: 0; }
 .cda .Chart svg { display: block; max-width: 100%; font-family: var(--body); font-size: 14px; }
@@ -114,11 +114,11 @@
 .cda .Tip .v { font-family: var(--display); font-weight: 700; }
 
 /* Table (crimeindex explorer/ExplorerTable) */
-.cda .TableScroll { max-height: 26rem; overflow: auto; border-bottom: 1px solid var(--divider); min-width: 0; }
+.cda .TableScroll { max-height: 22rem; overflow: auto; border-bottom: 1px solid var(--divider); min-width: 0; }
 .cda table.T { width: 100%; border-collapse: collapse; }
-.cda table.T th { position: sticky; top: 0; background: #fff; height: 3.5rem; padding: 1rem; text-align: right; font-family: var(--display); font-weight: 600; font-size: 1rem; color: var(--darker); box-shadow: inset 0 -1px 0 var(--divider); vertical-align: bottom; }
+.cda table.T th { position: sticky; top: 0; background: #fff; padding: .45rem .7rem; text-align: right; font-family: var(--display); font-weight: 600; font-size: .8rem; line-height: 1.25; color: var(--darker); box-shadow: inset 0 -1px 0 var(--divider); vertical-align: bottom; }
 .cda table.T th:first-child, .cda table.T td:first-child, .cda table.T .txt { text-align: left; }
-.cda table.T td { height: 3rem; padding: .75rem 1rem; font-size: .875rem; color: var(--darker); text-align: right; font-variant-numeric: tabular-nums; }
+.cda table.T td { padding: .32rem .7rem; font-size: .8rem; line-height: 1.3; color: var(--darker); text-align: right; font-variant-numeric: tabular-nums; }
 .cda table.T td:first-child { font-weight: 600; }
 .cda table.T .sortBtn { background: none; border: 0; padding: 0 0 .35rem; font: inherit; color: inherit; text-align: inherit; cursor: pointer; position: relative; }
 .cda table.T .sortBtn:hover { color: var(--teal); }
@@ -131,10 +131,14 @@
 .cda table.T tbody tr:nth-child(odd) { background: var(--row-1); }
 .cda table.T tbody tr.hl td { background: var(--nibrs-tint); color: var(--nibrs); }
 
-/* The question box, pinned under the header; the newest answer comes first, just below it (Jeff, 2026-11-01) */
+/* The question box, pinned under the header; the newest answer comes first, just below it (Jeff, 2026-11-01).
+   Slim: the box, then its hint and the fine print on one line. */
 .cda .Dock { position: sticky; top: var(--header); z-index: 25; background: #fff; border-bottom: 1px solid var(--divider); box-shadow: 0 4px 16px rgba(0,0,0,.04); }
-.cda .Dock .AskForm { max-width: 76rem; margin: 0 auto; padding: .75rem var(--gutter) 0; }
-.cda .Dock .AskRow input, .cda .Dock .Src, .cda .Dock .Ask { height: 2.75rem; }
+.cda .DockIn { max-width: 76rem; margin: 0 auto; padding: .5rem var(--gutter) .35rem; display: grid; grid-template-columns: auto 1fr; column-gap: 1.5rem; align-items: baseline; }
+.cda .Dock .AskForm { display: contents; }
+.cda .Dock .AskRow { grid-column: 1 / -1; }
+.cda .Dock .AskRow input, .cda .Dock .Src, .cda .Dock .Ask { height: 2.5rem; }
+.cda .Dock .AskRow input { font-size: .95rem; }
 .cda .AskRow { display: flex; gap: .75rem; align-items: center; }
 .cda .AskRow input { flex: 1; height: 3.25rem; border: 1px solid var(--input); border-radius: .375rem; padding: 0 1.1rem; font-size: 1.05rem; color: var(--darker); }
 .cda .AskRow input::placeholder { color: var(--input); }
@@ -149,11 +153,11 @@
 .cda .Btn.teal { background: var(--teal); border-color: var(--teal); color: #fff; }
 /* The one-line hint under the box: how to ask on the start page; follow-up or new question after an answer */
 .cda .Hint { margin: .45rem 0 0; font-size: .8rem; color: var(--dark); }
-.cda .Dock .Hint { margin: .35rem 0 .15rem; }
-.cda .fine { max-width: 76rem; margin: 0 auto; padding: 0 var(--gutter) .6rem; font-size: .75rem; color: var(--light); }
+.cda .Dock .Hint { margin: .3rem 0 0; font-size: .75rem; }
+.cda .fine { margin: .3rem 0 0; font-size: .7rem; color: var(--light); text-align: right; }
 
 /* Question history: a thin strip on the right edge, one mark per question (follow-ups shorter, under their question) */
-.cda .Strip { position: fixed; right: 1.25rem; top: calc(var(--header) + 8.5rem); bottom: 2rem; z-index: 20; width: 1.5rem; overflow: visible; border-right: 1px solid var(--divider); }
+.cda .Strip { position: fixed; right: 1.25rem; top: calc(var(--header) + 5.5rem); bottom: 2rem; z-index: 20; width: 1.5rem; overflow: visible; border-right: 1px solid var(--divider); }
 .cda .Mark { position: absolute; right: .35rem; width: 1.5rem; height: .75rem; padding: 0; border: 0; background: none; cursor: pointer; }
 .cda .Mark span { position: absolute; right: 0; top: 50%; width: 1.1rem; height: 3px; margin-top: -1.5px; background: var(--index); }
 .cda .Mark.sub span { width: .6rem; height: 2px; margin-top: -1px; background: var(--input); }
@@ -183,7 +187,9 @@
   .cda .Dock .fine { display: none; }
   .cda .ToolRow { flex-wrap: wrap; row-gap: .5rem; }
   .cda .Seg button { white-space: nowrap; padding: .3rem .6rem; }
-  .cda .Me { scroll-margin-top: calc(var(--header) + 6.5rem); }
+  .cda .Me { scroll-margin-top: calc(var(--header) + 5rem); }
+  .cda .DockIn { grid-template-columns: 1fr; }
+  .cda .TableScroll { max-height: 24rem !important; }
   .cda .Src { display: none; }
 }
 

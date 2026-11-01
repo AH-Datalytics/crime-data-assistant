@@ -45,6 +45,9 @@ export default function AnswerChart({ kind, points, series, sub, hover, onHover,
   }, []);
 
   const n = points.length;
+  // Fit to the screen under the question box, with room for the title, controls and notes (Jeff: the whole answer on
+  // screen when it lands).
+  const fitH = Math.round(Math.max(180, Math.min(320, (typeof window === "undefined" ? 900 : window.innerHeight) - 530)));
   const stack = !!lines && (kind === "stacked" || kind === "stacked100" || kind === "area");
   // A stack's total per period: known only when every category's value is (never a partial total).
   const totals = lines ? points.map((_, i) => (lines.every((l) => l.ys[i] !== null) ? lines.reduce((a, l) => a + (l.ys[i] as number), 0) : null)) : [];
@@ -77,22 +80,26 @@ export default function AnswerChart({ kind, points, series, sub, hover, onHover,
     );
   } else if (W > 0 && kind === "hbar") {
     // A breakdown: categories down the side, values along the bottom.
-    const L = Math.min(220, Math.max(90, W * 0.32)), R = 56, T = 8, rowH = 30, B = 28;
+    const L = Math.min(220, Math.max(90, W * 0.32)), R = 56, T = 8, B = 28;
+    const rowH = Math.max(18, Math.min(30, Math.floor((fitH - T - B) / Math.max(1, n))));
+    // On a narrow screen: labels cut to the room at the left, every other value along the bottom.
+    const maxc = Math.min(30, Math.max(6, Math.floor((L - 14) / 6.5)));
+    const tkEvery = (W - L - R) / Math.max(1, tk.length) < 52 ? 2 : 1;
     H = T + n * rowH + B;
     const x = (v: number) => L + (v / yMax) * (W - L - R);
     svg = (
       <svg width={W} height={H} role="img" aria-label={series}>
         <g>
           <line x1={L} y1={T} x2={L} y2={H - B} stroke={C.axis} />
-          {tk.map((t) => <text key={t} x={x(t)} y={H - 8} textAnchor="middle" {...T14}>{fmt(t)}</text>)}
+          {tk.map((t, k) => (k % tkEvery ? null : <text key={t} x={x(t)} y={H - 8} textAnchor="middle" {...T14}>{fmt(t)}</text>))}
         </g>
         {points.map((p, i) => {
           const y = T + i * rowH;
           return (
             <g key={i} onMouseEnter={() => onHover(i)} onMouseLeave={() => onHover(null)}>
-              <text x={L - 10} y={y + rowH / 2 + 4} textAnchor="end" {...T13}>{p.label.length > 30 ? `${p.label.slice(0, 29)}...` : p.label}</text>
-              {p.y !== null ? <rect fill={C.mark} opacity={hover !== null && hover !== i ? 0.35 : 1} x={L} y={y + 5} width={Math.max(1, x(p.y) - L)} height={rowH - 10} rx={2} /> : null}
-              <text x={(p.y !== null ? x(p.y) : L) + 6} y={y + rowH / 2 + 4} {...T13}>{p.y === null ? "" : fmt(p.y)}</text>
+              <text x={L - 10} y={y + rowH / 2 + 4} textAnchor="end" {...T13} fontSize={rowH < 24 ? 12 : 13}>{p.label.length > maxc ? `${p.label.slice(0, maxc - 1)}...` : p.label}</text>
+              {p.y !== null ? <rect fill={C.mark} opacity={hover !== null && hover !== i ? 0.35 : 1} x={L} y={y + Math.min(5, rowH * 0.18)} width={Math.max(1, x(p.y) - L)} height={rowH - 2 * Math.min(5, rowH * 0.18)} rx={2} /> : null}
+              <text x={(p.y !== null ? x(p.y) : L) + 6} y={y + rowH / 2 + 4} {...T13} fontSize={rowH < 24 ? 12 : 13}>{p.y === null ? "" : fmt(p.y)}</text>
               <rect x={0} y={y} width={W} height={rowH} fill="transparent" />
             </g>
           );
@@ -100,8 +107,8 @@ export default function AnswerChart({ kind, points, series, sub, hover, onHover,
       </svg>
     );
   } else if (W > 0) {
-    const L = 65, R = 8, T = 24, B = 32;
-    H = 380;
+    const L = 65, R = 8, T = 16, B = 32;
+    H = fitH;
     const y = (v: number) => T + (1 - v / yMax) * (H - T - B);
     const slot = (W - L - R) / n, bw = Math.min(slot / 1.5, 64);
     const slotted = kind === "bar" || kind === "stacked" || kind === "stacked100";
