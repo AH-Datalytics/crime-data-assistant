@@ -331,7 +331,8 @@ function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: Pre
   const r = t.reply!;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-  const ms = "ms" in r && r.ms !== undefined ? <p className="ms">{(r.ms / 1000).toFixed(1)} s</p> : null;
+  // The answer's time is for testing only: the console, never the page (Jeff, 2026-11-01).
+  useEffect(() => { if ("ms" in r && r.ms !== undefined) console.debug(`answer ${t.id}: ${(r.ms / 1000).toFixed(1)} s`); }, [r, t.id]);
   if (r.kind === "error") return <p className="err">{r.error}</p>;
 
   // The read line: what was answered, when it is not just what was typed (P69). Edit asks the edited question anew.
@@ -359,23 +360,20 @@ function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: Pre
       {r.options.map((o) => <button key={o.label} className="Choice" type="button" onClick={() => onAsk(o.question, null)}>{o.label}</button>)}
       <button className="Choice" type="button" onClick={() => onAsk(t.typed, null)}><span>Ask &ldquo;{t.typed}&rdquo; as a new question</span></button>
     </div>
-    {ms}
   </>);
-  if (r.kind === "presentation") return <p className="say">There is no earlier chart to change. {ms}</p>;
+  if (r.kind === "presentation") return <p className="say">There is no earlier chart to change.</p>;
   if (r.kind === "clarify") return (<>
     {read}
     <p className="say">{sentence(r.about)}</p>
     <Choices buttons={r.buttons} onButton={onButton} />
-    {ms}
   </>);
   if (r.kind === "decline") return (<>
     {r.reason.startsWith("route:") ? <p className="unavailable">Not available yet in this preview</p> : r.notBuilt ? <p className="unavailable">Not in this test build</p> : null}
     {read}
     <Lead lines={[r.text]} suggest={suggest} />
     <Choices buttons={rest(r.buttons)} onButton={onButton} primary />
-    {ms}
   </>);
-  return (<>{read}<AnswerView r={r} chartKind={t.chart} title={asked ?? t.typed} onButton={onButton} scoped={!!t.scope} suggest={suggest} />{ms}</>);
+  return (<>{read}<AnswerView r={r} chartKind={t.chart} title={asked ?? t.typed} onButton={onButton} scoped={!!t.scope} suggest={suggest} /></>);
 }
 
 function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButton[]; onButton: (b: PreviewButton) => void; primary?: boolean }) {

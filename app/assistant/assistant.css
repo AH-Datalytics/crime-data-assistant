@@ -93,7 +93,6 @@
 .cda .Seg button:hover { color: var(--teal); }
 .cda .Seg button.on { background: var(--teal-tint); color: var(--teal); font-weight: 600; }
 .cda .chartnote { font-size: .75rem; color: var(--light); margin: .3rem 0 0; }
-.cda .ms { font-family: var(--mono); font-size: .65rem; color: var(--index); margin: .3rem 0 0; }
 
 /* Choices (clarify, decline alternatives, P61 buttons, proposal) */
 .cda .Choices { display: flex; flex-direction: column; gap: .6rem; max-width: 36rem; margin-top: .25rem; }
