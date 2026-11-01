@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PreviewButton, PreviewResponse } from "@/lib/nibrs-shadow/preview";
 import AnswerChart, { type Line, type Point } from "./AnswerChart";
 import Logo from "./Logo";
+import QuestionStrip, { type StripItem } from "./QuestionStrip";
 
 /**
  * The Crime Data Assistant chat (spec: docs/superpowers/specs/2026-10-31-crime-data-assistant-redesign-design.md).
@@ -13,7 +14,7 @@ import Logo from "./Logo";
  */
 type Option = { label: string; question: string };
 type Reply =
-  | (PreviewResponse & { asked: string; ms?: number })
+  | (PreviewResponse & { asked: string; rewrite?: string | null; ms?: number })
   | { kind: "rewrite-ask"; why: string; options: Option[]; ms?: number }
   | { kind: "presentation"; asked: string; how: string; ms?: number }
   // The engine's coming confirm-before-run outcome for a model rewrite (stubbed until the engine returns it).
@@ -52,6 +53,36 @@ export default function AssistantClient() {
   const turnsRef = useRef<Turn[]>([]);
   const [scrollTo, setScrollTo] = useState<{ id: number; n: number } | null>(null);
   const scroll = (id: number) => setScrollTo((s) => ({ id, n: (s?.n ?? 0) + 1 }));
+  const [inView, setInView] = useState<number | null>(null);
+
+  // The question history: each question as answered; a follow-up (the rewriter's "rewrite", a button's continuation,
+  // a redrawn chart) is a smaller mark under the question before it.
+  const strip: StripItem[] = turns.map((t) => {
+    const r = t.reply;
+    const follow = !!t.viaButton || (!!r && ((r.kind === "answer" || r.kind === "clarify" || r.kind === "decline") && "rewrite" in r && r.rewrite === "rewrite"))
+      || (!!r && r.kind === "answer" && !!t.chart);
+    // A button's continuation and a redrawn chart say what was chosen or asked; the question above already says the rest.
+    const text = t.viaButton || (r?.kind === "answer" && t.chart) ? t.typed : r && "asked" in r && r.asked ? r.asked : t.typed;
+    return { id: t.id, text, follow };
+  });
+  // The answer in view: the last question whose top has passed just below the header.
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        let cur: number | null = null;
+        for (const t of turnsRef.current) {
+          const el = document.getElementById(`me${t.id}`);
+          if (el && el.getBoundingClientRect().top <= 220) cur = t.id;
+        }
+        setInView(cur ?? turnsRef.current[0]?.id ?? null);
+      });
+    };
+    onScroll();
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => { removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
+  }, [turns.length]);
   turnsRef.current = turns;
   const box = useRef<HTMLInputElement>(null);
 
@@ -132,6 +163,7 @@ export default function AssistantClient() {
           </div>
         ))}
       </main>
+      <QuestionStrip items={strip} active={inView} onGo={(id) => document.getElementById(`me${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
 
       <div className="Dock">
         <form className="DockInner" onSubmit={(e) => { e.preventDefault(); ask(input); setInput(""); }}>

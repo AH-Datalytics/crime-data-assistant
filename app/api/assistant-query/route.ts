@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const { question, path: clicked } = parsed;
   const started = Date.now();
   try {
-    let asked = question;
+    let asked = question, rewrite: string | null = null;
     if (previous && clicked.length === 0) {
       const r = deterministicRewriter.rewrite(previous, question);
       if (r.kind === "ask") return NextResponse.json({ kind: "rewrite-ask", why: r.why, options: r.options, ms: Date.now() - started });
@@ -54,10 +54,11 @@ export async function POST(req: Request) {
       // P73: a proposed rewrite is shown as "Did you mean ...?" and runs only when the user confirms it.
       if (r.kind === "propose") return NextResponse.json({ kind: "proposal", asked: r.question, question: r.question, ms: Date.now() - started });
       asked = r.question;
+      rewrite = r.kind; // "rewrite": a follow-up to the previous question; "new": a question of its own
     }
     const at = follow(shadowAnswer(asked, shadowDeps()), clicked);
     if (!at) return NextResponse.json({ error: "That button is no longer offered for this question." }, { status: 409 });
-    return NextResponse.json({ ...toPreview(at, clicked), asked, ms: Date.now() - started });
+    return NextResponse.json({ ...toPreview(at, clicked), asked, rewrite, ms: Date.now() - started });
   } catch (e) {
     return NextResponse.json({ error: `The preview engine failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
   }

@@ -123,7 +123,25 @@
 .cda .Btn.teal { background: var(--teal); border-color: var(--teal); color: #fff; }
 .cda .fine { max-width: 76rem; margin: 0 auto; padding: 0 var(--gutter) .75rem; font-size: .75rem; color: var(--light); }
 
+/* Question history: a thin strip on the right edge, one mark per question (follow-ups shorter, under their question) */
+.cda .Strip { position: fixed; right: 1.25rem; top: calc(var(--header) + 2rem); bottom: 9rem; z-index: 20; width: 1.5rem; overflow: visible; border-right: 1px solid var(--divider); }
+.cda .Mark { position: absolute; right: .35rem; width: 1.5rem; height: .75rem; padding: 0; border: 0; background: none; cursor: pointer; }
+.cda .Mark span { position: absolute; right: 0; top: 50%; width: 1.1rem; height: 3px; margin-top: -1.5px; background: var(--index); }
+.cda .Mark.sub span { width: .6rem; height: 2px; margin-top: -1px; background: var(--input); }
+.cda .Mark:hover span, .cda .Mark:focus-visible span { background: var(--darker); }
+.cda .Mark.on span { background: var(--teal); }
+.cda .Mark:focus { outline: none; }
+.cda .StripTip { position: fixed; right: 3.4rem; z-index: 40; transform: translateY(-50%); max-width: 22rem; background: var(--tooltip); color: #fff; font-size: .8rem; line-height: 1.4; padding: .5rem .75rem; border-radius: .125rem; pointer-events: none; }
+.cda .StripOpen { display: none; }
+.cda .StripList { display: none; }
+
 @media (max-width: 760px) {
+  .cda .Strip, .cda .StripTip { display: none; }
+  .cda .StripOpen { display: block; position: fixed; right: 1rem; top: calc(var(--header) + .5rem); z-index: 26; background: #fff; border: 1px solid var(--button-border); border-radius: .375rem; padding: .4rem .8rem; font-size: .8rem; color: var(--dark); }
+  .cda .StripList { display: flex; flex-direction: column; position: fixed; left: 1rem; right: 1rem; top: calc(var(--header) + 3rem); max-height: 60vh; overflow: auto; z-index: 27; background: #fff; border: 1px solid var(--divider); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .cda .StripList button { text-align: left; background: none; border: 0; border-bottom: 1px solid var(--divider); padding: .7rem 1rem; font-size: .9rem; color: var(--darker); }
+  .cda .StripList button.sub { padding-left: 2rem; font-size: .85rem; color: var(--dark); }
+  .cda .StripList button.on { color: var(--teal); }
   .cda .Answer { grid-template-columns: 1fr; }
   .cda .Nav, .cda .Preview { display: none; }
   .cda .DockInner { flex-wrap: wrap; }
