@@ -57,3 +57,13 @@ export const RESPONSE_SCHEMA = {
   },
   required: ["kind"],
 };
+
+/**
+ * Real conversations (the production log's follow-up turns): the same prompt, with the start of the app's previous
+ * answer as context, since many follow-ups reply to it ("Use Option 1"). Its own binding and cache (never committed).
+ */
+export const SYSTEM_PROMPT_WITH_ANSWER = `${SYSTEM_PROMPT}
+
+You also get the start of the app's previous answer. Use it only to understand what the follow-up refers to (an option it offered, a chart it showed). Never copy a number from it into the question.`;
+export const userPromptWithAnswer = (previous: string, previousAnswer: string, followUp: string) =>
+  `Previous: ${JSON.stringify(previous)}\nPrevious answer (start): ${JSON.stringify(previousAnswer)}\nFollow-up: ${JSON.stringify(followUp)}`;

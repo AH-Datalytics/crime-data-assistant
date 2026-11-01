@@ -106,6 +106,11 @@ export const deterministicRewriter: FollowUpRewriter = {
       && !/\b(?:that|this|those|these|it|them|previous|before|above|alongside|compare[ds]?|versus|vs|against|instead|also|too|as well)\b/i.test(unled))
       return ok(raw, "a complete question of its own", "new");
 
+    // Only now, for a follow-up that changes the previous question: that question must be one of its own. A follow-up
+    // ("Make it per capita") names no crime or place, and only the turn before it would say what it changes (real
+    // conversations, hand check #13). A complete new question, above, does not depend on it.
+    if (!prevParts.measures.length && !prevParts.places.length) return ask("The previous question was itself a change to an earlier one; ask the full question.");
+
     // P72: supporting columns, one at a time (both together are not built: Codex 7b-04.4).
     const popCol = /^(?:(?:add|show|include|give)\s+(?:me\s+)?(?:a\s+|the\s+)?(?:column\s+(?:for|with|showing)\s+(?:the\s+)?)?population(?:\s+column)?|(?:with|and)\s+(?:the\s+)?population|what(?:'s| is| was) the population(?: used)?)$/.test(fl);
     const agCol = /^(?:how many agencies (?:reported|report(?:ing|ed)?)|(?:add|show|include)\s+(?:the\s+)?(?:number of\s+)?agencies reporting|(?:with\s+)?(?:the\s+)?number of agencies reporting)$/.test(fl);
@@ -266,6 +271,13 @@ export const deterministicRewriter: FollowUpRewriter = {
             { label: `${newPlace} only`, question: clean(`${prev.slice(0, pw.at)}${newPlace}${prev.slice(pw.at + pw.text.length)}`.replace(/\s+combined\b/i, "")) },
             { label: `Add ${newPlace}; show all ${n} separately`, question: clean(withNew.replace(/\s+combined\b/i, "")) },
             ...(combinedPrev ? [{ label: `Add ${newPlace} to the combined total`, question: clean(withNew) }] : [])]);
+        } else if (/^state:/.test(String(t.places[0].value)) && !adding && !/\binstead\b/i.test(raw) && !/^state:|^national/.test(String(prevParts.places[0].value))) {
+          // A state after a city, with no "instead" (which replaces, as before; Codex review of the rule fixes, 1): a bare
+          // state names an ambiguous city's state (real conversations: "Missouri" answering "which Springfield?"); any
+          // other wording ("what about Missouri"), a year, or a city already placed asks which is meant.
+          if (bare !== null && /^ambiguous:/.test(String(prevParts.places[0].value)) && !newYear)
+            q = `${q.slice(0, pw.at)}${pw.text}, ${newPlace}${q.slice(pw.at + pw.text.length)}`;
+          else return ask(`Whether ${newPlace} means the state or ${pw.text} in ${newPlace}.`);
         } else q = `${q.slice(0, pw.at)}${newPlace}${q.slice(pw.at + pw.text.length)}`;
       }
       if (newYear) {

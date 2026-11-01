@@ -13,7 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { bindingOf, cacheKey, GENERATION, MODEL_ID, type CacheEntry, type ModelAnswer, type RewriteCache } from "../lib/nibrs-shadow/model-rewriter";
-import { RESPONSE_SCHEMA, SYSTEM_PROMPT, userPrompt } from "../lib/nibrs-shadow/model-rewriter-prompt";
+import { RESPONSE_SCHEMA, SYSTEM_PROMPT, SYSTEM_PROMPT_WITH_ANSWER, userPrompt, userPromptWithAnswer } from "../lib/nibrs-shadow/model-rewriter-prompt";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 export const CACHE_PATH = path.join(__dirname, `fixtures/answer-eval/model-rewrites/${MODEL_ID}.json`);
@@ -21,7 +21,17 @@ export const CACHE_PATH = path.join(__dirname, `fixtures/answer-eval/model-rewri
 export const PRICE = { input: 0.75, output: 3.75 };
 export const costOf = (u: CacheEntry["usage"]) => (u.input * PRICE.input + (u.output + u.thinking) * PRICE.output) / 1e6;
 /** An attempt's worst case: input estimated at one token per two characters, and the whole output cap. */
-const worstCase = (previous: string, followUp: string, cap: number) => ((SYSTEM_PROMPT.length + userPrompt(previous, followUp).length) / 2 * PRICE.input + cap * PRICE.output) / 1e6;
+const worstCase = (p: Pair, cap: number) => ((SYSTEM.length + userText(p).length) / 2 * PRICE.input + cap * PRICE.output) / 1e6;
+
+/**
+ * --with-answer (real conversations): the prompt with the start of the app's previous answer, its own binding, and a
+ * cache key that includes that answer; --cache puts such a cache outside the repository (it holds question text).
+ */
+type Pair = { previous: string; followUp: string; previousAnswer?: string };
+const WITH_ANSWER = process.argv.includes("--with-answer");
+const SYSTEM = WITH_ANSWER ? SYSTEM_PROMPT_WITH_ANSWER : SYSTEM_PROMPT;
+const userText = (p: Pair) => (WITH_ANSWER ? userPromptWithAnswer(p.previous, p.previousAnswer ?? "", p.followUp) : userPrompt(p.previous, p.followUp));
+export const answerKey = (p: Pair) => (WITH_ANSWER ? cacheKey(JSON.stringify([p.previous, p.previousAnswer ?? ""]), p.followUp) : cacheKey(p.previous, p.followUp));
 
 /**
  * `spent`: the cost of responses whose usage is known. `unresolved`: the worst case of attempts whose cost is not known
@@ -30,10 +40,10 @@ const worstCase = (previous: string, followUp: string, cap: number) => ((SYSTEM_
  */
 type Store = RewriteCache & { spent: number; unresolved?: number };
 
-async function call(previous: string, followUp: string, key: string, cap: number, reserve: () => boolean, settle: () => void): Promise<Omit<CacheEntry, "previous" | "followUp"> & { billed: number }> {
+async function call(p: Pair, key: string, cap: number, reserve: () => boolean, settle: () => void): Promise<Omit<CacheEntry, "previous" | "followUp"> & { billed: number }> {
   const body = {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: [{ role: "user", parts: [{ text: userPrompt(previous, followUp) }] }],
+    systemInstruction: { parts: [{ text: SYSTEM }] },
+    contents: [{ role: "user", parts: [{ text: userText(p) }] }],
     generationConfig: { temperature: GENERATION.temperature, maxOutputTokens: cap, responseMimeType: "application/json",
       responseSchema: RESPONSE_SCHEMA, thinkingConfig: { thinkingLevel: GENERATION.thinkingLevel } },
   };
@@ -62,18 +72,25 @@ async function call(previous: string, followUp: string, key: string, cap: number
 async function main() {
   const key = process.env.GEMINI_API_KEY;
   if (!key) { console.error("GEMINI_API_KEY is not set in this process; stopping."); process.exit(2); }
-  const pairs = JSON.parse(fs.readFileSync(arg("--pairs")!, "utf8")) as { previous: string; followUp: string }[];
+  const pairs = JSON.parse(fs.readFileSync(arg("--pairs")!, "utf8")) as Pair[];
+  const cachePath = arg("--cache") ?? CACHE_PATH;
+  // Real conversations hold question and answer text: their cache must be named, and outside the repository, before
+  // any request or write (Codex review of the rule fixes, 2). The synthetic default is unchanged.
+  // Outside means a real parent step or another drive ("..private.json" is a file inside; Codex confirmation).
+  const rel = path.relative(path.resolve(__dirname, ".."), path.resolve(cachePath));
+  const inRepo = !(rel === ".." || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel));
+  if (WITH_ANSWER && (!arg("--cache") || inRepo)) { console.error("--with-answer needs --cache <path outside the repository>; stopping."); process.exit(4); }
   const budget = Number(arg("--budget", "4.50")), limit = Number(arg("--limit", "1000000"));
-  const binding = bindingOf(SYSTEM_PROMPT);
-  fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
-  const store: Store = fs.existsSync(CACHE_PATH) ? JSON.parse(fs.readFileSync(CACHE_PATH, "utf8")) : { binding, spent: 0, entries: {} };
+  const binding = bindingOf(SYSTEM);
+  fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+  const store: Store = fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, "utf8")) : { binding, spent: 0, entries: {} };
   if (store.binding !== binding) { console.error("The cache on disk was made with another prompt, model or settings; stopping."); process.exit(3); }
-  const save = () => fs.writeFileSync(CACHE_PATH, JSON.stringify(store, null, 1));
+  const save = () => fs.writeFileSync(cachePath, JSON.stringify(store, null, 1));
   // The first pass fetches what is not cached; --retry-truncated fetches once more, with the larger cap, the answers
   // that did not parse (cut off at the cap), each only once.
   const retry = process.argv.includes("--retry-truncated");
   const cap = retry ? GENERATION.retryTruncatedMaxOutputTokens : GENERATION.maxOutputTokens;
-  const todo = [...new Map(pairs.map((p) => [cacheKey(p.previous, p.followUp), p])).entries()]
+  const todo = [...new Map(pairs.map((p) => [answerKey(p), p])).entries()]
     .filter(([k]) => (retry ? !!store.entries[k] && !store.entries[k].answer && !store.entries[k].retried : !store.entries[k]));
   store.unresolved ??= 0;
   console.log(`pairs ${pairs.length}, distinct to fetch ${todo.length}, cached ${Object.keys(store.entries).length}, spent so far $${store.spent.toFixed(4)} (+ $${store.unresolved.toFixed(4)} unresolved) of $${budget}`);
@@ -83,13 +100,13 @@ async function main() {
       if (sent >= limit) break;
       // Each attempt (retries included) is sent only if its worst case fits beside what is spent and unresolved; it is
       // reserved and saved first, and released when its usage comes back. One request at a time.
-      const worst = worstCase(p.previous, p.followUp, cap);
+      const worst = worstCase(p, cap);
       const reserve = () => { if (store.spent + store.unresolved! + worst > budget) return false; store.unresolved! += worst; save(); return true; };
       const settle = () => { store.unresolved = Math.max(0, store.unresolved! - worst); };
-      const r = await call(p.previous, p.followUp, key, cap, reserve, settle);
+      const r = await call(p, key, cap, reserve, settle);
       // A retry keeps the first attempt's usage in the total (both were billed).
       const first = store.entries[k];
-      store.entries[k] = { previous: p.previous, followUp: p.followUp, answer: r.answer, raw: r.raw, usage: r.usage,
+      store.entries[k] = { previous: p.previous, followUp: p.followUp, ...(WITH_ANSWER ? { previousAnswer: p.previousAnswer } : {}), answer: r.answer, raw: r.raw, usage: r.usage,
         ...(retry ? { retried: true, firstUsage: first.usage } : {}) };
       store.spent += r.billed; sent++;
       save();

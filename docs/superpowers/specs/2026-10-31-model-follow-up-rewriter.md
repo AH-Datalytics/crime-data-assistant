@@ -183,3 +183,40 @@ That is why each model rewrite is proposed, never run directly.
 | Model too cautious | 5% |
 
 The guard exceptions and the period default cover the parts of the last three that have evidence. The "not available yet" and help replies are a separate follow-up. Real conversations exist in the production log: session_id, 1,425 same-tab follow-up turns. Measuring on them waits for Jeff's OK to copy redacted text and send it to the model.
+
+## Real conversations (2026-11-01; Jeff's OK given directly in the engine session and through the coordinator)
+
+**Data.**
+- The production query log links turns by `session_id`, filled since 2026-04-18.
+- A follow-up turn is the next question in the same session and tab, within 30 minutes: 1,425 turns.
+- Each turn was built on the server, read-only: the previous question, the first 300 characters of the app's previous answer, and the follow-up.
+- It was redacted there with r2's rules plus email, URL, IP, phone and "my name is" patterns. It was copied off only as redacted text, into a scratchpad outside the repository, and the server copy was deleted. A residual scan found no personal details.
+- Nothing from it is committed; only the counts below.
+
+**Model.** The same rewriter with the previous answer as context: `SYSTEM_PROMPT_WITH_ANSWER`, under its own binding, with the cache kept outside the repository (`--with-answer --cache`). Spend $2.07; 13 answers still unparsed after the retry pass, counted as asked.
+
+| Tab | Turns | Run directly | Proposed | Asked |
+|---|---|---|---|---|
+| All | 1,425 | 209 (14.7%) | 119 (8.4%) | 1,097 (77.0%) |
+| Historical | 392 | 29.1% | 8.2% | 62.8% |
+| Current | 308 | 10.1% | 11.0% | 78.9% |
+| SHR | 250 | 14.8% | 7.2% | 78.0% |
+| NIBRS | 389 | 6.7% | 8.0% | 85.3% |
+| Hate crime | 86 | 1.2% | 4.7% | 94.2% |
+
+**Hand check:** 50 placed turns, drawn uniformly by a fixed seed.
+- Model proposals: 22 correct of 22.
+- Rule rewrites run directly: 26 correct of 28. Two changed the meaning:
+  - #13: the previous turn was itself a follow-up ("Make it per capita"), and "Show counts instead" left "Make it".
+  - #46: a bare "Missouri", answering "which Springfield?", replaced the city with the state.
+  - Both are fixed in the rules: a previous turn with no crime and no place asks; a bare state after an ambiguous city qualifies it, and after a placed city it asks. Each has a test.
+
+Many consecutive turns in real sessions are complete new questions. The rules accept a new question only when it names a crime, a place and a period, which explains much of the 77% asked. Reading first questions is the next experiment (item 3).
+
+**Sweep of the two rule fixes over all 1,425 real turns** (coordinator, 2026-11-01). The old rules ran 209 turns directly. The fixes change exactly 10 outcomes, all instances of the two bugs:
+- 1 bare state answering "which Springfield?", now Springfield, Missouri;
+- 9 turns whose previous turn was itself a follow-up: 8 of "Make it per capita" then "Show counts instead", and 1 of "number instead of rate" then "Give me count". These produced fragments ("Make it") and now ask.
+
+That is 10 of 209 (4.8%) direct runs that silently changed the meaning. Nothing else changed.
+
+A first version of the fix asked before checking whether the follow-up was a complete new question of its own. That made 9 complete new questions ask, such as "How many murders in Chicago in 2024" after "where is it". The check now comes after the new-question test, and a test covers it.
