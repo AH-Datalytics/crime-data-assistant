@@ -140,9 +140,9 @@ Discrepancies and unverified cases:
 - **LS-270** (wrong_action; expected clarify, got decline) "Shplftg in Nashville in 2024"
   - declined (reader): I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example "robberies in Denver in 2024".
 - **LS-282** (avoidable_decline; expected answer, got decline) "Simple assault victims in Louisville by race and sex in 2024"
-  - declined (reader): I didn't understand "and sex". Try asking it another way.
+  - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
-  - declined (reader): I didn't understand "and sex". Try asking it another way.
+  - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
 - **LS-348** (unverified; expected answer, got answer) "Robberies in Texas this year"
   - unverified route: expected `rtci answer`, got `routed to rtci: not run by this NIBRS shadow`
   - routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.

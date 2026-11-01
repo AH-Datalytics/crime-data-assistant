@@ -2387,7 +2387,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I didn't understand \"and sex\". Try asking it another way."
+    "declined (reader): I can break the numbers down one way at a time; \"and sex\" would be a second breakdown."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -2554,7 +2554,7 @@
    "outcome": "avoidable_decline",
    "diffs": [],
    "notes": [
-    "declined (reader): I didn't understand \"and sex\". Try asking it another way."
+    "declined (reader): I can break the numbers down one way at a time; \"and sex\" would be a second breakdown."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later"
@@ -3427,7 +3427,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance status, 2024. / Reported by the Memphis Police Department. / NIBRS lists stolen or damaged property for the whole incident, not for each offense i"
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance status, 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the prope"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3441,7 +3441,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance type, 2024. / Reported by the Memphis Police Department. / NIBRS lists stolen or damaged property for the whole incident, not for each offense in "
+    "delivered: Memphis, Tennessee: theft from motor vehicle offenses where a firearm was stolen by clearance type, 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the propert"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3545,7 +3545,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 1,508 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS lists stolen or damaged property for the whole incident, not for each offense in it, so the"
+    "delivered: Memphis, Tennessee: 1,508 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3559,7 +3559,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 9 burglary offenses where a firearm was recovered in 2024. / Reported by the Memphis Police Department. / NIBRS lists stolen or damaged property for the whole incident, not for each offense in it, so the property can't b"
+    "delivered: Memphis, Tennessee: 9 burglary offenses where a firearm was recovered in 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied to a single"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3573,7 +3573,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Dallas, Texas: 7,219 motor vehicle theft offenses where the vehicle was recovered in 2024. / Reported by the Dallas Police Department. / NIBRS lists stolen or damaged property for the whole incident, not for each offense in it, so the prope"
+    "delivered: Dallas, Texas: 7,219 motor vehicle theft offenses where the vehicle was recovered in 2024. / Reported by the Dallas Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3587,7 +3587,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 112 arrests on incidents where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS lists stolen or damaged property for the whole incident, not for each offense in it, so the property can't"
+    "delivered: Memphis, Tennessee: 112 arrests on incidents where a firearm was stolen in 2024. / Reported by the Memphis Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied to a sing"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3713,7 +3713,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS lists stolen or damaged property for the whole incident, not for each "
+    "delivered: Charlotte, North Carolina: 1,049 theft from motor vehicle offenses where a firearm was stolen in 2024. / Reported by the Charlotte-Mecklenburg Police Department. / NIBRS lists property for the whole incident, not for each offense in it, so "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
