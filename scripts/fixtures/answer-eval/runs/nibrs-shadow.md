@@ -75,7 +75,7 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-184 cases. Correct 162; unverified 17; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
+184 cases. Correct 161; unverified 17; wrong answers 1; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 170 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -94,7 +94,7 @@ Expected (rows) by actual (columns):
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: not measured (2/3 match, 1 not measured) |
 | answer:nibrs change | 2021 and later | 12 | pass | wrong answers: pass (0); initial action: pass (100% (12/12)); direct answers: pass (100%); numeric fixtures: pass (12/12 match) |
 | answer:nibrs count | 2021 and later | 118 | pass | wrong answers: pass (0); initial action: pass (97% (115/118)); direct answers: pass (97%); numeric fixtures: pass (115/115 match) |
-| answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
+| answer:nibrs count | spans 2021 | 2 | fail | wrong answers: fail (1); initial action: pass (100% (2/2)); direct answers: fail (50% (0 unverified)); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 14 | pass | wrong answers: pass (0); initial action: pass (100% (14/14)); direct answers: pass (100%); numeric fixtures: pass (14/14 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
@@ -144,6 +144,9 @@ Discrepancies and unverified cases:
   - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
+- **LS-345** (wrong_answer; expected answer, got answer) "Shoplifting in Ohio by year from 2018 to 2024"
+  - material statement: expected `notes that participation changed over the years (P03)`, got `Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS.`
+  - delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS.
 - **LS-348** (unverified; expected answer, got answer) "Robberies in Texas this year"
   - unverified route: expected `rtci answer`, got `routed to rtci: not run by this NIBRS shadow`
   - routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.

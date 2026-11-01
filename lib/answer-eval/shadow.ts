@@ -363,9 +363,9 @@ function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<
  * header line; the same-months line; the change line, rebuilt from the cells; the zero-base line; a known period's count;
  * a period not established; then readings, fixed statements and the source.
  */
-/** A rate's column says per 100,000 residents. */
+/** A rate's column says per 100,000 (Jeff 2026-11-01: never "residents"). */
 const rateHeader = (o: Extract<ShadowOutcome, { kind: "answer" }>) =>
-  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000 residents(?: of the reporting agencies)?$/.test(c.header));
+  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000$/.test(c.header));
 
 function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean {
   const cols = comparisonCells(o);
@@ -536,7 +536,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       // the answer computed (never a substring search), and the sentence that partial reporters are included.
       const ys = o.stateSum?.years ?? [];
       ok = ys.length > 0 && coverageColumnsMatch(o, ys.map((y) => ({ agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 })), "Agencies reporting")
-        && /reported only some months (?:and )?are included/.test(all);
+        && text.includes("Includes all agencies.");
     } else if (/^offers a button to show only agencies that reported every month/.test(s)) {
       // Clicked: the same place, crime, filters and period, counting only the Consistent Reporting Agencies (P80; one
       // fixed set over years).
@@ -550,7 +550,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       ok = !!o.stateSum && o.stateSum.years.length > 1 && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 })), "Agencies reporting");
     else if (/^notes that participation changed over the years/.test(s)) ok = /Which agencies report changed over these years/.test(all);
     else if (/^gives the rate per 100,000 residents of the reporting agencies/.test(s))
-      ok = rateHeader(o) && /per 100,000 residents of the reporting agencies/.test(o.delivered.table.columns.find((c) => c.binding.kind === "statistic" && c.binding.as === o.plan.statistics[0].as)?.header ?? "") && /^The rate is the sum per 100,000 residents of the agencies counted: [\d,]+ residents/m.test(text.join("\n"));
+      ok = rateHeader(o) && /^The rate uses the combined population of the agencies counted: [\d,]+ /m.test(text.join("\n"));
     // Increment 4: several agencies, combined totals, rates and rankings.
     else if (/^gives one total of both agencies/.test(s)) {
       // One known number of the plan's distinct agencies, said as combined.
@@ -571,7 +571,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       // is checked against the independent file's denominator with the values, Codex 7b-04.6).
       const t = o.delivered.table, pi = t.columns.findIndex((c) => c.binding.kind === "statistic" && c.header === "Population");
       const popOf = o.plan.statistics.find((x) => x.kind === "population");
-      const named = text.find((l) => /^Rates are per 100,000 residents, using the FBI's \d{4} population of /.test(l)) ?? "";
+      const named = text.find((l) => /^Rates are per 100,000, using the FBI's \d{4} population of /.test(l)) ?? "";
       ok = rateHeader(o) && pi >= 0 && popOf?.kind === "population" && o.plan.statistics.some((x) => x.kind === "rate" && x.as === popOf.of)
         && t.rows.length > 0 && t.rows.every((r) => typeof r[pi] === "number" && new RegExp(` ${(r[pi] as number).toLocaleString("en-US")}(?:;|\\.$)`).test(named));
     } else if (s === "gives each year's rate over that year's population") {
@@ -601,7 +601,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     } else if (s === "adds no other eligibility filter") {
       const p = o.plan.geography.places[0];
       ok = p.kind === "agency_set" && p.where.every((w) => w.field === "agency.type") && o.plan.filters.length === 0;
-    } else if (s === "says large means 250,000 residents or more") ok = text.includes("Large means 250,000 residents or more (the FBI's agency population).");
+    } else if (s === "says large means 250,000 residents or more") ok = text.includes("Large means a population of 250,000 or more (the FBI's agency population).");
     if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
     else if (!ok) out.push({ field: "statement", expected: s, actual: text.join(" / ").slice(0, 200), kind: "material" });
   }
@@ -1004,7 +1004,7 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     // Historical's agencies, named by their FBI names ("Figures for the Denver Police Department.").
     else if (ag) ok = all.includes(ag[1]);
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
-    else if (/^gives the rate per 100,000 residents/.test(s)) ok = /_capita$/.test(o.read.column) && all.includes("per 100,000 residents");
+    else if (/^gives the rate per 100,000 residents/.test(s)) ok = /_capita$/.test(o.read.column) && all.includes("per 100,000");
     else if (/^gives (\w+) yearly totals from one source/.test(s)) ok = rows.length === ({ ten: 10 } as Record<string, number>)[/^gives (\w+)/.exec(s)![1]] && /_total$/.test(o.read.column);
     // Provenance (Codex label review): the file's own aggregate column, read as given, never its parts re-added.
     else if (/^gives the file's (violent|property) crime total, not a re-added sum/.test(s)) ok = o.read.column === `${/(violent|property)/.exec(s)![1]}_total` && (!("uids" in o.read) || o.read.uids.length === 1);

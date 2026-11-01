@@ -319,7 +319,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
   } else {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
-    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}: a percent, not a rate per resident.`);
+    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}.`);
     // A category's total is known only when every month of it is: a month without reporting evidence leaves it unknown.
     // Said once per period (coordinator, 2026-11-01): a period with every category blank is one plain sentence.
     const isBlank = (i: number) => !!evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status));
@@ -381,8 +381,6 @@ function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, 
   const text = [share !== null && inc !== null
     ? `${agency}: ${fmt(c!)} of the ${fmt(t!)} ${whatAll} in ${when} were cleared (${share}%); the cleared ${whatAll} were in ${fmt(inc)} ${one(inc, "incidents")}.`
     : `${agency}: the available evidence does not establish the share of ${whatAll} cleared in ${when}, so no share is given.`];
-  // Jeff (Savant lesson, 2026-11-01): say what a percent is where it could be taken for a rate per resident.
-  if (share !== null) text.push(`This is the percent of ${whatAll} cleared, not a rate per resident.`);
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
   for (const s of statements) text.push(ANSWER_STATEMENTS[s]);

@@ -150,7 +150,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   };
   const pageRate = () => (computed ? [PAGE_RATE] : []);
   const read = { table: "agency_crime", column: col, release: build.release };
-  const header = `${ucFirst(m.words)}${hq.statistic === "rate" ? " per 100,000 residents" : ""}`;
+  const header = `${ucFirst(m.words)}${hq.statistic === "rate" ? " per 100,000" : ""}`;
   const shown = (v: number) => (hq.statistic === "rate" ? fmtRate(v) : fmt(v));
   const blanks = (ys: number[]) => hq.agencies.flatMap((a) => ys.filter((y) => value(a.ori, y) === null).map((y) => `${several ? `${a.label} ` : ""}${y}`));
   const blankLine = (ys: number[]) => { const b = blanks(ys); return b.length ? [`Not available in this data: ${b.join(", ")}.`] : []; };
@@ -185,7 +185,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const y = covered[0];
     const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "x" }, header }];
     const rows = hq.agencies.map((a) => [a.label, value(a.ori, y)]);
-    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000 residents" : ""} in ${y}.`, ...notes, ...blankLine([y]), ...pageRate(), AS_PUBLISHED, SRS_SOURCE);
+    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} in ${y}.`, ...notes, ...blankLine([y]), ...pageRate(), AS_PUBLISHED, SRS_SOURCE);
     return {
       kind: "historical", period,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: ["agency"], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
@@ -198,7 +198,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year" },
       ...hq.agencies.map((a, i) => ({ binding: { kind: "statistic" as const, as: several ? `x.${i}` : "x" }, header: several ? `${a.label}: ${header.toLowerCase()}` : header }))];
     const rows = covered.map((y) => [String(y), ...hq.agencies.map((a) => value(a.ori, y))]);
-    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000 residents" : ""} by year, ${yearsWords(covered[0], covered[covered.length - 1])}.`,
+    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} by year, ${yearsWords(covered[0], covered[covered.length - 1])}.`,
       ...notes, ...blankLine(covered), ...pageRate(), AS_PUBLISHED, SRS_SOURCE);
     return {
       kind: "historical", period,
@@ -209,7 +209,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   }
   const y = covered[0], v = value(hq.agencies[0].ori, y);
   if (v === null) return { kind: "historical-decline", explanation: `Crime Index has no ${hq.statistic === "rate" ? `${m.name} rate` : m.words} for ${where} in ${y}: not available in this data.` };
-  const text = lines(hq, hq.statistic === "rate" ? `${where}: ${shown(v)} ${m.words} per 100,000 residents in ${y}.` : `${where}: ${fmt(v)} ${m.words} in ${y}.`, ...notes, ...pageRate(), AS_PUBLISHED, SRS_SOURCE);
+  const text = lines(hq, hq.statistic === "rate" ? `${where}: ${shown(v)} ${m.words} per 100,000 in ${y}.` : `${where}: ${fmt(v)} ${m.words} in ${y}.`, ...notes, ...pageRate(), AS_PUBLISHED, SRS_SOURCE);
   return {
     kind: "historical", period,
     meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: [], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },

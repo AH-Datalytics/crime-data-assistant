@@ -130,7 +130,7 @@ const noPlace = as(ask("How many shoplifting offenses were there in 2024?"), "cl
 assert.deepEqual(noPlace.options.map((o) => o.label), ["The United States", "A state", "A city or agency"]);
 // Increment 5: the nation's shoplifting is summed over the agencies that reported (P61), with the button.
 const usShop = as(noPlace.options[0].continuation!, "answer");
-assert.ok(usShop.stateSum && usShop.buttons?.length === 1 && usShop.delivered.text.some((t) => t.includes("Excludes territories and federal agencies.")) && !usShop.delivered.text.some((t) => /counts reported to NIBRS/.test(t)));
+assert.ok(usShop.stateSum && usShop.buttons?.length === 1 && usShop.delivered.text.includes("Includes all agencies.") && !usShop.delivered.text.some((t) => /counts reported to NIBRS|territories/.test(t)));
 assert.equal(noPlace.options[1].entry, "which state");
 const noPeriod = as(ask("Shoplifting in Memphis"), "clarify");
 assert.deepEqual(noPeriod.options.map((o) => o.label), ["The latest complete year (2025)", "This year so far", "Another year"]);
@@ -193,7 +193,7 @@ assert.ok(sqls.at(-1)!.includes("WHEN v.age IN ('NN', 'NB', 'BB') THEN 'Under 18
 const bySex = as(ask("Simple assault victims in Detroit by sex in 2023"), "answer");
 assert.deepEqual(bySex.delivered.table.columns.map((c) => c.header), ["Victim sex", "Simple assault victims", "Share of all simple assault victims (%)"]);
 assert.deepEqual(bySex.delivered.table.rows, [["Female", 30, 60], ["Male", 20, 40], ["Unknown", null, null]]);
-assert.ok(bySex.delivered.text.includes("Each share is that category's part of all simple assault victims in 2023: a percent, not a rate per resident."));
+assert.ok(bySex.delivered.text.includes("Each share is that category's part of all simple assault victims in 2023."));
 assert.ok(bySex.delivered.text.includes("Shown blank, not zero, because reporting isn't complete: Unknown."));
 assert.deepEqual([bySex.delivered.contractProblems, bySex.delivered.chart], [[], null]);
 assert.equal(ask("Simple assault victims in Detroit by race and sex in 2023").kind === "answer", false, "two-way breakdowns are not built");
@@ -691,7 +691,8 @@ assert.ok(!txCj.delivered.text.some((t) => /residents covered|share of residents
 assert.equal(txCj.buttons![0].label, "Consistent Reporting Agencies");
 assert.deepEqual(txCj.stateSum!.years.map((y) => [y.agencies, y.partial, y.every.agencies, y.every.sum]), [[4, 1, 3, 252]]);
 // One short note line, then the source (Jeff 2026-11-01).
-assert.deepEqual(txCj.delivered.text.slice(1), ["Agencies that reported only some months are included.", "Source: FBI NIBRS."]);
+// Jeff (2026-11-01): his note, then the source; nothing else.
+assert.deepEqual(txCj.delivered.text.slice(1), ["Includes all agencies.", "Source: FBI NIBRS."]);
 const txEvery = txCj.buttons![0].continuation as Extract<ShadowOutcome, { kind: "answer" }>;
 assert.deepEqual([txEvery.plan.coverage.cohort, txEvery.delivered.table.rows], ["same_agencies", [[252, 3, `${txCj.stateSum!.years[0].every.share.toFixed(1)}%`]]]);
 assert.deepEqual(txEvery.delivered.table.columns.map((c) => c.header), ["Carjacking offenses", "Consistent Reporting Agencies", "Population covered"]);
@@ -736,13 +737,14 @@ assert.notEqual(ask("Murder incidents in Texas in 2024").kind, "srs");
 CONFLICT = { ori: "TXHPD0000", ym: "2024-02" };
 const txConflict = as(ask("Carjackings in Texas in 2024"), "answer");
 assert.deepEqual([first(txConflict), txConflict.stateSum!.years[0].conflicts, txConflict.stateSum!.years[0].every.agencies], [[298], 1, 2]);
-assert.ok(txConflict.delivered.text.some((t) => t.includes("1 agency-month whose reports disagree with the agency's record of which months it reported is not counted.")), txConflict.delivered.text.join(" / "));
+// Jeff (2026-11-01): one note only; a conflict month is still not counted (the figures above), no longer said.
+assert.ok(!txConflict.delivered.text.some((t) => /disagree/.test(t)), txConflict.delivered.text.join(" / "));
 CONFLICT = null;
 // 5. A missing population is never 0: no rate, and the share covered is a lower bound.
 assert.match(as(ask("Shoplifting rate in North Carolina in 2024"), "answer").delivered.text[0], /no rate is given for 2024, because 1 of the agencies counted have no FBI population/);
 const nc = as(ask("Shoplifting in North Carolina in 2024"), "answer");
 assert.match(String(nc.delivered.table.rows[0][2]), /^≥[\d.]+%$/, "a lower bound is marked in its cell");
-assert.ok(nc.delivered.text.some((t) => t.includes("≥ means at least: some agencies have no FBI population.")));
+assert.deepEqual(nc.delivered.text.slice(1), ["Includes all agencies.", "Source: FBI NIBRS."]);
 // 6. A span reaching this year: its completed years, this year named; a future year is declined.
 const toNow = srs("Robberies in Texas by year from 2020 to 2026");
 assert.deepEqual([toNow.delivered.table.rows.map((x) => x[0]), toNow.delivered.text[1]], [["2020", "2021", "2022", "2023", "2024", "2025"], "2026 is this year: its figures come from Current Trends (Crime Index) and are not included here."]);
@@ -757,7 +759,7 @@ assert.ok(material(wrongCount, sumLabel).includes("statement"));
 // Codex review 03. 1: the every-month view over years qualifies a missing population too.
 const ncEvery = as(ask("Shoplifting in North Carolina by year from 2023 to 2024, only agencies that reported every month"), "answer");
 assert.ok(ncEvery.delivered.table.rows.every((r) => /^≥[\d.]+%$/.test(String(r[3]))), JSON.stringify(ncEvery.delivered.table.rows));
-assert.ok(ncEvery.delivered.text.some((t) => t.includes("≥ means at least: some agencies have no FBI population.")));
+assert.ok(ncEvery.delivered.text.includes("Includes only agencies that reported complete data."));
 // 2: a span from this year into the future is declined, never routed as this year alone.
 assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").reason, "outside_release_coverage");
 
@@ -937,11 +939,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   }
 }
 
-// Jeff (Savant lesson, 2026-11-01): a percent says it is not a rate per resident, where it could be taken for one.
+// Jeff (2026-11-01): never a percent contrasted with a rate, and never "resident" (banned wording, wording.ts).
 {
   const text = (q: string) => as(ask(q), "answer").delivered.text.join(" / ");
-  assert.match(text("Simple assault victims in Detroit by sex in 2023"), /part of all simple assault victims in 2023: a percent, not a rate per resident\./);
-  assert.doesNotMatch(text("Shoplifting in Memphis in 2024"), /rate per resident/);
+  assert.doesNotMatch(text("Simple assault victims in Detroit by sex in 2023"), /not a rate|resident/);
+  assert.doesNotMatch(text("Shoplifting rate in Wichita in 2024"), /resident/);
+  assert.ok(jargon("Shoplifting per 100,000 residents").length > 0 && jargon("a percent, not a rate").length > 0, "both banned");
 }
 
 // The nearest question that works, the breakdown kept (coordinator, 2026-11-01): victims by weapon as offenses by

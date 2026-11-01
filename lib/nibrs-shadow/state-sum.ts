@@ -127,7 +127,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
 
   // Jeff (2026-11-01, "WAAAAY too much disclaimer"): no "counts reported to NIBRS" line; the lead says where they come from.
   const what = measureWords(plan);
-  const Header = `${what[0].toUpperCase()}${what.slice(1)}${isRate ? " per 100,000 residents of the reporting agencies" : ""}`;
+  const Header = `${what[0].toUpperCase()}${what.slice(1)}${isRate ? " per 100,000" : ""}`;
   const when = yearSet && yearSet.length > 1 ? `${yearSet.slice(0, -1).join(", ")} and ${yearSet[yearSet.length - 1]}` : periodWords(period.from, period.to);
   // Jeff (2026-11-01): the Consistent Reporting Agencies are one fixed set, complete for every month of the whole span
   // asked (never per year), and the span is always named.
@@ -139,10 +139,8 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // agencies have no FBI population) is marked "≥" in its cell. P80: the fixed set is "Consistent Reporting Agencies".
   const covered = (share: number, lower: number): Cell => ({ value: coveredText(share, lower > 0), status: "VALUE" });
   const CRA = "Consistent Reporting Agencies";
-  // At most one note line besides the title and the source (Jeff 2026-11-01): only what would mislead if left out.
-  const note = (...parts: (string | false)[]) => { const t = parts.filter(Boolean).join(" "); return t ? [t] : []; };
-  const nation = place.kind === "national" && "Excludes territories and federal agencies.";
-  const lower = (any: boolean) => any && "≥ means at least: some agencies have no FBI population.";
+  // Jeff (2026-11-01): one note, his words, then the source; a rate adds its basis. Nothing else.
+  const note = (every: boolean) => (every ? "Includes only agencies that reported complete data." : "Includes all agencies.");
   const view = (every: boolean): { lines: string[]; rows: Row[]; agencies: Cell[]; coverage: Cell[]; population: Cell[] } => {
     const lines: string[] = [];
     if (years.length === 1) {
@@ -155,11 +153,10 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       lines.push(isRate && v === null
         ? `${Where}: no rate is given for ${when}, because ${noPop ? `${fmt(noPop)} of ${counted} have no FBI population` : `the FBI population of ${counted} is 0`}.`
         : every
-        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
-        : `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000 residents of the reporting agencies` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
-      lines.push(...note(!every && y.partial > 0 && "Agencies that reported only some months are included.", lower(!!noPop), nation,
-        y.conflicts > 0 && `${fmt(y.conflicts)} agency-month${y.conflicts === 1 ? "" : "s"} whose reports disagree with the agency's record of which months it reported ${y.conflicts === 1 ? "is" : "are"} not counted.`));
-      if (isRate && v !== null) lines.push(`The rate is the sum per 100,000 residents of ${counted}: ${fmt(P)} residents (the FBI's ${y.year} populations).`);
+        ? `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000` : `${fmt(n)} ${what}`} in ${when}, counting only the ${fmt(y.every.agencies)} ${CRA} that reported every month ${span}.`
+        : `${Where}: ${isRate ? `${fmtRate(v!)} ${what} per 100,000` : `${fmt(n)} ${what}`} in ${when}, summed over the agencies that reported.`);
+      lines.push(note(every));
+      if (isRate && v !== null) lines.push(`The rate uses the combined population of ${counted}: ${fmt(P)} (the FBI's ${y.year} populations).`);
       // By year for one year keeps its Year cell (review 2.8).
       return { lines, rows: [{ key: yearG ? String(y.year) : null, value: v, status: v === null ? "UNAVAILABLE" : "VALUE" }],
         agencies: [{ value: every ? y.every.agencies : y.agencies, status: "VALUE" }],
@@ -169,10 +166,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     lines.push(every
       ? `${Where}: ${what} by year, ${when}, counting only the ${fmt(meta.everyAgencies)} ${CRA} that reported every month ${span}.`
       : `${Where}: ${what} by year, ${when}, summed over the agencies that reported each year.`);
-    const conflicted = byYear.filter((y) => y.conflicts);
-    lines.push(...note(!every && "Which agencies report changed over these years, and agencies that reported only some months are included.",
-      lower(byYear.some((y) => (every ? y.every.noPopulation : y.noPopulation))), nation,
-      conflicted.length > 0 && `Agency-months whose reports disagree with the agency's record of which months it reported are not counted: ${conflicted.map((y) => `${y.year} ${fmt(y.conflicts)}`).join("; ")}.`));
+    lines.push(note(every));
     return { lines, rows: byYear.map((y) => ({ key: String(y.year), value: every ? y.every.sum : y.sum, status: "VALUE" })),
       agencies: byYear.map((y) => ({ value: every ? meta.everyAgencies : y.agencies, status: "VALUE" })),
       coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),

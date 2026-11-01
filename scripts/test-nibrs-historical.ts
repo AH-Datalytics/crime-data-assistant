@@ -50,7 +50,7 @@ assert.equal(one.meaning.source, "historical");
 // P75: the published rate (one decimal), never one calculated; no rate published: blank, said, not computed.
 const rate = ok({ statistic: "rate" });
 assert.deepEqual(rate.delivered.table.rows, [[57]]);
-assert.equal(rate.delivered.text[0], "Memphis, Tennessee: 57.0 murders per 100,000 residents in 2023.");
+assert.equal(rate.delivered.text[0], "Memphis, Tennessee: 57.0 murders per 100,000 in 2023.");
 assert.equal(rate.read.column, "murder_capita");
 assert.match(no({ statistic: "rate", from: 2021, to: 2021 }), /^Crime Index has no murder rate for Memphis, Tennessee in 2021: not available in this data\.$/);
 assert.ok(!rate.delivered.text.some((t) => /as crimeindex\.org shows it/.test(t)), "a published rate needs no note");
