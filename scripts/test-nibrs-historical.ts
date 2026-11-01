@@ -127,6 +127,11 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.ok(combined.kind === "decline" && /can't be combined across agencies/.test(combined.explanation) && combined.alternative?.question === "Murders in Memphis and Dallas in 2023", JSON.stringify(combined).slice(0, 300));
   assert.notEqual(withBuild("Robberies in Memphis in 2023 according to NIBRS").kind, "historical");
   assert.notEqual(withBuild("Robberies in Memphis in 2023 by weapon").kind, "historical");
+  // Arrests and offenders are NIBRS's own counts: never Historical's, never its unit decline (scored-run regression).
+  for (const q of ["Robbery arrests in Memphis in 2023", "Aggravated assault offenders in Detroit in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind !== "historical" && !(o.kind === "decline" && /Historical counts/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
 }
 
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

@@ -1046,7 +1046,8 @@ function srsValueDiffs(o: SrsOutcome, expected: ExpectedCell[] | undefined): { d
   const lone = rows.length === 1 && rows[0].length === 1 && typeof rows[0][0] === "number" ? (rows[0][0] as number) : null;
   if (lone !== null) {
     const forms = [String(lone), lone.toLocaleString("en-US"), lone.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })];
-    if (!forms.some((f) => new RegExp(`(^|[^0-9.,])${f.replace(/[.,]/g, "\\$&")}([^0-9]|$)`).test(o.delivered.text[0] ?? "")))
+    // The whole number: nothing numeric continues it ("351" is not "351,000" or "351.9"; Codex confirmation 01).
+    if (!forms.some((f) => new RegExp(`(^|[^0-9.,])${f.replace(/[.,]/g, "\\$&")}(?![0-9]|[.,][0-9])`).test(o.delivered.text[0] ?? "")))
       diffs.push({ field: "value in the sentence", expected: forms[1], actual: (o.delivered.text[0] ?? "").slice(0, 160), kind: "material" });
   }
   for (const x of expected) {

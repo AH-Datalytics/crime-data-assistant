@@ -441,8 +441,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const yrs = sp.period.form === "year" ? [sp.period.year, sp.period.year] : sp.period.form === "range" ? [sp.period.from, sp.period.to] : null;
     const historicalShape = agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
       && (sp.statistic === "count" || sp.statistic === "rate");
-    // A unit the file doesn't count this crime in ("robbery victims"): said plainly, with NIBRS's count of that unit offered.
-    if (historicalShape && !historicalUnitFits(sp.measures[0], sp.unit)) {
+    // The crime counted in the other of its two units ("robbery victims"): said plainly, with NIBRS's count of that unit
+    // offered. Arrests, offenders and incidents are NIBRS's own counts and go on to it.
+    if (historicalShape && (sp.unit === "victims" || sp.unit === "offenses") && !historicalUnitFits(sp.measures[0], sp.unit)) {
       const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
       return decline("unsupported_capability", `Historical counts ${historicalCounts(sp.measures[0])}, not ${sp.unit}. NIBRS counts ${sp.unit} for the agencies that report to it.`,
         { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs } });
