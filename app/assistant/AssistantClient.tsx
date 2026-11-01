@@ -190,10 +190,12 @@ export default function AssistantClient() {
     return () => removeEventListener("keydown", onKey);
   }, []);
 
+  // This chat's id, for the model rewriter's cap on calls per session.
+  const session = useRef(Math.random().toString(36).slice(2));
   async function fetchReply(question: string, path: string[], previous?: string | null): Promise<Reply> {
     try {
       const res = await fetch("/api/assistant-query", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, path, ...(previous ? { previous } : {}) }) });
+        body: JSON.stringify({ question, path, session: session.current, ...(previous ? { previous } : {}) }) });
       const j = await res.json();
       return "error" in j ? { kind: "error", error: j.error } : (j as Reply);
     } catch (e) {
@@ -346,7 +348,8 @@ export default function AssistantClient() {
               <div className={`Re${t.loading ? " loading" : ""}`}>{t.reply
                 ? <Short.Provider value={t.short ?? []}><ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })}
                     suggest={suggestions(t)} /></Short.Provider>
-                : <div className="wait">Answering</div>}</div>
+                : <div className="wait">Answering</div>}
+</div>
             </section>
           ))}
         </main>
@@ -378,10 +381,11 @@ function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: Pre
     )
   ) : null;
 
+  // The model's rewrite of a follow-up (P73): shown, never run until it is confirmed.
   if (r.kind === "proposal") return (<>
-    <p className="say">Did you mean <b>{r.question}</b>?</p>
-    <div className="Choices"><button className="Choice primary" type="button" onClick={() => onAsk(r.question, null)}>Run it</button>
-      <button className="Choice" type="button" onClick={() => { setDraft(r.question); setEditing(true); }}>Edit it</button></div>
+    <p className="Lead">Did you mean: <b>{r.question}</b></p>
+    <div className="Propose"><button className="Btn teal" type="button" onClick={() => onAsk(r.question, null)}>Run</button>
+      <button className="Btn" type="button" onClick={() => { setDraft(r.question); setEditing(true); }}>Edit</button></div>
     {editing ? <form className="EditQ" style={{ marginTop: "1rem" }} onSubmit={(e) => { e.preventDefault(); onAsk(draft, null); setEditing(false); }}><input value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus /><button className="Btn teal" type="submit">Ask this</button></form> : null}
   </>);
   if (r.kind === "rewrite-ask") return (<>

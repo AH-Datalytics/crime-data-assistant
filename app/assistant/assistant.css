@@ -49,6 +49,8 @@
 .cda .Frame { border: 1px solid #E1E1D8; padding: 1rem 1.15rem; }
 .cda .Frame .notes { margin-bottom: 0; }
 .cda .Frame + .Choices { margin-top: .75rem; }
+/* The model's proposal: Run or Edit */
+.cda .Propose { display: flex; gap: .6rem; }
 @media (max-width: 760px) { .cda .Frame { padding: .6rem .65rem; } }
 /* How a new answer appears (?appear=type|fade|none, for Jeff to compare) */
 @keyframes cdaFadeIn { from { opacity: 0; } to { opacity: 1; } }

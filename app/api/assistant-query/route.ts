@@ -8,6 +8,10 @@
  * rewriter's question back is returned as a clarify; a presentation-only follow-up is returned as such, for the page
  * to redraw the chart with no data turn; a proposed rewrite (P73) is returned for the user to confirm, never run. Buttons
  * carry `path` against `asked`, with no `previous`. A decline's `detail` (for logs) is never sent: toPreview omits it.
+ *
+ * Where the deterministic rewriter can't tell, the model rewriter is asked live (P73, ./live-rewriter.ts): its rewrite
+ * comes back as a proposal; at the spend caps the page is asked for the full question. `session` (the page's id for the
+ * chat) counts calls per session.
  */
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -17,6 +21,7 @@ import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
 import { deterministicRewriter } from "@/lib/nibrs-shadow/follow-up";
 import { MAX_QUESTION, follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
 import { titlesFor } from "@/app/assistant/title";
+import { liveModelRewrite } from "./live-rewriter";
 
 export const dynamic = "force-dynamic";
 const notFound = () => new NextResponse("Not Found", { status: 404 });
@@ -45,11 +50,18 @@ export async function POST(req: Request) {
   const raw = (body as { previous?: unknown }).previous;
   const previous = typeof raw === "string" && raw.trim() && raw.length <= MAX_QUESTION ? raw.trim() : null;
   const { question, path: clicked } = parsed;
+  const extra = body as { session?: unknown };
+  const session = typeof extra.session === "string" ? extra.session.slice(0, 64) : "none";
   const started = Date.now();
   try {
     let asked = question, rewrite: string | null = null;
     if (previous && clicked.length === 0) {
-      const r = deterministicRewriter.rewrite(previous, question);
+      let r = deterministicRewriter.rewrite(previous, question);
+      if (r.kind === "ask") {
+        const m = await liveModelRewrite(previous, question, session);
+        if (m === "capped") return NextResponse.json({ kind: "rewrite-ask", why: "Please ask the full question, with the crime, the place and the years.", options: r.options, ms: Date.now() - started });
+        if (m && m.kind !== "ask") r = m;
+      }
       if (r.kind === "ask") return NextResponse.json({ kind: "rewrite-ask", why: r.why, options: r.options, ms: Date.now() - started });
       if (r.kind === "presentation") return NextResponse.json({ kind: "presentation", asked: r.question, how: r.how, ms: Date.now() - started });
       // P73: a proposed rewrite is shown as "Did you mean ...?" and runs only when the user confirms it.
