@@ -3408,7 +3408,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm. For example: \"robberies in Denver i"
    ],
    "capability": "decline:no meaning",
    "era": "no period"

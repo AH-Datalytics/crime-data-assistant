@@ -20607,7 +20607,7 @@
     "statements": [
      "gives each year's agencies counted and share of residents covered",
      "states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included (P61)",
-     "notes that participation changed over the years (P03)",
+     "offers the Consistent Reporting Agencies view for the participation change (P03, P85)",
      "offers a button to show only agencies that reported every month; clicking it keeps Ohio, shoplifting and 2018-2024 and counts one fixed set of agencies that reported every month of 2018 through 2024 (all 84 months), not a different set each year (P03, P61)",
      "ends with the source line \"Source: FBI NIBRS.\" (P63)"
     ]
