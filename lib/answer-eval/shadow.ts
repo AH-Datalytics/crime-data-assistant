@@ -584,7 +584,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       ok = !!o.stateSum && o.stateSum.years.length > 1 && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 })), "Agencies reporting");
     // P03 (Jeff 2026-11-01): the participation note is the Consistent Reporting Agencies offer, not a sentence in the
     // notes: a sum over several years offers the fixed set (the lead's sentence names it; the button opens it).
-    else if (/^notes that participation changed over the years/.test(s))
+    else if (/^notes that participation changed over the years|^offers the Consistent Reporting Agencies view for the participation change/.test(s))
       ok = (o.stateSum?.years.length ?? 0) > 1 && (o.buttons ?? []).some((b) => b.label === "Consistent Reporting Agencies" && b.continuation?.kind === "answer" && b.continuation.plan.coverage.cohort === "same_agencies");
     else if (/^gives the rate per 100,000 residents of the reporting agencies/.test(s))
       ok = rateHeader(o) && /^The rate uses the combined population of the agencies counted: [\d,]+ /m.test(text.join("\n"));

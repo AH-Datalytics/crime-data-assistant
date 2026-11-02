@@ -51,6 +51,8 @@ function stub(sql: string): unknown[][] {
     return years.map((y) => (months.some((m) => m.startsWith(y) && cell(m)[0] === null) ? [y, null, "UNKNOWN"] : [y, 7 * months.filter((m) => m.startsWith(y)).length, "VALUE"]));
   }
   if (/AS period/.test(sql)) return months.map((m) => [m, ...cell(m)]);
+  // A total with its incidents beside it (P66): the count, then the incidents (5 a month), each with its status.
+  if (/_incidents"/.test(sql)) return months.some((m) => cell(m)[0] === null) ? [[null, "UNKNOWN", null, "UNKNOWN"]] : [[7 * months.length, "VALUE", 5 * months.length, "VALUE"]];
   return months.some((m) => cell(m)[0] === null) ? [[null, "UNKNOWN"]] : [[7 * months.length, "VALUE"]];
 }
 /** Populations by ORI (null: the FBI gives none), and Texas's city agencies. */
@@ -966,6 +968,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.doesNotMatch(text("Simple assault victims in Detroit by sex in 2023"), /not a rate|resident/);
   assert.doesNotMatch(text("Shoplifting rate in Wichita in 2024"), /resident/);
   assert.ok(jargon("Shoplifting per 100,000 residents").length > 0 && jargon("a percent, not a rate").length > 0, "both banned");
+  for (const t of ["Sorry, I can't answer that.", "I apologize", "Unfortunately the data", "I'm afraid not"]) assert.ok(jargon(t).length > 0, `apology banned: ${t}`);
 }
 
 // The nearest question that works, the breakdown kept (coordinator, 2026-11-01): victims by weapon as offenses by
@@ -1014,5 +1017,14 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const tampered = { ...txCjA, buttons: txCjA.buttons!.map((x) => ({ ...x, continuation: { ...(x.continuation as Extract<ShadowOutcome, { kind: "answer" }>),
     delivered: { ...(x.continuation as Extract<ShadowOutcome, { kind: "answer" }>).delivered, table: { ...(x.continuation as Extract<ShadowOutcome, { kind: "answer" }>).delivered.table, rows: [[252, 999, "99.9%"]] } } } })) };
   assert.equal(scoreShadow(sumLabel, tampered as ShadowOutcome, r, ctx, sumV(307)).result!.values, "mismatch");
+}
+// Jeff (2026-11-01), his exact question: "vs" joins places, and an offered question must answer and keep every place
+// and crime asked; never one built by deleting words ("chicago memphis carjackings per year since 2022").
+{
+  const jeff = ask("chicago vs memphis carjackings per year since 2022");
+  assert.ok(jeff.kind !== "decline" || !jeff.alternative || /chicago/i.test(jeff.alternative.question ?? "") && /memphis/i.test(jeff.alternative.question ?? ""), JSON.stringify(jeff).slice(0, 300));
+  assert.ok(jeff.kind !== "decline" || !/^This isn't available yet: to compare/i.test(jeff.explanation), "vs is read as places side by side");
+  const cmp = ask("Chicago compared to Memphis carjackings in 2024");
+  assert.ok(cmp.kind === "answer" && cmp.plan.geography.places.length === 2, JSON.stringify(cmp).slice(0, 200));
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

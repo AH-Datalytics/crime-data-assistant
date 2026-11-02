@@ -98,7 +98,9 @@ export function meaningProblem(previous: string, followUp: string, rewrite: stri
       return `the follow-up's ${c} (${v}) is missing`;
     }
   }
-  for (const [c, vs] of P.by) if (!F.by.has(c) && !same(vs, O.by.get(c))) return `the previous ${c} changed although the follow-up does not change it`;
+  // A relative period ("the year before") changes the period without naming one (coordinator, 2026-11-01).
+  for (const [c, vs] of P.by) if (!F.by.has(c) && !same(vs, O.by.get(c)) && !(c === "period" && derivedYears(previous, followUp).length))
+    return `the previous ${c} changed although the follow-up does not change it`;
   // "y/y % change": a percent change is read as a share with a change; allowed only for a follow-up that says percent.
   const percentChange = allow && /%|\bpercent/i.test(followUp) && O.by.has("change");
   for (const c of O.by.keys()) if (!P.by.has(c) && !F.by.has(c) && c !== "unit" && !(c === "share" && percentChange)) return `a ${c} neither question asked for`;
@@ -131,6 +133,10 @@ export function guarded(a: ModelAnswer | null, previous: string, followUp: strin
   const q = a.question;
   if (typeof q !== "string" || !q.trim() || q.length > 300) return ask("The model's rewrite could not be used; ask the full question.");
   const allowed = new Set([...numbers(previous), ...numbers(followUp)]);
+  // A relative period ("the year before", "three years earlier") names years the conversation doesn't: only years the
+  // follow-up's own offset reaches from the previous question's years are allowed (coordinator, 2026-11-01; Codex
+  // follow-up review 01.1: never a nearby guess).
+  for (const y of derivedYears(previous, followUp)) allowed.add(String(y));
   if (numbers(q).some((n) => !allowed.has(n))) return ask("The rewrite named a number that is not in the conversation; ask the full question.");
   const problem = meaningProblem(previous, followUp, q);
   if (problem) return ask(`The rewrite was not used (${problem}); ask the full question.`);
@@ -152,6 +158,53 @@ export function hybridRewriter(model: FollowUpRewriter): FollowUpRewriter {
       return m.kind === "ask" ? d : m;
     },
   };
+}
+
+/** Words that make a period relative to the previous question's ("the year before", "the next year", "three years earlier"). */
+const RELATIVE = /\b(?:before|after|previous|prior|following|next|earlier|later|back|ago)\b/i;
+const OFFSET_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+/**
+ * The years a relative-period follow-up can reach from the previous question's years: only for a follow-up about years
+ * ("year" or "years" with before, after, previous, next, earlier, later, back or ago), and only as far as the offset it
+ * names (a number or a number word; "the year before" is one), in its direction (earlier, before, back, ago, previous
+ * or prior: back; later, after, next or following: on; Codex follow-up confirmation 02). A single offset ("three years
+ * earlier") reaches exactly that year; a span ("the three years before that") every year up to it; nothing else.
+ */
+function derivedYears(previous: string, followUp: string): number[] {
+  if (!/\byears?\b/i.test(followUp) || !RELATIVE.test(followUp)) return [];
+  const ys = (previous.match(/\b(?:19|20)\d{2}\b/g) ?? []).map(Number);
+  if (!ys.length) return [];
+  const f = followUp.toLowerCase();
+  const back = /\b(?:before|earlier|back|ago|previous|prior)\b/.test(f), on = /\b(?:after|later|next|following)\b/.test(f);
+  if (back === on) return [];
+  const named = [...f.matchAll(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\b/g)].map((m) => OFFSET_WORDS[m[1]] ?? Number(m[1]));
+  const k = Math.max(1, ...named.filter((n) => n >= 1 && n <= 20));
+  const span = /\bthe\s+(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\s+years\b/.test(f);
+  const sign = back ? -1 : 1;
+  const out = new Set<number>();
+  for (const y of ys) {
+    if (span) for (let d = 1; d <= k; d++) out.add(y + sign * d);
+    else out.add(y + sign * k);
+  }
+  return [...out];
+}
+
+/**
+ * The hybrid, live (coordinator, 2026-11-01): the deterministic rewriter first, its certain rewrites run directly;
+ * where it asks, the model's answer through the same guards (a proposal, never run before the user confirms it). The
+ * caller makes the model call with this module's prompt (model-rewriter-prompt.ts: SYSTEM_PROMPT, userPrompt,
+ * RESPONSE_SCHEMA) and keeps its key and spending limits; `callModel` gives the model's JSON answer, or null when there
+ * is none (a failure, a limit reached). Where both ask, the baseline's ask, with its options.
+ */
+export async function hybridRewriteAsync(previous: string, followUp: string,
+  callModel: (previous: string, followUp: string) => Promise<unknown | null>): Promise<Rewrite> {
+  const d = deterministicRewriter.rewrite(previous, followUp);
+  if (d.kind !== "ask") return d;
+  let answer: ModelAnswer | null = null;
+  try { answer = (await callModel(previous, followUp)) as ModelAnswer | null; } catch { answer = null; }
+  if (!answer) return d;
+  const m = guarded(answer, previous, followUp);
+  return m.kind === "ask" ? d : m;
 }
 
 /** The cached model rewriter: offline and synchronous, for a cache of this binding. A miss is asked about, and counted. */

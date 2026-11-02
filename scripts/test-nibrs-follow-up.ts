@@ -8,9 +8,11 @@ import assert from "node:assert/strict";
 import { deterministicRewriter as R, PLACE_ASK, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
 import { shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
+import { readQuestion } from "../lib/nibrs-shadow/reading";
 
 const P = "Shoplifting in Memphis by year from 2021 to 2024";
-const rw = (prev: string, f: string) => R.rewrite(prev, f);
+// A fixed calendar year (2026), so no test depends on today's date (timing-gate inventory: no clock reads).
+const rw = (prev: string, f: string, thisYear = 2026) => R.rewrite(prev, f, thisYear);
 const q = (r: Rewrite) => { assert.notEqual(r.kind, "ask", JSON.stringify(r)); return (r as Extract<Rewrite, { question: string }>).question; };
 const asked = (r: Rewrite) => { assert.equal(r.kind, "ask", JSON.stringify(r)); return r as Extract<Rewrite, { kind: "ask" }>; };
 
@@ -156,6 +158,49 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   assert.equal(q(rw("Female simple assault victims in Memphis in 2024", "male")), "Male simple assault victims in Memphis in 2024");
   assert.equal(asked(rw(P, "hmm that seems off")).why, PLACE_ASK);
   assert.doesNotMatch(PLACE_ASK, /could not be placed|follow-up/);
+}
+
+// Jeff's real follow-up (coordinator, 2026-11-01): "show me 2023" after a monthly question is the first period swap most
+// people try. Every lead-in, a year, a range of years or a month; relative periods from the previous question's period.
+{
+  const M = "Carjacking offenses in Memphis by month in 2024";
+  for (const f of ["show me 2023", "give me 2023", "how about 2023", "now 2023", "do 2023", "what about 2023", "for 2023", "in 2023", "same for 2023", "the same for 2023", "2023", "show me 2023?"])
+    assert.equal(q(rw(M, f)), "Carjacking offenses in Memphis by month in 2023", f);
+  assert.equal(q(rw(M, "and 2023")), "Carjacking offenses in Memphis by month in 2023 and 2024", "\"and\" adds, as before");
+  assert.equal(q(rw(M, "show me 2021 to 2023")), "Carjacking offenses in Memphis by month from 2021 to 2023");
+  assert.equal(q(rw(M, "what about from 2021 through 2023")), "Carjacking offenses in Memphis by month from 2021 to 2023");
+  assert.equal(q(rw(M, "show me March 2023")), "Carjacking offenses in Memphis by month in March 2023");
+  assert.equal(q(rw("Shoplifting in Memphis in January 2024", "show me March 2023")), "Shoplifting in Memphis in March 2023");
+  assert.equal(q(rw("Shoplifting in Memphis by year from 2021 to 2024", "show me 2017 to 2020")), "Shoplifting in Memphis by year from 2017 to 2020");
+  // Relative periods, from the previous question's period.
+  for (const f of ["what about the year before?", "the previous year", "the prior year", "the year before that"]) assert.equal(q(rw(M, f)), "Carjacking offenses in Memphis by month in 2023", f);
+  for (const f of ["the year after", "what about the following year?", "next year"]) assert.equal(q(rw(M, f)), "Carjacking offenses in Memphis by month in 2025", f);
+  assert.equal(q(rw("Shoplifting in Memphis by year from 2021 to 2024", "the five years before that")), "Shoplifting in Memphis by year from 2016 to 2020");
+  assert.equal(q(rw("Shoplifting in Memphis in 2024", "the three years before that")), "Shoplifting in Memphis from 2021 to 2023");
+  // Codex follow-up review 01.2, 01.3: "three years before that" is one year; an offset from a range, or "last year"
+  // after a range, is asked about.
+  assert.equal(q(rw("Shoplifting in Memphis in 2024", "three years before that")), "Shoplifting in Memphis in 2021");
+  // A first question with "vs" between places is places side by side, as "and" (coordinator, 2026-11-01); "2024 vs
+  // 2023" stays a period comparison.
+  assert.equal(readQuestion("Memphis vs Nashville carjacking offenses in 2024", 2026).ledger.question, readQuestion("Memphis and Nashville carjacking offenses in 2024", 2026).ledger.question);
+  assert.equal(readQuestion("Robberies in Memphis versus Nashville in 2023", 2026).ledger.question, readQuestion("Robberies in Memphis and Nashville in 2023", 2026).ledger.question);
+  assert.ok(readQuestion("Shoplifting in Memphis in 2024 vs 2023", 2026).comparison);
+  assert.deepEqual(asked(rw("Shoplifting in Memphis from 2021 to 2024", "three years before that")).options.map((o) => o.label), ["2018", "2018 to 2020"]);
+  const lastAfterRange = rw("Shoplifting in Memphis from 2021 to 2024", "last year");
+  assert.equal(asked(lastAfterRange).options.length, 2);
+  // Ambiguous: asked, with a button for each reading.
+  const before = asked(rw("Shoplifting in Memphis by year from 2021 to 2024", "the year before"));
+  assert.deepEqual(before.options.map((o) => o.question), ["Shoplifting in Memphis by year in 2020", "Shoplifting in Memphis by year from 2020 to 2023"]);
+  assert.deepEqual(asked(rw(M, "last year")).options.map((o) => o.label), ["2025", "2023"]);
+  assert.equal(q(rw(M, "last year", 2024)), "Carjacking offenses in Memphis by month in 2023", "both readings the same year: no question");
+  // A previous question with more than one period, or none, is asked about; so is an impossible range.
+  asked(rw("Shoplifting in Memphis in 2019 and 2024", "show me 2021 to 2023"));
+  asked(rw("Shoplifting in Memphis in 2019 and 2024", "the year before"));
+  asked(rw(M, "show me 2023 to 2021"));
+  // A complete question for any source stands alone for every caller of the rewriter (coordinator, 2026-11-01).
+  assert.equal(R.rewrite("Robberies in Memphis by year from 1990 to 2024", "Robberies in Memphis and Nashville by year from 2015 to 2024").kind, "new");
+  // A previous question with no period takes the range (real turns), as a bare year does.
+  assert.equal(q(rw("which city had the steepest decline in total violent crime?", "from 2015 to 2024")), "which city had the steepest decline in total violent crime from 2015 to 2024");
 }
 
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");
