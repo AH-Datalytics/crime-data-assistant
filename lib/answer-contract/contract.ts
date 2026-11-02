@@ -102,7 +102,8 @@ export type OfferRole = "consistent_agencies" | "all_agencies" | "other_source" 
  * `run`: what choosing it does, a path of button labels from the original question, or a new question.
  */
 export type Offer = { role: OfferRole; targetSource: SourceId; label: string; text: { before: string; link: string; after: string } | null;
-  run: { path: string[] } | { question: string } };
+  run: { path: string[] } | { question: string } | { input: string } };
+// `input`: the button asks the person for something first ("Another year" asks which year), then the whole question.
 export type ChartKind = "line" | "bar" | "horizontal_bar" | "grouped_bar" | "stacked_bar" | "stacked_100";
 export type ChartOptions = { allowed: ChartKind[]; default: ChartKind | null; exclusive: boolean | undefined; exclusiveByColumn: Record<string, boolean> | undefined };
 

@@ -189,6 +189,8 @@ function readComparison(text: string, currentYear: number): { comparison: Compar
  */
 /** P61's consistent-reporters wording ("only agencies that reported every month"): read here, and removed by the
  * answer contract to give the all-agencies question. */
+/** "according to NIBRS": the source asked for in words (P01). */
+export const NIBRS_WORDS = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
 export const CONSISTENT_WORDS = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters)\b/i;
 
 export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
@@ -250,7 +252,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const combined = /\b(?:combined|together|altogether)\b/i.test(own);
   if (combined) text = text.replace(/\s*\b(?:combined|together|altogether)\b/gi, "");
   // Increment 5: words that choose a source or a cohort are flags, and the reader is not asked to apply them.
-  const NIBRS_ASKED = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
+  const NIBRS_ASKED = NIBRS_WORDS;
   const nibrsAsked = NIBRS_ASKED.test(own);
   if (nibrsAsked) text = text.replace(NIBRS_ASKED, "");
   const CONSISTENT = CONSISTENT_WORDS;

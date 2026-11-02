@@ -82,7 +82,12 @@ export function toPreview(o: ShadowOutcome, path: string[] = [], places?: PlaceI
   if (!places) return r;
   const presentation = presentationOf(o, places, { question, path });
   // The buttons shown are the presentation's: one it does not offer (a single period's consistent agencies) is not shown.
-  if (r.kind === "answer" && "offers" in presentation) r.buttons = r.buttons.filter((b) => presentation.offers.some((x) => x.label === b.label));
+  if (r.kind === "answer" && "offers" in presentation) {
+    r.buttons = r.buttons.filter((b) => presentation.offers.some((x) => x.label === b.label));
+    // An offer the engine has no button for (the way back from the consistent view) is rendered from its run.
+    for (const x of presentation.offers) if (!r.buttons.some((b) => b.label === x.label))
+      r.buttons.push("path" in x.run ? { label: x.label, path: x.run.path, kind: "continuation" } : "question" in x.run ? { label: x.label, path, kind: "question", question: x.run.question } : { label: x.label, path, kind: "entry" });
+  }
   return { ...r, presentation };
 }
 function previewOf(o: ShadowOutcome, path: string[]): PreviewResponse {

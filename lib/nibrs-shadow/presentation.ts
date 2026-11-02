@@ -12,7 +12,7 @@ import type { ShadowOption, ShadowOutcome } from "./answer";
 import { CATEGORY, fmt, measureWords, monthName, periodWords } from "./deliver";
 import { HISTORICAL_MEASURE, type HistoricalAnswer } from "./historical";
 import { agencyName, reportedBy, STATE_NAMES, type PlaceIndex } from "./places";
-import { CONSISTENT_WORDS } from "./reading";
+import { CONSISTENT_WORDS, NIBRS_WORDS } from "./reading";
 import { SRS_MEASURE, type SrsAnswer } from "./srs";
 import type { StateSumMeta } from "./state-sum";
 
@@ -81,11 +81,23 @@ export type Reached = { question?: string; path?: string[] };
 function offerOf(o: ShadowOption, from: SourceId, inClarify: boolean, at: Reached): Offer {
   const role = o.role ?? (o.entry ? "entry" : o.question ? "ask_instead" : inClarify ? "choice" : "nearest_question");
   const targetSource = o.targetSource ?? (o.continuation ? sourceOf(o.continuation) : from);
-  return { role, targetSource, label: o.label, text: null, run: o.question ? { question: o.question } : { path: [...(at.path ?? []), o.label] } };
+  return { role, targetSource, label: o.label, text: null, run: o.question ? { question: o.question } : o.entry && !o.continuation ? { input: o.entry } : { path: [...(at.path ?? []), o.label] } };
+}
+/**
+ * The all-agencies question for a consistent view asked in words: the wording removed, and NIBRS kept as the source,
+ * so the way back never lands on another source (Codex contract confirmation 01.2).
+ */
+export function allAgencies(question: string): string {
+  const q = question.replace(CONSISTENT_WORDS, "").replace(/\s+/g, " ").trim().replace(/[?.!\s]+$/, "");
+  return NIBRS_WORDS.test(q) ? q : `${q} according to NIBRS`;
 }
 /** The engine lines the title and lead restate (the headline, when the table holds a number; the reporter line). */
-function restated(d: { table: ResultTable; text: string[]; headline?: string }, extra: string[]): Set<string> {
-  const anyNumber = d.table.rows.some((r) => r.some((v) => typeof v === "number"));
+function restated(d: { table: ResultTable; text: string[]; headline?: string }, extra: string[], valueAs?: string): Set<string> {
+  // Only the answer's own number counts: a column beside it (agencies reporting, population covered) never stands in
+  // for a missing result, whose explanation is the headline (Codex contract confirmation 01.1).
+  const at = valueAs === undefined ? 0 : d.table.columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === valueAs);
+  const valueCols = valueAs === undefined ? d.table.columns.map((_, i) => i).filter((i) => d.table.columns[i].binding.kind === "statistic") : [at];
+  const anyNumber = d.table.rows.some((r) => valueCols.some((i) => i >= 0 && typeof r[i] === "number"));
   return new Set([...(anyNumber ? [d.headline ?? d.text[0] ?? ""] : []), ...extra]);
 }
 
@@ -164,7 +176,7 @@ function nibrsPresentation(o: Extract<ShadowOutcome, { kind: "answer" }>, places
     // The way back: one button back when this view was reached by its button, else the question without its wording.
     const path = at.path ?? [];
     const back = path.length && path[path.length - 1] === "Consistent Reporting Agencies" ? { path: path.slice(0, -1) }
-      : at.question ? { question: at.question.replace(CONSISTENT_WORDS, "").replace(/\s+/g, " ").trim() } : null;
+      : at.question ? { question: allAgencies(at.question) } : null;
     if (every && back) offers.push({ role: "all_agencies", targetSource: "nibrs", label: "All reporting agencies", run: back,
       text: { before: `This counts only the ${fmt(meta.everyAgencies)} Consistent Reporting ${meta.everyAgencies === 1 ? "Agency" : "Agencies"} that reported every month. `, link: "See all reporting agencies instead", after: "." } });
     else {
@@ -174,7 +186,7 @@ function nibrsPresentation(o: Extract<ShadowOutcome, { kind: "answer" }>, places
         link: "see only the Consistent Reporting Agencies", after: ` that reported every month from ${from} through ${to}.` } };
     }
   }
-  const known = restated(o.delivered, agencies.length ? [reportedBy(agencies.map((x) => agencyName(places, x)))] : []);
+  const known = restated(o.delivered, agencies.length ? [reportedBy(agencies.map((x) => agencyName(places, x)))] : [], valueStat.as);
   return {
     source: "nibrs", titleParts, lead, offers, ...notesFrom("nibrs", o.delivered.answerStatements, o.delivered.text, known),
     coverage: { requested: plan.statistics.some((s) => s.kind === "agencies") },

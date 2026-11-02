@@ -27,7 +27,7 @@ import assert from "node:assert/strict";
 import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
   type SourceId, type SourceProfile } from "../lib/answer-contract/contract";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { presentationOf } from "../lib/nibrs-shadow/presentation";
+import { presentationOf, sourceOf } from "../lib/nibrs-shadow/presentation";
 import { follow, toPreview } from "../lib/nibrs-shadow/preview";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { BANNED } from "../lib/nibrs-shadow/wording";
@@ -45,7 +45,7 @@ function grid(sql: string): [string, string, number | null, string][] {
   const rows: [string, string, number | null, string][] = [];
   for (const o of oris) for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) {
     const ym = `${y}-${String(m).padStart(2, "0")}`;
-    rows.push(o === "KS0000002" && y < 2024 ? [o, ym, null, "UNKNOWN"] : [o, ym, 5, "VALUE"]);
+    rows.push(/^[A-Z]{2}0000002$/.test(o) && y < 2024 ? [o, ym, null, "UNKNOWN"] : [o, ym, 5, "VALUE"]);
   }
   return rows;
 }
@@ -53,8 +53,11 @@ function stateSum(sql: string): unknown[][] | null {
   if (sql.includes("agency/data.parquet")) {
     const years = /data_year IN \(([\d, ]+)\)/.exec(sql)![1].split(", ").map(Number);
     const hdr = /u\.state_abbr IN \(([^)]*)\)/.exec(sql);
-    const oris = hdr ? ["KS0000001", "KS0000002"] : [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
-    return oris.flatMap((o) => years.map((y) => (hdr ? [o, y, 100_000, "KS"] : [o, y, 100_000, "", o.slice(0, 2)])));
+    // Kansas, and Nebraska, whose second agency has no FBI population (no rate can be given).
+    const st = hdr ? hdr[1].split(", ")[0].slice(1, -1) : "KS";
+    const oris = hdr ? [`${st}0000001`, `${st}0000002`] : [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
+    const pop = (o: string) => (o === "NE0000002" ? null : 100_000);
+    return oris.flatMap((o) => years.map((y) => (hdr ? [o, y, pop(o), st] : [o, y, pop(o), "", o.slice(0, 2)])));
   }
   if (/repsum/.test(sql)) {
     const by = new Map<string, number[] & unknown[]>();
@@ -103,6 +106,10 @@ const FIXTURES: Record<string, string[]> = {
     "Shoplifting in Kansas by year from 2023 to 2024", "Shoplifting in Kansas in 2024, with the number of agencies reporting",
     "Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", "Drug crimes in Memphis in 2024",
     "Shoplifting in Memphis in March 2024",
+    // Codex contract confirmation 01: a missing rate keeps its explanation beside the agencies column; the way back
+    // from a typed consistent view stays on NIBRS.
+    "Shoplifting rate in Nebraska in 2024, with the number of agencies reporting",
+    "Murder in Kansas by year from 2023 to 2024, only agencies that reported every month",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023"],
 };
@@ -201,8 +208,13 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     }
     // 14
     for (const off of p.offers) {
-      if ("path" in off.run) check(follow(o, off.run.path) !== null, `14 ${tag}: offer "${off.label}" path does not resolve`);
-      else { const r = shadowAnswer(off.run.question, deps); check(r.kind !== "decline", `14 ${tag}: offer "${off.label}" question declines`); }
+      if ("path" in off.run) {
+        const r = follow(o, off.run.path);
+        check(r !== null, `14 ${tag}: offer "${off.label}" path does not resolve`);
+      } else if ("question" in off.run) {
+        const r = shadowAnswer(off.run.question, deps);
+        check(r.kind !== "decline" && (r.kind === "clarify" || sourceOf(r) === off.targetSource), `14 ${tag}: offer "${off.label}" question ${r.kind === "decline" ? "declines" : `lands on ${sourceOf(r)}, not ${off.targetSource}`}`);
+      } else check(!!off.run.input, `14 ${tag}: offer "${off.label}" asks for nothing`);
     }
     // 15
     const said = new Set([...leadOf(p).sentences, ...notesOf(p)]);
@@ -271,5 +283,17 @@ check(!ks1.offers.length && ks1.lead.kind === "single", "one year: no consistent
 const ksCov = presentationOf(shadowAnswer("Shoplifting in Kansas in 2024, with the number of agencies reporting", deps), places) as Presentation;
 check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.length, "one year with coverage columns: a single number, no offer");
 
+// Codex contract confirmation 01.1: a missing result keeps its explanation even with numbers beside it (the agencies
+// reporting): the rate blanked, its headline must stay a note.
+{
+  const o = shadowAnswer("Shoplifting rate in Nebraska in 2024, with the number of agencies reporting", deps);
+  if (o.kind !== "answer") fail.push("missing-rate fixture did not answer");
+  else {
+    const blank = { ...o, delivered: { ...o.delivered, headline: "Nebraska: no rate is given for 2024.", text: ["Nebraska: no rate is given for 2024.", ...o.delivered.text.slice(1)],
+      table: { ...o.delivered.table, rows: o.delivered.table.rows.map((r) => [null, ...r.slice(1)]) } } };
+    const p = presentationOf(blank, places, { question: "q", path: [] }) as Presentation;
+    check(notesOf(p).includes("Nebraska: no rate is given for 2024.") && p.lead.kind === "described", "a blank rate beside the agencies column lost its explanation");
+  }
+}
 assert.deepEqual(fail, [], fail.join("\n"));
 console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 15 checks`);
