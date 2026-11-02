@@ -285,3 +285,5 @@
   .cda .BandInner { padding: 2.5rem var(--gutter); }
 }
 
+/* A lower bound in the table ("≥ 84.3%"): its hover note says why */
+.cda table.T td.atLeast { cursor: help; text-decoration: underline dotted var(--light); text-underline-offset: .2em; }

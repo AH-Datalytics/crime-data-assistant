@@ -90,7 +90,7 @@ const shorten = (s: string, short: string[]) => ABBR.reduce((t, a) => (short.inc
 const SRC_DATA: Record<Src, string> = { nibrs: "the FBI's NIBRS data", historical: "Crime Index's historical data", rtci: "Crime Index's Current Trends data", shr: "the FBI's Supplementary Homicide Reports" };
 // The engine's role for a button, or (until the engine sends one) read from its label.
 type Roled = PreviewButton & { role?: "consistent-agencies" | "source"; source?: Src };
-const isScope = (b: Roled) => b.role === "consistent-agencies" || (!b.role && /reported every month/i.test(b.label));
+const isScope = (b: Roled) => b.role === "consistent-agencies" || (!b.role && /reported every month|^Consistent Reporting Agencies$/i.test(b.label));
 const sourceOfButton = (b: Roled): Src | null => (b.role === "source" ? b.source ?? null
   : !b.role && b.question && /\baccording to NIBRS$/i.test(b.question) ? "nibrs" : null);
 /** The source an engine reply belongs to: the engine's, a route's, or (P01's NIBRS alternative) the official counts'. */
@@ -221,7 +221,7 @@ export default function AssistantClient() {
     if (shown.kind !== "error" && "asked" in shown && shown.asked) seen.current.set(JSON.stringify([shown.asked, path]), shown);
     const short = [...spelled.current];
     // Every NIBRS answer's lead names NIBRS; anything else is spelled out where the engine's text spells it out.
-    for (const a of ABBR) if ((a.abbr === "NIBRS" && shown.kind === "answer") || JSON.stringify(shown).includes(a.long)) spelled.current.add(a.abbr);
+    for (const a of ABBR) if ((a.abbr === "NIBRS" && shown.kind === "answer" && sourceOfText(shown.text) === "nibrs") || JSON.stringify(shown).includes(a.long)) spelled.current.add(a.abbr);
     setTurns((ts) => ts.map((t) => {
       if (t.id !== id) return t;
       const q = "asked" in shown && shown.asked ? shown.asked : t.question, at = { question: q, path };
@@ -255,7 +255,7 @@ export default function AssistantClient() {
   const suggestions = (t: Turn): Suggestion[] => {
     const out: Suggestion[] = [];
     // Jeff's wording (2026-11-01); the number in the fixed set is read from the engine's answer sentence.
-    const every = t.reply?.kind === "answer" ? /\bthe ([\d,]+) agencies that reported every month\b/.exec(t.reply.text[0] ?? "")?.[1] : undefined;
+    const every = t.reply?.kind === "answer" ? /\bthe ([\d,]+) (?:Consistent Reporting )?agencies that reported every month\b/i.exec(t.reply.text[0] ?? "")?.[1] : undefined;
     // Every month of the whole period asked, not of each year (Jeff): "every month from January 2021 through December 2025".
     const p = t.reply?.kind === "answer" ? t.reply.period : null;
     const months = p ? `every month from ${label(p.from.slice(0, 7))} through ${label(p.to.slice(0, 7))}` : "every month of the period";
@@ -461,8 +461,11 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
   const firstKnown = isSeries ? r.rows.findIndex((row) => columns.some((c) => typeof row[c] === "number")) : 0;
   const rows = firstKnown > 0 ? r.rows.slice(firstKnown) : r.rows;
   const numberCols = columns.filter((c) => rows.every((row) => row[c] === null || typeof row[c] === "number"));
-  const groupCols = columns.filter((c) => !numberCols.includes(c));
-  const lead = composeLead(text, scoped, rows.length === 1 && numberCols.length === 1);
+  // Values sent as text (the share of population covered, "96.2%" or "≥ 84.3%" at a lower bound) are values, shown
+  // right-aligned and never charted as categories.
+  const shareCols = columns.filter((c) => !numberCols.includes(c) && rows.every((row) => row[c] === null || /^≥?\s*[\d.,]+%$/.test(String(row[c]))));
+  const groupCols = columns.filter((c) => !numberCols.includes(c) && !shareCols.includes(c));
+  const lead = composeLead(text, scoped, rows.length === 1 && numberCols.length === 1, sourceOfText(text));
   // The notes keep the finer points: whatever the lead did not say.
   let notes = text.filter((_, i) => !lead.used.has(i));
   if (firstKnown > 0) {
@@ -582,7 +585,7 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
       <div className="TableScroll" style={tableMax ? { maxHeight: tableMax } : undefined}>
         <table className="T">
           <thead><tr>{columns.map((c) => (
-            <th key={c} className={`${numberCols.includes(c) ? "" : "txt"}${sort?.col === c ? " sorted" : ""}`} aria-sort={sort?.col === c ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
+            <th key={c} className={`${numberCols.includes(c) || shareCols.includes(c) ? "" : "txt"}${sort?.col === c ? " sorted" : ""}`} aria-sort={sort?.col === c ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
               <button type="button" className="sortBtn" onClick={() => setSort((s) => (s?.col === c ? { col: c, dir: s.dir === 1 ? -1 : 1 } : { col: c, dir: numberCols.includes(c) ? -1 : 1 }))}>
                 {c}{sort?.col === c ? <span className={`dir ${sort.dir === 1 ? "up" : "down"}`} aria-hidden="true" /> : null}
               </button>
@@ -590,7 +593,10 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
           ))}</tr></thead>
           <tbody>{order(rows, sort).map((i) => { const row = rows[i]; return (
             <tr key={i} className={hover !== null && pointOf(i) === hover ? "hl" : ""} onMouseEnter={() => setHover(pointOf(i))} onMouseLeave={() => setHover(null)}>
-              {columns.map((c) => <td key={c} className={numberCols.includes(c) ? "" : "txt"}>{numberCols.includes(c) ? cell(row[c], /\(%\)/.test(c)) : yearLabel(row[c])}</td>)}
+              {columns.map((c) => shareCols.includes(c)
+                // A lower bound ("≥ 84.3%") says why on hover.
+                ? <td key={c} className={String(row[c]).startsWith("≥") ? "atLeast" : ""} title={String(row[c]).startsWith("≥") ? "At least this share; some agencies have no population figure." : undefined}>{row[c] ?? ""}</td>
+                : <td key={c} className={numberCols.includes(c) ? "" : "txt"}>{numberCols.includes(c) ? cell(row[c], /\(%\)/.test(c)) : yearLabel(row[c])}</td>)}
             </tr>
           ); })}</tbody>
         </table>
@@ -651,8 +657,11 @@ async function downloadPng(el: HTMLDivElement | null, title: string) {
 
 type Suggestion = { before: string; link: string; after: string; run: () => void };
 const cap = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
-// Where every answer in this preview comes from (the NIBRS engine), as the lead says it.
+// Where an answer comes from, as the lead says it: NIBRS, or (P75-P79, the engine's Historical) Crime Index's
+// published figures, which agencies report to the FBI's Summary Reporting System.
 const VIA = "to the FBI's National Incident-Based Reporting System (NIBRS)";
+/** The answer's source, from its source line ("Source: FBI NIBRS." or "Source: Crime Index."). */
+const sourceOfText = (text: string[]): "nibrs" | "historical" => (text.some((l) => /^Source: Crime Index\b/.test(l)) ? "historical" : "nibrs");
 /**
  * The lead (Jeff, 2026-11-01): plain sentences above the chart's title, on the page only (never in the chart, the table
  * or either download). Nothing analytical and no figures picked out: the first sentence says what the data is, in Jeff's
@@ -666,7 +675,7 @@ const VIA = "to the FBI's National Incident-Based Reporting System (NIBRS)";
  * the consistent-agencies sentence) agencies joining and leaving. The lines it uses are left out of the notes below; the
  * source line stays.
  */
-function composeLead(text: string[], scoped: boolean, single: boolean): { lines: string[]; used: Set<number> } {
+function composeLead(text: string[], scoped: boolean, single: boolean, source: "nibrs" | "historical" = "nibrs"): { lines: string[]; used: Set<number> } {
   const used = new Set([0]);
   const lines: string[] = [];
   const first = text[0] ?? "";
@@ -676,7 +685,15 @@ function composeLead(text: string[], scoped: boolean, single: boolean): { lines:
   const one = /^(.+?): ([\d,.]+) (.+) in (\d{4})\.$/.exec(first);
   const many = /^(.+?): (.+?)(?: by (.+?))?, (\d{4})(?: to (\d{4}))?(, .+)?\.$/.exec(first);
   const agencies = (place: string) => (place === "United States" ? "law enforcement agencies across the United States" : `${place} law enforcement agencies`);
-  if (single) {
+  if (source === "historical") {
+    // Crime Index's figures: what they are and where they come from, never "reported to NIBRS".
+    if (single || !many) lines.push(first);
+    else {
+      const [, place, what, by, y0, y1] = many;
+      const each = by && /^(?:year|quarter|month)$/.test(by) ? `each ${by} ` : "";
+      lines.push(`These are ${what} in ${place === "United States" ? "the United States" : place}, as published in Crime Index's historical data, ${each}${y1 ? `from ${y0} to ${y1}` : `in ${y0}`}.`);
+    }
+  } else if (single) {
     lines.push(one ? `${cap(reporter ?? agencies(one[1]))} reported ${one[2]} ${one[3]} ${VIA} in ${one[4]}.` : first);
   } else if (many) {
     const [, place, what, by, y0, y1, rest] = many;
