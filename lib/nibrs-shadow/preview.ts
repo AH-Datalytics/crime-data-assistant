@@ -77,9 +77,13 @@ export function follow(o: ShadowOutcome, path: string[]): ShadowOutcome | null {
   return at;
 }
 
-export function toPreview(o: ShadowOutcome, path: string[] = [], places?: PlaceIndex): PreviewWithPresentation {
+export function toPreview(o: ShadowOutcome, path: string[] = [], places?: PlaceIndex, question?: string): PreviewWithPresentation {
   const r = previewOf(o, path);
-  return places ? { ...r, presentation: presentationOf(o, places) } : r;
+  if (!places) return r;
+  const presentation = presentationOf(o, places, { question, path });
+  // The buttons shown are the presentation's: one it does not offer (a single period's consistent agencies) is not shown.
+  if (r.kind === "answer" && "offers" in presentation) r.buttons = r.buttons.filter((b) => presentation.offers.some((x) => x.label === b.label));
+  return { ...r, presentation };
 }
 function previewOf(o: ShadowOutcome, path: string[]): PreviewResponse {
   if (o.kind === "clarify") return { kind: "clarify", about: o.about, buttons: o.options.map((x) => button(x, path)) };

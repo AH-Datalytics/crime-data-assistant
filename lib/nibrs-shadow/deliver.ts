@@ -22,6 +22,12 @@ export type Delivered = {
   chart: { kind: "line" | "bar"; x: string; y: string[] } | null;
   /** Answer text, one sentence or block per line; the last line is always the source statement. */
   text: string[];
+  /**
+   * The answer contract (lib/answer-contract): the line of `text` that states the answer (the title and lead restate
+   * it), so every other line is kept as a note, never guessed; and a combined total's name ("drug crimes").
+   */
+  headline?: string;
+  combined?: string;
   answerStatements: AnswerStatement[];
   /** checkEnvelope's problems (empty when the table, evidence and statements meet the answer contract). */
   contractProblems: string[];
@@ -387,7 +393,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const col = tableCols.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === e.statistic);
     if (BLANK.includes(e.status) !== (table.rows[e.row][col] === null)) contractProblems.push(`row ${e.row}, ${e.statistic}: value and status disagree`);
   }
-  return { table, evidence, chart, text, answerStatements: statements, contractProblems };
+  return { table, evidence, chart, text, headline: text[0], answerStatements: statements, contractProblems };
 }
 
 /**
@@ -424,7 +430,7 @@ function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, 
   text.push(...shownStatements(statements));
   text.push(SOURCE_STATEMENT(release));
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
-  return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
+  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
 }
 
 /** Several measures (no categories): a column per measure; a combined total (D19, P31) as a sentence, totals only. */
@@ -483,7 +489,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
     const col = tableCols.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === e.statistic);
     if (BLANK.includes(e.status) !== (table.rows[e.row][col] === null)) contractProblems.push(`row ${e.row}, ${e.statistic}: value and status disagree`);
   }
-  return { table, evidence, chart, text, answerStatements: statements, contractProblems };
+  return { table, evidence, chart, text, headline: text[combined ? 1 : 0], ...(combined ? { combined: combined.label } : {}), answerStatements: statements, contractProblems };
 }
 
 const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
@@ -531,7 +537,7 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
   text.push(SOURCE_STATEMENT(release));
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   evidence.forEach((e, j) => { if (BLANK.includes(e.status) !== (table.rows[0][j] === null)) contractProblems.push(`${e.statistic}: value and status disagree`); });
-  return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
+  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
 }
 
 /**
@@ -564,5 +570,5 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
   for (const s of sup) s.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${s.as}: value and status disagree`); });
-  return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
+  return { table, evidence, chart: null, text, headline: text[0], answerStatements: statements, contractProblems };
 }

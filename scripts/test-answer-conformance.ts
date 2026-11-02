@@ -17,13 +17,18 @@
  *  10  every live source's profile is complete (no field missing or defaulted)
  *  11  no offer or note the source's profile doesn't support
  *  12  every breakdown the question names is in the answer (never silently dropped)
- *  13  a single-period answer has no reporting-change caveat and no consistent-agencies offer
+ *  13  a single-period answer has no reporting-change caveat and no consistent-agencies offer, in the presentation
+ *      and in the buttons the page renders
+ *  14  every offer runs: a button path the outcome follows, or a question that answers
+ *  15  nothing the engine says is lost: every line of its text is the restated headline or reporter line, in the
+ *      lead, or in the notes
  */
 import assert from "node:assert/strict";
 import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
   type SourceId, type SourceProfile } from "../lib/answer-contract/contract";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { presentationOf } from "../lib/nibrs-shadow/presentation";
+import { follow, toPreview } from "../lib/nibrs-shadow/preview";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { BANNED } from "../lib/nibrs-shadow/wording";
 import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
@@ -96,7 +101,8 @@ const FIXTURES: Record<string, string[]> = {
     "Simple assault victims in Memphis by sex in 2024", "Simple assault victims in Memphis by age in 2024", "Robberies in Memphis in 2024 by weapon",
     "Rolling 12-month shoplifting in Memphis since 2024", "Memphis robberies per month in 2024",
     "Shoplifting in Kansas by year from 2023 to 2024", "Shoplifting in Kansas in 2024, with the number of agencies reporting",
-    "Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month",
+    "Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", "Drug crimes in Memphis in 2024",
+    "Shoplifting in Memphis in March 2024",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023"],
 };
@@ -122,7 +128,7 @@ const fail: string[] = [];
 const check = (ok: boolean, what: string) => { if (!ok) fail.push(what); };
 const shown = (p: Presentation) => [titleOf(p.titleParts).title, titleOf(p.titleParts).subtitle ?? "", ...leadOf(p).sentences,
   ...p.offers.flatMap((o) => (o.text ? [o.text.before + o.text.link + o.text.after] : [])), ...notesOf(p)].join(" ");
-const answerOf = (o: ShadowOutcome): { table: ResultTable } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" ? o.delivered : null);
+const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" ? o.delivered : null);
 
 // 10: complete profiles, every field filled, for each live source.
 const FIELDS: (keyof SourceProfile)[] = ["units", "grain", "coverage", "rateBasis", "breakdowns", "caveats", "name"];
@@ -138,7 +144,7 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     const o = shadowAnswer(q, deps);
     const d = answerOf(o);
     if (!d) { fail.push(`fixture "${q}" did not answer (${o.kind}${o.kind === "decline" ? `: ${o.explanation}` : ""})`); continue; }
-    const p = presentationOf(o, places) as Presentation;
+    const p = presentationOf(o, places, { question: q, path: [] }) as Presentation;
     const tag = `[${p.source}] "${q}"`;
     sourcesSeen.add(p.source);
     check(p.source === want, `${tag}: answered from ${p.source}, fixture is ${want}'s`);
@@ -167,7 +173,13 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
       const vals = t.rows.map((r) => String(r[i]));
       const timeI = t.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
       if (col.binding.kind === "grouping" && col.binding.dimension.startsWith("time.")) check(vals.every((v, j) => j === 0 || v >= vals[j - 1]), `5 ${tag}: ${h} out of order`);
-      void timeI;
+      else if (o.kind === "answer" && col.binding.kind === "grouping") {
+        const dim = col.binding.dimension;
+        const bins = o.plan.groupings.find((g) => g.dimension === dim)?.bins?.map((b) => b.label) ?? [];
+        const per = new Map<string, number[]>();
+        t.rows.forEach((r, j) => { const k = timeI >= 0 ? String(r[timeI]) : ""; if (bins.includes(vals[j])) per.set(k, [...(per.get(k) ?? []), bins.indexOf(vals[j])]); });
+        for (const ix of per.values()) check(ix.every((x, j) => j === 0 || x > ix[j - 1]), `5 ${tag}: ${h} bins out of order`);
+      }
     }
     // Every category column, ordered or by count: the not-known categories last within each period, Unknown once.
     const timeCol = t.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
@@ -182,8 +194,21 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     });
     // 13
     const per = (o as { period: { from: string; to: string } }).period;
-    if (per.from.slice(0, 4) === per.to.slice(0, 4))
-      check(!p.offers.some((x) => x.role === "consistent_agencies" || x.role === "all_agencies" || /change/.test(x.text?.before ?? "")), `13 ${tag}: a change caveat or consistent offer on one period`);
+    if (per.from.slice(0, 4) === per.to.slice(0, 4)) {
+      check(!p.offers.some((x) => x.role === "consistent_agencies" || x.role === "all_agencies" || /\bchange\b/.test(x.text?.before ?? "")), `13 ${tag}: a change caveat or consistent offer on one period`);
+      const shownButtons = toPreview(o, [], places, q);
+      check(!(shownButtons.kind === "answer" && shownButtons.buttons.some((b) => b.label === "Consistent Reporting Agencies")), `13 ${tag}: the page still renders the consistent-agencies button`);
+    }
+    // 14
+    for (const off of p.offers) {
+      if ("path" in off.run) check(follow(o, off.run.path) !== null, `14 ${tag}: offer "${off.label}" path does not resolve`);
+      else { const r = shadowAnswer(off.run.question, deps); check(r.kind !== "decline", `14 ${tag}: offer "${off.label}" question declines`); }
+    }
+    // 15
+    const said = new Set([...leadOf(p).sentences, ...notesOf(p)]);
+    const headline = (d as { headline?: string }).headline ?? d.text[0];
+    for (const line of d.text)
+      check(said.has(line) || (line === headline && t.rows.some((r) => r.some((v) => typeof v === "number"))) || /^(?:Reported by|Figures for) /.test(line), `15 ${tag}: engine line lost: "${line}"`);
     // 12
     const dims = t.columns.flatMap((c) => (c.binding.kind === "grouping" ? [c.binding.dimension] : []));
     check(!missingGroupings(q, dims).length, `12 ${tag}: breakdown dropped (${missingGroupings(q, dims).join(", ")})`);
@@ -193,6 +218,9 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     check(!(p.lead.kind === "single" && c.allowed.length), `6 ${tag}: a chart for a single number`);
     check(!c.allowed.includes("line") || hasTime, `6 ${tag}: a line with no time grouping`);
     check(!(c.allowed.includes("stacked_bar") || c.allowed.includes("stacked_100")) || c.exclusive === true, `6 ${tag}: stacked when not exclusive`);
+    const catDims = t.columns.flatMap((x) => (x.binding.kind === "grouping" && !x.binding.dimension.startsWith("time.") && !x.binding.dimension.startsWith("geo.") ? [x.binding.dimension] : []));
+    const profExclusive = catDims.length > 0 && catDims.every((dm) => prof.breakdowns.some((b) => b.dimension === dm && b.exclusive));
+    check(!(c.allowed.includes("stacked_bar") || c.allowed.includes("stacked_100")) || profExclusive, `6 ${tag}: stacked though the profile doesn't mark every breakdown exclusive`);
     check(c.default === null || c.allowed.includes(c.default), `6 ${tag}: default not allowed`);
     check(JSON.stringify(c) === JSON.stringify(chartOptionsOf(t, p.ordered)), `6 ${tag}: chart options not the shared builder's`);
     // 7
@@ -227,10 +255,15 @@ for (const id of Object.keys(PROFILES)) check(sourcesSeen.has(id), `10 ${id}: no
 
 // The offers the checks above judge are really there (so 9 and 11 are not vacuous): past P88's threshold, the
 // Consistent Reporting Agencies offer in Jeff's words; in that view, the way back; one year, the button without words.
-const ks = presentationOf(shadowAnswer("Shoplifting in Kansas by year from 2023 to 2024", deps), places) as Presentation;
+const ks = presentationOf(shadowAnswer("Shoplifting in Kansas by year from 2023 to 2024", deps), places, { question: "Shoplifting in Kansas by year from 2023 to 2024", path: [] }) as Presentation;
 check(ks.offers.some((o) => o.role === "consistent_agencies" && o.text?.link === "see only the Consistent Reporting Agencies"
   && /^Not every agency reported in every year/.test(o.text.before) && o.text.after === " that reported every month from January 2023 through December 2024."), "P88 offer missing");
-const ksEvery = presentationOf(shadowAnswer("Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", deps), places) as Presentation;
+const ksEvery = presentationOf(shadowAnswer("Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", deps), places, { question: "Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", path: [] }) as Presentation;
+// The way back from the consistent view, reached by its button: one step back along the path.
+const viaButton = shadowAnswer("Shoplifting in Kansas by year from 2023 to 2024", deps);
+const clicked = follow(viaButton, ["Consistent Reporting Agencies"])!;
+const back = (presentationOf(clicked, places, { question: "Shoplifting in Kansas by year from 2023 to 2024", path: ["Consistent Reporting Agencies"] }) as Presentation).offers.find((x) => x.role === "all_agencies");
+check(!!back && "path" in back.run && back.run.path.length === 0 && follow(viaButton, back.run.path) === viaButton, "the way back by path");
 check(ksEvery.offers.some((o) => o.role === "all_agencies" && o.text?.before === "This counts only the 1 Consistent Reporting Agency that reported every month. " && o.text.link === "See all reporting agencies instead"), "the way back missing");
 const ks1 = presentationOf(shadowAnswer("Shoplifting in Kansas in 2024", deps), places) as Presentation;
 check(!ks1.offers.length && ks1.lead.kind === "single", "one year: no consistent-agencies offer, and a single number");
@@ -239,4 +272,4 @@ const ksCov = presentationOf(shadowAnswer("Shoplifting in Kansas in 2024, with t
 check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.length, "one year with coverage columns: a single number, no offer");
 
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 13 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 15 checks`);

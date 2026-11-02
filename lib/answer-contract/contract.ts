@@ -88,6 +88,8 @@ export type TitleParts = {
   period: string;          // "2024", "2021–2025", "January–June 2024"
   partialLastYear: string | null;  // "2026 (Partial): January–September 2026"
   rollingMonths: number | null;
+  /** A ranking's scope, between the place and the measure: "cities of 250,000+ with the most". */
+  ranking: string | null;
 };
 /** The lead's first sentence, from parts (Jeff: "These are [what] [who] reported to [source], [when], [how]."). */
 export type Lead =
@@ -95,8 +97,12 @@ export type Lead =
   /** `quantity`: the number with what it counts ("10,149 shoplifting offenses", "robberies at a rate of 68.6 per 100,000 people"). */
   | { kind: "single"; who: string; quantity: string; when: string; countedAs: string | null };
 export type OfferRole = "consistent_agencies" | "all_agencies" | "other_source" | "nearest_question" | "ask_instead" | "choice" | "entry" | "by_year";
-/** An offer or button: its role and the source it runs on; `text`: the lead's inline wording, the link in the middle. */
-export type Offer = { role: OfferRole; targetSource: SourceId; label: string; text: { before: string; link: string; after: string } | null };
+/**
+ * An offer or button: its role and the source it runs on; `text`: the lead's inline wording, the link in the middle;
+ * `run`: what choosing it does, a path of button labels from the original question, or a new question.
+ */
+export type Offer = { role: OfferRole; targetSource: SourceId; label: string; text: { before: string; link: string; after: string } | null;
+  run: { path: string[] } | { question: string } };
 export type ChartKind = "line" | "bar" | "horizontal_bar" | "grouped_bar" | "stacked_bar" | "stacked_100";
 export type ChartOptions = { allowed: ChartKind[]; default: ChartKind | null; exclusive: boolean | undefined; exclusiveByColumn: Record<string, boolean> | undefined };
 
@@ -133,7 +139,7 @@ const joinAnd = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, 
 
 /** The chart title and subtitle (the subtitle only for a rolling window or a partial last year). */
 export function titleOf(t: TitleParts): { title: string; subtitle: string | null } {
-  const title = `${joinAmp(t.places)} ${titleCase(t.measure)}${t.ratePer ? ` per ${t.ratePer.toLocaleString("en-US")}` : ""}${t.groupings.length ? ` by ${titleCase(joinAnd(t.groupings))}` : ""}, ${titleCase(t.period)}`;
+  const title = `${joinAmp(t.places)} ${t.ranking ? `${titleCase(t.ranking)} ` : ""}${titleCase(t.measure)}${t.ratePer ? ` per ${t.ratePer.toLocaleString("en-US")}` : ""}${t.groupings.length ? ` by ${titleCase(joinAnd(t.groupings))}` : ""}, ${titleCase(t.period)}`;
   const sub = [...(t.rollingMonths ? [`Rolling ${t.rollingMonths}-Month Totals`] : []), ...(t.partialLastYear ? [titleCase(t.partialLastYear)] : [])];
   return { title, subtitle: sub.length ? sub.join(", ") : null };
 }
@@ -170,8 +176,8 @@ export function chartOptionsOf(table: ResultTable, ordered: readonly string[] = 
   const time = groups.some((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
   const cats = groups.filter((c) => c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") && !c.binding.dimension.startsWith("geo."));
   const geo = groups.some((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("geo."));
-  const flags = cats.flatMap((c) => (c.exclusive === undefined ? [] : [c.exclusive]));
-  const exclusive = flags.length ? flags.every(Boolean) : undefined;
+  // Every category column must affirm it (Codex contract review 01.5): an unknown flag is not exclusive.
+  const exclusive = cats.length ? cats.every((c) => c.exclusive === true) : undefined;
   const exclusiveByColumn = exclusive === undefined ? undefined : Object.fromEntries(stats.map((c) => [c.header, exclusive && (c.exclusive ?? true)]));
   const monthly = groups.some((c) => c.binding.kind === "grouping" && (c.binding.dimension === "time.month" || c.binding.dimension === "time.quarter"));
   let allowed: ChartKind[];

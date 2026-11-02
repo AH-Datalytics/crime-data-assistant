@@ -187,6 +187,10 @@ function readComparison(text: string, currentYear: number): { comparison: Compar
  * `lastMonth`: the release's latest reported month (P52), for "the last 12 months" (P56); without it that wording is
  * left to the accounting.
  */
+/** P61's consistent-reporters wording ("only agencies that reported every month"): read here, and removed by the
+ * answer contract to give the all-agencies question. */
+export const CONSISTENT_WORDS = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters)\b/i;
+
 export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
   const readings: Reading[] = [];
   let text = question;
@@ -249,7 +253,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   const NIBRS_ASKED = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
   const nibrsAsked = NIBRS_ASKED.test(own);
   if (nibrsAsked) text = text.replace(NIBRS_ASKED, "");
-  const CONSISTENT = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters)\b/i;
+  const CONSISTENT = CONSISTENT_WORDS;
   const consistent = CONSISTENT.test(own);
   if (consistent) text = text.replace(CONSISTENT, "");
   const shrDetail = /\b(?:murders?|homicides?)\b/i.test(own) && /\bvictim[-\s]offender\s+relationships?\b/i.test(own);

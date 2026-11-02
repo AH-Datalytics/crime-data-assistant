@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const deps = shadowDeps();
     const at = follow(shadowAnswer(question, deps), path);
     if (!at) return NextResponse.json({ error: "That button is no longer offered for this question." }, { status: 409 });
-    return NextResponse.json(toPreview(at, path, deps.places));
+    return NextResponse.json(toPreview(at, path, deps.places, question));
   } catch (e) {
     return NextResponse.json({ error: `The preview engine failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
   }
