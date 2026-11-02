@@ -59,6 +59,8 @@ export type ShadowDeps = {
   execute(sql: string): unknown[][];
   /** The Crime Index build (scripts/build-crimeindex.py): with it, agencies' Part I questions are Historical's answers; without it, routed. */
   historical?: HistoricalBuild;
+  /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
+  checkingOffer?: boolean;
 };
 
 export type ShadowOption = {
@@ -122,8 +124,24 @@ export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
  *   - and when no button reads, an example in the text.
  */
 function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps, asked: string): ShadowOutcome {
-  if (o.kind !== "decline" || o.notBuilt) return o;
+  if (o.kind !== "decline" || o.notBuilt || deps.checkingOffer) return o;
   const year = Number(deps.release.lastMonth.slice(0, 4));
+  // Jeff (2026-11-01): an offered question must actually answer, and keep every place and crime the user named
+  // ("chicago vs memphis carjackings per year since 2022" was offered "chicago memphis carjackings ..."). It is run
+  // (its own declines get no next step), and its places and crimes compared with the question's; otherwise no button,
+  // the example only.
+  const named = (q: string) => {
+    const parts = readQuestion(q, year).ledger.parts.filter((p) => p.clause === 0 && p.state === "recognized" && (p.concept === "place" || p.concept === "measure"));
+    return new Set(parts.map((p) => `${p.concept}:${String(p.value ?? p.text).toLowerCase()}`));
+  };
+  const asks = named(asked);
+  const offerable = (q: string | undefined) => {
+    if (!q) return true;
+    const got = named(q);
+    if (![...asks].every((x) => got.has(x))) return false;
+    const r = shadowAnswer(q, { ...deps, checkingOffer: true });
+    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs";
+  };
   const question = ledger.question;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
   const periods = own.filter((p) => p.concept === "period" && p.span);
@@ -147,15 +165,15 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   // condition kept (Codex coverage review 01.1: a cohort, "that were cleared", "by quarter").
   if (o.explanation === UNDEFINED_TERM["gun violence"]) {
     const gun = tidy(said.replace(/\bgun\s+violence\b/i, (m) => (/^G/.test(m) ? "Gun crime" : "gun crime")).replace(/[?.!]+$/, ""));
-    if (gun !== tidy(said.replace(/[?.!]+$/, "")) && keeps(gun, said, year, ["undefinedTerm", "composite"])) return { ...o, alternative: { label: `Ask instead: "${gun}"`, question: gun } };
+    if (gun !== tidy(said.replace(/[?.!]+$/, "")) && keeps(gun, said, year, ["undefinedTerm", "composite"]) && offerable(gun)) return { ...o, alternative: { label: `Ask instead: "${gun}"`, question: gun } };
   }
   const level = said.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
-  if (level !== said && keeps(level, said, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
+  if (level !== said && keeps(level, said, year) && offerable(tidy(level))) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
   // The nearest question that works (coordinator, 2026-11-01), the user's breakdown kept:
   //   - "cleared" read into the crime's name ("homicide victims cleared in Memphis"): the same question "that were cleared";
   //   - victims by weapon (a weapon is recorded for each offense): the same question about offenses.
   const nearest = (alt: string, explanation: string, except: (typeof CONDITIONS)[number][] = []) =>
-    keeps(alt, said, year, except) ? { ...o, explanation, alternative: { label: `Ask instead: "${alt}"`, question: alt } } : null;
+    keeps(alt, said, year, except) && offerable(alt) ? { ...o, explanation, alternative: { label: `Ask instead: "${alt}"`, question: alt } } : null;
   const cleared = /_cleared" has no executable definition|does not apply "victims"/.test(o.detail ?? "") && /\bcleared\b/i.test(said)
     && !/\bwere cleared\b/i.test(said)
     ? nearest(tidy(`${said.replace(/\s+cleared\b/i, "").replace(/[?.!]+$/, "")} that were cleared`), "I couldn't read \"cleared\" there. Put \"that were cleared\" at the end instead.", ["clearance"]) : null;
@@ -166,14 +184,15 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   if (byWeapon) return byWeapon;
   // The two specific steps above come first; a button the decline already has (the question without the words the
   // reader couldn't use) is kept over the generic ones below.
-  if (o.alternative) return o;
+  if (o.alternative && offerable(o.alternative.question)) return o;
+  if (o.alternative) o = { ...o, alternative: null };
   const text =(c: string) => own.find((p) => p.concept === c && p.state === "recognized")?.text.trim();
   const measure = text("measure"), place = text("place");
   if (measure && place) {
     const period = text("period") ?? `in ${Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1)}`;
     const simple = tidy(`${measure} in ${place} ${/^(?:in|from|since|during)\b/i.test(period) ? period : `in ${period}`}`);
     // Compared with what the user typed (the reader's text may have dropped words it set aside, such as a column).
-    if (simple.toLowerCase() !== asked.trim().replace(/[?.!]+$/, "").toLowerCase() && readsWhole(simple, year))
+    if (simple.toLowerCase() !== asked.trim().replace(/[?.!]+$/, "").toLowerCase() && readsWhole(simple, year) && offerable(simple))
       return { ...o, alternative: { label: `Ask instead: "${simple}"`, question: simple } };
   }
   return /\bfor example\b/i.test(o.explanation) ? o : { ...o, explanation: `${o.explanation} ${EXAMPLE}` };
@@ -536,7 +555,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // P01, in plain words (P74): the official counts are Historical's and Current Trends'; NIBRS has them when asked by name.
   if (!flags(ledger0).nibrsAsked && !flags(ledger0).consistent && asked.some((x) => PART_ONE.has(x))) {
     const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
-    return decline("unsupported_capability", "The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it.",
+    // With the Crime Index build, Historical answers the plain counts above; what reaches here is a form it doesn't
+    // answer yet (coordinator, 2026-11-01: never "not available here" when it is).
+    return decline("unsupported_capability", deps.historical
+      ? "The official counts of this crime come from Crime Index's Historical and Current Trends data, which don't answer this form of the question yet. NIBRS has its own counts, from the agencies that report to it."
+      : "The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it.",
       { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs } });
   }
 
