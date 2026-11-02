@@ -40,23 +40,34 @@ const signal = new Int32Array(flag);
 // A large result arrives in many chunks: they are kept as a list and joined once its line ends (scanning only the new
 // chunk), never re-scanned as one growing string.
 let parts = [], stderr = "";
-const reply = (msg) => { port.postMessage(msg); Atomics.store(signal, 0, 1); Atomics.notify(signal, 0); };
+// One reply per request, never one unasked (Codex speed review 01): a process that fails to start or exits is
+// remembered, answers the request waiting if there is one, and answers every later request at once.
+let pending = false, gone = null;
+const reply = (msg) => { pending = false; port.postMessage(msg); Atomics.store(signal, 0, 1); Atomics.notify(signal, 0); };
+const fail = (why) => { gone ??= JSON.stringify({ error: "duckdb process exited: " + why + (stderr ? ": " + stderr : "") }); if (pending) reply(gone); };
 child.stdout.setEncoding("utf8");
 child.stdout.on("data", (d) => {
   let i;
-  while ((i = d.indexOf("\\n")) >= 0) { parts.push(d.slice(0, i)); reply(parts.join("")); parts = []; d = d.slice(i + 1); }
+  while ((i = d.indexOf("\\n")) >= 0) { parts.push(d.slice(0, i)); if (pending) reply(parts.join("")); parts = []; d = d.slice(i + 1); }
   if (d) parts.push(d);
 });
 child.stderr.on("data", (d) => { stderr = (stderr + d).slice(-4000); });
-child.on("exit", (code) => reply(JSON.stringify({ error: "duckdb process exited (" + code + "): " + stderr })));
-parentPort.on("message", (m) => child.stdin.write(JSON.stringify({ sql: m }) + "\\n"));
+child.on("error", (e) => fail(String(e && e.message || e)));
+child.on("exit", (code) => fail("code " + code));
+child.stdin.on("error", (e) => fail(String(e && e.message || e)));
+parentPort.on("message", (m) => {
+  if (gone) { pending = true; reply(gone); return; }
+  pending = true;
+  child.stdin.write(JSON.stringify({ sql: m }) + "\\n");
+});
 `;
 
-export type DuckdbOptions = { persistent?: boolean; cacheSize?: number };
+/** `timeoutMs`: the longest one query may take on the persistent path (default 300 s). */
+export type DuckdbOptions = { persistent?: boolean; cacheSize?: number; timeoutMs?: number };
 
 export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): (sql: string) => unknown[][] {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-shadow-")).replace(/\\/g, "/");
-  const run = opts.persistent === false ? spawnPerQuery(python, tmp) : persistent(python, tmp);
+  const run = opts.persistent === false ? spawnPerQuery(python, tmp) : persistent(python, tmp, opts.timeoutMs ?? 300_000);
   // The build is pinned and read-only: the same SQL gives the same rows. Least recently used out first.
   const cache = new Map<string, unknown[][]>();
   const size = opts.cacheSize ?? 256;
@@ -86,7 +97,7 @@ print(json.dumps(con.execute(open(sys.argv[1], encoding="utf-8").read()).fetchal
 }
 
 /** One Python process for the executor's lifetime; each call waits for its own response. */
-function persistent(python: string, tmp: string): (sql: string) => unknown[][] {
+function persistent(python: string, tmp: string, timeoutMs: number): (sql: string) => unknown[][] {
   const flag = new SharedArrayBuffer(4);
   const signal = new Int32Array(flag);
   const { port1, port2 } = new MessageChannel();
@@ -99,7 +110,12 @@ function persistent(python: string, tmp: string): (sql: string) => unknown[][] {
     if (dead) throw new Error(dead);
     Atomics.store(signal, 0, 0);
     worker.postMessage(sql);
-    Atomics.wait(signal, 0, 0);
+    // Never wait forever (Codex speed review 01): past the limit the executor is closed and the call fails.
+    if (Atomics.wait(signal, 0, 0, timeoutMs) === "timed-out") {
+      dead = `duckdb failed: no answer within ${timeoutMs / 1000} s`;
+      void worker.terminate();
+      throw new Error(dead);
+    }
     const msg = receiveMessageOnPort(port1);
     if (!msg) throw new Error("duckdb worker gave no response");
     const out = JSON.parse(String(msg.message)) as { rows?: unknown[][]; error?: string };
@@ -109,4 +125,12 @@ function persistent(python: string, tmp: string): (sql: string) => unknown[][] {
     }
     return out.rows!;
   };
+}
+
+/** The built monthly totals at `root` (scripts/build-nibrs-month-totals.ts): a measure's file, or null where not built. */
+export function monthTotalsAt(root: string | undefined): ((measureId: string) => string | null) | undefined {
+  if (!root || !fs.existsSync(path.join(root, "manifest.json"))) return undefined;
+  const built = new Set(Object.keys((JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8")) as { built: Record<string, unknown> }).built));
+  const dir = root.replace(/\\/g, "/");
+  return (id) => (built.has(id) ? `${dir}/${id}.parquet` : null);
 }

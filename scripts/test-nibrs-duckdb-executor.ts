@@ -31,4 +31,12 @@ assert.deepEqual(run("SELECT 42"), [[42]]);
 // Calls are answered in order, each with its own result.
 for (let i = 0; i < 50; i++) assert.deepEqual(run(`SELECT ${i}`), [[i]]);
 
+// Codex speed review 01: a Python that can't start fails the call (never a wait forever); a query past the limit fails
+// and the executor stays closed. (A process exiting between queries is answered the same way, from the remembered exit.)
+assert.throws(() => duckdbExecutor("C:/no/such/python-for-shadow.exe")("SELECT 1"), /duckdb failed: duckdb process exited/);
+const slow = duckdbExecutor(python, { timeoutMs: 1500 });
+assert.deepEqual(slow("SELECT 7"), [[7]]);
+assert.throws(() => slow("SELECT count(*) FROM range(5000000000) a, range(10) b"), /no answer within 1.5 s/);
+assert.throws(() => slow("SELECT 8"), /no answer within 1.5 s/, "a timed-out executor stays closed");
+
 console.log("nibrs duckdb executor: one persistent process, synchronous answers, cached by SQL, same rows as the reference");
