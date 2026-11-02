@@ -146,6 +146,10 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const by = o.kind === "decline" ? o.alternative?.continuation : undefined;
     assert.ok(by?.kind === "clarify" && by.options.every((x) => x.continuation?.kind === "historical"), JSON.stringify(by).slice(0, 300));
   }
+  // Codex routing review 01: rolling windows never recurse; a route to Current Trends (not loaded) is not a button.
+  assert.ok(runnable(withBuild("violent crime in Memphis rolling 12 months in 2023")));
+  const now = withBuild("crime in Memphis in 2026");
+  assert.ok(runnable(now) && !(now.kind === "clarify" && now.options.some((x) => x.continuation?.kind === "route")), JSON.stringify(now).slice(0, 300));
   const kinds = withBuild("Memphis crime in 2023");
   assert.ok(kinds.kind === "clarify" && runnable(kinds) && kinds.options.map((x) => x.label).join() === "Violent crime,Property crime", JSON.stringify(kinds).slice(0, 300));
   // A Part I crime by month goes to NIBRS (monthly), never Historical's whole-years decline or P01's.

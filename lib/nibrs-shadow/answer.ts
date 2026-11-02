@@ -245,10 +245,20 @@ function filledAll(ledger: RequestLedger, concept: string, values: string[][]): 
     return withParts(l, [...l.parts.filter((p) => !(p.clause === 0 && p.concept === concept && (i === 0 || p.rule !== "shadow:button"))), part]);
   }, ledger);
 }
-/** A whole-years version of a question finer than years, run now (its button never dead-ends). */
+/** A button's continuation that runs now: not a decline, and not a route to a source not loaded here (Current Trends). */
+const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route";
+/**
+ * A whole-years version of a question finer than years, run now (its button never dead-ends). Never nested: a
+ * question still finer than years once by year (rolling windows) gets no alternative (Codex routing review 01.1).
+ */
+let inByYear = false;
 function byYearInstead(ledger: RequestLedger, deps: ShadowDeps, pins: Map<number, Candidate>): ShadowOption | null {
-  const o = fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins);
-  return o.kind === "decline" ? null : { label: "By year instead", continuation: o };
+  if (inByYear) return null;
+  inByYear = true;
+  try {
+    const o = fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins);
+    return runsNow(o) ? { label: "By year instead", continuation: o } : null;
+  } finally { inByYear = false; }
 }
 
 /** The reason a reader decline gives, as a limitation reason; "reader" when its words name none of them. */
@@ -431,7 +441,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
       { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
     const options = kinds.map((k) => ({ label: k.label, continuation: fromLedger(filledAll(ledger, "measure", k.measures), deps, pins) }));
-    const runnable = options.filter((o) => o.continuation.kind !== "decline");
+    const runnable = options.filter((o) => runsNow(o.continuation));
     if (!runnable.length) {
       const d0 = options[0].continuation;
       return partYear({ grain: clause0("grain")[0]?.value ?? "total" }, flags(ledger0).comparison)
