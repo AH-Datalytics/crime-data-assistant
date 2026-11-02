@@ -261,7 +261,10 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   // Age groups (binned) are shown in age order, with "Not recorded" (no age) merged into "Unknown" and last (Jeff
   // 2026-11-01: ordered by age range, not by count; one Unknown row). Their counts and shares add; a blank in either
   // leaves the merged cell blank; the incidents beside them could overlap, so a merged row has none.
+  // The SQL already counts both as Unknown (compile.ts ageBins); this merges any rows that still arrive apart, only for an
+  // exclusive grouping, where counts add (Codex notes-audit review 01.1: a multi-valued one's would double-count).
   const binned = plan.groupings.find((g) => g.bins && cats.includes(g.dimension));
+  const addable = !!binned && !binned.multiValue;
   if (binned && cats.length === 1) {
     const ic = at(cats[0]);
     const known = (st: unknown) => st === "VALUE" || st === "REPORTED_ZERO";
@@ -270,7 +273,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const both = new Set<unknown[]>();   // the Unknown rows that took in a second row
     for (const r of rows) {
       const isUnknown = r[ic] === null || r[ic] === undefined || String(r[ic]).trim() === "" || categoryName(cats[0], r[ic]) === "Unknown";
-      if (!isUnknown) { out.push(r); continue; }
+      if (!isUnknown || !addable) { out.push(r); continue; }
       const key = ip >= 0 ? String(r[ip]) : "";
       const m = merged.get(key);
       if (!m) { const c = [...r]; c[ic] = "Unknown"; merged.set(key, c); out.push(c); continue; }

@@ -507,10 +507,17 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     } else if (/^groups ages as /.test(s)) {
       // P86: the age groups are named by their rows, in age order, with one Unknown row (no age or an unknown age) last.
       const bins = o.plan.groupings.find((g) => g.bins)?.bins ?? [];
-      const labels = o.delivered.table.rows.map((r) => String(r[0]));
-      const order = labels.filter((l) => l !== "Unknown").map((l) => bins.findIndex((b) => b.label === l));
-      ok = bins.length > 0 && order.every((i, j) => i >= 0 && (j === 0 || i > order[j - 1])) && labels.filter((l) => l === "Unknown").length <= 1
-        && (!labels.includes("Unknown") || labels[labels.length - 1] === "Unknown") && !labels.includes("Not recorded");
+      // Within each period (a time column before it), checked apart (Codex notes-audit review 01.2).
+      const cols = o.delivered.table.columns;
+      const ia = cols.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension === o.plan.groupings.find((g) => g.bins)?.dimension);
+      const it = cols.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
+      const periods = new Map<string, string[]>();
+      for (const r of o.delivered.table.rows) { const k = it >= 0 ? String(r[it]) : ""; periods.set(k, [...(periods.get(k) ?? []), String(r[ia])]); }
+      ok = bins.length > 0 && ia >= 0 && [...periods.values()].every((labels) => {
+        const order = labels.filter((l) => l !== "Unknown").map((l) => bins.findIndex((b) => b.label === l));
+        return order.every((i, j) => i >= 0 && (j === 0 || i > order[j - 1])) && labels.filter((l) => l === "Unknown").length <= 1
+          && (!labels.includes("Unknown") || labels[labels.length - 1] === "Unknown") && !labels.includes("Not recorded");
+      });
     }
     // Increment 3: comparisons and rolling windows.
     else if (/^gives both counts, the change and the percent change, with no adjectives$/.test(s) || /^gives both counts and the change$/.test(s)) {
