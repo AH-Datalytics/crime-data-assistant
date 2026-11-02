@@ -1,7 +1,7 @@
 {
  "candidate": "nibrs-shadow",
  "release": {
-  "id": "20261028-test5",
+  "id": "test6-20261031-host",
   "firstMonth": "2017-01",
   "lastMonth": "2026-09",
   "asOf": "2026-10-29"
@@ -435,7 +435,13 @@
    "LS-423",
    "LS-424",
    "LS-425",
-   "LS-426"
+   "LS-426",
+   "LS-427",
+   "LS-428",
+   "LS-429",
+   "LS-430",
+   "LS-431",
+   "LS-432"
   ]
  },
  "eligibility": {
@@ -810,7 +816,13 @@
    "LS-423",
    "LS-424",
    "LS-425",
-   "LS-426"
+   "LS-426",
+   "LS-427",
+   "LS-428",
+   "LS-429",
+   "LS-430",
+   "LS-431",
+   "LS-432"
   ],
   "label unresolved": [
    "LS-024",
@@ -1096,7 +1108,13 @@
   "LS-423": "designed",
   "LS-424": "designed",
   "LS-425": "designed",
-  "LS-426": "designed"
+  "LS-426": "designed",
+  "LS-427": "designed",
+  "LS-428": "designed",
+  "LS-429": "designed",
+  "LS-430": "designed",
+  "LS-431": "designed",
+  "LS-432": "designed"
  },
  "scored": [
   {
@@ -2531,22 +2549,14 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "174 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-293",
@@ -3747,44 +3757,28 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "5379 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-378",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "738 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-379",
@@ -3833,22 +3827,14 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "107 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / Sour"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-383",
@@ -3911,44 +3897,28 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "569 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-388",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "709 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-389",
@@ -4109,22 +4079,14 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "1041 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the tota"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-398",
@@ -4313,22 +4275,14 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "value Unknown",
-     "expected": "(merged from overlapping categories: no independent value)",
-     "actual": "5379 VALUE",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-412",
@@ -4544,6 +4498,98 @@
     "declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants)."
    ],
    "capability": "decline:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-427",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: aggravated assault victims by month and sex, 2023. / Reported by the Metropolitan Nashville Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-428",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: aggravated assault victims by month and sex, 2023. / Reported by the Metropolitan Nashville Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-429",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Nashville, Tennessee: aggravated assault victims by quarter and sex, 2023. / Reported by the Metropolitan Nashville Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-430",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Memphis, Tennessee: robbery offenses by quarter and weapon, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-431",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Detroit, Michigan: simple assault victims by month and race, 2024. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-432",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: robbery offenders by month and offender age group, 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "not measured",
    "unverifiedAnswers": 1

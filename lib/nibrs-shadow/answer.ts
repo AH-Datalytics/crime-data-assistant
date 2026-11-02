@@ -34,7 +34,9 @@ import { NOT_YET, plainReaderExplanation } from "./wording";
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
-import { matchNibrsType, MEASURE_CODES } from "../nibrs-question-types";
+import { matchNibrsType, MEASURE_CODES, type MatchOptions } from "../nibrs-question-types";
+/** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
+const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
 import { agencyPopulationSql, compilePlan, type CompileTarget } from "../nibrs-plan/compile";
@@ -98,13 +100,13 @@ function askInstead(question: string, parts: Part[], year: number): ShadowOption
   t = t.replace(/\s+(?:and|or)(?=\s*[?.!]?$)/i, "").replace(/\s+(?:and|or)\s+(?:and|or)\s+/gi, " and ").trim();
   if (!t || t.toLowerCase() === question.trim().toLowerCase()) return null;
   const r = readQuestion(t, year);
-  if (r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") || matchNibrsType(r.ledger).kind !== "spec") return null;
+  if (r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") || matchNibrsType(r.ledger, SHADOW_MATCH).kind !== "spec") return null;
   return { label: `Ask instead: "${t}"`, question: t };
 }
 /** A question the reader reads completely, every word, as a complete question (no data is read). */
 function readsWhole(t: string, year: number): boolean {
   const r = readQuestion(t, year);
-  return !r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") && matchNibrsType(r.ledger).kind === "spec";
+  return !r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") && matchNibrsType(r.ledger, SHADOW_MATCH).kind === "spec";
 }
 const tidy = (t: string) => t.replace(/\s+([,?.!])/g, "$1").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
 /** The conditions the reader sets aside from its text (clearance, people, property...): a button must keep them. */
@@ -487,7 +489,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const geoOnly = (ps: Part[]) => ps.length > 0 && ps.every((p) => p.value === "national" || /^state:/.test(p.value ?? ""));
   if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
-  const d = matchNibrsType(ledger);
+  const d = matchNibrsType(ledger, SHADOW_MATCH);
   if (d.kind === "none") return decline("reader", "I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example \"robberies in Denver in 2024\".");
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
   if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
@@ -858,10 +860,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return decline("unsupported_capability", "This isn't available yet: rolling windows of a rate, a breakdown, or several crimes.");
   if (plan.transforms.some((t) => t.kind !== "rolling" && t.kind !== "period_comparison" && !(t.kind === "rank" && plan.geography.places[0].kind === "agency_set")))
     return decline("unsupported_capability", "This isn't available yet: rankings.");
-  // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime.
+  // Increment 7b (P71): quarters are the sums of one agency's monthly counts of one crime; by category too (coordinator
+  // 2026-11-02), each category's quarter compiled as the sum of its months with its share of the quarter.
   const quarterly = !!flags(ledger0).quarter;
-  if (quarterly && (plan.measures.length !== 1 || plan.transforms.length || plan.statistics.length !== 1 || plan.statistics[0].kind !== "count"
-    || plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month" || plan.geography.places.length !== 1 || plan.geography.places[0].kind !== "agency"))
+  const quarterCats = quarterly && plan.groupings.length === 2 && plan.groupings[0].dimension === "time.month" && !plan.groupings[1].dimension.startsWith("time.");
+  if (quarterly && (plan.measures.length !== 1 || plan.transforms.length || plan.geography.places.length !== 1 || plan.geography.places[0].kind !== "agency"
+    || plan.groupings[0]?.dimension !== "time.month" || (quarterCats ? plan.statistics.some((s) => s.kind !== "count" && s.kind !== "share")
+      : plan.statistics.length !== 1 || plan.statistics[0].kind !== "count" || plan.groupings.length !== 1)))
     return decline("unsupported_capability", "This isn't available yet: quarters of a rate, a breakdown, several crimes or several places.");
 
   // The slice delivers counts, as totals or by month or year: one measure optionally broken down by ONE delivered
@@ -1021,6 +1026,27 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const qStart = (ym: string) => `${ym.slice(0, 4)}-${String(Math.floor((Number(ym.slice(5, 7)) - 1) / 3) * 3 + 1).padStart(2, "0")}`;
     const from = qStart(period.from), toQ = addMonths(qStart(period.to), 2);
     const to = toQ > release.lastMonth ? release.lastMonth : toQ;
+    if (quarterCats) {
+      // The compiler's quarter grain: each category's quarter known only when all three months are (D6), its share of
+      // that quarter's units; a quarter past the data is incomplete, never a shorter sum.
+      // Read only through the release's last month (Codex month review 01.1): a quarter running past it is incomplete,
+      // blank, never a sum of the months before the cutoff or of months the release does not cover.
+      const qPlan: NibrsPlan = { ...checked, period: { kind: "absolute", from, to },
+        groupings: [{ ...checked.groupings[0], dimension: "time.quarter" }, checked.groupings[1]],
+        statistics: checked.statistics.map((s) => (s.kind === "share" ? { ...s, within: ["time.quarter"] } : s)) };
+      const c = compilePlan(qPlan, { kind: "absolute", from, to }, deps.target);
+      if (c.kind === "unsupported") return notYet(c.reason);
+      const qEnd = (k: string) => `${k.slice(0, 4)}-${String(Number(k.slice(6)) * 3).padStart(2, "0")}`;
+      const pi = c.query.columns.indexOf("period");
+      const got = deps.execute(c.query.sql).map((r) => (qEnd(String(r[pi])) <= release.lastMonth ? r
+        : c.query.columns.map((col, i) => (i === pi || checked.groupings.some((g) => g.dimension === col) ? r[i] : col.endsWith("_status") ? "UNKNOWN" : null))));
+      if (got.some((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i])))))
+        return decline("unsupported_capability", "This agency's reports for this period disagree with its record of which months it reported, so no number is given.");
+      for (const st of c.query.statements) if (!statements.includes(st)) statements.push(st);
+      const delivered = deliver(qPlan, { from, to }, requestedTo, c.query.columns, got, statements, release.id, notes0, null);
+      if (delivered.contractProblems.length) return notYet(`answer contract: ${delivered.contractProblems.join("; ")}`);
+      return { kind: "answer", plan: qPlan, period, sql: c.query.sql, delivered: reported(delivered) };
+    }
     const sub: NibrsPlan = { ...checked, period: { kind: "absolute", from, to } };
     const c = compilePlan(sub, { kind: "absolute", from, to }, deps.target);
     if (c.kind === "unsupported") return notYet(c.reason);

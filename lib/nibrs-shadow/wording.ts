@@ -78,6 +78,7 @@ export const REASONS: Record<string, (x: string) => string> = {
   "a rate over several years is given per year; ask without \"total\" for one rate per year.": () => "A rate over several years is given for each year; ask without \"total\" to see one rate per year.",
   "breakdowns come from yearly tables; monthly or rolling breakdowns aren't available.": () => "Breakdowns are available by year, not by month or as rolling totals.",
   "breakdowns come from yearly tables; a breakdown for part of a year isn't available.": () => "Breakdowns are available for whole years, not for part of a year.",
+  "a breakdown is by year or by month, not both.": () => "A breakdown is by year or by month, not both: ask for one of them.",
   "a breakdown covers one year or one range of years; ask for each year on its own.": () => "A breakdown covers one year or one range of years; ask for each year on its own.",
   "clearance figures count offense records, not other units.": (x) => `Clearances are recorded for each offense, not for each person, so they can't be counted by ${q(x)}.`,
   "NIBRS's clearance tables don't record it, so a clearance share can't be restricted by it.": (x) => `Clearances aren't recorded with ${q(x)}, so a share of clearances can't be limited by it.`,

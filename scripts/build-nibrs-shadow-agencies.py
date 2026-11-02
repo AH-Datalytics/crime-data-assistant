@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds the shadow slice's place index: scripts/fixtures/nibrs-shadow/agencies.json.
 
-    <python with duckdb> -I scripts/build-nibrs-shadow-agencies.py --root <canonical dir> --names <crime_data.db>
+    <python with duckdb> -I scripts/build-nibrs-shadow-agencies.py --root <canonical dir> --names <crime_data.db> --release <release id>
 
 One row per city police agency (agency indicator 1) and per county agency (crime_data.db's Historical agency type
 "county", named "<X> County") in the canonical build, with its population in the build's latest year, at or above
@@ -21,6 +21,7 @@ MIN_POPULATION = 10_000
 ap = argparse.ArgumentParser()
 ap.add_argument("--root", required=True)
 ap.add_argument("--names", required=True)
+ap.add_argument("--release", required=True)  # the canonical release id, recorded in the file
 a = ap.parse_args()
 OUT = os.path.join(os.path.dirname(__file__), "fixtures", "nibrs-shadow", "agencies.json")
 
@@ -42,8 +43,8 @@ for o, c, s, ind, p, y in rows:
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "w", encoding="utf-8", newline="\n") as f:
     # One agency per line, so a rebuild diffs by agency.
-    f.write('{"_comment": "City police and county agencies in canonical release 20261028-test5 with 10,000+ residents (scripts/build-nibrs-shadow-agencies.py).",\n')
-    f.write(' "release": "20261028-test5",\n "agencies": [\n')
+    f.write('{"_comment": "City police and county agencies in canonical release ' + a.release + ' with 10,000+ residents (scripts/build-nibrs-shadow-agencies.py).",\n')
+    f.write(' "release": "' + a.release + '",\n "agencies": [\n')
     f.write(",\n".join("  " + json.dumps(r, ensure_ascii=False) for r in out))
     f.write("\n ]\n}\n")
 print(len(out), "agencies:", sum(r["kind"] == "city" for r in out), "city,", sum(r["kind"] == "county" for r in out), "county")

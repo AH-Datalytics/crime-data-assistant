@@ -1,9 +1,9 @@
 {
-"_comment": "FBI agency names for the ORIs of canonical release 20261028-test5, from nibrs-model's reference/agency-names/agency-names.csv (scripts/build-nibrs-agency-names.py).",
-"release": "20261028-test5",
+"_comment": "FBI agency names for the ORIs of canonical release test6-20261031-host, from nibrs-model's reference/agency-names/agency-names.csv (scripts/build-nibrs-agency-names.py).",
+"release": "test6-20261031-host",
 "source": {
 "repo": "nibrs-model",
-"commit": "6b429fc51dff52400e3b091fa8fdea3972dcbb4f",
+"commit": "aeb0156b91d2beba37ce318e4948cc2e4b076ba6",
 "file": "reference/agency-names/agency-names.csv",
 "sources": [
 {
