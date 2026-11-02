@@ -19,7 +19,6 @@ import { shadowAnswer, type ShadowDeps } from "@/lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "@/lib/nibrs-shadow/places";
 import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "@/lib/nibrs-shadow/historical";
-import { deterministicRewriter } from "@/lib/nibrs-shadow/follow-up";
 import { MAX_QUESTION, follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
 import { headlineTitle, titlesFor } from "@/app/assistant/title";
 import { liveModelRewrite } from "./live-rewriter";
@@ -59,14 +58,10 @@ export async function POST(req: Request) {
   try {
     let asked = question, rewrite: string | null = null;
     if (previous && clicked.length === 0) {
-      let r = deterministicRewriter.rewrite(previous, question);
-      if (r.kind === "ask") {
-        const m = await liveModelRewrite(previous, question, session);
-        if (m === "capped") return NextResponse.json({ kind: "rewrite-ask", why: "Please ask the full question, with the crime, the place and the years.", options: r.options, ms: Date.now() - started });
-        // The model's question back with its checked choices: each a proposal, none run until clicked.
-        if (m && m.kind === "choices") return NextResponse.json({ kind: "proposal", asked: question, why: m.why, options: m.options, ms: Date.now() - started });
-        if (m && m.kind !== "ask") r = m;
-      }
+      // The engine's live hybrid (#95): deterministic first, the model only where it asks, through the guards.
+      const r = await liveModelRewrite(previous, question, session);
+      // The model's question back with its checked choices: each a proposal, none run until clicked.
+      if (r.kind === "choices") return NextResponse.json({ kind: "proposal", asked: question, why: r.why, options: r.options, ms: Date.now() - started });
       if (r.kind === "ask") return NextResponse.json({ kind: "rewrite-ask", why: r.why, options: r.options, ms: Date.now() - started });
       if (r.kind === "presentation") return NextResponse.json({ kind: "presentation", asked: r.question, how: r.how, ms: Date.now() - started });
       // P73: a proposed rewrite is shown as "Did you mean ...?" and runs only when the user confirms it.

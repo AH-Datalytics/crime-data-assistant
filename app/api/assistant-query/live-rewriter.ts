@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { GENERATION, MODEL_ID, guarded, meaningProblem, type ModelAnswer } from "@/lib/nibrs-shadow/model-rewriter";
+import { GENERATION, MODEL_ID, guarded, hybridRewriteAsync, meaningProblem, type ModelAnswer } from "@/lib/nibrs-shadow/model-rewriter";
 import { RESPONSE_SCHEMA, SYSTEM_PROMPT, userPrompt } from "@/lib/nibrs-shadow/model-rewriter-prompt";
 import { deterministicRewriter, type Rewrite } from "@/lib/nibrs-shadow/follow-up";
 
@@ -101,42 +101,49 @@ function yearChoices(previous: string, followUp: string): Choices | null {
 }
 
 /**
- * The model's guarded rewrite of a follow-up, or its question back with checked choices; "capped" when the daily or
- * the session cap is reached; null when the model can't help (no key, an error, a question back with no usable choice),
- * for the caller to keep the deterministic rewriter's question back. It is called with the engine's larger output cap
- * (for answers cut off at the smaller one), and once more when the answer is cut off or is a question back with no
- * usable choice (the model's answers vary).
+ * A follow-up through the engine's live hybrid (hybridRewriteAsync, #95): the deterministic rewriter first, its certain
+ * rewrites run directly; where it asks, the model's answer through the same guards, as a proposal. This supplies the
+ * model call, with the spending caps: called with the engine's larger output cap (for answers cut off at the smaller
+ * one), and once more when the answer is cut off or is not usable (the model's answers vary). Where both ask, the
+ * model's own checked choices, else "same for"/"add" a single year, are offered as proposals; at the daily or the
+ * session cap, the question back asks for the full question.
  */
-export async function liveModelRewrite(previous: string, followUp: string, session: string): Promise<Rewrite | Choices | "capped" | null> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
+export async function liveModelRewrite(previous: string, followUp: string, session: string): Promise<Rewrite | Choices> {
   const k = JSON.stringify([previous.trim(), followUp.trim()]);
   const known = answered.get(k);
   if (known) return known;
-  const used = calls.get(session) ?? 0;
-  if (used >= PER_SESSION) return "capped";
-  calls.set(session, used + 1);
-  const prompt = userPrompt(previous, followUp);
-  let result: Rewrite | Choices | null = null;
-  try {
-    for (let attempt = 0; attempt < 2 && !result; attempt++) {
-      // The engine's larger cap from the start: at the smaller one, low thinking often uses the whole budget.
-      const a = await call(key, prompt, GENERATION.retryTruncatedMaxOutputTokens);
-      if (!a) return null;
-      if (a === "cut") continue;
-      if (a.kind === "ask") {
-        const options = checkedOptions(a, previous, followUp);
-        if (options.length) result = { kind: "choices", why: plainWhy(a.why), options };
-        continue;
+  let capped = false, choices: Choices | null = null;
+  const r = await hybridRewriteAsync(previous, followUp, async (p, f) => {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return null;
+    const used = calls.get(session) ?? 0;
+    if (used >= PER_SESSION) { capped = true; return null; }
+    calls.set(session, used + 1);
+    const prompt = userPrompt(p, f);
+    let last: ModelAnswer | null = null;
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        // The engine's larger cap from the start: at the smaller one, low thinking often uses the whole budget.
+        const a = await call(key, prompt, GENERATION.retryTruncatedMaxOutputTokens);
+        if (!a) return last;
+        if (a === "cut") continue;
+        last = a;
+        if (a.kind === "ask") {
+          const options = checkedOptions(a, p, f);
+          if (options.length) { choices = { kind: "choices", why: plainWhy(a.why), options }; return a; }
+          continue;
+        }
+        if (guarded(a, p, f).kind !== "ask") return a;
       }
-      const r = guarded(a, previous, followUp);
-      if (r.kind !== "ask") result = r;
+    } catch (e) {
+      if (e instanceof Error && e.message === "capped") capped = true;
+      return null;
     }
-  } catch (e) {
-    if (e instanceof Error && e.message === "capped") return "capped";
-    return null;
-  }
-  result ??= yearChoices(previous, followUp);
-  if (result) answered.set(k, result);
-  return result;
+    return last;
+  });
+  if (r.kind !== "ask") { answered.set(k, r); return r; }
+  if (capped) return { ...r, why: "Please ask the full question, with the crime, the place and the years." };
+  const out = choices ?? yearChoices(previous, followUp) ?? r;
+  if (out !== r) answered.set(k, out);
+  return out;
 }
