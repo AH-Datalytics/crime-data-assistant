@@ -96,12 +96,18 @@ type Groupable = { col: string; join?: (read: Read) => string; multi?: true; age
 const own = (col: string): Groupable => ({ col });
 const age = (a: string): Groupable => ({ col: `${a}.age`, age: true });
 /**
- * P49: a crime by an attribute of its incident's offenders (sex, race, ethnicity, age); offender 00 (none known) is its
- * own category. Each crime counts once under each category present.
+ * P86 (coordinator 2026-11-02: one Unknown row, last): a person's sex, race or ethnicity left blank is counted with the
+ * code recorded as unknown ('U', "Unknown"), here in SQL, so a unit with both counts once in it.
+ */
+const unknownAs = (col: string) => `CASE WHEN ${col} IS NULL OR trim(${col}) = '' THEN 'U' ELSE ${col} END`;
+/**
+ * P49: a crime by an attribute of its incident's offenders (sex, race, ethnicity, age). Each crime counts once under
+ * each category present. An offender 00 (no offender identified), a blank, or no offender record is Unknown (P86:
+ * one Unknown row, merged here so a crime counts once in it).
  */
 const offenderAttr = (a: string, attr: "sex" | "race" | "ethnicity" | "age"): Groupable => {
-  const unknown = (x: string) => `CASE WHEN f2.offender_seq = '00' THEN 'unknown_offender' ELSE ${x} END`;
-  return { col: unknown(`f2.${attr}`), multi: true, join: (read) => `LEFT JOIN ${read("offender")} f2 ON ${sameIncident("f2", a)}`,
+  const unknown = (x: string) => `CASE WHEN f2.offender_seq = '00' THEN ${attr === "age" ? "'Unknown'" : "'U'"} ELSE ${x} END`;
+  return { col: unknown(unknownAs(`f2.${attr}`)), multi: true, join: (read) => `LEFT JOIN ${read("offender")} f2 ON ${sameIncident("f2", a)}`,
     ...(attr === "age" ? { age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => unknown(ageBins("f2.age", bins)) } : {}) };
 };
 /**
@@ -110,7 +116,7 @@ const offenderAttr = (a: string, attr: "sex" | "race" | "ethnicity" | "age"): Gr
  */
 const pairAttr = (attr: "sex" | "race" | "ethnicity" | "age"): Groupable => {
   const none = (x: string) => `CASE WHEN r.data_year IS NULL THEN 'no_relationship' ELSE ${x} END`;
-  return { col: none(`f3.${attr}`), multi: true,
+  return { col: none(unknownAs(`f3.${attr}`)), multi: true,
     join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")} LEFT JOIN ${read("offender")} f3 ON ${sameIncident("f3", "r")} AND f3.offender_seq = r.offender_number`,
     ...(attr === "age" ? { age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => none(ageBins("f3.age", bins)) } : {}) };
 };
@@ -142,20 +148,20 @@ function clearanceCond(read: Read, a: string, dimension: string, values: string[
   return `(${clearanceCols(type)[dimension]}) IN (${list(values)})`;
 }
 const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
-  victim: { "victim.race": own("v.race"), "victim.sex": own("v.sex"), "victim.ethnicity": own("v.ethnicity"), "victim.age": age("v"),
+  victim: { "victim.race": own(unknownAs("v.race")), "victim.sex": own(unknownAs("v.sex")), "victim.ethnicity": own(unknownAs("v.ethnicity")), "victim.age": age("v"),
     "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
     ...offenderGroupings("v"), ...Object.fromEntries(OFFENDER_ATTRS.map((x) => [`victim_offender.offender_${x}`, pairAttr(x)])), ...clearance("v") },
   offense: { "offense.location_type": own("o.location_type"),
     "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
     ...offenderGroupings("o"), ...clearance("o") },
   incident: { ...clearance("o") },
-  // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is its own
-  // category, "unknown_offender", whatever its blank fields hold.
+  // P44 and the segment convention (Trap C): an offender record with sequence 00 (no offender information) is counted
+  // as one offender, whatever its blank fields hold; its attributes are Unknown (P86: one Unknown row).
   offender: Object.fromEntries(OFFENDER_ATTRS.map((x) => {
-    const seq00 = (c: string) => `CASE WHEN f.offender_seq = '00' THEN 'unknown_offender' ELSE ${c} END`;
-    return [`offender.${x}`, x === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(`f.${x}`))];
+    const seq00 = (c: string) => `CASE WHEN f.offender_seq = '00' THEN ${x === "age" ? "'Unknown'" : "'U'"} ELSE ${c} END`;
+    return [`offender.${x}`, x === "age" ? { col: "f.age", age: true as const, binned: (bins: { label: string; from: number; to: number }[]) => seq00(ageBins("f.age", bins)) } : own(seq00(unknownAs(`f.${x}`)))];
   })),
-  arrestee: { "arrestee.race": own("a.race"), "arrestee.sex": own("a.sex"), "arrestee.ethnicity": own("a.ethnicity"), "arrestee.age": age("a") },
+  arrestee: { "arrestee.race": own(unknownAs("a.race")), "arrestee.sex": own(unknownAs("a.sex")), "arrestee.ethnicity": own(unknownAs("a.ethnicity")), "arrestee.age": age("a") },
 };
 
 /**

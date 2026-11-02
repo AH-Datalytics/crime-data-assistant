@@ -30,7 +30,8 @@ assert.equal(read("car thefts in Tulsa in 2022").readings.length, 0, "car theft 
 // A breakdown asked as its categories, or with "and" before a time grain (compiler increment 1).
 assert.equal(read("How many robbery victims in Tulsa were women or men in 2022?").text, "How many robbery victims in Tulsa by sex in 2022?");
 assert.equal(read("arsons in Tulsa by location type and month, 2022").text, "arsons in Tulsa by location type by month, 2022");
-assert.equal(read("robberies in Tulsa by weapon and year").readings.length, 0, "only the delivered categories");
+assert.equal(read("robberies in Tulsa by weapon and year").text, "robberies in Tulsa by weapon by year", "every breakdown asked is read: weapon by year (coordinator 2026-11-02), never the year dropped");
+assert.equal(read("robbery offenders in Tulsa by year and age").text, "robbery offenders in Tulsa by age by year");
 assert.equal(read("Simple assaults committed by men and women in Tulsa in 2023").readings.length, 0, "offenders, not victims: left alone");
 // P29 (Jeff): "by" names the offenders, "against" names the victims.
 assert.equal(read("robberies against men and women in Tulsa in 2022").text, "robberies by sex in Tulsa in 2022");

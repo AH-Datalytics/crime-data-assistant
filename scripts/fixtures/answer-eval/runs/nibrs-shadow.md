@@ -75,7 +75,7 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-184 cases. Correct 162; unverified 17; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
+184 cases. Correct 154; unverified 25; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -93,7 +93,7 @@ Expected (rows) by actual (columns):
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: not measured (2/3 match, 1 not measured) |
 | answer:nibrs change | 2021 and later | 12 | pass | wrong answers: pass (0); initial action: pass (100% (12/12)); direct answers: pass (100%); numeric fixtures: pass (12/12 match) |
-| answer:nibrs count | 2021 and later | 118 | pass | wrong answers: pass (0); initial action: pass (97% (115/118)); direct answers: pass (97%); numeric fixtures: pass (115/115 match) |
+| answer:nibrs count | 2021 and later | 118 | not measured | wrong answers: not measured (0, 8 answers unverified); initial action: pass (97% (115/118)); direct answers: not measured (91% verified, 8 unverified); numeric fixtures: not measured (107/115 match, 8 not measured) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 14 | pass | wrong answers: pass (0); initial action: pass (100% (14/14)); direct answers: pass (100%); numeric fixtures: pass (14/14 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
@@ -142,6 +142,9 @@ Discrepancies and unverified cases:
   - declined (reader): I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example "robberies in Denver in 2024".
 - **LS-282** (avoidable_decline; expected answer, got decline) "Simple assault victims in Louisville by race and sex in 2024"
   - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
+- **LS-292** (unverified; expected answer, got answer) "Simple assaults by men and women in Oklahoma City in 2024"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `174 VALUE`
+  - delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / A crime that falls in several of these categories is counted once in each, so the cat
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
 - **LS-348** (unverified; expected answer, got answer) "Robberies in Texas this year"
@@ -154,6 +157,21 @@ Discrepancies and unverified cases:
   - unverified measures: expected `?`, got `?`
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Atlanta, Georgia: 26.7% of robberies were cleared in 2023 (161 of 602). / Figures for the Atlanta Police Department. / Source: Crime Index.
+- **LS-377** (unverified; expected answer, got answer) "Aggravated assaults in Memphis in 2024 by offender race"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `5379 VALUE`
+  - delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categorie
+- **LS-378** (unverified; expected answer, got answer) "Robberies in Detroit in 2024 by offender age"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `738 VALUE`
+  - delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can 
+- **LS-382** (unverified; expected answer, got answer) "According to NIBRS, murder victims in Memphis in 2024 by offender race"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `107 VALUE`
+  - delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up
+- **LS-387** (unverified; expected answer, got answer) "Simple assaults in Milwaukee in 2024 by offender ethnicity"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `569 VALUE`
+  - delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / A crime that falls in several of these categories is counted once in each, so the cate
+- **LS-388** (unverified; expected answer, got answer) "Robbery offenders in Albuquerque in 2023 by age"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `709 VALUE`
+  - delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Source: FBI NIBRS.
 - **LS-389** (unverified; expected clarify, got clarify) "According to NIBRS, murders by young adults in Memphis in 2024"
   - unverified option "18 to 24" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "18 to 29" values: expected `independent expected values`, got `none given: NOT MEASURED`
@@ -168,6 +186,12 @@ Discrepancies and unverified cases:
 - **LS-392** (unverified; expected decline, got decline) "Aggravated assaults in Tennessee in 2024 by offender sex"
   - unverified reason: expected `Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.`, got `unsupported_capability`
   - declined (unsupported_capability): Offender breakdowns for a whole state or the nation aren't available yet; they are for one agency or several named agencies.
+- **LS-397** (unverified; expected answer, got answer) "Aggravated assaults in Denver in 2023 by offender race"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `1041 VALUE`
+  - delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / A crime that falls in several of these categories is counted once in each, so the categories c
+- **LS-411** (unverified; expected answer, got answer) "by offender race"
+  - unverified value Unknown: expected `(merged from overlapping categories: no independent value)`, got `5379 VALUE`
+  - delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categorie
 - **LS-422** (unverified; expected clarify, got clarify) "what about Wichita?"
   - unverified option "Wichita only" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "Add Wichita; show all three separately" values: expected `independent expected values`, got `none given: NOT MEASURED`
