@@ -133,7 +133,7 @@ assert.deepEqual(m.delivered.contractProblems, []);
 const v = as(ask("How many shoplifting victims were there in Memphis in 2024?"), "answer");
 assert.equal(v.plan.measures[0].unit, "offense");
 // P86: carried, not shown (the title says "offenses").
-assert.ok(v.delivered.answerStatements.includes("property_counted_by_offense") && !v.delivered.text.includes("Property crimes are counted by offense, not by victim."));
+assert.equal(v.delivered.text.at(-2), "Property crimes are counted by offense, not by victim.", "P86: shown, since victims were asked for");
 // Person crimes stay by victim (D18); carjacking is counted by offense (D18).
 assert.equal(as(ask("How many simple assaults were there in Detroit in 2023?"), "answer").plan.measures[0].id, "victims.simple_assault");
 const cj = as(ask("carjackings in Memphis TN by month in 2025"), "answer");
@@ -328,7 +328,7 @@ assert.equal(zipScore.outcome, "unverified");
 assert.equal(gates([zipScore])[0].categories.find((x) => x.name === "wrong answers")!.status, "not measured");
 const victimsNoPeriod = as(ask("Shoplifting victims in Memphis"), "clarify");
 const latest = as(victimsNoPeriod.options[0].continuation!, "answer");
-assert.ok(latest.delivered.answerStatements.includes("property_counted_by_offense") && !latest.delivered.text.includes("Property crimes are counted by offense, not by victim."));
+assert.equal(latest.delivered.text.at(-2), "Property crimes are counted by offense, not by victim.");
 // A statement the plan calls for but the answer does not carry is caught (P86: carried in answerStatements).
 const stripped = { ...victimsNoPeriod, options: victimsNoPeriod.options.map((o, i) => (i ? o : { ...o, continuation: { ...latest, delivered: { ...latest.delivered, answerStatements: latest.delivered.answerStatements.filter((x) => x !== "property_counted_by_offense") } } })) };
 const vLabel: Case = { ...label(np), question: "Shoplifting victims in Memphis" };

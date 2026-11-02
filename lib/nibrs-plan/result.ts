@@ -109,7 +109,7 @@ export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
  * the plan calls for is still carried in the answer's `answerStatements` (the contract and the scorer check them there,
  * and the page can show them on request); only these are written into the text.
  */
-export const SHOWN: ReadonlySet<AnswerStatement> = new Set<AnswerStatement>(["property_not_attributed", "categories_overlap", "clearance_as_of_file"]);
+export const SHOWN: ReadonlySet<AnswerStatement> = new Set<AnswerStatement>(["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file"]);
 /** The text lines of the statements shown (SHOWN), in order. */
 export const shownStatements = (statements: readonly AnswerStatement[]) => statements.filter((s) => SHOWN.has(s)).map((s) => ANSWER_STATEMENTS[s]);
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */

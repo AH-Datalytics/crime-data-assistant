@@ -1736,7 +1736,7 @@
     }
    ],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2174,7 +2174,7 @@
     }
    ],
    "notes": [
-    "delivered: Denver, Colorado: 12,457 motor vehicle thefts in 2023. / Figures for the Denver Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this data, not zero. / Source: Crime Index."
+    "delivered: Denver, Colorado: 12,457 motor vehicle thefts in 2023. / Figures for the Denver Police Department. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "2021 and later",
@@ -2241,7 +2241,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by race, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
+    "delivered: Milwaukee, Wisconsin: simple assault victims by race, 2024. / Reported by the Milwaukee Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2255,7 +2255,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: aggravated assault victims by sex, 2022. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in 2022. / Source: FBI NIBRS."
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by sex, 2022. / Reported by the Albuquerque Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2269,7 +2269,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Louisville, Kentucky: simple assault victims by ethnicity, 2024. / Reported by the Louisville Metro Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
+    "delivered: Louisville, Kentucky: simple assault victims by ethnicity, 2024. / Reported by the Louisville Metro Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2283,7 +2283,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tucson, Arizona: shoplifting offenses by location type, 2024. / Reported by the Tucson Police Department. / Each share is that category's part of all shoplifting offenses in 2024. / Source: FBI NIBRS."
+    "delivered: Tucson, Arizona: shoplifting offenses by location type, 2024. / Reported by the Tucson Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2297,7 +2297,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Austin, Texas: theft from motor vehicle offenses by location type, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all theft from motor vehicle offenses in 2023. / Source: FBI NIBRS."
+    "delivered: Austin, Texas: theft from motor vehicle offenses by location type, 2023. / Reported by the Austin Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2311,7 +2311,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Kansas City, Missouri: murder victims by race, 2023. / Reported by the Kansas City Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
+    "delivered: Kansas City, Missouri: murder victims by race, 2023. / Reported by the Kansas City Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2325,7 +2325,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: simple assault victims by race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all simple assault victims in 2021 to 2023. / Source: FBI NIBRS."
+    "delivered: Albuquerque, New Mexico: simple assault victims by race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2339,7 +2339,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Austin, Texas: murder victims by sex, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
+    "delivered: Austin, Texas: murder victims by sex, 2023. / Reported by the Austin Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2353,7 +2353,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: aggravated assault victims by year and race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in the same year. / Source: FBI NIBR"
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by year and race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2367,7 +2367,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by age group, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under "
+    "delivered: Milwaukee, Wisconsin: simple assault victims by age group, 2024. / Reported by the Milwaukee Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2381,7 +2381,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: robbery offenses by weapon, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime that falls in several of these categories is counted"
+    "delivered: Albuquerque, New Mexico: robbery offenses by weapon, 2023. / Reported by the Albuquerque Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2408,7 +2408,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Kansas City, Missouri: carjacking offenses by location type, 2024. / Reported by the Kansas City Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
+    "delivered: Kansas City, Missouri: carjacking offenses by location type, 2024. / Reported by the Kansas City Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2464,7 +2464,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Fort Worth, Texas: robbery offenses by weapon, 2023. / Reported by the Fort Worth Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime that falls in several of these categories is counted once i"
+    "delivered: Fort Worth, Texas: robbery offenses by weapon, 2023. / Reported by the Fort Worth Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / Source:"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2478,7 +2478,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Mesa, Arizona: aggravated assault victims by age group, 2024. / Reported by the Mesa Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under one "
+    "delivered: Mesa, Arizona: aggravated assault victims by age group, 2024. / Reported by the Mesa Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2492,7 +2492,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Colorado Springs, Colorado: murder victims by relationship to the offender, 2023. / Reported by the Colorado Springs Police Department. / Each share is that category's part of all murder victims in 2023. / A crime that falls in several of t"
+    "delivered: Colorado Springs, Colorado: murder victims by relationship to the offender, 2023. / Reported by the Colorado Springs Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add u"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2520,7 +2520,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: carjacking offenses by location type, 2024. / Reported by the Wichita Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
+    "delivered: Wichita, Kansas: carjacking offenses by location type, 2024. / Reported by the Wichita Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2534,7 +2534,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime that falls in several of these c"
+    "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2548,7 +2548,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024. / Offenders are counted as listed in each incident report,"
+    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2603,7 +2603,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Colorado Springs, Colorado: 1,284 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Colorado Springs, Colorado: 1,284 shoplifting arrests in 2024. / Reported by the Colorado Springs Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2617,7 +2617,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: robbery arrests by month, 2023. / Reported by the Wichita Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Wichita, Kansas: robbery arrests by month, 2023. / Reported by the Wichita Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2631,7 +2631,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: 161 burglary arrests in 2024. / Reported by the Raleigh Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Raleigh, North Carolina: 161 burglary arrests in 2024. / Reported by the Raleigh Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2825,7 +2825,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Arlington, Texas: carjacking offenses, rolling 12-month totals by month, January 2023 through September 2026. / Reported by the Arlington Police Department. / Each month's figure is the total of that month and the 11 months before it. / Sou"
+    "delivered: Arlington, Texas: carjacking offenses, rolling 12-month totals by month, January 2023 through September 2026. / Reported by the Arlington Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2853,7 +2853,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Greensboro, North Carolina: shoplifting offenses, rolling 12-month totals by month, January 2025 through September 2026. / Reported by the Greensboro Police Department. / Each month's figure is the total of that month and the 11 months befo"
+    "delivered: Greensboro, North Carolina: shoplifting offenses, rolling 12-month totals by month, January 2025 through September 2026. / Reported by the Greensboro Police Department. / No report is known for November 2025 to December 2025: every window c"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2867,7 +2867,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Greensboro, North Carolina: shoplifting offenses, rolling 12-month totals by month, January through September 2026. / Reported by the Greensboro Police Department. / Each month's figure is the total of that month and the 11 months before it"
+    "delivered: Greensboro, North Carolina: shoplifting offenses, rolling 12-month totals by month, January through September 2026. / Reported by the Greensboro Police Department. / No report is known for November 2025 to December 2025: every window contai"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3007,7 +3007,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas city agencies with a population of 250,000 or more: the 12 with the highest shoplifting offenses per 100,000, 2024. / Large means a population of 250,000 or more (the FBI's agency population). / Ranked: agencies that reported all 12 m"
+    "delivered: Texas city agencies with a population of 250,000 or more: the 12 with the highest shoplifting offenses per 100,000, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Rates use each agency's pop"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -3546,7 +3546,7 @@
     }
    ],
    "notes": [
-    "delivered: Atlanta, Georgia: 26.7% of robberies were cleared in 2023 (161 of 602). / Figures for the Atlanta Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this data, not zero. / Source: Crime In"
+    "delivered: Atlanta, Georgia: 26.7% of robberies were cleared in 2023 (161 of 602). / Figures for the Atlanta Police Department. / Source: Crime Index."
    ],
    "capability": "answer:historical rate",
    "era": "2021 and later",
@@ -3616,7 +3616,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3672,7 +3672,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 351 arrests on incidents that included a robbery in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Arrests with no crime"
+    "delivered: Memphis, Tennessee: 351 arrests on incidents that included a robbery in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3686,7 +3686,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 328 robbery arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: 328 robbery arrests in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3742,7 +3742,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime that falls in several of these cat"
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3756,7 +3756,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / Each share is that category's part of all robbery offenses in 2024. / Age groups: Under 18 (ages 1-17 and infants under one year"
+    "delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3770,7 +3770,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 555 aggravated assault victims with an offender under 18 in the incident in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, s"
+    "delivered: Memphis, Tennessee: 555 aggravated assault victims with an offender under 18 in the incident in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3784,7 +3784,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,541 aggravated assault victims under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted. /"
+    "delivered: Memphis, Tennessee: 2,541 aggravated assault victims under 18 in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3798,7 +3798,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 5,162 aggravated assault victims with a firearm who were female in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that pe"
+    "delivered: Memphis, Tennessee: 5,162 aggravated assault victims with a firearm who were female in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3812,7 +3812,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categories is counted once "
+    "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / Sour"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3826,7 +3826,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: murder victims by the race of the linked offenders, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categori"
+    "delivered: Memphis, Tennessee: murder victims by the race of the linked offenders, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more tha"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3840,7 +3840,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault offenders who were strangers to the victim by offender sex, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault offenders who were stranger"
+    "delivered: Memphis, Tennessee: aggravated assault offenders who were strangers to the victim by offender sex, 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3854,7 +3854,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested more th"
+    "delivered: Denver, Colorado: arrests by arrestee race, 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3868,7 +3868,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: 71 robbery arrests of arrestees under 18 in 2024. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / A person whose detail is unkno"
+    "delivered: Detroit, Michigan: 71 robbery arrests of arrestees under 18 in 2024. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3882,7 +3882,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime that falls in several of these ca"
+    "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3896,7 +3896,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenders in 2023. / Age groups: Under 18 (ages 1-17 and infants un"
+    "delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4008,7 +4008,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested mo"
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4022,7 +4022,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Age groups: Under 18 (ages 1-17 and infants under one year), 18-24, 25-34, 35-"
+    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4036,7 +4036,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 1,169 aggravated assault victims who were female under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person i"
+    "delivered: Memphis, Tennessee: 1,169 aggravated assault victims who were female under 18 in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4050,7 +4050,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) by race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggrav"
+    "delivered: Memphis, Tennessee: aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) by race, 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4064,7 +4064,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime that falls in several of these catego"
+    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the tota"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4078,7 +4078,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime that falls in seve"
+    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4092,7 +4092,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so t"
+    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4106,7 +4106,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 254 aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) in 2023. / Reported by the Denver Police Department. / The condition on the offender is checked only for the"
+    "delivered: Denver, Colorado: 254 aggravated assault victims of an offender under 18 (linked to the victim by the victim-offender relationship) in 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4120,7 +4120,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categories is counted on"
+    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / S"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4134,7 +4134,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categ"
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4246,7 +4246,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so t"
+    "delivered: Denver, Colorado: 263 aggravated assault victims with an offender under 18 in the incident in 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4260,7 +4260,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime that falls in several of these cat"
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4274,7 +4274,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested mo"
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4288,7 +4288,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Age groups: Under 18 (ages 1-17 and infants under one year), 18-24, 25-34, 35-"
+    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4302,7 +4302,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categ"
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4330,7 +4330,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: 54 robbery arrests of arrestees under 18 in 2023. / Reported by the Detroit Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / A person whose detail is unkno"
+    "delivered: Detroit, Michigan: 54 robbery arrests of arrestees under 18 in 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4344,7 +4344,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 1,372 aggravated assault victims who were male under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is "
+    "delivered: Memphis, Tennessee: 1,372 aggravated assault victims who were male under 18 in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4358,7 +4358,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 17 murder victims under 18 in 2024. / Reported by the Memphis Police Department. / A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted. / Source: FBI NI"
+    "delivered: Memphis, Tennessee: 17 murder victims under 18 in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4372,7 +4372,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: carjacking offenses by quarter, 2025. / Reported by the Memphis Police Department. / Each quarter's figure is the sum of its three months. / Source: FBI NIBRS."
+    "delivered: Memphis, Tennessee: carjacking offenses by quarter, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",

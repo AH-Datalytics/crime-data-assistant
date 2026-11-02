@@ -66,7 +66,7 @@ Discrepancies and unverified cases:
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-241** (unverified; expected answer, got answer) "Shoplifting arrests in Memphis in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI N
+  - delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
 - **LS-243** (unverified; expected clarify, got clarify) "Shoplifting in Washington in 2024"
   - unverified option "Washington state" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "Washington state" button "Consistent Reporting Agencies" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
@@ -133,7 +133,7 @@ Discrepancies and unverified cases:
   - declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants).
 - **LS-266** (unverified; expected answer, got answer) "Motor vehicle thefts in Denver in 2023"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Denver, Colorado: 12,457 motor vehicle thefts in 2023. / Figures for the Denver Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this data, not zero. / Sou
+  - delivered: Denver, Colorado: 12,457 motor vehicle thefts in 2023. / Figures for the Denver Police Department. / Source: Crime Index.
 - **LS-267** (wrong_action; expected clarify, got decline) "Shootings in Nashville in 2024"
   - declined (reader): NIBRS doesn't count shootings as a category, so "Shootings" can't be counted. For fatal shootings, the Homicide Reports tab has firearm homicides. The closest NIBRS figure is aggravated assault with a
 - **LS-269** (avoidable_decline; expected answer, got decline) "How many shoplifting offenses will Denver's 2024 numbers show?"
@@ -153,7 +153,7 @@ Discrepancies and unverified cases:
 - **LS-363** (unverified; expected answer, got answer) "Robbery clearance rate in Atlanta in 2023"
   - unverified measures: expected `?`, got `?`
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Atlanta, Georgia: 26.7% of robberies were cleared in 2023 (161 of 602). / Figures for the Atlanta Police Department. / Figures as published by Crime Index; a blank means the figure is not available in this dat
+  - delivered: Atlanta, Georgia: 26.7% of robberies were cleared in 2023 (161 of 602). / Figures for the Atlanta Police Department. / Source: Crime Index.
 - **LS-389** (unverified; expected clarify, got clarify) "According to NIBRS, murders by young adults in Memphis in 2024"
   - unverified option "18 to 24" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "18 to 29" values: expected `independent expected values`, got `none given: NOT MEASURED`
