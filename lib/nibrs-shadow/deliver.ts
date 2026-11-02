@@ -208,6 +208,8 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
     arrest: "Cleared by arrest", A: "Exceptional: death of the offender", B: "Exceptional: prosecution declined",
     C: "Exceptional: in custody of another jurisdiction", D: "Exceptional: victim refused to cooperate", E: "Exceptional: juvenile, no custody", none: "Uncleared" } },
 };
+/** The category names that say a detail is not known: always listed after the known categories. */
+export const UNKNOWN_NAMES: ReadonlySet<string> = new Set(["Unknown", "Not recorded", "Unknown offender", "No relationship reported"]);
 /** A category's name: the code's name; a blank field is "Not recorded"; a code with no name keeps its code. */
 export function categoryName(dimension: string, code: unknown): string {
   const c = code === null || code === undefined ? "" : String(code).trim();
@@ -298,9 +300,12 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const rank = (r: unknown[]) => { const name = categoryName(cats[0], r[ic]); const i = order.indexOf(name); return i >= 0 ? i : name === "Unknown" ? order.length + 1 : order.length; };
     rows = out.sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || rank(x) - rank(y));
   } else if (cats.length) {
-    // Within each period, categories by count, largest first; blanks last; then by name.
+    // Within each period, categories by count, largest first; blanks last; then by name. A category that says the detail
+    // is not known (Unknown, Not recorded, No relationship reported) is always after the known ones, whatever its count
+    // (coordinator 2026-11-02: Unknown last in every grouping, table, chart and CSV alike).
     const n = (r: unknown[]) => (r[at(count)] === null || r[at(count)] === undefined ? -1 : Number(r[at(count)]));
-    rows = [...rows].sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || n(y) - n(x)
+    const last = (r: unknown[]) => (UNKNOWN_NAMES.has(categoryName(cats[0], r[at(cats[0])])) ? 1 : 0);
+    rows = [...rows].sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || last(x) - last(y) || n(y) - n(x)
       || categoryName(cats[0], x[at(cats[0])]).localeCompare(categoryName(cats[0], y[at(cats[0])])));
   }
   const evidence: CellEvidence[] = [];

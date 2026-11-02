@@ -48,6 +48,7 @@ import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthNam
 import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
+import { missingGroupings } from "./named-groupings";
 import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 
@@ -272,7 +273,27 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
-  return withNextStep(fromLedger(ledger, deps), ledger, deps, question);
+  return withNextStep(everyBreakdown(question, fromLedger(ledger, deps)), ledger, deps, question);
+}
+
+/** The groupings an answer has, as dimensions (Historical's and the historical file's: by year or not). */
+export function answerDimensions(o: ShadowOutcome): string[] | null {
+  if (o.kind === "answer") return o.plan.groupings.map((g) => g.dimension);
+  if (o.kind === "historical" || o.kind === "srs") return o.meaning.groupings.includes("year") ? ["time.year"] : [];
+  return null;
+}
+/**
+ * A requested breakdown is never silently dropped (coordinator 2026-11-02): every breakdown the question names
+ * (named-groupings.ts) is a grouping of the answer, or the question is declined. A clarify's choices are checked the
+ * same way, since each answers this question.
+ */
+function everyBreakdown(question: string, o: ShadowOutcome): ShadowOutcome {
+  if (o.kind === "clarify") return { ...o, options: o.options.map((x) => (x.continuation ? { ...x, continuation: everyBreakdown(question, x.continuation) } : x)) };
+  const dims = answerDimensions(o);
+  if (!dims) return o;
+  const missing = missingGroupings(question, dims);
+  return missing.length ? decline("unsupported_capability", `This isn't available yet: this answer by ${missing.join(" and ")} together with the rest of the question.`,
+    { detail: `breakdown dropped: ${missing.join(", ")}` }) : o;
 }
 
 /**

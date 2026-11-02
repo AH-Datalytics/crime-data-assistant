@@ -97,8 +97,10 @@ const PHRASES: [RegExp, string][] = [
   [/\b(victims?\b[^?.!]*?\s)were\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "$1by sex"],
   // P29: "against men and women" names the victims -> by (victim) sex.
   [/\bagainst\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "by sex"],
-  // A category and a time grain joined by "and": "by race and year" -> "by race by year".
-  [/\bby\s+(race|sex|gender|ethnicity|location(?:\s+type)?)\s+and\s+(year|month)\b/gi, "by $1 by $2"],
+  // A category and a time grain joined by "and", in either order: "by race and year", "by year and age" -> "by race by
+  // year", "by age by year" (coordinator 2026-11-02: "by age and year" had dropped the year).
+  [/\bby\s+(race|sex|gender|ethnicity|age(?:\s+groups?)?|weapons?|relationships?|location(?:\s+type)?)\s+(?:and|&)\s+(?:by\s+)?(year|month|quarter)\b/gi, "by $1 by $2"],
+  [/\bby\s+(year|month|quarter)\s+(?:and|&)\s+(?:by\s+)?(race|sex|gender|ethnicity|age(?:\s+groups?)?|weapons?|relationships?|location(?:\s+type)?)\b/gi, "by $2 by $1"],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];
@@ -299,7 +301,12 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   let column: Flags["column"] = null;
   const col = (c: "population" | "agencies") => { column = column && column !== c ? "both" : c; return ""; };
   text = text.replace(/,?\s*with a column showing the population used to calculate the rate\b/gi, () => col("population"))
-    .replace(/,?\s*with the number of agencies reporting\b/gi, () => col("agencies"));
+    .replace(/,?\s*with the number of agencies reporting\b/gi, () => col("agencies"))
+    // The same request in other words (coordinator 2026-11-02): "how many agencies reported carjackings in ...",
+    // "agencies reporting carjackings in ...", "..., with coverage": the agencies reporting and the population covered.
+    .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted|had)\s+/i, () => col("agencies"))
+    .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
+    .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
   const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };

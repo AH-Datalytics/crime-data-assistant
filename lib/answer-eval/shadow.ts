@@ -13,6 +13,8 @@
 import { NOT_YET } from "../nibrs-shadow/wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
+import { answerDimensions } from "../nibrs-shadow/answer";
+import { missingGroupings } from "../nibrs-shadow/named-groupings";
 import { ANSWER_STATEMENTS, clearanceDims, peopleFacts, SHOWN, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
@@ -127,8 +129,9 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       ? (v.rows ?? []).flatMap((r) => measures.map((m) => ({ key: String(r.year ?? r.month ?? ""), ...pick(cell(r[m])), ...definition(m) })))
       : (v.rows ?? []).map((r) => {
         const c = pick(cell(r[measures[0]]));
-        // Increment 7: an offender record with sequence 00 is its own row, "seq_00" (the segment convention, V59 regenerated).
-        const code = catField ? (String(r[catField]) === "seq_00" ? "unknown_offender" : CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
+        // Increment 7: an offender record with sequence 00 is "seq_00" in the file (the segment convention, V59
+        // regenerated); P86 (coordinator 2026-11-02) counts it in the one Unknown row, as the engine does in SQL.
+        const code = catField ? (String(r[catField]) === "seq_00" ? "U" : CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
         const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], code) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
         const p = String(r.year ?? r.month ?? "");
         // A known 0 denominator (P51) is evidence: its share is an expected blank (UNAVAILABLE). Only absent or unknown
@@ -138,7 +141,7 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
         return { key, ...c, ...(catField ? { share } : {}) };
       });
     // P86: rows that name the same category (Unknown) are one row: values add (blank when either is), share recomputed.
-    if (catField === "age_group") {
+    if (catField) {
       const seen = new Map<string, ExpectedCell>();
       for (const c of cells.splice(0)) {
         const m = seen.get(c.key);
@@ -191,10 +194,12 @@ function peopleCells(v: Record<string, unknown> | undefined): ExpectedCell[] | n
   const age = Object.keys(map).some((k) => /^\d{2}-\d{2}$|^under_18$/.test(k));
   const dim = age ? "victim.age" : PEOPLE_MAPS.find(([re]) => re.test(key))?.[1]
     ?? (Object.keys(map).some((k) => ["H", "N"].includes(k)) ? "victim.ethnicity" : Object.keys(map).some((k) => ["F", "M"].includes(k)) ? "victim.sex" : "victim.race");
-  const name = (k: string) => k === "seq_00" ? "Unknown offender" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
+  // P86: no offender identified, and a person's detail left blank, are the one Unknown row (merged below).
+  const person = age || /(?:sex|race|ethnicity|age)$/.test(dim);
+  const name = (k: string) => k === "seq_00" || (person && k === " ") ? "Unknown" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
     : age ? (k === "under_18" ? "Under 18" : k === "00" ? "Unknown" : k) : categoryName(dim, k);
   const cells = new Map<string, number>();
-  for (const [k, n] of Object.entries(map)) { const key = age && k === " " ? "Unknown" : name(k); cells.set(key, (cells.get(key) ?? 0) + n); }
+  for (const [k, n] of Object.entries(map)) { const key = name(k); cells.set(key, (cells.get(key) ?? 0) + n); }
   return [...cells].map(([key, n]) => ({ key, value: n, status: "VALUE", share: share(n) }));
 }
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
@@ -314,7 +319,9 @@ const MULTI_FIELDS = new Set(["weapon", "relationship", "offender_sex"]);
 const CODE_ALIASES: Record<string, Record<string, string>> = {
   // P86: an age not recorded (" ") and an age recorded as unknown ("00") are one Unknown row.
   age_group: { under_18: "Under 18", "00": "Unknown", " ": "Unknown" },
-  offender_sex: { "00": "unknown_offender" },
+  // P86 (coordinator 2026-11-02): no offender identified, and a sex, race or ethnicity left blank, are Unknown ('U').
+  offender_sex: { "00": "U", " ": "U" }, offender_segment_sex: { "00": "U", " ": "U" },
+  sex: { " ": "U" }, race: { " ": "U" }, ethnicity: { " ": "U" },
 };
 /**
  * Values requested before a label changed: P28 made these questions ask city or county first, so the city's values serve
@@ -975,6 +982,11 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
       take(deliveredCheck(`button "${b.label}" `, `${c.id}|button`, b.continuation, want, r, expectedValues, walk));
     }
   }
+  // A requested breakdown is never silently dropped (coordinator 2026-11-02): whatever was expected, an answer missing a
+  // breakdown the question names is wrong.
+  const dims = answerDimensions(o);
+  const dropped = dims ? missingGroupings(c.question, dims) : [];
+  if (dropped.length) diffs.push({ field: "breakdowns", expected: `by ${dropped.join(" and ")}`, actual: `answered without it (${dims!.join(", ") || "no breakdown"})`, kind: "material" });
   if (e.action === "clarify" && o.kind === "clarify") {
     for (const want of e.options) {
       const got = o.options.find((x) => normLabel(x.label) === normLabel(want.label));
