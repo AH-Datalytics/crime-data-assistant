@@ -104,6 +104,15 @@ export type OfferRole = "consistent_agencies" | "all_agencies" | "other_source" 
 export type Offer = { role: OfferRole; targetSource: SourceId; label: string; text: { before: string; link: string; after: string } | null;
   run: { path: string[] } | { question: string } | { input: string } };
 // `input`: the button asks the person for something first ("Another year" asks which year), then the whole question.
+/**
+ * The shared rule for zero categories (coordinator 2026-11-02), for every grouping and source: in a breakdown by period,
+ * every category that occurs in any period of the answer is listed in every period, with 0 where that period's
+ * reporting establishes none and blank where the period is unknown, so the periods line up row for row and line for
+ * line. A category that occurs in no period is not listed. One period's breakdown lists the categories that occur.
+ * (The engine's compiler does it: every category of the place and period in every month, compile.ts `cats`.)
+ */
+export const ZERO_CATEGORIES = "listed in every period once they occur in any" as const;
+
 export type ChartKind = "line" | "bar" | "horizontal_bar" | "grouped_bar" | "stacked_bar" | "stacked_100";
 export type ChartOptions = { allowed: ChartKind[]; default: ChartKind | null; exclusive: boolean | undefined; exclusiveByColumn: Record<string, boolean> | undefined };
 

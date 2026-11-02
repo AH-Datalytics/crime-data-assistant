@@ -22,6 +22,7 @@
  *  14  every offer runs: a button path the outcome follows, or a question that answers
  *  15  nothing the engine says is lost: every line of its text is the restated headline or reporter line, in the
  *      lead, or in the notes
+ *  17  zero categories (ZERO_CATEGORIES): in a breakdown by period, every period lists the same categories
  *  16  the coverage columns never change the chart: the same answer with and without them has the same chart options
  */
 import assert from "node:assert/strict";
@@ -235,6 +236,17 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     const headline = (d as { headline?: string }).headline ?? d.text[0];
     for (const line of d.text)
       check(said.has(line) || (line === headline && t.rows.some((r) => r.some((v) => typeof v === "number"))) || /^(?:Reported by|Figures for) /.test(line), `15 ${tag}: engine line lost: "${line}"`);
+    // 17
+    {
+      const ti = t.columns.findIndex((x) => x.binding.kind === "grouping" && x.binding.dimension.startsWith("time."));
+      const ci = t.columns.findIndex((x) => x.binding.kind === "grouping" && !x.binding.dimension.startsWith("time.") && !x.binding.dimension.startsWith("geo."));
+      if (ti >= 0 && ci >= 0) {
+        const per = new Map<string, string[]>();
+        for (const r of t.rows) per.set(String(r[ti]), [...(per.get(String(r[ti])) ?? []), String(r[ci])]);
+        const sets = [...per.values()].map((xs) => [...xs].sort().join("|"));
+        check(sets.every((x) => x === sets[0]), `17 ${tag}: periods list different categories`);
+      }
+    }
     // 12
     const dims = t.columns.flatMap((c) => (c.binding.kind === "grouping" ? [c.binding.dimension] : []));
     check(!missingGroupings(q, dims).length, `12 ${tag}: breakdown dropped (${missingGroupings(q, dims).join(", ")})`);
@@ -340,4 +352,4 @@ check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.
   }
 }
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 16 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 17 checks`);

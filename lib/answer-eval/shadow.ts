@@ -29,7 +29,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7|inc7b)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7|inc7b|category)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -70,9 +70,35 @@ export type ExpectedValues = Map<string, ExpectedCell[]>;
  * far", LS-236 alternative`. A file with more than one measure gives a cell per measure for each period (or the total),
  * each carrying its measure.
  */
+/**
+ * nibrs-model's merged-Unknown files (V156-V166, 2026-11-02: "one Unknown per period, last", each unit once): a
+ * breakdown's categories with one Unknown, for one period or by month or quarter, each with its count and the share of
+ * its period's units. They restate earlier files with the Unknown merged, so they are read last and win.
+ */
+type MergedFile = { nibrsai_cases: string[]; question: string; unknown_rule: string;
+  values: { categories?: Record<string, number>; total?: number;
+    by_period?: Record<string, { status: string; units: number | null; categories: Record<string, { count: number | null; share_pct: number | null }> }> } };
+const MERGED_DIMS: [RegExp, string][] = [[/offender race/, "offender.race"], [/offender sex/, "offender.sex"], [/offender ethnicity/, "offender.ethnicity"],
+  [/offender age|offenders .* by age/, "offender.age"], [/victim sex|by sex/, "victim.sex"], [/victim race|by race/, "victim.race"], [/weapon/, "offense_weapon.weapon"], [/by age/, "victim.age"]];
+function mergedCells(v: MergedFile): ExpectedCell[] | null {
+  if (!v.unknown_rule || !v.values || !Array.isArray(v.nibrsai_cases)) return null;
+  const dim = MERGED_DIMS.find(([re]) => re.test(v.question.toLowerCase()))?.[1];
+  if (!dim) return null;
+  const age = dim.endsWith(".age");
+  const name = (k: string) => (k === "Unknown" ? "Unknown" : age ? (k === "under_18" ? "Under 18" : k) : categoryName(dim, k));
+  if (v.values.by_period) return Object.entries(v.values.by_period).flatMap(([p, c]) => Object.entries(c.categories).map(([k, x]) => ({
+    key: `${p}|${name(k)}`, value: c.status === "VALUE" || c.status === "REPORTED_ZERO" ? x.count : null, status: c.status, share: x.share_pct })));
+  const cats = v.values.categories ?? {}, total = v.values.total ?? 0;
+  return Object.entries(cats).map(([k, n]) => ({ key: name(k), value: n, status: "VALUE", share: total > 0 ? Math.round((1000 * n) / total) / 10 : null }));
+}
+
 export function sliceValues(files: { name: string; json: string }[]): ExpectedValues {
   const out: ExpectedValues = new Map();
-  for (const f of files) {
+  // The merged-Unknown files last, so they win over the earlier files they restate.
+  const merged = (f: { json: string }) => /"unknown_rule"/.test(f.json);
+  for (const f of [...files.filter((x) => !merged(x)), ...files.filter(merged)]) {
+    const mv = merged(f) ? mergedCells(JSON.parse(f.json) as MergedFile) : null;
+    if (mv) { for (const c of (JSON.parse(f.json) as MergedFile).nibrsai_cases) out.set(c, mv); continue; }
     const v = JSON.parse(f.json) as { nibrsai_cases: string; grouping: string; measures: Record<string, string>; totals: Record<string, { status: string; value: number | null }>;
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
     // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
@@ -775,6 +801,14 @@ export function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "an
   const timeKeyed = columns[groupCols[0]]?.binding.kind === "grouping" && (columns[groupCols[0]].binding as { dimension: string }).dimension.startsWith("time.") && groupCols.length === 1;
   // Only where delivery trims: the answer's first row is reported (Codex month review 02.1).
   if (timeKeyed && firstGot !== undefined && got.get(firstGot)!.value !== null) expected = expected.filter((x) => !(x.value === null && !got.has(x.key) && x.key < firstGot));
+  // A category with a known 0 is the same listed or left out (the engine lists every category of the period's
+  // breakdown, nibrs-model's files only those that occur, and Unknown always): a 0 on one side, absent on the other, is
+  // no difference. A category breakdown only; a blank or any other number is still judged.
+  const zero = (v: number | null, st: string) => v === 0 && (st === "VALUE" || st === "REPORTED_ZERO");
+  if (groupCols.some((j) => columns[j].binding.kind === "grouping" && !(columns[j].binding as { dimension: string }).dimension.startsWith("time."))) {
+    expected = expected.filter((x) => !(zero(x.value, x.status) && !got.has(x.key)));
+    for (const [k, g] of [...got]) if (zero(g.value, g.status) && !expected.some((x) => x.key === k)) got.delete(k);
+  }
   if (got.size !== expected.length) diffs.push({ field: `${prefix}values`, expected: `${expected.length} cells`, actual: `${got.size} cells`, kind: "material" });
   // A breakdown promises each category's share (increment 1): a table without it is incomplete.
   if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });

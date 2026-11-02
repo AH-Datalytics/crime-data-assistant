@@ -25796,9 +25796,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-month",
-    "reviewed_by": null,
+    "reviewed_by": "codex:month-labels-1",
     "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
    }
   },
@@ -25857,9 +25857,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-month",
-    "reviewed_by": null,
+    "reviewed_by": "codex:month-labels-1",
     "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
    }
   },
@@ -25918,9 +25918,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-month",
-    "reviewed_by": null,
+    "reviewed_by": "codex:month-labels-1",
     "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
    }
   },
@@ -25979,9 +25979,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-month",
-    "reviewed_by": null,
+    "reviewed_by": "codex:month-labels-1",
     "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
    }
   },
@@ -26040,9 +26040,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-month",
-    "reviewed_by": null,
+    "reviewed_by": "codex:month-labels-1",
     "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
    }
   },
@@ -26101,9 +26101,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-month",
-    "reviewed_by": null,
+    "reviewed_by": "codex:month-labels-1",
     "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
    }
   }
