@@ -341,17 +341,14 @@ export default function AssistantClient() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = turns.length === 0;
-  // One hint under the box: how to ask, then (after an answer) that a follow-up or a new question both work.
-  const hint = start
-    ? <>Name a crime, a place and a year, for example &ldquo;carjacking in Memphis in 2024&rdquo;.</>
-    : <>Ask a follow-up, like &ldquo;same for 2023&rdquo;, or a new question.</>;
   const form = (
     <form className="AskForm" onSubmit={(e) => { e.preventDefault(); ask(input); setInput(""); }}>
       <div className="AskRow">
         <input ref={box} value={input} onChange={(e) => setInput(e.target.value)} placeholder={start ? "Shoplifting in Memphis by month in 2024" : "Ask a question or a follow-up"} aria-label="Question" />
         <button className="Ask" type="submit" disabled={busy}>Ask</button>
       </div>
-      <p className="Hint">{hint} <button type="button" className="tourLink" onClick={startTour}>Take the tour</button></p>
+      {/* On the start page only (Jeff, 2026-11-02): how to ask, and the tour. After a question the box's own placeholder says it. */}
+      {start ? <p className="Hint">Name a crime, a place and a year, for example &ldquo;carjacking in Memphis in 2024&rdquo;. <button type="button" className="tourLink" onClick={startTour}>Take the tour</button></p> : null}
     </form>
   );
   const dock = (
@@ -491,12 +488,14 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
   // leading blank rows are left out of the chart, the table and the export, and a note says where it starts.
   const isSeries = !!r.chart?.xAxis;
   const firstKnown = isSeries ? r.rows.findIndex((row) => columns.some((c) => typeof row[c] === "number")) : 0;
-  const rows = firstKnown > 0 ? r.rows.slice(firstKnown) : r.rows;
-  const numberCols = columns.filter((c) => rows.every((row) => row[c] === null || typeof row[c] === "number"));
+  const kept = firstKnown > 0 ? r.rows.slice(firstKnown) : r.rows;
+  const numberCols = columns.filter((c) => kept.every((row) => row[c] === null || typeof row[c] === "number"));
   // Values sent as text (the share of population covered, "96.2%" or "≥ 84.3%" at a lower bound) are values, shown
   // right-aligned and never charted as categories.
-  const shareCols = columns.filter((c) => !numberCols.includes(c) && rows.every((row) => row[c] === null || /^≥?\s*[\d.,]+%$/.test(String(row[c]))));
+  const shareCols = columns.filter((c) => !numberCols.includes(c) && kept.every((row) => row[c] === null || /^≥?\s*[\d.,]+%$/.test(String(row[c]))));
   const groupCols = columns.filter((c) => !numberCols.includes(c) && !shareCols.includes(c));
+  // A breakdown's categories in their own order when they have one (ages, value bands, weekdays), Unknown last.
+  const rows = groupCols.length === 1 ? arrange(kept, groupCols[0]) : kept;
   const lead = composeLead(text, scoped, rows.length === 1 && numberCols.length === 1, sourceOfText(text));
   // The notes keep the finer points: whatever the lead did not say.
   let notes = text.filter((_, i) => !lead.used.has(i));
@@ -558,7 +557,7 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     const [tc, cc] = groupCols;
     series = numberCols[0];
     const periods = [...new Set(rows.map((row) => String(row[tc])))];
-    const cats = [...new Set(rows.map((row) => String(row[cc])))];
+    const cats = ordered([...new Set(rows.map((row) => String(row[cc])))]);
     points = periods.map((pd) => ({ x: pd, label: yearLabel(pd), y: null }));
     lines = cats.slice(0, SERIES.length).map((c, k) => ({ name: c, color: SERIES[k],
       ys: periods.map((pd) => { const hit = rows.find((row) => String(row[tc]) === pd && String(row[cc]) === c); return hit ? (hit[series] as number | null) : null; }) }));
@@ -649,6 +648,37 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     <Choices buttons={rest(r.buttons)} onButton={onButton} />
     </div>
   </>);
+}
+
+/**
+ * Ordinal categories keep their natural order (Jeff, 2026-11-02: "shouldn't age groups be sorted by age range, not by
+ * count?"); the engine sorts every breakdown largest first. Read from the labels themselves, until the engine marks a
+ * grouping as ordered: age and value bands ("Under 18", "18-24", "65+", "$200-$999", "$1,000 or more") and weekdays.
+ * Unordered categories (weapon, location, race) keep the engine's largest-first order. Unknown or not recorded is last
+ * either way.
+ */
+const UNKNOWN = /^(?:unknown|not (?:recorded|reported|specified)|none recorded)\b/i;
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+function rankOf(label: string): number | null {
+  const s = label.trim().toLowerCase(), n = (x: string) => Number(x.replace(/,/g, ""));
+  if (DAYS.includes(s)) return DAYS.indexOf(s);
+  let m: RegExpExecArray | null;
+  if ((m = /^(?:under|less than|younger than) \$?([\d,.]+)/.exec(s))) return n(m[1]) - 0.5;
+  if ((m = /^\$?([\d,.]+)\s*(?:-|–|to)\s*\$?[\d,.]+/.exec(s))) return n(m[1]);
+  if ((m = /^\$?([\d,.]+)\s*(?:\+|or (?:more|older|over)|and (?:over|older|up))/.exec(s))) return n(m[1]);
+  return null;
+}
+/** Labels in their natural order when every known one has a rank (two or more), else as given; unknown last. */
+function ordered(labels: string[]): string[] {
+  const known = labels.filter((l) => !UNKNOWN.test(l)), unknown = labels.filter((l) => UNKNOWN.test(l));
+  const ranks = known.map(rankOf);
+  const sorted = known.length >= 2 && ranks.every((r) => r !== null) ? known.map((l, i) => ({ l, r: ranks[i]! })).sort((a, b) => a.r - b.r).map((x) => x.l) : known;
+  return [...sorted, ...unknown];
+}
+function arrange<T extends Record<string, unknown>>(rows: T[], col: string): T[] {
+  if (rows.every((row) => PERIOD.test(String(row[col])))) return rows;
+  const order = ordered(rows.map((row) => String(row[col])));
+  return [...rows].sort((a, b) => order.indexOf(String(a[col])) - order.indexOf(String(b[col])));
 }
 
 /** Row indexes in display order: as delivered, or sorted by one column (numbers by value, text alphabetically), blanks last. */
