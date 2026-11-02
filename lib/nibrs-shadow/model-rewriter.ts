@@ -98,7 +98,9 @@ export function meaningProblem(previous: string, followUp: string, rewrite: stri
       return `the follow-up's ${c} (${v}) is missing`;
     }
   }
-  for (const [c, vs] of P.by) if (!F.by.has(c) && !same(vs, O.by.get(c))) return `the previous ${c} changed although the follow-up does not change it`;
+  // A relative period ("the year before") changes the period without naming one (coordinator, 2026-11-01).
+  for (const [c, vs] of P.by) if (!F.by.has(c) && !same(vs, O.by.get(c)) && !(c === "period" && RELATIVE.test(followUp)))
+    return `the previous ${c} changed although the follow-up does not change it`;
   // "y/y % change": a percent change is read as a share with a change; allowed only for a follow-up that says percent.
   const percentChange = allow && /%|\bpercent/i.test(followUp) && O.by.has("change");
   for (const c of O.by.keys()) if (!P.by.has(c) && !F.by.has(c) && c !== "unit" && !(c === "share" && percentChange)) return `a ${c} neither question asked for`;
@@ -131,6 +133,12 @@ export function guarded(a: ModelAnswer | null, previous: string, followUp: strin
   const q = a.question;
   if (typeof q !== "string" || !q.trim() || q.length > 300) return ask("The model's rewrite could not be used; ask the full question.");
   const allowed = new Set([...numbers(previous), ...numbers(followUp)]);
+  // A relative period ("the year before", "the five years before that") names years the conversation doesn't: a year
+  // within 20 of the previous question's years is derived from them, and allowed (coordinator, 2026-11-01).
+  if (RELATIVE.test(followUp)) {
+    const ys = (previous.match(/\b(?:19|20)\d{2}\b/g) ?? []).map(Number);
+    if (ys.length) for (let y = Math.min(...ys) - 20; y <= Math.max(...ys) + 20; y++) allowed.add(String(y));
+  }
   if (numbers(q).some((n) => !allowed.has(n))) return ask("The rewrite named a number that is not in the conversation; ask the full question.");
   const problem = meaningProblem(previous, followUp, q);
   if (problem) return ask(`The rewrite was not used (${problem}); ask the full question.`);
@@ -152,6 +160,27 @@ export function hybridRewriter(model: FollowUpRewriter): FollowUpRewriter {
       return m.kind === "ask" ? d : m;
     },
   };
+}
+
+/** Words that make a period relative to the previous question's ("the year before", "the next year", "three years earlier"). */
+const RELATIVE = /\b(?:before|after|previous|prior|following|next|earlier|later|last|past|back|ago)\b/i;
+
+/**
+ * The hybrid, live (coordinator, 2026-11-01): the deterministic rewriter first, its certain rewrites run directly;
+ * where it asks, the model's answer through the same guards (a proposal, never run before the user confirms it). The
+ * caller makes the model call with this module's prompt (model-rewriter-prompt.ts: SYSTEM_PROMPT, userPrompt,
+ * RESPONSE_SCHEMA) and keeps its key and spending limits; `callModel` gives the model's JSON answer, or null when there
+ * is none (a failure, a limit reached). Where both ask, the baseline's ask, with its options.
+ */
+export async function hybridRewriteAsync(previous: string, followUp: string,
+  callModel: (previous: string, followUp: string) => Promise<unknown | null>): Promise<Rewrite> {
+  const d = deterministicRewriter.rewrite(previous, followUp);
+  if (d.kind !== "ask") return d;
+  let answer: ModelAnswer | null = null;
+  try { answer = (await callModel(previous, followUp)) as ModelAnswer | null; } catch { answer = null; }
+  if (!answer) return d;
+  const m = guarded(answer, previous, followUp);
+  return m.kind === "ask" ? d : m;
 }
 
 /** The cached model rewriter: offline and synchronous, for a cache of this binding. A miss is asked about, and counted. */

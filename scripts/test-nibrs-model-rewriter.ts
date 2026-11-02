@@ -4,7 +4,7 @@
  * answer or a cache miss is asked about with no options. Offline: hand-written model answers, no model, no database.
  */
 import assert from "node:assert/strict";
-import { bindingOf, cachedModelRewriter, cacheKey, guarded, hybridRewriter, meaningProblem, type ModelAnswer } from "../lib/nibrs-shadow/model-rewriter";
+import { bindingOf, cachedModelRewriter, cacheKey, guarded, hybridRewriteAsync, hybridRewriter, meaningProblem, type ModelAnswer } from "../lib/nibrs-shadow/model-rewriter";
 import { shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { SYSTEM_PROMPT } from "../lib/nibrs-shadow/model-rewriter-prompt";
@@ -81,4 +81,30 @@ const o = shadowFollowUp(Y, "nashville pls", deps, stand);
 assert.deepEqual(o, { kind: "proposal", question: "nashville pls", proposed: "Shoplifting in Nashville in 2024", how: "test", rewrite: "Shoplifting in Nashville in 2024", rewriteKind: "propose" });
 assert.equal(ran, 0);
 
-console.log("nibrs model rewriter: guarded rewrites keep the reader's meaning; the rest, malformed answers and misses are asked");
+// A relative period the model works out ("the year before" -> 2023) is a year derived from the conversation, not a
+// guessed one (coordinator, 2026-11-01); an unrelated year is still refused.
+{
+  const P = "Shoplifting in Memphis by year from 2021 to 2024";
+  const derived = guarded({ kind: "rewrite", question: "Shoplifting in Memphis by year from 2017 to 2020" }, P, "and the four years before that, how did it compare");
+  assert.notEqual(derived.kind === "ask" ? derived.why : "", "The rewrite named a number that is not in the conversation; ask the full question.");
+  const unrelated = guarded({ kind: "rewrite", question: "Shoplifting in Memphis by year from 2017 to 2020" }, P, "what about Nashville");
+  assert.equal(unrelated.kind, "ask");
+}
+
+// The live hybrid: deterministic first; the model only where it asks, through the guards, as a proposal; no answer or a
+// failing call falls back to the baseline's ask.
+(async () => {
+  const P = "Carjacking offenses in Memphis by month in 2024";
+  let calls = 0;
+  const model = async () => { calls++; return { kind: "rewrite", question: "Carjacking offenses in Memphis by month in 2022" }; };
+  const direct = await hybridRewriteAsync(P, "show me 2023", model);
+  assert.equal(direct.kind === "rewrite" && direct.question, "Carjacking offenses in Memphis by month in 2023");
+  assert.equal(calls, 0, "a certain deterministic rewrite never calls the model");
+  const proposed = await hybridRewriteAsync(P, "and maybe the one two years back", model);
+  assert.ok(proposed.kind === "propose" && proposed.question === "Carjacking offenses in Memphis by month in 2022", JSON.stringify(proposed));
+  assert.equal(calls, 1);
+  assert.equal((await hybridRewriteAsync(P, "and maybe the one two years back", async () => null)).kind, "ask");
+  assert.equal((await hybridRewriteAsync(P, "and maybe the one two years back", async () => { throw new Error("quota"); })).kind, "ask");
+  assert.equal((await hybridRewriteAsync(P, "hmm that seems off", async () => ({ kind: "rewrite", question: "Murders in Chicago in 1990" }))).kind, "ask", "the guards still apply");
+  console.log("nibrs model rewriter: guarded rewrites keep the reader's meaning; the rest, malformed answers and misses are asked");
+})().catch((e) => { console.error(e); process.exit(1); });
