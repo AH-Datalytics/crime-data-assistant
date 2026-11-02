@@ -40,9 +40,10 @@ export async function POST(req: Request) {
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const { question, path } = parsed;
   try {
-    const at = follow(shadowAnswer(question, shadowDeps()), path);
+    const deps = shadowDeps();
+    const at = follow(shadowAnswer(question, deps), path);
     if (!at) return NextResponse.json({ error: "That button is no longer offered for this question." }, { status: 409 });
-    return NextResponse.json(toPreview(at, path));
+    return NextResponse.json(toPreview(at, path, deps.places, question));
   } catch (e) {
     return NextResponse.json({ error: `The preview engine failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
   }

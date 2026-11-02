@@ -34,6 +34,12 @@ O28 = "Decided 2026-10-28"
 
 ROWS = [
     # ---------------- needs Jeff, most consequential first ----------------
+    ("P88", "\"Carjackings in Tennessee by year from 2021 to 2025\" (a state or national sum over several years): when the lead offers the Consistent Reporting Agencies",
+     "A button for the Consistent Reporting Agencies under every state or national sum; no sentence about it.",
+     "The lead adds Jeff's offer (\"Not every agency reported in every year, so part of this change could come from agencies starting or stopping reporting. To compare the same agencies across years, see only the Consistent Reporting Agencies that reported every month from ... through ...\") when the sum covers two or more years and the number of agencies reporting in some year differs from the first year's by 5% or more. Otherwise only the button.",
+     "Threshold: 5% change in the agencies reporting, against the first year.",
+     "A small change in participation barely moves a total; a large one can make a trend that is only agencies joining. 5% is a starting point, easy to change (PARTICIPATION_CHANGE).",
+     OPEN, NEW),
     ("P01", "\"How many robberies were there in the US in 2015?\", \"Murders in Chicago this year\", \"Robberies with a gun in Atlanta by victim race\": any question, typed into one box",
      "The user picks a source tab (or Auto mode, which guesses and asks when unsure); the chosen tab answers even when another source answers better, e.g. NIBRS summing only its reporting agencies for US robberies in 2015.",
      "The app picks the source for every question: it works out what the question needs (the crime, any detail, the period, the place) and uses the source that actually holds it most completely for that place and period. A source the user asks for in words (\"according to NIBRS\") is used and labelled, never silently replaced. Where it helps, a button offers the other source's figure.",
@@ -599,8 +605,10 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
+    "P88": "Show the Consistent Reporting Agencies offer in the lead when the agencies reporting change by 5% or more across the years?",
 }
 TOPIC = {
+    "P88": "Answer presentation",
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
 ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]

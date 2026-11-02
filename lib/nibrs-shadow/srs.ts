@@ -30,7 +30,7 @@ const clearances = () => (CLEAR ??= readCsv("historical_clearances_states_nation
 export const SRS_YEARS = { first: 1960, last: 2025 };
 
 /** The reader's Part I measures -> the file's column stem, the words for a count, and the label schema's name and unit. */
-const MEASURE: Record<string, { col: string; words: string; name: string; unit: string }> = {
+export const SRS_MEASURE: Record<string, { col: string; words: string; name: string; unit: string }> = {
   murder: { col: "murder", words: "murders", name: "murder", unit: "victim" },
   homicide: { col: "murder", words: "murders", name: "murder", unit: "victim" },
   rape: { col: "rape", words: "rapes", name: "rape", unit: "victim" },
@@ -42,7 +42,7 @@ const MEASURE: Record<string, { col: string; words: string; name: string; unit: 
   violent_crime: { col: "violent", words: "violent crimes", name: "violent crime", unit: "victim (robbery by offense)" },
   property_crime: { col: "property", words: "property crimes", name: "property crime", unit: "offense" },
 };
-export const isSrsMeasure = (m: string) => m in MEASURE;
+export const isSrsMeasure = (m: string) => m in SRS_MEASURE;
 
 export type SrsPlace = { kind: "state"; code: string } | { kind: "national" };
 export type SrsQuestion = {
@@ -54,6 +54,8 @@ export type SrsQuestion = {
 /** A Part I answer from the historical file: the table, its text, its meaning in the labels' terms, and what it read. */
 export type SrsAnswer = {
   kind: "srs"; meaning: Meaning; period: { from: string; to: string };
+  /** The question answered, for its presentation (lib/answer-contract). */
+  question: SrsQuestion;
   delivered: { table: ResultTable; text: string[] };
   /** Provenance: the file and column read and the rows used (uid), so a total is shown to be the file's, not re-added. */
   read: { file: string; column: string; uids: string[] };
@@ -68,7 +70,7 @@ const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i)
 const yearsWords = (a: number, b: number) => (a === b ? String(a) : `${a} through ${b}`);
 
 export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
-  const m = MEASURE[q.measure];
+  const m = SRS_MEASURE[q.measure];
   const where = placeName(q.place);
   const level = q.place.kind === "national" ? "National" : "State";
   // D04, P14: the covered part of the span, the rest named; nothing covered: declined, the range named.
@@ -86,7 +88,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
     const v = row?.[col] ? Number(row[col]) : null;
     if (v === null) return { kind: "srs-decline", explanation: `The data has no national ${m.name} clearance rate for ${y}.` };
     return {
-      kind: "srs", period: { from: `${y}-01`, to: `${y}-12` },
+      kind: "srs", question: q, period: { from: `${y}-01`, to: `${y}-12` },
       meaning: { source: "historical", places: [placeOf(q.place)], period: { from: `${y}-01`, to: `${y}-12` }, measures: [{ name: `${m.name} cleared`, unit: "offense" }], filters: [], groupings: [], statistic: "rate", denominator: `${m.words}, per 100` },
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "clearance_rate" }, header: `${m.words[0].toUpperCase()}${m.words.slice(1)} cleared (%)` }], rows: [[v]] },
         text: [`${where}: ${v}% of ${m.words} were cleared in ${y}.`, SRS_SOURCE] },
@@ -114,7 +116,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
       `${fmt(e)} in ${E} and ${fmt(l)} in ${L}: a change of ${signed(change)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
       ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), SRS_SOURCE];
     return {
-      kind: "srs", period: { from: `${E}-01`, to: `${L}-12` },
+      kind: "srs", question: q, period: { from: `${E}-01`, to: `${L}-12` },
       meaning: { ...meaningBase, period: { from: `${E}-01`, to: `${L}-12` }, groupings: [], statistic: "change" },
       delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` }, header: k === "earlier" ? String(E) : k === "later" ? String(L) : k === "change" ? "Change" : "Percent change" })),
         rows: [[e, l, change, pct]] }, text },
@@ -126,7 +128,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   if (q.byYear || covered.length > 1) {
     const text = [`${where}: ${m.words}${q.statistic === "rate" ? " per 100,000" : ""} by year, ${periodWords(period.from, period.to)}.`, ...missingLine, SRS_SOURCE];
     return {
-      kind: "srs", period,
+      kind: "srs", question: q, period,
       meaning: { ...meaningBase, period, groupings: ["year"], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
       delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }], rows: rows.map((r) => [String(r.y), value(r.row)]) }, text },
       read,
@@ -136,7 +138,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   if (v === null) return { kind: "srs-decline", explanation: `The data has no ${m.words} for ${where} in ${covered[0]}.` };
   const text = [q.statistic === "rate" ? `${where}: ${v} ${m.words} per 100,000 in ${covered[0]}.` : `${where}: ${fmt(v)} ${m.words} in ${covered[0]}.`, ...missingLine, SRS_SOURCE];
   return {
-    kind: "srs", period,
+    kind: "srs", question: q, period,
     meaning: { ...meaningBase, period, groupings: [], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
     delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header }], rows: [[v]] }, text },
     read,
