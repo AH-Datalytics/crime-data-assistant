@@ -8,13 +8,15 @@
  *   2  lead: "These are ..." or the single number's sentence; no "Showing"; a described lead has no figures
  *   3  at most one caveat, never repeated in the notes
  *   4  notes: the keep list and the answer's own lines, the source line last; no banned words anywhere shown
- *   5  order: a column in `ordered` keeps its natural order (time ascending; bins in order, Unknown last and once)
+ *   5  order: a column in `ordered` keeps its natural order (time ascending; bins in order); in EVERY category column
+ *      the not-known categories (Unknown, Not recorded, ...) come after the known ones, and Unknown at most once
  *   6  chart: none for a single number; a line only with a time grouping; stacked only when exclusive
  *   7  coverage columns present if and only if requested
  *   8  exports: the CSV is the table; the PNG has the title, the chart's default and the source line
  *   9  every offer and button has a role and a source; another source only as a choice, a nearest question or another source's
  *  10  every live source's profile is complete (no field missing or defaulted)
  *  11  no offer or note the source's profile doesn't support
+ *  12  every breakdown the question names is in the answer (never silently dropped)
  */
 import assert from "node:assert/strict";
 import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
@@ -23,6 +25,8 @@ import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-
 import { presentationOf } from "../lib/nibrs-shadow/presentation";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { BANNED } from "../lib/nibrs-shadow/wording";
+import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
+import { missingGroupings } from "../lib/nibrs-shadow/named-groupings";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
 import type { ResultTable } from "../lib/nibrs-plan/result";
 
@@ -64,7 +68,8 @@ function nibrs(sql: string): unknown[][] {
   if (s) return s;
   if (/cats AS/.test(sql) && !/AS period/.test(sql) && /THEN 'Under 18'/.test(sql))
     return [["25-34", 20, "VALUE", 0.4, "VALUE"], ["Unknown", 15, "VALUE", 0.3, "VALUE"], ["Under 18", 15, "VALUE", 0.3, "VALUE"]];
-  if (/cats AS/.test(sql) && !/AS period/.test(sql)) return [["F", 30, "VALUE", 0.6, "VALUE"], ["M", 20, "VALUE", 0.4, "VALUE"]];
+  // Unknown the largest, so its place last is the ordering rule, not its count.
+  if (/cats AS/.test(sql) && !/AS period/.test(sql)) return [["U", 40, "VALUE", 0.444, "VALUE"], ["F", 30, "VALUE", 0.333, "VALUE"], ["M", 20, "VALUE", 0.222, "VALUE"]];
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
   for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
@@ -161,12 +166,22 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
       const vals = t.rows.map((r) => String(r[i]));
       const timeI = t.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
       if (col.binding.kind === "grouping" && col.binding.dimension.startsWith("time.")) check(vals.every((v, j) => j === 0 || v >= vals[j - 1]), `5 ${tag}: ${h} out of order`);
-      else {
-        const per = new Map<string, string[]>();
-        t.rows.forEach((r, j) => { const k = timeI >= 0 ? String(r[timeI]) : ""; per.set(k, [...(per.get(k) ?? []), vals[j]]); });
-        for (const ls of per.values()) check(ls.filter((v) => v === "Unknown").length <= 1 && (!ls.includes("Unknown") || ls[ls.length - 1] === "Unknown") && !ls.includes("Not recorded"), `5 ${tag}: ${h} Unknown not last and once`);
-      }
+      void timeI;
     }
+    // Every category column, ordered or by count: the not-known categories last within each period, Unknown once.
+    const timeCol = t.columns.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
+    t.columns.forEach((col, i) => {
+      if (col.binding.kind !== "grouping" || col.binding.dimension.startsWith("time.") || col.binding.dimension.startsWith("geo.")) return;
+      const per = new Map<string, string[]>();
+      t.rows.forEach((r) => { const k = timeCol >= 0 ? String(r[timeCol]) : ""; per.set(k, [...(per.get(k) ?? []), String(r[i])]); });
+      for (const ls of per.values()) {
+        const firstUnknown = ls.findIndex((v) => UNKNOWN_NAMES.has(v));
+        check(ls.filter((v) => v === "Unknown").length <= 1 && (firstUnknown < 0 || ls.slice(firstUnknown).every((v) => UNKNOWN_NAMES.has(v))), `5 ${tag}: ${col.header}: not-known categories not last (${ls.join(", ")})`);
+      }
+    });
+    // 12
+    const dims = t.columns.flatMap((c) => (c.binding.kind === "grouping" ? [c.binding.dimension] : []));
+    check(!missingGroupings(q, dims).length, `12 ${tag}: breakdown dropped (${missingGroupings(q, dims).join(", ")})`);
     // 6
     const c = p.chart;
     const hasTime = t.columns.some((x) => x.binding.kind === "grouping" && x.binding.dimension.startsWith("time."));
@@ -216,4 +231,4 @@ const ks1 = presentationOf(shadowAnswer("Shoplifting in Kansas in 2024", deps), 
 check(ks1.offers.some((o) => o.role === "consistent_agencies" && o.text === null) && ks1.lead.kind === "single", "one year: the button, no words");
 
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 11 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 12 checks`);
