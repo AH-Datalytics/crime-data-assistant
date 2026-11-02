@@ -727,7 +727,7 @@ function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer"
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }
 /** Delivered cells (value and status) against independent expected cells; none given is NOT MEASURED, never a match. */
-function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected0: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+export function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected0: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
   // A ranking's left-out agencies (P60) are not rows: checked against the answer's "Not ranked" line below.
   const leftOut = (expected0 ?? []).filter((x) => x.leftOut);
   let expected = expected0?.filter((x) => !x.leftOut);
@@ -773,7 +773,8 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   // absent from the answer, are left out, never counted as missing rows; one with a value is still judged missing.
   const firstGot = [...got.keys()].sort()[0];
   const timeKeyed = columns[groupCols[0]]?.binding.kind === "grouping" && (columns[groupCols[0]].binding as { dimension: string }).dimension.startsWith("time.") && groupCols.length === 1;
-  if (timeKeyed && firstGot !== undefined) expected = expected.filter((x) => !(x.value === null && !got.has(x.key) && x.key < firstGot));
+  // Only where delivery trims: the answer's first row is reported (Codex month review 02.1).
+  if (timeKeyed && firstGot !== undefined && got.get(firstGot)!.value !== null) expected = expected.filter((x) => !(x.value === null && !got.has(x.key) && x.key < firstGot));
   if (got.size !== expected.length) diffs.push({ field: `${prefix}values`, expected: `${expected.length} cells`, actual: `${got.size} cells`, kind: "material" });
   // A breakdown promises each category's share (increment 1): a table without it is incomplete.
   if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });

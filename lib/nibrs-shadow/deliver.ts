@@ -316,9 +316,10 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   }
   // A series that begins with periods no report is known for starts at the first reported one (owner 2026-10-31; the
   // engine, not the page, since 2026-11-02): those leading rows are left out of the table, the chart and the export,
-  // and the note says where the series starts. Rolling windows and quarters keep their own notes.
+  // and the note says where the series starts. Months only: a blank year may be partly reported (Codex month review
+  // 02.2), so years keep their blank rows and the "not every month is known" note. Rolling windows and quarters too.
   let leadingGap: string[] = [];
-  if ((time === "time.month" || time === "time.year") && !cats.length && !opts.rolling && !opts.quarters && ip >= 0) {
+  if (time === "time.month" && !cats.length && !opts.rolling && !opts.quarters && ip >= 0) {
     const noReport = (r: unknown[]) => ["UNKNOWN", "NOT_REPORTED"].includes(String(r[at(`${count}_status`)]));
     const first = rows.findIndex((r) => !noReport(r));
     if (first > 0) { leadingGap = rows.slice(0, first).map((r) => String(r[ip])); rows = rows.slice(first); }
