@@ -496,9 +496,9 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
   // right-aligned and never charted as categories.
   const shareCols = columns.filter((c) => !numberCols.includes(c) && kept.every((row) => row[c] === null || /^≥?\s*[\d.,]+%$/.test(String(row[c]))));
   const groupCols = columns.filter((c) => !numberCols.includes(c) && !shareCols.includes(c));
-  // Rows in the engine's order (by count, or a grouping's natural order), with an unknown category last.
-  const rows = groupCols.length === 1 ? unknownLast(kept, (row) => String(row[groupCols[0]])) : kept;
-  const lead = composeLead(text, scoped, rows.length === 1 && numberCols.length === 1, sourceOfText(text));
+  // Rows in the engine's order (by count, or a grouping's natural order; an unknown category last).
+  const rows = kept;
+  const lead = composeLead(text, scoped, rows.length === 1, sourceOfText(text));
   // The notes keep the finer points: whatever the lead did not say.
   let notes = text.filter((_, i) => !lead.used.has(i));
   if (firstKnown > 0) {
@@ -559,7 +559,7 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     const [tc, cc] = groupCols;
     series = numberCols[0];
     const periods = [...new Set(rows.map((row) => String(row[tc])))];
-    const cats = unknownLast([...new Set(rows.map((row) => String(row[cc])))], (c) => c);
+    const cats = [...new Set(rows.map((row) => String(row[cc])))];
     points = periods.map((pd) => ({ x: pd, label: yearLabel(pd), y: null }));
     lines = cats.slice(0, SERIES.length).map((c, k) => ({ name: c, color: SERIES[k],
       ys: periods.map((pd) => { const hit = rows.find((row) => String(row[tc]) === pd && String(row[cc]) === c); return hit ? (hit[series] as number | null) : null; }) }));
@@ -650,16 +650,6 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     <Choices buttons={rest(r.buttons)} onButton={onButton} />
     </div>
   </>);
-}
-
-/**
- * An unknown or unrecorded category ("Unknown", "Not recorded") last, the rest in the engine's order (largest first, or
- * natural order): the engine sorts a breakdown by count, so a large Unknown would otherwise lead the table, the chart's
- * bars and its lines (Codex review of bd58b01).
- */
-const UNKNOWN = /^(?:unknown|not (?:recorded|reported|specified)|none recorded)\b/i;
-function unknownLast<T>(items: T[], name: (x: T) => string): T[] {
-  return [...items.filter((x) => !UNKNOWN.test(name(x))), ...items.filter((x) => UNKNOWN.test(name(x)))];
 }
 
 /** Row indexes in display order: as delivered, or sorted by one column (numbers by value, text alphabetically), blanks last. */
@@ -758,7 +748,7 @@ function composeLead(text: string[], scoped: boolean, single: boolean, source: "
       ...(rest && /^, summed over the agencies that reported/.test(rest) ? ["added up across the agencies that reported"] : []),
     ];
     lines.push(`These are ${what} ${reporter ?? agencies(place)} reported ${VIA} ${when}${how.map((h) => `, ${h}`).join("")}.`);
-  }
+  } else lines.push(first); // a sentence in another shape is kept as sent, never dropped
   const overlap = text.findIndex((l) => /counted once in each/.test(l));
   const change = text.findIndex((l) => /^Which agencies report changed/.test(l));
   if (overlap > 0) { lines.push(text[overlap]); used.add(overlap); }
