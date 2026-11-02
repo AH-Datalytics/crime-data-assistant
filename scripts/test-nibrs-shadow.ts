@@ -25,6 +25,8 @@ const sqls: string[] = [];
 function stub(sql: string): unknown[][] {
   sqls.push(sql);
   // Increment 4. Populations (the canonical agency file) and several agencies' monthly grids: see POP and GRID below.
+  // P90: the Consistent Reporting Agencies' current populations (an agency with none has no row).
+  if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], POP[m[1]] === undefined ? 100_000 : POP[m[1]]]).filter((r) => r[1] !== null);
   if (sql.includes("agency/data.parquet")) return popRows(sql);
   // A state sum's grid summed by agency and year (state-sum.ts): the stub sums its own monthly grid the same way.
   if (/repsum/.test(sql)) {
@@ -163,7 +165,7 @@ assert.deepEqual(trend.options.map((o) => o.label), ["The last 10 complete years
 assert.equal(as(trend.options[0].continuation!, "decline").notBuilt, true, "2016 is before this build");
 assert.deepEqual(as(trend.options[1].continuation!, "answer").period, { from: "2017-01", to: "2026-09" });
 // No Historical build here: no crime-kind button could run, so a plain decline, never dead buttons (coordinator 2026-11-02).
-assert.match(as(ask("How many crimes were there in Detroit in 2024?"), "decline").explanation, /aren.t available here yet/);
+assert.match(as(ask("How many crimes were there in Detroit in 2024?"), "decline").explanation, /^This isn.t available here yet./, "no source that is not loaded is named");
 const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
 assert.deepEqual(kc.options.map((o) => o.label), ["Kansas City, Missouri", "Kansas City, Kansas"]);
 assert.deepEqual(kc.options.map((o) => as(o.continuation!, "answer").plan.geography.places[0]), [
@@ -365,7 +367,7 @@ assert.deepEqual([ct.reason, ct.alternative!.label], ["court_outcome", "Arrests 
 const typo = as(ask("Shoplfting in Memphis in 2023"), "answer");
 assert.equal(typo.delivered.text.at(-2), 'Read "Shoplfting" as shoplifting.');
 const burg = as(ask("Burglaries in Memphis in 2023"), "decline");
-assert.match(burg.explanation, /^The official counts of this crime come from the Historical and Current Trends data/);
+assert.match(burg.explanation, /^This isn.t available here yet./);
 // P74: the nearest answerable question, shown whole on the button, run only when chosen.
 assert.deepEqual(burg.alternative, { label: 'Ask instead: "Burglaries in Memphis in 2023 according to NIBRS"', question: "Burglaries in Memphis in 2023 according to NIBRS", role: "other_source", targetSource: "nibrs" });
 
@@ -482,7 +484,7 @@ const fcCmp = as(ask("Will shoplifting increase in Detroit in 2027 compared with
 assert.equal(fcCmp.reason, "forecast");
 const fcAltCmp = as(fcCmp.alternative!.continuation!, "decline");
 assert.deepEqual([fcAltCmp.notBuilt, /2016 to 2025/.test(fcAltCmp.explanation)], [true, true], "the trend alternative is the last 10 complete years (before this build), not the forecast's comparison");
-assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /^The official counts of this crime come from/);
+assert.match(as(ask("Did burglaries increase in Detroit from 2022 to 2023?"), "decline").explanation, /^This isn.t available here yet./);
 // Scoring: the comparison's periods are checked against the label; prose must be the templates with the table's numbers;
 // a rolling answer must show every displayed month.
 const lab309 = label({ action: "answer", meaning: { source: "nibrs", places: [{ kind: "agency", name: "Detroit Police Department", state: "MI" }], period: { from: "2022-01", to: "2023-06" },

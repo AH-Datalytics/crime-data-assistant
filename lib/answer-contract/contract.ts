@@ -34,6 +34,12 @@ export type SourceProfile = {
   breakdowns: readonly { dimension: string; exclusive: boolean; ordinal: boolean }[];
   /** The notes and caveats this source's answers may show. */
   caveats: readonly NoteKey[];
+  /**
+   * The source's own words (coordinator 2026-11-02): each crime it answers and the everyday names people use for it.
+   * The shared reader reads them (conformance check 10b): a synonym listed here that doesn't read as its crime fails.
+   * `not` lists words that must never read as that crime ("shootings" is not murder).
+   */
+  vocabulary: { terms: Readonly<Record<string, readonly string[]>>; not: Readonly<Record<string, readonly string[]>> };
   /** `reportedTo`: how the lead names where figures went; `asPublished`: added when the source publishes them. */
   name: { short: string; long: string; reportedToShort: string; reportedToLong: string; asPublished: string | null; sourceLine: string };
 };
@@ -54,6 +60,11 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
       { dimension: "offender.sex", exclusive: false, ordinal: false }, { dimension: "offender.age", exclusive: false, ordinal: true },
     ],
     caveats: ["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file", "car_break_ins"],
+    vocabulary: {
+      terms: { shoplifting: ["shoplifting"], carjacking: ["carjackings", "car jackings"], simple_assault: ["simple assaults"],
+        theft_from_motor_vehicle: ["car break-ins", "thefts from cars"], murder: ["murders", "killings", "homicides"], motor_vehicle_theft: ["car theft", "stolen cars"] },
+      not: { murder: ["shootings"] },
+    },
     name: { short: "NIBRS", long: "the FBI's National Incident-Based Reporting System (NIBRS)", reportedToShort: "NIBRS",
       reportedToLong: "the FBI's National Incident-Based Reporting System (NIBRS)", asPublished: null, sourceLine: "Source: FBI NIBRS." },
   },
@@ -64,6 +75,13 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
     rateBasis: "published_or_computed",
     breakdowns: [],
     caveats: ["blank_not_available"],
+    // Crime Index's Part I offenses and the names people use (Jeff 2026-11-02: "Memphis homicides by year").
+    vocabulary: {
+      terms: { murder: ["murders", "homicides", "homicide", "killings"], rape: ["rapes"], robbery: ["robberies"], aggravated_assault: ["aggravated assaults"],
+        burglary: ["burglaries", "break-ins"], theft: ["thefts", "larceny", "larceny-theft"], motor_vehicle_theft: ["motor vehicle thefts", "car theft", "auto theft", "stolen cars"],
+        violent_crime: ["violent crime", "violent crimes"], property_crime: ["property crime", "property crimes"] },
+      not: { murder: ["shootings"] },
+    },
     name: { short: "Crime Index", long: "Crime Index's historical data", reportedToShort: "the FBI", reportedToLong: "the FBI",
       asPublished: "as published by Crime Index", sourceLine: "Source: Crime Index." },
   },

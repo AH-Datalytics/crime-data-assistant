@@ -101,6 +101,18 @@ const PHRASES: [RegExp, string][] = [
   // year", "by age by year" (coordinator 2026-11-02: "by age and year" had dropped the year).
   [/\bby\s+(race|sex|gender|ethnicity|age(?:\s+groups?)?|weapons?|relationships?|location(?:\s+type)?)\s+(?:and|&)\s+(?:by\s+)?(year|month|quarter)\b/gi, "by $1 by $2"],
   [/\bby\s+(year|month|quarter)\s+(?:and|&)\s+(?:by\s+)?(race|sex|gender|ethnicity|age(?:\s+groups?)?|weapons?|relationships?|location(?:\s+type)?)\b/gi, "by $2 by $1"],
+  // Periods in everyday words, read once for every source (coordinator 2026-11-02): a decade ("in the 1990s", "the 90s",
+  // "the 2010s") is its ten years; "the last decade" is the past 10 years; "after 2000" runs from that year on.
+  [/\b(?:in\s+|during\s+)?the\s+(19[0-9]|20[0-2])0'?s\b/gi, "from $10 to $19"],
+  [/\b(?:in\s+|during\s+)?the\s+'?([5-9])0'?s\b/gi, "from 19$10 to 19$19"],
+  [/\b(?:in|over|during)\s+the\s+(?:last|past)\s+decade\b/gi, "over the past 10 years"],
+  [/\bafter\s+((?:19|20)\d{2})\b/gi, "since $1"],
+  // Everyday names of a crime (the sources' vocabulary, lib/answer-contract PROFILES): "stolen cars" are motor vehicle thefts.
+  [/\bstolen\s+(?:cars|vehicles|autos)\b/gi, "motor vehicle thefts"],
+  // Misspellings seen in the Historical tab's real questions (query-log step one, 2026-11-02).
+  [/\bhomo?cides?\b/gi, (m: string) => (m.toLowerCase().endsWith("s") ? "homicides" : "homicide")] as unknown as [RegExp, string],
+  [/\bauto\s*thefts?\b/gi, "auto theft"],
+  [/\bagg(?:ravated)?\.?\s+ass(?:au|ua)lts?\b/gi, "aggravated assaults"],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];

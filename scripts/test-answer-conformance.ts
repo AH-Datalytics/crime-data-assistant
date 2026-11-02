@@ -23,16 +23,18 @@
  *  15  nothing the engine says is lost: every line of its text is the restated headline or reporter line, in the
  *      lead, or in the notes
  *  17  zero categories (ZERO_CATEGORIES): in a breakdown by period, every period lists the same categories
+ *  18  a decline's offered question keeps the place and crime asked, and its words name no source not loaded
  *  16  the coverage columns never change the chart: the same answer with and without them has the same chart options
  */
 import assert from "node:assert/strict";
 import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
   type SourceId, type SourceProfile } from "../lib/answer-contract/contract";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
-import { presentationOf, sourceOf } from "../lib/nibrs-shadow/presentation";
+import { aboutPeople, presentationOf, sourceOf } from "../lib/nibrs-shadow/presentation";
 import { follow, toPreview } from "../lib/nibrs-shadow/preview";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { BANNED } from "../lib/nibrs-shadow/wording";
+import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
 import { missingGroupings } from "../lib/nibrs-shadow/named-groupings";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
@@ -52,6 +54,7 @@ function grid(sql: string): [string, string, number | null, string][] {
   return rows;
 }
 function stateSum(sql: string): unknown[][] | null {
+  if (/current_population/.test(sql)) return [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => [m[1], m[1] === "NE0000002" ? null : 4_100_000]).filter((r) => r[1] !== null);
   if (sql.includes("agency/data.parquet")) {
     const years = /data_year IN \(([\d, ]+)\)/.exec(sql)![1].split(", ").map(Number);
     const hdr = /u\.state_abbr IN \(([^)]*)\)/.exec(sql);
@@ -124,10 +127,13 @@ const FIXTURES: Record<string, string[]> = {
     "Simple assault victims in Memphis by sex and month in 2024", "Simple assault victims in Memphis by sex by quarter in 2024",
     "Simple assault victims in Memphis by sex and year from 2023 to 2024",
   ],
-  historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023"],
+  historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
+    // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.
+    "Memphis murders since 1930", "Memphis homicides by year", "Memphis murders over the past 3 years"],
 };
 /** Choices and declines: their buttons are checked (9, 11). */
-const CHOICES = ["Memphis crime in 2024", "Memphis crime per month in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024"];
+const CHOICES = ["Memphis crime in 2024", "Memphis crime per month in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024",
+  "Memphis murders in 1925", "Memphis murders and robberies by year"];
 
 /** RFC 4180 rows: quoted fields with doubled quotes. */
 function parseCsv(text: string): string[][] {
@@ -151,11 +157,15 @@ const shown = (p: Presentation) => [titleOf(p.titleParts).title, titleOf(p.title
 const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" ? o.delivered : null);
 
 // 10: complete profiles, every field filled, for each live source.
-const FIELDS: (keyof SourceProfile)[] = ["units", "grain", "coverage", "rateBasis", "breakdowns", "caveats", "name"];
+const FIELDS: (keyof SourceProfile)[] = ["units", "grain", "coverage", "rateBasis", "breakdowns", "caveats", "vocabulary", "name"];
 for (const [id, prof] of Object.entries(PROFILES) as [SourceId, SourceProfile][]) {
   for (const f of FIELDS) check(prof[f] !== undefined && prof[f] !== null, `10 ${id}: profile field ${f} missing`);
   check(prof.units.length > 0 && !!prof.name.short && !!prof.name.long && /^Source: .+\.$/.test(prof.name.sourceLine) && !!prof.name.reportedToLong, `10 ${id}: profile names or units empty`);
   check(id in FIXTURES, `10 ${id}: a live source with no fixtures`);
+  // 10b: the source's words read as its crimes through the shared reader; its "not" words never do.
+  const readAs = (w: string) => readQuestion(`${w} in Memphis in 2023`, 2026, "2026-09").ledger.parts.filter((x) => x.concept === "measure" && x.state === "recognized").map((x) => (x.value === "homicide" ? "murder" : String(x.value)));
+  for (const [term, words] of Object.entries(prof.vocabulary.terms)) for (const w of words) check(readAs(w).length > 0 && readAs(w).every((v) => v === term), `10b ${id}: "${w}" reads as ${readAs(w).join(", ") || "nothing"}, not ${term}`);
+  for (const [term, words] of Object.entries(prof.vocabulary.not)) for (const w of words) check(!readAs(w).includes(term), `10b ${id}: "${w}" reads as ${term}`);
 }
 
 const sourcesSeen = new Set<string>();
@@ -277,6 +287,12 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
       check(!!off.role && !!off.targetSource, `9 ${tag}: offer without role or source`);
       check(off.targetSource === p.source || ["other_source", "nearest_question", "choice"].includes(off.role), `9 ${tag}: ${off.role} to ${off.targetSource}`);
       check(!["consistent_agencies", "all_agencies"].includes(off.role) || !!prof.coverage.cohortView, `11 ${tag}: ${off.role} on a source with no consistent view`);
+      // P90: the consistent view names the people its agencies cover, rounded to two significant figures.
+      if (off.role === "all_agencies") {
+        const m = /, covering (roughly|at least) ([\d,.]+)( million)? people, that reported every month from /.exec(off.text?.before ?? "");
+        const digits = m ? m[2].replace(/[,.]/g, "").replace(/0+$/, "").length : 99;
+        check(!!m && digits <= 2, `11 ${tag}: the consistent view's population is missing or not rounded: "${off.text?.before}"`);
+      }
     }
     for (const k of [...(p.caveat ? [p.caveat] : []), ...p.notes.keys]) check(prof.caveats.includes(k), `11 ${tag}: note ${k} not in ${p.source}'s profile`);
     check(!p.titleParts.ratePer || prof.rateBasis !== undefined, `11 ${tag}: a rate with no rate basis`);
@@ -290,6 +306,14 @@ for (const q of CHOICES) {
     check(!!b.role && !!b.targetSource, `9 "${q}": button without role or source`);
     check(b.targetSource === p.source || ["other_source", "nearest_question", "choice", "ask_instead"].includes(b.role), `9 "${q}": ${b.role} to ${b.targetSource}`);
     check(b.targetSource in PROFILES || ["rtci", "shr"].includes(b.targetSource), `9 "${q}": button to ${b.targetSource}`);
+  }
+  // 18 (coordinator 2026-11-02): a decline's question keeps the place and crime asked; its words name no source that
+  // isn't loaded here.
+  if (o.kind === "decline") {
+    const named = (s: string) => readQuestion(s, 2026, "2026-09").ledger.parts.filter((x) => x.clause === 0 && x.state === "recognized" && (x.concept === "place" || x.concept === "measure")).map((x) => `${x.concept}:${x.value}`);
+    const asks = named(q), alt = o.alternative?.question ?? null;
+    if (alt) check(asks.every((x) => named(alt).includes(x)), `18 "${q}": the offered question "${alt}" drops the place or crime asked`);
+    check(!/Current Trends|Real-Time Crime Index|\bRTCI\b/.test(o.explanation), `18 "${q}": names a source not loaded here: ${o.explanation}`);
   }
 }
 for (const id of Object.keys(PROFILES)) check(sourcesSeen.has(id), `10 ${id}: no fixture answered from it`);
@@ -305,7 +329,7 @@ const viaButton = shadowAnswer("Shoplifting in Kansas by year from 2023 to 2024"
 const clicked = follow(viaButton, ["Consistent Reporting Agencies"])!;
 const back = (presentationOf(clicked, places, { question: "Shoplifting in Kansas by year from 2023 to 2024", path: ["Consistent Reporting Agencies"] }) as Presentation).offers.find((x) => x.role === "all_agencies");
 check(!!back && "path" in back.run && back.run.path.length === 0 && follow(viaButton, back.run.path) === viaButton, "the way back by path");
-check(ksEvery.offers.some((o) => o.role === "all_agencies" && o.text?.before === "This counts only the 1 Consistent Reporting Agency that reported every month. " && o.text.link === "See all reporting agencies instead"), "the way back missing");
+check(ksEvery.offers.some((o) => o.role === "all_agencies" && o.text?.before === "This counts only the 1 Consistent Reporting Agency, covering roughly 4.1 million people, that reported every month from January 2023 through December 2024. " && o.text.link === "See all reporting agencies instead"), "the way back missing");
 // A series whose first months have no report starts at the first reported one, and the engine says so in the words the
 // page shows (owner 2026-10-31; engine-side 2026-11-02).
 {
@@ -316,6 +340,9 @@ check(ksEvery.offers.some((o) => o.role === "all_agencies" && o.text?.before ===
   check(rows[0]?.[0] === "2024-03" && rows.length === 10, `the leading gap is left out: ${JSON.stringify(rows.slice(0, 2))}`);
   check(notesOf(p).includes("No report is known for January 2024 to February 2024, so the chart and table start at March 2024."), `the leading-gap note: ${notesOf(p).join(" / ")}`);
 }
+// P90: the people a consistent view covers, in round words.
+for (const [n, want] of [[4_123_456, "4.1 million"], [12_345_678, "12 million"], [853_000, "850,000"], [331_000_000, "330 million"], [1_960, "2,000"], [1_049_000, "1 million"]] as const)
+  check(aboutPeople(n) === want, `aboutPeople(${n}) = ${aboutPeople(n)}, not ${want}`);
 // 16: the coverage columns are table-only (coordinator 2026-11-02).
 for (const [plain, withCov] of [["Shoplifting in Kansas by year from 2023 to 2024", "Shoplifting in Kansas by year from 2023 to 2024, with the number of agencies reporting"],
   ["Shoplifting in Kansas in 2024", "Shoplifting in Kansas in 2024, with the number of agencies reporting"]]) {
@@ -352,4 +379,4 @@ check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.
   }
 }
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 17 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 18 checks`);

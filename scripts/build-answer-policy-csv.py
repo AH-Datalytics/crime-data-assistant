@@ -574,6 +574,12 @@ ROWS = [
      "Breakdowns by month and by quarter for one agency.",
      "Jeff asked for it directly; the limit was the old yearly tables, not the data.",
      "Decided 2026-11-02 (Jeff: \"we can't breakdown by month?\"; plan approved by the coordinator)", NEW),
+    ("P90", "\"Carjackings in Tennessee by year from 2021 to 2025, only agencies that reported every month\": the Consistent Reporting Agencies view's sentence",
+     "\"This counts only the N Consistent Reporting Agencies that reported every month.\"",
+     "\"This counts only the N Consistent Reporting Agencies, covering roughly P people, that reported every month from START through END.\" P is the sum of each Consistent Reporting Agency's current population: its most recent FBI population in the build, whatever the answer's span. Rounded to two significant figures, millions in words (\"4.1 million\", \"12 million\", \"850,000\"); \"at least P\" when an agency has no population.",
+     "Current population, rounded; \"at least\" when any is missing.",
+     "A reader wants to know how much of the place the consistent view stands for.",
+     "Decided 2026-11-02 (Jeff: \"covering roughly TK people\"; \"population should be sum of current population of consistent agencies\")", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),

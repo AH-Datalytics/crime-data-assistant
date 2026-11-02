@@ -189,12 +189,18 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     };
   }
   if (hq.byYear || covered.length > 1 || several) {
+    // A series starts at its first year with a figure (coordinator 2026-11-02: "Memphis murders since 1930" has none for
+    // 1930-31): the leading years with no figure for any agency are left out, and a note names the first year.
+    const firstFigure = covered.findIndex((y) => hq.agencies.some((a) => value(a.ori, y) !== null));
+    const kept = firstFigure > 0 ? covered.slice(firstFigure) : covered;
+    const startNote = firstFigure > 0 ? [`Crime Index has no ${m.name} figures for ${where} before ${kept[0]}, so the chart and table start there.`] : [];
+    const period = { from: `${kept[0]}-01`, to: `${kept[kept.length - 1]}-12` };
     // Several agencies side by side, one column each (never combined: the file has no cohort to combine, design note 2).
     const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
       ...hq.agencies.map((a, i) => ({ binding: { kind: "statistic" as const, as: several ? `x.${i}` : "x" }, header: several ? `${a.label}: ${header.toLowerCase()}` : header }))];
-    const rows = covered.map((y) => [String(y), ...hq.agencies.map((a) => value(a.ori, y))]);
-    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} by year, ${yearsWords(covered[0], covered[covered.length - 1])}.`,
-      ...notes, ...blankLine(covered), SRS_SOURCE);
+    const rows = kept.map((y) => [String(y), ...hq.agencies.map((a) => value(a.ori, y))]);
+    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} by year, ${yearsWords(kept[0], kept[kept.length - 1])}.`,
+      ...startNote, ...notes, ...blankLine(kept), SRS_SOURCE);
     return {
       kind: "historical", question: hq, period,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: ["year", ...(several ? ["agency"] : [])], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
