@@ -89,6 +89,12 @@ assert.equal(ran, 0);
   assert.notEqual(derived.kind === "ask" ? derived.why : "", "The rewrite named a number that is not in the conversation; ask the full question.");
   const unrelated = guarded({ kind: "rewrite", question: "Shoplifting in Memphis by year from 2017 to 2020" }, P, "what about Nashville");
   assert.equal(unrelated.kind, "ask");
+  // Codex follow-up review 01.1: only the offset the follow-up names, and only for a follow-up about years.
+  const S = "Shoplifting in Memphis in 2024";
+  assert.equal(guarded({ kind: "rewrite", question: "Shoplifting in Memphis in 2040" }, S, "three years earlier").kind, "ask");
+  assert.equal(guarded({ kind: "rewrite", question: "Shoplifting in Memphis in 2021" }, S, "three years earlier").kind, "propose");
+  assert.equal(guarded({ kind: "rewrite", question: "Shoplifting in Memphis in 2040" }, S, "same as last time").kind, "ask");
+  assert.equal(guarded({ kind: "rewrite", question: "Shoplifting offenders in Memphis in 2040" }, S, "the past offenders").kind, "ask");
 }
 
 // The live hybrid: deterministic first; the model only where it asks, through the guards, as a proposal; no answer or a

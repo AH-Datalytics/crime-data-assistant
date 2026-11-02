@@ -99,7 +99,7 @@ export function meaningProblem(previous: string, followUp: string, rewrite: stri
     }
   }
   // A relative period ("the year before") changes the period without naming one (coordinator, 2026-11-01).
-  for (const [c, vs] of P.by) if (!F.by.has(c) && !same(vs, O.by.get(c)) && !(c === "period" && RELATIVE.test(followUp)))
+  for (const [c, vs] of P.by) if (!F.by.has(c) && !same(vs, O.by.get(c)) && !(c === "period" && derivedYears(previous, followUp).length))
     return `the previous ${c} changed although the follow-up does not change it`;
   // "y/y % change": a percent change is read as a share with a change; allowed only for a follow-up that says percent.
   const percentChange = allow && /%|\bpercent/i.test(followUp) && O.by.has("change");
@@ -133,12 +133,10 @@ export function guarded(a: ModelAnswer | null, previous: string, followUp: strin
   const q = a.question;
   if (typeof q !== "string" || !q.trim() || q.length > 300) return ask("The model's rewrite could not be used; ask the full question.");
   const allowed = new Set([...numbers(previous), ...numbers(followUp)]);
-  // A relative period ("the year before", "the five years before that") names years the conversation doesn't: a year
-  // within 20 of the previous question's years is derived from them, and allowed (coordinator, 2026-11-01).
-  if (RELATIVE.test(followUp)) {
-    const ys = (previous.match(/\b(?:19|20)\d{2}\b/g) ?? []).map(Number);
-    if (ys.length) for (let y = Math.min(...ys) - 20; y <= Math.max(...ys) + 20; y++) allowed.add(String(y));
-  }
+  // A relative period ("the year before", "three years earlier") names years the conversation doesn't: only years the
+  // follow-up's own offset reaches from the previous question's years are allowed (coordinator, 2026-11-01; Codex
+  // follow-up review 01.1: never a nearby guess).
+  for (const y of derivedYears(previous, followUp)) allowed.add(String(y));
   if (numbers(q).some((n) => !allowed.has(n))) return ask("The rewrite named a number that is not in the conversation; ask the full question.");
   const problem = meaningProblem(previous, followUp, q);
   if (problem) return ask(`The rewrite was not used (${problem}); ask the full question.`);
@@ -163,7 +161,24 @@ export function hybridRewriter(model: FollowUpRewriter): FollowUpRewriter {
 }
 
 /** Words that make a period relative to the previous question's ("the year before", "the next year", "three years earlier"). */
-const RELATIVE = /\b(?:before|after|previous|prior|following|next|earlier|later|last|past|back|ago)\b/i;
+const RELATIVE = /\b(?:before|after|previous|prior|following|next|earlier|later|back|ago)\b/i;
+const OFFSET_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+/**
+ * The years a relative-period follow-up can reach from the previous question's years: only for a follow-up about years
+ * ("year" or "years" with before, after, previous, next, earlier, later, back or ago), and only as far as the offset it
+ * names (a number or a number word; "the year before" is one). Every year from the previous years moved by that offset
+ * to the previous years is allowed, so a span ("the three years before that") is too; nothing else.
+ */
+function derivedYears(previous: string, followUp: string): number[] {
+  if (!/\byears?\b/i.test(followUp) || !RELATIVE.test(followUp)) return [];
+  const ys = (previous.match(/\b(?:19|20)\d{2}\b/g) ?? []).map(Number);
+  if (!ys.length) return [];
+  const named = [...followUp.toLowerCase().matchAll(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\b/g)].map((m) => OFFSET_WORDS[m[1]] ?? Number(m[1]));
+  const k = Math.max(1, ...named.filter((n) => n >= 1 && n <= 20));
+  const out = new Set<number>();
+  for (const y of ys) for (let d = -k; d <= k; d++) out.add(y + d);
+  return [...out];
+}
 
 /**
  * The hybrid, live (coordinator, 2026-11-01): the deterministic rewriter first, its certain rewrites run directly;

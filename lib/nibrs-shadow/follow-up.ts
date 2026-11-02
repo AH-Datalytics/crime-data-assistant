@@ -149,7 +149,10 @@ export const deterministicRewriter: FollowUpRewriter = {
     // asked about (Codex 7b-04 fourth and fifth passes).
     const own = partsOf(unled);
     const plain = readQuestion(unled, 2026).ledger.parts.filter((p) => p.clause === 0).every((p) => p.state === "recognized" || p.concept === "opener"
-      || p.concept === "punctuation" || (p.concept === "filler" && NEW_FILLER.has(p.text.toLowerCase())));
+      || p.concept === "punctuation" || (p.concept === "filler" && NEW_FILLER.has(p.text.toLowerCase()))
+      // "and" or "or" joining the question's own places ("Robberies in Memphis and Nashville by year from 2015 to 2024";
+      // coordinator, 2026-11-01): plain words of a complete question, never a lead-in (that is checked below).
+      || (p.concept === "connector" && /^(?:and|or)$/i.test(p.text.trim())));
     // A comparative or additive opening ("compare shoplifting in Nashville in 2023") relates it to the previous one.
     if (own.measures.length && own.places.length && own.periods.length && !/\binstead\b/i.test(raw) && plain
       && !/^(?:compare|vs\.?|versus|against|add|and|also|plus|as well as|with)\b/i.test(unled)
@@ -320,10 +323,19 @@ export const deterministicRewriter: FollowUpRewriter = {
           { label: String(y), question: clean(withPeriod(prev, pr, `in ${y}`)) },
           { label: `${pr.from + shift} to ${pr.to + shift}`, question: clean(withPeriod(prev, pr, `from ${pr.from + shift} to ${pr.to + shift}`)) }]);
       }
-      if (beforeN) return ok(withPeriod(prev, pr, `from ${pr.from - n} to ${pr.from - 1}`), `the ${n} years before the previous question's period`);
-      // "Last year" can mean the calendar's last year or the year before the one asked about: a button for each.
+      if (beforeN) {
+        // "The three years before that" is the span before the period; "three years before that" is one year, three
+        // years back (Codex follow-up review 01.2). An offset from a range is asked about.
+        if (/^the\s/i.test(asPeriod)) return ok(withPeriod(prev, pr, `from ${pr.from - n} to ${pr.from - 1}`), `the ${n} years before the previous question's period`);
+        if (pr.from === pr.to) return ok(withPeriod(prev, pr, `in ${pr.from - n}`), `${n} years before the previous question's year`);
+        return ask(`Which years "${asPeriod}" means.`, [
+          { label: String(pr.from - n), question: clean(withPeriod(prev, pr, `in ${pr.from - n}`)) },
+          { label: `${pr.from - n} to ${pr.from - 1}`, question: clean(withPeriod(prev, pr, `from ${pr.from - n} to ${pr.from - 1}`)) }]);
+      }
+      // "Last year" can mean the calendar's last year or the year before the one asked about (after a range, the year
+      // before it): a button for each, unless both are the same year (Codex follow-up review 01.3).
       const calendar = new Date().getFullYear() - 1, before = pr.from - 1;
-      if (pr.from !== pr.to || calendar === before) return ok(withPeriod(prev, pr, `in ${calendar}`), "last year: the calendar's last year");
+      if (calendar === before) return ok(withPeriod(prev, pr, `in ${calendar}`), "last year: the calendar's last year");
       return ask("Which year \"last year\" means.", [
         { label: String(calendar), question: clean(withPeriod(prev, pr, `in ${calendar}`)) },
         { label: String(before), question: clean(withPeriod(prev, pr, `in ${before}`)) }]);

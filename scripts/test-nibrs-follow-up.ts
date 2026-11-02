@@ -175,6 +175,12 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   for (const f of ["the year after", "what about the following year?", "next year"]) assert.equal(q(rw(M, f)), "Carjacking offenses in Memphis by month in 2025", f);
   assert.equal(q(rw("Shoplifting in Memphis by year from 2021 to 2024", "the five years before that")), "Shoplifting in Memphis by year from 2016 to 2020");
   assert.equal(q(rw("Shoplifting in Memphis in 2024", "the three years before that")), "Shoplifting in Memphis from 2021 to 2023");
+  // Codex follow-up review 01.2, 01.3: "three years before that" is one year; an offset from a range, or "last year"
+  // after a range, is asked about.
+  assert.equal(q(rw("Shoplifting in Memphis in 2024", "three years before that")), "Shoplifting in Memphis in 2021");
+  assert.deepEqual(asked(rw("Shoplifting in Memphis from 2021 to 2024", "three years before that")).options.map((o) => o.label), ["2018", "2018 to 2020"]);
+  const lastAfterRange = rw("Shoplifting in Memphis from 2021 to 2024", "last year");
+  if (new Date().getFullYear() - 1 !== 2020) assert.equal(asked(lastAfterRange).options.length, 2);
   // Ambiguous: asked, with a button for each reading.
   const before = asked(rw("Shoplifting in Memphis by year from 2021 to 2024", "the year before"));
   assert.deepEqual(before.options.map((o) => o.question), ["Shoplifting in Memphis by year in 2020", "Shoplifting in Memphis by year from 2020 to 2023"]);
@@ -185,6 +191,8 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   asked(rw("Shoplifting in Memphis in 2019 and 2024", "show me 2021 to 2023"));
   asked(rw("Shoplifting in Memphis in 2019 and 2024", "the year before"));
   asked(rw(M, "show me 2023 to 2021"));
+  // A complete question for any source stands alone for every caller of the rewriter (coordinator, 2026-11-01).
+  assert.equal(R.rewrite("Robberies in Memphis by year from 1990 to 2024", "Robberies in Memphis and Nashville by year from 2015 to 2024").kind, "new");
   // A previous question with no period takes the range (real turns), as a bare year does.
   assert.equal(q(rw("which city had the steepest decline in total violent crime?", "from 2015 to 2024")), "which city had the steepest decline in total violent crime from 2015 to 2024");
 }
