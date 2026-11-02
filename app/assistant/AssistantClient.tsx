@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PreviewButton, PreviewResponse } from "@/lib/nibrs-shadow/preview";
-import { PROFILES, joinAmp, leadOf, notesOf, titleOf, type ChartKind as ContractKind, type ChoicePresentation, type Offer, type Presentation } from "@/lib/answer-contract/contract";
+import { PROFILES, joinAmp, leadOf, notesOf, seriesLabel, titleOf, type ChartKind as ContractKind, type ChoicePresentation, type Offer, type Presentation } from "@/lib/answer-contract/contract";
 import AnswerChart, { type ChartKind, type Line, type Point } from "./AnswerChart";
 import Logo from "./Logo";
 import QuestionStrip, { type StripItem } from "./QuestionStrip";
@@ -35,7 +35,8 @@ type Turn = { id: number; typed: string; question: string; path: string[]; reply
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const label = (v: unknown) => {
   const s = String(v ?? "");
-  return /^\d{4}-\d{2}$/.test(s) ? `${MONTHS[Number(s.slice(5)) - 1]} ${s.slice(0, 4)}` : s;
+  // Months as "January 2023"; quarters as "Q1 2023", as the engine's notes name them.
+  return /^\d{4}-\d{2}$/.test(s) ? `${MONTHS[Number(s.slice(5)) - 1]} ${s.slice(0, 4)}` : /^\d{4}-Q[1-4]$/.test(s) ? `${s.slice(5)} ${s.slice(0, 4)}` : s;
 };
 // A percent column always shows its one decimal ("13.0"); counts show no decimals.
 const cell = (v: unknown, pct = false) => (v === null || v === undefined ? "" : typeof v === "number"
@@ -155,9 +156,7 @@ export default function AssistantClient() {
     try {
       const res = await fetch("/api/assistant-query", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, path, session: session.current, ...(previous ? { previous } : {}) }) });
-      // Never "residents" (Jeff, 2026-11-01): "per 100,000 residents" is "per 100,000" in every header, label and
-      // sentence of the reply, until the engine's own text drops it.
-      const j = JSON.parse((await res.text()).replace(/(per [\d,]+) residents\b/gi, "$1"));
+      const j = await res.json();
       return "error" in j ? { kind: "error", error: j.error } : (j as Reply);
     } catch (e) {
       return { kind: "error", error: e instanceof Error ? e.message : String(e) };
@@ -419,29 +418,17 @@ function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, sugges
   });
   // The engine sends the coverage columns (agencies counted, population covered) only when the question asks for them.
   const columns = r.columns;
-  // A series that begins with periods no agency reported starts at the first reported one (owner, 2026-10-31): the
-  // leading blank rows are left out of the chart, the table and the export, and a note says where it starts.
-  const isSeries = !!r.chart?.xAxis;
-  const firstKnown = isSeries ? r.rows.findIndex((row) => columns.some((c) => typeof row[c] === "number")) : 0;
-  const kept = firstKnown > 0 ? r.rows.slice(firstKnown) : r.rows;
-  const numberCols = columns.filter((c) => kept.every((row) => row[c] === null || typeof row[c] === "number"));
+  // Rows in the engine's order (by count, or a grouping's natural order; an unknown category last). A series that
+  // begins with months no report is known for starts at the first reported one, and the engine's note says so (#99).
+  const rows = r.rows;
+  const numberCols = columns.filter((c) => rows.every((row) => row[c] === null || typeof row[c] === "number"));
   // Values sent as text (the share of population covered, "96.2%" or "≥ 84.3%" at a lower bound) are values, shown
   // right-aligned and never charted as categories.
-  const shareCols = columns.filter((c) => !numberCols.includes(c) && kept.every((row) => row[c] === null || /^≥?\s*[\d.,]+%$/.test(String(row[c]))));
+  const shareCols = columns.filter((c) => !numberCols.includes(c) && rows.every((row) => row[c] === null || /^≥?\s*[\d.,]+%$/.test(String(row[c]))));
   const groupCols = columns.filter((c) => !numberCols.includes(c) && !shareCols.includes(c));
-  // Rows in the engine's order (by count, or a grouping's natural order; an unknown category last).
-  const rows = kept;
   const lead = leadOf(p, { firstMention }).sentences;
   // The notes keep the finer points the lead did not say, the source line last.
-  let notes = notesOf(p);
-  if (firstKnown > 0) {
-    // The engine's note for exactly the left-out run ("No report is known for January 2017 to May 2018: shown blank,
-    // not zero.") would no longer be true; it becomes one sentence saying where the series starts.
-    const x = r.chart!.xAxis, start = label(rows[0][x]);
-    const run = `${label(r.rows[0][x])}${firstKnown > 1 ? ` to ${label(r.rows[firstKnown - 1][x])}` : ""}`;
-    const replaced = notes.map((n) => (n === `No report is known for ${run}: shown blank, not zero.` ? `No report is known for ${run}, so the chart and table start at ${start}.` : n));
-    notes = replaced.some((n, i) => n !== notes[i]) ? replaced : [`The chart and table start at ${start}, the first period with a report.`, ...notes];
-  }
+  const notes = notesOf(p);
 
   // One number with nothing beside it: the answer sentence only (owner, 2026-10-31). With the coverage columns the
   // sentence stays and the table shows them.
@@ -472,9 +459,10 @@ function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, sugges
     const tc = groupCols[0];
     series = charted[0];
     points = rows.map((row) => ({ x: String(row[tc]), label: yearLabel(row[tc]), y: charted.length > 1 ? null : (row[series] as number | null) }));
-    // Several series over time (places compared, measures side by side): one line each, each keeping its color.
+    // Several series over time (places compared, measures side by side): one line each, each keeping its color, named
+    // as the engine labels it ("Memphis, TN").
     if (charted.length > 1) {
-      lines = charted.slice(0, SERIES.length).map((c, k) => ({ name: c, color: SERIES[k], ys: rows.map((row) => row[c] as number | null) }));
+      lines = charted.slice(0, SERIES.length).map((c, k) => ({ name: seriesLabel(p, c), color: SERIES[k], ys: rows.map((row) => row[c] as number | null) }));
       if (charted.length > SERIES.length) moreLines = charted.length;
     }
   } else if (timed && groupCols.length === 2 && charted.length) {
@@ -543,7 +531,7 @@ function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, sugges
         <div className="cap" ref={cap}>
           {/* Only in the PNG: the chart's title and subtitle above it, its source under it. */}
           <div className="pngOnly pngHead"><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div>
-          <AnswerChart kind={kind!} points={drawn} series={series} sub={sub} hover={hover} onHover={setHover} lines={lines} />
+          <AnswerChart kind={kind!} points={drawn} series={seriesLabel(p, series)} sub={sub} hover={hover} onHover={setHover} lines={lines} />
           {moreLines ? <p className="chartnote">The {SERIES.length} largest of {moreLines} are drawn; the table lists all.</p> : null}
           {drawn.length < points.length ? <p className="chartnote">The {drawn.length} largest of {points.length} are drawn; the table lists all {points.length}.</p> : null}
           <p className="pngOnly pngSource">{source}</p>
