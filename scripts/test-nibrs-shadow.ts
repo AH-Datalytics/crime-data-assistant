@@ -158,7 +158,8 @@ const trend = as(ask("Carjackings in Memphis by month"), "clarify");
 assert.deepEqual(trend.options.map((o) => o.label), ["The last 10 complete years", "Every year available", "Another range"]);
 assert.equal(as(trend.options[0].continuation!, "decline").notBuilt, true, "2016 is before this build");
 assert.deepEqual(as(trend.options[1].continuation!, "answer").period, { from: "2017-01", to: "2026-09" });
-assert.deepEqual(as(ask("How many crimes were there in Detroit in 2024?"), "clarify").options.map((o) => o.otherSource), ["historical", "historical", "historical"]);
+// No Historical build here: no crime-kind button could run, so a plain decline, never dead buttons (coordinator 2026-11-02).
+assert.match(as(ask("How many crimes were there in Detroit in 2024?"), "decline").explanation, /aren.t available here yet/);
 const kc = as(ask("Shoplifting in Kansas City in 2024"), "clarify");
 assert.deepEqual(kc.options.map((o) => o.label), ["Kansas City, Missouri", "Kansas City, Kansas"]);
 assert.deepEqual(kc.options.map((o) => as(o.continuation!, "answer").plan.geography.places[0]), [

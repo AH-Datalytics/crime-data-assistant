@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { answerHistorical, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
-import { shadowAnswer } from "../lib/nibrs-shadow/answer";
+import { shadowAnswer, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
@@ -131,6 +131,27 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   for (const q of ["Robbery arrests in Memphis in 2023", "Aggravated assault offenders in Detroit in 2023"]) {
     const o = withBuild(q);
     assert.ok(o.kind !== "historical" && !(o.kind === "decline" && /Historical counts/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  // Coordinator 2026-11-02 (the redesign's preview of Jeff's own question): months route by the sources' grain, and
+  // every button runs now. A button is runnable when it carries a question, or a continuation that is not a decline
+  // and whose own buttons are runnable.
+  const runnable = (o: ShadowOutcome): boolean => o.kind === "clarify" ? o.options.length > 0 && o.options.every((x) => !x.otherSource && (!!x.question || !!x.entry || (!!x.continuation && x.continuation.kind !== "decline" && runnable(x.continuation))))
+    : o.kind === "decline" ? !o.alternative || (!o.alternative.otherSource && (!!o.alternative.question || (!!o.alternative.continuation && o.alternative.continuation.kind !== "decline" && runnable(o.alternative.continuation))))
+    : true;
+  // "Memphis crime per month in 2023" and its rewrites ("show me 2022", "the year before"): violent and property totals
+  // are annual (no NIBRS total yet), so a plain decline with the whole-year question, which asks the kind and answers.
+  for (const q of ["Memphis crime per month in 2023", "Memphis crime per month in 2022", "Memphis crime by month in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind === "decline" && /whole years only/.test(o.explanation) && runnable(o), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    const by = o.kind === "decline" ? o.alternative?.continuation : undefined;
+    assert.ok(by?.kind === "clarify" && by.options.every((x) => x.continuation?.kind === "historical"), JSON.stringify(by).slice(0, 300));
+  }
+  const kinds = withBuild("Memphis crime in 2023");
+  assert.ok(kinds.kind === "clarify" && runnable(kinds) && kinds.options.map((x) => x.label).join() === "Violent crime,Property crime", JSON.stringify(kinds).slice(0, 300));
+  // A Part I crime by month goes to NIBRS (monthly), never Historical's whole-years decline or P01's.
+  for (const q of ["Memphis robberies per month in 2023", "Memphis burglaries by quarter in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind !== "historical" && !(o.kind === "decline" && /whole years|Crime Index's Historical/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
 }
 

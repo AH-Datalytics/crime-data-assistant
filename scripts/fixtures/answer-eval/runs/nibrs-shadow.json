@@ -1625,29 +1625,29 @@
    "split": "dev",
    "expected": "clarify",
    "actual": "clarify",
-   "outcome": "unverified",
+   "outcome": "incomplete",
    "diffs": [
     {
      "field": "option \"Violent crime\" ",
-     "expected": "historical answer",
-     "actual": "routed to historical: not run by this NIBRS shadow",
+     "expected": "answer",
+     "actual": "a historical-file answer",
      "kind": "unverified"
     },
     {
      "field": "option \"Property crime\" ",
-     "expected": "historical answer",
-     "actual": "routed to historical: not run by this NIBRS shadow",
+     "expected": "answer",
+     "actual": "a historical-file answer",
      "kind": "unverified"
     },
     {
-     "field": "option \"Both\" ",
-     "expected": "historical answer",
-     "actual": "routed to historical: not run by this NIBRS shadow",
-     "kind": "unverified"
+     "field": "option \"Both\"",
+     "expected": "offered",
+     "actual": "missing",
+     "kind": "material"
     }
    ],
    "notes": [
-    "asked which kind of crime: Violent crime | Property crime | Both"
+    "asked which kind of crime: Violent crime | Property crime"
    ],
    "capability": "clarify:historical count",
    "era": "2021 and later"
