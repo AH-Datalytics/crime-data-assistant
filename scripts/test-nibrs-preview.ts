@@ -43,6 +43,10 @@ if (monthly.kind === "answer") {
   // The answer-columns contract: only the table's columns, no status or notes.
   assert.ok(!monthly.columns.some((c) => /status|note/i.test(c)));
 }
+// The answer contract: with the place index (as the API route passes it), the response carries its presentation.
+assert.equal(toPreview(shadowAnswer("Shoplifting in Memphis by month in 2024", deps)).presentation, undefined);
+const withP = toPreview(shadowAnswer("Shoplifting in Memphis by month in 2024", deps), [], deps.places).presentation;
+assert.ok(withP && "titleParts" in withP && withP.source === "nibrs" && withP.titleParts.groupings[0] === "month" && withP.chart.default === "line", JSON.stringify(withP));
 // A breakdown with shares: no chart (category charts wait), rows keyed by headers.
 const bySex = toPreview(shadowAnswer("Simple assault victims in Memphis by sex in 2024", deps));
 assert.ok(bySex.kind === "answer" && bySex.chart === null && bySex.rows[0]["Victim sex"] === "Female");

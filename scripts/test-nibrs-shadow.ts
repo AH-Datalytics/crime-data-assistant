@@ -366,7 +366,7 @@ assert.equal(typo.delivered.text.at(-2), 'Read "Shoplfting" as shoplifting.');
 const burg = as(ask("Burglaries in Memphis in 2023"), "decline");
 assert.match(burg.explanation, /^The official counts of this crime come from the Historical and Current Trends data/);
 // P74: the nearest answerable question, shown whole on the button, run only when chosen.
-assert.deepEqual(burg.alternative, { label: 'Ask instead: "Burglaries in Memphis in 2023 according to NIBRS"', question: "Burglaries in Memphis in 2023 according to NIBRS" });
+assert.deepEqual(burg.alternative, { label: 'Ask instead: "Burglaries in Memphis in 2023 according to NIBRS"', question: "Burglaries in Memphis in 2023 according to NIBRS", role: "other_source", targetSource: "nibrs" });
 
 // Breakdown scoring: rows keyed by category name, counts and statuses compared, shares checked against the independent
 // count over the independent total; nibrs-model's category rows load under those keys.
