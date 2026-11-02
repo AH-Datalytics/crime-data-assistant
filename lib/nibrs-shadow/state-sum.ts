@@ -17,7 +17,7 @@
 import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan } from "../nibrs-plan/compile";
-import { rate, type MonthCell } from "../nibrs-plan/transforms";
+import { rate } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
 import { stateName, STATE_NAMES } from "./places";
@@ -88,35 +88,45 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const c = compilePlan(sub, { kind: "absolute", ...period }, { ...deps.target, agencies: oris });
   if (c.kind === "unsupported") return decline(NOT_YET, c.reason);
   for (const s of c.query.statements) if (!statements.includes(s)) statements.push(s);
-  const cells = new Map<string, MonthCell[]>();
-  for (const r of deps.execute(c.query.sql)) {
-    const ym = String(r[1]);
-    if (yearSet && !yearSet.includes(Number(ym.slice(0, 4)))) continue;
-    (cells.get(String(r[0])) ?? cells.set(String(r[0]), []).get(String(r[0]))!).push({ ym, value: r[2] === null || r[2] === undefined ? null : Number(r[2]), status: String(r[3]) });
+  // Speed (Jeff 2026-11-01, "it's very slow to load"): the grid is summed by agency and year in DuckDB, not read back
+  // month by month (the nation's grid is 1.4 million rows; its sums are 90,000). The same figures: per agency and year,
+  // the months in the period, the months reported (VALUE or REPORTED_ZERO; a conflict or unknown month is not), the sum
+  // of the reported months, and the conflict months.
+  const agg = new Map<string, { months: number; rep: number; sum: number; conflicts: number }>();
+  const monthsIn = new Map<number, number>();
+  for (const r of deps.execute(`SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
+      count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
+      coalesce(sum(n) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')), 0) AS repsum,
+      count(*) FILTER (WHERE n_status = 'EVIDENCE_CONFLICT') AS conflicts
+    FROM (${c.query.sql}) GROUP BY ALL`)) {
+    const y = Number(r[1]);
+    if (yearSet && !yearSet.includes(y)) continue;
+    agg.set(`${r[0]}|${y}`, { months: Number(r[2]), rep: Number(r[3]), sum: Number(r[4]), conflicts: Number(r[5]) });
+    monthsIn.set(y, Math.max(monthsIn.get(y) ?? 0, Number(r[2])));
   }
-  // A month is reported when its status is known (VALUE or REPORTED_ZERO); a conflict or unknown month is not.
-  const reported = (x: MonthCell) => x.status === "VALUE" || x.status === "REPORTED_ZERO";
-  const monthsOf = (y: number) => (cells.values().next().value ?? []).filter((x) => x.ym.startsWith(`${y}-`)).length;
+  const keptYears = years.filter((y) => monthsIn.has(y));
+  const of = (o: string, y: number) => agg.get(`${o}|${y}`);
   // The button's set: reported every month of the whole period, with a header in every year (one fixed set).
-  const everySet = oris.filter((o) => years.every((y) => inYear.get(y)!.has(o)) && (cells.get(o) ?? []).length > 0 && (cells.get(o) ?? []).every(reported));
+  const everySet = oris.filter((o) => years.every((y) => inYear.get(y)!.has(o)) && keptYears.some((y) => of(o, y))
+    && keptYears.every((y) => { const a = of(o, y); return !a || a.rep === a.months; }));
   const byYear: StateSumYear[] = years.map((y) => {
     let sum = 0, agencies = 0, partial = 0, population = 0, noPopulation = 0, conflicts = 0;
     for (const o of inYear.get(y)!) {
-      const mine = (cells.get(o) ?? []).filter((x) => x.ym.startsWith(`${y}-`));
+      const a = of(o, y);
+      if (!a) continue;
       // A month whose records conflict with its reporting status is neither reported nor zero: not summed, and said
       // (review 2.4), never folded silently into "reported only some months".
-      conflicts += mine.filter((x) => x.status === "EVIDENCE_CONFLICT").length;
-      const rep = mine.filter(reported);
-      if (!rep.length) continue;
+      conflicts += a.conflicts;
+      if (!a.rep) continue;
       agencies++;
       const p = pop.get(`${o}|${y}`);
       if (p === null || p === undefined) noPopulation++; else population += p;
-      if (rep.length < monthsOf(y)) partial++;
-      sum += rep.reduce((a, x) => a + (x.value ?? 0), 0);
+      if (a.rep < (monthsIn.get(y) ?? 0)) partial++;
+      sum += a.sum;
     }
     const ev = { agencies: everySet.length, sum: 0, population: 0, share: 0, noPopulation: 0 };
     for (const o of everySet) {
-      ev.sum += (cells.get(o) ?? []).filter((x) => x.ym.startsWith(`${y}-`)).reduce((a, x) => a + (x.value ?? 0), 0);
+      ev.sum += of(o, y)?.sum ?? 0;
       const p = pop.get(`${o}|${y}`);
       if (p === null || p === undefined) ev.noPopulation++; else ev.population += p;
     }

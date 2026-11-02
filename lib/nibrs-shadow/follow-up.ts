@@ -30,7 +30,8 @@ export type Rewrite =
   /** P69 amendment (Jeff 2026-10-31): a model's rewrite, shown as "Did you mean ...?"; nothing runs until it is confirmed. */
   | { kind: "propose"; question: string; how: string }
   | { kind: "ask"; why: string; options: { label: string; question: string }[] };
-export interface FollowUpRewriter { rewrite(previous: string, followUp: string): Rewrite }
+/** `thisYear` (the calendar year now) is injectable so tests never depend on today's date. */
+export interface FollowUpRewriter { rewrite(previous: string, followUp: string, thisYear?: number): Rewrite }
 
 const COUNT: Record<number, string> = { 3: "three", 4: "four", 5: "five", 6: "six" };
 const YEAR = /\b(19|20)\d{2}\b/;
@@ -41,6 +42,31 @@ const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const ask = (why: string, options: { label: string; question: string }[] = []): Rewrite => ({ kind: "ask", why, options });
 /** A follow-up that changes the last question in no way the rules can tell (plain wording, P74). */
 export const PLACE_ASK = "I couldn't tell how this changes your last question. Ask the whole question, for example \"robberies in Denver in 2024\".";
+
+const MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december";
+/**
+ * The previous question's one period, when it is one whole year ("in 2024"), one month ("in March 2024") or one range
+ * of years ("from 2021 to 2025"): its words, where they are, and its first and last year. Anything else (two periods,
+ * "since", "this year", "so far") is null, and a period follow-up is asked about.
+ */
+function onePeriod(q: string): { text: string; at: number; from: number; to: number } | null {
+  const forms = [
+    new RegExp(`\\bfrom\\s+((?:19|20)\\d{2})\\s+(?:to|through)\\s+((?:19|20)\\d{2})\\b`, "i"),
+    new RegExp(`\\b(?:in|during)\\s+(?:(?:${MONTHS})\\s+)?((?:19|20)\\d{2})\\b(?!\\s+(?:to|through|and)\\b)`, "i"),
+  ];
+  if (/\bsince\b|\b(?:this|last|past)\s+(?:year|month|\d+)|\bso far\b|\byear to date\b/i.test(q)) return null;
+  const found = forms.map((r) => r.exec(q)).filter((m): m is RegExpExecArray => !!m);
+  const years = q.match(/\b(?:19|20)\d{2}\b/g) ?? [];
+  if (found.length !== 1) return null;
+  const m = found[0];
+  const from = Number(m[1]), to = Number(m[2] ?? m[1]);
+  // Every year in the question is this period's: "in 2019 and 2024" or a second date elsewhere is not one period.
+  if (years.length !== (m[2] ? 2 : 1)) return null;
+  return { text: m[0], at: m.index, from, to };
+}
+/** The question with its one period replaced by a period's words ("in 2023", "in March 2023", "from 2021 to 2023"). */
+const withPeriod = (q: string, p: { text: string; at: number }, words: string) => `${q.slice(0, p.at)}${words}${q.slice(p.at + p.text.length)}`;
+const NUMBER: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
 const ok = (question: string, how: string, kind: "rewrite" | "new" | "presentation" = "rewrite"): Rewrite => ({ kind, question: clean(question), confidence: "certain", how });
 /** Filler words a complete question of its own may hold; any other unrecognized word makes it a follow-up to ask about. */
 const NEW_FILLER = new Set(["in", "of", "were", "was", "there", "the", "a", "an", "is", "are", "did", "during", "total"]);
@@ -100,7 +126,7 @@ export function standsAlone(turn: string): boolean {
 }
 
 export const deterministicRewriter: FollowUpRewriter = {
-  rewrite(previous: string, followUp: string): Rewrite {
+  rewrite(previous: string, followUp: string, thisYear = new Date().getFullYear()): Rewrite {
     const prev = previous.trim();
     const raw = followUp.trim();
     // The follow-up's own words, without lead-ins and "instead". An additive lead-in ("also 2023", "and Nashville") keeps
@@ -124,7 +150,10 @@ export const deterministicRewriter: FollowUpRewriter = {
     // asked about (Codex 7b-04 fourth and fifth passes).
     const own = partsOf(unled);
     const plain = readQuestion(unled, 2026).ledger.parts.filter((p) => p.clause === 0).every((p) => p.state === "recognized" || p.concept === "opener"
-      || p.concept === "punctuation" || (p.concept === "filler" && NEW_FILLER.has(p.text.toLowerCase())));
+      || p.concept === "punctuation" || (p.concept === "filler" && NEW_FILLER.has(p.text.toLowerCase()))
+      // "and" or "or" joining the question's own places ("Robberies in Memphis and Nashville by year from 2015 to 2024";
+      // coordinator, 2026-11-01): plain words of a complete question, never a lead-in (that is checked below).
+      || (p.concept === "connector" && /^(?:and|or)$/i.test(p.text.trim())));
     // A comparative or additive opening ("compare shoplifting in Nashville in 2023") relates it to the previous one.
     if (own.measures.length && own.places.length && own.periods.length && !/\binstead\b/i.test(raw) && plain
       && !/^(?:compare|vs\.?|versus|against|add|and|also|plus|as well as|with)\b/i.test(unled)
@@ -261,8 +290,63 @@ export const deterministicRewriter: FollowUpRewriter = {
       return /\bcombined\b/i.test(prev) ? ask("The places are already combined.") : ok(beforePeriod(prev, "combined"), "the same places as one total");
     }
 
+    // A period in place of the previous one (coordinator, 2026-11-01: "show me 2023" is the first follow-up most people
+    // try): a year, a range of years or a month, after a lead-in or none; relative periods computed from the previous
+    // question's period. The previous question must have one period; otherwise it is asked about.
+    const lead = /^(?:(?:show|give)(?: me)?|(?:what|how) about|(?:the )?same(?: thing)? for|do|for|in|during)\s+/i;
+    const asPeriod = f.replace(lead, "").trim();
+    const pr = onePeriod(prev);
+    const range = new RegExp(`^(?:from\\s+)?((?:19|20)\\d{2})\\s*(?:to|through|-|–)\\s*((?:19|20)\\d{2})$`, "i").exec(asPeriod);
+    const month = new RegExp(`^(?:in\\s+)?(${MONTHS})\\s+((?:19|20)\\d{2})$`, "i").exec(asPeriod);
+    if (range || month) {
+      if (range && Number(range[1]) >= Number(range[2])) return ask(`Which years "${asPeriod}" means.`);
+      const words = range ? `from ${range[1]} to ${range[2]}` : `in ${ucFirst(month![1].toLowerCase())} ${month![2]}`;
+      // A previous question with no period at all takes this one (real turns: "which city had the steepest decline in
+      // total violent crime?", then "from 2015 to 2024"), as a bare year does; one with another period is asked about.
+      if (!pr) return prevParts.periods.length || YEAR.test(prev) || /\b(?:since|this year|last year|so far|year to date|past|last \d+)\b/i.test(prev)
+        ? ask(`Whether ${asPeriod} replaces the whole period or is added to it.`)
+        : ok(`${prev.replace(/[?.!\s]+$/, "")} ${words}`, "the previous question takes the period");
+      return ok(withPeriod(prev, pr, words), range ? "the period replaced by a range of years" : "the period replaced by a month");
+    }
+    const rel = asPeriod.toLowerCase().replace(/^the\s+/, "");
+    const shift = /^(?:year before|previous year|prior year|year before that)$/.test(rel) ? -1 : /^(?:year after|following year|next year|year after that)$/.test(rel) ? 1 : 0;
+    const beforeN = /^(\w+)\s+years\s+(?:before|prior to)\s+(?:that|then)$/.exec(rel);
+    if (shift || beforeN || rel === "last year") {
+      if (!pr) return ask("Which period is meant: the previous question has more than one, or none.");
+      const n = beforeN ? NUMBER[beforeN[1]] ?? Number(beforeN[1]) : 0;
+      if (beforeN && !(n >= 2 && n <= 20)) return ask(`Which years "${asPeriod}" means.`);
+      if (shift) {
+        // A year before or after one year: that year. After a range it could be the one year next to it or the whole
+        // range moved by a year: a button for each.
+        const y = shift < 0 ? pr.from - 1 : pr.to + 1;
+        if (pr.from === pr.to) return ok(withPeriod(prev, pr, `in ${y}`), `the year ${shift < 0 ? "before" : "after"} the previous question's`);
+        return ask(`Whether "${asPeriod}" means ${y} alone or the whole period moved by a year.`, [
+          { label: String(y), question: clean(withPeriod(prev, pr, `in ${y}`)) },
+          { label: `${pr.from + shift} to ${pr.to + shift}`, question: clean(withPeriod(prev, pr, `from ${pr.from + shift} to ${pr.to + shift}`)) }]);
+      }
+      if (beforeN) {
+        // "The three years before that" is the span before the period; "three years before that" is one year, three
+        // years back (Codex follow-up review 01.2). An offset from a range is asked about.
+        if (/^the\s/i.test(asPeriod)) return ok(withPeriod(prev, pr, `from ${pr.from - n} to ${pr.from - 1}`), `the ${n} years before the previous question's period`);
+        if (pr.from === pr.to) return ok(withPeriod(prev, pr, `in ${pr.from - n}`), `${n} years before the previous question's year`);
+        return ask(`Which years "${asPeriod}" means.`, [
+          { label: String(pr.from - n), question: clean(withPeriod(prev, pr, `in ${pr.from - n}`)) },
+          { label: `${pr.from - n} to ${pr.from - 1}`, question: clean(withPeriod(prev, pr, `from ${pr.from - n} to ${pr.from - 1}`)) }]);
+      }
+      // "Last year" can mean the calendar's last year or the year before the one asked about (after a range, the year
+      // before it): a button for each, unless both are the same year (Codex follow-up review 01.3).
+      const calendar = thisYear - 1, before = pr.from - 1;
+      if (calendar === before) return ok(withPeriod(prev, pr, `in ${calendar}`), "last year: the calendar's last year");
+      return ask("Which year \"last year\" means.", [
+        { label: String(calendar), question: clean(withPeriod(prev, pr, `in ${calendar}`)) },
+        { label: String(before), question: clean(withPeriod(prev, pr, `in ${before}`)) }]);
+    }
+
     // Place and period: "what about Dallas?", "what about Denver in 2023?", "same for 2023", "2024", "compare to X", "add X".
-    const pp = /^(?:(?:what|how) about|same (?:thing )?for|do|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
+    // A bare year after a lead-in ("show me 2023", "give me 2023") is the year alone, replaced or added below; the
+    // lead-ins "show me", "give me" and "in" never route other words to the place and period forms.
+    if (asPeriod !== f && /^(?:19|20)\d{2}$/.test(asPeriod)) f = asPeriod;
+    const pp = /^(?:(?:what|how) about|(?:the )?same (?:thing )?for|do|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
     // A bare place ("washington state", "minneapolis"), or a place and year, is read as "what about ..." (P23): the
     // follow-up's words must be nothing but that place (and year).
     const bare = (() => {

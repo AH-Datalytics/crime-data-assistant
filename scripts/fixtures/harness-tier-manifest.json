@@ -2484,6 +2484,15 @@
       "note": "NIBRS shadow slice: question to answer, clarification or decline under the decided policy, with a stubbed DuckDB step and the checked-in place index; the runner scores it locally against a canonical build"
     },
     {
+      "id": "test-nibrs-duckdb-executor",
+      "tier": "F",
+      "script": "scripts/test-nibrs-duckdb-executor.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The shadow's DuckDB executor: one persistent Python process answering synchronously, cached by SQL, the same rows as the one-process-per-query reference. Uses the harness Python's duckdb (requirements-harness.in); skipped with none."
+    },
+    {
       "id": "test-nibrs-historical",
       "tier": "F",
       "script": "scripts/test-nibrs-historical.ts",

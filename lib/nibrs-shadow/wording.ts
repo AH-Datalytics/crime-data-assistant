@@ -22,6 +22,8 @@ export const BANNED: { re: RegExp; what: string }[] = [
   { re: /\bv0\b/i, what: "v0" },
   // Jeff (2026-11-01): "I don't EVER want 'resident'"; and never a percent contrasted with a rate.
   { re: /\bresidents?\b/i, what: "resident" },
+  // Jeff (2026-11-01): no apologetic wording; declines and clarifications stay direct (P85).
+  { re: /\bsorry\b|\bapologi[sz]e\w*|\bunfortunately\b|\bI['’]m afraid\b/i, what: "an apology" },
   { re: /\bnot a rate\b|\bpercent, not\b/i, what: "a percent contrasted with a rate" },
   { re: /\btyped reading\b|\bno (?:typed )?reading\b|\bthis reading\b|\bplan form\b/i, what: "an engine reading" },
   { re: /\binterpret(?:s|ed|ing)?\b/i, what: "interpret" },
