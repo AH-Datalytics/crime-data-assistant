@@ -4515,21 +4515,15 @@
    "id": "LS-418",
    "split": "heldout",
    "expected": "answer",
-   "actual": "clarify",
-   "outcome": "unnecessary_clarify",
-   "diffs": [
-    {
-     "field": "rewrite",
-     "expected": "Murders against juveniles in Memphis in 2024",
-     "actual": "(none: asked)",
-     "kind": "material"
-    }
-   ],
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "asked Which crime to replace.: Ask the full question | Start over"
+    "delivered: Memphis, Tennessee: 17 murder victims under 18 in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later"
+   "era": "2021 and later",
+   "values": "match"
   },
   {
    "id": "LS-420",
@@ -4787,7 +4781,7 @@
     }
    ],
    "notes": [
-    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee before 1932, so the chart and table start there. / Source: Crime Index."
+    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start in 1932. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
@@ -4808,7 +4802,7 @@
     }
    ],
    "notes": [
-    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee before 1932, so the chart and table start there. / Source: Crime Index."
+    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start in 1932. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
@@ -4829,7 +4823,7 @@
     }
    ],
    "notes": [
-    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee before 1932, so the chart and table start there. / Source: Crime Index."
+    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start in 1932. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
@@ -4913,7 +4907,7 @@
     }
    ],
    "notes": [
-    "delivered: Chicago, Illinois: robberies by year, 2010 through 2025. / Figures for the Chicago Police Department. / Source: Crime Index."
+    "delivered: Chicago, Illinois: robberies by year, 2011 through 2025. / Figures for the Chicago Police Department. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
