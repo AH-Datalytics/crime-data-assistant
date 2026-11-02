@@ -20,7 +20,6 @@ import { loadPlaceIndex } from "@/lib/nibrs-shadow/places";
 import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "@/lib/nibrs-shadow/historical";
 import { MAX_QUESTION, follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
-import { headlineTitle, titlesFor } from "@/app/assistant/title";
 import { liveModelRewrite } from "./live-rewriter";
 
 export const dynamic = "force-dynamic";
@@ -69,17 +68,11 @@ export async function POST(req: Request) {
       asked = r.question;
       rewrite = r.kind; // "rewrite": a follow-up to the previous question; "new": a question of its own
     }
-    const at = follow(shadowAnswer(asked, shadowDeps()), clicked);
+    const d = shadowDeps();
+    const at = follow(shadowAnswer(asked, d), clicked);
     if (!at) return NextResponse.json({ error: "That button is no longer offered for this question." }, { status: 409 });
-    // The chart title and subtitle, from the plan's place, measures, groupings and period (Jeff's convention).
-    const titles = at.kind === "answer"
-      ? titlesFor(at.plan, at.period, { rolling: at.plan.transforms.find((t) => t.kind === "rolling")?.months ?? null })
-      : null;
-    // Every chart has a title, whatever the source: from the plan where there is one, else from the engine's headline.
-    // A single number (one row) is its sentence and needs none.
-    const shown = toPreview(at, clicked);
-    const fallback = !titles && shown.kind === "answer" && shown.rows.length > 1 && shown.text[0] ? { title: headlineTitle(shown.text[0]), subtitle: null, partialYear: null } : null;
-    return NextResponse.json({ ...shown, ...(titles ?? fallback ?? {}), asked, rewrite, ms: Date.now() - started });
+    // The answer contract (#98): the page builds the title, lead, notes, chart choices and offers from `presentation`.
+    return NextResponse.json({ ...toPreview(at, clicked, d.places, asked), asked, rewrite, ms: Date.now() - started });
   } catch (e) {
     return NextResponse.json({ error: `The preview engine failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
   }

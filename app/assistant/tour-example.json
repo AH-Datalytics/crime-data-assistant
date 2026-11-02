@@ -1,5 +1,5 @@
 {
- "_note": "Fixed example answers for the tour (captured from the local engine; the decline 2026-11-02, a permanent one: causes); the tour never asks the engine or the model.",
+ "_note": "Fixed example answers for the tour (captured from the local engine on test6 with the answer contract, 2026-11-02; the decline a permanent one: causes); the tour never asks the engine or the model.",
  "answer": {
   "typed": "same for 2024",
   "reply": {
@@ -38,11 +38,56 @@
    },
    "chart": null,
    "buttons": [],
-   "title": "Memphis, TN Carjacking Offenses by Clearance Status, 2024",
-   "subtitle": null,
-   "partialYear": null,
+   "presentation": {
+    "source": "nibrs",
+    "titleParts": {
+     "places": [
+      "Memphis, TN"
+     ],
+     "measure": "carjacking offenses",
+     "ratePer": null,
+     "ranking": null,
+     "groupings": [
+      "clearance status"
+     ],
+     "period": "2024",
+     "partialLastYear": null,
+     "rollingMonths": null
+    },
+    "lead": {
+     "kind": "described",
+     "what": "carjacking offenses",
+     "who": "the Memphis Police Department",
+     "when": "in 2024",
+     "countedAs": null,
+     "brokenDownBy": "clearance status"
+    },
+    "offers": [],
+    "caveat": "clearance_as_of_file",
+    "notes": {
+     "keys": [],
+     "lines": []
+    },
+    "coverage": {
+     "requested": false
+    },
+    "chart": {
+     "allowed": [
+      "horizontal_bar",
+      "bar",
+      "stacked_100"
+     ],
+     "default": "horizontal_bar",
+     "exclusive": true,
+     "exclusiveByColumn": {
+      "Carjacking offenses": true,
+      "Incidents": true
+     }
+    },
+    "ordered": []
+   },
    "asked": "Carjacking offenses in Memphis by clearance status in 2024",
-   "rewrite": "rewrite"
+   "rewrite": null
   }
  },
  "decline": {
@@ -62,6 +107,20 @@
     }
    ],
    "notBuilt": false,
+   "presentation": {
+    "source": "nibrs",
+    "buttons": [
+     {
+      "role": "ask_instead",
+      "targetSource": "nibrs",
+      "label": "Ask instead: \"carjackings in Memphis in 2025\"",
+      "text": null,
+      "run": {
+       "question": "carjackings in Memphis in 2025"
+      }
+     }
+    ]
+   },
    "asked": "Why are carjackings increasing in Memphis?",
    "rewrite": null
   }

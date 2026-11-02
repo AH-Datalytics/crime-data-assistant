@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PreviewButton, PreviewResponse } from "@/lib/nibrs-shadow/preview";
+import { PROFILES, joinAmp, leadOf, notesOf, titleOf, type ChartKind as ContractKind, type ChoicePresentation, type Offer, type Presentation } from "@/lib/answer-contract/contract";
 import AnswerChart, { type ChartKind, type Line, type Point } from "./AnswerChart";
 import Logo from "./Logo";
 import QuestionStrip, { type StripItem } from "./QuestionStrip";
@@ -17,24 +18,17 @@ import TOUR from "./tour-example.json";
  */
 type Option = { label: string; question: string };
 type Reply =
-  | (PreviewResponse & { asked: string; rewrite?: string | null; title?: string; subtitle?: string | null; partialYear?: string | null; ms?: number })
+  | (PreviewResponse & { asked: string; rewrite?: string | null; presentation?: Presentation | ChoicePresentation; ms?: number })
   | { kind: "rewrite-ask"; why: string; options: Option[]; ms?: number }
   | { kind: "presentation"; asked: string; how: string; ms?: number }
   // The engine's coming confirm-before-run outcome for a model rewrite (stubbed until the engine returns it).
   | { kind: "proposal"; asked: string; question?: string; why?: string; options?: Option[]; ms?: number }
   | { kind: "error"; error: string };
-type Src = "nibrs" | "historical" | "rtci" | "shr";
 type Asking = { question: string; path: string[] };
-/**
- * Choices made inside an answer that rerun it in place (Jeff, 2026-11-01), in the same slot, with no new question:
- * all reporting agencies or only those that reported every month (P61), and the source.
- */
-type Scope = { all: Asking; every: Asking; on: boolean };
-type Sources = { on: Src; list: { source: Src; asking: Asking; available: boolean }[] };
 type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: ChartMode; viaButton?: boolean;
-  scope?: Scope; sources?: Sources; loading?: boolean;
-  /** The sources already spelled out earlier in the session when this answer came: said short here ("NIBRS"). */
-  short?: string[];
+  loading?: boolean;
+  /** Whether this answer's source had not been spelled out earlier in the session: its lead spells it out. */
+  firstMention?: boolean;
   /** One of the tour's fixed example turns (its steps find them by this). */
   tour?: "answer" | "decline" };
 
@@ -70,57 +64,17 @@ function chartCommand(text: string): ChartMode | null {
 // The dataviz skill's validated categorical order (references/palette.md, light mode): a category keeps its slot.
 const SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"];
 const PERIOD = /^\d{4}(-\d{2}|-?Q[1-4])?$/;
-/**
- * Whether a category-by-time answer's categories are exclusive (each unit in exactly one), so stacked forms are honest.
- * From the engine's flag (top-level `exclusive`: the charted count's categories sum to its total).
- */
-const exclusive = (r: object) => (r as { exclusive?: boolean }).exclusive === true;
+// The contract's chart types as this page draws them (a grouped bar is the bar form of several lines).
+const KIND: Record<ContractKind, ChartKind> = { line: "line", bar: "bar", horizontal_bar: "hbar", grouped_bar: "bar", stacked_bar: "stacked", stacked_100: "stacked100" };
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}${/[?.]$/.test(s) ? "" : "?"}`;
 
-const SRC_NAME: Record<Src, string> = { nibrs: "NIBRS", historical: "Historical", rtci: "Current Trends", shr: "Homicide Reports" };
-const LIVE: Src[] = ["nibrs"];
 const TOUR_SEEN = "cda-tour-seen";
-/**
- * Spelled out only the first time in a session (Jeff, 2026-11-01), then short. Until the engine marks the long form,
- * these exact strings are matched; "to the FBI's National Incident-Based Reporting System (NIBRS)" becomes "to NIBRS".
- */
-const ABBR = [
-  { abbr: "NIBRS", long: "the FBI's National Incident-Based Reporting System (NIBRS)" },
-  { abbr: "SHR", long: "the FBI's Supplementary Homicide Reports (SHR)" },
-];
-const Short = createContext<string[]>([]);
-const shorten = (s: string, short: string[]) => ABBR.reduce((t, a) => (short.includes(a.abbr) ? t.split(a.long).join(a.abbr) : t), s);
-// How the lead names another source's data, as a link.
-const SRC_DATA: Record<Src, string> = { nibrs: "the FBI's NIBRS data", historical: "Crime Index's historical data", rtci: "Crime Index's Current Trends data", shr: "the FBI's Supplementary Homicide Reports" };
-// The engine's role for a button, or (until the engine sends one) read from its label.
-type Roled = PreviewButton & { role?: "consistent-agencies" | "source"; source?: Src };
-const isScope = (b: Roled) => b.role === "consistent-agencies" || (!b.role && /reported every month|^Consistent Reporting Agencies$/i.test(b.label));
-const sourceOfButton = (b: Roled): Src | null => (b.role === "source" ? b.source ?? null
-  : !b.role && b.question && /\baccording to NIBRS$/i.test(b.question) ? "nibrs" : null);
-/** The source an engine reply belongs to: the engine's, a route's, or (P01's NIBRS alternative) the official counts'. */
-function sourceOf(r: PreviewResponse): Src {
-  const own = (r as { source?: Src }).source;
-  if (own) return own;
-  if (r.kind === "decline" && r.reason.startsWith("route:")) return r.reason.slice(6) as Src;
-  if (r.kind === "decline" && r.buttons.some((b) => sourceOfButton(b) === "nibrs")) return "historical";
-  return "nibrs";
-}
-const scopeOf = (r: Reply | null, at: Asking): Scope | undefined => {
-  const b = r && (r.kind === "answer") ? (r.buttons as Roled[]).find(isScope) : undefined;
-  return b ? { all: at, every: { question: at.question, path: [...at.path, b.label] }, on: false } : undefined;
-};
-const sourcesOf = (r: Reply | null, at: Asking): Sources | undefined => {
-  if (!r || (r.kind !== "answer" && r.kind !== "decline")) return undefined;
-  const on = sourceOf(r);
-  const others = (r.buttons as Roled[]).flatMap((b) => {
-    const s = sourceOfButton(b);
-    return s && s !== on ? [{ source: s, asking: b.question ? { question: b.question, path: [] } : { question: at.question, path: [...at.path, b.label] }, available: LIVE.includes(s) }] : [];
-  });
-  return { on, list: [{ source: on, asking: at, available: LIVE.includes(on) }, ...others] };
-};
-/** The buttons left under an answer once the scope and source choices have moved into its control row. */
-const rest = (bs: PreviewButton[]) => (bs as Roled[]).filter((b) => !isScope(b) && !sourceOfButton(b));
+/** An answer's presentation (the engine's answer contract, lib/answer-contract), when the reply is an answer. */
+const answerOf = (r: Reply | null): Presentation | null => (r && r.kind === "answer" && r.presentation && "lead" in r.presentation ? r.presentation : null);
+/** The offers its lead carries inline, as links in plain words; every other button stays a button. */
+const inlineOffers = (r: Reply | null): Offer[] => { const p = answerOf(r); return p ? leadOf(p).offers : []; };
+const rest = (r: Reply, bs: PreviewButton[]) => bs.filter((b) => !inlineOffers(r).some((o) => o.label === b.label));
 
 export default function AssistantClient() {
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -217,31 +171,33 @@ export default function AssistantClient() {
     scroll(id);
     setBusy(true);
     let reply = await fetchReply(question, path, opts.previous);
-    // A presentation-only follow-up ("make it a bar chart") redraws the last answer; no data question is asked (P69).
+    // Where the reply belongs (question and path), for the cache and the lead's offers.
+    let at = path;
+    // A presentation-only follow-up ("make it a bar chart") redraws the last answer, with its own path (a consistent
+    // view stays one); no data question is asked (P69).
     if (reply.kind === "presentation") {
       const last = [...turnsRef.current].reverse().find((t) => t.reply?.kind === "answer");
-      if (last && last.reply) reply = { ...(last.reply as Extract<Reply, { kind: "answer" }>), ms: reply.ms };
+      if (last && last.reply) { reply = { ...(last.reply as Extract<Reply, { kind: "answer" }>), ms: reply.ms }; at = last.path; }
     }
     const shown = reply;
-    if (shown.kind !== "error" && "asked" in shown && shown.asked) seen.current.set(JSON.stringify([shown.asked, path]), shown);
-    const short = [...spelled.current];
-    // Every NIBRS answer's lead names NIBRS; anything else is spelled out where the engine's text spells it out.
-    for (const a of ABBR) if ((a.abbr === "NIBRS" && shown.kind === "answer" && sourceOfText(shown.text) === "nibrs") || JSON.stringify(shown).includes(a.long)) spelled.current.add(a.abbr);
+    if (shown.kind !== "error" && "asked" in shown && shown.asked) seen.current.set(JSON.stringify([shown.asked, at]), shown);
+    // A source is spelled out in the first answer from it in the session, then said short.
+    const p = answerOf(shown), firstMention = !!p && !spelled.current.has(p.source);
+    if (p) spelled.current.add(p.source);
     setTurns((ts) => ts.map((t) => {
       if (t.id !== id) return t;
-      const q = "asked" in shown && shown.asked ? shown.asked : t.question, at = { question: q, path };
-      return { ...t, reply: shown, question: q, scope: scopeOf(shown, at), sources: sourcesOf(shown, at), short };
+      return { ...t, reply: shown, question: "asked" in shown && shown.asked ? shown.asked : t.question, path: at, firstMention };
     }));
     scroll(id);
     setBusy(false);
   }
 
-  // A scope or source choice reruns the answer in place: the same slot, the same question line, the new reply.
+  // An offer in the lead reruns the answer in place: the same slot, the same question line, the new reply.
   // Replies already fetched, by question and path, so going back to a view (all agencies, a source) is instant.
   const seen = useRef(new Map<string, Reply>());
   // The sources spelled out so far in this session.
   const spelled = useRef(new Set<string>());
-  async function rerun(id: number, asking: Asking, change: (t: Turn, r: Reply) => Partial<Turn>) {
+  async function rerun(id: number, asking: Asking) {
     const key = JSON.stringify([asking.question, asking.path]);
     let reply = seen.current.get(key);
     if (!reply) {
@@ -250,40 +206,18 @@ export default function AssistantClient() {
       if (reply.kind !== "error") seen.current.set(key, reply);
     }
     const shown = reply;
-    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...change(t, shown), reply: shown, path: asking.path, loading: false } : t)));
+    const question = "asked" in shown && shown.asked ? shown.asked : asking.question;
+    // An offer on another source spells that source out the first time, as a new answer would.
+    const p = answerOf(shown), fresh = !!p && !spelled.current.has(p.source);
+    if (p) spelled.current.add(p.source);
+    setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, reply: shown, question, path: asking.path, loading: false, ...(fresh ? { firstMention: true } : {}) } : t)));
   }
-  const setScope = (t: Turn, on: boolean) => t.scope && t.scope.on !== on
-    && void rerun(t.id, on ? t.scope.every : t.scope.all, (u) => ({ scope: { ...u.scope!, on } }));
-  // The lead's own sentences for the agencies counted and the source (Jeff, 2026-11-01: part of the description, as
-  // links in plain words, not controls). Each link reruns the answer in place. Nothing is said about other sources when
-  // no other source answers the question.
-  const suggestions = (t: Turn): Suggestion[] => {
-    const out: Suggestion[] = [];
-    // Jeff's wording (2026-11-01); the number in the fixed set is read from the engine's answer sentence.
-    const every = t.reply?.kind === "answer" ? /\bthe ([\d,]+) (?:Consistent Reporting )?agencies that reported every month\b/i.exec(t.reply.text[0] ?? "")?.[1] : undefined;
-    // Every month of the whole period asked, not of each year (Jeff): "every month from January 2021 through December 2025".
-    const p = t.reply?.kind === "answer" ? t.reply.period : null;
-    const months = p ? `every month from ${label(p.from.slice(0, 7))} through ${label(p.to.slice(0, 7))}` : "every month of the period";
-    if (t.scope) out.push(t.scope.on
-      ? { before: `This counts only the ${every ? `${every} ` : ""}Consistent Reporting Agencies that reported ${months}. `, link: "See all reporting agencies", after: " instead.", run: () => setScope(t, false) }
-      : { before: "Not every agency reported in every year, so part of this change could come from agencies starting or stopping reporting. To compare the same agencies across years, see only the ",
-          link: "Consistent Reporting Agencies", after: ` that reported ${months}.`, run: () => setScope(t, true) });
-    const others = t.sources ? t.sources.list.filter((s) => s.source !== t.sources!.on) : [];
-    if (t.reply?.kind === "decline") {
-      for (const o of others) out.push({ before: "The same question can be answered from ", link: SRC_DATA[o.source], after: ".", run: () => setSource(t, o.source) });
-    } else {
-      others.forEach((o, k) => out.push({ before: k ? "Or from " : "The same question can also be answered from ",
-        link: SRC_DATA[o.source], after: ".", run: () => setSource(t, o.source) }));
-    }
-    return out;
-  };
-  const setSource = (t: Turn, s: Src) => {
-    const to = t.sources?.list.find((x) => x.source === s);
-    if (!to || t.sources!.on === s) return;
-    // A new source is a new answer: its own scope choice, if it offers one.
-    void rerun(t.id, to.asking, (u, r) => ({ sources: { ...u.sources!, on: s }, scope: scopeOf(r, to.asking),
-      question: "asked" in r && r.asked ? r.asked : to.asking.question }));
-  };
+  // The lead's offers (the Consistent Reporting Agencies and the way back, another source), in the engine's words:
+  // links in plain words, each rerunning the answer in place (Jeff, 2026-11-01).
+  const suggestions = (t: Turn): Suggestion[] => inlineOffers(t.reply).flatMap((o) => {
+    const asking = "path" in o.run ? { question: t.question, path: o.run.path } : "question" in o.run ? { question: o.run.question, path: [] } : null;
+    return o.text && asking ? [{ ...o.text, run: () => void rerun(t.id, asking) }] : [];
+  });
 
   // A typed question follows up on the last answer the engine read (P69).
   const lastAsked = () => [...turns].reverse().find((t) => t.reply && "asked" in t.reply && t.reply.kind !== "presentation")?.question ?? null;
@@ -321,10 +255,9 @@ export default function AssistantClient() {
     beforeTour.current = turnsRef.current;
     const answer = { ...(TOUR.answer.reply as unknown as Extract<Reply, { kind: "answer" }>) };
     const decline = { ...(TOUR.decline.reply as unknown as Extract<Reply, { kind: "decline" }>) };
-    const at = (r: Reply) => ({ question: "asked" in r ? r.asked : "", path: [] });
     setTurns([
-      { id: -2, typed: TOUR.decline.typed, question: decline.asked, path: [], reply: decline, sources: sourcesOf(decline, at(decline)), short: [], tour: "decline" },
-      { id: -1, typed: TOUR.answer.typed, question: answer.asked, path: [], reply: answer, sources: sourcesOf(answer, at(answer)), short: [], tour: "answer" },
+      { id: -2, typed: TOUR.decline.typed, question: decline.asked, path: [], reply: decline, firstMention: true, tour: "decline" },
+      { id: -1, typed: TOUR.answer.typed, question: answer.asked, path: [], reply: answer, firstMention: true, tour: "answer" },
     ]);
     setTourStep(0);
   };
@@ -377,8 +310,7 @@ export default function AssistantClient() {
             <section className="Turn" key={t.id} id={`turn${t.id}`} data-tour={t.tour}>
               <div className="Me" id={`me${t.id}`}><p>{t.typed}</p></div>
               <div className={`Re${t.loading ? " loading" : ""}`}>{t.reply
-                ? <Short.Provider value={t.short ?? []}><ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })}
-                    suggest={suggestions(t)} /></Short.Provider>
+                ? <ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })} suggest={suggestions(t)} />
                 : <div className="wait">Answering</div>}</div>
             </section>
           ))}
@@ -444,9 +376,11 @@ function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: Pre
     {r.reason.startsWith("route:") ? <p className="unavailable">Not available yet in this preview</p> : r.notBuilt ? <p className="unavailable">Not in this test build</p> : null}
     {read}
     <Lead lines={[r.text]} suggest={suggest} onDone={reveal} />
-    <div className={bodyClass(bodyIn)}><Choices buttons={rest(r.buttons)} onButton={onButton} primary /></div>
+    <div className={bodyClass(bodyIn)}><Choices buttons={r.buttons} onButton={onButton} primary /></div>
   </>);
-  return (<>{read}<AnswerView r={r} chartKind={t.chart} title={asked ?? t.typed} onButton={onButton} scoped={!!t.scope} suggest={suggest} /></>);
+  const p = answerOf(r);
+  if (!p) return <p className="err">This answer came without its presentation.</p>;
+  return (<>{read}<AnswerView r={r} p={p} firstMention={!!t.firstMention} chartKind={t.chart} onButton={onButton} suggest={suggest} /></>);
 }
 
 function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButton[]; onButton: (b: PreviewButton) => void; primary?: boolean }) {
@@ -463,11 +397,13 @@ function Choices({ buttons, onButton, primary = false }: { buttons: PreviewButto
   );
 }
 
-function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, suggest }: { r: Extract<PreviewResponse, { kind: "answer" }> & { title?: string; subtitle?: string | null; partialYear?: string | null }; chartKind?: ChartMode; title: string; onButton: (b: PreviewButton) => void; scoped: boolean; suggest: Suggestion[] }) {
-  // The chart title (from the engine's plan, Jeff's convention) names the answer on screen and in both exports; the
-  // question as asked is the fallback for an answer without one (the historical file's).
-  const title = r.title ?? asked, subtitle = r.subtitle ?? null;
-  const yearLabel = (v: unknown) => (r.partialYear && String(v) === r.partialYear ? `${r.partialYear} (Partial)` : label(v));
+function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, suggest }: { r: Extract<Reply, { kind: "answer" }>; p: Presentation; firstMention: boolean; chartKind?: ChartMode; onButton: (b: PreviewButton) => void; suggest: Suggestion[] }) {
+  // Everything said about the answer comes from its presentation, through the contract's shared builders: the title
+  // (on screen and in both exports), the lead, the notes and the chart types (lib/answer-contract).
+  const { title, subtitle } = titleOf(p.titleParts);
+  // A partial last year ("2026 (Partial): January-September 2026") is marked in its year's cells.
+  const partial = p.titleParts.partialLastYear?.slice(0, 4) ?? null;
+  const yearLabel = (v: unknown) => (partial && String(v) === partial ? `${partial} (Partial)` : label(v));
   // The chart type: chosen with the Line | Bar control beside the chart, or preselected by a typed command.
   const [chartKind, setChartKind] = useState<ChartMode | undefined>(typedKind);
   const [bodyIn, reveal] = useReveal();
@@ -483,7 +419,6 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     ro.observe(el);
     return () => ro.disconnect();
   });
-  const { text } = r;
   // The engine sends the coverage columns (agencies counted, population covered) only when the question asks for them.
   const columns = r.columns;
   // A series that begins with periods no agency reported starts at the first reported one (owner, 2026-10-31): the
@@ -498,9 +433,9 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
   const groupCols = columns.filter((c) => !numberCols.includes(c) && !shareCols.includes(c));
   // Rows in the engine's order (by count, or a grouping's natural order; an unknown category last).
   const rows = kept;
-  const lead = composeLead(text, scoped, rows.length === 1, sourceOfText(text));
-  // The notes keep the finer points: whatever the lead did not say.
-  let notes = text.filter((_, i) => !lead.used.has(i));
+  const lead = leadOf(p, { firstMention }).sentences;
+  // The notes keep the finer points the lead did not say, the source line last.
+  let notes = notesOf(p);
   if (firstKnown > 0) {
     // The engine's note for exactly the left-out run ("No report is known for January 2017 to May 2018: shown blank,
     // not zero.") would no longer be true; it becomes one sentence saying where the series starts.
@@ -510,68 +445,57 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     notes = replaced.some((n, i) => n !== notes[i]) ? replaced : [`The chart and table start at ${start}, the first period with a report.`, ...notes];
   }
 
-  // One number: the answer sentence only (owner, 2026-10-31), including a one-row series ("2024: 10,149").
-  if (rows.length === 1 && numberCols.length === 1) {
-    const v = rows[0][numberCols[0]];
+  // One number with nothing beside it: the answer sentence only (owner, 2026-10-31). With the coverage columns the
+  // sentence stays and the table shows them.
+  if (p.lead.kind === "single" && columns.length === 1) {
+    const v = rows[0]?.[columns[0]];
     const shown = typeof v === "number" ? v.toLocaleString("en-US", { maximumFractionDigits: 1 }) : null;
     return (<>
       {/* The sentence is the answer; the title would only repeat it. */}
-      <Lead lines={lead.lines} bold={shown} suggest={suggest} onDone={reveal} />
+      <Lead lines={lead} bold={shown} suggest={suggest} onDone={reveal} />
       <div className={bodyClass(bodyIn)}>
         <Notes lines={notes} />
-        <Choices buttons={rest(r.buttons)} onButton={onButton} />
+        <Choices buttons={rest(r, r.buttons)} onButton={onButton} />
       </div>
     </>);
   }
 
-  // The chart: the engine's time series, or a bar chart drawn from a breakdown's table (one category, first number column).
-  let kind: ChartKind | null = null, points: Point[] = [], series = "", lines: Line[] | undefined, moreLines = 0;
-  // The chart types this answer offers (Jeff, 2026-11-01): a series Line | Bar; a breakdown horizontal | vertical bars;
-  // category by time Line | Grouped bars, plus stacked forms only when the engine marks the categories as exclusive
-  // (overlapping categories, such as a crime under each weapon, would show false shares).
-  let options: ChartKind[] = [];
+  // The chart types and the default are the contract's (stacked and 100% only when every category is exclusive); the
+  // page only draws the table's shape: one series or several over time, lines per category over time, or bars.
+  let options: ChartKind[] = [...new Set(p.chart.allowed.map((k) => KIND[k]))];
+  let kind: ChartKind | null = p.chart.default ? KIND[p.chart.default] : null;
+  let points: Point[] = [], series = "", lines: Line[] | undefined, moreLines = 0;
   // Which chart point a table row belongs to: its own index, or (time by category) its period's.
   let pointOf = (i: number) => i;
-  if (r.chart && r.chart.xAxis && r.chart.yAxis?.[0]) {
-    options = ["line", "bar"];
-    kind = r.chart.type === "bar" ? "bar" : "line";
-    series = r.chart.yAxis[0];
-    points = rows.map((row) => ({ x: String(row[r.chart!.xAxis]), label: yearLabel(row[r.chart!.xAxis]), y: row[series] as number | null }));
-  } else if (rows.length > 1 && groupCols.length === 1 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
-    // A series without an engine chart (a state or national sum by year): time, so Line | Bar, never category bars;
-    // a long one (Historical's decades) starts as a line.
-    options = ["line", "bar"];
-    kind = rows.length > 12 ? "line" : "bar";
-    series = numberCols[0];
-    points = rows.map((row) => ({ x: String(row[groupCols[0]]), label: yearLabel(row[groupCols[0]]), y: row[series] as number | null }));
-    // Places compared over time (Historical: "Memphis, Tennessee: robberies", "Nashville, Tennessee: robberies"): one
-    // line per place, each keeping its color; never the coverage columns beside a single series.
-    const compared = numberCols.filter((c) => /^.+: .+$/.test(c));
-    if (compared.length >= 2) {
-      kind = "line";
-      points = points.map((pt) => ({ ...pt, y: null }));
-      lines = compared.slice(0, SERIES.length).map((c, k) => ({ name: c.slice(0, c.lastIndexOf(": ")), color: SERIES[k], ys: rows.map((row) => row[c] as number | null) }));
-      if (compared.length > SERIES.length) moreLines = compared.length;
+  const timed = groupCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])));
+  // The coverage columns are shown in the table, never charted beside the count.
+  const charted = p.coverage.requested ? numberCols.slice(0, 1) : numberCols;
+  if (timed && groupCols.length === 1 && charted.length) {
+    const tc = groupCols[0];
+    series = charted[0];
+    points = rows.map((row) => ({ x: String(row[tc]), label: yearLabel(row[tc]), y: charted.length > 1 ? null : (row[series] as number | null) }));
+    // Several series over time (places compared, measures side by side): one line each, each keeping its color.
+    if (charted.length > 1) {
+      lines = charted.slice(0, SERIES.length).map((c, k) => ({ name: c, color: SERIES[k], ys: rows.map((row) => row[c] as number | null) }));
+      if (charted.length > SERIES.length) moreLines = charted.length;
     }
-  } else if (groupCols.length === 2 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
-    // Time by category (no engine chart): one line per category over the periods, the first number column; at most
-    // eight lines, in the engine's order (largest first in the first period), each keeping its color.
+  } else if (timed && groupCols.length === 2 && charted.length) {
+    // Time by category: one line per category over the periods, the first number column; at most eight lines, in the
+    // engine's order, each keeping its color.
     const [tc, cc] = groupCols;
-    series = numberCols[0];
+    series = charted[0];
     const periods = [...new Set(rows.map((row) => String(row[tc])))];
     const cats = [...new Set(rows.map((row) => String(row[cc])))];
     points = periods.map((pd) => ({ x: pd, label: yearLabel(pd), y: null }));
     lines = cats.slice(0, SERIES.length).map((c, k) => ({ name: c, color: SERIES[k],
       ys: periods.map((pd) => { const hit = rows.find((row) => String(row[tc]) === pd && String(row[cc]) === c); return hit ? (hit[series] as number | null) : null; }) }));
-    options = ["line", "bar", ...(exclusive(r) ? (["stacked", "stacked100", "area"] as ChartKind[]) : [])];
-    kind = periods.length < 2 ? null : "line";
     pointOf = (i: number) => periods.indexOf(String(rows[i][tc]));
-    if (cats.length > SERIES.length) moreLines = cats.length;
-  } else if (rows.length > 1 && groupCols.length === 1 && numberCols.length >= 1) {
-    // A breakdown is bars, never a line (a line across categories would imply an order they don't have).
-    options = ["hbar", "bar", ...(exclusive(r) && rows.length <= SERIES.length ? (["stacked100"] as ChartKind[]) : [])];
-    kind = "hbar";
-    series = numberCols[0];
+    // Only some categories drawn: no 100% stack, whose shares would be of those drawn, not of the total.
+    if (cats.length > SERIES.length) { moreLines = cats.length; options = options.filter((m) => m !== "stacked100"); }
+  } else if (!timed && groupCols.length === 1 && charted.length) {
+    // A breakdown: bars of categories; its one 100% bar only while each category can keep its own color.
+    if (rows.length > SERIES.length) options = options.filter((m) => m !== "stacked100");
+    series = charted[0];
     points = rows.map((row) => ({ x: String(row[groupCols[0]]), label: label(row[groupCols[0]]), y: row[series] as number | null }));
     if (chartKind === "stacked100" && options.includes("stacked100")) {
       // One bar of shares: each category a part, in the table's order, each in its own color.
@@ -579,13 +503,15 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
       points = [{ x: "all", label: "", y: null }];
       pointOf = () => 0;
     }
-  }
+  } else options = [];
+  if (!options.length || !points.length) kind = null;
+  else if (!kind || !options.includes(kind)) kind = options[0];
   // The chosen type, when this answer offers it; otherwise the default above.
   if (kind && chartKind && chartKind !== "table" && options.includes(chartKind)) kind = chartKind;
-  const breakdown = groupCols.length === 1 && !r.chart && options[0] === "hbar"; // bars of categories, or their one 100% bar
+  const breakdown = !timed && groupCols.length === 1 && !!kind; // bars of categories, or their one 100% bar
   // A long breakdown: the largest categories are drawn (the engine sorts them, largest first); the table has all.
   const drawn = breakdown && points.length > MAX_BARS ? points.slice(0, MAX_BARS) : points;
-  const sub = (text[0] ?? "").split(":")[0];
+  const sub = joinAmp(p.titleParts.places);
   // "Table only" hides the chart; the control stays, with nothing chosen, to bring it back.
   const hidden = chartKind === "table";
   const name = (m: ChartKind) => (lines && !breakdown && m === "bar" ? "Grouped bars" : breakdown && m === "bar" ? "Vertical bars" : KIND_LABEL[m]);
@@ -595,27 +521,27 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     </div>
   ) : null;
 
-  const charted = !!kind && !hidden;
-  // The source line under the chart in its PNG (the engine's source statement, always its last line).
-  const source = [...text].reverse().find((t) => /^Source:/.test(t)) ?? "Source: FBI NIBRS.";
+  const drawnChart = !!kind && !hidden;
+  // The source line under the chart in its PNG.
+  const source = PROFILES[p.source]!.name.sourceLine;
   return (<>
-    <Lead lines={lead.lines} suggest={suggest} onDone={reveal} />
+    <Lead lines={lead} suggest={suggest} onDone={reveal} />
     {/* The chart's block: its title (as in the PNG), the chart type and downloads, the chart beside the table, the notes. */}
     <div className={bodyClass(bodyIn)}>
     {/* A hairline frame around the data, apart from the sentence above it (Jeff, 2026-11-01, to try). */}
     <div className="Frame">
-    {r.title ? <div className="ChartTitle"><h3>{r.title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div> : null}
+    <div className="ChartTitle"><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div>
     <div className="ToolRow">
       {seg}
       {/* Downloads (Jeff): small, at the right of the row. PNG is the chart alone; CSV is the table alone. */}
       <span className="Dl" role="group" aria-label="Download">
         <span className="lbl">Download</span>
-        {charted ? <button type="button" onClick={() => void downloadPng(cap.current, title)}>PNG</button> : null}
+        {drawnChart ? <button type="button" onClick={() => void downloadPng(cap.current, title)}>PNG</button> : null}
         <button type="button" onClick={() => downloadCsv(columns, order(rows, sort).map((i) => rows[i]), numberCols, yearLabel, title)}>CSV</button>
       </span>
     </div>
-    <div className={`Answer${charted ? "" : " tableOnly"}`}>
-      {charted ? (
+    <div className={`Answer${drawnChart ? "" : " tableOnly"}`}>
+      {drawnChart ? (
         <div className="cap" ref={cap}>
           {/* Only in the PNG: the chart's title and subtitle above it, its source under it. */}
           <div className="pngOnly pngHead"><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div>
@@ -647,7 +573,7 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     </div>
     <Notes lines={notes} />
     </div>
-    <Choices buttons={rest(r.buttons)} onButton={onButton} />
+    <Choices buttons={rest(r, r.buttons)} onButton={onButton} />
     </div>
   </>);
 }
@@ -699,64 +625,6 @@ async function downloadPng(el: HTMLDivElement | null, title: string) {
 }
 
 type Suggestion = { before: string; link: string; after: string; run: () => void };
-const cap = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
-// Where an answer comes from, as the lead says it: NIBRS, or (P75-P79, the engine's Historical) Crime Index's
-// published figures, which agencies report to the FBI's Summary Reporting System.
-const VIA = "to the FBI's National Incident-Based Reporting System (NIBRS)";
-/** The answer's source, from its source line ("Source: FBI NIBRS." or "Source: Crime Index."). */
-const sourceOfText = (text: string[]): "nibrs" | "historical" => (text.some((l) => /^Source: Crime Index\b/.test(l)) ? "historical" : "nibrs");
-/**
- * The lead (Jeff, 2026-11-01): plain sentences above the chart's title, on the page only (never in the chart, the table
- * or either download). Nothing analytical and no figures picked out: the first sentence says what the data is, in Jeff's
- * pattern "These are [what] [who] reported to [source], [when], [how it's counted]."; then the factual caveats;
- * then the offers (Consistent Reporting Agencies, another source). A single number's sentence is the answer, and the
- * title is left out instead. INTERIM, until the engine sends its own lead: read from the engine's answer sentence
- * ("Tennessee: carjacking offenses by year, 2021 to 2025, summed over the agencies that reported each year.") and the
- * reporting agency line ("Reported by the Memphis Police Department."), giving "These are carjacking offenses
- * Tennessee law enforcement agencies reported to the FBI's National Incident-Based Reporting System (NIBRS) each year
- * from 2021 to 2025, added up across the agencies that reported."; the caveat is the overlap of categories, or (without
- * the consistent-agencies sentence) agencies joining and leaving. The lines it uses are left out of the notes below; the
- * source line stays.
- */
-function composeLead(text: string[], scoped: boolean, single: boolean, source: "nibrs" | "historical" = "nibrs"): { lines: string[]; used: Set<number> } {
-  const used = new Set([0]);
-  const lines: string[] = [];
-  const first = text[0] ?? "";
-  const ri = text.findIndex((l, i) => i > 0 && /^Reported by .+\.$/.test(l));
-  const reporter = ri > 0 ? text[ri].slice("Reported by ".length, -1) : null;
-  if (ri > 0) used.add(ri);
-  const one = /^(.+?): ([\d,.]+) (.+) in (\d{4})(, summed over the agencies that reported)?\.$/.exec(first);
-  const many = /^(.+?): (.+?)(?: by (.+?))?, (\d{4})(?: (?:to|through) (\d{4}))?(, .+)?\.$/.exec(first);
-  const agencies = (place: string) => (place === "United States" ? "law enforcement agencies across the United States" : `${place} law enforcement agencies`);
-  if (source === "historical") {
-    // Crime Index's figures: what they are and where they come from, never "reported to NIBRS".
-    if (single || !many) lines.push(first);
-    else {
-      const [, place, what, by, y0, y1] = many;
-      const each = by && /^(?:year|quarter|month)$/.test(by) ? `each ${by} ` : "";
-      lines.push(`These are ${what} in ${place === "United States" ? "the United States" : place}, as published in Crime Index's historical data, ${each}${y1 ? `from ${y0} to ${y1}` : `in ${y0}`}.`);
-    }
-  } else if (single) {
-    lines.push(one ? `${cap(reporter ?? agencies(one[1]))} reported ${one[2]} ${one[3]} ${VIA} in ${one[4]}${one[5] ? ", added up across the agencies that reported" : ""}.` : first);
-  } else if (many) {
-    const [, place, what, by, y0, y1, rest] = many;
-    // A period breakdown is part of when ("each year from 2021 to 2025"); a category is part of how it's counted.
-    const each = by && /^(?:year|quarter|month)$/.test(by) ? `each ${by} ` : "";
-    const when = `${each}${y1 ? `from ${y0} to ${y1}` : `in ${y0}`}`;
-    const how = [
-      ...(by && !each ? [`broken down by ${by}`] : []),
-      ...(rest && /^, summed over the agencies that reported/.test(rest) ? ["added up across the agencies that reported"] : []),
-    ];
-    lines.push(`These are ${what} ${reporter ?? agencies(place)} reported ${VIA} ${when}${how.map((h) => `, ${h}`).join("")}.`);
-  } else lines.push(first); // a sentence in another shape is kept as sent, never dropped
-  const overlap = text.findIndex((l) => /counted once in each/.test(l));
-  const change = text.findIndex((l) => /^Which agencies report changed/.test(l));
-  if (overlap > 0) { lines.push(text[overlap]); used.add(overlap); }
-  // With the consistent-agencies choice, the lead's own sentence about it says this; the engine's goes.
-  else if (change > 0) { if (!scoped) lines.push(`${text[change].split(";")[0]}.`); used.add(change); }
-  return { lines, used };
-}
-
 /**
  * How a new answer appears, for Jeff to compare (local switch, 2026-11-01): ?appear=type streams the lead word by word
  * (about a second in all), then fades in the chart's block; ?appear=fade fades the lead in (0.4 s), then the block 0.3 s later; ?appear=none
@@ -779,10 +647,7 @@ function useReveal(): [boolean, () => void] {
 const bodyClass = (bodyIn: boolean) => `Body appear-${appear()}${bodyIn ? "" : " pending"}`;
 
 type Tok = { t: string; s?: Suggestion };
-function Lead({ lines: given, bold, suggest: offered, onDone }: { lines: string[]; bold?: string | null; suggest: Suggestion[]; onDone?: () => void }) {
-  const short = useContext(Short);
-  const lines = given.map((l) => shorten(l, short));
-  const suggest = offered.map((s) => ({ ...s, before: shorten(s.before, short), link: shorten(s.link, short), after: shorten(s.after, short) }));
+function Lead({ lines, bold, suggest, onDone }: { lines: string[]; bold?: string | null; suggest: Suggestion[]; onDone?: () => void }) {
   // Whole words (a figure such as "1,004" is one word, so it never shows half typed), and each link whole.
   const toks: Tok[] = [];
   const words = (s: string) => { for (const w of s.split(/(?<=\s)/)) if (w) toks.push({ t: w }); };
@@ -816,9 +681,8 @@ function Lead({ lines: given, bold, suggest: offered, onDone }: { lines: string[
   );
 }
 
-function Notes({ lines: given }: { lines: string[] }) {
-  const short = useContext(Short);
-  const lines = given.map((l) => shorten(l, short));
+/** The notes under an answer; the source line, always last (notesOf), set apart. */
+function Notes({ lines }: { lines: string[] }) {
   if (!lines.length) return null;
-  return <div className="notes">{lines.map((l, i) => <p key={i} className={i === lines.length - 1 && /^Source:/.test(l) ? "src" : ""}>{l}</p>)}</div>;
+  return <div className="notes">{lines.map((l, i) => <p key={i} className={i === lines.length - 1 ? "src" : ""}>{l}</p>)}</div>;
 }
