@@ -20,6 +20,7 @@ import type { Case, Meaning } from "./case";
 import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type PlanView, type Release } from "./compare";
 import { RETURN_A } from "../nibrs-shadow/places";
 import { readQuestion } from "../nibrs-shadow/reading";
+import { coveredText } from "../nibrs-shadow/state-sum";
 import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./gates";
 
 /** The slice: its designed group, the replay cases inside it, and replay cases next to it (action and reason only). */
@@ -362,9 +363,9 @@ function comparisonCells(o: Extract<ShadowOutcome, { kind: "answer" }>): Record<
  * header line; the same-months line; the change line, rebuilt from the cells; the zero-base line; a known period's count;
  * a period not established; then readings, fixed statements and the source.
  */
-/** A rate's column says per 100,000 residents. */
+/** A rate's column says per 100,000 (Jeff 2026-11-01: never "residents"). */
 const rateHeader = (o: Extract<ShadowOutcome, { kind: "answer" }>) =>
-  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000 residents(?: of the reporting agencies)?$/.test(c.header));
+  o.plan.statistics.some((x) => x.kind === "rate") && o.delivered.table.columns.some((c) => c.binding.kind === "statistic" && /per 100,000$/.test(c.header));
 
 function comparisonProse(o: Extract<ShadowOutcome, { kind: "answer" }>): boolean {
   const cols = comparisonCells(o);
@@ -531,34 +532,28 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     // Increment 5: P63's source line, and P61's disclaimer and button on a state or national sum.
     else if (/^ends with the source line "(.+?)"/.test(s)) { const want = /^ends with the source line "(.+?)"/.exec(s)![1]; ok = text[text.length - 1] === want && text.filter((t) => /^Source: /.test(t)).length === 1; }
     else if (/^states how many agencies are counted, what share of residents they cover, and that agencies reporting only some months are included/.test(s)) {
-      // Each figure read from its own place in the sentence (Codex increment-5 review 2.9: never a substring search, where
-      // "14 agencies" would pass for 4), against what the answer computed; and that partial reporters are included.
-      const n = (x: string) => Number(x.replace(/,/g, ""));
+      // Jeff (2026-11-01): the agencies and the population they cover are table columns. Each row's cells against what
+      // the answer computed (never a substring search), and the sentence that partial reporters are included.
       const ys = o.stateSum?.years ?? [];
-      if (ys.length === 1) {
-        const m = /^([\d,]+) agencies reported at least one month of .+?, covering (?:at least )?([\d.]+)% of .+?; ([\d,]+) of them reported only some months and are included\. ([\d,]+) reported every month \((?:at least )?([\d.]+)% of /.exec(text.find((t) => / agencies reported at least one month of /.test(t)) ?? "");
-        const y = ys[0];
-        ok = !!m && n(m[1]) === y.agencies && Number(m[2]) === y.share && n(m[3]) === y.partial && n(m[4]) === y.every.agencies && Number(m[5]) === y.every.share;
-      } else {
-        const line = text.find((t) => /^Agencies counted and share of /.test(t)) ?? "";
-        ok = ys.length > 1 && /Agencies reporting only some months are included\.$/.test(line) && ys.every((y) => {
-          const m = new RegExp(`(?:: |; )${y.year} ([\\d,]+) \\((?:at least )?([\\d.]+)%, ([\\d,]+) reporting only some months\\)`).exec(line);
-          return !!m && n(m[1]) === y.agencies && Number(m[2]) === y.share && n(m[3]) === y.partial;
-        });
-      }
+      ok = ys.length > 0 && coverageColumnsMatch(o, ys.map((y) => ({ agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 })), "Agencies reporting")
+        && text.includes("Includes all agencies.");
     } else if (/^offers a button to show only agencies that reported every month/.test(s)) {
-      // Clicked: the same place, crime, filters and period, counting only the every-month set (one fixed set over years).
-      const b = (o.buttons ?? []).find((x) => /only agencies that reported every month/i.test(x.label))?.continuation;
+      // Clicked: the same place, crime, filters and period, counting only the Consistent Reporting Agencies (P80; one
+      // fixed set over years).
+      const b = (o.buttons ?? []).find((x) => x.label === "Consistent Reporting Agencies")?.continuation;
       const same = (p: NibrsPlan) => JSON.stringify([p.geography, p.measures, p.filters, p.period, p.groupings, p.statistics]) === JSON.stringify([o.plan.geography, o.plan.measures, o.plan.filters, o.plan.period, o.plan.groupings, o.plan.statistics]);
       ok = !!b && b.kind === "answer" && b.plan.coverage.cohort === "same_agencies" && same(b.plan) && !!b.stateSum && b.delivered.table.rows.length === o.delivered.table.rows.length
-        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} agencies that reported every month of`).test(b.delivered.text[0] ?? ""));
+        && (!/one fixed set/.test(s) || new RegExp(`only the ${b.stateSum.everyAgencies.toLocaleString("en-US")} Consistent Reporting Agencies that reported every month (?:from |in )`).test(b.delivered.text[0] ?? ""));
     } else if (/^states how many agencies reported every month and what share of residents they cover/.test(s))
-      ok = o.plan.coverage.cohort === "same_agencies" && !!o.stateSum && o.stateSum.years.every((y) => all.includes(y.every.agencies.toLocaleString("en-US")) && all.includes(`${y.every.share.toFixed(1)}%`));
+      ok = o.plan.coverage.cohort === "same_agencies" && !!o.stateSum && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: o.stateSum!.years.length > 1 ? o.stateSum!.everyAgencies : y.every.agencies, share: y.every.share, lower: y.every.noPopulation > 0 })), "Consistent Reporting Agencies");
     else if (/^gives each year's agencies counted and share of residents covered/.test(s))
-      ok = !!o.stateSum && o.stateSum.years.length > 1 && o.stateSum.years.every((y) => all.includes(`${y.year} ${y.agencies.toLocaleString("en-US")} (${y.share.toFixed(1)}%`));
-    else if (/^notes that participation changed over the years/.test(s)) ok = /Which agencies report changed over these years/.test(all);
+      ok = !!o.stateSum && o.stateSum.years.length > 1 && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 })), "Agencies reporting");
+    // P03 (Jeff 2026-11-01): the participation note is the Consistent Reporting Agencies offer, not a sentence in the
+    // notes: a sum over several years offers the fixed set (the lead's sentence names it; the button opens it).
+    else if (/^notes that participation changed over the years/.test(s))
+      ok = (o.stateSum?.years.length ?? 0) > 1 && (o.buttons ?? []).some((b) => b.label === "Consistent Reporting Agencies" && b.continuation?.kind === "answer" && b.continuation.plan.coverage.cohort === "same_agencies");
     else if (/^gives the rate per 100,000 residents of the reporting agencies/.test(s))
-      ok = rateHeader(o) && /per 100,000 residents of the reporting agencies/.test(o.delivered.table.columns.at(-1)?.header ?? "") && /^The rate is the sum per 100,000 residents of the agencies counted: [\d,]+ residents/m.test(text.join("\n"));
+      ok = rateHeader(o) && /^The rate uses the combined population of the agencies counted: [\d,]+ /m.test(text.join("\n"));
     // Increment 4: several agencies, combined totals, rates and rankings.
     else if (/^gives one total of both agencies/.test(s)) {
       // One known number of the plan's distinct agencies, said as combined.
@@ -579,7 +574,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       // is checked against the independent file's denominator with the values, Codex 7b-04.6).
       const t = o.delivered.table, pi = t.columns.findIndex((c) => c.binding.kind === "statistic" && c.header === "Population");
       const popOf = o.plan.statistics.find((x) => x.kind === "population");
-      const named = text.find((l) => /^Rates are per 100,000 residents, using the FBI's \d{4} population of /.test(l)) ?? "";
+      const named = text.find((l) => /^Rates are per 100,000, using the FBI's \d{4} population of /.test(l)) ?? "";
       ok = rateHeader(o) && pi >= 0 && popOf?.kind === "population" && o.plan.statistics.some((x) => x.kind === "rate" && x.as === popOf.of)
         && t.rows.length > 0 && t.rows.every((r) => typeof r[pi] === "number" && new RegExp(` ${(r[pi] as number).toLocaleString("en-US")}(?:;|\\.$)`).test(named));
     } else if (s === "gives each year's rate over that year's population") {
@@ -609,7 +604,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     } else if (s === "adds no other eligibility filter") {
       const p = o.plan.geography.places[0];
       ok = p.kind === "agency_set" && p.where.every((w) => w.field === "agency.type") && o.plan.filters.length === 0;
-    } else if (s === "says large means 250,000 residents or more") ok = text.includes("Large means 250,000 residents or more (the FBI's agency population).");
+    } else if (s === "says large means 250,000 residents or more") ok = text.includes("Large means a population of 250,000 or more (the FBI's agency population).");
     if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
     else if (!ok) out.push({ field: "statement", expected: s, actual: text.join(" / ").slice(0, 200), kind: "material" });
   }
@@ -806,7 +801,6 @@ function fixedStatementDiffs(question: string, c: Extract<ShadowOutcome, { kind:
   const want: AnswerStatement[] = [];
   if (/\bvictims?\b/i.test(question) && plan.measures.every((m) => m.unit === "offense")) want.push("property_counted_by_offense");
   if ([...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "property")) want.push("property_not_attributed");
-  if (plan.geography.places.some((p) => p.kind === "national")) want.push("reported_nibrs_counts");
   if (plan.groupings.some((g) => g.multiValue)) want.push("categories_overlap");
   if (plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee")) want.push("arrests_counted_once");
   // Increment 7: every arrest (Group B included) or arrests through an incident; the linked offenders; offender records;
@@ -941,7 +935,7 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
     if (o.delivered.contractProblems.length) diffs.push({ field: "answer contract", expected: "no problems", actual: o.delivered.contractProblems.join("; "), kind: "material" });
     notes.push(`delivered: ${o.delivered.text.join(" / ").slice(0, 240)}`);
     // P61's button: the label's own question over the every-month set, checked as an answer (values "<case>|button").
-    for (const b of o.buttons ?? []) if (b.continuation?.kind === "answer" && /only agencies that reported every month/i.test(b.label)) {
+    for (const b of o.buttons ?? []) if (b.continuation?.kind === "answer" && b.label === "Consistent Reporting Agencies") {
       walk.checked.add(b.continuation);
       const want: Meaning = { ...e.meaning, cohort: "same_agencies", filters: [...e.meaning.filters, "agencies that reported every month of the period"] };
       take(deliveredCheck(`button "${b.label}" `, `${c.id}|button`, b.continuation, want, r, expectedValues, walk));
@@ -1013,7 +1007,7 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
     // Historical's agencies, named by their FBI names ("Figures for the Denver Police Department.").
     else if (ag) ok = all.includes(ag[1]);
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
-    else if (/^gives the rate per 100,000 residents/.test(s)) ok = /_capita$/.test(o.read.column) && all.includes("per 100,000 residents");
+    else if (/^gives the rate per 100,000 residents/.test(s)) ok = /_capita$/.test(o.read.column) && all.includes("per 100,000");
     else if (/^gives (\w+) yearly totals from one source/.test(s)) ok = rows.length === ({ ten: 10 } as Record<string, number>)[/^gives (\w+)/.exec(s)![1]] && /_total$/.test(o.read.column);
     // Provenance (Codex label review): the file's own aggregate column, read as given, never its parts re-added.
     else if (/^gives the file's (violent|property) crime total, not a re-added sum/.test(s)) ok = o.read.column === `${/(violent|property)/.exec(s)![1]}_total` && (!("uids" in o.read) || o.read.uids.length === 1);
@@ -1098,6 +1092,17 @@ function scoreOther(c: Case, o: SrsOutcome | Extract<ShadowOutcome, { kind: "rou
  * every-month set its button gives; or either's rate, P62), each row, and the disclaimer's figures the answer carries
  * (agencies counted, partial reporters, coverage, the every-month set) per year.
  */
+/**
+ * A state or national sum's coverage columns (Jeff 2026-11-01): each row's agencies (under `agenciesHeader`) and
+ * population covered ("84.1%", or "≥84.1%" for a lower bound) equal what the answer computed.
+ */
+function coverageColumnsMatch(o: Extract<ShadowOutcome, { kind: "answer" }>, want: { agencies: number; share: number; lower: boolean }[], agenciesHeader: string): boolean {
+  const cols = o.delivered.table.columns.map((c) => c.header);
+  const ia = cols.indexOf(agenciesHeader), ic = cols.indexOf("Population covered");
+  const rows = o.delivered.table.rows;
+  return ia >= 0 && ic >= 0 && rows.length === want.length
+    && want.every((w, i) => rows[i][ia] === w.agencies && rows[i][ic] === coveredText(w.share, w.lower));
+}
 function stateSumDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected: ExpectedCell[]): { diffs: Diff[]; values: Values } {
   const every = o.plan.coverage.cohort === "same_agencies";
   const isRate = o.plan.statistics[0].kind === "rate";
@@ -1105,16 +1110,24 @@ function stateSumDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer
   const want = expected.filter((x) => x.view === view);
   const diffs: Diff[] = [];
   const rows = o.delivered.table.rows;
-  const keyOf = (r: (string | number | null)[]) => (r.length > 1 ? String(r[0]) : "");
+  const keyOf = (r: (string | number | null)[]) => (o.delivered.table.columns[0]?.binding.kind === "grouping" ? String(r[0]) : "");
   if (!want.length) diffs.push({ field: `${prefix}values`, expected: `a ${view} figure`, actual: "none in the independent file", kind: "unverified" });
   if (want.length && rows.length !== want.length) diffs.push({ field: `${prefix}values`, expected: `${want.length} cells`, actual: `${rows.length} rows`, kind: "material" });
   for (const x of want) {
     const r = rows.find((row) => keyOf(row) === x.key);
-    const g = r ? r[r.length - 1] : undefined;
+    // The value column (the plan's first statistic): the agencies and coverage columns follow it.
+    const iv = o.delivered.table.columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === o.plan.statistics[0].as);
+    const g = r ? r[iv] : undefined;
     if (g !== x.value) diffs.push({ field: `${prefix}value ${x.key || "total"} (${view})`, expected: String(x.value), actual: String(g), kind: "material" });
   }
   const meta = o.stateSum;
   if (!meta) diffs.push({ field: `${prefix}coverage`, expected: "the disclaimer's figures", actual: "none carried", kind: "material" });
+  // The columns shown, whatever the label asks (Codex coverage review 01.2): each row's agencies and population covered
+  // are the answer's own figures, in either view.
+  else if (!coverageColumnsMatch(o, meta.years.map((y) => every
+    ? { agencies: meta.years.length > 1 ? meta.everyAgencies : y.every.agencies, share: y.every.share, lower: y.every.noPopulation > 0 }
+    : { agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 }), every ? "Consistent Reporting Agencies" : "Agencies reporting"))
+    diffs.push({ field: `${prefix}coverage columns`, expected: "the answer's agencies and population covered", actual: JSON.stringify(o.delivered.table.rows).slice(0, 160), kind: "material" });
   else for (const x of expected.filter((c) => c.view === "meta")) {
     const [what, y] = x.key.split("|");
     const yr = meta.years.find((m) => m.year === Number(y));

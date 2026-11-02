@@ -70,7 +70,7 @@ export type CellEvidence = {
 /**
  * The only answer text the engine adds, each with fixed wording (owner: minimize editorializing). Never a column.
  * - property_not_attributed: a plan with an incident-scoped property existence filter (case N2);
- * - reported_nibrs_counts: a plan whose geography is the nation;
+ * - reported_nibrs_counts: allowed for a plan whose geography is the nation, no longer required (Jeff 2026-11-01);
  * - property_counted_by_offense: a question that asked for victims of a property crime, answered with offenses (P11).
  *   It depends on the question's words, not the plan, so checkEnvelope authorizes it but cannot require it.
  * - categories_overlap: a plan with a multi-valued grouping (the weapons of an offense, the relationships of a victim);
@@ -205,7 +205,11 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
     r.forEach((v, j) => {
       const c = table.columns[j];
       if (!c) return;
-      if (c.binding.kind === "statistic" && v !== null && (typeof v !== "number" || !Number.isFinite(v))) out.push(`row ${i}, "${c.header}": a number column holds ${JSON.stringify(v)}; unknown is null`);
+      // The population covered (P72, Jeff 2026-11-01) is a percent, "≥" marking a lower bound: that form only.
+      const as = c.binding.kind === "statistic" ? c.binding.as : null;
+      const coverage = as !== null && plan.statistics.some((s) => s.kind === "coverage" && s.as === as);
+      if (coverage && v !== null && !(typeof v === "string" && /^≥?\d+\.\d%$/.test(v))) out.push(`row ${i}, "${c.header}": a population-covered cell holds ${JSON.stringify(v)}; it is a percent, "≥" for a lower bound`);
+      if (!coverage && c.binding.kind === "statistic" && v !== null && (typeof v !== "number" || !Number.isFinite(v))) out.push(`row ${i}, "${c.header}": a number column holds ${JSON.stringify(v)}; unknown is null`);
       if (c.binding.kind === "grouping" && (v === null || v === "" || typeof v !== "string" && typeof v !== "number")) out.push(`row ${i}, "${c.header}": a grouping value is blank`);
     });
   });
@@ -236,7 +240,9 @@ export function checkEnvelope(env: Pick<ResultEnvelope, "plan" | "table" | "evid
   const hasPropertyExists = [...plan.filters, ...plan.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "property");
   const national = plan.geography.places.some((p) => p.kind === "national");
   if (plan.source === "nibrs" && hasPropertyExists !== env.answerStatements.includes("property_not_attributed")) out.push("property_not_attributed is required exactly when the plan filters on incident property");
-  if (plan.source === "nibrs" && national !== env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts is required exactly when the geography is the nation");
+  // Jeff (2026-11-01, "WAAAAY too much disclaimer"): no longer required for the nation (the lead says where the counts
+  // come from); still only for the nation when given.
+  if (plan.source === "nibrs" && !national && env.answerStatements.includes("reported_nibrs_counts")) out.push("reported_nibrs_counts belongs to a national plan only");
   const multi = plan.groupings.some((g) => g.multiValue);
   if (plan.source === "nibrs" && multi !== env.answerStatements.includes("categories_overlap")) out.push("categories_overlap is required exactly when a grouping is multi-valued");
   const arrests = plan.measures.some((m) => m.unit === "arrest" || m.unit === "arrestee");

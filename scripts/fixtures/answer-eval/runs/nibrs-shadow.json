@@ -1565,13 +1565,13 @@
      "kind": "unverified"
     },
     {
-     "field": "option \"The United States\" button \"Show only agencies that reported every month\" meaning",
+     "field": "option \"The United States\" button \"Consistent Reporting Agencies\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.shoplifting 2024-01..2024-12",
      "kind": "unverified"
     },
     {
-     "field": "option \"The United States\" button \"Show only agencies that reported every month\" values",
+     "field": "option \"The United States\" button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"
@@ -1771,13 +1771,13 @@
      "kind": "unverified"
     },
     {
-     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" meaning",
+     "field": "option \"Washington state\" button \"Consistent Reporting Agencies\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.shoplifting 2024-01..2024-12",
      "kind": "unverified"
     },
     {
-     "field": "option \"Washington state\" button \"Show only agencies that reported every month\" values",
+     "field": "option \"Washington state\" button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"
@@ -1819,13 +1819,13 @@
      "kind": "unverified"
     },
     {
-     "field": "option \"New York state\" button \"Show only agencies that reported every month\" meaning",
+     "field": "option \"New York state\" button \"Consistent Reporting Agencies\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.shoplifting 2024-01..2024-12",
      "kind": "unverified"
     },
     {
-     "field": "option \"New York state\" button \"Show only agencies that reported every month\" values",
+     "field": "option \"New York state\" button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"
@@ -1931,7 +1931,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Nashville, Tennessee: 7,793 theft from motor vehicle offenses in 2022. / Reported by the Metropolitan Nashville Police Department. / Source: FBI NIBRS."
+    "delivered: Nashville, Tennessee: 7,793 theft from motor vehicle offenses in 2022. / Reported by the Metropolitan Nashville Police Department. / Car break-ins are counted as theft from motor vehicles. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2241,7 +2241,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by race, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024: a percent, not a rate per resident. / Source: FBI NIBRS."
+    "delivered: Milwaukee, Wisconsin: simple assault victims by race, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2255,7 +2255,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: aggravated assault victims by sex, 2022. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in 2022: a percent, not a rate per resident. / Source:"
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by sex, 2022. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in 2022. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2269,7 +2269,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Louisville, Kentucky: simple assault victims by ethnicity, 2024. / Reported by the Louisville Metro Police Department. / Each share is that category's part of all simple assault victims in 2024: a percent, not a rate per resident. / Source:"
+    "delivered: Louisville, Kentucky: simple assault victims by ethnicity, 2024. / Reported by the Louisville Metro Police Department. / Each share is that category's part of all simple assault victims in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2283,7 +2283,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tucson, Arizona: shoplifting offenses by location type, 2024. / Reported by the Tucson Police Department. / Each share is that category's part of all shoplifting offenses in 2024: a percent, not a rate per resident. / Source: FBI NIBRS."
+    "delivered: Tucson, Arizona: shoplifting offenses by location type, 2024. / Reported by the Tucson Police Department. / Each share is that category's part of all shoplifting offenses in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2297,7 +2297,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Austin, Texas: theft from motor vehicle offenses by location type, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all theft from motor vehicle offenses in 2023: a percent, not a rate per resident. "
+    "delivered: Austin, Texas: theft from motor vehicle offenses by location type, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all theft from motor vehicle offenses in 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2311,7 +2311,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Kansas City, Missouri: murder victims by race, 2023. / Reported by the Kansas City Police Department. / Each share is that category's part of all murder victims in 2023: a percent, not a rate per resident. / Source: FBI NIBRS."
+    "delivered: Kansas City, Missouri: murder victims by race, 2023. / Reported by the Kansas City Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2325,7 +2325,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: simple assault victims by race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all simple assault victims in 2021 to 2023: a percent, not a rate per resident. "
+    "delivered: Albuquerque, New Mexico: simple assault victims by race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all simple assault victims in 2021 to 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2339,7 +2339,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Austin, Texas: murder victims by sex, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all murder victims in 2023: a percent, not a rate per resident. / Source: FBI NIBRS."
+    "delivered: Austin, Texas: murder victims by sex, 2023. / Reported by the Austin Police Department. / Each share is that category's part of all murder victims in 2023. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2353,7 +2353,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: aggravated assault victims by year and race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in the same year: a percent, not a r"
+    "delivered: Albuquerque, New Mexico: aggravated assault victims by year and race, 2021 to 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all aggravated assault victims in the same year. / Source: FBI NIBR"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2367,7 +2367,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by age group, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024: a percent, not a rate per resident. / Age groups: Un"
+    "delivered: Milwaukee, Wisconsin: simple assault victims by age group, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2381,7 +2381,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: robbery offenses by weapon, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenses in 2023: a percent, not a rate per resident. / A crime that falls in se"
+    "delivered: Albuquerque, New Mexico: robbery offenses by weapon, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime that falls in several of these categories is counted"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2408,7 +2408,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Kansas City, Missouri: carjacking offenses by location type, 2024. / Reported by the Kansas City Police Department. / Each share is that category's part of all carjacking offenses in 2024: a percent, not a rate per resident. / Source: FBI N"
+    "delivered: Kansas City, Missouri: carjacking offenses by location type, 2024. / Reported by the Kansas City Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2464,7 +2464,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Fort Worth, Texas: robbery offenses by weapon, 2023. / Reported by the Fort Worth Police Department. / Each share is that category's part of all robbery offenses in 2023: a percent, not a rate per resident. / A crime that falls in several o"
+    "delivered: Fort Worth, Texas: robbery offenses by weapon, 2023. / Reported by the Fort Worth Police Department. / Each share is that category's part of all robbery offenses in 2023. / A crime that falls in several of these categories is counted once i"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2478,7 +2478,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Mesa, Arizona: aggravated assault victims by age group, 2024. / Reported by the Mesa Police Department. / Each share is that category's part of all aggravated assault victims in 2024: a percent, not a rate per resident. / Age groups: Under "
+    "delivered: Mesa, Arizona: aggravated assault victims by age group, 2024. / Reported by the Mesa Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / Age groups: Under 18 (ages 1-17 and infants under one "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2492,7 +2492,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Colorado Springs, Colorado: murder victims by relationship to the offender, 2023. / Reported by the Colorado Springs Police Department. / Each share is that category's part of all murder victims in 2023: a percent, not a rate per resident. "
+    "delivered: Colorado Springs, Colorado: murder victims by relationship to the offender, 2023. / Reported by the Colorado Springs Police Department. / Each share is that category's part of all murder victims in 2023. / A crime that falls in several of t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2520,7 +2520,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: carjacking offenses by location type, 2024. / Reported by the Wichita Police Department. / Each share is that category's part of all carjacking offenses in 2024: a percent, not a rate per resident. / Source: FBI NIBRS."
+    "delivered: Wichita, Kansas: carjacking offenses by location type, 2024. / Reported by the Wichita Police Department. / Each share is that category's part of all carjacking offenses in 2024. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2534,7 +2534,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / Each share is that category's part of all simple assault victims in 2024: a percent, not a rate per resident. / A cr"
+    "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime that falls in several of these c"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2548,7 +2548,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024: a percent, not a rate per resident. / Offenders are counte"
+    "delivered: Raleigh, North Carolina: robbery offenders by offender sex, 2024. / Reported by the Raleigh Police Department. / Each share is that category's part of all robbery offenders in 2024. / Offenders are counted as listed in each incident report,"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -2672,7 +2672,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm. For example: \"robberies in Denver i"
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -2923,7 +2923,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. /"
+    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -2937,7 +2937,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 61"
+    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 613,207. / S"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -2951,7 +2951,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Dallas, Texas: 11.3 carjacking offenses per 100,000 residents in January through September 2026. / Reported by the Dallas Police Department. / Rates are per 100,000 residents, using the FBI's 2026 population of the agency: Dallas Police Dep"
+    "delivered: Dallas, Texas: 11.3 carjacking offenses per 100,000 in January through September 2026. / Reported by the Dallas Police Department. / Rates are per 100,000, using the FBI's 2026 population of the agency: Dallas Police Department 1,331,217. /"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -2965,7 +2965,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Greensboro, North Carolina: no rate is given for 2025, because not every month is known. / Reported by the Greensboro Police Department. / Rates are per 100,000 residents, using the FBI's 2025 population of the agency: Greensboro Police Dep"
+    "delivered: Greensboro, North Carolina: no rate is given for 2025, because not every month is known. / Reported by the Greensboro Police Department. / Rates are per 100,000, using the FBI's 2025 population of the agency: Greensboro Police Department 31"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -2993,7 +2993,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Ohio city agencies: the 10 with the highest shoplifting offenses per 100,000 residents, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of "
+    "delivered: Ohio city agencies: the 10 with the highest shoplifting offenses per 100,000, 2024. / Ranked: agencies that reported all 12 months of 2024; ties are ordered by agency name. / Not ranked because they didn't report all 12 months of 2024: 403 "
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -3007,7 +3007,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas city agencies of 250,000 residents or more: the 12 with the highest shoplifting offenses per 100,000 residents, 2024. / Large means 250,000 residents or more (the FBI's agency population). / Ranked: agencies that reported all 12 month"
+    "delivered: Texas city agencies with a population of 250,000 or more: the 12 with the highest shoplifting offenses per 100,000, 2024. / Large means a population of 250,000 or more (the FBI's agency population). / Ranked: agencies that reported all 12 m"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -3063,7 +3063,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses per 100,000 residents by agency, 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Rates are per 100,000 residents, using the FBI's 2"
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma: shoplifting offenses per 100,000 by agency, 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / Rates are per 100,000, using the FBI's 2024 population of ea"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -3077,7 +3077,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 694.1 shoplifting offenses per 100,000 residents in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / The rate is both agencies' offenses over b"
+    "delivered: Tulsa, Oklahoma and Oklahoma City, Oklahoma, combined: 694.1 shoplifting offenses per 100,000 in 2024. / Reported by the Tulsa Police Department and the Oklahoma City Police Department. / The rate is both agencies' offenses over both agenci"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -3147,7 +3147,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Ohio: 259.5 burglaries per 100,000 residents in 2022. / Source: Crime Index."
+    "delivered: Ohio: 259.5 burglaries per 100,000 in 2022. / Source: Crime Index."
    ],
    "capability": "answer:historical rate",
    "era": "2021 and later",
@@ -3217,7 +3217,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 re"
+    "delivered: Texas: 1,947 carjacking offenses in 2024, summed over the agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3231,7 +3231,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the 1,439 agencies that reported every month (99.1% of the state's residents). / Source: FBI NIBRS."
+    "delivered: Texas: 1,947 carjacking offenses in 2024, counting only the 1,439 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Includes only agencies that reported complete data. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3245,7 +3245,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / 441 agencies reported at least one month of 2024, covering 93.4% of the state's residents; 63 of them reported only some months and are includ"
+    "delivered: Georgia: 2,315 robbery offenses with a firearm in 2024, summed over the agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3259,7 +3259,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / 14,945 agencies reported at least one month of 2024, covering 89.0% of the nation's residents; 1,933 of "
+    "delivered: United States: 131,508 aggravated assault victims with a knife or cutting instrument in 2024, summed over the agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3273,7 +3273,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Agencies counted and share of the state's residents covered: 2018 561 (86.8%, 167 reporting only some months); 2019 578 (88.6%, 178 report"
+    "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "spans 2021",
@@ -3287,7 +3287,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them reported only some months and are included. 1,439 repo"
+    "delivered: Texas: 19,994 robbery offenses in 2024, summed over the agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3408,7 +3408,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm. For example: \"robberies in Denver i"
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -3421,7 +3421,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Texas: 6.3 carjacking offenses per 100,000 residents of the reporting agencies in 2024, summed over the agencies that reported. / 1,533 agencies reported at least one month of 2024, covering 99.4% of the state's residents; 94 of them report"
+    "delivered: Texas: 6.3 carjacking offenses per 100,000 in 2024, summed over the agencies that reported. / Includes all agencies. / The rate uses the combined population of the agencies counted: 31,102,328 (the FBI's 2024 populations). / Source: FBI NIB"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -3477,7 +3477,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: 2,065 of the 10,149 shoplifting offenses in 2024 were cleared (20.3%); the cleared shoplifting offenses were in 2,065 incidents. / Reported by the Memphis Police Department. / This is the percent of shoplifting offenses "
+    "delivered: Memphis, Tennessee: 2,065 of the 10,149 shoplifting offenses in 2024 were cleared (20.3%); the cleared shoplifting offenses were in 2,065 incidents. / Reported by the Memphis Police Department. / A crime counts as cleared if it was cleared "
    ],
    "capability": "answer:nibrs share",
    "era": "2021 and later",
@@ -3742,7 +3742,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024: a percent, not a rate per resident. / A crim"
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime that falls in several of these cat"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3756,7 +3756,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / Each share is that category's part of all robbery offenses in 2024: a percent, not a rate per resident. / Age groups: Under 18 ("
+    "delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / Each share is that category's part of all robbery offenses in 2024. / Age groups: Under 18 (ages 1-17 and infants under one year"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3812,7 +3812,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024: a percent, not a rate per resident. / A crime that falls in several "
+    "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categories is counted once "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3826,7 +3826,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: murder victims by the race of the linked offenders, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024: a percent, not a rate per resident. / A crime tha"
+    "delivered: Memphis, Tennessee: murder victims by the race of the linked offenders, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categori"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3854,7 +3854,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023: a percent, not a rate per resident. / Each arrest counts once; NIBRS can't tell when "
+    "delivered: Denver, Colorado: arrests by arrestee race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested more th"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3882,7 +3882,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024: a percent, not a rate per resident. / A cri"
+    "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / Each share is that category's part of all simple assault victims in 2024. / A crime that falls in several of these ca"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -3896,7 +3896,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenders in 2023: a percent, not a rate per resident. / Age groups"
+    "delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Each share is that category's part of all robbery offenders in 2023. / Age groups: Under 18 (ages 1-17 and infants un"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4008,7 +4008,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023: a percent, not a rate per resident. / Each arrest counts once; NIBRS can't tell "
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested mo"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4022,7 +4022,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023: a percent, not a rate per resident. / Age groups: Under 18 (ages 1-17 and infant"
+    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Age groups: Under 18 (ages 1-17 and infants under one year), 18-24, 25-34, 35-"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4064,7 +4064,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023: a percent, not a rate per resident. / A crime t"
+    "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime that falls in several of these catego"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4078,7 +4078,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023: a percent, not a rate per re"
+    "delivered: Denver, Colorado: aggravated assault victims by the race of the linked offenders, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all aggravated assault victims in 2023. / A crime that falls in seve"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4120,7 +4120,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024: a percent, not a rate per resident. / A crime that falls in sever"
+    "delivered: Rochester, New York: murder victims by offender race, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categories is counted on"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4134,7 +4134,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024: a percent, not a rate per resident. / A crime "
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categ"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4148,7 +4148,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. /"
+    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -4162,7 +4162,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 61"
+    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 613,207. / S"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -4260,7 +4260,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024: a percent, not a rate per resident. / A crim"
+    "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / Each share is that category's part of all aggravated assault victims in 2024. / A crime that falls in several of these cat"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4274,7 +4274,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023: a percent, not a rate per resident. / Each arrest counts once; NIBRS can't tell "
+    "delivered: Denver, Colorado: arrests by arrestee ethnicity, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Each arrest counts once; NIBRS can't tell when the same person was arrested mo"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4288,7 +4288,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023: a percent, not a rate per resident. / Age groups: Under 18 (ages 1-17 and infant"
+    "delivered: Denver, Colorado: arrests by arrestee age group, 2023. / Reported by the Denver Police Department. / Each share is that category's part of all arrests in 2023. / Age groups: Under 18 (ages 1-17 and infants under one year), 18-24, 25-34, 35-"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4302,7 +4302,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024: a percent, not a rate per resident. / A crime "
+    "delivered: Rochester, New York: murder victims by the race of the linked offenders, 2024. / Reported by the Rochester Police Department. / Each share is that category's part of all murder victims in 2024. / A crime that falls in several of these categ"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -4316,7 +4316,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 residents by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 61"
+    "delivered: Memphis, Tennessee: shoplifting offenses per 100,000 by year, 2021 to 2024. / Reported by the Memphis Police Department. / Each year's rate uses the FBI's population for that year: 2021 649,444; 2022 624,944; 2023 616,061; 2024 613,207. / S"
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",
@@ -4386,7 +4386,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 residents in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000 residents, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. /"
+    "delivered: Wichita, Kansas: 1,459.7 shoplifting offenses per 100,000 in 2024. / Reported by the Wichita Police Department. / Rates are per 100,000, using the FBI's 2024 population of the agency: Wichita Police Department 395,486. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs rate",
    "era": "2021 and later",

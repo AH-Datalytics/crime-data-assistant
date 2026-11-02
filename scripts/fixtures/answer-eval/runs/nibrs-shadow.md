@@ -47,8 +47,8 @@ Discrepancies and unverified cases:
 
 - **LS-232** (unverified; expected clarify, got clarify) "How many shoplifting offenses were there in 2024?"
   - unverified option "The United States" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - unverified option "The United States" button "Show only agencies that reported every month" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
-  - unverified option "The United States" button "Show only agencies that reported every month" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "The United States" button "Consistent Reporting Agencies" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
+  - unverified option "The United States" button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which place: The United States | A state | A city or agency
 - **LS-234** (unverified; expected clarify, got clarify) "Carjackings in Memphis by month"
   - unverified option "The last 10 complete years" : expected `answer`, got `refused: this build does not hold the months (not built)`
@@ -69,8 +69,8 @@ Discrepancies and unverified cases:
   - delivered: Memphis, Tennessee: 2,078 shoplifting arrests in 2024. / Reported by the Memphis Police Department. / Each arrest counts once; NIBRS can't tell when the same person was arrested more than once. / Source: FBI N
 - **LS-243** (unverified; expected clarify, got clarify) "Shoplifting in Washington in 2024"
   - unverified option "Washington state" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - unverified option "Washington state" button "Show only agencies that reported every month" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
-  - unverified option "Washington state" button "Show only agencies that reported every month" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "Washington state" button "Consistent Reporting Agencies" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
+  - unverified option "Washington state" button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which Washington: Washington, D.C. | Washington state | Washington County, Oregon | Washington County, Maryland
 
 ### Held out
@@ -110,8 +110,8 @@ Discrepancies and unverified cases:
 
 - **LS-245** (unverified; expected clarify, got clarify) "Shoplifting in New York in 2024"
   - unverified option "New York state" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - unverified option "New York state" button "Show only agencies that reported every month" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
-  - unverified option "New York state" button "Show only agencies that reported every month" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "New York state" button "Consistent Reporting Agencies" meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2024-01..2024-12`
+  - unverified option "New York state" button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which New York: New York City | New York state
 - **LS-260** (unverified; expected decline, got decline) "Will shoplifting rise in Denver next year?"
   - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`

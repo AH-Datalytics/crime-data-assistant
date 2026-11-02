@@ -192,7 +192,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   if (cmp) { readings.push({ kind: "period", from: cmp.from, to: cmp.text }); text = cmp.text; }
   // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest.
   let largeCities = false;
-  text = text.replace(/\b(?:large|big)\s+(?=(?:[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(250,000 residents or more)" }); return ""; });
+  text = text.replace(/\b(?:large|big)\s+(?=(?:[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
   let last12 = false;
   const L12 = /\b(?:over|in|during|for)\s+the\s+(?:last|past|previous)\s+(?:12|twelve)\s+months\b/i;
   if (lastMonth && L12.test(text)) {

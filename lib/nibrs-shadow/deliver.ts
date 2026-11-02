@@ -319,7 +319,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
   } else {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
-    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}: a percent, not a rate per resident.`);
+    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}.`);
     // A category's total is known only when every month of it is: a month without reporting evidence leaves it unknown.
     // Said once per period (coordinator, 2026-11-01): a period with every category blank is one plain sentence.
     const isBlank = (i: number) => !!evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status));
@@ -381,8 +381,6 @@ function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, 
   const text = [share !== null && inc !== null
     ? `${agency}: ${fmt(c!)} of the ${fmt(t!)} ${whatAll} in ${when} were cleared (${share}%); the cleared ${whatAll} were in ${fmt(inc)} ${one(inc, "incidents")}.`
     : `${agency}: the available evidence does not establish the share of ${whatAll} cleared in ${when}, so no share is given.`];
-  // Jeff (Savant lesson, 2026-11-01): say what a percent is where it could be taken for a rate per resident.
-  if (share !== null) text.push(`This is the percent of ${whatAll} cleared, not a rate per resident.`);
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
   for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
@@ -503,10 +501,16 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
  * a rate by year), with the text lines its caller built from templates: the fixed statements and the source are added
  * last. The columns are exactly the plan's groupings and statistic (the answer contract).
  */
+/** A supporting column of deliverTable: its statistic, header and one cell per row. */
+export type Support = { as: string; header: string; cells: { value: number | string | null; status: string }[] };
 export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; header: string } | null, stat: { as: string; header: string },
   rows: { key: string | null; value: number | null; status: string }[], lines: string[], statements: AnswerStatement[], release: string, readings: string[] = [],
-  /** P72: a supporting statistic beside the value (the population a rate divides by; the agencies reporting), row by row. */
-  support?: { as: string; header: string; cells: { value: number | null; status: string }[] }): Delivered {
+  /**
+   * P72: supporting statistics beside the value (the population a rate divides by; the agencies reporting and the
+   * population they cover), row by row, in order. A cell may be text where the figure carries a mark ("≥84.1%").
+   */
+  supports?: Support | Support[]): Delivered {
+  const sup = supports === undefined ? [] : Array.isArray(supports) ? supports : [supports];
   const labels: Record<string, string> = { [`statistic:${stat.as}`]: stat.header };
   const tableCols: ResultColumn[] = [];
   if (grouping) {
@@ -514,13 +518,13 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
     tableCols.push({ binding: { kind: "grouping", dimension: grouping.dimension }, header: grouping.header });
   }
   tableCols.push({ binding: { kind: "statistic", as: stat.as }, header: stat.header });
-  if (support) { labels[`statistic:${support.as}`] = support.header; tableCols.push({ binding: { kind: "statistic", as: support.as }, header: support.header }); }
+  for (const s of sup) { labels[`statistic:${s.as}`] = s.header; tableCols.push({ binding: { kind: "statistic", as: s.as }, header: s.header }); }
   const evidence: CellEvidence[] = rows.flatMap((r, i) => [{ row: i, statistic: stat.as, status: r.status as CellStatus },
-    ...(support ? [{ row: i, statistic: support.as, status: support.cells[i].status as CellStatus }] : [])]);
-  const table: ResultTable = { columns: tableCols, rows: rows.map((r, i) => [...(grouping ? [r.key ?? ""] : []), r.value, ...(support ? [support.cells[i].value] : [])]) };
+    ...sup.map((s) => ({ row: i, statistic: s.as, status: s.cells[i].status as CellStatus }))]);
+  const table: ResultTable = { columns: tableCols, rows: rows.map((r, i) => [...(grouping ? [r.key ?? ""] : []), r.value, ...sup.map((s) => s.cells[i].value)]) };
   const text = [...lines, ...readings, ...statements.map((s) => ANSWER_STATEMENTS[s]), SOURCE_STATEMENT(release)];
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
-  if (support) support.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${support.as}: value and status disagree`); });
+  for (const s of sup) s.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${s.as}: value and status disagree`); });
   return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
 }

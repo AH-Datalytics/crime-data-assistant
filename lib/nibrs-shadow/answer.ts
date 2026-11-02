@@ -143,6 +143,12 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     });
     if (options.every(Boolean)) return { kind: "clarify", about: "which period", question, options: options as ShadowOption[] };
   }
+  // P83 (Jeff 2026-11-01): gun violence stays declined (P31), with the same question as gun crime offered, every
+  // condition kept (Codex coverage review 01.1: a cohort, "that were cleared", "by quarter").
+  if (o.explanation === UNDEFINED_TERM["gun violence"]) {
+    const gun = tidy(said.replace(/\bgun\s+violence\b/i, (m) => (/^G/.test(m) ? "Gun crime" : "gun crime")).replace(/[?.!]+$/, ""));
+    if (gun !== tidy(said.replace(/[?.!]+$/, "")) && keeps(gun, said, year, ["undefinedTerm", "composite"])) return { ...o, alternative: { label: `Ask instead: "${gun}"`, question: gun } };
+  }
   const level = said.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
   if (level !== said && keeps(level, said, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
   // The nearest question that works (coordinator, 2026-11-01), the user's breakdown kept:
@@ -317,7 +323,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
   const term = flags(ledger0).undefinedTerm;
-  if (term) return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term]);
+  if (term) {
+    // P83: gun crime is offered in withNextStep, from the words asked (the reader's text has set conditions aside).
+    return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term]);
+  }
   // P29: "by <group>" asks about offenders. "By men and women" is answered by the offenders' sexes (P49, below); any
   // other group (one sex, juveniles) is declined, never answered as victims.
   const bySexes = !!flags(ledger0).offenders && BY_SEXES.test(ledger0.question);
@@ -642,7 +651,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).largeCities) {
     if (set0.kind !== "agency_set") return decline("unsupported_capability", "This isn't available yet: large cities outside a ranking of a state's cities.");
     set0.where.push({ field: "agency.population", op: ">=", value: 250000 });
-    plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities are 250,000 residents or more" });
+    plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities have a population of 250,000 or more" });
   }
   // D05: a ranking with no number shows 20 rows.
   plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: 20 } : t));
@@ -888,7 +897,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "This isn't available yet: this weapon or relationship selection.");
-  const notes0 = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
+  const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
+    // P84 (Jeff 2026-11-01): how the phrase was read.
+    ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).

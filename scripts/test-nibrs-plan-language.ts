@@ -301,7 +301,9 @@ assert.ok(checkEnvelope({ ...s3Env, table: { columns: [s3col("victims")], rows: 
 
 // Answer statements: only the authorized ones, exactly where they apply.
 assert.equal(checkEnvelope({ ...n1Env, answerStatements: ["data_incomplete" as never] }, LABELS).length, 1);
-assert.equal(checkEnvelope({ ...n1Env, plan: { ...X.N1, geography: { places: [{ kind: "national" }], combine: "separate" } } }, LABELS).length, 1, "a national answer says reported NIBRS counts");
+// Jeff (2026-11-01): a national answer no longer has to say "reported NIBRS counts"; the statement stays national-only.
+assert.equal(checkEnvelope({ ...n1Env, plan: { ...X.N1, geography: { places: [{ kind: "national" }], combine: "separate" } } }, LABELS).length, 0, "a national answer needn't say reported NIBRS counts");
+assert.equal(checkEnvelope({ ...n1Env, answerStatements: ["reported_nibrs_counts"] }, LABELS).length, 1, "the statement belongs to a national plan only");
 
 // ---- generalisations for other sources (G1, G2, G5, G8): none changes a NIBRS plan ----
 // G1: the plan's source must be the layer's.
