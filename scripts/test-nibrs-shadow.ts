@@ -1069,6 +1069,16 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const trimmed = { ...base, delivered: { ...base.delivered, table: { ...base.delivered.table, rows: [["2024-03", 7]] }, evidence: [{ row: 0, statistic: st, status: "VALUE" as const }] } };
   const wantTrim = [{ key: "2024-01", value: null, status: "UNKNOWN" }, { key: "2024-02", value: null, status: "UNKNOWN" }, { key: "2024-03", value: 7, status: "VALUE" }];
   assert.equal(valueDiffs("", trimmed, wantTrim).values, "match", "a real leading gap, trimmed");
+  // Zero categories (ZERO_CATEGORIES): a known 0 listed on one side only is no difference, but never with a share that
+  // is not 0 (Codex scorer check 01).
+  const sexes = as(ask("Simple assault victims in Detroit by sex in 2023"), "answer");
+  const cs = sexes.plan.statistics.map((s) => s.as);
+  const withZero = (share: number) => ({ ...sexes, delivered: { ...sexes.delivered,
+    table: { ...sexes.delivered.table, rows: [["Female", 30, 60], ["Male", 20, 40], ["Non-binary", 0, share]] },
+    evidence: [0, 1, 2].flatMap((row) => cs.map((statistic) => ({ row, statistic, status: "VALUE" as const }))) } });
+  const wantSexes = [{ key: "Female", value: 30, status: "VALUE", share: 60 }, { key: "Male", value: 20, status: "VALUE", share: 40 }];
+  assert.equal(valueDiffs("", withZero(0), wantSexes).values, "match", "a 0 category listed: the same as left out");
+  assert.equal(valueDiffs("", withZero(99), wantSexes).values, "mismatch", "a 0 count with a 99% share is wrong");
 }
 // Jeff 2026-11-02 ("we can't breakdown by month?"): the shadow answers a breakdown by month or quarter from the monthly
 // build; the live route's reader (yearly summary tables) still declines it.

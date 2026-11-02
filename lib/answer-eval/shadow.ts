@@ -804,10 +804,11 @@ export function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "an
   // A category with a known 0 is the same listed or left out (the engine lists every category of the period's
   // breakdown, nibrs-model's files only those that occur, and Unknown always): a 0 on one side, absent on the other, is
   // no difference. A category breakdown only; a blank or any other number is still judged.
-  const zero = (v: number | null, st: string) => v === 0 && (st === "VALUE" || st === "REPORTED_ZERO");
+  // The row's share must be 0 or absent too (Codex scorer check 01: a 0 count with a 99% share is wrong, never ignored).
+  const zero = (v: number | null, st: string, share: number | null | undefined) => v === 0 && (st === "VALUE" || st === "REPORTED_ZERO") && (share === undefined || share === null || share === 0);
   if (groupCols.some((j) => columns[j].binding.kind === "grouping" && !(columns[j].binding as { dimension: string }).dimension.startsWith("time."))) {
-    expected = expected.filter((x) => !(zero(x.value, x.status) && !got.has(x.key)));
-    for (const [k, g] of [...got]) if (zero(g.value, g.status) && !expected.some((x) => x.key === k)) got.delete(k);
+    expected = expected.filter((x) => !(zero(x.value, x.status, x.share) && !got.has(x.key)));
+    for (const [k, g] of [...got]) if (zero(g.value, g.status, g.share) && !expected.some((x) => x.key === k)) got.delete(k);
   }
   if (got.size !== expected.length) diffs.push({ field: `${prefix}values`, expected: `${expected.length} cells`, actual: `${got.size} cells`, kind: "material" });
   // A breakdown promises each category's share (increment 1): a table without it is incomplete.
