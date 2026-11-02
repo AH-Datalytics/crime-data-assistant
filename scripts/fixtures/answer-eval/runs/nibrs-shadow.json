@@ -441,7 +441,15 @@
    "LS-429",
    "LS-430",
    "LS-431",
-   "LS-432"
+   "LS-432",
+   "LS-433",
+   "LS-434",
+   "LS-435",
+   "LS-436",
+   "LS-437",
+   "LS-438",
+   "LS-439",
+   "LS-440"
   ]
  },
  "eligibility": {
@@ -881,7 +889,15 @@
    "LS-218"
   ],
   "label drafted": [
-   "LS-419"
+   "LS-419",
+   "LS-433",
+   "LS-434",
+   "LS-435",
+   "LS-436",
+   "LS-437",
+   "LS-438",
+   "LS-439",
+   "LS-440"
   ]
  },
  "notBuilt": [
@@ -1114,7 +1130,15 @@
   "LS-429": "designed",
   "LS-430": "designed",
   "LS-431": "designed",
-  "LS-432": "designed"
+  "LS-432": "designed",
+  "LS-433": "designed",
+  "LS-434": "designed",
+  "LS-435": "designed",
+  "LS-436": "designed",
+  "LS-437": "designed",
+  "LS-438": "designed",
+  "LS-439": "designed",
+  "LS-440": "designed"
  },
  "scored": [
   {
@@ -1151,7 +1175,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"ZIP code\" can't be counted. For example: \"robberies in Denver in 2024\"."
+    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"ZIP code\" can't be counted. For example: \"robberies in Chicago in 2025\"."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1267,9 +1291,33 @@
    "outcome": "unverified",
    "diffs": [
     {
+     "field": "option \"St. Louis city, Missouri\" option \"The last 10 complete years\" alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"St. Louis city, Missouri\" option \"The last 10 complete years\" alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
      "field": "option \"St. Louis city, Missouri\" option \"Every year available\" meaning",
      "expected": "(the label gives no meaning past this button)",
      "actual": "offenses.carjacking 2017-01..2026-09",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"St. Louis County, Missouri\" option \"The last 10 complete years\" alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"St. Louis County, Missouri\" option \"The last 10 complete years\" alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     },
     {
@@ -1291,7 +1339,7 @@
    "capability": "clarify:no meaning",
    "era": "no period",
    "values": "not measured",
-   "unverifiedAnswers": 2
+   "unverifiedAnswers": 4
   },
   {
    "id": "LS-141",
@@ -1301,7 +1349,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"ZIP code\" can't be counted. For example: \"robberies in Denver in 2024\"."
+    "declined (below_agency_level): NIBRS doesn't include anything below the level of an agency (ZIP codes, neighborhoods, districts, wards or beats), so \"ZIP code\" can't be counted. For example: \"robberies in Chicago in 2025\"."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -1337,6 +1385,18 @@
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
      "kind": "unverified"
+    },
+    {
+     "field": "option \"The last 10 complete years\" alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.theft_from_motor_vehicle 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"The last 10 complete years\" alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -1345,7 +1405,7 @@
    "capability": "clarify:nibrs count",
    "era": "spans 2021",
    "values": "not measured",
-   "unverifiedAnswers": 1
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-151",
@@ -1629,6 +1689,18 @@
      "expected": "answer",
      "actual": "refused: this build does not hold the months (not built)",
      "kind": "unverified"
+    },
+    {
+     "field": "option \"The last 10 complete years\" alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "option \"The last 10 complete years\" alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -1636,7 +1708,8 @@
    ],
    "capability": "clarify:nibrs count",
    "era": "spans 2021",
-   "values": "match"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-235",
@@ -1731,13 +1804,27 @@
      "expected": "answer",
      "actual": "refused: this build does not hold the months (not built)",
      "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
     "declined (forecast): The data records past crime and cannot predict the future."
    ],
    "capability": "decline:nibrs count",
-   "era": "spans 2021"
+   "era": "spans 2021",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-241",
@@ -2065,13 +2152,27 @@
      "expected": "answer",
      "actual": "refused: this build does not hold the months (not built)",
      "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.shoplifting 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
     "declined (forecast): The data records past crime and cannot predict the future."
    ],
    "capability": "decline:nibrs count",
-   "era": "spans 2021"
+   "era": "spans 2021",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-261",
@@ -2085,13 +2186,27 @@
      "expected": "answer",
      "actual": "refused: this build does not hold the months (not built)",
      "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
     "declined (forecast): The data records past crime and cannot predict the future."
    ],
    "capability": "decline:nibrs count",
-   "era": "spans 2021"
+   "era": "spans 2021",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-262",
@@ -2105,13 +2220,27 @@
      "expected": "answer",
      "actual": "refused: this build does not hold the months (not built)",
      "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "victims.simple_assault 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
     "declined (forecast): The data records past crime and cannot predict the future."
    ],
    "capability": "decline:nibrs count",
-   "era": "spans 2021"
+   "era": "spans 2021",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-263",
@@ -2125,13 +2254,27 @@
      "expected": "answer",
      "actual": "refused: this build does not hold the months (not built)",
      "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative meaning",
+     "expected": "(the label gives no meaning past this button)",
+     "actual": "offenses.carjacking 2017-01..2025-12",
+     "kind": "unverified"
+    },
+    {
+     "field": "alternative alternative values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
     }
    ],
    "notes": [
     "declined (forecast): The data records past crime and cannot predict the future."
    ],
    "capability": "decline:nibrs count",
-   "era": "spans 2021"
+   "era": "spans 2021",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-264",
@@ -2677,7 +2820,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): The data lists offenders and the weapons used, not who fired a gun, so \"shooters\" can't be counted. For example: \"robberies in Denver in 2024\"."
+    "declined (not_recorded_in_nibrs): The data lists offenders and the weapons used, not who fired a gun, so \"shooters\" can't be counted. For example: \"robberies in Raleigh in 2025\"."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -3385,7 +3528,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (outside_release_coverage): State figures in the data cover 1960 through 2025, so 1955 is outside them. For example: \"robberies in Denver in 2024\"."
+    "declined (outside_release_coverage): State figures in the data cover 1960 through 2025, so 1955 is outside them."
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -3426,7 +3569,7 @@
    "outcome": "correct",
    "diffs": [],
    "notes": [
-    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm. For example: \"robberies in Denver i"
+    "declined (not_recorded_in_nibrs): The data has no counts of non-fatal shootings, so gun violence cannot be counted. It can count gun crime: murders, robberies and aggravated assaults with a firearm. For example: \"robberies in Texas in"
    ],
    "capability": "decline:no meaning",
    "era": "no period"
@@ -4372,15 +4515,21 @@
    "id": "LS-418",
    "split": "heldout",
    "expected": "answer",
-   "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "actual": "clarify",
+   "outcome": "unnecessary_clarify",
+   "diffs": [
+    {
+     "field": "rewrite",
+     "expected": "Murders against juveniles in Memphis in 2024",
+     "actual": "(none: asked)",
+     "kind": "material"
+    }
+   ],
    "notes": [
-    "delivered: Memphis, Tennessee: 17 murder victims under 18 in 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+    "asked Which crime to replace.: Ask the full question | Start over"
    ],
    "capability": "answer:nibrs count",
-   "era": "2021 and later",
-   "values": "match"
+   "era": "2021 and later"
   },
   {
    "id": "LS-420",
@@ -4622,6 +4771,174 @@
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "match"
+  },
+  {
+   "id": "LS-433",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee before 1932, so the chart and table start there. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-434",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee before 1932, so the chart and table start there. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-435",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee before 1932, so the chart and table start there. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-436",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: robberies by year, 1990 through 2025. / Figures for the Memphis Police Department. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-437",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Philadelphia, Pennsylvania: murders by year, 1990 through 1999. / Figures for the Philadelphia Police Department. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "before 2021",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-438",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Philadelphia, Pennsylvania: murders by year, 2016 through 2025. / Figures for the Philadelphia Police Department. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-439",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Chicago, Illinois: robberies by year, 2010 through 2025. / Figures for the Chicago Police Department. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-440",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: robberies by year, 2000 to 2025. / Source: Crime Index."
+   ],
+   "capability": "answer:historical count",
+   "era": "spans 2021",
+   "values": "not measured"
   }
  ]
 }

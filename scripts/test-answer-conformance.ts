@@ -272,6 +272,8 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     check(c.default === null || c.allowed.includes(c.default), `6 ${tag}: default not allowed`);
     const tableOnly = o.kind === "answer" ? o.plan.statistics.filter((x) => ["agencies", "coverage", "population", "incidents"].includes(x.kind)).map((x) => x.as) : [];
     check(JSON.stringify(c) === JSON.stringify(chartOptionsOf(t, p.ordered, tableOnly)), `6 ${tag}: chart options not the shared builder's`);
+    // The columns charted, named exactly (coordinator 2026-11-02): never a coverage, population or incidents column.
+    check(c.columns.every((h) => t.columns.some((x) => x.header === h && x.binding.kind === "statistic" && !tableOnly.includes(x.binding.as))) && !c.columns.some((h) => ["Agencies reporting", "Consistent Reporting Agencies", "Population covered", "Population", "Incidents"].includes(h)), `6 ${tag}: charted columns ${JSON.stringify(c.columns)}`);
     // Legend labels in the title's form: no colon, no measure words after the place.
     for (const [h, label] of Object.entries(p.series)) check(t.columns.some((x) => x.header === h) && !label.includes(":"), `6 ${tag}: series label "${label}" for "${h}"`);
     // 7

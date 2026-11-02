@@ -51,7 +51,7 @@ NEW = [
     # A decade, the past N years, "after YEAR".
     case("Philadelphia murders in the 90s", PHILADELPHIA, "murder", "victim", 1990, 1999),
     case("Philadelphia murders over the past 10 years", PHILADELPHIA, "murder", "victim", 2016, 2025),
-    case("Chicago robberies after 2010", CHICAGO, "robbery", "offense", 2010, 2025),
+    case("Chicago robberies after 2010", CHICAGO, "robbery", "offense", 2011, 2025),
     # A state's figures (the historical file), the same words.
     case("Tennessee robberies since 2000", TENNESSEE, "robbery", "offense", 2000, 2025),
 ]

@@ -996,8 +996,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (period.from < release.firstMonth) {
     // The nearest question that runs (coordinator 2026-11-02): the same one from the data's first year, when the period
     // reaches into the data (a button, run when chosen); otherwise none.
-    const firstY = release.firstMonth.slice(0, 4), toY = (period.to > release.lastMonth ? release.lastMonth : period.to).slice(0, 4);
-    const covered = period.to >= release.firstMonth ? fromLedger(filled(ledger, "period", firstY === toY ? `year:${firstY}` : `range:${firstY}:${toY}`, `from ${firstY}`), deps, pins) : null;
+    // The asked end kept to the month (Codex period review 01.1), never widened; a set of years gets none.
+    const firstY = release.firstMonth.slice(0, 4), to = period.to > release.lastMonth ? release.lastMonth : period.to;
+    const value = to.endsWith("-12") ? (firstY === to.slice(0, 4) ? `year:${firstY}` : `range:${firstY}:${to.slice(0, 4)}`) : `monthrange:${release.firstMonth}:${to}`;
+    const covered = period.to >= release.firstMonth && !yearSet ? fromLedger(filled(ledger, "period", value, `from ${firstY}`), deps, pins) : null;
     return decline("outside_release_coverage", `The data here covers ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so it doesn't include ${periodWords(period.from, period.to)}.`,
       { notBuilt: true, alternative: covered && runsNow(covered) ? { label: `From ${firstY}, the first year in the data`, continuation: covered, role: "nearest_question" } : null });
   }

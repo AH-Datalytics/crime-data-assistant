@@ -132,7 +132,8 @@ export type Offer = { role: OfferRole; targetSource: SourceId; label: string; te
 export const ZERO_CATEGORIES = "listed in every period once they occur in any" as const;
 
 export type ChartKind = "line" | "bar" | "horizontal_bar" | "grouped_bar" | "stacked_bar" | "stacked_100";
-export type ChartOptions = { allowed: ChartKind[]; default: ChartKind | null; exclusive: boolean | undefined; exclusiveByColumn: Record<string, boolean> | undefined };
+/** `columns`: the headers of the number columns charted, exactly; the others (coverage, populations, incidents) are table-only. */
+export type ChartOptions = { allowed: ChartKind[]; default: ChartKind | null; exclusive: boolean | undefined; exclusiveByColumn: Record<string, boolean> | undefined; columns: string[] };
 
 export type Presentation = {
   source: SourceId;
@@ -225,7 +226,7 @@ export function chartOptionsOf(table: ResultTable, ordered: readonly string[] = 
   // An ordinal breakdown (age groups) keeps its order left to right: an upright bar.
   const ordinal = cats.some((c) => ordered.includes(c.header));
   const def: ChartKind | null = !allowed.length ? null : time ? (monthly || stats.length > 1 || cats.length ? "line" : "bar") : ordinal && allowed.includes("bar") ? "bar" : allowed[0];
-  return { allowed, default: def, exclusive, exclusiveByColumn };
+  return { allowed, default: def, exclusive, exclusiveByColumn, columns: allowed.length ? stats.map((c) => c.header) : [] };
 }
 
 /** A charted column's legend label. */

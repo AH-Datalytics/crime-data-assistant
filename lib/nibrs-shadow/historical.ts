@@ -193,7 +193,9 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     // 1930-31): the leading years with no figure for any agency are left out, and a note names the first year.
     const firstFigure = covered.findIndex((y) => hq.agencies.some((a) => value(a.ori, y) !== null));
     const kept = firstFigure > 0 ? covered.slice(firstFigure) : covered;
-    const startNote = firstFigure > 0 ? [`Crime Index has no ${m.name} figures for ${where} before ${kept[0]}, so the chart and table start there.`] : [];
+    // Only the years asked and left out are named, and the statistic asked (Codex period review 01.3).
+    const what0 = hq.statistic === "rate" ? `${m.name} rate` : `${m.name} figure`;
+    const startNote = firstFigure > 0 ? [`Crime Index has no ${what0}${firstFigure > 1 ? "s" : ""} for ${where} ${firstFigure > 1 ? `from ${covered[0]} to ${covered[firstFigure - 1]}` : `in ${covered[0]}`}, so the chart and table start in ${kept[0]}.`] : [];
     const period = { from: `${kept[0]}-01`, to: `${kept[kept.length - 1]}-12` };
     // Several agencies side by side, one column each (never combined: the file has no cohort to combine, design note 2).
     const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },

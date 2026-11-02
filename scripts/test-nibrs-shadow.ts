@@ -1038,6 +1038,13 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   const cmp = ask("Chicago compared to Memphis carjackings in 2024");
   assert.ok(cmp.kind === "answer" && cmp.plan.geography.places.length === 2, JSON.stringify(cmp).slice(0, 200));
 }
+// A period starting before the data: the covered part, to the month asked, never widened (Codex period review 01.1).
+{
+  const before = as(ask("Shoplifting in Memphis from January 2016 to March 2024"), "decline");
+  const cont = before.alternative?.continuation;
+  assert.ok(cont && cont.kind === "answer" && cont.period.from === "2017-01" && cont.period.to === "2024-03", JSON.stringify(before.alternative).slice(0, 300));
+  assert.equal(readQuestion("Chicago robberies after 2010", 2026, "2026-09").ledger.parts.find((p) => p.concept === "period")?.value, "since:2011", "after 2010 starts with 2011");
+}
 // Coordinator 2026-11-02 (the redesign's retest of #96). 1: a breakdown the question names is never dropped.
 {
   assert.deepEqual(namedGroupings("Robbery offenders in Memphis by age and year from 2022 to 2024").map((g) => g.word), ["year", "age"]);

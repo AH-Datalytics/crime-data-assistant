@@ -69,7 +69,7 @@ assert.ok(!pageRate.delivered.text.some((t) => /as crimeindex\.org shows it/.tes
 assert.match(no({ from: 2021, to: 2021 }), /not available in this data/);
 const series = ok({ from: 2021, to: 2023, byYear: true });
 assert.deepEqual(series.delivered.table.rows, [["2022", 252], ["2023", 351]]);
-assert.ok(series.delivered.text.includes("Crime Index has no murder figures for Memphis, Tennessee before 2022, so the chart and table start there."), series.delivered.text.join(" / "));
+assert.ok(series.delivered.text.includes("Crime Index has no murder figure for Memphis, Tennessee in 2021, so the chart and table start in 2022."), series.delivered.text.join(" / "));
 assert.deepEqual(series.period, { from: "2022-01", to: "2023-12" });
 
 // P76: the build's years; outside them named, never "doesn't exist"; part of a span outside: the rest answered.
