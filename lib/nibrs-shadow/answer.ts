@@ -49,6 +49,7 @@ import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
 import { missingGroupings } from "./named-groupings";
+import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 
@@ -73,6 +74,12 @@ export type ShadowOption = {
   otherSource?: string;
   /** P74: a complete question, shown on the button and run as a new question only when chosen (never before). */
   question?: string;
+  /**
+   * The answer contract (lib/answer-contract): what the button is for, and the source it runs on, when its creator
+   * knows them; otherwise taken from its shape and its continuation (presentation.ts).
+   */
+  role?: OfferRole;
+  targetSource?: SourceId;
 };
 
 /**
@@ -258,7 +265,7 @@ function byYearInstead(ledger: RequestLedger, deps: ShadowDeps, pins: Map<number
   inByYear = true;
   try {
     const o = fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins);
-    return runsNow(o) ? { label: "By year instead", continuation: o } : null;
+    return runsNow(o) ? { label: "By year instead", continuation: o, role: "by_year" } : null;
   } finally { inByYear = false; }
 }
 
@@ -279,7 +286,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
 /** The groupings an answer has, as dimensions (Historical's and the historical file's: by year or not). */
 export function answerDimensions(o: ShadowOutcome): string[] | null {
   if (o.kind === "answer") return o.plan.groupings.map((g) => g.dimension);
-  if (o.kind === "historical" || o.kind === "srs") return o.meaning.groupings.includes("year") ? ["time.year"] : [];
+  if (o.kind === "historical" || o.kind === "srs") return o.question.byYear ? ["time.year"] : [];
   return null;
 }
 /**
@@ -541,7 +548,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (historicalShape && (sp.unit === "victims" || sp.unit === "offenses") && !historicalUnitFits(sp.measures[0], sp.unit)) {
       const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
       return decline("unsupported_capability", `Historical counts ${historicalCounts(sp.measures[0])}, not ${sp.unit}. NIBRS counts ${sp.unit} for the agencies that report to it.`,
-        { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs } });
+        { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs, role: "other_source", targetSource: "nibrs" } });
     }
     if (agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
       && historicalUnitFits(sp.measures[0], sp.unit) && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate")
@@ -550,7 +557,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       if (flags(ledger0).combined && agencies.length > 1) {
         const apart = ledger0.question.replace(/\s*,?\s*\b(?:combined|together|as one total)\b/i, "").replace(/[?.!\s]+$/, "");
         return decline("unsupported_capability", "Historical figures can't be combined across agencies yet. Ask for each agency; they are shown side by side.",
-          { alternative: { label: `Ask instead: "${apart}"`, question: apart } });
+          { alternative: { label: `Ask instead: "${apart}"`, question: apart, role: "ask_instead", targetSource: "historical" } });
       }
       const cmp = flags(ledger0).comparison;
       if (partYear(sp, cmp))
@@ -630,7 +637,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return decline("unsupported_capability", deps.historical
       ? "The official counts of this crime come from Crime Index's Historical and Current Trends data, which don't answer this form of the question yet. NIBRS has its own counts, from the agencies that report to it."
       : "The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it.",
-      { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs } });
+      { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs, role: "other_source", targetSource: "nibrs" } });
   }
 
   // The plan.

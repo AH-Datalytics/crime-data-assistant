@@ -202,6 +202,6 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   if (consistent) return everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
   const delivered = deliver(plan, false);
   if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
-  const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome };
+  const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome, role: "consistent_agencies", targetSource: "nibrs" };
   return { kind: "answer", plan, period, sql: c.query.sql, delivered, buttons: [button], stateSum: meta };
 }

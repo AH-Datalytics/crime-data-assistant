@@ -12,6 +12,9 @@
  */
 import type { ChartConfig } from "../types";
 import type { ShadowOption, ShadowOutcome } from "./answer";
+import type { ChoicePresentation, Presentation } from "../answer-contract/contract";
+import type { PlaceIndex } from "./places";
+import { presentationOf } from "./presentation";
 
 export function previewEnabled(env: Record<string, string | undefined> = process.env): boolean {
   return env.NODE_ENV !== "production" && !!env.NIBRS_SHADOW_ROOT;
@@ -45,6 +48,12 @@ export type PreviewResponse =
   | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[]; exclusive?: boolean; exclusiveByColumn?: Record<string, boolean>; ordered?: string[] }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }
   | { kind: "decline"; reason: string; text: string; buttons: PreviewButton[]; notBuilt: boolean };
+/**
+ * The answer contract (lib/answer-contract): every response also carries `presentation`, the structured fields the
+ * page builds the title, lead, notes, chart options and exports from with the shared builders (never by reading the
+ * text). Present when the caller passes the place index (the API route always does).
+ */
+export type PreviewWithPresentation = PreviewResponse & { presentation?: Presentation | ChoicePresentation };
 
 // A continuation this build cannot answer (its years are outside the build) is shown, not offered: the build is the
 // limit, not the question. The preview has no follow-up turns, so an entry asks for the whole question again.
@@ -68,7 +77,20 @@ export function follow(o: ShadowOutcome, path: string[]): ShadowOutcome | null {
   return at;
 }
 
-export function toPreview(o: ShadowOutcome, path: string[] = []): PreviewResponse {
+export function toPreview(o: ShadowOutcome, path: string[] = [], places?: PlaceIndex, question?: string): PreviewWithPresentation {
+  const r = previewOf(o, path);
+  if (!places) return r;
+  const presentation = presentationOf(o, places, { question, path });
+  // The buttons shown are the presentation's: one it does not offer (a single period's consistent agencies) is not shown.
+  if (r.kind === "answer" && "offers" in presentation) {
+    r.buttons = r.buttons.filter((b) => presentation.offers.some((x) => x.label === b.label));
+    // An offer the engine has no button for (the way back from the consistent view) is rendered from its run.
+    for (const x of presentation.offers) if (!r.buttons.some((b) => b.label === x.label))
+      r.buttons.push("path" in x.run ? { label: x.label, path: x.run.path, kind: "continuation" } : "question" in x.run ? { label: x.label, path, kind: "question", question: x.run.question } : { label: x.label, path, kind: "entry" });
+  }
+  return { ...r, presentation };
+}
+function previewOf(o: ShadowOutcome, path: string[]): PreviewResponse {
   if (o.kind === "clarify") return { kind: "clarify", about: o.about, buttons: o.options.map((x) => button(x, path)) };
   if (o.kind === "decline") return { kind: "decline", reason: o.reason, text: o.explanation, buttons: o.alternative ? [button(o.alternative, path)] : [], notBuilt: !!o.notBuilt };
   // Another source's question: the route is named (this preview runs only the NIBRS shadow and the historical file).

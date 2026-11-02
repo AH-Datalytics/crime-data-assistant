@@ -40,7 +40,7 @@ export function historicalRate(published: number | null, total: number | null, p
 }
 
 /** The reader's Part I measures -> the build's column stem, the words for a count, and the label schema's name and unit. */
-const MEASURE: Record<string, { col: string; words: string; name: string; unit: string }> = {
+export const HISTORICAL_MEASURE: Record<string, { col: string; words: string; name: string; unit: string }> = {
   murder: { col: "murder", words: "murders", name: "murder", unit: "victim" },
   homicide: { col: "murder", words: "murders", name: "murder", unit: "victim" },
   rape: { col: "rape", words: "rapes", name: "rape", unit: "victim" },
@@ -52,7 +52,7 @@ const MEASURE: Record<string, { col: string; words: string; name: string; unit: 
   violent_crime: { col: "violent", words: "violent crimes", name: "violent crime", unit: "victim (robbery by offense)" },
   property_crime: { col: "property", words: "property crimes", name: "property crime", unit: "offense" },
 };
-export const isHistoricalMeasure = (m: string) => m in MEASURE;
+export const isHistoricalMeasure = (m: string) => m in HISTORICAL_MEASURE;
 /**
  * The unit asked fits the file's count (Codex review 01.1): none named, or the offense's own unit (victims for murder,
  * rape and aggravated assault; offenses for robbery and the property offenses). Violent crime mixes the two, so only
@@ -60,11 +60,11 @@ export const isHistoricalMeasure = (m: string) => m in MEASURE;
  */
 /** How the file counts a crime, in words ("robberies as offenses"), for a decline that names it. */
 export function historicalCounts(measure: string): string {
-  const m = MEASURE[measure];
+  const m = HISTORICAL_MEASURE[measure];
   return m.unit === "victim" ? `${m.words} by victim` : m.unit === "offense" ? `${m.words} as offenses` : `${m.words} as one total (murder, rape and aggravated assault by victim, robbery by offense)`;
 }
 export function historicalUnitFits(measure: string, unit: string | null): boolean {
-  const m = MEASURE[measure];
+  const m = HISTORICAL_MEASURE[measure];
   if (!m || unit === null) return !!m;
   return (unit === "victims" && m.unit === "victim") || (unit === "offenses" && m.unit === "offense");
 }
@@ -81,6 +81,8 @@ export type HistoricalQuestion = {
 };
 export type HistoricalAnswer = {
   kind: "historical"; meaning: Meaning; period: { from: string; to: string };
+  /** The question answered, for its presentation (lib/answer-contract). */
+  question: HistoricalQuestion;
   delivered: { table: ResultTable; text: string[] };
   /** Provenance: the table and column read and the release, so every figure is shown to be the file's. */
   read: { table: string; column: string; release: string };
@@ -97,7 +99,7 @@ const lines = (hq: HistoricalQuestion, title: string, ...rest: string[]) => [tit
 const placeOf = (a: HistoricalAgency): Meaning["places"][number] => ({ kind: "agency", name: a.name, ...(a.state ? { state: a.state } : {}) });
 
 export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
-  const m = MEASURE[hq.measure];
+  const m = HISTORICAL_MEASURE[hq.measure];
   if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
   const clearance = hq.statistic === "clearance_rate";
   const first = clearance ? build.clearanceFirstYear : build.firstYear;
@@ -123,7 +125,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     if (rate === null) return { kind: "historical-decline", explanation: `Crime Index has no ${m.name} clearance rate for ${where} in ${y}: not available in this data.` };
     const counts = cleared !== null && all !== null ? ` (${fmt(cleared)} of ${fmt(all)})` : "";
     return {
-      kind: "historical", period: { from: `${y}-01`, to: `${y}-12` },
+      kind: "historical", question: hq, period: { from: `${y}-01`, to: `${y}-12` },
       meaning: { ...meaningBase, period: { from: `${y}-01`, to: `${y}-12` }, measures: [{ name: `${m.name} cleared`, unit: "offense" }], groupings: [], statistic: "rate", denominator: `${m.words}, per 100` },
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "clearance_rate" }, header: `${ucFirst(m.words)} cleared (%)` }], rows: [[rate]] },
         text: lines(hq, `${where}: ${rate}% of ${m.words} were cleared in ${y}${counts}.`, SRS_SOURCE) },
@@ -160,7 +162,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const change = l - e, pct = e === 0 ? null : pct1(change, e);
     const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : n < 0 ? `-${fmt(-n)}` : "0");
     return {
-      kind: "historical", period: { from: `${E}-01`, to: `${L}-12` },
+      kind: "historical", question: hq, period: { from: `${E}-01`, to: `${L}-12` },
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period: { from: `${E}-01`, to: `${L}-12` }, groupings: [], statistic: "change" },
       delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` }, header: k === "earlier" ? String(E) : k === "later" ? String(L) : k === "change" ? "Change" : "Percent change" })),
         rows: [[e, l, change, pct]] },
@@ -180,7 +182,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const rows = hq.agencies.map((a) => [a.label, value(a.ori, y)]);
     const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} in ${y}.`, ...notes, ...blankLine([y]), SRS_SOURCE);
     return {
-      kind: "historical", period,
+      kind: "historical", question: hq, period,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: ["agency"], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
       delivered: { table: { columns, rows }, text },
       read,
@@ -194,7 +196,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} by year, ${yearsWords(covered[0], covered[covered.length - 1])}.`,
       ...notes, ...blankLine(covered), SRS_SOURCE);
     return {
-      kind: "historical", period,
+      kind: "historical", question: hq, period,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: ["year", ...(several ? ["agency"] : [])], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
       delivered: { table: { columns, rows }, text },
       read,
@@ -204,7 +206,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   if (v === null) return { kind: "historical-decline", explanation: `Crime Index has no ${hq.statistic === "rate" ? `${m.name} rate` : m.words} for ${where} in ${y}: not available in this data.` };
   const text = lines(hq, hq.statistic === "rate" ? `${where}: ${shown(v)} ${m.words} per 100,000 in ${y}.` : `${where}: ${fmt(v)} ${m.words} in ${y}.`, ...notes, SRS_SOURCE);
   return {
-    kind: "historical", period,
+    kind: "historical", question: hq, period,
     meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: [], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
     delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header }], rows: [[v]] }, text },
     read,
