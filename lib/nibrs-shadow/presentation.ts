@@ -118,17 +118,24 @@ function nibrsPresentation(o: Extract<ShadowOutcome, { kind: "answer" }>, places
     : o.stateSum && !every ? "added up across the agencies that reported" : null;
   const when = cmp && cmp.kind === "period_comparison" ? `in ${periodWords(cmp.earlier.from, cmp.earlier.to)} and ${periodWords(cmp.later.from, cmp.later.to)}, with the change between them`
     : whenWords(o.period, timeG ? timeG.dimension.slice(5) : null, years);
-  const statCols = o.delivered.table.columns.filter((c) => c.binding.kind === "statistic");
-  const single = o.delivered.table.rows.length === 1 && !plan.groupings.length && !cmp && statCols.length === 1 && typeof o.delivered.table.rows[0][0] === "number";
-  const v = single ? (o.delivered.table.rows[0][0] as number) : null;
+  // A single number: one row, no breakdown, one measure; the columns beside it (agencies reporting, population covered,
+  // the population a rate divides by) don't make it a table (coordinator 2026-11-02).
+  const valueAt = o.delivered.table.columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === plan.statistics[0].as);
+  const support = new Set(["agencies", "coverage", "population"]);
+  const values = plan.statistics.filter((s) => !support.has(s.kind));
+  const single = o.delivered.table.rows.length === 1 && !plan.groupings.length && !cmp && values.length === 1 && valueAt >= 0 && typeof o.delivered.table.rows[0][valueAt] === "number";
+  const v = single ? (o.delivered.table.rows[0][valueAt] as number) : null;
   const lead: Lead = single
     ? { kind: "single", who, quantity: rate ? `${measure} at a rate of ${one(v!)} per 100,000 people` : `${fmt(v!)} ${measure}`, when, countedAs: rate ? null : countedAs }
     : { kind: "described", what: measure, who, when, countedAs, brokenDownBy: cats.length ? and(cats.map((g) => groupWord(g.dimension))) : null };
 
   // Offers: the Consistent Reporting Agencies (P61, P80) in Jeff's words, past P88's threshold; the way back from it.
-  const offers: Offer[] = (o.buttons ?? []).map((b) => offerOf(b, "nibrs", false));
+  // One period has no change to explain: neither the reporting-change caveat nor the consistent-agencies offer, in
+  // either view (coordinator 2026-11-02); its button is not offered.
   const meta = o.stateSum;
-  if (meta) {
+  const oneYear = !!meta && meta.years.length < 2;
+  const offers: Offer[] = (o.buttons ?? []).map((b) => offerOf(b, "nibrs", false)).filter((x) => !(oneYear && x.role === "consistent_agencies"));
+  if (meta && !oneYear) {
     const from = monthName(o.period.from), to = monthName(o.period.to);
     if (every) offers.push({ role: "all_agencies", targetSource: "nibrs", label: "All reporting agencies",
       text: { before: `This counts only the ${fmt(meta.everyAgencies)} Consistent Reporting ${meta.everyAgencies === 1 ? "Agency" : "Agencies"} that reported every month. `, link: "See all reporting agencies instead", after: "." } });

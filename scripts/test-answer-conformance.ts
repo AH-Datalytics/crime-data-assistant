@@ -17,6 +17,7 @@
  *  10  every live source's profile is complete (no field missing or defaulted)
  *  11  no offer or note the source's profile doesn't support
  *  12  every breakdown the question names is in the answer (never silently dropped)
+ *  13  a single-period answer has no reporting-change caveat and no consistent-agencies offer
  */
 import assert from "node:assert/strict";
 import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
@@ -179,6 +180,10 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
         check(ls.filter((v) => v === "Unknown").length <= 1 && (firstUnknown < 0 || ls.slice(firstUnknown).every((v) => UNKNOWN_NAMES.has(v))), `5 ${tag}: ${col.header}: not-known categories not last (${ls.join(", ")})`);
       }
     });
+    // 13
+    const per = (o as { period: { from: string; to: string } }).period;
+    if (per.from.slice(0, 4) === per.to.slice(0, 4))
+      check(!p.offers.some((x) => x.role === "consistent_agencies" || x.role === "all_agencies" || /change/.test(x.text?.before ?? "")), `13 ${tag}: a change caveat or consistent offer on one period`);
     // 12
     const dims = t.columns.flatMap((c) => (c.binding.kind === "grouping" ? [c.binding.dimension] : []));
     check(!missingGroupings(q, dims).length, `12 ${tag}: breakdown dropped (${missingGroupings(q, dims).join(", ")})`);
@@ -228,7 +233,10 @@ check(ks.offers.some((o) => o.role === "consistent_agencies" && o.text?.link ===
 const ksEvery = presentationOf(shadowAnswer("Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", deps), places) as Presentation;
 check(ksEvery.offers.some((o) => o.role === "all_agencies" && o.text?.before === "This counts only the 1 Consistent Reporting Agency that reported every month. " && o.text.link === "See all reporting agencies instead"), "the way back missing");
 const ks1 = presentationOf(shadowAnswer("Shoplifting in Kansas in 2024", deps), places) as Presentation;
-check(ks1.offers.some((o) => o.role === "consistent_agencies" && o.text === null) && ks1.lead.kind === "single", "one year: the button, no words");
+check(!ks1.offers.length && ks1.lead.kind === "single", "one year: no consistent-agencies offer, and a single number");
+// A one-row answer with coverage columns beside it is still a single number (the redesign had guessed this).
+const ksCov = presentationOf(shadowAnswer("Shoplifting in Kansas in 2024, with the number of agencies reporting", deps), places) as Presentation;
+check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.length, "one year with coverage columns: a single number, no offer");
 
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 12 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 13 checks`);
