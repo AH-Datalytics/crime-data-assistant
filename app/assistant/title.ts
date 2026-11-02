@@ -70,3 +70,20 @@ export function titlesFor(plan: NibrsPlan, period: { from: string; to: string },
   if (partialYear) sub.push(`${partialYear} (Partial): ${titleCase(periodWords(`${partialYear}-01`, period.to).replace(/ (?:to|through) /g, "–"))}`);
   return { title, subtitle: sub.length ? sub.join(", ") : null, partialYear };
 }
+/**
+ * A title for any answer, from the engine's headline when no plan gives one (Jeff, 2026-11-02: "every graph needs a
+ * title"; Historical's and the historical file's answers have no NIBRS plan): "Memphis, Tennessee: robberies by year,
+ * 1990 through 2024." becomes "Memphis, TN Robberies by Year, 1990–2024"; "Memphis, Tennessee and Nashville, Tennessee:
+ * robberies by year, 2015 through 2024." becomes "Memphis, TN & Nashville, TN Robberies by Year, 2015–2024". A headline
+ * that doesn't read as "<place>: <what>, <period>." is kept as it is, its final period dropped.
+ */
+export function headlineTitle(headline: string): string {
+  const h = headline.trim().replace(/\.$/, "");
+  const m = /^(.+?): (.+?), ((?:[A-Z][a-z]+ )?\d{4}(?: (?:to|through) (?:[A-Z][a-z]+ )?\d{4})?)(?:,.*)?$/.exec(h);
+  if (!m) return h;
+  const places = m[1].split(/ and /).map((p) => {
+    const c = /^(.*), ([A-Za-z .]+)$/.exec(p.trim());
+    return c && CODE_BY_STATE[c[2]] ? `${c[1]}, ${CODE_BY_STATE[c[2]]}` : p.trim();
+  });
+  return `${join(places)} ${titleCase(m[2])}, ${titleCase(m[3].replace(/ (?:to|through) /, "–"))}`;
+}

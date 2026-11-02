@@ -6,6 +6,8 @@ import AnswerChart, { type ChartKind, type Line, type Point } from "./AnswerChar
 import Logo from "./Logo";
 import QuestionStrip, { type StripItem } from "./QuestionStrip";
 import { StartPage } from "./StartPage";
+import { Tour } from "./Tour";
+import TOUR from "./tour-example.json";
 
 /**
  * The Crime Data Assistant chat (spec: docs/superpowers/specs/2026-10-31-crime-data-assistant-redesign-design.md).
@@ -32,7 +34,9 @@ type Sources = { on: Src; list: { source: Src; asking: Asking; available: boolea
 type Turn = { id: number; typed: string; question: string; path: string[]; reply: Reply | null; chart?: ChartMode; viaButton?: boolean;
   scope?: Scope; sources?: Sources; loading?: boolean;
   /** The sources already spelled out earlier in the session when this answer came: said short here ("NIBRS"). */
-  short?: string[] };
+  short?: string[];
+  /** One of the tour's fixed example turns (its steps find them by this). */
+  tour?: "answer" | "decline" };
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const label = (v: unknown) => {
@@ -76,6 +80,7 @@ const sentence = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}${/[?.]$/.tes
 
 const SRC_NAME: Record<Src, string> = { nibrs: "NIBRS", historical: "Historical", rtci: "Current Trends", shr: "Homicide Reports" };
 const LIVE: Src[] = ["nibrs"];
+const TOUR_SEEN = "cda-tour-seen";
 /**
  * Spelled out only the first time in a session (Jeff, 2026-11-01), then short. Until the engine marks the long form,
  * these exact strings are matched; "to the FBI's National Incident-Based Reporting System (NIBRS)" becomes "to NIBRS".
@@ -308,6 +313,33 @@ export default function AssistantClient() {
     return () => cancelAnimationFrame(raf);
   }, [scrollTo]);
 
+  // The tour (Jeff, 2026-11-02): on a first visit, and from "Take the tour". While it runs, the page shows its fixed
+  // example (an answer and a decline, no engine or model call); when it ends, the page is as it was.
+  const [tourStep, setTourStep] = useState<number | null>(null);
+  const beforeTour = useRef<Turn[]>([]);
+  const startTour = () => {
+    beforeTour.current = turnsRef.current;
+    const answer = { ...(TOUR.answer.reply as unknown as Extract<Reply, { kind: "answer" }>) };
+    const decline = { ...(TOUR.decline.reply as unknown as Extract<Reply, { kind: "decline" }>) };
+    const at = (r: Reply) => ({ question: "asked" in r ? r.asked : "", path: [] });
+    setTurns([
+      { id: -2, typed: TOUR.decline.typed, question: decline.asked, path: [], reply: decline, sources: sourcesOf(decline, at(decline)), short: [], tour: "decline" },
+      { id: -1, typed: TOUR.answer.typed, question: answer.asked, path: [], reply: answer, sources: sourcesOf(answer, at(answer)), short: [], tour: "answer" },
+    ]);
+    setTourStep(0);
+  };
+  const endTour = () => {
+    setTourStep(null);
+    setTurns(beforeTour.current);
+    try { localStorage.setItem(TOUR_SEEN, "1"); } catch { /* storage unavailable: the tour may show again */ }
+    window.scrollTo({ top: 0 });
+  };
+  useEffect(() => {
+    let seen = true;
+    try { seen = !!localStorage.getItem(TOUR_SEEN); } catch { /* storage unavailable: don't show it unasked */ }
+    if (!seen) startTour();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const start = turns.length === 0;
   // One hint under the box: how to ask, then (after an answer) that a follow-up or a new question both work.
   const hint = start
@@ -319,7 +351,7 @@ export default function AssistantClient() {
         <input ref={box} value={input} onChange={(e) => setInput(e.target.value)} placeholder={start ? "Shoplifting in Memphis by month in 2024" : "Ask a question or a follow-up"} aria-label="Question" />
         <button className="Ask" type="submit" disabled={busy}>Ask</button>
       </div>
-      <p className="Hint">{hint}</p>
+      <p className="Hint">{hint} <button type="button" className="tourLink" onClick={startTour}>Take the tour</button></p>
     </form>
   );
   const dock = (
@@ -345,18 +377,18 @@ export default function AssistantClient() {
         <main className="Chat">
           {/* One answer per screen (Jeff, 2026-11-01): each question and its answer fill the space under the box. */}
           {[...turns].reverse().map((t) => (
-            <section className="Turn" key={t.id} id={`turn${t.id}`}>
+            <section className="Turn" key={t.id} id={`turn${t.id}`} data-tour={t.tour}>
               <div className="Me" id={`me${t.id}`}><p>{t.typed}</p></div>
               <div className={`Re${t.loading ? " loading" : ""}`}>{t.reply
                 ? <Short.Provider value={t.short ?? []}><ReplyView t={t} onButton={(b) => click(t, b)} onAsk={(q, prev) => void run(q, { previous: prev })}
                     suggest={suggestions(t)} /></Short.Provider>
-                : <div className="wait">Answering</div>}
-</div>
+                : <div className="wait">Answering</div>}</div>
             </section>
           ))}
         </main>
         <QuestionStrip items={strip} active={inView} onGo={(id) => document.getElementById(`turn${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
       </>)}
+      {tourStep !== null && !start ? <Tour step={tourStep} onStep={setTourStep} onClose={endTour} /> : null}
     </div>
   );
 }
@@ -505,11 +537,21 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     series = r.chart.yAxis[0];
     points = rows.map((row) => ({ x: String(row[r.chart!.xAxis]), label: yearLabel(row[r.chart!.xAxis]), y: row[series] as number | null }));
   } else if (rows.length > 1 && groupCols.length === 1 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
-    // A series without an engine chart (a state or national sum by year): time, so Line | Bar, never category bars.
+    // A series without an engine chart (a state or national sum by year): time, so Line | Bar, never category bars;
+    // a long one (Historical's decades) starts as a line.
     options = ["line", "bar"];
-    kind = "bar";
+    kind = rows.length > 12 ? "line" : "bar";
     series = numberCols[0];
     points = rows.map((row) => ({ x: String(row[groupCols[0]]), label: yearLabel(row[groupCols[0]]), y: row[series] as number | null }));
+    // Places compared over time (Historical: "Memphis, Tennessee: robberies", "Nashville, Tennessee: robberies"): one
+    // line per place, each keeping its color; never the coverage columns beside a single series.
+    const compared = numberCols.filter((c) => /^.+: .+$/.test(c));
+    if (compared.length >= 2) {
+      kind = "line";
+      points = points.map((pt) => ({ ...pt, y: null }));
+      lines = compared.slice(0, SERIES.length).map((c, k) => ({ name: c.slice(0, c.lastIndexOf(": ")), color: SERIES[k], ys: rows.map((row) => row[c] as number | null) }));
+      if (compared.length > SERIES.length) moreLines = compared.length;
+    }
   } else if (groupCols.length === 2 && numberCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])))) {
     // Time by category (no engine chart): one line per category over the periods, the first number column; at most
     // eight lines, in the engine's order (largest first in the first period), each keeping its color.
@@ -683,7 +725,7 @@ function composeLead(text: string[], scoped: boolean, single: boolean, source: "
   const reporter = ri > 0 ? text[ri].slice("Reported by ".length, -1) : null;
   if (ri > 0) used.add(ri);
   const one = /^(.+?): ([\d,.]+) (.+) in (\d{4})\.$/.exec(first);
-  const many = /^(.+?): (.+?)(?: by (.+?))?, (\d{4})(?: to (\d{4}))?(, .+)?\.$/.exec(first);
+  const many = /^(.+?): (.+?)(?: by (.+?))?, (\d{4})(?: (?:to|through) (\d{4}))?(, .+)?\.$/.exec(first);
   const agencies = (place: string) => (place === "United States" ? "law enforcement agencies across the United States" : `${place} law enforcement agencies`);
   if (source === "historical") {
     // Crime Index's figures: what they are and where they come from, never "reported to NIBRS".
