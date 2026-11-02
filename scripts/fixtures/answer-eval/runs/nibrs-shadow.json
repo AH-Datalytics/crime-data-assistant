@@ -2531,13 +2531,13 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "2 cells",
-     "actual": "3 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "174 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -2545,7 +2545,8 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-293",
@@ -3746,13 +3747,13 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "5 cells",
-     "actual": "6 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "5379 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -3760,20 +3761,21 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-378",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "7 cells",
-     "actual": "8 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "738 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -3781,7 +3783,8 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-379",
@@ -3830,13 +3833,13 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "3 cells",
-     "actual": "4 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "107 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -3844,7 +3847,8 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-383",
@@ -3907,13 +3911,13 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "2 cells",
-     "actual": "3 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "569 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -3921,20 +3925,21 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-388",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "7 cells",
-     "actual": "8 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "709 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -3942,7 +3947,8 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-389",
@@ -4103,13 +4109,13 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "4 cells",
-     "actual": "5 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "1041 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -4117,7 +4123,8 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-398",
@@ -4306,13 +4313,13 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "5 cells",
-     "actual": "6 cells",
-     "kind": "material"
+     "field": "value Unknown",
+     "expected": "(merged from overlapping categories: no independent value)",
+     "actual": "5379 VALUE",
+     "kind": "unverified"
     }
    ],
    "notes": [
@@ -4320,7 +4327,8 @@
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "mismatch"
+   "values": "not measured",
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-412",
