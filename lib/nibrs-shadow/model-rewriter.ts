@@ -166,17 +166,26 @@ const OFFSET_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4
 /**
  * The years a relative-period follow-up can reach from the previous question's years: only for a follow-up about years
  * ("year" or "years" with before, after, previous, next, earlier, later, back or ago), and only as far as the offset it
- * names (a number or a number word; "the year before" is one). Every year from the previous years moved by that offset
- * to the previous years is allowed, so a span ("the three years before that") is too; nothing else.
+ * names (a number or a number word; "the year before" is one), in its direction (earlier, before, back, ago, previous
+ * or prior: back; later, after, next or following: on; Codex follow-up confirmation 02). A single offset ("three years
+ * earlier") reaches exactly that year; a span ("the three years before that") every year up to it; nothing else.
  */
 function derivedYears(previous: string, followUp: string): number[] {
   if (!/\byears?\b/i.test(followUp) || !RELATIVE.test(followUp)) return [];
   const ys = (previous.match(/\b(?:19|20)\d{2}\b/g) ?? []).map(Number);
   if (!ys.length) return [];
-  const named = [...followUp.toLowerCase().matchAll(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\b/g)].map((m) => OFFSET_WORDS[m[1]] ?? Number(m[1]));
+  const f = followUp.toLowerCase();
+  const back = /\b(?:before|earlier|back|ago|previous|prior)\b/.test(f), on = /\b(?:after|later|next|following)\b/.test(f);
+  if (back === on) return [];
+  const named = [...f.matchAll(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\b/g)].map((m) => OFFSET_WORDS[m[1]] ?? Number(m[1]));
   const k = Math.max(1, ...named.filter((n) => n >= 1 && n <= 20));
+  const span = /\bthe\s+(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\s+years\b/.test(f);
+  const sign = back ? -1 : 1;
   const out = new Set<number>();
-  for (const y of ys) for (let d = -k; d <= k; d++) out.add(y + d);
+  for (const y of ys) {
+    if (span) for (let d = 1; d <= k; d++) out.add(y + sign * d);
+    else out.add(y + sign * k);
+  }
   return [...out];
 }
 

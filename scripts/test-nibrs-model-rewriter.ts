@@ -93,6 +93,9 @@ assert.equal(ran, 0);
   const S = "Shoplifting in Memphis in 2024";
   assert.equal(guarded({ kind: "rewrite", question: "Shoplifting in Memphis in 2040" }, S, "three years earlier").kind, "ask");
   assert.equal(guarded({ kind: "rewrite", question: "Shoplifting in Memphis in 2021" }, S, "three years earlier").kind, "propose");
+  // Codex follow-up confirmation 02: the direction and a single offset count; 2027 and 2023 are not "three years earlier".
+  for (const y of [2027, 2023]) assert.equal(guarded({ kind: "rewrite", question: `Shoplifting in Memphis in ${y}` }, S, "three years earlier").kind, "ask", String(y));
+  assert.equal(guarded({ kind: "rewrite", question: "Shoplifting in Memphis in 2027" }, S, "three years later").kind, "propose");
   assert.equal(guarded({ kind: "rewrite", question: "Shoplifting in Memphis in 2040" }, S, "same as last time").kind, "ask");
   assert.equal(guarded({ kind: "rewrite", question: "Shoplifting offenders in Memphis in 2040" }, S, "the past offenders").kind, "ask");
 }

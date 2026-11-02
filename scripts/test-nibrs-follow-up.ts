@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { deterministicRewriter as R, PLACE_ASK, standsAlone, type FollowUpRewriter, type Rewrite } from "../lib/nibrs-shadow/follow-up";
 import { shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
+import { readQuestion } from "../lib/nibrs-shadow/reading";
 
 const P = "Shoplifting in Memphis by year from 2021 to 2024";
 const rw = (prev: string, f: string) => R.rewrite(prev, f);
@@ -178,6 +179,11 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   // Codex follow-up review 01.2, 01.3: "three years before that" is one year; an offset from a range, or "last year"
   // after a range, is asked about.
   assert.equal(q(rw("Shoplifting in Memphis in 2024", "three years before that")), "Shoplifting in Memphis in 2021");
+  // A first question with "vs" between places is places side by side, as "and" (coordinator, 2026-11-01); "2024 vs
+  // 2023" stays a period comparison.
+  assert.equal(readQuestion("Memphis vs Nashville carjacking offenses in 2024", 2026).ledger.question, readQuestion("Memphis and Nashville carjacking offenses in 2024", 2026).ledger.question);
+  assert.equal(readQuestion("Robberies in Memphis versus Nashville in 2023", 2026).ledger.question, readQuestion("Robberies in Memphis and Nashville in 2023", 2026).ledger.question);
+  assert.ok(readQuestion("Shoplifting in Memphis in 2024 vs 2023", 2026).comparison);
   assert.deepEqual(asked(rw("Shoplifting in Memphis from 2021 to 2024", "three years before that")).options.map((o) => o.label), ["2018", "2018 to 2020"]);
   const lastAfterRange = rw("Shoplifting in Memphis from 2021 to 2024", "last year");
   if (new Date().getFullYear() - 1 !== 2020) assert.equal(asked(lastAfterRange).options.length, 2);
