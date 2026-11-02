@@ -106,26 +106,27 @@ function yearChoices(previous: string, followUp: string): Choices | null {
  * model call, with the spending caps: called with the engine's larger output cap (for answers cut off at the smaller
  * one), and once more when the answer is cut off or is not usable (the model's answers vary). Where both ask, the
  * model's own checked choices, else "same for"/"add" a single year, are offered as proposals; at the daily or the
- * session cap, the question back asks for the full question.
+ * session cap, the question back asks for the full question. The session cap counts each call sent, retries included.
+ * A fallback made when the model could not be reached (no key, a failed call) is not kept, so a later try asks again.
  */
 export async function liveModelRewrite(previous: string, followUp: string, session: string): Promise<Rewrite | Choices> {
   const k = JSON.stringify([previous.trim(), followUp.trim()]);
   const known = answered.get(k);
   if (known) return known;
-  let capped = false, choices: Choices | null = null;
+  let capped = false, failed = false, choices: Choices | null = null;
   const r = await hybridRewriteAsync(previous, followUp, async (p, f) => {
     const key = process.env.GEMINI_API_KEY;
-    if (!key) return null;
-    const used = calls.get(session) ?? 0;
-    if (used >= PER_SESSION) { capped = true; return null; }
-    calls.set(session, used + 1);
+    if (!key) { failed = true; return null; }
     const prompt = userPrompt(p, f);
     let last: ModelAnswer | null = null;
     try {
       for (let attempt = 0; attempt < 2; attempt++) {
+        const used = calls.get(session) ?? 0;
+        if (used >= PER_SESSION) { capped = true; return last; }
+        calls.set(session, used + 1);
         // The engine's larger cap from the start: at the smaller one, low thinking often uses the whole budget.
         const a = await call(key, prompt, GENERATION.retryTruncatedMaxOutputTokens);
-        if (!a) return last;
+        if (!a) { failed = true; return last; }
         if (a === "cut") continue;
         last = a;
         if (a.kind === "ask") {
@@ -137,6 +138,7 @@ export async function liveModelRewrite(previous: string, followUp: string, sessi
       }
     } catch (e) {
       if (e instanceof Error && e.message === "capped") capped = true;
+      else failed = true;
       return null;
     }
     return last;
@@ -144,6 +146,6 @@ export async function liveModelRewrite(previous: string, followUp: string, sessi
   if (r.kind !== "ask") { answered.set(k, r); return r; }
   if (capped) return { ...r, why: "Please ask the full question, with the crime, the place and the years." };
   const out = choices ?? yearChoices(previous, followUp) ?? r;
-  if (out !== r) answered.set(k, out);
+  if (out !== r && !failed) answered.set(k, out);
   return out;
 }
