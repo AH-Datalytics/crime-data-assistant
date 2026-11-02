@@ -1,5 +1,5 @@
 {
- "_note": "Fixed example answers for the tour (captured from the local engine, 2026-11-02); the tour never asks the engine or the model.",
+ "_note": "Fixed example answers for the tour (captured from the local engine; the decline 2026-11-02, a permanent one: causes); the tour never asks the engine or the model.",
  "answer": {
   "typed": "same for 2024",
   "reply": {
@@ -46,23 +46,23 @@
   }
  },
  "decline": {
-  "typed": "Robbery in Memphis in 2023",
+  "typed": "Why are carjackings increasing in Memphis?",
   "reply": {
    "kind": "decline",
-   "reason": "unsupported_capability",
-   "text": "The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it.",
+   "reason": "explanation_requested",
+   "text": "The data shows how many crimes were reported; it can't say why they rose or fell.",
    "buttons": [
     {
-     "label": "Ask instead: \"Robbery in Memphis in 2023 according to NIBRS\"",
+     "label": "Ask instead: \"carjackings in Memphis in 2025\"",
      "path": [
-      "Ask instead: \"Robbery in Memphis in 2023 according to NIBRS\""
+      "Ask instead: \"carjackings in Memphis in 2025\""
      ],
      "kind": "question",
-     "question": "Robbery in Memphis in 2023 according to NIBRS"
+     "question": "carjackings in Memphis in 2025"
     }
    ],
    "notBuilt": false,
-   "asked": "Robbery in Memphis in 2023",
+   "asked": "Why are carjackings increasing in Memphis?",
    "rewrite": null
   }
  }
