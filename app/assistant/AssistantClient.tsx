@@ -483,7 +483,13 @@ function AnswerView({ r, chartKind: typedKind, title: asked, onButton, scoped, s
     ro.observe(el);
     return () => ro.disconnect();
   });
-  const { columns, text } = r;
+  const { text } = r;
+  // The engine's coverage columns on a state or national sum (agencies counted, population covered) show only when the
+  // question asks about them (Jeff, 2026-11-02: "why does it give agencies reported and population covered when not
+  // asked?"); the table, the chart and the CSV leave them out otherwise.
+  const coverageAsked = /\b(?:agenc(?:y|ies)|coverage|covered|population|how many (?:\w+ )?report)/i.test(asked);
+  const columns = coverageAsked ? r.columns
+    : r.columns.filter((c) => !/^(?:Agencies reporting(?: every month)?|Consistent Reporting Agencies|Population covered)$/i.test(c));
   // A series that begins with periods no agency reported starts at the first reported one (owner, 2026-10-31): the
   // leading blank rows are left out of the chart, the table and the export, and a note says where it starts.
   const isSeries = !!r.chart?.xAxis;
@@ -754,7 +760,7 @@ function composeLead(text: string[], scoped: boolean, single: boolean, source: "
   const ri = text.findIndex((l, i) => i > 0 && /^Reported by .+\.$/.test(l));
   const reporter = ri > 0 ? text[ri].slice("Reported by ".length, -1) : null;
   if (ri > 0) used.add(ri);
-  const one = /^(.+?): ([\d,.]+) (.+) in (\d{4})\.$/.exec(first);
+  const one = /^(.+?): ([\d,.]+) (.+) in (\d{4})(, summed over the agencies that reported)?\.$/.exec(first);
   const many = /^(.+?): (.+?)(?: by (.+?))?, (\d{4})(?: (?:to|through) (\d{4}))?(, .+)?\.$/.exec(first);
   const agencies = (place: string) => (place === "United States" ? "law enforcement agencies across the United States" : `${place} law enforcement agencies`);
   if (source === "historical") {
@@ -766,7 +772,7 @@ function composeLead(text: string[], scoped: boolean, single: boolean, source: "
       lines.push(`These are ${what} in ${place === "United States" ? "the United States" : place}, as published in Crime Index's historical data, ${each}${y1 ? `from ${y0} to ${y1}` : `in ${y0}`}.`);
     }
   } else if (single) {
-    lines.push(one ? `${cap(reporter ?? agencies(one[1]))} reported ${one[2]} ${one[3]} ${VIA} in ${one[4]}.` : first);
+    lines.push(one ? `${cap(reporter ?? agencies(one[1]))} reported ${one[2]} ${one[3]} ${VIA} in ${one[4]}${one[5] ? ", added up across the agencies that reported" : ""}.` : first);
   } else if (many) {
     const [, place, what, by, y0, y1, rest] = many;
     // A period breakdown is part of when ("each year from 2021 to 2025"); a category is part of how it's counted.
