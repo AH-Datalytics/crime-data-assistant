@@ -128,7 +128,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
     return {
       kind: "srs", period,
       meaning: { ...meaningBase, period, groupings: ["year"], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
-      delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year" }, { binding: { kind: "statistic", as: "x" }, header }], rows: rows.map((r) => [String(r.y), value(r.row)]) }, text },
+      delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true }, { binding: { kind: "statistic", as: "x" }, header }], rows: rows.map((r) => [String(r.y), value(r.row)]) }, text },
       read,
     };
   }

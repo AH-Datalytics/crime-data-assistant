@@ -39,9 +39,10 @@ export type PreviewResponse =
    * Jeff 2026-11-01: stacked and 100% charts only when honest. Present when the table has a category grouping:
    * `exclusive`, true when the categories sum to the primary count's total (the charted measure); `exclusiveByColumn`,
    * the same for each number column by header (the incidents beside a count, P66, can overlap when the primary count
-   * does not). A column is stacked only when its own entry is true.
+   * does not). A column is stacked only when its own entry is true. `ordered` (P86): the headers of grouping columns
+   * whose rows are in natural order (time; age groups with Unknown last), which a chart keeps and never sorts by value.
    */
-  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[]; exclusive?: boolean; exclusiveByColumn?: Record<string, boolean> }
+  | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[]; exclusive?: boolean; exclusiveByColumn?: Record<string, boolean>; ordered?: string[] }
   | { kind: "clarify"; about: string; buttons: PreviewButton[] }
   | { kind: "decline"; reason: string; text: string; buttons: PreviewButton[]; notBuilt: boolean };
 
@@ -78,10 +79,12 @@ export function toPreview(o: ShadowOutcome, path: string[] = []): PreviewRespons
   const rows = table.rows.map((r) => Object.fromEntries(columns.map((c, i) => [c, r[i] ?? null])));
   const flags = table.columns.flatMap((c) => (c.binding.kind === "grouping" && c.exclusive !== undefined ? [c.exclusive] : []));
   const exclusive = flags.length ? flags.every(Boolean) : undefined;
+  const ordered = table.columns.flatMap((c) => (c.binding.kind === "grouping" && "ordered" in c && c.ordered ? [c.header] : []));
   const byColumn = exclusive === undefined ? undefined
     : Object.fromEntries(table.columns.filter((c) => c.binding.kind === "statistic").map((c) => [c.header, exclusive && (c.exclusive ?? true)]));
   return {
     kind: "answer", columns, rows, text, period: o.period, ...(exclusive === undefined ? {} : { exclusive, exclusiveByColumn: byColumn }),
+    ...(ordered.length ? { ordered } : {}),
     chart: chart ? { type: chart.kind, xAxis: chart.x, yAxis: chart.y, title: text[0] ?? "" } : null,
     buttons: o.kind === "answer" ? (o.buttons ?? []).map((x) => button(x, path)) : [],
   };

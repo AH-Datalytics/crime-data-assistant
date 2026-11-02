@@ -36,6 +36,7 @@ const monthly = toPreview(shadowAnswer("Shoplifting in Memphis by month in 2024"
 assert.equal(monthly.kind, "answer");
 if (monthly.kind === "answer") {
   assert.deepEqual(monthly.columns, ["Month", "Shoplifting offenses"]);
+  assert.deepEqual(monthly.ordered, ["Month"], "P86: a time grouping keeps its order");
   assert.deepEqual(monthly.rows[0], { Month: "2024-01", "Shoplifting offenses": 7 });
   assert.deepEqual([monthly.chart?.type, monthly.chart?.xAxis, monthly.chart?.yAxis], ["line", "Month", ["Shoplifting offenses"]]);
   assert.match(monthly.text[monthly.text.length - 1], /^Source: /);

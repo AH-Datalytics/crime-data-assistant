@@ -10,7 +10,7 @@ import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
 import type { Comparison } from "../nibrs-plan/transforms";
-import { ANSWER_STATEMENTS, checkEnvelope, finalStatistics, peopleFacts, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
+import { ANSWER_STATEMENTS, checkEnvelope, shownStatements, finalStatistics, peopleFacts, type AnswerStatement, type CellEvidence, type CellStatus, type ResultColumn, type ResultTable } from "../nibrs-plan/result";
 import { MEASURE_CODES, MEASURE_LABEL } from "../nibrs-question-types";
 import { ETHNICITY_CODES, LOCATION_TYPES, RACE_CODES, WEAPON_TYPES } from "../nibrs-codes";
 import { RELATIONSHIP_LABEL } from "../nibrs-question-compiler";
@@ -144,10 +144,14 @@ export function runs(periods: string[]): string {
   return out.join(", ");
 }
 export const fmt = (n: number) => n.toLocaleString("en-US");
-/** A grouping's column; a category grouping says whether its categories are exclusive for the primary count. */
+/**
+ * A grouping's column; a category grouping says whether its categories are exclusive for the primary count; a time
+ * grouping or age groups (bins) say their rows are in natural order (P86).
+ */
 const groupingColumn = (g: NibrsPlan["groupings"][number], header: string): ResultColumn =>
-  g.dimension.startsWith("time.") || g.dimension.startsWith("geo.") ? { binding: { kind: "grouping", dimension: g.dimension }, header }
-    : { binding: { kind: "grouping", dimension: g.dimension }, header, exclusive: !g.multiValue };
+  g.dimension.startsWith("time.") ? { binding: { kind: "grouping", dimension: g.dimension }, header, ordered: true }
+    : g.dimension.startsWith("geo.") ? { binding: { kind: "grouping", dimension: g.dimension }, header }
+    : { binding: { kind: "grouping", dimension: g.dimension }, header, exclusive: !g.multiValue, ...(g.bins ? { ordered: true as const } : {}) };
 /**
  * The incidents beside a count (P66) by category: they sum to their total only when every category grouping is
  * exclusive and of the incident itself (clearance); below the incident, one incident can have victims in several
@@ -214,12 +218,6 @@ export function categoryName(dimension: string, code: unknown): string {
   const names = CATEGORY[dimension]?.names;
   return names === null ? c : names?.[c] ?? `Code ${c}`;
 }
-/** The age groups in words (P30): what each holds, unknown and not-recorded ages named. */
-function ageSentence(bins: { label: string; from: number; to: number }[]): string {
-  const one = (b: { label: string; from: number; to: number }) =>
-    b.from <= 1 && 1 <= b.to ? `${b.label} (ages ${b.from}-${b.to} and infants under one year)` : b.to === 99 ? `${b.label} (${b.from} and over)` : b.label;
-  return `Age groups: ${bins.map(one).join(", ")}; Unknown is an age recorded as unknown, and Not recorded is no age recorded.`;
-}
 
 /**
  * rows: the compiled query's rows, in `columns` order: the period key when grouped by time, each category grouping, then
@@ -260,8 +258,44 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   if (share) tableCols.push({ binding: { kind: "statistic", as: share }, header: labels[`statistic:${share}`] });
   const ip = columns.indexOf("period");
   const at = (name: string) => columns.indexOf(name);
-  // Within each period, categories by count, largest first; blanks last; then by name.
-  if (cats.length) {
+  // Age groups (binned) are shown in age order, with "Not recorded" (no age) merged into "Unknown" and last (Jeff
+  // 2026-11-01: ordered by age range, not by count; one Unknown row). Their counts and shares add; a blank in either
+  // leaves the merged cell blank; the incidents beside them could overlap, so a merged row has none.
+  const binned = plan.groupings.find((g) => g.bins && cats.includes(g.dimension));
+  if (binned && cats.length === 1) {
+    const ic = at(cats[0]);
+    const known = (st: unknown) => st === "VALUE" || st === "REPORTED_ZERO";
+    const merged = new Map<string, unknown[]>();
+    const out: unknown[][] = [];
+    const both = new Set<unknown[]>();   // the Unknown rows that took in a second row
+    for (const r of rows) {
+      const isUnknown = r[ic] === null || r[ic] === undefined || String(r[ic]).trim() === "" || categoryName(cats[0], r[ic]) === "Unknown";
+      if (!isUnknown) { out.push(r); continue; }
+      const key = ip >= 0 ? String(r[ip]) : "";
+      const m = merged.get(key);
+      if (!m) { const c = [...r]; c[ic] = "Unknown"; merged.set(key, c); out.push(c); continue; }
+      for (const stat of [count, share].filter(Boolean) as string[]) {
+        const sv = at(stat), ss = at(`${stat}_status`);
+        const both = known(m[ss]) && known(r[ss]);
+        m[sv] = both ? Number(m[sv] ?? 0) + Number(r[sv] ?? 0) : null;
+        m[ss] = both ? (m[ss] === "REPORTED_ZERO" && r[ss] === "REPORTED_ZERO" ? "REPORTED_ZERO" : "VALUE") : (known(m[ss]) ? r[ss] : m[ss]);
+      }
+      if (beside) { m[at(beside)] = null; m[at(`${beside}_status`)] = "UNAVAILABLE"; }
+      both.add(m);
+    }
+    // A merged row's share is recomputed from its count over its period's total (age groups partition the people),
+    // so it equals one computed from the merged count; when a count in its period is blank, the shares stay added.
+    if (share) for (const m of both) {
+      const same = out.filter((r) => ip < 0 || String(r[ip]) === String(m[ip]));
+      if (!same.every((r) => known(r[at(`${count}_status`)]))) continue;
+      const total = same.reduce((a, r) => a + Number(r[at(count)] ?? 0), 0);
+      if (total > 0) m[at(share)] = Number(m[at(count)] ?? 0) / total;
+    }
+    const order = binned.bins!.map((b) => b.label);
+    const rank = (r: unknown[]) => { const name = categoryName(cats[0], r[ic]); const i = order.indexOf(name); return i >= 0 ? i : name === "Unknown" ? order.length + 1 : order.length; };
+    rows = out.sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || rank(x) - rank(y));
+  } else if (cats.length) {
+    // Within each period, categories by count, largest first; blanks last; then by name.
     const n = (r: unknown[]) => (r[at(count)] === null || r[at(count)] === undefined ? -1 : Number(r[at(count)]));
     rows = [...rows].sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || n(y) - n(x)
       || categoryName(cats[0], x[at(cats[0])]).localeCompare(categoryName(cats[0], y[at(cats[0])])));
@@ -302,13 +336,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
     const n = opts.rolling.months;
     text.push(`${agency}: ${what}, rolling ${n}-month totals by month, ${when}.`);
-    text.push(`Each month's figure is the total of that month and the ${n - 1} months before it.`);
     if (rows.some((r) => statusOf(r) !== "VALUE" && statusOf(r) !== "REPORTED_ZERO") && opts.rolling.missing.length)
       text.push(`No report is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter total.`);
   } else if (!cats.length && opts.quarters) {
     // P71: each quarter the sum of its three months; an incomplete quarter is marked, never shown as a whole quarter.
     text.push(`${agency}: ${what} by quarter, ${when}.`);
-    text.push("Each quarter's figure is the sum of its three months.");
     const q = (k: string) => `Q${k.slice(6)} ${k.slice(0, 4)}`;
     if (opts.quarters.incomplete.length) text.push(`Incomplete: ${opts.quarters.incomplete.map(q).join(", ")}. The agency did not report every month of ${opts.quarters.incomplete.length === 1 ? "that quarter" : "those quarters"}, so ${opts.quarters.incomplete.length === 1 ? "it is" : "they are"} shown blank, not as a whole quarter.`);
   } else if (!cats.length) {
@@ -319,7 +351,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (missing.length) text.push(time === "time.year" ? `Not every month of ${runs(missing)} is known: shown blank, not zero.` : `No report is known for ${runs(missing)}: shown blank, not zero.`);
   } else {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
-    if (share) text.push(`Each share is that category's part of all ${what}${time ? ` in the same ${time === "time.month" ? "month" : "year"}` : ` in ${when}`}.`);
+    // P86: the share's meaning is its column header ("Share of all ... (%)"), not a sentence.
     // A category's total is known only when every month of it is: a month without reporting evidence leaves it unknown.
     // Said once per period (coordinator, 2026-11-01): a period with every category blank is one plain sentence.
     const isBlank = (i: number) => !!evidence.find((e) => e.row === i && e.statistic === count && BLANK.includes(e.status));
@@ -333,13 +365,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
       ? `${runs(whole)} ${whole.length === 1 ? "is" : "are"} shown blank, not zero: reporting for ${whole.length === 1 ? runs(whole) : "those periods"} isn't complete.`
       : `Every category is shown blank, not zero: reporting for ${when} isn't complete.`);
     if (partial.length) text.push(`Shown blank, not zero, because reporting isn't complete: ${partial.map(([p, cs]) => (p ? `${p}: ${cs.join("; ")}` : cs.join("; "))).join(". ")}.`);
-    const binned = plan.groupings.find((g) => g.bins);
-    if (binned?.bins) text.push(ageSentence(binned.bins));
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   // How a misspelled word was read (reading.ts), then the fixed statements; the source stays last.
   text.push(...readings);
-  for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
+  text.push(...shownStatements(statements));
   text.push(SOURCE_STATEMENT(release));
   // Charts bind one series per statistic: a time series of a single count only. Category charts wait until a series
   // can bind to each category (Codex plan review).
@@ -383,7 +413,7 @@ function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, 
     : `${agency}: the available evidence does not establish the share of ${whatAll} cleared in ${when}, so no share is given.`];
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
-  for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
+  text.push(...shownStatements(statements));
   text.push(SOURCE_STATEMENT(release));
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   return { table, evidence, chart: null, text, answerStatements: statements, contractProblems };
@@ -437,7 +467,7 @@ function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   text.push(...readings);
-  for (const s of statements) text.push(ANSWER_STATEMENTS[s]);
+  text.push(...shownStatements(statements));
   text.push(SOURCE_STATEMENT(release));
   const chart = time && tableRows.length > 1 ? { kind: time === "time.month" ? "line" as const : "bar" as const, x: labels[`grouping:${time}`], y: stats.map((s) => labels[`statistic:${s.as}`]) } : null;
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
@@ -489,7 +519,7 @@ export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: s
       else if (p.missing.length) text.push(`No report is known for ${runs(p.missing)}, so the ${words} total is not established and no change is given.`);
   }
   text.push(...readings);
-  for (const st of statements) text.push(ANSWER_STATEMENTS[st]);
+  text.push(...shownStatements(statements));
   text.push(SOURCE_STATEMENT(release));
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   evidence.forEach((e, j) => { if (BLANK.includes(e.status) !== (table.rows[0][j] === null)) contractProblems.push(`${e.statistic}: value and status disagree`); });
@@ -515,14 +545,14 @@ export function deliverTable(plan: NibrsPlan, grouping: { dimension: string; hea
   const tableCols: ResultColumn[] = [];
   if (grouping) {
     labels[`grouping:${grouping.dimension}`] = grouping.header;
-    tableCols.push({ binding: { kind: "grouping", dimension: grouping.dimension }, header: grouping.header });
+    tableCols.push({ binding: { kind: "grouping", dimension: grouping.dimension }, header: grouping.header, ...(grouping.dimension.startsWith("time.") ? { ordered: true as const } : {}) });
   }
   tableCols.push({ binding: { kind: "statistic", as: stat.as }, header: stat.header });
   for (const s of sup) { labels[`statistic:${s.as}`] = s.header; tableCols.push({ binding: { kind: "statistic", as: s.as }, header: s.header }); }
   const evidence: CellEvidence[] = rows.flatMap((r, i) => [{ row: i, statistic: stat.as, status: r.status as CellStatus },
     ...sup.map((s) => ({ row: i, statistic: s.as, status: s.cells[i].status as CellStatus }))]);
   const table: ResultTable = { columns: tableCols, rows: rows.map((r, i) => [...(grouping ? [r.key ?? ""] : []), r.value, ...sup.map((s) => s.cells[i].value)]) };
-  const text = [...lines, ...readings, ...statements.map((s) => ANSWER_STATEMENTS[s]), SOURCE_STATEMENT(release)];
+  const text = [...lines, ...readings, ...shownStatements(statements), SOURCE_STATEMENT(release)];
   const contractProblems = checkEnvelope({ plan, table, evidence, answerStatements: statements }, labels);
   rows.forEach((r, i) => { if (BLANK.includes(r.status as CellStatus) !== (r.value === null)) contractProblems.push(`row ${i}: value and status disagree`); });
   for (const s of sup) s.cells.forEach((c, i) => { if (BLANK.includes(c.status as CellStatus) !== (c.value === null)) contractProblems.push(`row ${i}, ${s.as}: value and status disagree`); });

@@ -42,7 +42,7 @@ assert.deepEqual(one.delivered.table.rows, [[351]]);
 assert.equal(one.delivered.text[0], "Memphis, Tennessee: 351 murders in 2023.");
 assert.equal(one.delivered.text[one.delivered.text.length - 1], SRS_SOURCE);
 assert.equal(SRS_SOURCE, "Source: Crime Index.");
-assert.match(one.delivered.text.join(" "), /as published by Crime Index; a blank means the figure is not available in this data, not zero/);
+assert.doesNotMatch(one.delivered.text.join(" "), /as published by Crime Index; a blank means/, "P86: no generic availability note");
 assert.ok(sqls.every((s) => s.includes("/ci/agency_")), "reads the build only");
 assert.deepEqual(one.meaning.places, [{ kind: "agency", name: "Memphis", state: "TN" }]);
 assert.equal(one.meaning.source, "historical");
@@ -62,7 +62,7 @@ assert.deepEqual(historicalRate(null, null, 41843), { rate: null, computed: fals
 assert.deepEqual(historicalRate(null, 10, null), { rate: null, computed: false });
 const pageRate = ok({ agencies: [{ ori: "TX0200000", label: "Brazoria County, Texas", name: "Brazoria County", state: "TX" }], statistic: "rate", from: 1960, to: 1960 });
 assert.deepEqual(pageRate.delivered.table.rows, [[23.9]]);
-assert.ok(pageRate.delivered.text.some((t) => /as crimeindex\.org shows it/.test(t)));
+assert.ok(!pageRate.delivered.text.some((t) => /as crimeindex\.org shows it/.test(t)), "P86: the computed rate needs no note");
 
 // A blank is not available, never zero: a single year declines, a series shows it blank and names it.
 assert.match(no({ from: 2021, to: 2021 }), /not available in this data/);
