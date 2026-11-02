@@ -82,6 +82,12 @@ function nibrs(sql: string): unknown[][] {
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
   for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
+  // A breakdown by month, quarter or year (coordinator 2026-11-02): each period's categories, Unknown the largest.
+  if (/cats AS/.test(sql) && /AS period/.test(sql)) {
+    const periods = /'-Q'/.test(sql) ? [...new Set(months.map((m) => `${m.slice(0, 4)}-Q${Math.floor((Number(m.slice(5, 7)) - 1) / 3) + 1}`))]
+      : /substr\(ym, 1, 4\) AS period/.test(sql) ? [...new Set(months.map((m) => m.slice(0, 4)))] : months;
+    return periods.flatMap((p) => [[p, "U", 40, "VALUE", 0.444, "VALUE"], [p, "F", 30, "VALUE", 0.333, "VALUE"], [p, "M", 20, "VALUE", 0.222, "VALUE"]]);
+  }
   if (/substr\(ym, 1, 4\) AS period/.test(sql)) return [...new Set(months.map((m) => m.slice(0, 4)))].map((y) => [y, 7 * months.filter((m) => m.startsWith(y)).length, "VALUE"]);
   if (/AS period/.test(sql)) return months.map((m) => [m, 7, "VALUE"]);
   return [[7 * months.length, "VALUE"]];
@@ -110,6 +116,9 @@ const FIXTURES: Record<string, string[]> = {
     // from a typed consistent view stays on NIBRS.
     "Shoplifting rate in Nebraska in 2024, with the number of agencies reporting",
     "Murder in Kansas by year from 2023 to 2024, only agencies that reported every month",
+    // Jeff 2026-11-02: a breakdown by month or quarter (Unknown last within each period; the month order kept).
+    "Simple assault victims in Memphis by sex and month in 2024", "Simple assault victims in Memphis by sex by quarter in 2024",
+    "Simple assault victims in Memphis by sex and year from 2023 to 2024",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023"],
 };

@@ -334,7 +334,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (!entity) return no(`measure "${m.id}" has no executable definition in v0`);
   const timeDims = plan.groupings.filter((g) => g.dimension.startsWith("time."));
   const attrDims = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
-  if (timeDims.length > 1 || timeDims.some((g) => g.dimension !== "time.month" && g.dimension !== "time.year")) return no("v0 groups time by month or by year, once");
+  if (timeDims.length > 1 || timeDims.some((g) => !["time.month", "time.quarter", "time.year"].includes(g.dimension))) return no("v0 groups time by month, quarter or year, once");
   if (timeDims.some((g) => g.bins || g.multiValue)) return no("v0 groups time without bins");
   if (timeDims.length && plan.groupings[0] !== timeDims[0]) return no("v0 puts the time grouping first");
   const groupCols: string[] = [];
@@ -504,7 +504,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     parts.push(`cells AS (SELECT ${O}ym, den, month_cell, den AS n, deni AS ni, month_cell AS cell FROM month_cells)`);
   }
 
-  const grain = timeDims[0]?.dimension === "time.month" ? "month" : timeDims[0]?.dimension === "time.year" ? "year" : "total";
+  const grain = timeDims[0]?.dimension === "time.month" ? "month" : timeDims[0]?.dimension === "time.year" ? "year" : timeDims[0]?.dimension === "time.quarter" ? "quarter" : "total";
   const known = (c: string) => `${c} IN ('VALUE', 'REPORTED_ZERO')`;
   const countName = ident(count.as), shareName = share ? ident(share.as) : "";
   let body: string;
@@ -519,7 +519,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   } else {
     // A year or total is a sum of months: known only when every month of it is. A share of a year divides by the year's
     // own units, which (one unit, one category) is the sum of its months' totals.
-    const pk = grain === "year" ? `substr(ym, 1, 4) AS period, ` : "";
+    // A quarter (P71, coordinator 2026-11-02: by category too) is a sum of its three months, under the same rule.
+    const pk = grain === "year" ? `substr(ym, 1, 4) AS period, ` : grain === "quarter" ? `substr(ym, 1, 4) || '-Q' || CAST((CAST(substr(ym, 5, 2) AS INTEGER) + 2) // 3 AS VARCHAR) AS period, ` : "";
     const rolled = (c: string) => `CASE WHEN bool_or(${c} = 'EVIDENCE_CONFLICT') THEN 'EVIDENCE_CONFLICT' WHEN bool_and(${known(c)}) THEN CASE WHEN bool_and(${c} = 'REPORTED_ZERO') THEN 'REPORTED_ZERO' ELSE 'VALUE' END ELSE 'UNKNOWN' END`;
     const shareCols = share ? `,
       CASE WHEN bool_and(${known("cell")}) AND sum(den) > 0 THEN sum(n)::DOUBLE / sum(den) END AS ${shareName},
@@ -528,7 +529,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
     body = `SELECT ${pk}${g.join(", ")}${g.length ? ", " : ""}
       CASE WHEN bool_and(${known("cell")}) THEN sum(n) END AS ${countName}, ${rolled("cell")} AS ${ident(`${count.as}_status`)}${inc ? `,
       CASE WHEN bool_and(${known("cell")}) THEN sum(ni) END AS ${ident(inc.as)}, ${rolled("cell")} AS ${ident(`${inc.as}_status`)}` : ""}${shareCols}
-      FROM cells${grain === "year" || g.length ? ` GROUP BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" ? ["1"] : []), ...g].join(", ")}` : ""}`;
+      FROM cells${grain === "year" || grain === "quarter" || g.length ? ` GROUP BY ${[...(grain === "year" || grain === "quarter" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" || grain === "quarter" ? ["1"] : []), ...g].join(", ")}` : ""}`;
   }
   const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(inc ? [inc.as, `${inc.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
   const sql = `WITH ${parts.join(",\n")}\n${body}`;

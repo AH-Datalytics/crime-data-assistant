@@ -17,7 +17,7 @@ import { answerDimensions } from "../nibrs-shadow/answer";
 import { missingGroupings } from "../nibrs-shadow/named-groupings";
 import { ANSWER_STATEMENTS, clearanceDims, peopleFacts, SHOWN, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
-import { categoryName, periodWords } from "../nibrs-shadow/deliver";
+import { categoryName, periodWords, UNKNOWN_NAMES } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
 import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type PlanView, type Release } from "./compare";
 import { RETURN_A } from "../nibrs-shadow/places";
@@ -477,6 +477,15 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     // Department"): either is accepted for an agency the plan names.
     if (ag) ok = all.includes(ag[1]) || o.plan.geography.places.some((p) => p.kind === "agency" && (() => { const f = fbiNameFor(ag[1], p.ori); return !!f && all.includes(f); })());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
+    else if (s === "lists the unknown category after the known ones in each period") {
+      // P86 (coordinator 2026-11-02): within each period, the not-known categories after the known ones, Unknown once.
+      const cols = o.delivered.table.columns;
+      const it = cols.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
+      const ic = cols.findIndex((c) => c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") && !c.binding.dimension.startsWith("geo."));
+      const per = new Map<string, string[]>();
+      for (const r of o.delivered.table.rows) { const k = it >= 0 ? String(r[it]) : ""; per.set(k, [...(per.get(k) ?? []), String(r[ic])]); }
+      ok = ic >= 0 && [...per.values()].every((ls) => { const f = ls.findIndex((v) => UNKNOWN_NAMES.has(v)); return ls.filter((v) => v === "Unknown").length <= 1 && (f < 0 || ls.slice(f).every((v) => UNKNOWN_NAMES.has(v))); });
+    }
     else if (/^gives each quarter as the sum of its three months; a quarter in which the agency did not report/.test(s)) {
       // P71: quarters from months; exactly the blank quarters are named incomplete.
       const inc = text.find((t) => /^Incomplete: /.test(t)) ?? "";

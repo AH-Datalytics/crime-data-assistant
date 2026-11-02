@@ -65,7 +65,7 @@ function notesFrom(source: SourceId, statements: readonly AnswerStatement[], tex
 }
 
 /**
- * P88 (proposed, 2026-11-02): the inline offer of the Consistent Reporting Agencies is shown when a sum covers two or
+ * P88 (Jeff 2026-11-02: accepted): the inline offer of the Consistent Reporting Agencies is shown when a sum covers two or
  * more years and the number of agencies reporting in some year differs from the first year's by 5% or more.
  */
 export const PARTICIPATION_CHANGE = 0.05;

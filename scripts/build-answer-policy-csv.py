@@ -39,7 +39,7 @@ ROWS = [
      "The lead adds Jeff's offer (\"Not every agency reported in every year, so part of this change could come from agencies starting or stopping reporting. To compare the same agencies across years, see only the Consistent Reporting Agencies that reported every month from ... through ...\") when the sum covers two or more years and the number of agencies reporting in some year differs from the first year's by 5% or more. Otherwise only the button.",
      "Threshold: 5% change in the agencies reporting, against the first year.",
      "A small change in participation barely moves a total; a large one can make a trend that is only agencies joining. 5% is a starting point, easy to change (PARTICIPATION_CHANGE).",
-     OPEN, NEW),
+     "Decided 2026-11-02 (Jeff: \"yes\" to 5%)", NEW),
     ("P01", "\"How many robberies were there in the US in 2015?\", \"Murders in Chicago this year\", \"Robberies with a gun in Atlanta by victim race\": any question, typed into one box",
      "The user picks a source tab (or Auto mode, which guesses and asks when unsure); the chosen tab answers even when another source answers better, e.g. NIBRS summing only its reporting agencies for US robberies in 2015.",
      "The app picks the source for every question: it works out what the question needs (the crime, any detail, the period, the place) and uses the source that actually holds it most completely for that place and period. A source the user asks for in words (\"according to NIBRS\") is used and labelled, never silently replaced. Where it helps, a button offers the other source's figure.",
@@ -568,6 +568,12 @@ ROWS = [
      "Coverage columns on request.",
      "The columns crowded every state answer; the one-sentence note and the Consistent Reporting Agencies offer say what a reader needs.",
      "Decided 2026-11-01 (Jeff, through the coordinator: \"coverage columns only on request\")", NEW),
+    ("P89", "\"Aggravated assault victims in Nashville by sex and month in 2023\" (a breakdown by month or by quarter)",
+     "Declined: \"Breakdowns are available by year, not by month or as rolling totals.\" (the live tab's yearly summary tables).",
+     "The new engine answers it from the monthly build: each month's (or quarter's) categories with each category's share of that period, the months in order, Unknown last. A quarter is the sum of its three months, known only when all three are. An agency's breakdown first; a state's or the nation's next. Rolling breakdowns, and by year and by month at once, stay declined.",
+     "Breakdowns by month and by quarter for one agency.",
+     "Jeff asked for it directly; the limit was the old yearly tables, not the data.",
+     "Decided 2026-11-02 (Jeff: \"we can't breakdown by month?\"; plan approved by the coordinator)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
@@ -605,10 +611,8 @@ ROWS = [
 
 # The decision Jeff is asked to make, one plain question per open row (answer yes, no, or change it).
 DECISION = {
-    "P88": "Show the Consistent Reporting Agencies offer in the lead when the agencies reporting change by 5% or more across the years?",
 }
 TOPIC = {
-    "P88": "Answer presentation",
 }
 assert set(DECISION) == set(TOPIC) == {r[0] for r in ROWS if r[6] == OPEN}, "every open row has a decision and a topic"
 ordered = sorted([r for r in ROWS if r[6] == OPEN], key=lambda r: (TOPIC[r[0]], r[0])) + [r for r in ROWS if r[6] != OPEN]

@@ -25740,6 +25740,372 @@
     "reviewed_by": "codex:inc7b-labels-1",
     "notes": "Codex 7b-01: after a decline, a place-only follow-up keeps the unsupported request (charging records, P46): still declined, with Detroit's robbery arrests offered."
    }
+  },
+  {
+   "id": "LS-427",
+   "group": "designed:category-by-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Nashville by sex and month in 2023",
+   "policy": [
+    "P01",
+    "P16",
+    "P86",
+    "P89"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month",
+      "victim sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Names the Metropolitan Nashville Police Department as the agency counted",
+     "Lists the unknown category after the known ones in each period",
+     "Names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-month",
+    "reviewed_by": null,
+    "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-428",
+   "group": "designed:category-by-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Nashville by month and sex in 2023",
+   "policy": [
+    "P01",
+    "P16",
+    "P86",
+    "P89"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month",
+      "victim sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Names the Metropolitan Nashville Police Department as the agency counted",
+     "Lists the unknown category after the known ones in each period",
+     "Names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-month",
+    "reviewed_by": null,
+    "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-429",
+   "group": "designed:category-by-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Nashville by sex by quarter in 2023",
+   "policy": [
+    "P01",
+    "P16",
+    "P86",
+    "P89"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Metropolitan Nashville Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2023-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "quarter",
+      "victim sex"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Names the Metropolitan Nashville Police Department as the agency counted",
+     "Lists the unknown category after the known ones in each period",
+     "Names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-month",
+    "reviewed_by": null,
+    "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-430",
+   "group": "designed:category-by-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robberies in Memphis by weapon by quarter in 2024",
+   "policy": [
+    "P01",
+    "P16",
+    "P86",
+    "P89"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "quarter",
+      "weapon"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Names the Memphis Police Department as the agency counted",
+     "Lists the unknown category after the known ones in each period",
+     "Names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-month",
+    "reviewed_by": null,
+    "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-431",
+   "group": "designed:category-by-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assault victims in Detroit by race and month in 2024",
+   "policy": [
+    "P01",
+    "P16",
+    "P86",
+    "P89"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Detroit Police Department",
+       "state": "MI"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month",
+      "victim race"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Names the Detroit Police Department as the agency counted",
+     "Lists the unknown category after the known ones in each period",
+     "Names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-month",
+    "reviewed_by": null,
+    "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-432",
+   "group": "designed:category-by-month",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robbery offenders in Memphis by age and month in 2024",
+   "policy": [
+    "P01",
+    "P16",
+    "P86",
+    "P89"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offender"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month",
+      "offender age"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "Names the Memphis Police Department as the agency counted",
+     "Lists the unknown category after the known ones in each period",
+     "Names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-month",
+    "reviewed_by": null,
+    "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
+   }
   }
  ]
 }

@@ -339,7 +339,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const table: ResultTable = { columns: tableCols, rows: tableRows };
   const text: string[] = [];
   const when = opts.years ? andList(opts.years.map(String)) : periodWords(effective.from, effective.to);
-  const by = [time === "time.month" ? "month" : time === "time.year" ? "year" : null, ...cats.map((d) => CATEGORY[d]?.plural ?? d)].filter(Boolean).join(" and ");
+  const by = [time === "time.month" ? "month" : time === "time.quarter" ? "quarter" : time === "time.year" ? "year" : null, ...cats.map((d) => CATEGORY[d]?.plural ?? d)].filter(Boolean).join(" and ");
   const statusOf = (r: unknown[]) => String(r[at(`${count}_status`)]);
   if (!time && !cats.length) {
     const v = tableRows[0]?.[0] as number | null | undefined;
