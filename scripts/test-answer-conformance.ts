@@ -22,6 +22,8 @@
  *  14  every offer runs: a button path the outcome follows, or a question that answers
  *  15  nothing the engine says is lost: every line of its text is the restated headline or reporter line, in the
  *      lead, or in the notes
+ *  17  zero categories (ZERO_CATEGORIES): in a breakdown by period, every period lists the same categories
+ *  16  the coverage columns never change the chart: the same answer with and without them has the same chart options
  */
 import assert from "node:assert/strict";
 import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
@@ -82,6 +84,12 @@ function nibrs(sql: string): unknown[][] {
   const [, from, to] = /range\(DATE '(\d{4}-\d{2})-01', DATE '(\d{4}-\d{2})-01'/.exec(sql)!;
   const months: string[] = [];
   for (let y = +from.slice(0, 4), m = +from.slice(5); `${y}-${String(m).padStart(2, "0")}` <= to; m === 12 ? (y++, (m = 1)) : m++) months.push(`${y}-${String(m).padStart(2, "0")}`);
+  // A breakdown by month, quarter or year (coordinator 2026-11-02): each period's categories, Unknown the largest.
+  if (/cats AS/.test(sql) && /AS period/.test(sql)) {
+    const periods = /'-Q'/.test(sql) ? [...new Set(months.map((m) => `${m.slice(0, 4)}-Q${Math.floor((Number(m.slice(5, 7)) - 1) / 3) + 1}`))]
+      : /substr\(ym, 1, 4\) AS period/.test(sql) ? [...new Set(months.map((m) => m.slice(0, 4)))] : months;
+    return periods.flatMap((p) => [[p, "U", 40, "VALUE", 0.444, "VALUE"], [p, "F", 30, "VALUE", 0.333, "VALUE"], [p, "M", 20, "VALUE", 0.222, "VALUE"]]);
+  }
   if (/substr\(ym, 1, 4\) AS period/.test(sql)) return [...new Set(months.map((m) => m.slice(0, 4)))].map((y) => [y, 7 * months.filter((m) => m.startsWith(y)).length, "VALUE"]);
   if (/AS period/.test(sql)) return months.map((m) => [m, 7, "VALUE"]);
   return [[7 * months.length, "VALUE"]];
@@ -91,7 +99,9 @@ function crimeIndex(sql: string): unknown[][] {
   if (/agency_clearances/.test(sql)) return [];
   const years = /year IN \((\d{4}), (\d{4})\)/.exec(sql);
   const rows = [[2022, 252, 40.3, 624944], [2023, 351, 57.0, 616061]];
-  return /TNMPD0000/.test(sql) ? rows.filter(([y]) => !years || y === Number(years[1]) || y === Number(years[2])).map(([y, t, c, p]) => (years ? [y, t] : ["TNMPD0000", y, t, c, p])) : [];
+  // Every agency asked gets the same figures (several places side by side).
+  const oris = [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
+  return oris.flatMap((o) => rows.filter(([y]) => !years || y === Number(years[1]) || y === Number(years[2])).map(([y, t, c, p]) => (years ? [y, t] : [o, y, t, c, p])));
 }
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
 const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
@@ -110,6 +120,9 @@ const FIXTURES: Record<string, string[]> = {
     // from a typed consistent view stays on NIBRS.
     "Shoplifting rate in Nebraska in 2024, with the number of agencies reporting",
     "Murder in Kansas by year from 2023 to 2024, only agencies that reported every month",
+    // Jeff 2026-11-02: a breakdown by month or quarter (Unknown last within each period; the month order kept).
+    "Simple assault victims in Memphis by sex and month in 2024", "Simple assault victims in Memphis by sex by quarter in 2024",
+    "Simple assault victims in Memphis by sex and year from 2023 to 2024",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023"],
 };
@@ -169,7 +182,9 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     // 4
     const notes = notesOf(p);
     check(notes[notes.length - 1] === prof.name.sourceLine && notes.filter((n) => /^Source: /.test(n)).length === 1, `4 ${tag}: source line`);
-    const words = shown(p);
+    // Every text field shown: title, lead, offers, notes, the table's headers and text cells, the legend labels, and the
+    // engine's own lines (coordinator 2026-11-02: "resident" anywhere is a failure).
+    const words = [shown(p), ...d.table.columns.map((x) => x.header), ...d.table.rows.flatMap((r) => r.filter((v) => typeof v === "string")), ...Object.values(p.series), ...d.text].join(" ");
     for (const b of BANNED) check(!b.re.test(words), `4 ${tag}: banned (${b.what})`);
     check(!/\bresidents?\b/i.test(words) && !/\b(?:sorry|apologi[sz]e|unfortunately|I'm afraid)\b/i.test(words), `4 ${tag}: banned word`);
     // 5
@@ -221,6 +236,17 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     const headline = (d as { headline?: string }).headline ?? d.text[0];
     for (const line of d.text)
       check(said.has(line) || (line === headline && t.rows.some((r) => r.some((v) => typeof v === "number"))) || /^(?:Reported by|Figures for) /.test(line), `15 ${tag}: engine line lost: "${line}"`);
+    // 17
+    {
+      const ti = t.columns.findIndex((x) => x.binding.kind === "grouping" && x.binding.dimension.startsWith("time."));
+      const ci = t.columns.findIndex((x) => x.binding.kind === "grouping" && !x.binding.dimension.startsWith("time.") && !x.binding.dimension.startsWith("geo."));
+      if (ti >= 0 && ci >= 0) {
+        const per = new Map<string, string[]>();
+        for (const r of t.rows) per.set(String(r[ti]), [...(per.get(String(r[ti])) ?? []), String(r[ci])]);
+        const sets = [...per.values()].map((xs) => [...xs].sort().join("|"));
+        check(sets.every((x) => x === sets[0]), `17 ${tag}: periods list different categories`);
+      }
+    }
     // 12
     const dims = t.columns.flatMap((c) => (c.binding.kind === "grouping" ? [c.binding.dimension] : []));
     check(!missingGroupings(q, dims).length, `12 ${tag}: breakdown dropped (${missingGroupings(q, dims).join(", ")})`);
@@ -234,7 +260,10 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     const profExclusive = catDims.length > 0 && catDims.every((dm) => prof.breakdowns.some((b) => b.dimension === dm && b.exclusive));
     check(!(c.allowed.includes("stacked_bar") || c.allowed.includes("stacked_100")) || profExclusive, `6 ${tag}: stacked though the profile doesn't mark every breakdown exclusive`);
     check(c.default === null || c.allowed.includes(c.default), `6 ${tag}: default not allowed`);
-    check(JSON.stringify(c) === JSON.stringify(chartOptionsOf(t, p.ordered)), `6 ${tag}: chart options not the shared builder's`);
+    const tableOnly = o.kind === "answer" ? o.plan.statistics.filter((x) => ["agencies", "coverage", "population", "incidents"].includes(x.kind)).map((x) => x.as) : [];
+    check(JSON.stringify(c) === JSON.stringify(chartOptionsOf(t, p.ordered, tableOnly)), `6 ${tag}: chart options not the shared builder's`);
+    // Legend labels in the title's form: no colon, no measure words after the place.
+    for (const [h, label] of Object.entries(p.series)) check(t.columns.some((x) => x.header === h) && !label.includes(":"), `6 ${tag}: series label "${label}" for "${h}"`);
     // 7
     const covCols = t.columns.some((x) => ["Agencies reporting", "Consistent Reporting Agencies", "Population covered"].includes(x.header));
     check(covCols === p.coverage.requested, `7 ${tag}: coverage columns ${covCols} but requested ${p.coverage.requested}`);
@@ -277,6 +306,33 @@ const clicked = follow(viaButton, ["Consistent Reporting Agencies"])!;
 const back = (presentationOf(clicked, places, { question: "Shoplifting in Kansas by year from 2023 to 2024", path: ["Consistent Reporting Agencies"] }) as Presentation).offers.find((x) => x.role === "all_agencies");
 check(!!back && "path" in back.run && back.run.path.length === 0 && follow(viaButton, back.run.path) === viaButton, "the way back by path");
 check(ksEvery.offers.some((o) => o.role === "all_agencies" && o.text?.before === "This counts only the 1 Consistent Reporting Agency that reported every month. " && o.text.link === "See all reporting agencies instead"), "the way back missing");
+// A series whose first months have no report starts at the first reported one, and the engine says so in the words the
+// page shows (owner 2026-10-31; engine-side 2026-11-02).
+{
+  const gap = (sql: string) => { const r = deps.execute(sql); return /AS period/.test(sql) && !/cats AS/.test(sql) ? r.map((x, i) => (i < 2 ? [x[0], null, "UNKNOWN"] : x)) : r; };
+  const o = shadowAnswer("Shoplifting in Memphis by month in 2024", { ...deps, execute: gap });
+  const rows = o.kind === "answer" ? o.delivered.table.rows : [];
+  const p = presentationOf(o, places) as Presentation;
+  check(rows[0]?.[0] === "2024-03" && rows.length === 10, `the leading gap is left out: ${JSON.stringify(rows.slice(0, 2))}`);
+  check(notesOf(p).includes("No report is known for January 2024 to February 2024, so the chart and table start at March 2024."), `the leading-gap note: ${notesOf(p).join(" / ")}`);
+}
+// 16: the coverage columns are table-only (coordinator 2026-11-02).
+for (const [plain, withCov] of [["Shoplifting in Kansas by year from 2023 to 2024", "Shoplifting in Kansas by year from 2023 to 2024, with the number of agencies reporting"],
+  ["Shoplifting in Kansas in 2024", "Shoplifting in Kansas in 2024, with the number of agencies reporting"]]) {
+  const a = presentationOf(shadowAnswer(plain, deps), places) as Presentation, b = presentationOf(shadowAnswer(withCov, deps), places) as Presentation;
+  check(JSON.stringify(a.chart) === JSON.stringify(b.chart) && b.coverage.requested && !a.coverage.requested, `16 "${withCov}": the coverage columns changed the chart`);
+}
+// Places compared by year: each column's legend label is the place in the title's form.
+{
+  const p = presentationOf(shadowAnswer("Murders in Memphis and Nashville by year from 2022 to 2023", deps), places) as Presentation;
+  check(JSON.stringify(Object.values(p.series ?? {})) === JSON.stringify(["Memphis, TN", "Nashville, TN"]), `series labels: ${JSON.stringify(p.series)}`);
+}
+// Codex month review 01.1: a quarter running past the release's last month is blank, never a sum of fewer months.
+{
+  const o = shadowAnswer("Simple assault victims in Memphis by sex by quarter in 2026", { ...deps, release: { ...deps.release, lastMonth: "2026-08" } });
+  const rows = o.kind === "answer" ? o.delivered.table.rows : [];
+  check(rows.length > 0 && rows.filter((r) => r[0] === "2026-Q3").every((r) => r[2] === null) && rows.filter((r) => r[0] === "2026-Q2").every((r) => typeof r[2] === "number"), `a quarter past the cutoff: ${JSON.stringify(rows)}`);
+}
 const ks1 = presentationOf(shadowAnswer("Shoplifting in Kansas in 2024", deps), places) as Presentation;
 check(!ks1.offers.length && ks1.lead.kind === "single", "one year: no consistent-agencies offer, and a single number");
 // A one-row answer with coverage columns beside it is still a single number (the redesign had guessed this).
@@ -296,4 +352,4 @@ check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.
   }
 }
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 15 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 17 checks`);

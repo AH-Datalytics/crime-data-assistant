@@ -87,7 +87,7 @@ export type Grain = "total" | "year" | "month" | "rolling";
 export type Statistic = "count" | "rate" | "clearance_rate" | "total_value" | "average_value";
 
 export type SeriesSpec = { type: "series"; measures: string[]; unit: Unit | null; statistic: Statistic; filters: string[]; places: NPlace[]; period: NPeriod; grain: Grain };
-export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true };
+export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true; byMonth?: true };
 export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true };
 export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
 export type ChangeSpec = { type: "change"; measure: string; unit: Unit | null; statistic: "count" | "rate"; place: NPlace; earlier: number; later: number };
@@ -149,7 +149,12 @@ const cannot = (p: Part, why: string) => `I can't apply "${p.text.trim()}": ${wh
  * Read clause 0 of the ledger into one spec. `consumed` collects every part a slot used; any meaningful part left over
  * declines the request naming it. Clause 1 holds an explanation request beside an explicit numeric ask (L7).
  */
-export function matchNibrsType(ledger: RequestLedger): NibrsTypeDecision {
+/**
+ * `monthlyBreakdowns` (the shadow engine only; coordinator 2026-11-02): a breakdown by month, or over part of a year,
+ * is answered from the monthly build instead of declined. The live route reads yearly summary tables and leaves it off.
+ */
+export type MatchOptions = { monthlyBreakdowns?: boolean };
+export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): NibrsTypeDecision {
   const parts = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
   const explain = ledger.parts.some((p) => p.clause === 1 && p.concept === "explain");
   const consumed = new Set<Part>();
@@ -322,8 +327,8 @@ export function matchNibrsType(ledger: RequestLedger): NibrsTypeDecision {
     take(breakdowns); take(clearance);
     // Named before the measure check, so a monthly or rolling breakdown is declined by name even when no offense is
     // named (gold GC-101).
-    if (grains.includes("month") || rolling) return declineParts([...of("rolling"), ...grainParts.filter((p) => p.value === "month")], (p) => cannot(p, "breakdowns come from yearly tables; monthly or rolling breakdowns aren't available."));
-    if (monthPeriodParts.length) return declineParts(monthPeriodParts, (p) => cannot(p, "breakdowns come from yearly tables; a breakdown for part of a year isn't available."));
+    if (rolling || (grains.includes("month") && !opts.monthlyBreakdowns)) return declineParts([...of("rolling"), ...grainParts.filter((p) => p.value === "month")], (p) => cannot(p, "breakdowns come from yearly tables; monthly or rolling breakdowns aren't available."));
+    if (monthPeriodParts.length && !opts.monthlyBreakdowns) return declineParts(monthPeriodParts, (p) => cannot(p, "breakdowns come from yearly tables; a breakdown for part of a year isn't available."));
     const separateYears = periodParts.filter((p) => /^years:/.test(p.value ?? ""));
     if (separateYears.length) return declineParts(separateYears, (p) => cannot(p, "a breakdown covers one year or one range of years; ask for each year on its own."));
     if (measures.length !== 1 || one("one place")) return { kind: "none" };
@@ -346,8 +351,10 @@ export function matchNibrsType(ledger: RequestLedger): NibrsTypeDecision {
         ? "clearance figures count offense records, not other units."
         : "NIBRS's clearance tables don't record it, so a clearance breakdown can't be restricted by it."));
     }
-    const byYear = grains.includes("year");
-    return finish({ type: "breakdown", measure: measures[0], unit: bUnit, filters, dim, place: places[0]!, period: periods[0] ?? { form: "none" }, ...(byYear ? { byYear: true as const } : {}) });
+    const byYear = grains.includes("year"), byMonth = grains.includes("month");
+    if (byYear && byMonth) return declineParts(grainParts, (p) => cannot(p, "a breakdown is by year or by month, not both."));
+    return finish({ type: "breakdown", measure: measures[0], unit: bUnit, filters, dim, place: places[0]!, period: periods[0] ?? { form: "none" },
+      ...(byYear ? { byYear: true as const } : {}), ...(byMonth ? { byMonth: true as const } : {}) });
   }
 
   function finish(spec: NibrsSpec): NibrsTypeDecision {

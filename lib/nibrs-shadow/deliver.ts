@@ -314,6 +314,16 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     rows = [...rows].sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || last(x) - last(y) || n(y) - n(x)
       || categoryName(cats[0], x[at(cats[0])]).localeCompare(categoryName(cats[0], y[at(cats[0])])));
   }
+  // A series that begins with periods no report is known for starts at the first reported one (owner 2026-10-31; the
+  // engine, not the page, since 2026-11-02): those leading rows are left out of the table, the chart and the export,
+  // and the note says where the series starts. Months only: a blank year may be partly reported (Codex month review
+  // 02.2), so years keep their blank rows and the "not every month is known" note. Rolling windows and quarters too.
+  let leadingGap: string[] = [];
+  if (time === "time.month" && !cats.length && !opts.rolling && !opts.quarters && ip >= 0) {
+    const noReport = (r: unknown[]) => ["UNKNOWN", "NOT_REPORTED"].includes(String(r[at(`${count}_status`)]));
+    const first = rows.findIndex((r) => !noReport(r));
+    if (first > 0) { leadingGap = rows.slice(0, first).map((r) => String(r[ip])); rows = rows.slice(first); }
+  }
   const evidence: CellEvidence[] = [];
   const tableRows = rows.map((r, i) => {
     const out: (string | number | null)[] = [];
@@ -339,7 +349,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const table: ResultTable = { columns: tableCols, rows: tableRows };
   const text: string[] = [];
   const when = opts.years ? andList(opts.years.map(String)) : periodWords(effective.from, effective.to);
-  const by = [time === "time.month" ? "month" : time === "time.year" ? "year" : null, ...cats.map((d) => CATEGORY[d]?.plural ?? d)].filter(Boolean).join(" and ");
+  const by = [time === "time.month" ? "month" : time === "time.quarter" ? "quarter" : time === "time.year" ? "year" : null, ...cats.map((d) => CATEGORY[d]?.plural ?? d)].filter(Boolean).join(" and ");
   const statusOf = (r: unknown[]) => String(r[at(`${count}_status`)]);
   if (!time && !cats.length) {
     const v = tableRows[0]?.[0] as number | null | undefined;
@@ -359,6 +369,10 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     if (opts.quarters.incomplete.length) text.push(`Incomplete: ${opts.quarters.incomplete.map(q).join(", ")}. The agency did not report every month of ${opts.quarters.incomplete.length === 1 ? "that quarter" : "those quarters"}, so ${opts.quarters.incomplete.length === 1 ? "it is" : "they are"} shown blank, not as a whole quarter.`);
   } else if (!cats.length) {
     text.push(`${agency}: ${what} by ${by}, ${when}.`);
+    if (leadingGap.length) {
+      const start = String(rows[0][ip]);
+      text.push(`No report is known for ${runs(leadingGap)}, so the chart and table start at ${start.length === 7 ? monthName(start) : start}.`);
+    }
     const missing = rows.filter((r) => statusOf(r) === "UNKNOWN" || statusOf(r) === "NOT_REPORTED").map((r) => String(r[ip]));
     // Only what the status establishes: an unknown month has no known report; a year is known only when all its months are.
     // (A month with crimes reported and none of these is a known 0, P51.)
@@ -375,8 +389,10 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     const whole = periods.filter((p) => tableRows.every((r, i) => periodOf(r) !== p || isBlank(i)));
     const partial = periods.filter((p) => !whole.includes(p)).map((p) => [p, tableRows.filter((r, i) => periodOf(r) === p && isBlank(i)).map(catsOf)] as const)
       .filter(([, cs]) => cs.length);
+    // Quarters are named as quarters ("Q3 2026"); months and years by runs.
+    const named = (ps: string[]) => (ps.every((p) => /^\d{4}-Q\d$/.test(p)) ? andList(ps.map((p) => `Q${p.slice(6)} ${p.slice(0, 4)}`)) : runs(ps));
     if (whole.length) text.push(ip >= 0
-      ? `${runs(whole)} ${whole.length === 1 ? "is" : "are"} shown blank, not zero: reporting for ${whole.length === 1 ? runs(whole) : "those periods"} isn't complete.`
+      ? `${named(whole)} ${whole.length === 1 ? "is" : "are"} shown blank, not zero: reporting for ${whole.length === 1 ? named(whole) : "those periods"} isn't complete.`
       : `Every category is shown blank, not zero: reporting for ${when} isn't complete.`);
     if (partial.length) text.push(`Shown blank, not zero, because reporting isn't complete: ${partial.map(([p, cs]) => (p ? `${p}: ${cs.join("; ")}` : cs.join("; "))).join(". ")}.`);
   }

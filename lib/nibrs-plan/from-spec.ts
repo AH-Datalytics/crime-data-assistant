@@ -227,11 +227,12 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
       places = [p];
       periodValue = periodOf(spec.period, false);
       if (spec.byYear) groupings.push({ dimension: "time.year", unknown: "visible", absent: "show" });
+      if (spec.byMonth) groupings.push({ dimension: "time.month", unknown: "visible", absent: "show" });
       const g = groupingFor(spec.dim, unit);
       if (!g) return { kind: "unmapped", reason: `breakdown ${spec.dim} has no plan form` };
       groupings.push(g);
       statistics.push({ kind: "count", as: "count", measure: spec.measure });
-      statistics.push({ kind: "share", as: "share", measure: spec.measure, within: spec.byYear ? ["time.year"] : [] });
+      statistics.push({ kind: "share", as: "share", measure: spec.measure, within: spec.byYear ? ["time.year"] : spec.byMonth ? ["time.month"] : [] });
       break;
     }
     case "share": {

@@ -104,6 +104,15 @@ export type OfferRole = "consistent_agencies" | "all_agencies" | "other_source" 
 export type Offer = { role: OfferRole; targetSource: SourceId; label: string; text: { before: string; link: string; after: string } | null;
   run: { path: string[] } | { question: string } | { input: string } };
 // `input`: the button asks the person for something first ("Another year" asks which year), then the whole question.
+/**
+ * The shared rule for zero categories (coordinator 2026-11-02), for every grouping and source: in a breakdown by period,
+ * every category that occurs in any period of the answer is listed in every period, with 0 where that period's
+ * reporting establishes none and blank where the period is unknown, so the periods line up row for row and line for
+ * line. A category that occurs in no period is not listed. One period's breakdown lists the categories that occur.
+ * (The engine's compiler does it: every category of the place and period in every month, compile.ts `cats`.)
+ */
+export const ZERO_CATEGORIES = "listed in every period once they occur in any" as const;
+
 export type ChartKind = "line" | "bar" | "horizontal_bar" | "grouped_bar" | "stacked_bar" | "stacked_100";
 export type ChartOptions = { allowed: ChartKind[]; default: ChartKind | null; exclusive: boolean | undefined; exclusiveByColumn: Record<string, boolean> | undefined };
 
@@ -118,6 +127,11 @@ export type Presentation = {
   coverage: { requested: boolean };
   chart: ChartOptions;
   ordered: string[];
+  /**
+   * Each charted column's legend label, by header (coordinator 2026-11-02): places compared are named in the title's form
+   * ("Memphis, TN"); a column not listed is labeled by its header.
+   */
+  series: Record<string, string>;
 };
 /** A clarify or decline: its source and its buttons. */
 export type ChoicePresentation = { source: SourceId; buttons: Offer[] };
@@ -171,9 +185,11 @@ export function notesOf(p: Presentation): string[] {
  * The chart types a table allows (Jeff 2026-11-01: stacked and 100% only when honest), from its shape: a single number
  * has none; a line needs a time grouping; stacked needs every category column exclusive.
  */
-export function chartOptionsOf(table: ResultTable, ordered: readonly string[] = []): ChartOptions {
+export function chartOptionsOf(table: ResultTable, ordered: readonly string[] = [], tableOnly: readonly string[] = []): ChartOptions {
+  // `tableOnly`: statistics shown in the table but never charted (the agencies reporting, the population covered or
+  // divided by, the incidents beside a count): asking for them never changes the chart (coordinator 2026-11-02).
   const groups = table.columns.filter((c) => c.binding.kind === "grouping");
-  const stats = table.columns.filter((c) => c.binding.kind === "statistic");
+  const stats = table.columns.filter((c) => c.binding.kind === "statistic" && !tableOnly.includes(c.binding.as));
   const time = groups.some((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
   const cats = groups.filter((c) => c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") && !c.binding.dimension.startsWith("geo."));
   const geo = groups.some((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("geo."));
@@ -193,6 +209,9 @@ export function chartOptionsOf(table: ResultTable, ordered: readonly string[] = 
   const def: ChartKind | null = !allowed.length ? null : time ? (monthly || stats.length > 1 || cats.length ? "line" : "bar") : ordinal && allowed.includes("bar") ? "bar" : allowed[0];
   return { allowed, default: def, exclusive, exclusiveByColumn };
 }
+
+/** A charted column's legend label. */
+export const seriesLabel = (p: Presentation, header: string) => p.series[header] ?? header;
 
 /** The table alone as CSV: its columns and rows exactly as shown; a blank for an unknown number. */
 export function csvOf(table: ResultTable): string {

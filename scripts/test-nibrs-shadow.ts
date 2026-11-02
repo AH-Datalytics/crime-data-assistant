@@ -12,8 +12,9 @@ import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } 
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
+import { matchNibrsType } from "../lib/nibrs-question-types";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
-import { scoreShadow, sliceValues } from "../lib/answer-eval/shadow";
+import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow";
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
 import { gates } from "../lib/answer-eval/gates";
 import type { Case } from "../lib/answer-eval/case";
@@ -1057,4 +1058,36 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   for (const q of ["how many agencies reported shoplifting in Kansas in 2024", "agencies reporting shoplifting in Kansas in 2024", "shoplifting in Kansas in 2024 with coverage"])
     assert.deepEqual(as(ask(q), "answer").delivered.table.columns.map((c) => c.header), ["Shoplifting offenses", "Agencies reporting", "Population covered"], q);
 }
+// Codex month review 02.1: the leading-gap exemption applies only where delivery trims (its first row reported); an
+// answer of unknown months that leaves rows out is still a mismatch.
+{
+  const base = as(ask("Shoplifting in Detroit by month in 2024"), "answer");
+  const st = base.plan.statistics[0].as;
+  const allBlank = { ...base, delivered: { ...base.delivered, table: { ...base.delivered.table, rows: [["2024-12", null]] }, evidence: [{ row: 0, statistic: st, status: "UNKNOWN" as const }] } };
+  const want = Array.from({ length: 12 }, (_, i) => ({ key: `2024-${String(i + 1).padStart(2, "0")}`, value: null, status: "UNKNOWN" }));
+  assert.equal(valueDiffs("", allBlank, want).values, "mismatch");
+  const trimmed = { ...base, delivered: { ...base.delivered, table: { ...base.delivered.table, rows: [["2024-03", 7]] }, evidence: [{ row: 0, statistic: st, status: "VALUE" as const }] } };
+  const wantTrim = [{ key: "2024-01", value: null, status: "UNKNOWN" }, { key: "2024-02", value: null, status: "UNKNOWN" }, { key: "2024-03", value: 7, status: "VALUE" }];
+  assert.equal(valueDiffs("", trimmed, wantTrim).values, "match", "a real leading gap, trimmed");
+  // Zero categories (ZERO_CATEGORIES): a known 0 listed on one side only is no difference, but never with a share that
+  // is not 0 (Codex scorer check 01).
+  const sexes = as(ask("Simple assault victims in Detroit by sex in 2023"), "answer");
+  const cs = sexes.plan.statistics.map((s) => s.as);
+  const withZero = (share: number) => ({ ...sexes, delivered: { ...sexes.delivered,
+    table: { ...sexes.delivered.table, rows: [["Female", 30, 60], ["Male", 20, 40], ["Non-binary", 0, share]] },
+    evidence: [0, 1, 2].flatMap((row) => cs.map((statistic) => ({ row, statistic, status: "VALUE" as const }))) } });
+  const wantSexes = [{ key: "Female", value: 30, status: "VALUE", share: 60 }, { key: "Male", value: 20, status: "VALUE", share: 40 }];
+  assert.equal(valueDiffs("", withZero(0), wantSexes).values, "match", "a 0 category listed: the same as left out");
+  assert.equal(valueDiffs("", withZero(99), wantSexes).values, "mismatch", "a 0 count with a 99% share is wrong");
+}
+// Jeff 2026-11-02 ("we can't breakdown by month?"): the shadow answers a breakdown by month or quarter from the monthly
+// build; the live route's reader (yearly summary tables) still declines it.
+{
+  const led = readQuestion("Aggravated assault victims in Nashville by sex and month in 2023", 2026, "2026-09").ledger;
+  assert.equal(matchNibrsType(led).kind, "decline", "live: unchanged");
+  const d = matchNibrsType(led, { monthlyBreakdowns: true });
+  assert.ok(d.kind === "spec" && d.spec.type === "breakdown" && d.spec.byMonth === true, JSON.stringify(d));
+  assert.equal(matchNibrsType(readQuestion("Aggravated assault victims in Nashville by sex by year by month in 2023", 2026, "2026-09").ledger, { monthlyBreakdowns: true }).kind, "decline", "by year and by month at once");
+}
+
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");

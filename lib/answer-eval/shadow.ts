@@ -17,7 +17,7 @@ import { answerDimensions } from "../nibrs-shadow/answer";
 import { missingGroupings } from "../nibrs-shadow/named-groupings";
 import { ANSWER_STATEMENTS, clearanceDims, peopleFacts, SHOWN, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
-import { categoryName, periodWords } from "../nibrs-shadow/deliver";
+import { categoryName, periodWords, UNKNOWN_NAMES } from "../nibrs-shadow/deliver";
 import type { Case, Meaning } from "./case";
 import { compareMeaning, fbiNameFor, planToMeaning, type Diff, type PlanView, type Release } from "./compare";
 import { RETURN_A } from "../nibrs-shadow/places";
@@ -29,7 +29,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7|inc7b)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7|inc7b|category)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -70,9 +70,35 @@ export type ExpectedValues = Map<string, ExpectedCell[]>;
  * far", LS-236 alternative`. A file with more than one measure gives a cell per measure for each period (or the total),
  * each carrying its measure.
  */
+/**
+ * nibrs-model's merged-Unknown files (V156-V166, 2026-11-02: "one Unknown per period, last", each unit once): a
+ * breakdown's categories with one Unknown, for one period or by month or quarter, each with its count and the share of
+ * its period's units. They restate earlier files with the Unknown merged, so they are read last and win.
+ */
+type MergedFile = { nibrsai_cases: string[]; question: string; unknown_rule: string;
+  values: { categories?: Record<string, number>; total?: number;
+    by_period?: Record<string, { status: string; units: number | null; categories: Record<string, { count: number | null; share_pct: number | null }> }> } };
+const MERGED_DIMS: [RegExp, string][] = [[/offender race/, "offender.race"], [/offender sex/, "offender.sex"], [/offender ethnicity/, "offender.ethnicity"],
+  [/offender age|offenders .* by age/, "offender.age"], [/victim sex|by sex/, "victim.sex"], [/victim race|by race/, "victim.race"], [/weapon/, "offense_weapon.weapon"], [/by age/, "victim.age"]];
+function mergedCells(v: MergedFile): ExpectedCell[] | null {
+  if (!v.unknown_rule || !v.values || !Array.isArray(v.nibrsai_cases)) return null;
+  const dim = MERGED_DIMS.find(([re]) => re.test(v.question.toLowerCase()))?.[1];
+  if (!dim) return null;
+  const age = dim.endsWith(".age");
+  const name = (k: string) => (k === "Unknown" ? "Unknown" : age ? (k === "under_18" ? "Under 18" : k) : categoryName(dim, k));
+  if (v.values.by_period) return Object.entries(v.values.by_period).flatMap(([p, c]) => Object.entries(c.categories).map(([k, x]) => ({
+    key: `${p}|${name(k)}`, value: c.status === "VALUE" || c.status === "REPORTED_ZERO" ? x.count : null, status: c.status, share: x.share_pct })));
+  const cats = v.values.categories ?? {}, total = v.values.total ?? 0;
+  return Object.entries(cats).map(([k, n]) => ({ key: name(k), value: n, status: "VALUE", share: total > 0 ? Math.round((1000 * n) / total) / 10 : null }));
+}
+
 export function sliceValues(files: { name: string; json: string }[]): ExpectedValues {
   const out: ExpectedValues = new Map();
-  for (const f of files) {
+  // The merged-Unknown files last, so they win over the earlier files they restate.
+  const merged = (f: { json: string }) => /"unknown_rule"/.test(f.json);
+  for (const f of [...files.filter((x) => !merged(x)), ...files.filter(merged)]) {
+    const mv = merged(f) ? mergedCells(JSON.parse(f.json) as MergedFile) : null;
+    if (mv) { for (const c of (JSON.parse(f.json) as MergedFile).nibrsai_cases) out.set(c, mv); continue; }
     const v = JSON.parse(f.json) as { nibrsai_cases: string; grouping: string; measures: Record<string, string>; totals: Record<string, { status: string; value: number | null }>;
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
     // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
@@ -477,6 +503,15 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     // Department"): either is accepted for an agency the plan names.
     if (ag) ok = all.includes(ag[1]) || o.plan.geography.places.some((p) => p.kind === "agency" && (() => { const f = fbiNameFor(ag[1], p.ori); return !!f && all.includes(f); })());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
+    else if (s === "lists the unknown category after the known ones in each period") {
+      // P86 (coordinator 2026-11-02): within each period, the not-known categories after the known ones, Unknown once.
+      const cols = o.delivered.table.columns;
+      const it = cols.findIndex((c) => c.binding.kind === "grouping" && c.binding.dimension.startsWith("time."));
+      const ic = cols.findIndex((c) => c.binding.kind === "grouping" && !c.binding.dimension.startsWith("time.") && !c.binding.dimension.startsWith("geo."));
+      const per = new Map<string, string[]>();
+      for (const r of o.delivered.table.rows) { const k = it >= 0 ? String(r[it]) : ""; per.set(k, [...(per.get(k) ?? []), String(r[ic])]); }
+      ok = ic >= 0 && [...per.values()].every((ls) => { const f = ls.findIndex((v) => UNKNOWN_NAMES.has(v)); return ls.filter((v) => v === "Unknown").length <= 1 && (f < 0 || ls.slice(f).every((v) => UNKNOWN_NAMES.has(v))); });
+    }
     else if (/^gives each quarter as the sum of its three months; a quarter in which the agency did not report/.test(s)) {
       // P71: quarters from months; exactly the blank quarters are named incomplete.
       const inc = text.find((t) => /^Incomplete: /.test(t)) ?? "";
@@ -718,10 +753,10 @@ function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer"
   return { diffs, values: diffs.some((d) => d.kind === "material") ? "mismatch" : diffs.length ? "not measured" : "match" };
 }
 /** Delivered cells (value and status) against independent expected cells; none given is NOT MEASURED, never a match. */
-function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected0: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
+export function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected0: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
   // A ranking's left-out agencies (P60) are not rows: checked against the answer's "Not ranked" line below.
   const leftOut = (expected0 ?? []).filter((x) => x.leftOut);
-  const expected = expected0?.filter((x) => !x.leftOut);
+  let expected = expected0?.filter((x) => !x.leftOut);
   if (!expected) return { values: "not measured", diffs: [{ field: `${prefix}values`, expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
   if (expected.some((x) => x.view)) return stateSumDiffs(prefix, o, expected);
   // A change: each output cell (earlier, later, change, percent change) against its expected cell, value and status.
@@ -760,6 +795,21 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   // A key delivered twice could hide a wrong row behind a right one: never compared, always wrong.
   const twice = keys.filter((k, i) => keys.indexOf(k) !== i);
   if (twice.length) diffs.push({ field: `${prefix}rows`, expected: "each grouping once", actual: `repeated: ${[...new Set(twice)].join(", ")}`, kind: "material" });
+  // A series starts at its first reported period (owner 2026-10-31): leading expected cells with no value (no report),
+  // absent from the answer, are left out, never counted as missing rows; one with a value is still judged missing.
+  const firstGot = [...got.keys()].sort()[0];
+  const timeKeyed = columns[groupCols[0]]?.binding.kind === "grouping" && (columns[groupCols[0]].binding as { dimension: string }).dimension.startsWith("time.") && groupCols.length === 1;
+  // Only where delivery trims: the answer's first row is reported (Codex month review 02.1).
+  if (timeKeyed && firstGot !== undefined && got.get(firstGot)!.value !== null) expected = expected.filter((x) => !(x.value === null && !got.has(x.key) && x.key < firstGot));
+  // A category with a known 0 is the same listed or left out (the engine lists every category of the period's
+  // breakdown, nibrs-model's files only those that occur, and Unknown always): a 0 on one side, absent on the other, is
+  // no difference. A category breakdown only; a blank or any other number is still judged.
+  // The row's share must be 0 or absent too (Codex scorer check 01: a 0 count with a 99% share is wrong, never ignored).
+  const zero = (v: number | null, st: string, share: number | null | undefined) => v === 0 && (st === "VALUE" || st === "REPORTED_ZERO") && (share === undefined || share === null || share === 0);
+  if (groupCols.some((j) => columns[j].binding.kind === "grouping" && !(columns[j].binding as { dimension: string }).dimension.startsWith("time."))) {
+    expected = expected.filter((x) => !(zero(x.value, x.status, x.share) && !got.has(x.key)));
+    for (const [k, g] of [...got]) if (zero(g.value, g.status, g.share) && !expected.some((x) => x.key === k)) got.delete(k);
+  }
   if (got.size !== expected.length) diffs.push({ field: `${prefix}values`, expected: `${expected.length} cells`, actual: `${got.size} cells`, kind: "material" });
   // A breakdown promises each category's share (increment 1): a table without it is incomplete.
   if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });

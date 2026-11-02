@@ -1,5 +1,5 @@
-{"_comment": "City police and county agencies in canonical release 20261028-test5 with 10,000+ residents (scripts/build-nibrs-shadow-agencies.py).",
- "release": "20261028-test5",
+{"_comment": "City police and county agencies in canonical release test6-20261031-host with 10,000+ residents (scripts/build-nibrs-shadow-agencies.py).",
+ "release": "test6-20261031-host",
  "agencies": [
   {"ori": "AK0010100", "kind": "city", "name": "Anchorage", "state": "AK", "population": 287385, "year": 2026},
   {"ori": "AK0011800", "kind": "city", "name": "North Slope Borough", "state": "AK", "population": 10510, "year": 2026},

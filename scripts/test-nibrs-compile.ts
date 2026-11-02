@@ -141,6 +141,11 @@ const plan = (id: string, unit: string, groupings: G[] = [], filters: unknown[] 
 const firearm = ["11", "11A", "12", "12A", "13", "13A", "14", "14A", "15", "15A"];
 const weapon = (scope: string, values: string[]) => ({ kind: "exists", scope, entity: "offense_weapon", where: [{ kind: "attribute", dimension: "offense_weapon.weapon", op: "in", values }] });
 
+// A breakdown by quarter (coordinator 2026-11-02): each quarter the sum of its months, by category, with its share.
+const byQuarter = ok(compilePlan({ ...plan("victims.simple_assault", "victim", [by("time.quarter"), by("victim.sex")]),
+  statistics: [{ kind: "count", as: "c", measure: "x" }, { kind: "share", as: "s", measure: "x", within: ["time.quarter"] }] } as Plan, year(2024), t));
+for (const s of ["'-Q' || CAST((CAST(substr(ym, 5, 2) AS INTEGER) + 2) // 3 AS VARCHAR) AS period", "GROUP BY 1, g0", "sum(n)::DOUBLE / sum(den)"]) assert.ok(byQuarter.sql.includes(s), s);
+assert.deepEqual(byQuarter.columns.slice(0, 2), ["period", "victim.sex"]);
 // Weapons of an offense: multi-valued, by LEFT JOIN on the offense's own keys, and the overlap statement.
 const byWeapon = ok(compilePlan(plan("offenses.robbery", "offense", [by("offense_weapon.weapon", { multiValue: "each_value" })]), year(2023), t));
 for (const s of ["LEFT JOIN read_parquet", "w.offense_code = o.offense_code", "w.key_occurrence = o.key_occurrence", "w.weapon AS g0", "COUNT(DISTINCT (u.data_year, u.ori, u.incident_num, u.sub))"]) assert.ok(byWeapon.sql.includes(s), s);
