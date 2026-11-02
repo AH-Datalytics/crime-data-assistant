@@ -346,7 +346,22 @@ export const deterministicRewriter: FollowUpRewriter = {
     // A bare year after a lead-in ("show me 2023", "give me 2023") is the year alone, replaced or added below; the
     // lead-ins "show me", "give me" and "in" never route other words to the place and period forms.
     if (asPeriod !== f && /^(?:19|20)\d{2}$/.test(asPeriod)) f = asPeriod;
-    const pp = /^(?:(?:what|how) about|(?:the )?same (?:thing )?for|do|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
+    // Two places side by side ("Chicago vs Memphis", "Memphis and Nashville", "compare Memphis and Nashville"): both
+    // replace the previous question's place, and nothing else changes (coordinator 2026-11-02: deterministic, no model).
+    const pair = /^(?:compare\s+)?(.+?)\s+(?:vs\.?|versus|and|with)\s+(.+?)$/i.exec(f);
+    if (pair) {
+      const [a, b] = [pair[1], pair[2]].map((x) => x.replace(/^the\s+/i, "").trim());
+      const t = partsOf(`Shoplifting in ${a} and ${b}`);
+      const names = t.places.map((p) => p.text.replace(/^the\s+/i, "").toLowerCase());
+      if (t.places.length === 2 && names[0] === a.toLowerCase() && names[1] === b.toLowerCase()
+        && t.all.every((p) => ["measure", "place", "filler"].includes(p.concept)) && t.measures.every((m) => m.text === "Shoplifting")) {
+        const pw = placeWords(prev, prevParts.places);
+        if (!pw) return ask("Where to put the new places.");
+        if (/\bcombined\b/i.test(prev)) return ask(`Whether ${a} and ${b} are combined or shown side by side.`);
+        return ok(`${prev.slice(0, pw.at)}${a} and ${b}${prev.slice(pw.at + pw.text.length)}`, "the place replaced by two places");
+      }
+    }
+    const pp =/^(?:(?:what|how) about|(?:the )?same (?:thing )?for|do|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
     // A bare place ("washington state", "minneapolis"), or a place and year, is read as "what about ..." (P23): the
     // follow-up's words must be nothing but that place (and year).
     const bare = (() => {

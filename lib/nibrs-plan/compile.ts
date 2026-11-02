@@ -158,11 +158,14 @@ const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
   arrestee: { "arrestee.race": own("a.race"), "arrestee.sex": own("a.sex"), "arrestee.ethnicity": own("a.ethnicity"), "arrestee.age": age("a") },
 };
 
-/** Age in bins (P30): infants in the bin holding 1, "00" Unknown, blank not recorded (NULL), 01-99 as numbers. */
+/**
+ * Age in bins (P30): infants in the bin holding 1, 01-99 as numbers; "00" (an age recorded as unknown) and a blank (no
+ * age recorded) are one "Unknown" category (P86), merged here so a crime with offenders of both counts once in it.
+ */
 function ageBins(col: string, bins: { label: string; from: number; to: number }[]): string {
   const infant = bins.find((b) => b.from <= 1 && 1 <= b.to)?.label;
   const n = `TRY_CAST(${col} AS INTEGER)`;
-  return `CASE WHEN ${col} IS NULL OR trim(${col}) = '' THEN NULL WHEN ${col} = '00' THEN 'Unknown'
+  return `CASE WHEN ${col} IS NULL OR trim(${col}) = '' OR ${col} = '00' THEN 'Unknown'
       WHEN ${col} IN ('NN', 'NB', 'BB') THEN ${infant ? q(infant) : "'Outside the groups'"}
       ${bins.map((b) => `WHEN ${n} BETWEEN ${b.from} AND ${b.to} THEN ${q(b.label)}`).join(" ")} ELSE 'Outside the groups' END`;
 }

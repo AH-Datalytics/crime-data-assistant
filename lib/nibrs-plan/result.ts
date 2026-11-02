@@ -27,8 +27,10 @@ export type ResultColumn =
    * false for a multi-valued grouping (a crime with several weapons or locations, an incident's several offenders),
    * whose categories can add up to more. Taken from the layer: a one-to-many dimension must be grouped with
    * `multiValue: "each_value"` (P3). Absent for time and place groupings.
+   * `ordered` (P86): true when the rows are in the grouping's natural order (time; age groups, Unknown last), which a
+   * chart or sort must keep; absent when the order is by count.
    */
-  | { binding: { kind: "grouping"; dimension: string }; header: string; exclusive?: boolean }
+  | { binding: { kind: "grouping"; dimension: string }; header: string; exclusive?: boolean; ordered?: true }
   /**
    * `exclusive` on a supporting statistic whose categories can differ from the primary count's: the incidents beside a
    * count (P66). False when one incident can fall in several categories (a grouping below the incident: one incident
@@ -101,6 +103,15 @@ export const ANSWER_STATEMENTS = {
   unknown_not_counted: "A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
+/**
+ * The statements an answer's TEXT shows (Jeff 2026-11-01, P86: "like this entire disclaimer is unneeded"): a note stays
+ * only where a reader would be misled without it and the title, headers and rows don't already say it. Every statement
+ * the plan calls for is still carried in the answer's `answerStatements` (the contract and the scorer check them there,
+ * and the page can show them on request); only these are written into the text.
+ */
+export const SHOWN: ReadonlySet<AnswerStatement> = new Set<AnswerStatement>(["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file"]);
+/** The text lines of the statements shown (SHOWN), in order. */
+export const shownStatements = (statements: readonly AnswerStatement[]) => statements.filter((s) => SHOWN.has(s)).map((s) => ANSWER_STATEMENTS[s]);
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */
 export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs", categories_overlap: "nibrs", arrests_counted_once: "nibrs", clearance_as_of_file: "nibrs", clearance_arrest_first: "nibrs", arrests_through_incident: "nibrs",
   arrests_include_group_b: "nibrs", pair_linked: "nibrs", pair_condition: "nibrs", offender_records: "nibrs", unknown_not_counted: "nibrs" };

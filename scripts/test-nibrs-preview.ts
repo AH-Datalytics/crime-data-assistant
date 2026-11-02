@@ -36,6 +36,7 @@ const monthly = toPreview(shadowAnswer("Shoplifting in Memphis by month in 2024"
 assert.equal(monthly.kind, "answer");
 if (monthly.kind === "answer") {
   assert.deepEqual(monthly.columns, ["Month", "Shoplifting offenses"]);
+  assert.deepEqual(monthly.ordered, ["Month"], "P86: a time grouping keeps its order");
   assert.deepEqual(monthly.rows[0], { Month: "2024-01", "Shoplifting offenses": 7 });
   assert.deepEqual([monthly.chart?.type, monthly.chart?.xAxis, monthly.chart?.yAxis], ["line", "Month", ["Shoplifting offenses"]]);
   assert.match(monthly.text[monthly.text.length - 1], /^Source: /);
@@ -72,9 +73,9 @@ const dec = shadowAnswer("Shoplifting in Memphis in 2027", deps);
 const decP = toPreview(dec);
 assert.ok(decP.kind === "decline" && decP.buttons.length === 1 && decP.buttons[0].kind === "continuation");
 if (decP.kind === "decline") assert.equal(follow(dec, decP.buttons[0].path)?.kind, "answer");
-// A button to another source is shown but not run.
+// No button that can't run (coordinator 2026-11-02): with no Historical build, the crime-kind question is a plain decline.
 const other = toPreview(shadowAnswer("How many crimes were there in Detroit in 2024?", deps));
-assert.ok(other.kind === "clarify" && other.buttons.every((b) => b.kind === "other-source" && /isn.t available here yet/.test(b.note ?? "")));
+assert.ok(other.kind === "decline" && other.buttons.every((b) => b.kind !== "other-source"), JSON.stringify(other));
 // A button whose years this build does not hold is shown with the reason, never offered ("the last 10 complete
 // years" is 2016-2025; the build starts in 2017). An entry asks for the whole question again (no follow-up turns).
 const range = toPreview(shadowAnswer("Shoplifting in Memphis by month", deps));

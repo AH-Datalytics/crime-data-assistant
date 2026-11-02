@@ -182,18 +182,20 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       coverage: byYear.map((y) => covered(every ? y.every.share : y.share, every ? y.every.noPopulation : y.noPopulation)),
       population: byYear.map(() => ({ value: null, status: "UNAVAILABLE" })) };
   };
-  // The plan names every column it shows (the answer contract): the agencies and the population covered, always; the
-  // population a rate divides by when asked (P72).
+  // The plan names every column it shows (the answer contract): the agencies and the population covered only when the
+  // question asks for the agencies reporting (P87, Jeff 2026-11-01: coverage columns on request; the figures are still
+  // carried in stateSum); the population a rate divides by when asked (P72).
   const measureOf = "measure" in st ? st.measure : "";
+  const askedCoverage = plan.statistics.some((x) => x.kind === "agencies");
   const withColumns = (p: NibrsPlan): NibrsPlan => ({ ...p, statistics: [...p.statistics.filter((x) => x.kind !== "agencies"),
     { kind: "agencies", as: "agencies", measure: measureOf }, { kind: "coverage", as: "coverage", measure: measureOf }] });
   const deliver = (p: NibrsPlan, every: boolean) => {
     const v = view(every);
     return deliverTable(p, yearG ? { dimension: "time.year", header: "Year" } : null, { as: st.as, header: Header }, v.rows, v.lines, statements, deps.release.id, readings,
-      [{ as: "agencies", header: every ? CRA : "Agencies reporting", cells: v.agencies }, { as: "coverage", header: "Population covered", cells: v.coverage },
+      [...(askedCoverage ? [{ as: "agencies", header: every ? CRA : "Agencies reporting", cells: v.agencies }, { as: "coverage", header: "Population covered", cells: v.coverage }] : []),
         ...(supportStat?.kind === "population" ? [{ as: supportStat.as, header: "Population", cells: v.population }] : [])]);
   };
-  plan = withColumns(plan);
+  if (askedCoverage) plan = withColumns(plan);
   const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
   const everyDelivered = deliver(everyPlan, true);
   const everyOutcome: ShadowOutcome = { kind: "answer", plan: everyPlan, period, sql: c.query.sql, delivered: everyDelivered, stateSum: meta };

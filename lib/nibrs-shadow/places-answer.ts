@@ -112,7 +112,6 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const where = stateName(code);
     const floor = set.where.find((w) => w.field === "agency.population");
     lines.push(`${where} city agencies${floor ? " with a population of 250,000 or more" : ""}: the ${ranked.length} with the ${rankT.direction === "top" ? (isRate ? "highest" : "most") : (isRate ? "lowest" : "fewest")} ${what}${isRate ? " per 100,000" : ""}, ${when}.`);
-    if (floor) lines.push("Large means a population of 250,000 or more (the FBI's agency population).");
     partLine();
     const full = partYear ? `every month of ${when}` : `all 12 months of ${when}`;
     lines.push(`Ranked: agencies that reported ${full}; ties are ordered by agency name.`);
