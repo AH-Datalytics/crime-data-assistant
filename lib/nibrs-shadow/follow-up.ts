@@ -30,7 +30,8 @@ export type Rewrite =
   /** P69 amendment (Jeff 2026-10-31): a model's rewrite, shown as "Did you mean ...?"; nothing runs until it is confirmed. */
   | { kind: "propose"; question: string; how: string }
   | { kind: "ask"; why: string; options: { label: string; question: string }[] };
-export interface FollowUpRewriter { rewrite(previous: string, followUp: string): Rewrite }
+/** `thisYear` (the calendar year now) is injectable so tests never depend on today's date. */
+export interface FollowUpRewriter { rewrite(previous: string, followUp: string, thisYear?: number): Rewrite }
 
 const COUNT: Record<number, string> = { 3: "three", 4: "four", 5: "five", 6: "six" };
 const YEAR = /\b(19|20)\d{2}\b/;
@@ -125,7 +126,7 @@ export function standsAlone(turn: string): boolean {
 }
 
 export const deterministicRewriter: FollowUpRewriter = {
-  rewrite(previous: string, followUp: string): Rewrite {
+  rewrite(previous: string, followUp: string, thisYear = new Date().getFullYear()): Rewrite {
     const prev = previous.trim();
     const raw = followUp.trim();
     // The follow-up's own words, without lead-ins and "instead". An additive lead-in ("also 2023", "and Nashville") keeps
@@ -334,7 +335,7 @@ export const deterministicRewriter: FollowUpRewriter = {
       }
       // "Last year" can mean the calendar's last year or the year before the one asked about (after a range, the year
       // before it): a button for each, unless both are the same year (Codex follow-up review 01.3).
-      const calendar = new Date().getFullYear() - 1, before = pr.from - 1;
+      const calendar = thisYear - 1, before = pr.from - 1;
       if (calendar === before) return ok(withPeriod(prev, pr, `in ${calendar}`), "last year: the calendar's last year");
       return ask("Which year \"last year\" means.", [
         { label: String(calendar), question: clean(withPeriod(prev, pr, `in ${calendar}`)) },

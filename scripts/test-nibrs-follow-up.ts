@@ -11,7 +11,8 @@ import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 
 const P = "Shoplifting in Memphis by year from 2021 to 2024";
-const rw = (prev: string, f: string) => R.rewrite(prev, f);
+// A fixed calendar year (2026), so no test depends on today's date (timing-gate inventory: no clock reads).
+const rw = (prev: string, f: string, thisYear = 2026) => R.rewrite(prev, f, thisYear);
 const q = (r: Rewrite) => { assert.notEqual(r.kind, "ask", JSON.stringify(r)); return (r as Extract<Rewrite, { question: string }>).question; };
 const asked = (r: Rewrite) => { assert.equal(r.kind, "ask", JSON.stringify(r)); return r as Extract<Rewrite, { kind: "ask" }>; };
 
@@ -186,13 +187,12 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   assert.ok(readQuestion("Shoplifting in Memphis in 2024 vs 2023", 2026).comparison);
   assert.deepEqual(asked(rw("Shoplifting in Memphis from 2021 to 2024", "three years before that")).options.map((o) => o.label), ["2018", "2018 to 2020"]);
   const lastAfterRange = rw("Shoplifting in Memphis from 2021 to 2024", "last year");
-  if (new Date().getFullYear() - 1 !== 2020) assert.equal(asked(lastAfterRange).options.length, 2);
+  assert.equal(asked(lastAfterRange).options.length, 2);
   // Ambiguous: asked, with a button for each reading.
   const before = asked(rw("Shoplifting in Memphis by year from 2021 to 2024", "the year before"));
   assert.deepEqual(before.options.map((o) => o.question), ["Shoplifting in Memphis by year in 2020", "Shoplifting in Memphis by year from 2020 to 2023"]);
-  const last = rw(M, "last year"), calendar = new Date().getFullYear() - 1;
-  if (calendar === 2023) assert.equal(q(last), "Carjacking offenses in Memphis by month in 2023");
-  else assert.deepEqual(asked(last).options.map((o) => o.label), [String(calendar), "2023"]);
+  assert.deepEqual(asked(rw(M, "last year")).options.map((o) => o.label), ["2025", "2023"]);
+  assert.equal(q(rw(M, "last year", 2024)), "Carjacking offenses in Memphis by month in 2023", "both readings the same year: no question");
   // A previous question with more than one period, or none, is asked about; so is an impossible range.
   asked(rw("Shoplifting in Memphis in 2019 and 2024", "show me 2021 to 2023"));
   asked(rw("Shoplifting in Memphis in 2019 and 2024", "the year before"));
