@@ -26,6 +26,8 @@ const shortLabel = (label: string) => { const m = /^(.*), ([A-Za-z .]+)$/.exec(l
 /** "the Memphis Police Department", as reportedBy names it, without "Reported by". */
 const reporter = (places: PlaceIndex, oris: string[]) => reportedBy(oris.map((o) => agencyName(places, o))).replace(/^Reported by /, "").replace(/\.$/, "");
 
+/** Statistics shown in the table only, never charted. */
+const TABLE_ONLY = new Set(["agencies", "coverage", "population", "incidents"]);
 /** The headers of grouping columns in natural order (time; age groups, Unknown last). */
 const orderedOf = (t: ResultTable) => t.columns.flatMap((c) => (c.binding.kind === "grouping" && "ordered" in c && c.ordered ? [c.header] : []));
 
@@ -190,7 +192,8 @@ function nibrsPresentation(o: Extract<ShadowOutcome, { kind: "answer" }>, places
   return {
     source: "nibrs", titleParts, lead, offers, ...notesFrom("nibrs", o.delivered.answerStatements, o.delivered.text, known),
     coverage: { requested: plan.statistics.some((s) => s.kind === "agencies") },
-    chart: chartOptionsOf(o.delivered.table, orderedOf(o.delivered.table)), ordered: orderedOf(o.delivered.table),
+    chart: chartOptionsOf(o.delivered.table, orderedOf(o.delivered.table), plan.statistics.filter((s) => TABLE_ONLY.has(s.kind)).map((s) => s.as)),
+    ordered: orderedOf(o.delivered.table), series: {},
   };
 }
 
@@ -225,6 +228,11 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   return {
     source: "historical", titleParts, lead, offers: [], ...notesFrom("historical", [], o.delivered.text, known),
     coverage: { requested: false }, chart: chartOptionsOf(table, orderedOf(table)), ordered: orderedOf(table),
+    // Several agencies by year: one column each, labeled as the title names them.
+    series: Object.fromEntries(table.columns.flatMap((c) => {
+      const i = c.binding.kind === "statistic" ? /\.(\d+)$/.exec(c.binding.as) : null;
+      return i && agencies[Number(i[1])] ? [[c.header, shortLabel(agencies[Number(i[1])].label)]] : [];
+    })),
   };
 }
 

@@ -7,7 +7,7 @@
  *                                               # and the independent values from that repo's main branch with git show)
  *
  * Candidate "nibrs-shadow": the shadow slice (lib/nibrs-shadow), question to delivered answer for single-agency NIBRS
- * counts on canonical release 20261028-test5, scored at every level by lib/answer-eval/shadow.ts on the slice's cases:
+ * counts on the canonical release (test6-20261031-host by default; --root and --release name another), scored at every level by lib/answer-eval/shadow.ts on the slice's cases:
  * its designed group, the replay cases inside it, and replay cases next to it. Everything else is listed as outside
  * the slice. A refusal because the build lacks the months is listed apart, never scored.
  *
@@ -58,11 +58,12 @@ const MODEL = SHADOW && arg("--rewriter") === "model" ? (() => {
 const RUN_NAME = MODEL ? `${CANDIDATE}-model-rewriter` : CANDIDATE;
 const release: Release & { id: string; asOf: string } = SHADOW
   // P52: the FBI uploaded the 2026 file on 2026-10-15; the upload month is partial and not reported, so data runs through 2026-09.
-  ? { id: "20261028-test5", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }
+  // --release and --last-month name another canonical build (test6, 2026-11-02: given with --root).
+  ? { id: arg("--release", "test6-20261031-host")!, firstMonth: "2017-01", lastMonth: arg("--last-month", "2026-09")!, asOf: "2026-10-29" }
   : { id: "eval", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
 const shadowDeps = (): ShadowDeps => ({
   places: loadPlaceIndex(), release,
-  target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/build/20261028-test5/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+  target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
   execute: duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!),
   // Historical (P75-P79): the Crime Index build (scripts/build-crimeindex.py), when present.
   historical: historicalBuildAt(arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101")),
@@ -215,7 +216,7 @@ const GROUPS: [string, string][] = [["designed", "designed slice cases"], ["repl
 const byGroup = (title: string, rs: CaseResult[], gate: boolean) =>
   GROUPS.map(([g, name]) => bySplit(`${title}: ${name}`, rs.filter((r) => groupOf.get(r.id) === g), gate)).join("\n");
 const LEVEL = SHADOW
-  ? "**Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns."
+  ? "**Level: question -> delivered answer (shadow slice, release " + release.id + ").** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns."
   : "**Level: question -> reader only.** An \"answer\" is a plan-level semantic assessment. Not measured: compiled results and numeric values (no compiler yet), routing between sources, the delivered answer and its statements, follow-ups and button continuations, the truthfulness of decline reasons (not judged), clarification options (the reader returns text).";
 
 const md = [

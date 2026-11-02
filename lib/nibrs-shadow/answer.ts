@@ -1029,12 +1029,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (quarterCats) {
       // The compiler's quarter grain: each category's quarter known only when all three months are (D6), its share of
       // that quarter's units; a quarter past the data is incomplete, never a shorter sum.
-      const qPlan: NibrsPlan = { ...checked, period: { kind: "absolute", from, to: toQ },
+      // Read only through the release's last month (Codex month review 01.1): a quarter running past it is incomplete,
+      // blank, never a sum of the months before the cutoff or of months the release does not cover.
+      const qPlan: NibrsPlan = { ...checked, period: { kind: "absolute", from, to },
         groupings: [{ ...checked.groupings[0], dimension: "time.quarter" }, checked.groupings[1]],
         statistics: checked.statistics.map((s) => (s.kind === "share" ? { ...s, within: ["time.quarter"] } : s)) };
-      const c = compilePlan(qPlan, { kind: "absolute", from, to: toQ }, deps.target);
+      const c = compilePlan(qPlan, { kind: "absolute", from, to }, deps.target);
       if (c.kind === "unsupported") return notYet(c.reason);
-      const got = deps.execute(c.query.sql);
+      const qEnd = (k: string) => `${k.slice(0, 4)}-${String(Number(k.slice(6)) * 3).padStart(2, "0")}`;
+      const pi = c.query.columns.indexOf("period");
+      const got = deps.execute(c.query.sql).map((r) => (qEnd(String(r[pi])) <= release.lastMonth ? r
+        : c.query.columns.map((col, i) => (i === pi || checked.groupings.some((g) => g.dimension === col) ? r[i] : col.endsWith("_status") ? "UNKNOWN" : null))));
       if (got.some((r) => c.query.columns.some((col, i) => col.endsWith("_status") && c.query.refuseOn.includes(String(r[i])))))
         return decline("unsupported_capability", "This agency's reports for this period disagree with its record of which months it reported, so no number is given.");
       for (const st of c.query.statements) if (!statements.includes(st)) statements.push(st);

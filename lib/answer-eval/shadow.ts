@@ -730,7 +730,7 @@ function severalDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer"
 function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }>, expected0: ExpectedCell[] | undefined): { diffs: Diff[]; values: Values } {
   // A ranking's left-out agencies (P60) are not rows: checked against the answer's "Not ranked" line below.
   const leftOut = (expected0 ?? []).filter((x) => x.leftOut);
-  const expected = expected0?.filter((x) => !x.leftOut);
+  let expected = expected0?.filter((x) => !x.leftOut);
   if (!expected) return { values: "not measured", diffs: [{ field: `${prefix}values`, expected: "independent expected values", actual: "none given: NOT MEASURED", kind: "unverified" }] };
   if (expected.some((x) => x.view)) return stateSumDiffs(prefix, o, expected);
   // A change: each output cell (earlier, later, change, percent change) against its expected cell, value and status.
@@ -769,6 +769,11 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   // A key delivered twice could hide a wrong row behind a right one: never compared, always wrong.
   const twice = keys.filter((k, i) => keys.indexOf(k) !== i);
   if (twice.length) diffs.push({ field: `${prefix}rows`, expected: "each grouping once", actual: `repeated: ${[...new Set(twice)].join(", ")}`, kind: "material" });
+  // A series starts at its first reported period (owner 2026-10-31): leading expected cells with no value (no report),
+  // absent from the answer, are left out, never counted as missing rows; one with a value is still judged missing.
+  const firstGot = [...got.keys()].sort()[0];
+  const timeKeyed = columns[groupCols[0]]?.binding.kind === "grouping" && (columns[groupCols[0]].binding as { dimension: string }).dimension.startsWith("time.") && groupCols.length === 1;
+  if (timeKeyed && firstGot !== undefined) expected = expected.filter((x) => !(x.value === null && !got.has(x.key) && x.key < firstGot));
   if (got.size !== expected.length) diffs.push({ field: `${prefix}values`, expected: `${expected.length} cells`, actual: `${got.size} cells`, kind: "material" });
   // A breakdown promises each category's share (increment 1): a table without it is incomplete.
   if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });

@@ -1,7 +1,7 @@
 {
  "candidate": "nibrs-shadow",
  "release": {
-  "id": "20261028-test5",
+  "id": "test6-20261031-host",
   "firstMonth": "2017-01",
   "lastMonth": "2026-09",
   "asOf": "2026-10-29"
@@ -211,7 +211,13 @@
    "LS-215",
    "LS-216",
    "LS-217",
-   "LS-218"
+   "LS-218",
+   "LS-427",
+   "LS-428",
+   "LS-429",
+   "LS-430",
+   "LS-431",
+   "LS-432"
   ],
   "run by this candidate": [
    "LS-005",
@@ -869,7 +875,13 @@
    "LS-218"
   ],
   "label drafted": [
-   "LS-419"
+   "LS-419",
+   "LS-427",
+   "LS-428",
+   "LS-429",
+   "LS-430",
+   "LS-431",
+   "LS-432"
   ]
  },
  "notBuilt": [

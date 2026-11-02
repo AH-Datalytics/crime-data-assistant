@@ -35,8 +35,8 @@ return_a = sorted(r["ori"] for r in rows if r["source"] == "reta_2025" and r["ag
 
 with open(OUT, "w", encoding="utf-8", newline="\n") as f:
     f.write(json.dumps({
-        "_comment": "FBI agency names for the ORIs of canonical release 20261028-test5, from nibrs-model's reference/agency-names/agency-names.csv (scripts/build-nibrs-agency-names.py).",
-        "release": "20261028-test5",
+        "_comment": "FBI agency names for the ORIs of canonical release test6-20261031-host, from nibrs-model's reference/agency-names/agency-names.csv (scripts/build-nibrs-agency-names.py).",
+        "release": "test6-20261031-host",
         "source": {"repo": "nibrs-model", "commit": commit, "file": "reference/agency-names/agency-names.csv",
                    "sources": [{"source": s, "date": d} for s, d in sources]},
         "build_oris": len(rows), "named": len(names),

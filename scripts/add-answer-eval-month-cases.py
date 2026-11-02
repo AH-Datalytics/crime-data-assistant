@@ -23,8 +23,8 @@ NASHVILLE = {"kind": "agency", "name": "Metropolitan Nashville Police Department
 MEMPHIS = {"kind": "agency", "name": "Memphis Police Department", "state": "TN"}
 DETROIT = {"kind": "agency", "name": "Detroit Police Department", "state": "MI"}
 YEAR = lambda y: {"from": f"{y}-01", "to": f"{y}-12"}
-SOURCE = "Names its source at the end"
-UNKNOWN_LAST = "Lists the unknown category after the known ones in each period"
+SOURCE = "names its source at the end"
+UNKNOWN_LAST = "lists the unknown category after the known ones in each period"
 
 
 def case(question, place, measure, unit, groupings, year, agency_name):
@@ -36,7 +36,7 @@ def case(question, place, measure, unit, groupings, year, agency_name):
             "meaning": {"source": "nibrs", "places": [place], "period": YEAR(year), "measures": [{"name": measure, "unit": unit}],
                         "filters": [], "groupings": groupings, "statistic": "count"},
             "values": {"status": "pending_build"},
-            "statements": [f"Names the {agency_name} as the agency counted", UNKNOWN_LAST, SOURCE],
+            "statements": [f"names the agency ({place['name']})", UNKNOWN_LAST, SOURCE],
         },
     }
 
