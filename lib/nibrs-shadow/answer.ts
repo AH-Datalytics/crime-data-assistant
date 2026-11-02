@@ -48,6 +48,7 @@ import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthNam
 import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
+import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 
 export type ShadowDeps = {
@@ -56,6 +57,8 @@ export type ShadowDeps = {
   target: CompileTarget;
   /** Runs one SQL statement read-only and returns its rows. */
   execute(sql: string): unknown[][];
+  /** The Crime Index build (scripts/build-crimeindex.py): with it, agencies' Part I questions are Historical's answers; without it, routed. */
+  historical?: HistoricalBuild;
 };
 
 export type ShadowOption = {
@@ -140,6 +143,12 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     });
     if (options.every(Boolean)) return { kind: "clarify", about: "which period", question, options: options as ShadowOption[] };
   }
+  // P83 (Jeff 2026-11-01): gun violence stays declined (P31), with the same question as gun crime offered, every
+  // condition kept (Codex coverage review 01.1: a cohort, "that were cleared", "by quarter").
+  if (o.explanation === UNDEFINED_TERM["gun violence"]) {
+    const gun = tidy(said.replace(/\bgun\s+violence\b/i, (m) => (/^G/.test(m) ? "Gun crime" : "gun crime")).replace(/[?.!]+$/, ""));
+    if (gun !== tidy(said.replace(/[?.!]+$/, "")) && keeps(gun, said, year, ["undefinedTerm", "composite"])) return { ...o, alternative: { label: `Ask instead: "${gun}"`, question: gun } };
+  }
   const level = said.replace(/\b(?:the\s+)?(?:biggest|largest|greatest|highest|most|steepest|sharpest)\s+(?:increases?|decreases?|rises?|drops?|declines?|changes?|jumps?|growth|falls?)\s+in\b/i, "the most");
   if (level !== said && keeps(level, said, year)) return { ...o, alternative: { label: `Ask instead: "${tidy(level)}"`, question: tidy(level) } };
   // The nearest question that works (coordinator, 2026-11-01), the user's breakdown kept:
@@ -176,6 +185,8 @@ export type ShadowOutcome =
     stateSum?: StateSumMeta }
   /** A Part I figure for a state or the nation, read from the historical file (P53; srs.ts). */
   | SrsAnswer
+  /** A Part I figure for one or several agencies, read from the Crime Index build (Historical, P75-P79; historical.ts). */
+  | HistoricalAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
   | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
@@ -312,7 +323,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
   const term = flags(ledger0).undefinedTerm;
-  if (term) return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term]);
+  if (term) {
+    // P83: gun crime is offered in withNextStep, from the words asked (the reader's text has set conditions aside).
+    return decline("not_recorded_in_nibrs", UNDEFINED_TERM[term]);
+  }
   // P29: "by <group>" asks about offenders. "By men and women" is answered by the offenders' sexes (P49, below); any
   // other group (one sex, juveniles) is declined, never answered as victims.
   const bySexes = !!flags(ledger0).offenders && BY_SEXES.test(ledger0.question);
@@ -423,9 +437,76 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
     }
   }
+  // Historical (P75-P79): a Part I offense for one or several named agencies in completed years is the Crime Index
+  // build's: its count, its published rate (P75) or its published clearance percentage (P57), by year or a change;
+  // unless NIBRS is asked for in words (P01). Only the plain figure: a restriction the file cannot apply (a property
+  // condition, a cohort, people, a breakdown or filter) keeps the question with NIBRS's limits, never dropped.
+  if (deps.historical && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property
+    && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite) {
+    const sp = d.spec;
+    const agencies = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : undefined));
+    const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
+      || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
+    const yrs = sp.period.form === "year" ? [sp.period.year, sp.period.year] : sp.period.form === "range" ? [sp.period.from, sp.period.to] : null;
+    const historicalShape = agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
+      && (sp.statistic === "count" || sp.statistic === "rate");
+    // The crime counted in the other of its two units ("robbery victims"): said plainly, with NIBRS's count of that unit
+    // offered. Arrests, offenders and incidents are NIBRS's own counts and go on to it.
+    if (historicalShape && (sp.unit === "victims" || sp.unit === "offenses") && !historicalUnitFits(sp.measures[0], sp.unit)) {
+      const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
+      return decline("unsupported_capability", `Historical counts ${historicalCounts(sp.measures[0])}, not ${sp.unit}. NIBRS counts ${sp.unit} for the agencies that report to it.`,
+        { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs } });
+    }
+    if (agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
+      && historicalUnitFits(sp.measures[0], sp.unit) && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate")) {
+      // Codex review 01.2: the file has no cohort to combine agencies with (design note 2): asked, it is declined.
+      if (flags(ledger0).combined && agencies.length > 1) {
+        const apart = ledger0.question.replace(/\s*,?\s*\b(?:combined|together|as one total)\b/i, "").replace(/[?.!\s]+$/, "");
+        return decline("unsupported_capability", "Historical figures can't be combined across agencies yet. Ask for each agency; they are shown side by side.",
+          { alternative: { label: `Ask instead: "${apart}"`, question: apart } });
+      }
+      const cmp = flags(ledger0).comparison;
+      const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") && s.to.endsWith("-12");
+      if ((sp.grain !== "total" && sp.grain !== "year") || (cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later))))
+        return decline("unsupported_capability", "Historical figures for these crimes are whole years only; ask for whole years, for example \"burglaries in Memphis in 2024\".");
+      const thisYear = Number(release.lastMonth.slice(0, 4));
+      if (yrs[1] > thisYear) return decline("outside_release_coverage", `${yrs[1]} is not in the data; the latest year is ${thisYear}.`);
+      if (yrs[0] === thisYear && sp.statistic !== "clearance_rate")
+        return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.` };
+      // A span reaching this year: its completed years from the build, this year named as Current Trends' (P14).
+      const reachesNow = yrs[1] === thisYear && sp.statistic !== "clearance_rate";
+      const list = agencies as Extract<Place, { kind: "agency" }>[];
+      const r = answerHistorical({ measure: sp.measures[0], agencies: list.map((a, i) => ({ ori: a.ori, label: a.label, name: (sp.places[i] as { name: string }).name, state: (sp.places[i] as { state: string }).state })),
+        from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year", statistic: sp.statistic,
+        comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
+        notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
+        agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for ") }, deps.historical, deps.execute);
+      if (r.kind === "historical") return r;
+      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+    }
+  }
+  // The reader's own change form ("how did burglaries in Memphis change from 2010 to 2020") for one agency: the same
+  // Historical answer as "<crime> in <agency>, <earlier> against <later>" (P54, P55).
+  if (deps.historical && d.spec.type === "change" && d.spec.statistic === "count" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
+    && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite && d.spec.place.kind === "agency"
+    && isHistoricalMeasure(d.spec.measure) && historicalUnitFits(d.spec.measure, d.spec.unit)
+    && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
+    const sp = d.spec, pl = sp.place as Extract<typeof sp.place, { kind: "agency" }>;
+    const a = resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`);
+    const thisYear = Number(release.lastMonth.slice(0, 4));
+    if (a?.kind === "agency") {
+      if (sp.later > thisYear) return decline("outside_release_coverage", `${sp.later} is not in the data; the latest year is ${thisYear}.`);
+      if (sp.later === thisYear)
+        return { kind: "route", source: "rtci", explanation: `This year's ${sp.measure.replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.` };
+      const r = answerHistorical({ measure: sp.measure, agencies: [{ ori: a.ori, label: a.label, name: pl.name, state: pl.state }], from: sp.earlier, to: sp.later, byYear: false,
+        statistic: "count", comparison: { earlier: sp.earlier, later: sp.later },
+        agencyLine: reportedBy([agencyName(deps.places, a.ori)]).replace(/^Reported by /, "Figures for ") }, deps.historical, deps.execute);
+      if (r.kind === "historical") return r;
+      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+    }
+  }
   // P57 (increment 6): a Part I offense's clearance rate for an agency in a completed year is the historical
-  // clearances' (FBI SRS, Return A), not computed from NIBRS. The shadow's historical file has states and the nation
-  // only, so it names the route.
+  // clearances' (FBI SRS, Return A), not computed from NIBRS. Without the Crime Index build, the route is named.
   // Only the plain rate: a restriction the historical figures cannot apply (a property condition, a cohort, a
   // breakdown or filter) is never dropped by the route (Codex increment-6 review 02.1).
   const plainRate = !flags(ledger0).people && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).arrestsThrough && !flags(ledger0).consistent && !flags(ledger0).composite
@@ -570,7 +651,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).largeCities) {
     if (set0.kind !== "agency_set") return decline("unsupported_capability", "This isn't available yet: large cities outside a ranking of a state's cities.");
     set0.where.push({ field: "agency.population", op: ">=", value: 250000 });
-    plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities are 250,000 residents or more" });
+    plan.defaults.push({ path: "geography.places[0].where", value: "250000", reason: "P08: large cities have a population of 250,000 or more" });
   }
   // D05: a ranking with no number shows 20 rows.
   plan.transforms = plan.transforms.map((t) => (t.kind === "rank" && t.limit === null ? { ...t, limit: 20 } : t));
@@ -816,7 +897,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A weapon or relationship restriction the answer cannot name is declined: a restricted count must say what restricts it.
   const unnamed = [...checked.filters, ...checked.measures.flatMap((m) => m.filters ?? [])].some((f) => f.kind === "exists" && f.entity !== "property" && !filterWords(f));
   if (unnamed) return decline("unsupported_capability", "This isn't available yet: this weapon or relationship selection.");
-  const notes0 = (flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence);
+  const notes0 = [...(flags(ledger0).readings ?? []).filter((x) => x.kind === "spelling").map(readingSentence),
+    // P84 (Jeff 2026-11-01): how the phrase was read.
+    ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
   if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
   // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).

@@ -2,7 +2,7 @@
  * Part I offenses for a state or the nation, completed years (P53): read from the Crime Index snapshot's historical
  * file (scripts/fixtures/nibrs-shadow/crimeindex, byte-pinned to nibrs-model's manifest, snapshot 20261030), never
  * summed from NIBRS agencies and never spliced with another source (P14). The national clearance rate comes from the
- * snapshot's historical clearances (P57); there is no state clearance rate (P18). Answers end "Source: FBI SRS." (P63).
+ * snapshot's historical clearances (P57); there is no state clearance rate (P18). Answers end "Source: Crime Index." (P77, amending P63).
  *
  * The file has the seven offenses' totals, year-over-year change and rates per 100,000 (its "capita" columns) for each
  * state and the nation, 1960-2025, and its own violent and property sums, which are read as given, never re-added.
@@ -101,7 +101,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   const missingLine = [...(outside.length ? [`${span}; ${yearsWords(outside[0], outside[outside.length - 1])} ${outside.length > 1 ? "are" : "is"} outside them.`] : []), ...(q.notes ?? [])];
   const meaningBase = { source: "historical" as const, places: [placeOf(q.place)], measures: [{ name: m.name, unit: m.unit }], filters: [] as string[] };
   const read = { file: "historical_crime_states_nation_1960-2025.csv", column: col, uids };
-  const header = `${m.words[0].toUpperCase()}${m.words.slice(1)}${q.statistic === "rate" ? " per 100,000 residents" : ""}`;
+  const header = `${m.words[0].toUpperCase()}${m.words.slice(1)}${q.statistic === "rate" ? " per 100,000" : ""}`;
 
   // A change (P54): the earlier and later years, the change and percent change (P55: none from a zero base).
   if (q.comparison && q.statistic === "count") {
@@ -124,7 +124,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
 
   const period = { from: `${covered[0]}-01`, to: `${covered[covered.length - 1]}-12` };
   if (q.byYear || covered.length > 1) {
-    const text = [`${where}: ${m.words}${q.statistic === "rate" ? " per 100,000 residents" : ""} by year, ${periodWords(period.from, period.to)}.`, ...missingLine, SRS_SOURCE];
+    const text = [`${where}: ${m.words}${q.statistic === "rate" ? " per 100,000" : ""} by year, ${periodWords(period.from, period.to)}.`, ...missingLine, SRS_SOURCE];
     return {
       kind: "srs", period,
       meaning: { ...meaningBase, period, groupings: ["year"], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
@@ -134,7 +134,7 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   }
   const v = value(rows[0].row);
   if (v === null) return { kind: "srs-decline", explanation: `The data has no ${m.words} for ${where} in ${covered[0]}.` };
-  const text = [q.statistic === "rate" ? `${where}: ${v} ${m.words} per 100,000 residents in ${covered[0]}.` : `${where}: ${fmt(v)} ${m.words} in ${covered[0]}.`, ...missingLine, SRS_SOURCE];
+  const text = [q.statistic === "rate" ? `${where}: ${v} ${m.words} per 100,000 in ${covered[0]}.` : `${where}: ${fmt(v)} ${m.words} in ${covered[0]}.`, ...missingLine, SRS_SOURCE];
   return {
     kind: "srs", period,
     meaning: { ...meaningBase, period, groupings: [], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },

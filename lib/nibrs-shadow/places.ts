@@ -111,7 +111,7 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
   if (/ city$|\bpolice\b/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
   else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");
-  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with 10,000+ residents in this build` };
+  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with a population of 10,000 or more in this build` };
   // The most populous agency of each kind in each state; the large ones are the real candidates.
   const firsts = pool.filter((a, i) => pool.findIndex((b) => b.kind === a.kind && b.state === a.state) === i);
   // Buttons, most likely first: cities, then counties, each by population; the state (when the name is one) second.

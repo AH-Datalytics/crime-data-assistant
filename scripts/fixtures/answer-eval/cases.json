@@ -19962,7 +19962,7 @@
     },
     "statements": [
      "names the state (Texas)",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20016,7 +20016,7 @@
      "status": "pending_build"
     },
     "statements": [
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20073,7 +20073,7 @@
     },
     "statements": [
      "gives the rate per 100,000 residents",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20132,7 +20132,7 @@
     },
     "statements": [
      "gives ten yearly totals from one source",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20189,7 +20189,7 @@
     },
     "statements": [
      "gives the file's violent crime total, not a re-added sum",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20247,7 +20247,7 @@
     "statements": [
      "gives both counts, the change and the percent change, with no adjectives",
      "names the comparison year (2024)",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20303,7 +20303,7 @@
     },
     "statements": [
      "gives the national murder clearance rate",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20923,7 +20923,7 @@
     "statements": [
      "says the data covers 1960 through 2025, so 1955 through 1959 are outside it (D04)",
      "uses one source for every year shown, never another for the missing years (P14)",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -20979,7 +20979,7 @@
     },
     "statements": [
      "gives the file's property crime total, not a re-added sum",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {
@@ -21578,7 +21578,7 @@
     },
     "statements": [
      "names the agency (Atlanta Police Department)",
-     "ends with the source line \"Source: FBI SRS.\" (P63)"
+     "ends with the source line \"Source: Crime Index.\" (P63)"
     ]
    },
    "label": {

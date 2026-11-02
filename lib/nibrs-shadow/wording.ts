@@ -20,6 +20,9 @@ export const BANNED: { re: RegExp; what: string }[] = [
   { re: /\bshadow\b/i, what: "shadow" },
   { re: /\b[PDFGRSAC]\d{1,3}\b/, what: "a policy or rule id" },
   { re: /\bv0\b/i, what: "v0" },
+  // Jeff (2026-11-01): "I don't EVER want 'resident'"; and never a percent contrasted with a rate.
+  { re: /\bresidents?\b/i, what: "resident" },
+  { re: /\bnot a rate\b|\bpercent, not\b/i, what: "a percent contrasted with a rate" },
   { re: /\btyped reading\b|\bno (?:typed )?reading\b|\bthis reading\b|\bplan form\b/i, what: "an engine reading" },
   { re: /\binterpret(?:s|ed|ing)?\b/i, what: "interpret" },
   { re: /\bappl(?:y|ied|ies)\b/i, what: "apply" },
@@ -56,7 +59,7 @@ export const REASONS: Record<string, (x: string) => string> = {
   "I couldn't resolve that place to one NIBRS agency, a state or the nation.": (x) => `I couldn't find ${q(x)} as a police agency, a state or the nation.`,
   "I couldn't read that as a period.": (x) => `I couldn't tell which period ${q(x)} means.`,
   "I give one breakdown per answer; ask for one breakdown at a time.": (x) => `I can break the numbers down one way at a time; ${q(x)} would be a second breakdown.`,
-  "rates are given per 100,000 people.": () => "Rates are given per 100,000 residents.",
+  "rates are given per 100,000 people.": () => "Rates are given per 100,000.",
   "I rank places by a level, not by a change, in this version.": () => "Places can be ranked by their numbers for one year, not yet by how much they changed. For example: \"Which Texas cities had the most robberies in 2024?\"",
   "I can apply one minimum population (\"at least\" or \"over\"), not a maximum.": () => "A ranking can take one minimum population (\"at least\" or \"over\"), not a maximum.",
   "a ranking covers the nation or one state.": () => "A ranking covers the cities of one state or of the nation.",

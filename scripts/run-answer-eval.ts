@@ -40,6 +40,7 @@ import { bindingOf, cachedModelRewriter, GUARD_VERSION, hybridRewriter, MODEL_ID
 import { SYSTEM_PROMPT } from "../lib/nibrs-shadow/model-rewriter-prompt";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
+import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
 
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "scripts/fixtures/answer-eval/runs");
@@ -63,6 +64,8 @@ const shadowDeps = (): ShadowDeps => ({
   places: loadPlaceIndex(), release,
   target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/build/20261028-test5/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
   execute: duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!),
+  // Historical (P75-P79): the Crime Index build (scripts/build-crimeindex.py), when present.
+  historical: historicalBuildAt(arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101")),
 });
 /** Independent expected values: nibrs-model's correctness/slice/V*.json on its main branch, read with git show (read-only). */
 function readSliceValues(repo: string): ExpectedValues {

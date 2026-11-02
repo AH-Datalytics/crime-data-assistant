@@ -212,6 +212,12 @@ export const Statistic = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("population"), as: Name, of: Name }),
   /** P72: the number of agencies reporting in each cell of a state or national total of `measure` (P61's cohort). */
   z.strictObject({ kind: z.literal("agencies"), as: Name, measure: Name }),
+  /**
+   * P72 (Jeff 2026-11-01: the coverage in the table, not in prose): the population those agencies cover, as a share of
+   * the place's Crime Index population, in each cell of a state or national total of `measure`; marked "at least"
+   * when some of the agencies have no FBI population. A supporting number: it never changes the total.
+   */
+  z.strictObject({ kind: z.literal("coverage"), as: Name, measure: Name }),
 ]);
 
 /* ------------------------------------------------------------------ transforms ----------------------------------- */
