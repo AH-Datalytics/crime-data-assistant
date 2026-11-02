@@ -237,6 +237,30 @@ function filled(ledger: RequestLedger, concept: string, value: string, text: str
   return concept === "period" || concept === "grain" ? Object.assign(next, { comparison: null, last12: false }) : next;
 }
 
+/** Several parts of one concept filled by one button ("Both": violent and property crime). */
+function filledAll(ledger: RequestLedger, concept: string, values: string[][]): RequestLedger {
+  return values.reduce<RequestLedger>((l, [value, text], i) => {
+    const n = l.question.length + 1 + l.parts.filter((p) => p.rule === "shadow:button").length;
+    const part = { concept, value, span: [n, n], text, explains: [[n, n]], clause: 0, rule: "shadow:button", state: "recognized", explanation: null } as unknown as Part;
+    return withParts(l, [...l.parts.filter((p) => !(p.clause === 0 && p.concept === concept && (i === 0 || p.rule !== "shadow:button"))), part]);
+  }, ledger);
+}
+/** A button's continuation that runs now: not a decline, and not a route to a source not loaded here (Current Trends). */
+const runsNow = (o: ShadowOutcome) => o.kind !== "decline" && o.kind !== "route";
+/**
+ * A whole-years version of a question finer than years, run now (its button never dead-ends). Never nested: a
+ * question still finer than years once by year (rolling windows) gets no alternative (Codex routing review 01.1).
+ */
+let inByYear = false;
+function byYearInstead(ledger: RequestLedger, deps: ShadowDeps, pins: Map<number, Candidate>): ShadowOption | null {
+  if (inByYear) return null;
+  inByYear = true;
+  try {
+    const o = fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins);
+    return runsNow(o) ? { label: "By year instead", continuation: o } : null;
+  } finally { inByYear = false; }
+}
+
 /** The reason a reader decline gives, as a limitation reason; "reader" when its words name none of them. */
 function readerReason(explanation: string): LimitationReason | "reader" {
   if (/below the level of an agency/.test(explanation)) return "below_agency_level";
@@ -330,6 +354,17 @@ const FORECAST_SENTENCE = "The data records past crime and cannot predict the fu
 /** P01: crimes whose completed years are Historical's and whose current year is Current Trends'; NIBRS answers their details. */
 const PART_ONE = new Set(["murder", "homicide", "rape", "robbery", "aggravated_assault", "burglary", "theft", "motor_vehicle_theft", "arson", "violent_crime", "property_crime"]);
 
+/**
+ * Crime Index totals with no NIBRS measure: a month, quarter or part-year question about them has no source yet (the
+ * Crime Index builds are annual). Every other Part I crime asked by month goes to NIBRS, whose grain is monthly
+ * (coordinator 2026-11-02: route by the sources' grain; never an annual-only source for months).
+ */
+const ANNUAL_ONLY = new Set(["violent_crime", "property_crime"]);
+const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") && s.to.endsWith("-12");
+/** A question finer than whole years: a month or quarter grain, or a comparison of part years. */
+const partYear = (sp: { grain: string }, cmp: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null | undefined) =>
+  (sp.grain !== "total" && sp.grain !== "year") || (!!cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later)));
+
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
 function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const { release } = deps;
@@ -401,8 +436,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
   const named = clause0("measure").some((p) => p.value !== "unspecified");
   if (!named && clause0("measure").length) {
-    return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: [
-      { label: "Violent crime", otherSource: "historical" }, { label: "Property crime", otherSource: "historical" }, { label: "Both", otherSource: "historical" }] };
+    // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
+    // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
+    const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
+      { label: "Both", measures: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
+    const options = kinds.map((k) => ({ label: k.label, continuation: fromLedger(filledAll(ledger, "measure", k.measures), deps, pins) }));
+    const runnable = options.filter((o) => runsNow(o.continuation));
+    if (!runnable.length) {
+      const d0 = options[0].continuation;
+      return partYear({ grain: clause0("grain")[0]?.value ?? "total" }, flags(ledger0).comparison)
+        ? decline("unsupported_capability", "Violent and property crime totals are whole years only.", { alternative: byYearInstead(ledger, deps, pins) })
+        : d0;
+    }
+    return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: runnable };
   }
   if (!clause0("place").length) {
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
@@ -432,13 +478,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // The file's own unit only (offenses; victims for murder, rape, assault): incidents are another quantity (Codex
     // increment-5 review 2.3) and stay with P01's decline.
     if (geo && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
-      && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate") && !flags(ledger0).composite) {
+      && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate") && !flags(ledger0).composite
+      && !(partYear(sp, flags(ledger0).comparison) && !ANNUAL_ONLY.has(sp.measures[0]))) {
       // The file has whole years only: a month, part of a year or a part-year comparison is declined, never answered
       // as whole years (review 2.1).
       const cmp = flags(ledger0).comparison;
-      const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") && s.to.endsWith("-12");
-      if ((sp.grain !== "total" && sp.grain !== "year") || (cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later))))
-        return decline("unsupported_capability", "State and national figures for these crimes come from the Historical data, which has whole years only; ask for whole years, for example \"burglaries in Tennessee in 2024\".");
+      if (partYear(sp, cmp))
+        return decline("unsupported_capability", `${sp.measures[0] === "violent_crime" ? "Violent" : "Property"} crime totals are whole years only.`, { alternative: byYearInstead(ledger, deps, pins) });
       const thisYear = Number(release.lastMonth.slice(0, 4));
       if (yrs[0] > thisYear) return decline("outside_release_coverage", `${yrs[0]} is not in the data; the latest year is ${thisYear}.`);
       // The whole span is checked before any route: a year after this one is not in the data (Codex review 03.2).
@@ -477,7 +523,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs } });
     }
     if (agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
-      && historicalUnitFits(sp.measures[0], sp.unit) && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate")) {
+      && historicalUnitFits(sp.measures[0], sp.unit) && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate")
+      && !(partYear(sp, flags(ledger0).comparison) && !ANNUAL_ONLY.has(sp.measures[0]))) {
       // Codex review 01.2: the file has no cohort to combine agencies with (design note 2): asked, it is declined.
       if (flags(ledger0).combined && agencies.length > 1) {
         const apart = ledger0.question.replace(/\s*,?\s*\b(?:combined|together|as one total)\b/i, "").replace(/[?.!\s]+$/, "");
@@ -485,9 +532,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
           { alternative: { label: `Ask instead: "${apart}"`, question: apart } });
       }
       const cmp = flags(ledger0).comparison;
-      const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") && s.to.endsWith("-12");
-      if ((sp.grain !== "total" && sp.grain !== "year") || (cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later))))
-        return decline("unsupported_capability", "Historical figures for these crimes are whole years only; ask for whole years, for example \"burglaries in Memphis in 2024\".");
+      if (partYear(sp, cmp))
+        return decline("unsupported_capability", `${sp.measures[0] === "violent_crime" ? "Violent" : "Property"} crime totals are whole years only.`, { alternative: byYearInstead(ledger, deps, pins) });
       const thisYear = Number(release.lastMonth.slice(0, 4));
       if (yrs[1] > thisYear) return decline("outside_release_coverage", `${yrs[1]} is not in the data; the latest year is ${thisYear}.`);
       if (yrs[0] === thisYear && sp.statistic !== "clearance_rate")
@@ -553,7 +599,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
     : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
   // P01, in plain words (P74): the official counts are Historical's and Current Trends'; NIBRS has them when asked by name.
-  if (!flags(ledger0).nibrsAsked && !flags(ledger0).consistent && asked.some((x) => PART_ONE.has(x))) {
+  // A month, quarter or part-year question goes to NIBRS, the source with monthly grain (coordinator 2026-11-02); the
+  // Crime Index builds are annual. (Current Trends, monthly too, is settled with Jeff when it is built.)
+  const months = d.spec.type === "series" && partYear(d.spec, flags(ledger0).comparison);
+  if (!flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !months && asked.some((x) => PART_ONE.has(x))) {
     const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
     // With the Crime Index build, Historical answers the plain counts above; what reaches here is a form it doesn't
     // answer yet (coordinator, 2026-11-01: never "not available here" when it is).

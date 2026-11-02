@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { answerHistorical, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
-import { shadowAnswer } from "../lib/nibrs-shadow/answer";
+import { shadowAnswer, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
@@ -42,7 +42,7 @@ assert.deepEqual(one.delivered.table.rows, [[351]]);
 assert.equal(one.delivered.text[0], "Memphis, Tennessee: 351 murders in 2023.");
 assert.equal(one.delivered.text[one.delivered.text.length - 1], SRS_SOURCE);
 assert.equal(SRS_SOURCE, "Source: Crime Index.");
-assert.match(one.delivered.text.join(" "), /as published by Crime Index; a blank means the figure is not available in this data, not zero/);
+assert.doesNotMatch(one.delivered.text.join(" "), /as published by Crime Index; a blank means/, "P86: no generic availability note");
 assert.ok(sqls.every((s) => s.includes("/ci/agency_")), "reads the build only");
 assert.deepEqual(one.meaning.places, [{ kind: "agency", name: "Memphis", state: "TN" }]);
 assert.equal(one.meaning.source, "historical");
@@ -62,7 +62,7 @@ assert.deepEqual(historicalRate(null, null, 41843), { rate: null, computed: fals
 assert.deepEqual(historicalRate(null, 10, null), { rate: null, computed: false });
 const pageRate = ok({ agencies: [{ ori: "TX0200000", label: "Brazoria County, Texas", name: "Brazoria County", state: "TX" }], statistic: "rate", from: 1960, to: 1960 });
 assert.deepEqual(pageRate.delivered.table.rows, [[23.9]]);
-assert.ok(pageRate.delivered.text.some((t) => /as crimeindex\.org shows it/.test(t)));
+assert.ok(!pageRate.delivered.text.some((t) => /as crimeindex\.org shows it/.test(t)), "P86: the computed rate needs no note");
 
 // A blank is not available, never zero: a single year declines, a series shows it blank and names it.
 assert.match(no({ from: 2021, to: 2021 }), /not available in this data/);
@@ -131,6 +131,31 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   for (const q of ["Robbery arrests in Memphis in 2023", "Aggravated assault offenders in Detroit in 2023"]) {
     const o = withBuild(q);
     assert.ok(o.kind !== "historical" && !(o.kind === "decline" && /Historical counts/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
+  // Coordinator 2026-11-02 (the redesign's preview of Jeff's own question): months route by the sources' grain, and
+  // every button runs now. A button is runnable when it carries a question, or a continuation that is not a decline
+  // and whose own buttons are runnable.
+  const runnable = (o: ShadowOutcome): boolean => o.kind === "clarify" ? o.options.length > 0 && o.options.every((x) => !x.otherSource && (!!x.question || !!x.entry || (!!x.continuation && x.continuation.kind !== "decline" && runnable(x.continuation))))
+    : o.kind === "decline" ? !o.alternative || (!o.alternative.otherSource && (!!o.alternative.question || (!!o.alternative.continuation && o.alternative.continuation.kind !== "decline" && runnable(o.alternative.continuation))))
+    : true;
+  // "Memphis crime per month in 2023" and its rewrites ("show me 2022", "the year before"): violent and property totals
+  // are annual (no NIBRS total yet), so a plain decline with the whole-year question, which asks the kind and answers.
+  for (const q of ["Memphis crime per month in 2023", "Memphis crime per month in 2022", "Memphis crime by month in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind === "decline" && /whole years only/.test(o.explanation) && runnable(o), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+    const by = o.kind === "decline" ? o.alternative?.continuation : undefined;
+    assert.ok(by?.kind === "clarify" && by.options.every((x) => x.continuation?.kind === "historical"), JSON.stringify(by).slice(0, 300));
+  }
+  // Codex routing review 01: rolling windows never recurse; a route to Current Trends (not loaded) is not a button.
+  assert.ok(runnable(withBuild("violent crime in Memphis rolling 12 months in 2023")));
+  const now = withBuild("crime in Memphis in 2026");
+  assert.ok(runnable(now) && !(now.kind === "clarify" && now.options.some((x) => x.continuation?.kind === "route")), JSON.stringify(now).slice(0, 300));
+  const kinds = withBuild("Memphis crime in 2023");
+  assert.ok(kinds.kind === "clarify" && runnable(kinds) && kinds.options.map((x) => x.label).join() === "Violent crime,Property crime", JSON.stringify(kinds).slice(0, 300));
+  // A Part I crime by month goes to NIBRS (monthly), never Historical's whole-years decline or P01's.
+  for (const q of ["Memphis robberies per month in 2023", "Memphis burglaries by quarter in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind !== "historical" && !(o.kind === "decline" && /whole years|Crime Index's Historical/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
 }
 

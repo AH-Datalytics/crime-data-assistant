@@ -203,4 +203,15 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   assert.equal(q(rw("which city had the steepest decline in total violent crime?", "from 2015 to 2024")), "which city had the steepest decline in total violent crime from 2015 to 2024");
 }
 
+// Two places side by side replace the previous place, nothing else changes, with no model (coordinator 2026-11-02).
+{
+  const cj = "Carjackings in Chicago by year since 2022";
+  for (const f of ["Chicago vs Memphis", "Chicago versus Memphis", "Chicago and Memphis", "compare Chicago and Memphis", "Chicago vs. Memphis"])
+    assert.equal(q(rw(cj, f)), "Carjackings in Chicago and Memphis by year since 2022", f);
+  assert.equal(q(rw("Robberies in Memphis in 2024", "Nashville vs Knoxville")), "Robberies in Nashville and Knoxville in 2024");
+  asked(rw("Robberies in Memphis and Dallas combined in 2024", "Memphis vs Nashville"));
+  // Not two places: left to the other forms.
+  assert.equal(q(rw("Robberies in Memphis in 2024", "what about Nashville")), "Robberies in Nashville in 2024");
+}
+
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");

@@ -153,10 +153,10 @@ const p49 = ok(compilePlan(plan("victims.simple_assault", "victim", [by("offende
 assert.ok(p49.sql.includes("WHEN f2.offender_seq = '00' THEN 'unknown_offender'") && p49.sql.includes("f2.incident_num = v.incident_num"));
 // key_occurrence joins a parent segment to its own children only, never one segment family to another (Codex review 02).
 assert.ok(!p49.sql.includes("f2.key_occurrence") && !ok(compilePlan(plan("offenders.robbery", "offender"), year(2024), t)).sql.includes("o.key_occurrence = f.key_occurrence"));
-// Age in bins (P30): infants under 18, 00 Unknown, blank not recorded; bins required, and never overlapping.
+// Age in bins (P30): infants under 18; 00 and blank one Unknown (P86); bins required, and never overlapping.
 const bins = [{ label: "Under 18", from: 1, to: 17 }, { label: "18-24", from: 18, to: 24 }, { label: "65+", from: 65, to: 99 }];
 const byAge = ok(compilePlan(plan("victims.aggravated_assault", "victim", [by("victim.age", { bins })]), year(2024), t));
-for (const s of ["WHEN v.age IN ('NN', 'NB', 'BB') THEN 'Under 18'", "WHEN v.age = '00' THEN 'Unknown'", "trim(v.age) = '' THEN NULL", "BETWEEN 65 AND 99 THEN '65+'"]) assert.ok(byAge.sql.includes(s), s);
+for (const s of ["WHEN v.age IN ('NN', 'NB', 'BB') THEN 'Under 18'", "trim(v.age) = '' OR v.age = '00' THEN 'Unknown'", "BETWEEN 65 AND 99 THEN '65+'"]) assert.ok(byAge.sql.includes(s), s);
 assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.age")])), /in bins/);
 assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.age", { bins: [...bins, { label: "x", from: 20, to: 30 }] })])), /overlap/);
 assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.sex", { bins })])), /bins ages only/);
