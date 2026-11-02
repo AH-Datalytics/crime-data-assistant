@@ -2,7 +2,7 @@
 
 Labeled set: 432 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
-**Level: question -> delivered answer (shadow slice, release 20261028-test5).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
+**Level: question -> delivered answer (shadow slice, release test6-20261031-host).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
