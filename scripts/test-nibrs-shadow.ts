@@ -955,6 +955,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.doesNotMatch(text("Simple assault victims in Detroit by sex in 2023"), /not a rate|resident/);
   assert.doesNotMatch(text("Shoplifting rate in Wichita in 2024"), /resident/);
   assert.ok(jargon("Shoplifting per 100,000 residents").length > 0 && jargon("a percent, not a rate").length > 0, "both banned");
+  for (const t of ["Sorry, I can't answer that.", "I apologize", "Unfortunately the data", "I'm afraid not"]) assert.ok(jargon(t).length > 0, `apology banned: ${t}`);
 }
 
 // The nearest question that works, the breakdown kept (coordinator, 2026-11-01): victims by weapon as offenses by

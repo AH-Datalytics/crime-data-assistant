@@ -295,9 +295,13 @@ export const deterministicRewriter: FollowUpRewriter = {
     const range = new RegExp(`^(?:from\\s+)?((?:19|20)\\d{2})\\s*(?:to|through|-|–)\\s*((?:19|20)\\d{2})$`, "i").exec(asPeriod);
     const month = new RegExp(`^(?:in\\s+)?(${MONTHS})\\s+((?:19|20)\\d{2})$`, "i").exec(asPeriod);
     if (range || month) {
-      if (!pr) return ask(`Whether ${asPeriod} replaces the whole period or is added to it.`);
       if (range && Number(range[1]) >= Number(range[2])) return ask(`Which years "${asPeriod}" means.`);
       const words = range ? `from ${range[1]} to ${range[2]}` : `in ${ucFirst(month![1].toLowerCase())} ${month![2]}`;
+      // A previous question with no period at all takes this one (real turns: "which city had the steepest decline in
+      // total violent crime?", then "from 2015 to 2024"), as a bare year does; one with another period is asked about.
+      if (!pr) return prevParts.periods.length || YEAR.test(prev) || /\b(?:since|this year|last year|so far|year to date|past|last \d+)\b/i.test(prev)
+        ? ask(`Whether ${asPeriod} replaces the whole period or is added to it.`)
+        : ok(`${prev.replace(/[?.!\s]+$/, "")} ${words}`, "the previous question takes the period");
       return ok(withPeriod(prev, pr, words), range ? "the period replaced by a range of years" : "the period replaced by a month");
     }
     const rel = asPeriod.toLowerCase().replace(/^the\s+/, "");
@@ -326,7 +330,10 @@ export const deterministicRewriter: FollowUpRewriter = {
     }
 
     // Place and period: "what about Dallas?", "what about Denver in 2023?", "same for 2023", "2024", "compare to X", "add X".
-    const pp = /^(?:(?:what|how) about|(?:show|give)(?: me)?|(?:the )?same (?:thing )?for|do|(?:and )?for|in|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
+    // A bare year after a lead-in ("show me 2023", "give me 2023") is the year alone, replaced or added below; the
+    // lead-ins "show me", "give me" and "in" never route other words to the place and period forms.
+    if (asPeriod !== f && /^(?:19|20)\d{2}$/.test(asPeriod)) f = asPeriod;
+    const pp = /^(?:(?:what|how) about|(?:the )?same (?:thing )?for|do|(?:and )?for|(compare (?:it |this |that )?(?:to|with)|add|plus|and|vs\.?|versus))\s+(.+)$/i.exec(f);
     // A bare place ("washington state", "minneapolis"), or a place and year, is read as "what about ..." (P23): the
     // follow-up's words must be nothing but that place (and year).
     const bare = (() => {

@@ -185,6 +185,8 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   asked(rw("Shoplifting in Memphis in 2019 and 2024", "show me 2021 to 2023"));
   asked(rw("Shoplifting in Memphis in 2019 and 2024", "the year before"));
   asked(rw(M, "show me 2023 to 2021"));
+  // A previous question with no period takes the range (real turns), as a bare year does.
+  assert.equal(q(rw("which city had the steepest decline in total violent crime?", "from 2015 to 2024")), "which city had the steepest decline in total violent crime from 2015 to 2024");
 }
 
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");
