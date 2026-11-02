@@ -3270,15 +3270,8 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
-   "diffs": [
-    {
-     "field": "statement",
-     "expected": "notes that participation changed over the years (P03)",
-     "actual": "Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS.",
-     "kind": "material"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Ohio: shoplifting offenses by year, 2018 to 2024, summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS."
    ],

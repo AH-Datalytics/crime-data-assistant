@@ -10,3 +10,8 @@ Also covered by the confirmation:
 - the one-note-line discipline;
 - the relaxed "reported to NIBRS" requirement;
 - the whole-span Consistent Reporting Agencies wording and its test.
+
+## 03, confirmation of the wording commit (Jeff's notes, no "resident", no percent-versus-rate): REVISE, one P2, fixed
+- The scorer still required the removed participation sentence (LS-345). P03's note is now the Consistent Reporting
+  Agencies offer, so the check looks for that offer on a sum over several years. With that fix the scored run is
+  unchanged against dev. No missed "resident", no vacuous check, and the Consistent Reporting Agencies view is intact.

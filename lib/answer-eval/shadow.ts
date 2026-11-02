@@ -548,7 +548,10 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       ok = o.plan.coverage.cohort === "same_agencies" && !!o.stateSum && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: o.stateSum!.years.length > 1 ? o.stateSum!.everyAgencies : y.every.agencies, share: y.every.share, lower: y.every.noPopulation > 0 })), "Consistent Reporting Agencies");
     else if (/^gives each year's agencies counted and share of residents covered/.test(s))
       ok = !!o.stateSum && o.stateSum.years.length > 1 && coverageColumnsMatch(o, o.stateSum.years.map((y) => ({ agencies: y.agencies, share: y.share, lower: y.noPopulation > 0 })), "Agencies reporting");
-    else if (/^notes that participation changed over the years/.test(s)) ok = /Which agencies report changed over these years/.test(all);
+    // P03 (Jeff 2026-11-01): the participation note is the Consistent Reporting Agencies offer, not a sentence in the
+    // notes: a sum over several years offers the fixed set (the lead's sentence names it; the button opens it).
+    else if (/^notes that participation changed over the years/.test(s))
+      ok = (o.stateSum?.years.length ?? 0) > 1 && (o.buttons ?? []).some((b) => b.label === "Consistent Reporting Agencies" && b.continuation?.kind === "answer" && b.continuation.plan.coverage.cohort === "same_agencies");
     else if (/^gives the rate per 100,000 residents of the reporting agencies/.test(s))
       ok = rateHeader(o) && /^The rate uses the combined population of the agencies counted: [\d,]+ /m.test(text.join("\n"));
     // Increment 4: several agencies, combined totals, rates and rankings.
