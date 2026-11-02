@@ -325,7 +325,6 @@ export default function AssistantClient() {
 function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: PreviewButton) => void; onAsk: (q: string, previous: string | null) => void; suggest: Suggestion[] }) {
   const r = t.reply!;
   const [editing, setEditing] = useState(false);
-  const [bodyIn, reveal] = useReveal();
   const [draft, setDraft] = useState("");
   // The answer's time is for testing only: the console, never the page (Jeff, 2026-11-01).
   useEffect(() => { if ("ms" in r && r.ms !== undefined) console.debug(`answer ${t.id}: ${(r.ms / 1000).toFixed(1)} s`); }, [r, t.id]);
@@ -375,8 +374,8 @@ function ReplyView({ t, onButton, onAsk, suggest }: { t: Turn; onButton: (b: Pre
   if (r.kind === "decline") return (<>
     {r.reason.startsWith("route:") ? <p className="unavailable">Not available yet in this preview</p> : r.notBuilt ? <p className="unavailable">Not in this test build</p> : null}
     {read}
-    <Lead lines={[r.text]} suggest={suggest} onDone={reveal} />
-    <div className={bodyClass(bodyIn)}><Choices buttons={r.buttons} onButton={onButton} primary /></div>
+    <Lead lines={[r.text]} suggest={suggest} />
+    <div className="Body"><Choices buttons={r.buttons} onButton={onButton} primary /></div>
   </>);
   const p = answerOf(r);
   if (!p) return <p className="err">This answer came without its presentation.</p>;
@@ -406,7 +405,6 @@ function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, sugges
   const yearLabel = (v: unknown) => (partial && String(v) === partial ? `${partial} (Partial)` : label(v));
   // The chart type: chosen with the Line | Bar control beside the chart, or preselected by a typed command.
   const [chartKind, setChartKind] = useState<ChartMode | undefined>(typedKind);
-  const [bodyIn, reveal] = useReveal();
   const [hover, setHover] = useState<number | null>(null);
   // Click a header to sort this answer's table by it; again to reverse. Blanks (unknown) always sort last.
   const [sort, setSort] = useState<{ col: string; dir: 1 | -1 } | null>(null);
@@ -452,8 +450,8 @@ function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, sugges
     const shown = typeof v === "number" ? v.toLocaleString("en-US", { maximumFractionDigits: 1 }) : null;
     return (<>
       {/* The sentence is the answer; the title would only repeat it. */}
-      <Lead lines={lead} bold={shown} suggest={suggest} onDone={reveal} />
-      <div className={bodyClass(bodyIn)}>
+      <Lead lines={lead} bold={shown} suggest={suggest} />
+      <div className="Body">
         <Notes lines={notes} />
         <Choices buttons={rest(r, r.buttons)} onButton={onButton} />
       </div>
@@ -525,9 +523,9 @@ function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, sugges
   // The source line under the chart in its PNG.
   const source = PROFILES[p.source]!.name.sourceLine;
   return (<>
-    <Lead lines={lead} suggest={suggest} onDone={reveal} />
+    <Lead lines={lead} suggest={suggest} />
     {/* The chart's block: its title (as in the PNG), the chart type and downloads, the chart beside the table, the notes. */}
-    <div className={bodyClass(bodyIn)}>
+    <div className="Body">
     {/* A hairline frame around the data, apart from the sentence above it (Jeff, 2026-11-01, to try). */}
     <div className="Frame">
     <div className="ChartTitle"><h3>{title}</h3>{subtitle ? <p>{subtitle}</p> : null}</div>
@@ -625,58 +623,14 @@ async function downloadPng(el: HTMLDivElement | null, title: string) {
 }
 
 type Suggestion = { before: string; link: string; after: string; run: () => void };
-/**
- * How a new answer appears, for Jeff to compare (local switch, 2026-11-01): ?appear=type streams the lead word by word
- * (about a second in all), then fades in the chart's block; ?appear=fade fades the lead in (0.4 s), then the block 0.3 s later; ?appear=none
- * (the default) shows it all at once. Reduced motion always shows it all at once.
- */
-type Appear = "type" | "fade" | "none";
-let appearMode: Appear | null = null;
-function appear(): Appear {
-  if (appearMode) return appearMode;
-  if (typeof window === "undefined") return "none";
-  const m = new URLSearchParams(location.search).get("appear");
-  appearMode = matchMedia("(prefers-reduced-motion: reduce)").matches ? "none" : m === "type" || m === "fade" ? m : "none";
-  return appearMode;
-}
-/** Whether the chart's block is shown yet: at once, except while a typed lead is still streaming. */
-function useReveal(): [boolean, () => void] {
-  const [bodyIn, setBodyIn] = useState(() => appear() !== "type");
-  return [bodyIn, () => setBodyIn(true)];
-}
-const bodyClass = (bodyIn: boolean) => `Body appear-${appear()}${bodyIn ? "" : " pending"}`;
-
-type Tok = { t: string; s?: Suggestion };
-function Lead({ lines, bold, suggest, onDone }: { lines: string[]; bold?: string | null; suggest: Suggestion[]; onDone?: () => void }) {
-  // Whole words (a figure such as "1,004" is one word, so it never shows half typed), and each link whole.
-  const toks: Tok[] = [];
-  const words = (s: string) => { for (const w of s.split(/(?<=\s)/)) if (w) toks.push({ t: w }); };
-  lines.forEach((l, i) => words(`${i ? " " : ""}${l}`));
-  for (const s of suggest) { words(` ${s.before}`); toks.push({ t: s.link, s }); words(s.after); }
-  const n = toks.length;
-  const [k, setK] = useState(() => (appear() === "type" ? 0 : Infinity));
-  useEffect(() => {
-    if (appear() !== "type") return;
-    let i = 0, over = false;
-    const finish = () => {
-      if (over) return;
-      over = true; clearInterval(id);
-      removeEventListener("pointerdown", finish, true); removeEventListener("keydown", finish, true);
-      setK(Infinity); onDone?.();
-    };
-    // About a second for the whole lead, never slower than 60 ms a word; any click or key completes it.
-    const id = setInterval(() => { i += 1; if (i >= n) finish(); else setK(i); }, Math.min(60, 1000 / Math.max(1, n)));
-    addEventListener("pointerdown", finish, true); addEventListener("keydown", finish, true);
-    return () => { over = true; clearInterval(id); removeEventListener("pointerdown", finish, true); removeEventListener("keydown", finish, true); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!n) return null;
-  const em = (s: string) => { const i = bold ? s.indexOf(bold) : -1; return i >= 0 ? <>{s.slice(0, i)}<b>{bold}</b>{s.slice(i + bold!.length)}</> : s; };
-  const tok = (x: Tok, i: number) => (x.s ? <button key={i} type="button" className="sug" onClick={x.s.run}>{x.t}</button> : <span key={i}>{em(x.t)}</span>);
+function Lead({ lines, bold, suggest }: { lines: string[]; bold?: string | null; suggest: Suggestion[] }) {
+  if (!lines.join("") && !suggest.length) return null;
+  const em = (t: string) => { const i = bold ? t.indexOf(bold) : -1; return i >= 0 ? <>{t.slice(0, i)}<b>{bold}</b>{t.slice(i + bold!.length)}</> : t; };
+  // A new answer fades in, the lead first and then the chart's block (assistant.css); Jeff picked it, 2026-11-02.
   return (
-    <p className={`Lead${appear() === "fade" ? " fade" : ""}`}>
-      {toks.slice(0, Math.min(k, n)).map(tok)}
-      {/* The words still to come hold their place, so nothing below moves while the lead is typed. */}
-      {k < n ? <span className="ghost" aria-hidden="true">{toks.slice(k).map((x, i) => tok(x, k + i))}</span> : null}
+    <p className="Lead fade">
+      {em(lines.join(" "))}
+      {suggest.map((x, i) => <span key={i}>{` ${x.before}`}<button type="button" className="sug" onClick={x.run}>{x.link}</button>{x.after}</span>)}
     </p>
   );
 }
