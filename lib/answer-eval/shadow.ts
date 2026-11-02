@@ -40,7 +40,11 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  * cell's status. The map's keys: a case id ("LS-219"), a case and one of its options ("LS-231|Kansas City, Missouri"),
  * or a case's alternative ("LS-236|alternative").
  */
-export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null;
+/**
+ * `unverifiable`: the cell must be there, but no independent value exists for it (an Unknown merged from categories
+ * that overlap, P86): its row is required, its value never judged.
+ */
+export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null; unverifiable?: true;
   /** Increment 6 (P66): the distinct incidents of the cell's units, beside its count. */
   incidents?: number | null;
   /** Increment 7b (P72): the population the cell's rate divides by (the file's FBI agency population). */
@@ -146,7 +150,8 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       for (const c of cells.splice(0)) {
         const m = seen.get(c.key);
         if (!m) { seen.set(c.key, c); cells.push(c); continue; }
-        if (MULTI_FIELDS.has(catField) && m.value !== 0 && c.value !== 0) { cells.splice(cells.indexOf(m), 1); continue; }
+        if (m.unverifiable) continue;
+        if (MULTI_FIELDS.has(catField) && m.value !== 0 && c.value !== 0) { m.unverifiable = true; m.share = undefined; continue; }
         m.value = m.value === null || c.value === null ? null : m.value + c.value;
         if (m.value === null) m.status = m.status === "VALUE" || m.status === "REPORTED_ZERO" ? c.status : m.status;
         else m.status = m.value === 0 && m.status === "REPORTED_ZERO" && c.status === "REPORTED_ZERO" ? "REPORTED_ZERO" : "VALUE";
@@ -202,7 +207,7 @@ function peopleCells(v: Record<string, unknown> | undefined): ExpectedCell[] | n
   // Categories that overlap (the file's own total): a merged Unknown cannot be summed, so it has no expected cell.
   const cells = new Map<string, number>(), merged = new Set<string>();
   for (const [k, n] of Object.entries(map)) { const key = name(k); if (cells.has(key) && cells.get(key)! > 0 && n > 0) merged.add(key); cells.set(key, (cells.get(key) ?? 0) + n); }
-  return [...cells].filter(([key]) => !(own && merged.has(key))).map(([key, n]) => ({ key, value: n, status: "VALUE", share: share(n) }));
+  return [...cells].map(([key, n]) => (own && merged.has(key) ? { key, value: n, status: "VALUE", unverifiable: true as const } : { key, value: n, status: "VALUE", share: share(n) }));
 }
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
   const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
@@ -760,6 +765,11 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });
   for (const x of expected) {
     const g = got.get(x.key);
+    if (x.unverifiable) {
+      diffs.push(g ? { field: `${prefix}value ${x.key}`, expected: "(merged from overlapping categories: no independent value)", actual: `${g.value} ${g.status}`, kind: "unverified" }
+        : { field: `${prefix}value ${x.key}`, expected: "a row", actual: "missing", kind: "material" });
+      continue;
+    }
     if (!g || g.value !== x.value || g.status !== x.status) diffs.push({ field: `${prefix}value ${x.key || "total"}`, expected: `${x.value} ${x.status}`, actual: g ? `${g.value} ${g.status}` : "missing", kind: "material" });
     // A ranking: each agency in its place (P17's tie order included).
     else if (x.position !== undefined && keys.indexOf(x.key) + 1 !== x.position)

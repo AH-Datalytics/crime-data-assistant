@@ -2531,14 +2531,21 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "2 cells",
+     "actual": "3 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Oklahoma City, Oklahoma: simple assault victims by offender sex, 2024. / Reported by the Oklahoma City Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-293",
@@ -3739,28 +3746,42 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "5 cells",
+     "actual": "6 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-378",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "7 cells",
+     "actual": "8 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Detroit, Michigan: robbery offenses by offender age group, 2024. / Reported by the Detroit Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-379",
@@ -3809,14 +3830,21 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "3 cells",
+     "actual": "4 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Memphis, Tennessee: murder victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / Sour"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-383",
@@ -3879,28 +3907,42 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "2 cells",
+     "actual": "3 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Milwaukee, Wisconsin: simple assault victims by offender ethnicity, 2024. / Reported by the Milwaukee Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than "
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-388",
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "7 cells",
+     "actual": "8 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Albuquerque, New Mexico: robbery offenders by offender age group, 2023. / Reported by the Albuquerque Police Department. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-389",
@@ -4061,14 +4103,21 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "4 cells",
+     "actual": "5 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Denver, Colorado: aggravated assault victims by offender race, 2023. / Reported by the Denver Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the tota"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-398",
@@ -4257,14 +4306,21 @@
    "split": "heldout",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "correct",
-   "diffs": [],
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "5 cells",
+     "actual": "6 cells",
+     "kind": "material"
+    }
+   ],
    "notes": [
     "delivered: Memphis, Tennessee: aggravated assault victims by offender race, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the t"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "match"
+   "values": "mismatch"
   },
   {
    "id": "LS-412",

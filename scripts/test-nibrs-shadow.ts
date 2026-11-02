@@ -532,7 +532,8 @@ assert.deepEqual(v5("age_group", [{ age_group: "under_18", m: { status: "VALUE",
   [["Under 18", 40], ["Unknown", 20]]);
 // Codex guard review 01.2: overlapping categories (an offense's offenders) merged into one Unknown are not summed: the
 // cell is left unverified, never judged against a double count.
-assert.deepEqual(v5("offender_sex", [{ offender_sex: " ", m: { status: "VALUE", value: 1 } }, { offender_sex: "U", m: { status: "VALUE", value: 1 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } }]).map((x) => x.key), ["Male"]);
+assert.deepEqual(v5("offender_sex", [{ offender_sex: " ", m: { status: "VALUE", value: 1 } }, { offender_sex: "U", m: { status: "VALUE", value: 1 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } },
+  { offender_sex: "seq_00", m: { status: "VALUE", value: 2 } }]).map((x) => [x.key, !!x.unverifiable]), [["Unknown", true], ["Male", false]], "the Unknown row required, its value not judged; Male kept");
 assert.deepEqual(v5("offender_sex", [{ offender_sex: "00", m: { status: "VALUE", value: 3 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } }]).map((x) => [x.key, x.share]),
   [["Unknown", 30], ["Male", 90]]);
 const weaponYear = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "year", category: "weapon", measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } },
@@ -1044,6 +1045,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // ends the phrase, never hides it; "had" is not a request for the agencies reporting.
   assert.deepEqual(namedGroupings("Shoplifting in Texas by year from 2023 to 2024, only agencies that reported each month").map((g) => g.word), ["year"]);
   assert.deepEqual(missingGroupings("Robbery offenders in Detroit by age and year, 2022 to 2024", ["offender.age"]), ["year"]);
+  assert.deepEqual(namedGroupings("How many robberies did Detroit report each year from 2022 to 2024?").map((g) => g.word), ["year"]);
   assert.deepEqual(missingGroupings("Robbery offenders in Detroit by age and year (2022 to 2024)", ["offender.age"]), ["year"]);
   assert.equal((readQuestion("How many agencies had shoplifting in Kansas in 2024", 2026, "2026-09").ledger as unknown as { column: unknown }).column, null);
   assert.equal((readQuestion("How many agencies reported shoplifting in Kansas in 2024", 2026, "2026-09").ledger as unknown as { column: unknown }).column, "agencies");

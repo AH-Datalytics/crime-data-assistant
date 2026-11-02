@@ -24,8 +24,11 @@ const DIMENSIONS: { re: RegExp; word: string; matches: (d: string) => boolean }[
   { re: /\bclearance\s+(?:status|type|method)\b/, word: "clearance", matches: (d) => /clearance/.test(d) },
 ];
 const PHRASE = /\b(?:by|per|each)\s+([a-z][a-z\s,&/-]*?)(?=\s+(?:in|from|since|for|during|between|over|with|where|that|who|which|across|at|compared|vs\.?|versus|only|according|combined|together)\b|\s*,\s*(?=\d|(?:in|from|since|for|during|between|over)\b)|\s*\(|\s*[?.!;]|\s*$)/gi;
-/** How often agencies reported ("only agencies that reported each month"): who is counted, not a breakdown (Codex guard review 01.1). */
-const REPORTING = /\breport(?:ed|ing|s)?\s+(?:each|every|per)\s+(?:month|year|quarter)\b/gi;
+/**
+ * Which agencies are counted ("only agencies that reported each month"), not a breakdown (Codex guard review 01.1);
+ * "did Detroit report each year" still asks for years (confirmation 01.3).
+ */
+const REPORTING = /\bagencies\s+(?:that\s+|which\s+|who\s+)?report(?:ed|ing|s)?\s+(?:in\s+)?(?:each|every)\s+(?:month|year|quarter)\b/gi;
 
 /** The breakdowns the question's "by/per/each" phrases name, each once. */
 export function namedGroupings(question: string): NamedGrouping[] {
