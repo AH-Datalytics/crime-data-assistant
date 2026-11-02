@@ -304,7 +304,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/,?\s*with the number of agencies reporting\b/gi, () => col("agencies"))
     // The same request in other words (coordinator 2026-11-02): "how many agencies reported carjackings in ...",
     // "agencies reporting carjackings in ...", "..., with coverage": the agencies reporting and the population covered.
-    .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted|had)\s+/i, () => col("agencies"))
+    .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
   const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };

@@ -146,6 +146,7 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       for (const c of cells.splice(0)) {
         const m = seen.get(c.key);
         if (!m) { seen.set(c.key, c); cells.push(c); continue; }
+        if (MULTI_FIELDS.has(catField) && m.value !== 0 && c.value !== 0) { cells.splice(cells.indexOf(m), 1); continue; }
         m.value = m.value === null || c.value === null ? null : m.value + c.value;
         if (m.value === null) m.status = m.status === "VALUE" || m.status === "REPORTED_ZERO" ? c.status : m.status;
         else m.status = m.value === 0 && m.status === "REPORTED_ZERO" && c.status === "REPORTED_ZERO" ? "REPORTED_ZERO" : "VALUE";
@@ -198,9 +199,10 @@ function peopleCells(v: Record<string, unknown> | undefined): ExpectedCell[] | n
   const person = age || /(?:sex|race|ethnicity|age)$/.test(dim);
   const name = (k: string) => k === "seq_00" || (person && k === " ") ? "Unknown" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
     : age ? (k === "under_18" ? "Under 18" : k === "00" ? "Unknown" : k) : categoryName(dim, k);
-  const cells = new Map<string, number>();
-  for (const [k, n] of Object.entries(map)) { const key = name(k); cells.set(key, (cells.get(key) ?? 0) + n); }
-  return [...cells].map(([key, n]) => ({ key, value: n, status: "VALUE", share: share(n) }));
+  // Categories that overlap (the file's own total): a merged Unknown cannot be summed, so it has no expected cell.
+  const cells = new Map<string, number>(), merged = new Set<string>();
+  for (const [k, n] of Object.entries(map)) { const key = name(k); if (cells.has(key) && cells.get(key)! > 0 && n > 0) merged.add(key); cells.set(key, (cells.get(key) ?? 0) + n); }
+  return [...cells].filter(([key]) => !(own && merged.has(key))).map(([key, n]) => ({ key, value: n, status: "VALUE", share: share(n) }));
 }
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
   const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>

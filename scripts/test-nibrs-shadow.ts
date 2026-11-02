@@ -530,6 +530,9 @@ const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ nam
   measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } }, rows, ...extra }) }]).get("LS-999")!;
 assert.deepEqual(v5("age_group", [{ age_group: "under_18", m: { status: "VALUE", value: 4 } }, { age_group: "00", m: { status: "VALUE", value: 1 } }, { age_group: " ", m: { status: "VALUE", value: 1 } }]).map((x) => [x.key, x.share]),
   [["Under 18", 40], ["Unknown", 20]]);
+// Codex guard review 01.2: overlapping categories (an offense's offenders) merged into one Unknown are not summed: the
+// cell is left unverified, never judged against a double count.
+assert.deepEqual(v5("offender_sex", [{ offender_sex: " ", m: { status: "VALUE", value: 1 } }, { offender_sex: "U", m: { status: "VALUE", value: 1 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } }]).map((x) => x.key), ["Male"]);
 assert.deepEqual(v5("offender_sex", [{ offender_sex: "00", m: { status: "VALUE", value: 3 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } }]).map((x) => [x.key, x.share]),
   [["Unknown", 30], ["Male", 90]]);
 const weaponYear = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "year", category: "weapon", measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } },
@@ -1037,6 +1040,13 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(namedGroupings("Robbery rate per 100,000 in Memphis in 2024, by men and women").map((g) => g.word), []);
   assert.deepEqual(missingGroupings("Robbery offenders in Memphis by age and year from 2022 to 2024", ["offender.age"]), ["year"]);
   assert.deepEqual(missingGroupings("Shoplifting in Memphis per month in 2024", ["time.month"]), []);
+  // Codex guard review 01: how often agencies reported is not a breakdown; a comma or parenthesis before the period
+  // ends the phrase, never hides it; "had" is not a request for the agencies reporting.
+  assert.deepEqual(namedGroupings("Shoplifting in Texas by year from 2023 to 2024, only agencies that reported each month").map((g) => g.word), ["year"]);
+  assert.deepEqual(missingGroupings("Robbery offenders in Detroit by age and year, 2022 to 2024", ["offender.age"]), ["year"]);
+  assert.deepEqual(missingGroupings("Robbery offenders in Detroit by age and year (2022 to 2024)", ["offender.age"]), ["year"]);
+  assert.equal((readQuestion("How many agencies had shoplifting in Kansas in 2024", 2026, "2026-09").ledger as unknown as { column: unknown }).column, null);
+  assert.equal((readQuestion("How many agencies reported shoplifting in Kansas in 2024", 2026, "2026-09").ledger as unknown as { column: unknown }).column, "agencies");
   // (Age by year itself is read in test-nibrs-shadow-reading; this stub has no year-by-category rows.)
   // 2: one Unknown row, last, even when it is the largest; no offender identified counted in it in SQL.
   const race = as(ask("Robbery offenders in Detroit by race in 2023"), "answer");
