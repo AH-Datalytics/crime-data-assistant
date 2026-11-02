@@ -33,7 +33,7 @@ assert.ok(n3.sql.includes("o.offense_code IN ('240')") && n3.sql.includes("o.off
 // month's own units.
 const n1 = ok(compilePlan(X.N1, { kind: "absolute", from: "2018-01", to: "2026-10" }, t));
 assert.deepEqual(n1.columns, ["period", "victim.race", "victim.sex", "victims", "victims_status", "share_of_month", "share_of_month_status"]);
-for (const s of ["v.race AS g0", "v.sex AS g1", "cats AS (SELECT DISTINCT g0, g1 FROM scoped)", "CROSS JOIN cats", "n::DOUBLE / den", "vo.connected_offense IN ('09A')"]) assert.ok(n1.sql.includes(s), s);
+for (const s of ["ELSE v.race END AS g0", "ELSE v.sex END AS g1", "cats AS (SELECT DISTINCT g0, g1 FROM scoped)", "CROSS JOIN cats", "n::DOUBLE / den", "vo.connected_offense IN ('09A')"]) assert.ok(n1.sql.includes(s), s);
 
 // N2: 23F offenses in incidents with a stolen firearm: an incident-level existence over property, and its statement.
 const n2 = ok(compilePlan(X.N2, year(2024), t));
@@ -69,7 +69,7 @@ const every = ok(compilePlan({ ...allArrests, filters: [] }, year(2024), t));
 for (const s of ["group_b_arrest", "UNION ALL", "identical_to_line_no IS NULL", "<> 'M'"]) assert.ok(every.sql.includes(s), s);
 assert.deepEqual(every.statements, ["arrests_counted_once", "arrests_include_group_b"]);
 const byArrestee = ok(compilePlan({ ...allArrests, filters: [], groupings: [{ dimension: "arrestee.race", unknown: "visible", absent: "show" }] }, year(2024), t));
-assert.ok(byArrestee.sql.includes("a.race AS g0"));
+assert.ok(byArrestee.sql.includes("ELSE a.race END AS g0"));
 // Codex increment-7 review 04.1: a condition only on the arrestee ("juvenile arrests") still counts every arrest, with
 // the condition on the Group A and the Group B branch alike.
 const juvAll = ok(compilePlan({ ...allArrests, filters: [{ kind: "attribute", dimension: "arrestee.age", op: "between", values: [1, 17] }] }, year(2024), t));
@@ -81,7 +81,7 @@ assert.deepEqual(juvAll.statements, ["arrests_counted_once", "arrests_include_gr
 // offenders linked as strangers to a victim of the crime.
 const vic = { ...X.N2, filters: [], groupings: [], measures: [{ id: "victims.aggravated_assault", unit: "victim" as const, as: "v" }], statistics: [{ kind: "count" as const, as: "n", measure: "v" }] };
 const byOffRace = ok(compilePlan({ ...vic, groupings: [{ dimension: "offender.race", unknown: "visible", absent: "show", multiValue: "each_value" }] }, year(2024), t));
-assert.ok(byOffRace.sql.includes("CASE WHEN f2.offender_seq = '00' THEN 'unknown_offender' ELSE f2.race END"));
+assert.ok(byOffRace.sql.includes("CASE WHEN f2.offender_seq = '00' THEN 'U' ELSE CASE WHEN f2.race IS NULL OR trim(f2.race) = '' THEN 'U' ELSE f2.race END END"));
 assert.deepEqual(byOffRace.statements, ["categories_overlap"]);
 const byPair = ok(compilePlan({ ...vic, groupings: [{ dimension: "victim_offender.offender_race", unknown: "visible", absent: "show", multiValue: "each_value" }] }, year(2024), t));
 for (const s of ["'no_relationship'", "f3.offender_seq = r.offender_number"]) assert.ok(byPair.sql.includes(s), s);
@@ -150,7 +150,7 @@ assert.match(refuse(plan("offenses.robbery", "offense", [by("offense.location_ty
 // Relationships of a victim; the incident's offender sexes for a crime (P49), offender 00 its own category.
 assert.ok(ok(compilePlan(plan("victims.murder", "victim", [by("victim_offender.relationship", { multiValue: "each_value" })]), year(2023), t)).sql.includes("r.victim_seq = v.victim_seq"));
 const p49 = ok(compilePlan(plan("victims.simple_assault", "victim", [by("offender.sex", { multiValue: "each_value" })]), year(2024), t));
-assert.ok(p49.sql.includes("WHEN f2.offender_seq = '00' THEN 'unknown_offender'") && p49.sql.includes("f2.incident_num = v.incident_num"));
+assert.ok(p49.sql.includes("WHEN f2.offender_seq = '00' THEN 'U'") && p49.sql.includes("f2.incident_num = v.incident_num"));
 // key_occurrence joins a parent segment to its own children only, never one segment family to another (Codex review 02).
 assert.ok(!p49.sql.includes("f2.key_occurrence") && !ok(compilePlan(plan("offenders.robbery", "offender"), year(2024), t)).sql.includes("o.key_occurrence = f.key_occurrence"));
 // Age in bins (P30): infants under 18; 00 and blank one Unknown (P86); bins required, and never overlapping.
@@ -162,7 +162,7 @@ assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.age
 assert.match(refuse(plan("victims.aggravated_assault", "victim", [by("victim.sex", { bins })])), /bins ages only/);
 // Offenders (P44): offender segments of incidents with the codes, by their own sex.
 const offenders = ok(compilePlan(plan("offenders.robbery", "offender", [by("offender.sex")]), year(2024), t));
-assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS sub") && offenders.sql.includes("o.offense_code IN ('120')") && offenders.sql.includes("CASE WHEN f.offender_seq = '00' THEN 'unknown_offender' ELSE f.sex END AS g0"));
+assert.ok(offenders.sql.includes("f.offender_seq || ':' || f.key_occurrence AS sub") && offenders.sql.includes("o.offense_code IN ('120')") && offenders.sql.includes("CASE WHEN f.offender_seq = '00' THEN 'U' ELSE CASE WHEN f.sex IS NULL OR trim(f.sex) = '' THEN 'U' ELSE f.sex END END AS g0"));
 // Arrests (P46, P50): by arrest date only, every built year scanned, and the once-each statement.
 const arrests = ok(compilePlan(plan("arrests.shoplifting", "arrest", [], [], "arrest_date"), year(2024), t));
 assert.ok(arrests.sql.includes("substr(a.arrest_date, 1, 6) AS ym") && arrests.sql.includes("a.arrest_offense IN ('23C')"));

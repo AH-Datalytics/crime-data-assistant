@@ -13,6 +13,8 @@
 import { NOT_YET } from "../nibrs-shadow/wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 import type { ShadowOption, ShadowOutcome } from "../nibrs-shadow/answer";
+import { answerDimensions } from "../nibrs-shadow/answer";
+import { missingGroupings } from "../nibrs-shadow/named-groupings";
 import { ANSWER_STATEMENTS, clearanceDims, peopleFacts, SHOWN, type AnswerStatement } from "../nibrs-plan/result";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { categoryName, periodWords } from "../nibrs-shadow/deliver";
@@ -38,7 +40,11 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  * cell's status. The map's keys: a case id ("LS-219"), a case and one of its options ("LS-231|Kansas City, Missouri"),
  * or a case's alternative ("LS-236|alternative").
  */
-export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null;
+/**
+ * `unverifiable`: the cell must be there, but no independent value exists for it (an Unknown merged from categories
+ * that overlap, P86): its row is required, its value never judged.
+ */
+export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null; unverifiable?: true;
   /** Increment 6 (P66): the distinct incidents of the cell's units, beside its count. */
   incidents?: number | null;
   /** Increment 7b (P72): the population the cell's rate divides by (the file's FBI agency population). */
@@ -127,8 +133,9 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       ? (v.rows ?? []).flatMap((r) => measures.map((m) => ({ key: String(r.year ?? r.month ?? ""), ...pick(cell(r[m])), ...definition(m) })))
       : (v.rows ?? []).map((r) => {
         const c = pick(cell(r[measures[0]]));
-        // Increment 7: an offender record with sequence 00 is its own row, "seq_00" (the segment convention, V59 regenerated).
-        const code = catField ? (String(r[catField]) === "seq_00" ? "unknown_offender" : CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
+        // Increment 7: an offender record with sequence 00 is "seq_00" in the file (the segment convention, V59
+        // regenerated); P86 (coordinator 2026-11-02) counts it in the one Unknown row, as the engine does in SQL.
+        const code = catField ? (String(r[catField]) === "seq_00" ? "U" : CODE_ALIASES[catField]?.[String(r[catField])] ?? r[catField]) : null;
         const key = [r.year ?? r.month, catField ? categoryName(CATEGORY_FIELDS[catField], code) : null].filter((x) => x !== undefined && x !== null).map(String).join("|");
         const p = String(r.year ?? r.month ?? "");
         // A known 0 denominator (P51) is evidence: its share is an expected blank (UNAVAILABLE). Only absent or unknown
@@ -138,11 +145,13 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
         return { key, ...c, ...(catField ? { share } : {}) };
       });
     // P86: rows that name the same category (Unknown) are one row: values add (blank when either is), share recomputed.
-    if (catField === "age_group") {
+    if (catField) {
       const seen = new Map<string, ExpectedCell>();
       for (const c of cells.splice(0)) {
         const m = seen.get(c.key);
         if (!m) { seen.set(c.key, c); cells.push(c); continue; }
+        if (m.unverifiable) continue;
+        if (MULTI_FIELDS.has(catField) && m.value !== 0 && c.value !== 0) { m.unverifiable = true; m.share = undefined; continue; }
         m.value = m.value === null || c.value === null ? null : m.value + c.value;
         if (m.value === null) m.status = m.status === "VALUE" || m.status === "REPORTED_ZERO" ? c.status : m.status;
         else m.status = m.value === 0 && m.status === "REPORTED_ZERO" && c.status === "REPORTED_ZERO" ? "REPORTED_ZERO" : "VALUE";
@@ -191,11 +200,14 @@ function peopleCells(v: Record<string, unknown> | undefined): ExpectedCell[] | n
   const age = Object.keys(map).some((k) => /^\d{2}-\d{2}$|^under_18$/.test(k));
   const dim = age ? "victim.age" : PEOPLE_MAPS.find(([re]) => re.test(key))?.[1]
     ?? (Object.keys(map).some((k) => ["H", "N"].includes(k)) ? "victim.ethnicity" : Object.keys(map).some((k) => ["F", "M"].includes(k)) ? "victim.sex" : "victim.race");
-  const name = (k: string) => k === "seq_00" ? "Unknown offender" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
+  // P86: no offender identified, and a person's detail left blank, are the one Unknown row (merged below).
+  const person = age || /(?:sex|race|ethnicity|age)$/.test(dim);
+  const name = (k: string) => k === "seq_00" || (person && k === " ") ? "Unknown" : k === "no_relationship_reported" ? "No relationship reported" : k === " " ? "Not recorded"
     : age ? (k === "under_18" ? "Under 18" : k === "00" ? "Unknown" : k) : categoryName(dim, k);
-  const cells = new Map<string, number>();
-  for (const [k, n] of Object.entries(map)) { const key = age && k === " " ? "Unknown" : name(k); cells.set(key, (cells.get(key) ?? 0) + n); }
-  return [...cells].map(([key, n]) => ({ key, value: n, status: "VALUE", share: share(n) }));
+  // Categories that overlap (the file's own total): a merged Unknown cannot be summed, so it has no expected cell.
+  const cells = new Map<string, number>(), merged = new Set<string>();
+  for (const [k, n] of Object.entries(map)) { const key = name(k); if (cells.has(key) && cells.get(key)! > 0 && n > 0) merged.add(key); cells.set(key, (cells.get(key) ?? 0) + n); }
+  return [...cells].map(([key, n]) => (own && merged.has(key) ? { key, value: n, status: "VALUE", unverifiable: true as const } : { key, value: n, status: "VALUE", share: share(n) }));
 }
 function clearanceCells(lsCase: string, v: ClearanceValues): ExpectedCell[] | null {
   const ui = (x: UnitsIncidents, key: string, dim?: string): ExpectedCell =>
@@ -314,7 +326,9 @@ const MULTI_FIELDS = new Set(["weapon", "relationship", "offender_sex"]);
 const CODE_ALIASES: Record<string, Record<string, string>> = {
   // P86: an age not recorded (" ") and an age recorded as unknown ("00") are one Unknown row.
   age_group: { under_18: "Under 18", "00": "Unknown", " ": "Unknown" },
-  offender_sex: { "00": "unknown_offender" },
+  // P86 (coordinator 2026-11-02): no offender identified, and a sex, race or ethnicity left blank, are Unknown ('U').
+  offender_sex: { "00": "U", " ": "U" }, offender_segment_sex: { "00": "U", " ": "U" },
+  sex: { " ": "U" }, race: { " ": "U" }, ethnicity: { " ": "U" },
 };
 /**
  * Values requested before a label changed: P28 made these questions ask city or county first, so the city's values serve
@@ -751,6 +765,11 @@ function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "answer" }
   if (si < 0 && expected.some((x) => "share" in x)) diffs.push({ field: `${prefix}shares`, expected: "each category's share of its period", actual: "no share column", kind: "material" });
   for (const x of expected) {
     const g = got.get(x.key);
+    if (x.unverifiable) {
+      diffs.push(g ? { field: `${prefix}value ${x.key}`, expected: "(merged from overlapping categories: no independent value)", actual: `${g.value} ${g.status}`, kind: "unverified" }
+        : { field: `${prefix}value ${x.key}`, expected: "a row", actual: "missing", kind: "material" });
+      continue;
+    }
     if (!g || g.value !== x.value || g.status !== x.status) diffs.push({ field: `${prefix}value ${x.key || "total"}`, expected: `${x.value} ${x.status}`, actual: g ? `${g.value} ${g.status}` : "missing", kind: "material" });
     // A ranking: each agency in its place (P17's tie order included).
     else if (x.position !== undefined && keys.indexOf(x.key) + 1 !== x.position)
@@ -975,6 +994,11 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
       take(deliveredCheck(`button "${b.label}" `, `${c.id}|button`, b.continuation, want, r, expectedValues, walk));
     }
   }
+  // A requested breakdown is never silently dropped (coordinator 2026-11-02): whatever was expected, an answer missing a
+  // breakdown the question names is wrong.
+  const dims = answerDimensions(o);
+  const dropped = dims ? missingGroupings(c.question, dims) : [];
+  if (dropped.length) diffs.push({ field: "breakdowns", expected: `by ${dropped.join(" and ")}`, actual: `answered without it (${dims!.join(", ") || "no breakdown"})`, kind: "material" });
   if (e.action === "clarify" && o.kind === "clarify") {
     for (const want of e.options) {
       const got = o.options.find((x) => normLabel(x.label) === normLabel(want.label));

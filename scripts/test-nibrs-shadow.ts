@@ -12,6 +12,7 @@ import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } 
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
+import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
 import { scoreShadow, sliceValues } from "../lib/answer-eval/shadow";
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
 import { gates } from "../lib/answer-eval/gates";
@@ -39,6 +40,8 @@ function stub(sql: string): unknown[][] {
   // The same with the incidents beside the count (P66): one incident had a female and a male victim (12 + 9 > 20).
   if (/cats AS/.test(sql) && !/AS period/.test(sql) && /_incidents"/.test(sql)) return [["F", 14, "VALUE", 12, "VALUE", 0.6, "VALUE"], ["M", 10, "VALUE", 9, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN", null, "UNKNOWN"]];
   // Age groups out of order, with an age recorded as unknown and one not recorded (P86 merges them into one Unknown).
+  // Offenders by their own race: Unknown the largest, still listed last (coordinator 2026-11-02).
+  if (/cats AS/.test(sql) && !/AS period/.test(sql) && /ELSE f\.race END/.test(sql)) return [["U", 50, "VALUE", 0.625, "VALUE"], ["W", 10, "VALUE", 0.125, "VALUE"], ["B", 20, "VALUE", 0.25, "VALUE"]];
   if (/cats AS/.test(sql) && !/AS period/.test(sql) && /THEN 'Under 18'/.test(sql))
     return [["25-34", 20, "VALUE", 0.4, "VALUE"], ["Unknown", 5, "VALUE", 0.1, "VALUE"], ["Under 18", 15, "VALUE", 0.3, "VALUE"], [null, 10, "VALUE", 0.2, "VALUE"]];
   if (/cats AS/.test(sql) && !/AS period/.test(sql)) return [["F", 30, "VALUE", 0.6, "VALUE"], ["M", 20, "VALUE", 0.4, "VALUE"], ["U", null, "UNKNOWN", null, "UNKNOWN"]];
@@ -226,7 +229,7 @@ assert.deepEqual([cjLoc.plan.measures[0].id, cjLoc.plan.groupings[0].multiValue]
 const bySexes = as(ask("Simple assaults by men and women in Detroit in 2023"), "answer");
 assert.deepEqual([bySexes.plan.filters, bySexes.plan.groupings.map((g) => `${g.dimension}:${g.multiValue}`)], [[], ["offender.sex:each_value"]]);
 assert.deepEqual(bySexes.delivered.table.rows.map((r) => r[0]), ["Female", "Male", "Unknown"]);
-assert.ok(sqls.at(-1)!.includes("'unknown_offender'"));
+assert.ok(sqls.at(-1)!.includes("WHEN f2.offender_seq = '00' THEN 'U'"), "P86: no offender identified is Unknown, merged in SQL");
 assert.match(as(ask("Simple assaults by women in Detroit in 2023"), "decline").explanation, /^"By" a group of people means the offenders/);
 // P44: offenders themselves, by their own sex.
 assert.equal(as(ask("Robbery offenders in Detroit by sex in 2023"), "answer").plan.groupings[0].multiValue, undefined);
@@ -527,8 +530,12 @@ const v5 = (category: string, rows: unknown[], extra = {}) => sliceValues([{ nam
   measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } }, rows, ...extra }) }]).get("LS-999")!;
 assert.deepEqual(v5("age_group", [{ age_group: "under_18", m: { status: "VALUE", value: 4 } }, { age_group: "00", m: { status: "VALUE", value: 1 } }, { age_group: " ", m: { status: "VALUE", value: 1 } }]).map((x) => [x.key, x.share]),
   [["Under 18", 40], ["Unknown", 20]]);
+// Codex guard review 01.2: overlapping categories (an offense's offenders) merged into one Unknown are not summed: the
+// cell is left unverified, never judged against a double count.
+assert.deepEqual(v5("offender_sex", [{ offender_sex: " ", m: { status: "VALUE", value: 1 } }, { offender_sex: "U", m: { status: "VALUE", value: 1 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } },
+  { offender_sex: "seq_00", m: { status: "VALUE", value: 2 } }]).map((x) => [x.key, !!x.unverifiable]), [["Unknown", true], ["Male", false]], "the Unknown row required, its value not judged; Male kept");
 assert.deepEqual(v5("offender_sex", [{ offender_sex: "00", m: { status: "VALUE", value: 3 } }, { offender_sex: "M", m: { status: "VALUE", value: 9 } }]).map((x) => [x.key, x.share]),
-  [["Unknown offender", 30], ["Male", 90]]);
+  [["Unknown", 30], ["Male", 90]]);
 const weaponYear = sliceValues([{ name: "V", json: JSON.stringify({ nibrsai_cases: "LS-999", grouping: "year", category: "weapon", measures: { m: "x" }, totals: { m: { status: "VALUE", value: 10 } },
   rows: [{ year: "2023", weapon: "12", m: { status: "VALUE", value: 8 } }, { year: "2023", weapon: "40", m: { status: "VALUE", value: 7 } }] }) }]).get("LS-999")!;
 assert.deepEqual(weaponYear.map((x) => [x.key, x.share]), [["2023|Handgun", undefined], ["2023|Personal Weapons", undefined]], "overlapping categories are never summed");
@@ -1027,5 +1034,27 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.ok(jeff.kind !== "decline" || !/^This isn't available yet: to compare/i.test(jeff.explanation), "vs is read as places side by side");
   const cmp = ask("Chicago compared to Memphis carjackings in 2024");
   assert.ok(cmp.kind === "answer" && cmp.plan.geography.places.length === 2, JSON.stringify(cmp).slice(0, 200));
+}
+// Coordinator 2026-11-02 (the redesign's retest of #96). 1: a breakdown the question names is never dropped.
+{
+  assert.deepEqual(namedGroupings("Robbery offenders in Memphis by age and year from 2022 to 2024").map((g) => g.word), ["year", "age"]);
+  assert.deepEqual(namedGroupings("Robbery rate per 100,000 in Memphis in 2024, by men and women").map((g) => g.word), []);
+  assert.deepEqual(missingGroupings("Robbery offenders in Memphis by age and year from 2022 to 2024", ["offender.age"]), ["year"]);
+  assert.deepEqual(missingGroupings("Shoplifting in Memphis per month in 2024", ["time.month"]), []);
+  // Codex guard review 01: how often agencies reported is not a breakdown; a comma or parenthesis before the period
+  // ends the phrase, never hides it; "had" is not a request for the agencies reporting.
+  assert.deepEqual(namedGroupings("Shoplifting in Texas by year from 2023 to 2024, only agencies that reported each month").map((g) => g.word), ["year"]);
+  assert.deepEqual(missingGroupings("Robbery offenders in Detroit by age and year, 2022 to 2024", ["offender.age"]), ["year"]);
+  assert.deepEqual(namedGroupings("How many robberies did Detroit report each year from 2022 to 2024?").map((g) => g.word), ["year"]);
+  assert.deepEqual(missingGroupings("Robbery offenders in Detroit by age and year (2022 to 2024)", ["offender.age"]), ["year"]);
+  assert.equal((readQuestion("How many agencies had shoplifting in Kansas in 2024", 2026, "2026-09").ledger as unknown as { column: unknown }).column, null);
+  assert.equal((readQuestion("How many agencies reported shoplifting in Kansas in 2024", 2026, "2026-09").ledger as unknown as { column: unknown }).column, "agencies");
+  // (Age by year itself is read in test-nibrs-shadow-reading; this stub has no year-by-category rows.)
+  // 2: one Unknown row, last, even when it is the largest; no offender identified counted in it in SQL.
+  const race = as(ask("Robbery offenders in Detroit by race in 2023"), "answer");
+  assert.deepEqual(race.delivered.table.rows.map((r) => r[0]), ["Black", "White", "Unknown"]);
+  // 3: the agencies reporting, asked in other words.
+  for (const q of ["how many agencies reported shoplifting in Kansas in 2024", "agencies reporting shoplifting in Kansas in 2024", "shoplifting in Kansas in 2024 with coverage"])
+    assert.deepEqual(as(ask(q), "answer").delivered.table.columns.map((c) => c.header), ["Shoplifting offenses", "Agencies reporting", "Population covered"], q);
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
