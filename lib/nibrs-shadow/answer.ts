@@ -598,10 +598,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // a region or the nation, unless another source is named (P01) or a detail is asked (NIBRS's or SHR's). Counts only
   // for now. An agency Current Trends doesn't have goes on to NIBRS (P01's fallback).
   if (deps.current && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance
-    && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite && d.spec.statistic === "count" && d.spec.measures.length === 1
+    && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite && (d.spec.statistic === "count" || d.spec.statistic === "rate") && d.spec.measures.length === 1
     && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length === 1
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
-    const sp = d.spec, cur = deps.current, span = monthSpan(sp, cur), pl = sp.places[0];
+    const sp = d.spec, cur = deps.current, pl = sp.places[0];
+    // The form asked: the rolling 12 months through the latest month; this year as one total is its year to date; a
+    // range of months is each month when asked by month, otherwise one total (design note, section 3).
+    const ctYear = Number(cur.lastMonth.slice(0, 4));
+    let form: "months" | "ytd" | "rolling" | "total" | null = null, span: [string, string] | null = null;
+    // "the last 12 months" is the 12 months through Current Trends' own latest month, not NIBRS's (the reader's).
+    if ((sp.grain === "rolling" && sp.period.form === "none") || flags(ledger0).last12) { form = "rolling"; span = [cur.lastMonth, cur.lastMonth]; }
+    else if (sp.grain === "total" && sp.period.form === "year" && sp.period.year === ctYear) { form = "ytd"; span = [`${ctYear}-01`, cur.lastMonth]; }
+    else if ((span = monthSpan(sp, cur))) form = sp.grain === "month" || span[0] === span[1] ? "months" : "total";
     let place: CurrentPlace | null = null;
     if (pl.kind === "national") place = { kind: "group", states: null, label: "The United States" };
     else if (pl.kind === "state") place = { kind: "group", states: [pl.code], label: stateName(pl.code) };
@@ -610,8 +618,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${a.ori.replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
       if (a?.kind === "agency" && has) place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
     }
-    if (span && place) {
-      const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form: "months",
+    if (span && form && place) {
+      const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form, statistic: sp.statistic === "rate" ? "rate" : "count",
         ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);

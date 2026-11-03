@@ -94,6 +94,11 @@ export function groupMonths(b: CurrentBuild, states: string[] | null, measure: s
   return out;
 }
 
+/** An agency's current population: its row's in `month`, else its latest earlier row's; null when none is above zero. */
+export function agencyPopulation(b: CurrentBuild, ori: string, month: Month, execute: (sql: string) => unknown[][]): number | null {
+  const r = execute(`SELECT population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND population > 0 AND printf('%04d-%02d', year, month) <= ${q(month)} ORDER BY year DESC, month DESC LIMIT 1`)[0];
+  return r ? Number(r[0]) : null;
+}
 /** A sum over months, null when any month in it is unknown; `missing` names those months (design note section 3). */
 export function cumulative(values: (number | null)[], ms: Month[]): { value: number | null; missing: Month[] } {
   const missing = ms.filter((_, i) => values[i] === null);
@@ -127,8 +132,10 @@ export type CurrentPlace =
   | { kind: "group"; states: string[] | null; label: string };
 export type CurrentQuestion = {
   measure: string; place: CurrentPlace; from: Month; to: Month;
-  /** "months": each month; "ytd" / "rolling": one total through `to` (its months computed here). */
-  form: "months" | "ytd" | "rolling";
+  /** "months": each month; "ytd" / "rolling": one total through `to` (its months computed here); "total": `from` through `to`. */
+  form: "months" | "ytd" | "rolling" | "total";
+  /** "rate" (decision B): only for a total of two or more months, every month known, and a population above zero. */
+  statistic?: "count" | "rate";
   agencyLine?: string;
 };
 export type CurrentAnswer = {
@@ -153,7 +160,11 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const col = CURRENT_MEASURE[cq.measure];
   if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
   const group = cq.place.kind === "group";
-  const span = cq.form === "months" ? months(cq.from, cq.to) : cq.form === "ytd" ? ytdMonths(cq.to) : rollingMonths(cq.to);
+  const span = cq.form === "months" || cq.form === "total" ? months(cq.from, cq.to) : cq.form === "ytd" ? ytdMonths(cq.to) : rollingMonths(cq.to);
+  const rate = cq.statistic === "rate";
+  // Decision B (P58, P59): a rate is a total's, of two or more months; never one month's, never month by month.
+  if (rate && (cq.form === "months" || span.length < 2))
+    return { kind: "current-decline", explanation: "Current Trends rates are given for a total of two or more months (the year to date, the past 12 months, or a range of months), never for one month or month by month." };
   // The months the data holds: an agency's from the Final panel's first, a group's from current_crime's (decision A).
   const first = group ? b.firstMonth : b.finalFirstMonth;
   const covered = span.filter((m) => m >= first && m <= b.lastMonth);
@@ -186,15 +197,27 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const hm = HISTORICAL_MEASURE[cq.measure];
   const places: Meaning["places"] = cq.place.kind === "agency" ? [{ kind: "agency", name: cq.place.name, state: cq.place.state }]
     : cq.place.states === null ? [{ kind: "national", name: "United States" }] : cq.place.states.map((st) => ({ kind: "state" as const, name: stateName(st), state: st }));
-  const meaning = (groupings: string[]): Meaning => ({ source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings, statistic: "count",
+  const meaning = (groupings: string[]): Meaning => ({ source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings, statistic: rate ? "rate" : "count",
+    ...(rate ? { denominator: group ? "the summed current population of the agencies counted, per 100,000" : "the agency's current population, per 100,000" } : {}),
     ...(group ? { cohort: "same_agencies" as const } : {}) });
   if (cq.form !== "months") {
     const c = cumulative(vals, covered);
-    const what = cq.form === "ytd" ? `year to date (${spanWords(period.from, period.to)})` : `12 months from ${spanWords(period.from, period.to)}`;
-    if (c.value === null) return { kind: "current-decline", explanation: `Crime Index has no ${one} figure for ${where} in ${c.missing.map(monthWords).join(", ")}, so there is no total for the ${what}.` };
+    const sw = spanWords(period.from, period.to);
+    const what = cq.form === "ytd" ? `in the year to date, ${sw}` : cq.form === "rolling" ? `in the 12 months from ${sw}` : `from ${sw}`;
+    const whatTotal = cq.form === "ytd" ? `the year to date (${sw})` : cq.form === "rolling" ? `the 12 months from ${sw}` : sw;
+    if (c.value === null) return { kind: "current-decline", explanation: `Crime Index has no ${one} figure for ${where} in ${c.missing.map(monthWords).join(", ")}, so there is no total for ${whatTotal}.` };
+    if (rate) {
+      // The population: the agency's in the span's last month; a group's, its counted agencies' summed population then.
+      const pop = cq.place.kind === "agency" ? agencyPopulation(b, cq.place.ori, period.to, execute) : lastCov ? lastCov.population : null;
+      const r = currentRate(c.value, pop, covered.length);
+      if (r === null) return { kind: "current-decline", explanation: `Crime Index gives no population for ${where} in ${monthWords(period.to)}, so there is no rate.` };
+      return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
+        delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)} per 100,000` }], rows: [[r]] },
+          text: [`${where}: ${r.toFixed(1)} ${words} per 100,000 people ${what} (${fmt(c.value)} ${words}; not annualized).`, ...head, ...cohortLine, ...leftOutLine, source] } };
+    }
     return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }], rows: [[c.value]] },
-        text: [`${where}: ${fmt(c.value)} ${words}, ${what}.`, ...head, ...cohortLine, ...leftOutLine, source] } };
+        text: [`${where}: ${fmt(c.value)} ${words} ${what}.`, ...head, ...cohortLine, ...leftOutLine, source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);
   const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];

@@ -82,7 +82,7 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   // MO0922400's March 2025 year to date: February is unknown, so no total (the published 53 is never shown).
   const mo2 = answerCurrent({ measure: "property_crime", place: { kind: "agency", ori: "MO0922400", label: "MO0922400", name: "x", state: "MO" }, from: "2025-03", to: "2025-03", form: "ytd" }, build, execute);
   assert.equal(mo2.kind, "current-decline");
-  assert.match((mo2 as { explanation: string }).explanation, /in February 2025, so there is no total for the year to date/);
+  assert.match((mo2 as { explanation: string }).explanation, /in February 2025, so there is no total for the year to date \(January 2025 through March 2025\)\.$/);
   // Memphis by month across the Final panel and current_crime.
   const mem = answerCurrent({ measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee", name: "Memphis", state: "TN" }, from: "2024-11", to: "2025-02", form: "months" }, build, execute);
   assert.ok(mem.kind === "current" && mem.delivered.table.rows.length === 4 && mem.read.tables.join() === "current_final,current_crime");
