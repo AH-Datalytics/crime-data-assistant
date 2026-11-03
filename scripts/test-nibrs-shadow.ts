@@ -117,6 +117,20 @@ assert.equal(ori(at("city:Washington:DC", "Washington DC")), "DCMPD0000");
 assert.equal(ori(at("county:Baltimore County:MD", "Baltimore County")), "MD0030100");
 assert.equal(ori(at("city:Portland:OR", "Portland")), "OR0260200", "Portland, Maine is under 100,000");
 assert.equal(at("city:Nowhere:TX", "Nowhere").kind, "unresolved");
+// The shared index (coordinator 2026-11-02): the crosswalk's place names are aliases; Crime Index agencies NIBRS lacks are
+// in it; an agency's own name wins over another's alias in the same state.
+assert.equal(ori(at("city:New York City:NY", "New York City")), "NY0303000", "the crosswalk's \"new york city\"");
+assert.equal(ori(at("county:Jefferson County:LA", "Jefferson Parish")), "LA0260000", "a Crime Index parish NIBRS lacks");
+assert.equal(ori(at("county:Jefferson Parish:LA", "Jefferson Parish, Louisiana")), "LA0260000");
+assert.equal(ori(at("city:Louisville:KY", "Louisville")), "KY0568000", "not the old county police's \"louisville county\"");
+assert.equal(ori(at("city:Flint:MI", "Flint")), "MI2539800", "not Flint Township's mailing city \"flint\"");
+// "Borough" is a town's, never a county's (Codex places review 01).
+assert.equal(ori(at("ambiguous:Baldwin Borough", "Baldwin Borough")), "PA0020100");
+assert.equal(ori(at("city:Freehold Borough:NJ", "Freehold Borough")), "NJ0131500");
+assert.equal(ori(at("ambiguous:Middlesex Borough", "Middlesex Borough")), "NJ0121100");
+assert.equal(at("ambiguous:Orleans Parish", "Orleans Parish").kind, "unresolved", "never Orleans County, New York");
+assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "unresolved");
+assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"));
 
 // An answer: the plan, the compiled read, the delivered table and text (source statement last, D30).
 const a = as(ask("How many shoplifting offenses were there in Memphis in 2023?"), "answer");
