@@ -485,7 +485,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Places next (P16, P28): resolve each city or county through the build's agencies; the reader then sees a resolved
   // value. A name with several real candidates is asked about.
   const resolved = new Map<string, Place>();
-  let ask: { part: Part; name: string; candidates: Candidate[] } | null = null;
+  let ask: { part: Part; name: string; candidates: Candidate[]; more?: boolean } | null = null;
   let unfound: Part | null = null;
   const parts = ledger0.parts.map((p) => {
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
@@ -493,18 +493,20 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
     if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
-    if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates }; return p; }
+    if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates, more: r.more }; return p; }
     const value = `${r.agency.kind}:${r.agency.name}:${r.agency.state}`;
     resolved.set(value, r.place);
     return { ...p, value };
   });
   const ledger = withParts(ledger0, parts);
   if (ask) {
-    const a: { part: Part; name: string; candidates: Candidate[] } = ask;
-    const options = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
+    const a: { part: Part; name: string; candidates: Candidate[]; more?: boolean } = ask;
+    const options: ShadowOption[] = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
     // A question no choice could answer is declined, not asked about (D28): when no button leads to an answer or a
     // further question, the most likely reading's refusal is given.
-    if (options.every((o) => o.continuation.kind === "decline")) return options[0].continuation;
+    if (options.every((o) => o.continuation!.kind === "decline")) return options[0].continuation!;
+    // Same-name towns: the rest of them are one typed place away (the place with its state).
+    if (a.more) options.push({ label: `Another ${a.name}`, entry: "which city or agency" });
     const named = a.candidates.find((c) => c.kind === "agency");
     return { kind: "clarify", about: `which ${named?.kind === "agency" ? named.agency.name.replace(/ County$/, "") : a.name}`, question: ledger0.question, options };
   }
@@ -514,7 +516,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // its state, or as a county): a word the reader took for a place ("index", "summer") or a misspelling goes on as before.
   if (unfound) {
     const u: Part = unfound;
-    return decline("unresolved_place", `I couldn't find "${u.text.trim().replace(/[?.!,]+$/, "")}" among the places here: city and county police agencies serving 10,000 people or more, the states and the nation.`);
+    return decline("unresolved_place", `I couldn't find "${u.text.trim().replace(/[?.!,]+$/, "")}" among the city and county police agencies, states and the nation here.`);
   }
 
   // D31 for the Crime Index's annual figures (query-log step one, 2026-11-02: "murders in Philadelphia"): every year it

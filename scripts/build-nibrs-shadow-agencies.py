@@ -5,8 +5,8 @@
         [--crosswalk <crosswalk release dir> --crimeindex <Crime Index build dir>]
 
 One row per city police agency (agency indicator 1) and per county agency (crime_data.db's Historical agency type
-"county", named "<X> County") in the canonical build, with its population in the build's latest year, at or above
-MIN_POPULATION. A place named in a question resolves through this index (lib/nibrs-shadow/places.ts). It stands in for
+"county", named "<X> County") in the canonical build, with its population in the build's latest year (0 when it has
+none), whatever its size (Jeff 2026-11-03: no population floor). A place named in a question resolves through this index (lib/nibrs-shadow/places.ts). It stands in for
 the app's resolveNibrsPlaces, which needs nibrs.db, until the canonical build ships the app's agency tables. City names
 come from the canonical agency table, display casing and county names from crime_data.db's Historical agency names.
 Read-only on both.
@@ -19,7 +19,6 @@ import sqlite3
 
 import duckdb
 
-MIN_POPULATION = 10_000
 # A place's state is its postal code; the ORI prefix and header state differ for Nebraska and Guam (lib/nibrs-plan/state-codes.ts).
 ORI_PREFIX_STATES = {"NB": "NE", "GM": "GU"}
 CURRENT_YEAR = 2015  # a Crime Index agency with no figures since then is not a current place
@@ -36,17 +35,16 @@ rows = duckdb.connect().execute(f"""
   WITH y AS (SELECT ori, u.data_year, trim(u.city) AS city, u.state_abbr AS state, u.agency_indicator AS ind, u.population
              FROM read_parquet('{a.root}/agency/data.parquet'), unnest(by_year) AS t(u))
   SELECT ori, arg_max(city, data_year), arg_max(state, data_year), arg_max(ind, data_year), arg_max(population, data_year), max(data_year)
-  FROM y GROUP BY ori
-  HAVING arg_max(population, data_year) >= {MIN_POPULATION} ORDER BY 3, 2, 5 DESC""").fetchall()
+  FROM y GROUP BY ori ORDER BY 3, 2, 5 DESC""").fetchall()
 names = sqlite3.connect(f"file:{a.names}?mode=ro", uri=True)
 hist = {o: (n, t) for o, n, t in names.execute("SELECT ori, agency, type FROM historical_agency WHERE type IN ('city', 'county')")}
 out = []
 for o, c, s, ind, p, y in rows:
     name, kind = hist.get(o, (None, None))
     if ind == "1":
-        out.append({"ori": o, "kind": "city", "name": name if kind == "city" and name else c.title(), "state": s, "population": p, "year": y})
+        out.append({"ori": o, "kind": "city", "name": name if kind == "city" and name else c.title(), "state": s, "population": p or 0, "year": y})
     elif kind == "county" and name and name.endswith(" County"):
-        out.append({"ori": o, "kind": "county", "name": name, "state": s, "population": p, "year": y})
+        out.append({"ori": o, "kind": "county", "name": name, "state": s, "population": p or 0, "year": y})
 
 # The shared place index (coordinator 2026-11-02): NIBRS's agencies and the Crime Index's, one reader for every source.
 # The crosswalk (nibrs-model's agency crosswalk, --crosswalk) gives each ORI's place names (its "city" and "county"
@@ -70,8 +68,8 @@ if a.crosswalk:
         r["sources"] = ["nibrs"]
     if a.crimeindex:
         ci = cw.execute(f"""
-          SELECT ori, arg_max(name, year), arg_max(type, year), arg_max(state, year), arg_max(population, year) FILTER (WHERE population > 0 AND has),
-                 max(year) FILTER (WHERE population > 0 AND has)
+          SELECT ori, arg_max(name, year), arg_max(type, year), arg_max(state, year), arg_max(population, year) FILTER (WHERE has),
+                 max(year) FILTER (WHERE has)
           FROM (SELECT *, violent_total IS NOT NULL OR property_total IS NOT NULL AS has FROM read_parquet('{a.crimeindex}/agency_crime.parquet'))
           GROUP BY ori""").fetchall()  # the population of the latest year with figures (later rows carry it with none)
         ci_oris = {o for o, *_ in ci}
@@ -82,14 +80,14 @@ if a.crosswalk:
         for o, n, t, s, p, y in ci:
             # An agency with no figures since CURRENT_YEAR is gone or merged (Eau Gallie; Louisville before its
             # 2003 merger), so its name would shadow the place's current agency.
-            if o in have or t not in ("city", "county") or p is None or p < MIN_POPULATION or y < CURRENT_YEAR:
+            if o in have or t not in ("city", "county") or y is None or y < CURRENT_YEAR:
                 continue
             # The Crime Index's own name is the place's ("New York City", "Jefferson Parish"); the crosswalk's are aliases.
             name = n
             if t == "county" and not name.endswith((" County", " Parish", " Borough")):
                 name = f"{name} County"
             own = norm(name)
-            out.append({"ori": o, "kind": t, "name": name, "state": s, "population": int(p), "year": int(y),
+            out.append({"ori": o, "kind": t, "name": name, "state": s, "population": int(p or 0), "year": int(y),
                         "aliases": sorted({al for al, k in aliases.get(o, ()) if norm(al) != own and norm(al) + " county" != own}), "sources": ["crime_index"]})
             added += 1
         print(added, "Crime Index agencies added")
@@ -111,7 +109,7 @@ out.sort(key=lambda r: (r["state"], r["name"], -r["population"]))
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "w", encoding="utf-8", newline="\n") as f:
     # One agency per line, so a rebuild diffs by agency.
-    f.write('{"_comment": "City police and county agencies in canonical release ' + a.release + ' with 10,000+ residents (scripts/build-nibrs-shadow-agencies.py).",\n')
+    f.write('{"_comment": "City police and county agencies in canonical release ' + a.release + ', every size (scripts/build-nibrs-shadow-agencies.py).",\n')
     f.write(' "release": "' + a.release + '",\n "agencies": [\n')
     f.write(",\n".join("  " + json.dumps(r, ensure_ascii=False) for r in out))
     f.write("\n ]\n}\n")

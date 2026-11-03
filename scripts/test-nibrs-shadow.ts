@@ -131,6 +131,22 @@ assert.equal(ori(at("city:Freehold Borough:NJ", "Freehold Borough")), "NJ0131500
 assert.equal(ori(at("ambiguous:Middlesex Borough", "Middlesex Borough")), "NJ0121100");
 assert.equal(at("ambiguous:Orleans Parish", "Orleans Parish").kind, "unresolved", "never Orleans County, New York");
 assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "unresolved");
+// No population floor (Jeff 2026-11-03): every city and county agency is in the index, so same-name towns ask a short
+// list, never dozens; a name with one clearly main city (twice the next) is that city; a city's name is a city (P16).
+assert.ok(places.byName.get("clinton")!.length > 20 && places.byName.get("franklin")!.length > 20, "dozens of same-name agencies");
+assert.deepEqual(asked(at("ambiguous:Springfield", "Springfield")), ["Springfield, Missouri", "Springfield, Massachusetts", "Springfield, Illinois"]);
+const clinton = at("city:Clinton:IA", "Clinton");
+assert.ok(clinton.kind === "ask" && clinton.candidates.length === 3 && clinton.more, "Clinton: three towns, one per state, and the rest one step away");
+assert.deepEqual(asked(at("city:Greenville:SC", "Greenville")), ["Greenville, North Carolina", "Greenville city, South Carolina", "Greenville, Texas", "Greenville County, South Carolina"]);
+assert.equal(ori(at("city:Franklin:TN", "Franklin")), places.byName.get("franklin")!.find((x) => x.state === "TN" && x.kind === "city")!.ori, "Franklin, Tennessee is twice any other Franklin");
+assert.equal(at("city:Clinton:MI", "Clinton, Michigan").kind, "agency", "a state named settles it");
+assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: string } }).agency.kind, "city", "Clinton, Michigan is the city, not Clinton County");
+{
+  const c = as(ask("Shoplifting in Clinton in 2024"), "clarify");
+  assert.equal(c.options.length, 4);
+  assert.deepEqual(c.options.at(-1), { label: "Another Clinton", entry: "which city or agency" });
+}
+
 // A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").
 assert.ok([...places.byName.values()].flat().every((x) => x.state in STATE_NAMES), "every agency's state is a postal code");
 assert.equal(ori(at("city:Omaha:NE", "Omaha, NE")), "NB0280200");
@@ -142,9 +158,12 @@ assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"
 // says so, never P01's "figures don't answer"; asks outside the data name their limit; the nation is "the United States"
 // in an offered question, never "in nationwide".
 {
-  const unfound = as(ask("Murders in Ecorse, Michigan in 2020"), "decline");
+  // Every agency is in the index (no population floor, Jeff 2026-11-03), so the place is taken out of a copy of it.
+  const noEcorse = { ...places, byName: new Map([...places.byName].filter(([k]) => k !== "ecorse")) };
+  const unfound = as(shadowAnswer("Murders in Ecorse, Michigan in 2020", { ...deps, places: noEcorse }), "decline");
   assert.equal(unfound.reason, "unresolved_place");
-  assert.match(unfound.explanation, /^I couldn't find "Ecorse, Michigan" among the places here: city and county police agencies serving 10,000 people or more, the states and the nation\./);
+  assert.match(unfound.explanation, /^I couldn't find "Ecorse, Michigan" among the city and county police agencies, states and the nation here\./);
+  assert.equal(at("city:Ecorse:MI", "Ecorse, Michigan").kind, "agency", "a town of under 10,000 people is in the index");
   assert.doesNotMatch(unfound.explanation, /don't answer this question/);
   const outside: [string, RegExp][] = [
     ["Memphis crime on a map", /^Maps aren't available here/],
