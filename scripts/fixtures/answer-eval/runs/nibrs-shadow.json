@@ -830,7 +830,15 @@
    "LS-429",
    "LS-430",
    "LS-431",
-   "LS-432"
+   "LS-432",
+   "LS-433",
+   "LS-434",
+   "LS-435",
+   "LS-436",
+   "LS-437",
+   "LS-438",
+   "LS-439",
+   "LS-440"
   ],
   "label unresolved": [
    "LS-024",
@@ -889,15 +897,7 @@
    "LS-218"
   ],
   "label drafted": [
-   "LS-419",
-   "LS-433",
-   "LS-434",
-   "LS-435",
-   "LS-436",
-   "LS-437",
-   "LS-438",
-   "LS-439",
-   "LS-440"
+   "LS-419"
   ]
  },
  "notBuilt": [
@@ -4736,35 +4736,6 @@
    "era": "2021 and later",
    "values": "not measured",
    "unverifiedAnswers": 1
-  }
- ],
- "provisional": [
-  {
-   "id": "LS-419",
-   "split": "heldout",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "wrong_answer",
-   "diffs": [
-    {
-     "field": "statement",
-     "expected": "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)",
-     "actual": "(no check defined)",
-     "kind": "unverified"
-    },
-    {
-     "field": "statement",
-     "expected": "Changes the existing chart to bars using the existing result; makes no data-engine request.",
-     "actual": "Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.",
-     "kind": "material"
-    }
-   ],
-   "notes": [
-    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later",
-   "values": "match"
   },
   {
    "id": "LS-433",
@@ -4876,6 +4847,35 @@
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
+   "values": "match"
+  }
+ ],
+ "provisional": [
+  {
+   "id": "LS-419",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "statement",
+     "expected": "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Changes the existing chart to bars using the existing result; makes no data-engine request.",
+     "actual": "Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
    "values": "match"
   }
  ]

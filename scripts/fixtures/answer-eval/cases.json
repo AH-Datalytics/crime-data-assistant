@@ -26159,9 +26159,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   },
@@ -26217,9 +26217,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   },
@@ -26275,9 +26275,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   },
@@ -26333,9 +26333,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   },
@@ -26391,9 +26391,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   },
@@ -26449,9 +26449,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   },
@@ -26507,9 +26507,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   },
@@ -26564,9 +26564,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-period",
-    "reviewed_by": null,
+    "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
   }

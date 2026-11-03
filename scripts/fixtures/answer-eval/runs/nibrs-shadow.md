@@ -11,9 +11,9 @@ Labeled set: 440 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ## Label eligibility (can the case be scored)
 
-- 377: scorable (reviewed, decided policy)
+- 385: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 9: label drafted
+- 1: label drafted
 
 ## Refused as not built (not scored)
 
@@ -23,18 +23,20 @@ Labeled set: 440 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ### Development
 
-28 cases. Correct 20; unverified 7; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
+36 cases. Correct 28; unverified 7; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 16 | 0 | 0 | 0 |
+| answer | 24 | 0 | 0 | 0 |
 | clarify | 0 | 8 | 0 | 0 |
 | decline | 0 | 0 | 4 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
+| answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
 | answer:nibrs count | 2021 and later | 16 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (16/16)); direct answers: not measured (88% verified, 2 unverified); numeric fixtures: not measured (14/16 match, 2 not measured) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
@@ -297,21 +299,7 @@ Discrepancies and unverified cases:
 
 ### Development
 
-8 cases. Correct 8; unverified 0; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
-
-Expected (rows) by actual (columns):
-
-| | answer | clarify | decline | no reading |
-|---|---|---|---|---|
-| answer | 8 | 0 | 0 | 0 |
-
-| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
-|---|---|---|---|---|
-| answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
-
-Discrepancies and unverified cases:
-
+No cases.
 
 ### Held out
 
