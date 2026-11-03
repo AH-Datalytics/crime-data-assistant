@@ -49,6 +49,7 @@ import { GROUP_B, MEASURE_CODES, PERSON_CODES } from "../nibrs-question-types";
 import type { NibrsPlan } from "./plan";
 import { clearanceDims, peopleFacts, type AnswerStatement } from "./result";
 import type { ResolvedPeriod } from "./resolve";
+import { headerStates, postalStateSql } from "./state-codes";
 
 export type CompiledQuery = {
   sql: string;
@@ -298,10 +299,10 @@ const EXTRA_CODES: Record<string, string[]> = { drug_equipment: ["35B"] };
  * By ORIs, or a state's city agencies (FBI agency indicator 1). Columns: ori, data_year, population, city, state.
  */
 export function agencyPopulationSql(root: string, who: { oris: string[] } | { state: string; city: true }, years: number[]): string {
-  const where = "oris" in who ? `ori IN (${list(who.oris)})` : `u.state_abbr = ${q(who.state)} AND u.agency_indicator = '1'`;
+  const where = "oris" in who ? `ori IN (${list(who.oris)})` : `u.state_abbr IN (${list(headerStates(who.state))}) AND u.agency_indicator = '1'`;
   // A year with a blank city takes the agency's latest named year.
   return `SELECT ori, u.data_year, u.population,
-    coalesce(nullif(trim(u.city), ''), list_last(list_transform(list_filter(by_year, x -> trim(x.city) <> ''), x -> trim(x.city)))) AS city, u.state_abbr AS state
+    coalesce(nullif(trim(u.city), ''), list_last(list_transform(list_filter(by_year, x -> trim(x.city) <> ''), x -> trim(x.city)))) AS city, ${postalStateSql("u.state_abbr")} AS state
     FROM read_parquet(${q(`${root}/agency/data.parquet`)}), unnest(by_year) AS t(u)
     WHERE ${where} AND u.data_year IN (${years.map(Number).join(", ")}) ORDER BY ori, u.data_year`;
 }

@@ -20,6 +20,8 @@ import sqlite3
 import duckdb
 
 MIN_POPULATION = 10_000
+# A place's state is its postal code; the ORI prefix and header state differ for Nebraska and Guam (lib/nibrs-plan/state-codes.ts).
+ORI_PREFIX_STATES = {"NB": "NE", "GM": "GU"}
 CURRENT_YEAR = 2015  # a Crime Index agency with no figures since then is not a current place
 ap = argparse.ArgumentParser()
 ap.add_argument("--root", required=True)
@@ -103,7 +105,9 @@ if a.crosswalk:
         dropped += len(r["aliases"]) - len(keep)
         r["aliases"] = keep
     print(dropped, "aliases dropped (another agency's own name in the state)")
-    out.sort(key=lambda r: (r["state"], r["name"], -r["population"]))
+for r in out:
+    r["state"] = ORI_PREFIX_STATES.get(r["state"], r["state"])
+out.sort(key=lambda r: (r["state"], r["name"], -r["population"]))
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "w", encoding="utf-8", newline="\n") as f:
     # One agency per line, so a rebuild diffs by agency.

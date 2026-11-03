@@ -8,7 +8,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
-import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } from "../lib/nibrs-shadow/places";
+import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
+import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
@@ -130,6 +131,11 @@ assert.equal(ori(at("city:Freehold Borough:NJ", "Freehold Borough")), "NJ0131500
 assert.equal(ori(at("ambiguous:Middlesex Borough", "Middlesex Borough")), "NJ0121100");
 assert.equal(at("ambiguous:Orleans Parish", "Orleans Parish").kind, "unresolved", "never Orleans County, New York");
 assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "unresolved");
+// A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").
+assert.ok([...places.byName.values()].flat().every((x) => x.state in STATE_NAMES), "every agency's state is a postal code");
+assert.equal(ori(at("city:Omaha:NE", "Omaha, NE")), "NB0280200");
+assert.equal(agencyLabel(places.byName.get("omaha")![0]), "Omaha, Nebraska");
+assert.ok(agencyPopulationSql("r", { state: "NE", city: true }, [2024]).includes("IN ('NE', 'NB')"), "a state's city agencies under every header code");
 assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"));
 
 // An answer: the plan, the compiled read, the delivered table and text (source statement last, D30).
