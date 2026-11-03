@@ -4,8 +4,8 @@ Milestone report (coordinator 2026-11-02): the share of each live source's real 
 
 ## historical
 
-After the shared place index (before it, after the period-phrasing PR: answers 482 (34%), asks 405 (29%), declines well 306 (22%), declines badly 208 (15%); dev with #99: answers 51 (4%), declines badly 933 (67%)): 1401 first questions from the old historical tab, release test6-20261031-host, run 2026-11-03.
+After postal state codes (before it, after the shared place index: answers 502 (36%), asks 424 (30%), declines well 308 (22%), declines badly 167 (12%); dev with #99: answers 51 (4%), declines badly 933 (67%)): 1401 first questions from the old historical tab, release test6-20261031-host, run 2026-11-03.
 
 | Answers | Asks a clarifying question | Declines well | Declines badly | Answers wrong |
 |---|---|---|---|---|
-| 502 (36%) | 424 (30%) | 308 (22%) | 167 (12%) | (from the accuracy pilot) |
+| 505 (36%) | 424 (30%) | 319 (23%) | 153 (11%) | (from the accuracy pilot) |
