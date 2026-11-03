@@ -114,6 +114,7 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
     rateBasis: "computed",
     breakdowns: [],
     caveats: ["blank_not_available"],
+    latestMonth: "as_published",  // P93 doesn't apply: Crime Index's own publishing decides
     vocabulary: {
       terms: { murder: ["murders", "homicides", "homicide", "killings"], rape: ["rapes"], robbery: ["robberies"], aggravated_assault: ["aggravated assaults"],
         burglary: ["burglaries", "break-ins"], theft: ["thefts", "larceny", "larceny-theft"], motor_vehicle_theft: ["motor vehicle thefts", "car theft", "auto theft", "stolen cars"],
