@@ -138,6 +138,29 @@ assert.equal(agencyLabel(places.byName.get("omaha")![0]), "Omaha, Nebraska");
 assert.ok(agencyPopulationSql("r", { state: "NE", city: true }, [2024]).includes("IN ('NE', 'NB')"), "a state's city agencies under every header code");
 assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"));
 
+// Shared decline wording (coordinator 2026-11-03, Historical step one causes 3 and 7): a place the index doesn't have
+// says so, never P01's "figures don't answer"; asks outside the data name their limit; the nation is "the United States"
+// in an offered question, never "in nationwide".
+{
+  const unfound = as(ask("Murders in Ecorse, Michigan in 2020"), "decline");
+  assert.equal(unfound.reason, "unresolved_place");
+  assert.match(unfound.explanation, /^I couldn't find "Ecorse, Michigan" among the places here: city and county police agencies serving 10,000 people or more, the states and the nation\./);
+  assert.doesNotMatch(unfound.explanation, /don't answer this question/);
+  const outside: [string, RegExp][] = [
+    ["Memphis crime on a map", /^Maps aren't available here/],
+    ["US population per year since 1960", /^Population figures on their own aren't available here/],
+    ["Can you give me a list of Hawaii law enforcement agencies ordered by population covered in 2024?", /^A list of agencies/],
+    ["How common is cybercrime in New Hampshire?", /^Cybercrime isn't one category/],
+    ["Thefts on college campuses in New Jersey in 2020", /^College and university police agencies/],
+    ["Can I see a data set of all crimes by type across the US from 2020 to present", /^A whole data set isn't available here/],
+  ];
+  for (const [q, re] of outside) assert.match(as(ask(q), "decline").explanation, re, q);
+  assert.equal(ask("College Station robberies in 2024").kind !== "decline" || !/College and university/.test((ask("College Station robberies in 2024") as { explanation: string }).explanation), true, "a place named College is not a campus");
+  assert.ok(ask("Memphis population and robbery rate in 2023").kind === "decline" ? !/^Population figures/.test((ask("Memphis population and robbery rate in 2023") as { explanation: string }).explanation) : true, "population beside a crime is not the population-only limit");
+  const nation = as(ask("show homicides and total violent crimes nationwide by year for 2000 to 2025"), "decline");
+  assert.doesNotMatch(nation.explanation + (nation.alternative?.question ?? ""), /\bin nationwide\b/);
+}
+
 // An answer: the plan, the compiled read, the delivered table and text (source statement last, D30).
 const a = as(ask("How many shoplifting offenses were there in Memphis in 2023?"), "answer");
 assert.deepEqual(a.period, { from: "2023-01", to: "2023-12" });

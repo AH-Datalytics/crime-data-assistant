@@ -21,7 +21,7 @@ export type Candidate = { kind: "agency"; agency: Agency } | { kind: "state"; co
 export type PlaceResolution =
   | { kind: "agency"; place: Extract<Place, { kind: "agency" }>; agency: Agency }
   | { kind: "ask"; name: string; candidates: Candidate[] }
-  | { kind: "unresolved"; why: string };
+  | { kind: "unresolved"; why: string; named?: boolean };
 
 export const ASK_POPULATION = 100_000;
 export const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
@@ -120,7 +120,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
   if (/ city$|\bpolice\b/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
   else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");
-  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with a population of 10,000 or more in this build` };
+  // `named`: the words name a real place (with its state, or as a county), not a word the reader took for one ("index").
+  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with a population of 10,000 or more in this build`, named: !!stateNamed || countyNamed };
   // The most populous agency of each kind in each state; the large ones are the real candidates.
   const firsts = pool.filter((a, i) => pool.findIndex((b) => b.kind === a.kind && b.state === a.state) === i);
   // Buttons, most likely first: cities, then counties, each by population; the state (when the name is one) second.

@@ -29,13 +29,17 @@ const deps: ShadowDeps = {
 } as ShadowDeps;
 
 /** A decline is "well" when it gives a runnable next step or names an honest, specific limit; otherwise "badly". */
-const WELL = /court outcomes|below the level of an agency|cannot predict|staffing .* isn't available|no state clearance rate|is outside them|is not in the data|doesn't include/;
+const WELL = /court outcomes|below the level of an agency|cannot predict|staffing .* isn't available|no state clearance rate|is outside them|is not in the data|doesn't include|aren't available here|isn't available here|isn't one category|among the places here/;
+const HONEST = new Set(["explanation_requested", "court_outcome", "below_agency_level", "outside_release_coverage"]);
 type Class = "answered" | "asked" | "declined well" | "declined badly" | "error";
 function classify(o: ShadowOutcome): Class {
   if (o.kind === "answer" || o.kind === "historical" || o.kind === "srs") return "answered";
   if (o.kind === "clarify") return "asked";
   if (o.kind === "route") return "declined well";
-  if (o.kind === "decline") return o.alternative || WELL.test(o.explanation) ? "declined well" : "declined badly";
+  // A decline whose reason is an honest, specific limit (causes, court outcomes, below an agency, a period outside the
+  // data) is "well" by that reason, not only by its words. A place not found is "well" only in the shared wording that
+  // names the places here, never the reader's older refusal (a misspelling such as "batlimore" has the same reason).
+  if (o.kind === "decline") return o.alternative || WELL.test(o.explanation) || HONEST.has(o.reason) ? "declined well" : "declined badly";
   return "error";
 }
 
