@@ -95,7 +95,7 @@ if a.crosswalk:
     # Perris, not the county agency serving Menifee. Names are compared as places.ts compares them (base()).
     def base(s):
         k = " ".join(re.sub(r"[^a-z0-9 ]+", " ", s.lower()).replace("saint", "st").split())
-        return re.sub(r" (county|parish|borough)$", "", k)
+        return re.sub(r" (county|parish)$", "", k)
     owned = {(base(r["name"]), r["state"]) for r in out}
     dropped = 0
     for r in out:

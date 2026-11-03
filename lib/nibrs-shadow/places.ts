@@ -27,9 +27,9 @@ export const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska"
 export const stateName = (code: string) => STATE_NAMES[code] ?? code;
 const STATE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAMES).filter(([c]) => c !== "DC").map(([c, n]) => [n.toLowerCase(), c]));
 
-/** Names compared without case, punctuation, the St./Saint difference or a trailing "County" ("Parish", "Borough"). */
+/** Names compared without case, punctuation, the St./Saint difference or a trailing "County" or "Parish" (never "Borough": Baldwin Borough, PA is a town, not Baldwin County). */
 const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\bsaint\b/g, "st").replace(/\s+/g, " ").trim();
-const base = (s: string) => key(s).replace(/ (county|parish|borough)$/, "");
+const base = (s: string) => key(s).replace(/ (county|parish)$/, "");
 
 /**
  * City agencies the index names by their department instead of their place (crime_data.db's Historical names), named
@@ -110,7 +110,7 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
   if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };
   const name = (m[2] ?? m[4]).trim();
-  const countyNamed = m[1] === "county" || / (county|parish|borough)$/.test(key(name));
+  const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
   const words = key(text).replace(/ (city|county)$/, "");
   const stateNamed = m[3] && words !== base(name) ? m[3] : null;
   let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed));
