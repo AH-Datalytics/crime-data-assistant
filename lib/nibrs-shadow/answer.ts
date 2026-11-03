@@ -641,7 +641,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (span && span[0] > cur.lastMonth && form !== "rolling" && form !== "ytd") span = null;
     // Two spans compared (Codex review 01.4): both inside Current Trends' months, else it goes on.
     const cmp = flags(ledger0).comparison;
-    if (cmp && place && sp.statistic === "count") {
+    // Whole completed years compared stay Historical's (Codex confirmation 01: "2025 compared with 2024"); part years and
+    // this year's months are Current Trends'.
+    if (cmp && place && sp.statistic === "count" && !(wholeYear(cmp.earlier) && wholeYear(cmp.later))) {
       const ym = (s: string) => s.slice(0, 7);
       const e: [string, string] = [ym(cmp.earlier.from), ym(cmp.earlier.to)], l: [string, string] = [ym(cmp.later.from), ym(cmp.later.to)];
       const first = place.kind === "group" ? cur.firstMonth : cur.finalFirstMonth;
