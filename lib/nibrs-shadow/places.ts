@@ -113,7 +113,9 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
   const words = key(text).replace(/ (city|county)$/, "");
   const stateNamed = m[3] && words !== base(name) ? m[3] : null;
-  let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed));
+  // A parish is Louisiana's (Codex places review 02: "Orleans Parish" had found Orleans County, New York).
+  const parish = / parish$/.test(key(name)) || /\bparish\b/.test(key(text));
+  let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
   if (/ city$|\bpolice\b/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
   else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");

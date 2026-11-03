@@ -128,6 +128,8 @@ assert.equal(ori(at("city:Flint:MI", "Flint")), "MI2539800", "not Flint Township
 assert.equal(ori(at("ambiguous:Baldwin Borough", "Baldwin Borough")), "PA0020100");
 assert.equal(ori(at("city:Freehold Borough:NJ", "Freehold Borough")), "NJ0131500");
 assert.equal(ori(at("ambiguous:Middlesex Borough", "Middlesex Borough")), "NJ0121100");
+assert.equal(at("ambiguous:Orleans Parish", "Orleans Parish").kind, "unresolved", "never Orleans County, New York");
+assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "unresolved");
 assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"));
 
 // An answer: the plan, the compiled read, the delivered table and text (source statement last, D30).
