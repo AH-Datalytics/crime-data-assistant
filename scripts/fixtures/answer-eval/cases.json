@@ -26569,6 +26569,701 @@
     "reviewed_by": "codex:period-labels-1",
     "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
    }
+  },
+  {
+   "id": "LS-441",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Murders in the United States in August 2026",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2026-08",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V173 us all 2026-08 murder_total"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-442",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Rapes in the United States in August 2026",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2026-08",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "rape",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V173 us all 2026-08 rape_total"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "names the agencies with no figure, left out of the total (14 of 547)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-443",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Murders in the United States so far this year",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2026-01",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V173 us all 2026-08 murder_ytd"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-444",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Robberies in the Northeast in August 2026",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Connecticut",
+       "state": "CT"
+      },
+      {
+       "kind": "state",
+       "name": "Maine",
+       "state": "ME"
+      },
+      {
+       "kind": "state",
+       "name": "Massachusetts",
+       "state": "MA"
+      },
+      {
+       "kind": "state",
+       "name": "New Hampshire",
+       "state": "NH"
+      },
+      {
+       "kind": "state",
+       "name": "Rhode Island",
+       "state": "RI"
+      },
+      {
+       "kind": "state",
+       "name": "Vermont",
+       "state": "VT"
+      },
+      {
+       "kind": "state",
+       "name": "New Jersey",
+       "state": "NJ"
+      },
+      {
+       "kind": "state",
+       "name": "New York",
+       "state": "NY"
+      },
+      {
+       "kind": "state",
+       "name": "Pennsylvania",
+       "state": "PA"
+      }
+     ],
+     "combine": "combined",
+     "period": {
+      "from": "2026-08",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V174 noe all 2026-08 robbery_total"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-445",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Murders in the Midwest in August 2026",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Illinois",
+       "state": "IL"
+      },
+      {
+       "kind": "state",
+       "name": "Indiana",
+       "state": "IN"
+      },
+      {
+       "kind": "state",
+       "name": "Michigan",
+       "state": "MI"
+      },
+      {
+       "kind": "state",
+       "name": "Ohio",
+       "state": "OH"
+      },
+      {
+       "kind": "state",
+       "name": "Wisconsin",
+       "state": "WI"
+      },
+      {
+       "kind": "state",
+       "name": "Iowa",
+       "state": "IA"
+      },
+      {
+       "kind": "state",
+       "name": "Kansas",
+       "state": "KS"
+      },
+      {
+       "kind": "state",
+       "name": "Minnesota",
+       "state": "MN"
+      },
+      {
+       "kind": "state",
+       "name": "Missouri",
+       "state": "MO"
+      },
+      {
+       "kind": "state",
+       "name": "Nebraska",
+       "state": "NE"
+      },
+      {
+       "kind": "state",
+       "name": "North Dakota",
+       "state": "ND"
+      },
+      {
+       "kind": "state",
+       "name": "South Dakota",
+       "state": "SD"
+      }
+     ],
+     "combine": "combined",
+     "period": {
+      "from": "2026-08",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V174 mdw all 2026-08 murder_total"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-446",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Violent crime in Tennessee in August 2026",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2026-08",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "violent crime",
+       "unit": "victim (robbery by offense)"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V175 tn all 2026-08 violent_total"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-447",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Property crime in Texas in August 2026",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2026-08",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "property crime",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V175 tx all 2026-08 property_total"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-448",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Rapes in Alabama in August 2026",
+   "policy": [
+    "P01",
+    "P90",
+    "P91",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Alabama",
+       "state": "AL"
+      }
+     ],
+     "period": {
+      "from": "2026-08",
+      "to": "2026-08"
+     },
+     "measures": [
+      {
+       "name": "rape",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "verified",
+     "source": "nibrs-model V175 al all 2026-08 rape_total"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts and the people they cover",
+     "says no figure is known for August 2026 (never zero)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-449",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Memphis murders by month in 2025",
+   "policy": [
+    "P01",
+    "D04"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "rtci",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-450",
+   "group": "designed:current-trends",
+   "split": "heldout",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "current",
+   "setup": [],
+   "question": "Memphis murders by month in 2025 according to NIBRS",
+   "policy": [
+    "P01"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2025-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "month"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "drafted_by": "claude-current",
+    "reviewed_by": "codex:current-labels-1",
+    "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
   }
  ]
 }

@@ -4,8 +4,16 @@ Milestone report (coordinator 2026-11-02): the share of each live source's real 
 
 ## historical
 
-After removing the place index's population floor (before it, after the shared decline wording: answers 505 (36%), asks 424 (30%), declines well 355 (25%), declines badly 117 (8%); dev with #99: answers 51 (4%), declines badly 933 (67%)): 1401 first questions from the old historical tab, release test6-20261031-host, run 2026-11-03.
+After the Current Trends source (before it, after removing the place index's population floor: answers 517 (37%), asks 427 (30%), declines well 339 (24%), declines badly 118 (8%)): 1401 first questions from the old historical tab, release test6-20261031-host, run 2026-11-03.
 
 | Answers | Asks a clarifying question | Declines well | Declines badly | Answers wrong |
 |---|---|---|---|---|
-| 517 (37%) | 427 (30%) | 339 (24%) | 118 (8%) | (from the accuracy pilot) |
+| 519 (37%) | 429 (31%) | 337 (24%) | 116 (8%) | (from the accuracy pilot) |
+
+## current
+
+After the Current Trends source (before it, on dev: answers 386 (23%), asks 749 (44%), declines well 269 (16%), declines badly 297 (17%), with NIBRS and Historical answering its questions): 1701 first questions from the old current tab, release test6-20261031-host, run 2026-11-03.
+
+| Answers | Asks a clarifying question | Declines well | Declines badly | Answers wrong |
+|---|---|---|---|---|
+| 478 (28%) | 681 (40%) | 255 (15%) | 287 (17%) | (from the accuracy pilot) |

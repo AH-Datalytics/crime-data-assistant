@@ -449,7 +449,17 @@
    "LS-437",
    "LS-438",
    "LS-439",
-   "LS-440"
+   "LS-440",
+   "LS-441",
+   "LS-442",
+   "LS-443",
+   "LS-444",
+   "LS-445",
+   "LS-446",
+   "LS-447",
+   "LS-448",
+   "LS-449",
+   "LS-450"
   ]
  },
  "eligibility": {
@@ -838,7 +848,17 @@
    "LS-437",
    "LS-438",
    "LS-439",
-   "LS-440"
+   "LS-440",
+   "LS-441",
+   "LS-442",
+   "LS-443",
+   "LS-444",
+   "LS-445",
+   "LS-446",
+   "LS-447",
+   "LS-448",
+   "LS-449",
+   "LS-450"
   ],
   "label unresolved": [
    "LS-024",
@@ -1138,7 +1158,17 @@
   "LS-437": "designed",
   "LS-438": "designed",
   "LS-439": "designed",
-  "LS-440": "designed"
+  "LS-440": "designed",
+  "LS-441": "designed",
+  "LS-442": "designed",
+  "LS-443": "designed",
+  "LS-444": "designed",
+  "LS-445": "designed",
+  "LS-446": "designed",
+  "LS-447": "designed",
+  "LS-448": "designed",
+  "LS-449": "designed",
+  "LS-450": "designed"
  },
  "scored": [
   {
@@ -3475,17 +3505,36 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "route",
-     "expected": "rtci answer",
-     "actual": "routed to rtci: not run by this NIBRS shadow",
+     "field": "period",
+     "expected": "{\"rule\":\"year to date through the latest reported month\"}",
+     "actual": "2026-01..2026-08",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "names the months covered, through the latest reported month (P52)",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "says the current year is incomplete and which agencies the current source covers (P53)",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet."
+    "delivered: Texas: 4,317 robberies in the year to date, January 2026 through August 2026. / This counts only the 76 Consistent Reporting Agencies, covering roughly 15 million people, that reported every month from January 2025 through August 2026. / So"
    ],
    "capability": "answer:rtci count",
-   "era": "period not mapped"
+   "era": "period not mapped",
+   "values": "not measured"
   },
   {
    "id": "LS-349",
@@ -4848,6 +4897,161 @@
    "capability": "answer:historical count",
    "era": "spans 2021",
    "values": "match"
+  },
+  {
+   "id": "LS-441",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: The United States: murders by month, August 2026. / This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through August 2026. / Source: Crime Index."
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-442",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: The United States: rapes by month, August 2026. / This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through August 2026. / Agencies with no rape figure a"
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-443",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: The United States: 3,930 murders in the year to date, January 2026 through August 2026. / This counts only the 547 Consistent Reporting Agencies, covering roughly 110 million people, that reported every month from January 2025 through Augus"
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-444",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: The Northeast: robberies by month, August 2026. / This counts only the 47 Consistent Reporting Agencies, covering roughly 14 million people, that reported every month from January 2025 through August 2026. / Source: Crime Index."
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-445",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: The Midwest: murders by month, August 2026. / This counts only the 134 Consistent Reporting Agencies, covering roughly 19 million people, that reported every month from January 2025 through August 2026. / Source: Crime Index."
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-446",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Tennessee: violent crimes by month, August 2026. / This counts only the 18 Consistent Reporting Agencies, covering roughly 3.3 million people, that reported every month from January 2025 through August 2026. / Source: Crime Index."
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-447",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Texas: property crimes by month, August 2026. / This counts only the 76 Consistent Reporting Agencies, covering roughly 15 million people, that reported every month from January 2025 through August 2026. / Source: Crime Index."
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-448",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "correct",
+   "diffs": [],
+   "notes": [
+    "delivered: Alabama: rapes by month, August 2026. / This counts only the 2 Consistent Reporting Agencies, covering roughly 450,000 people, that reported every month from January 2025 through August 2026. / Agencies with no rape figure are left out of t"
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "match"
+  },
+  {
+   "id": "LS-449",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: murders by month, January 2025 through December 2025. / Figures for the Memphis Police Department. / Source: Crime Index."
+   ],
+   "capability": "answer:rtci count",
+   "era": "2021 and later",
+   "values": "not measured"
+  },
+  {
+   "id": "LS-450",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: murder victims by month, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
   }
  ],
  "provisional": [

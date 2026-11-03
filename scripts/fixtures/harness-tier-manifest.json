@@ -2511,6 +2511,15 @@
       "note": "Historical in the new engine (P75-P79): agencies' Part I figures from the Crime Index build, as published, blanks never zero, P77's source line; a stub executor stands in for DuckDB over the build"
     },
     {
+      "id": "test-nibrs-current",
+      "tier": "F",
+      "script": "scripts/test-nibrs-current.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Current Trends in the new engine (P90, P91, decisions A-C): agency months, consistent group sums, cumulative totals never complete over unknown months; a stub executor stands in for DuckDB over the build, which is checked when present"
+    },
+    {
       "id": "test-nibrs-preview",
       "tier": "F",
       "script": "scripts/test-nibrs-preview.ts",

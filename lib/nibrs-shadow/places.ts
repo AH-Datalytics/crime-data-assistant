@@ -76,6 +76,29 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
   return { byName, names, returnA };
 }
 
+/** Edit distance with adjacent transposition (optimal string alignment). */
+function distance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+/**
+ * A misspelled large place ("batlimore", "phialdelphia", "el paos"): the one city or county name of 100,000+ people
+ * within two edits (one for a name under six letters), same first letter; null when none or several are that close.
+ */
+export function nearestPlaceName(idx: PlaceIndex, name: string): string | null {
+  const k = base(name);
+  if (k.length < 4 || idx.byName.has(k)) return null;
+  const limit = k.length < 6 ? 1 : 2;
+  const near = [...idx.byName.entries()].filter(([n, xs]) => n[0] === k[0] && xs[0].population >= ASK_POPULATION && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit);
+  // The place's name (the city's, when there is one): "Baltimore", which then asks the city or the county (P28).
+  return near.length === 1 ? (near[0][1].find((x) => x.kind === "city") ?? near[0][1][0]).name : null;
+}
+
 /**
  * Who reported the figures: the agency's FBI name (Jeff 2026-10-30: "Reported by the Denver Police Department"), never
  * one built from a city and a type, nor the build's city (a mailing city, so possibly another agency's). Without one,

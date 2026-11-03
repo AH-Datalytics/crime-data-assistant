@@ -11,6 +11,7 @@ import { CAVEAT_ORDER, chartOptionsOf, NOTE_TEXT, PROFILES, type ChoicePresentat
 import type { ShadowOption, ShadowOutcome } from "./answer";
 import { CATEGORY, fmt, measureWords, monthName, periodWords } from "./deliver";
 import { HISTORICAL_MEASURE, type HistoricalAnswer } from "./historical";
+import type { CurrentAnswer } from "./current";
 import { agencyName, reportedBy, STATE_NAMES, type PlaceIndex } from "./places";
 import { CONSISTENT_WORDS, NIBRS_WORDS } from "./reading";
 import { SRS_MEASURE, type SrsAnswer } from "./srs";
@@ -47,7 +48,7 @@ const orderedOf = (t: ResultTable) => t.columns.flatMap((c) => (c.binding.kind =
 
 /** The source an outcome comes from. A clarify or decline is the engine's, whose live source here is NIBRS. */
 export function sourceOf(o: ShadowOutcome): SourceId {
-  return o.kind === "historical" || o.kind === "srs" ? "historical" : o.kind === "route" ? o.source : "nibrs";
+  return o.kind === "historical" || o.kind === "srs" ? "historical" : o.kind === "current" ? "rtci" : o.kind === "route" ? o.source : "nibrs";
 }
 
 /** When, for the lead: "each year from 2021 to 2025", "in 2024", "each month from January 2024 to June 2025". */
@@ -251,10 +252,31 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   };
 }
 
+/** Current Trends (current.ts): a place by month, or one total for the year to date or the rolling 12 months. */
+function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation {
+  const q = o.question, m = HISTORICAL_MEASURE[q.measure];
+  const monthly = q.form === "months";
+  const placeTitle = [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.label.replace(/^The /, "")];
+  const rate = q.statistic === "rate";
+  const titleParts: TitleParts = { places: placeTitle, measure: m.words, ratePer: rate ? 100000 : null, groupings: monthly ? ["month"] : [], period: titlePeriod(o.period, false),
+    partialLastYear: null, rollingMonths: q.form === "rolling" ? 12 : null, ranking: null };
+  const who = q.place.kind === "agency" ? reporter(places, [q.place.ori]) : `the Consistent Reporting Agencies of ${q.place.label.replace(/^The /, "the ")}`;
+  const table = o.delivered.table;
+  const single = table.rows.length === 1 && table.columns.length === 1 && typeof table.rows[0][0] === "number";
+  const when = whenWords(o.period, monthly ? "month" : null);
+  const v = single ? (table.rows[0][0] as number) : null;
+  const lead: Lead = single ? { kind: "single", who, quantity: rate ? `${m.words} at a rate of ${one(v!)} per 100,000 people` : `${fmt(v!)} ${m.words}`, when, countedAs: null }
+    : { kind: "described", what: m.words, who, when, countedAs: rate ? "as rates per 100,000 people" : null, brokenDownBy: null };
+  const known = restated(o.delivered, q.agencyLine ? [q.agencyLine] : []);
+  return { source: "rtci", titleParts, lead, offers: [], ...notesFrom("rtci", [], o.delivered.text, known), coverage: { requested: false },
+    chart: chartOptionsOf(table, orderedOf(table)), ordered: orderedOf(table), series: {} };
+}
+
 /** The presentation of an answer; a clarify's, decline's or route's buttons, each with its role and source. */
 export function presentationOf(o: ShadowOutcome, places: PlaceIndex, at: Reached = {}): Presentation | ChoicePresentation {
   if (o.kind === "answer") return nibrsPresentation(o, places, at);
   if (o.kind === "historical" || o.kind === "srs") return historicalPresentation(o, places);
+  if (o.kind === "current") return currentPresentation(o, places);
   const source = sourceOf(o);
   if (o.kind === "clarify") return { source, buttons: o.options.map((x) => offerOf(x, source, true, at)) };
   if (o.kind === "decline") return { source, buttons: o.alternative ? [offerOf(o.alternative, source, false, at)] : [] };
