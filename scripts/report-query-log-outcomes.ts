@@ -29,7 +29,7 @@ const deps: ShadowDeps = {
 } as ShadowDeps;
 
 /** A decline is "well" when it gives a runnable next step or names an honest, specific limit; otherwise "badly". */
-const WELL = /court outcomes|below the level of an agency|cannot predict|staffing .* isn't available|no state clearance rate|is outside them|is not in the data|doesn't include|aren't available here|isn't available here|isn't one category|among the places here/;
+const WELL = /court outcomes|below the level of an agency|cannot predict|staffing .* isn't available|no state clearance rate|is outside them|is not in the data|doesn't include|aren't available here|isn't available here|isn't one category|among the places here|states and the nation here/;
 const HONEST = new Set(["explanation_requested", "court_outcome", "below_agency_level", "outside_release_coverage"]);
 type Class = "answered" | "asked" | "declined well" | "declined badly" | "error";
 function classify(o: ShadowOutcome): Class {

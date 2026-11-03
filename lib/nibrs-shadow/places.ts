@@ -1,10 +1,10 @@
 /**
  * The shared place resolution (every source): a place named in a question -> one agency, a state, or a choice to ask
  * about. It reads scripts/fixtures/nibrs-shadow/agencies.json: the city police and county agencies of NIBRS's canonical
- * build and of the Crime Index with populations of 10,000 or more, each with the place names the agency crosswalk gives
+ * build and of the Crime Index, whatever their size (Jeff 2026-11-03: no population floor), each with the place names the agency crosswalk gives
  * it ("new york city" for New York's police) as aliases. It stands in for the app's resolveNibrsPlaces, which needs nibrs.db.
  *
- * The rule (P28, Jeff 2026-10-29): a name is asked about when it fits two or more real candidates of 100,000+ residents:
+ * The rule (P28, Jeff 2026-10-29): a name is asked about when it fits two or more real candidates serving 100,000+ people:
  * cities of that name in different states, a city and a county of that name ("Baltimore": the city or Baltimore County),
  * or counties of that name in different states. A name that is also a state ("Washington") always offers the state
  * beside its large cities and counties. Otherwise the most populous match is used without a question (P16: a city
@@ -20,10 +20,12 @@ export type Agency = { ori: string; kind: "city" | "county"; name: string; state
 export type Candidate = { kind: "agency"; agency: Agency } | { kind: "state"; code: string; name: string };
 export type PlaceResolution =
   | { kind: "agency"; place: Extract<Place, { kind: "agency" }>; agency: Agency }
-  | { kind: "ask"; name: string; candidates: Candidate[] }
+  | { kind: "ask"; name: string; candidates: Candidate[]; more?: boolean }
   | { kind: "unresolved"; why: string; named?: boolean };
 
 export const ASK_POPULATION = 100_000;
+/** Same-name towns (Jeff 2026-11-03, no population floor): at most this many cities are offered, one per state. */
+export const ASK_TOWNS = 3;
 export const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
 export const stateName = (code: string) => STATE_NAMES[code] ?? code;
 const STATE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAMES).filter(([c]) => c !== "DC").map(([c, n]) => [n.toLowerCase(), c]));
@@ -121,7 +123,7 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   if (/ city$|\bpolice\b/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
   else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");
   // `named`: the words name a real place (with its state, or as a county), not a word the reader took for one ("index").
-  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with a population of 10,000 or more in this build`, named: !!stateNamed || countyNamed };
+  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} in this build`, named: !!stateNamed || countyNamed };
   // The most populous agency of each kind in each state; the large ones are the real candidates.
   const firsts = pool.filter((a, i) => pool.findIndex((b) => b.kind === a.kind && b.state === a.state) === i);
   // Buttons, most likely first: cities, then counties, each by population; the state (when the name is one) second.
@@ -129,5 +131,17 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
     .sort((x, y) => (x.kind === y.kind ? y.population - x.population : x.kind === "city" ? -1 : 1)).map((a) => ({ kind: "agency", agency: a }));
   const asState = !countyNamed && !stateNamed ? STATE_BY_NAME[base(name)] : undefined;
   if (asState) large.splice(1, 0, { kind: "state", code: asState, name: stateName(asState) });
-  return large.length >= 2 ? { kind: "ask", name, candidates: large } : asPlace(pool[0]);
+  if (large.length >= 2) return { kind: "ask", name, candidates: large };
+  // Same-name towns with no large candidate ("Clinton": 29 agencies): when no city of the name is clearly the main one
+  // (the largest at least twice the next), ask which, the largest few one per state, and "another place" for the rest.
+  const towns = firsts.filter((a) => a.kind === "city").sort((x, y) => y.population - x.population);
+  // A large county of the name ("Greenville County, South Carolina") is offered after the towns.
+  if (!countyNamed && !stateNamed && towns.length >= 2 && towns[0].population < 2 * towns[1].population)
+    return { kind: "ask", name, candidates: [...towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), ...large.filter((c) => c.kind === "agency" && c.agency.kind === "county")],
+      more: towns.length > ASK_TOWNS };
+  // No question: a city's name means its principal police agency (P16), so the most populous city agency of that name,
+  // unless the words name a county (or the only large candidate is the county asked by name). "Clinton" is the city of
+  // Clinton, not Clinton County, New York; with every agency in the index (Jeff 2026-11-03) small cities share names
+  // with large counties far more often.
+  return asPlace(countyNamed ? pool[0] : pool.find((a) => a.kind === "city") ?? pool[0]);
 }
