@@ -11,9 +11,9 @@ Labeled set: 450 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ## Label eligibility (can the case be scored)
 
-- 385: scorable (reviewed, decided policy)
+- 395: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 11: label drafted
+- 1: label drafted
 
 ## Refused as not built (not scored)
 
@@ -84,13 +84,13 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-184 cases. Correct 162; unverified 17; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
+194 cases. Correct 170; unverified 19; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 157 | 0 | 3 | 0 |
+| answer | 167 | 0 | 3 | 0 |
 | clarify | 0 | 6 | 2 | 0 |
 | decline | 0 | 0 | 16 | 0 |
 
@@ -102,10 +102,11 @@ Expected (rows) by actual (columns):
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: not measured (2/3 match, 1 not measured) |
 | answer:nibrs change | 2021 and later | 12 | pass | wrong answers: pass (0); initial action: pass (100% (12/12)); direct answers: pass (100%); numeric fixtures: pass (12/12 match) |
-| answer:nibrs count | 2021 and later | 118 | pass | wrong answers: pass (0); initial action: pass (97% (115/118)); direct answers: pass (97%); numeric fixtures: pass (115/115 match) |
+| answer:nibrs count | 2021 and later | 119 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (97% (116/119)); direct answers: pass (97%); numeric fixtures: not measured (115/116 match, 1 not measured) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 14 | pass | wrong answers: pass (0); initial action: pass (100% (14/14)); direct answers: pass (100%); numeric fixtures: pass (14/14 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:rtci count | 2021 and later | 9 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (9/9)); direct answers: not measured (89% verified, 1 unverified); numeric fixtures: not measured (8/9 match, 1 not measured) |
 | answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
 | answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
@@ -195,6 +196,12 @@ Discrepancies and unverified cases:
 - **LS-426** (unverified; expected decline, got decline) "what about Detroit?"
   - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants).
+- **LS-449** (unverified; expected answer, got answer) "Memphis murders by month in 2025"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murders by month, January 2025 through December 2025. / Figures for the Memphis Police Department. / Source: Crime Index.
+- **LS-450** (unverified; expected answer, got answer) "Memphis murders by month in 2025 according to NIBRS"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murder victims by month, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
@@ -306,18 +313,17 @@ No cases.
 
 ### Held out
 
-11 cases. Correct 8; unverified 2; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 100 (trend only).
+1 cases. Correct 0; unverified 0; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 100 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 11 | 0 | 0 | 0 |
+| answer | 1 | 0 | 0 | 0 |
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1, 1 answers unverified); initial action: pass (100% (2/2)); direct answers: fail (0% (1 unverified)); numeric fixtures: not measured (1/2 match, 1 not measured) |
-| answer:rtci count | 2021 and later | 9 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (9/9)); direct answers: not measured (89% verified, 1 unverified); numeric fixtures: not measured (8/9 match, 1 not measured) |
+| answer:nibrs count | 2021 and later | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: pass (1/1 match) |
 
 Discrepancies and unverified cases:
 
@@ -325,12 +331,6 @@ Discrepancies and unverified cases:
   - unverified statement: expected `gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)`, got `(no check defined)`
   - material statement: expected `Changes the existing chart to bars using the existing result; makes no data-engine request.`, got `Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.`
   - delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.
-- **LS-449** (unverified; expected answer, got answer) "Memphis murders by month in 2025"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murders by month, January 2025 through December 2025. / Figures for the Memphis Police Department. / Source: Crime Index.
-- **LS-450** (unverified; expected answer, got answer) "Memphis murders by month in 2025 according to NIBRS"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murder victims by month, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
 
 ## PROVISIONAL: drafted labels (never a gate): replay cases inside the slice
 

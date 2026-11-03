@@ -26624,9 +26624,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -26685,9 +26685,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -26743,9 +26743,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -26845,9 +26845,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -26962,9 +26962,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -27023,9 +27023,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -27084,9 +27084,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -27146,9 +27146,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -27203,9 +27203,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   },
@@ -27259,9 +27259,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-current",
-    "reviewed_by": null,
+    "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
    }
   }
