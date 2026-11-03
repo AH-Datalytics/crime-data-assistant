@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, change, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { agencyMonths, answerCurrent, change, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -44,6 +44,14 @@ const g = groupMonths(b, ["TN"], "rape", "2026-08", "2026-08", stub([["2026-08",
 assert.deepEqual(g.get("2026-08"), { value: 120, agencies: 18, population: 2500000, blank: 1 });
 assert.ok(sqls[1].includes("WHERE sample AND state IN ('TN')"));
 
+// answerCurrent with a stub: a group before 2025 is not answered (decision A); a cumulative total needs every month.
+const nation = { kind: "group" as const, states: null, label: "The United States" };
+const early = answerCurrent({ measure: "murder", place: nation, from: "2024-01", to: "2024-06", form: "months" }, b, stub([]));
+assert.equal(early.kind, "current-decline");
+assert.match((early as { explanation: string }).explanation, /^Current Trends totals in the data cover January 2025 through August 2026, so January 2024 through June 2024 are outside them\.$/);
+const ytdOut = answerCurrent({ measure: "murder", place: nation, from: "2024-12", to: "2025-02", form: "rolling" }, b, stub([]));
+assert.equal(ytdOut.kind, "current-decline", "a rolling 12 reaching before the group's first month is never the part held");
+
 // Against the build, when it is here.
 const root = process.env.CURRENT_BUILD ?? "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct";
 const python = process.env.NIBRS_SHADOW_PYTHON ?? "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe";
@@ -63,6 +71,21 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   assert.equal(cumulative([...mo.values()], [...mo.keys()]).value, null);
   // Decision A: Memphis's 2018 months come from the Final panel.
   assert.ok((agencyMonths(build, "TNMPD0000", "murder", "2018-01", "2018-03", execute).get("2018-01") ?? -1) > 0);
+  // The nation's rape total names the agencies left out (V173: 14 of 547).
+  const r = answerCurrent({ measure: "rape", place: nation, from: "2026-08", to: "2026-08", form: "months" }, build, execute);
+  assert.equal(r.kind, "current");
+  if (r.kind === "current") {
+    assert.deepEqual(r.delivered.table.rows, [["2026-08", 3625]]);
+    assert.ok(r.delivered.text.includes("Agencies with no rape figure are left out of the total: August 2026 (14 of 547)."));
+    assert.equal(r.delivered.text.at(-1), "Source: Crime Index.");
+  }
+  // MO0922400's March 2025 year to date: February is unknown, so no total (the published 53 is never shown).
+  const mo2 = answerCurrent({ measure: "property_crime", place: { kind: "agency", ori: "MO0922400", label: "MO0922400", name: "x", state: "MO" }, from: "2025-03", to: "2025-03", form: "ytd" }, build, execute);
+  assert.equal(mo2.kind, "current-decline");
+  assert.match((mo2 as { explanation: string }).explanation, /in February 2025, so there is no total for the year to date/);
+  // Memphis by month across the Final panel and current_crime.
+  const mem = answerCurrent({ measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee", name: "Memphis", state: "TN" }, from: "2024-11", to: "2025-02", form: "months" }, build, execute);
+  assert.ok(mem.kind === "current" && mem.delivered.table.rows.length === 4 && mem.read.tables.join() === "current_final,current_crime");
   console.log("nibrs current: checked against the build", build.release);
 }
 console.log("nibrs current: agency months, consistent group sums, cumulative totals never complete over unknown months");
