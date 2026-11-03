@@ -34,11 +34,12 @@ import { validateResolved } from "../lib/nibrs-plan/resolve";
 import { validateBindings, validatePlanSemantics, validatePlanShape } from "../lib/nibrs-plan/validate";
 import { accountNibrsRequest } from "../lib/nibrs-request-accounting";
 import { matchNibrsType } from "../lib/nibrs-question-types";
-import { quarterCells, scoreShadow, sliceGroup, sliceValues, sameRewrite, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
+import { bindValueSources, quarterCells, scoreShadow, sliceGroup, sliceValues, sameRewrite, withRewrite, type ExpectedValues } from "../lib/answer-eval/shadow";
 import { shadowAnswer, shadowFollowUp, type FollowUpOutcome, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { bindingOf, cachedModelRewriter, GUARD_VERSION, hybridRewriter, MODEL_ID, type RewriteCache } from "../lib/nibrs-shadow/model-rewriter";
 import { SYSTEM_PROMPT } from "../lib/nibrs-shadow/model-rewriter-prompt";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
+import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
@@ -62,13 +63,16 @@ const release: Release & { id: string; asOf: string } = SHADOW
   // with it (release.json; --release-file names another build's, given with --root).
   ? (() => { const r = loadNibrsRelease(arg("--release-file"), arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")); return { id: r.id, firstMonth: r.firstMonth, lastMonth: r.lastMonth, asOf: "2026-10-29" }; })()
   : { id: "eval", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
-const shadowDeps = (): ShadowDeps => ({
-  places: loadPlaceIndex(), release,
-  target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
-  execute: duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!),
-  // Historical (P75-P79): the Crime Index build (scripts/build-crimeindex.py), when present.
-  historical: historicalBuildAt(arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101")),
-});
+const shadowDeps = (): ShadowDeps => {
+  const execute = duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!);
+  // The Crime Index build (scripts/build-crimeindex.py): Historical (P75-P79) and, when it has them, Current Trends' tables.
+  const crimeIndex = arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct");
+  return {
+    places: loadPlaceIndex(), release,
+    target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
+    execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute),
+  };
+};
 /** Independent expected values: nibrs-model's correctness/slice/V*.json on its main branch, read with git show (read-only). */
 function readSliceValues(repo: string): ExpectedValues {
   const git = (...a: string[]) => execFileSync("git", ["-C", repo, ...a], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
@@ -83,6 +87,8 @@ const authority = (v: string) => (PLACES[v] ? { oris: [PLACES[v].ori] } : null);
 const geo = { members: (p: Place) => (p.kind === "agency" ? [p.ori] : ["(any)"]) };
 
 const cases: Case[] = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/fixtures/answer-eval/cases.json"), "utf8")).cases.map((c: unknown) => Case.parse(c));
+// Value files that don't list their cases (Current Trends') are bound by the cell each case names.
+if (expectedValues) bindValueSources(expectedValues, cases);
 const policyCsv = fs.readFileSync(path.join(ROOT, "docs/policy/nibrsai-answer-policy.csv"), "utf8");
 const openPolicy = new Set([...policyCsv.matchAll(/^﻿?(P\d{2}),.*Needs Jeff/gm)].map((m) => m[1]));
 

@@ -29,7 +29,7 @@ import { outcomeOf, type ActualAction, type CaseResult, type Outcome } from "./g
 export const SLICE_REPLAY = ["LS-151", "LS-140"];
 export const SLICE_NEAR = ["LS-124", "LS-135", "LS-146", "LS-156", "LS-043", "LS-150", "LS-160", "LS-141", "LS-012", "LS-020", "LS-005", "LS-009"];
 export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
-  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7|inc7b|category|period)-/.test(c.group)) return "designed";
+  if (/^designed:(slice|reader|breakdown|inc2|inc3|inc4|inc5|inc6|inc7|inc7b|category|period|current)-/.test(c.group)) return "designed";
   if (SLICE_REPLAY.includes(c.id)) return "replay";
   if (SLICE_NEAR.includes(c.id)) return "near";
   return null;
@@ -45,6 +45,8 @@ export function sliceGroup(c: Case): "designed" | "replay" | "near" | null {
  * that overlap, P86): its row is required, its value never judged.
  */
 export type ExpectedCell = { key: string; value: number | null; status: string; share?: number | null; unverifiable?: true;
+  /** Current Trends group sums: the agencies left out (blank) of the agencies counted. */
+  blank?: number; agencies?: number;
   /** Increment 6 (P66): the distinct incidents of the cell's units, beside its count. */
   incidents?: number | null;
   /** Increment 7b (P72): the population the cell's rate divides by (the file's FBI agency population). */
@@ -101,6 +103,12 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     if (mv) { for (const c of (JSON.parse(f.json) as MergedFile).nibrsai_cases) out.set(c, mv); continue; }
     const v = JSON.parse(f.json) as { nibrsai_cases: string; grouping: string; measures: Record<string, string>; totals: Record<string, { status: string; value: number | null }>;
       rows: ({ month?: string; year?: string } & Record<string, unknown>)[] | null };
+    // Current Trends group sums (V173-V176, P91): one cell per group, size, month and column, keyed by the file's case;
+    // a case names its cell in values.source and bindValueSources hands it over.
+    const cur = currentCells(v as unknown as CurrentFile);
+    if (cur) { for (const [k, c] of cur) out.set(k, c); continue; }
+    // A file that lists no cases (SHR's V177-V184) is read only through a case's binding: never a crash.
+    if (typeof v.nibrsai_cases !== "string") continue;
     // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
     const batch8 = srsCells(v as unknown as SrsFile) ?? stateSumCells(v as unknown as StateSumFile);
     if (batch8) {
@@ -266,6 +274,34 @@ function srsCells(v: SrsFile): ExpectedCell[] | null {
   // rate's total, a sum's parts), not cells.
   const primary = vals.filter((x, i) => vals.findIndex((y) => y.year === x.year) === i);
   return primary.map((x) => ({ key: primary.length > 1 ? String(x.year) : "", value: Number(x.value), status: "VALUE", column: x.column, uid: x.uid }));
+}
+/** Current Trends group sums (nibrs-model V173-V176): each value's measures, with the agencies left out (blank_cells). */
+type CurrentFile = { basis?: string; case?: string; values?: { group: string; size: string; year: number; month: number; agencies: number;
+  measures: Record<string, { value: number | null; blank_cells: number }> }[] };
+function currentCells(v: CurrentFile): Map<string, ExpectedCell[]> | null {
+  if (v.basis !== "crime_index_snapshot_recomputed" || !v.values || !v.case) return null;
+  const out = new Map<string, ExpectedCell[]>();
+  for (const x of v.values) {
+    const ym = `${x.year}-${String(x.month).padStart(2, "0")}`;
+    for (const [col, m] of Object.entries(x.measures)) {
+      // A month's total is keyed by its month (the answer's row); a year to date is one figure (key "").
+      out.set(`${v.case}|${x.group}|${x.size}|${ym}|${col}`, [{ key: /_ytd$/.test(col) ? "" : ym, value: m.value, status: m.value === null ? "UNAVAILABLE" : "VALUE",
+        column: col.replace(/_ytd$/, "_total"), population: null, blank: m.blank_cells, agencies: x.agencies } as ExpectedCell]);
+    }
+  }
+  return out;
+}
+/**
+ * The cells a case names in values.source ("nibrs-model V173 us all 2026-08 murder_total"), for files that don't list
+ * their cases (Current Trends'): set under the case's id.
+ */
+export function bindValueSources(ev: ExpectedValues, cases: { id: string; expected?: unknown }[]): void {
+  for (const c of cases) {
+    const src = (c.expected as { values?: { source?: string } } | undefined)?.values?.source;
+    const m = src ? /^nibrs-model (V\d+) (\w+) (\w+) (\d{4}-\d{2}) (\w+)$/.exec(src) : null;
+    const cells = m ? ev.get(`${m[1]}|${m[2]}|${m[3]}|${m[4]}|${m[5]}`) : undefined;
+    if (cells) ev.set(c.id, cells);
+  }
 }
 /** Batch 8, NIBRS state and national sums (P61): read in stateSumCells, defined with the state-sum checks below. */
 type StateSumYearFile = { year: number; agencies_counted: number; partial_reporters: number; all_months_sum: number; every_month_agencies_sum: number;
@@ -1130,6 +1166,12 @@ function srsStatementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "
       const [, a, b, c, d] = /^says the data covers (\d{4}) through (\d{4}), so (\d{4}) through (\d{4})/.exec(s)!;
       ok = text.some((t) => t.includes(`cover ${a} through ${b}`) && t.includes(`${c} through ${d} are outside`));
     } else if (/^uses one source for every year shown/.test(s)) ok = rows.every((r) => Number(r[0]) >= 1960) && /_total$/.test(o.read.column);
+    // Current Trends (design note 2026-11-03): P90's sentence; the agencies left out, by count; an unknown month never zero.
+    else if (s === "names the Consistent Reporting Agencies it counts and the people they cover") ok = /This counts only the [\d,]+ Consistent Reporting Agenc(?:y|ies), covering (?:roughly|at least) [\d.,]+(?: million)? people/.test(all);
+    else if (/^names the agencies with no figure, left out of the total \((\d+) of (\d+)\)$/.test(s)) {
+      const [, n, of] = /\((\d+) of (\d+)\)/.exec(s)!;
+      ok = new RegExp(`left out of the total: .*\\(${n} of ${of}\\)`).test(all);
+    } else if (/^says no figure is known for (.+) \(never zero\)$/.test(s)) ok = all.includes(`No figure is known for ${/for (.+) \(never/.exec(s)![1]}: shown blank, not zero.`) && rows.every((r) => r[r.length - 1] === null);
     if (ok === null) out.push({ field: "statement", expected: s, actual: "(no check defined)", kind: "unverified" });
     else if (!ok) out.push({ field: "statement", expected: s, actual: all.slice(0, 200), kind: "material" });
   }

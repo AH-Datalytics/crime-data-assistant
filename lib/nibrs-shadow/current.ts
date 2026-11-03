@@ -199,7 +199,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     : cq.place.states === null ? [{ kind: "national", name: "United States" }] : cq.place.states.map((st) => ({ kind: "state" as const, name: stateName(st), state: st }));
   const meaning = (groupings: string[]): Meaning => ({ source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings, statistic: rate ? "rate" : "count",
     ...(rate ? { denominator: group ? "the summed current population of the agencies counted, per 100,000" : "the agency's current population, per 100,000" } : {}),
-    ...(group ? { cohort: "same_agencies" as const } : {}) });
+    ...(group ? { cohort: "same_agencies" as const } : {}), ...(places.length > 1 ? { combine: "combined" as const } : {}) });
   if (cq.form !== "months") {
     const c = cumulative(vals, covered);
     const sw = spanWords(period.from, period.to);

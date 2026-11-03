@@ -15,6 +15,7 @@ import path from "node:path";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
+import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
 
@@ -24,11 +25,13 @@ const QUESTIONS = arg("--questions")!;
 if (!SOURCE || !QUESTIONS) throw new Error("--source and --questions are required");
 // Through the month before the build's CDE release's month (Jeff 2026-11-03), from the release recorded with it.
 const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical"));
+const execute = duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!);
+// The Crime Index build: Historical and, when it has them, Current Trends' tables.
+const crimeIndex = arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct");
 const deps: ShadowDeps = {
   places: loadPlaceIndex(), release: { ...release, asOf: "2026-10-29" },
   target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
-  execute: duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!),
-  historical: historicalBuildAt(arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101")),
+  execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute),
 } as ShadowDeps;
 
 /** A decline is "well" when it gives a runnable next step or names an honest, specific limit; otherwise "badly". */

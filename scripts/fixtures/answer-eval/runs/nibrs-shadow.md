@@ -1,19 +1,19 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 440 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 450 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release test6-20261031-host).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
-- 236: run by this candidate
+- 246: run by this candidate
 - 204: outside the shadow slice
 
 ## Label eligibility (can the case be scored)
 
 - 385: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 1: label drafted
+- 11: label drafted
 
 ## Refused as not built (not scored)
 
@@ -106,7 +106,7 @@ Expected (rows) by actual (columns):
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 14 | pass | wrong answers: pass (0); initial action: pass (100% (14/14)); direct answers: pass (100%); numeric fixtures: pass (14/14 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
+| answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
 | answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 4 answers unverified); clarifications: not measured (2/6 verified correct, 4 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/6 match, 4 not measured) |
@@ -162,8 +162,11 @@ Discrepancies and unverified cases:
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
 - **LS-348** (unverified; expected answer, got answer) "Robberies in Texas this year"
-  - unverified route: expected `rtci answer`, got `routed to rtci: not run by this NIBRS shadow`
-  - routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.
+  - unverified period: expected `{"rule":"year to date through the latest reported month"}`, got `2026-01..2026-08`
+  - unverified statement: expected `names the months covered, through the latest reported month (P52)`, got `(no check defined)`
+  - unverified statement: expected `says the current year is incomplete and which agencies the current source covers (P53)`, got `(no check defined)`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Texas: 4,317 robberies in the year to date, January 2026 through August 2026. / This counts only the 76 Consistent Reporting Agencies, covering roughly 15 million people, that reported every month from January
 - **LS-349** (unverified; expected answer, got answer) "Murders in the US by victim-offender relationship in 2023"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't availabl
@@ -303,17 +306,18 @@ No cases.
 
 ### Held out
 
-1 cases. Correct 0; unverified 0; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 100 (trend only).
+11 cases. Correct 8; unverified 2; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 100 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 1 | 0 | 0 | 0 |
+| answer | 11 | 0 | 0 | 0 |
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: pass (1/1 match) |
+| answer:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1, 1 answers unverified); initial action: pass (100% (2/2)); direct answers: fail (0% (1 unverified)); numeric fixtures: not measured (1/2 match, 1 not measured) |
+| answer:rtci count | 2021 and later | 9 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (9/9)); direct answers: not measured (89% verified, 1 unverified); numeric fixtures: not measured (8/9 match, 1 not measured) |
 
 Discrepancies and unverified cases:
 
@@ -321,6 +325,12 @@ Discrepancies and unverified cases:
   - unverified statement: expected `gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)`, got `(no check defined)`
   - material statement: expected `Changes the existing chart to bars using the existing result; makes no data-engine request.`, got `Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.`
   - delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.
+- **LS-449** (unverified; expected answer, got answer) "Memphis murders by month in 2025"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murders by month, January 2025 through December 2025. / Figures for the Memphis Police Department. / Source: Crime Index.
+- **LS-450** (unverified; expected answer, got answer) "Memphis murders by month in 2025 according to NIBRS"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murder victims by month, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
 
 ## PROVISIONAL: drafted labels (never a gate): replay cases inside the slice
 
