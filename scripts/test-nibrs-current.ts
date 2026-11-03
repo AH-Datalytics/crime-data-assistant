@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, answerCurrent, change, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { agencyMonths, answerCurrent, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -86,6 +86,15 @@ if (fs.existsSync(`${root}/current_crime.parquet`) && fs.existsSync(python)) {
   // Memphis by month across the Final panel and current_crime.
   const mem = answerCurrent({ measure: "murder", place: { kind: "agency", ori: "TNMPD0000", label: "Memphis, Tennessee", name: "Memphis", state: "TN" }, from: "2024-11", to: "2025-02", form: "months" }, build, execute);
   assert.ok(mem.kind === "current" && mem.delivered.table.rows.length === 4 && mem.read.tables.join() === "current_final,current_crime");
+  // Codex review 01.1: a group's rate counts only its agencies with every month known, over their own population.
+  const rb = groupRateBase(build, null, "rape", "2026-01", "2026-08", execute)!;
+  assert.deepEqual([rb.count, rb.population], [29434, 105035976]);
+  const rr = answerCurrent({ measure: "rape", place: nation, from: "2026-01", to: "2026-08", form: "ytd", statistic: "rate" }, build, execute);
+  assert.ok(rr.kind === "current" && rr.delivered.table.rows[0][0] === 28);
+  // Codex review 01.4: two spans compared, each a complete total (Memphis murders, January-August: 146 against 99).
+  const memphis = { kind: "agency" as const, ori: "TNMPD0000", label: "Memphis, Tennessee", name: "Memphis", state: "TN" };
+  const ch = answerCurrentChange({ measure: "murder", place: memphis, from: "2026-01", to: "2026-08", form: "total" }, ["2025-01", "2025-08"], ["2026-01", "2026-08"], build, execute);
+  assert.ok(ch.kind === "current" && JSON.stringify(ch.delivered.table.rows) === "[[146,99,-47,-32.2]]");
   console.log("nibrs current: checked against the build", build.release);
 }
 console.log("nibrs current: agency months, consistent group sums, cumulative totals never complete over unknown months");

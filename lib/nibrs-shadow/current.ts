@@ -99,6 +99,17 @@ export function agencyPopulation(b: CurrentBuild, ori: string, month: Month, exe
   const r = execute(`SELECT population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND population > 0 AND printf('%04d-%02d', year, month) <= ${q(month)} ORDER BY year DESC, month DESC LIMIT 1`)[0];
   return r ? Number(r[0]) : null;
 }
+/**
+ * A group's rate (decision B; Codex review 01.1): over its sample agencies with every month of the span known for the
+ * offense, their count over their summed population (each agency's in the span's last month).
+ */
+export function groupRateBase(b: CurrentBuild, states: string[] | null, measure: string, from: Month, to: Month, execute: (sql: string) => unknown[][]): { count: number; population: number; agencies: number } | null {
+  const col = CURRENT_MEASURE[measure], key = "printf('%04d-%02d', year, month)", n = months(from, to).length;
+  const r = execute(`WITH a AS (SELECT ori, count(*) AS rows, count(${col}_total) AS known, sum(${col}_total) AS total, arg_max(population, year * 100 + month) AS pop
+      FROM read_parquet('${b.root}/current_crime.parquet') WHERE sample${states ? ` AND state IN (${states.map(q).join(", ")})` : ""} AND ${key} BETWEEN ${q(from)} AND ${q(to)} GROUP BY ori)
+    SELECT sum(total), sum(pop), count(*) FROM a WHERE rows = ${n} AND known = ${n} AND pop > 0`)[0];
+  return r && Number(r[2]) > 0 ? { count: Number(r[0]), population: Number(r[1]), agencies: Number(r[2]) } : null;
+}
 /** A sum over months, null when any month in it is unknown; `missing` names those months (design note section 3). */
 export function cumulative(values: (number | null)[], ms: Month[]): { value: number | null; missing: Month[] } {
   const missing = ms.filter((_, i) => values[i] === null);
@@ -125,7 +136,7 @@ export function currentRate(count: number | null, population: number | null, mon
   return Math.round((count * 1e6) / population) / 10;
 }
 
-/* ------------------------------------------------ the answer (counts; rates and routing come next) -------------- */
+/* ------------------------------------------------ the answer ---------------------------------------------------- */
 
 export type CurrentPlace =
   | { kind: "agency"; ori: string; label: string; name: string; state: string }
@@ -146,6 +157,30 @@ export type CurrentAnswer = {
   read: { tables: string[]; table: string; column: string; release: string };
 };
 export type CurrentDecline = { kind: "current-decline"; explanation: string };
+
+/**
+ * Two spans of months compared (design note section 3; Codex review 01.4): each a complete total, the change and the
+ * percent change from them (P55: none from a zero base); either total unknown and there is no change. The published
+ * year-to-date change is never used: it is computed the same way for every span.
+ */
+export function answerCurrentChange(cq: CurrentQuestion, earlier: [Month, Month], later: [Month, Month], b: CurrentBuild, execute: (sql: string) => unknown[][]): CurrentAnswer | CurrentDecline {
+  const total = (span: [Month, Month]) => {
+    const r = answerCurrent({ ...cq, from: span[0], to: span[1], form: "total", statistic: "count" }, b, execute);
+    return r.kind === "current" ? { value: r.delivered.table.rows[0][0] as number, r } : { value: null, why: r.explanation };
+  };
+  const e = total(earlier), l = total(later);
+  if (e.value === null || l.value === null) return { kind: "current-decline", explanation: `${("why" in e ? e.why : "why" in l ? l.why : "") as string} There is no change to give.`.trim() };
+  const lr = (l as { r: CurrentAnswer }).r;
+  const ch = l.value - e.value, pct = change(e.value, l.value);
+  const col = CURRENT_MEASURE[cq.measure], words = WORDS[col];
+  const ew = spanWords(...earlier), lw = spanWords(...later);
+  const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : n < 0 ? `-${fmt(-n)}` : "0");
+  return { ...lr, period: { from: earlier[0], to: later[1] }, meaning: { ...lr.meaning, period: { from: earlier[0], to: later[1] }, statistic: "change" },
+    delivered: { table: { columns: ["earlier", "later", "change", "pct_change"].map((k) => ({ binding: { kind: "statistic" as const, as: `x.${k}` },
+      header: k === "earlier" ? ew : k === "later" ? lw : k === "change" ? "Change" : "Percent change" })), rows: [[e.value, l.value, ch, pct]] },
+      text: [`${cq.place.label}: ${words}, ${ew} against ${lw}.`, `${fmt(e.value)} and ${fmt(l.value)}: a change of ${signed(ch)}${pct !== null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}.`,
+        ...(pct === null ? ["The percent change cannot be computed from a zero base."] : []), ...lr.delivered.text.slice(1)] } };
+}
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export const monthWords = (m: Month) => `${MONTH_NAMES[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`;
@@ -208,12 +243,15 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     if (c.value === null) return { kind: "current-decline", explanation: `Crime Index has no ${one} figure for ${where} in ${c.missing.map(monthWords).join(", ")}, so there is no total for ${whatTotal}.` };
     if (rate) {
       // The population: the agency's in the span's last month; a group's, its counted agencies' summed population then.
-      const pop = cq.place.kind === "agency" ? agencyPopulation(b, cq.place.ori, period.to, execute) : lastCov ? lastCov.population : null;
-      const r = currentRate(c.value, pop, covered.length);
-      if (r === null) return { kind: "current-decline", explanation: `Crime Index gives no population for ${where} in ${monthWords(period.to)}, so there is no rate.` };
+      // An agency: its count over its current population. A group: only its agencies with every month known (Codex 01.1).
+      const base = cq.place.kind === "agency" ? { count: c.value, population: agencyPopulation(b, cq.place.ori, period.to, execute), agencies: 1 }
+        : groupRateBase(b, cq.place.states, cq.measure, period.from, period.to, execute);
+      const r = base ? currentRate(base.count, base.population, covered.length) : null;
+      if (r === null || !base) return { kind: "current-decline", explanation: `Crime Index gives no population for ${where} in ${monthWords(period.to)}, so there is no rate.` };
+      const rateLine = cq.place.kind === "group" ? [`The rate counts the ${fmt(base.agencies)} Consistent Reporting ${base.agencies === 1 ? "Agency" : "Agencies"} with a ${one} figure for every month, ${fmt(base.count)} ${words} among roughly ${aboutPeople(base.population!)} people.`] : [];
       return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
         delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)} per 100,000` }], rows: [[r]] },
-          text: [`${where}: ${r.toFixed(1)} ${words} per 100,000 people ${what} (${fmt(c.value)} ${words}; not annualized).`, ...head, ...cohortLine, ...leftOutLine, source] } };
+          text: [`${where}: ${r.toFixed(1)} ${words} per 100,000 people ${what} (not annualized).`, ...head, ...(cq.place.kind === "agency" ? [`That is ${fmt(base.count)} ${words}.`] : rateLine), ...cohortLine, source] } };
     }
     return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }], rows: [[c.value]] },

@@ -257,14 +257,16 @@ function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation
   const q = o.question, m = HISTORICAL_MEASURE[q.measure];
   const monthly = q.form === "months";
   const placeTitle = [q.place.kind === "agency" ? shortLabel(q.place.label) : q.place.label.replace(/^The /, "")];
-  const titleParts: TitleParts = { places: placeTitle, measure: m.words, ratePer: null, groupings: monthly ? ["month"] : [], period: titlePeriod(o.period, false),
+  const rate = q.statistic === "rate";
+  const titleParts: TitleParts = { places: placeTitle, measure: m.words, ratePer: rate ? 100000 : null, groupings: monthly ? ["month"] : [], period: titlePeriod(o.period, false),
     partialLastYear: null, rollingMonths: q.form === "rolling" ? 12 : null, ranking: null };
   const who = q.place.kind === "agency" ? reporter(places, [q.place.ori]) : `the Consistent Reporting Agencies of ${q.place.label.replace(/^The /, "the ")}`;
   const table = o.delivered.table;
   const single = table.rows.length === 1 && table.columns.length === 1 && typeof table.rows[0][0] === "number";
   const when = whenWords(o.period, monthly ? "month" : null);
-  const lead: Lead = single ? { kind: "single", who, quantity: `${fmt(table.rows[0][0] as number)} ${m.words}`, when, countedAs: null }
-    : { kind: "described", what: m.words, who, when, countedAs: null, brokenDownBy: null };
+  const v = single ? (table.rows[0][0] as number) : null;
+  const lead: Lead = single ? { kind: "single", who, quantity: rate ? `${m.words} at a rate of ${one(v!)} per 100,000 people` : `${fmt(v!)} ${m.words}`, when, countedAs: null }
+    : { kind: "described", what: m.words, who, when, countedAs: rate ? "as rates per 100,000 people" : null, brokenDownBy: null };
   const known = restated(o.delivered, q.agencyLine ? [q.agencyLine] : []);
   return { source: "rtci", titleParts, lead, offers: [], ...notesFrom("rtci", [], o.delivered.text, known), coverage: { requested: false },
     chart: chartOptionsOf(table, orderedOf(table)), ordered: orderedOf(table), series: {} };

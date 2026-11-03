@@ -153,6 +153,7 @@ assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: st
   assert.deepEqual(la.options.map((o) => o.label), ["Los Angeles", "Louisiana"]);
   assert.notEqual(ask("Shoplifting in Baton Rouge, LA in 2024").kind, "clarify");
   assert.notEqual((ask("Shoplifting in La Crosse in 2024") as { about?: string }).about, "which LA");
+  assert.notEqual((ask("Shoplifting in LA CROSSE in 2024") as { about?: string }).about, "which LA", "Codex review 01.6: a name in capitals");
 }
 // A misspelled large place is read as it: one large place within two edits, same first letter (coordinator 2026-11-03).
 assert.equal(nearestPlaceName(places, "batlimore"), "Baltimore");

@@ -231,7 +231,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // South Side", "South Carolina" or "West Memphis".
   let region: Flags["region"] = null;
   const REGION_CODE: Record<string, NonNullable<Flags["region"]>> = { northeast: "noe", midwest: "mdw", south: "sth", west: "wst" };
-  text = text.replace(/\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west|south|west)(?:ern)?\s+(?:region|u\.?s\.?|united\s+states|states)\b|\b(?:in\s+)?the\s+(north[\s-]?east|mid[\s-]?west|south|west)\b(?=\s*$|\s*[?.,!]|\s+(?:by|in|since|from|during|over|for|between|this|last|so|per|year|month)\b)|\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west)(?:ern)?\b/i,
+  text = text.replace(/\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west|south|west)(?:ern)?\s+(?:region|u\.?s\.?|united\s+states|states)\b|\b(?:in\s+)?the\s+(north[\s-]?east|mid[\s-]?west|south|west)\b(?=\s*$|\s*[?.,!]|\s+(?:by|in|since|from|during|over|for|between|this|last|so|per|year|month)\b)|\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west)(?:ern)?\b(?!\s+(?:city|county|township|village|town|heights|park|borough)\b|\s*,)/i,
     (m, a?: string, b?: string, c?: string) => {
       region = REGION_CODE[(a ?? b ?? c ?? "").toLowerCase().replace(/[\s-]/g, "")];
       readings.push({ kind: "phrase", from: m.trim(), to: "a Census region" });

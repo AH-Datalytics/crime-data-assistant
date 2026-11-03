@@ -54,7 +54,7 @@ import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
-import { answerCurrent, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { answerCurrent, answerCurrentChange, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -310,7 +310,7 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 }
 
 /** "LA" for a place (not after a place it qualifies, "Shreveport, LA"): Los Angeles or Louisiana, asked. */
-const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][a-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
+const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][A-Za-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   // "LA" (coordinator 2026-11-03): the city or the state, asked; each choice is the question with the place named.
   if (LA.test(question)) {
@@ -635,6 +635,23 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const a = resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`);
       const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${a.ori.replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
       if (a?.kind === "agency" && has) place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
+    }
+    // Availability last (design note section 4): a span that starts after Current Trends' latest month goes on to NIBRS
+    // (Codex review 01.3: "September 2026"); one that crosses it keeps the months Current Trends has, the rest named.
+    if (span && span[0] > cur.lastMonth && form !== "rolling" && form !== "ytd") span = null;
+    // Two spans compared (Codex review 01.4): both inside Current Trends' months, else it goes on.
+    const cmp = flags(ledger0).comparison;
+    if (cmp && place && sp.statistic === "count") {
+      const ym = (s: string) => s.slice(0, 7);
+      const e: [string, string] = [ym(cmp.earlier.from), ym(cmp.earlier.to)], l: [string, string] = [ym(cmp.later.from), ym(cmp.later.to)];
+      const first = place.kind === "group" ? cur.firstMonth : cur.finalFirstMonth;
+      if (e[0] >= first && l[1] <= cur.lastMonth) {
+        const r = answerCurrentChange({ measure: sp.measures[0], place, from: l[0], to: l[1], form: "total",
+          ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for ") } : {}) }, e, l, cur, deps.execute);
+        if (r.kind === "current") return r;
+        return decline("unsupported_capability", r.explanation);
+      }
+      span = null;
     }
     if (span && form && place) {
       const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form, statistic: sp.statistic === "rate" ? "rate" : "count",
