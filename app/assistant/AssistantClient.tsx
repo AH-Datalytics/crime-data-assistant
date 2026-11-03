@@ -453,8 +453,8 @@ function AnswerView({ r, p, firstMention, chartKind: typedKind, onButton, sugges
   // Which chart point a table row belongs to: its own index, or (time by category) its period's.
   let pointOf = (i: number) => i;
   const timed = groupCols.length >= 1 && rows.every((row) => PERIOD.test(String(row[groupCols[0]])));
-  // The coverage columns are shown in the table, never charted beside the count.
-  const charted = p.coverage.requested ? numberCols.slice(0, 1) : numberCols;
+  // The columns charted are the engine's (#100); coverage, populations and incidents are shown in the table only.
+  const charted = p.chart.columns;
   if (timed && groupCols.length === 1 && charted.length) {
     const tc = groupCols[0];
     series = charted[0];

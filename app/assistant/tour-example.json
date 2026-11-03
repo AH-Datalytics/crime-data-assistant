@@ -1,5 +1,5 @@
 {
- "_note": "Fixed example answers for the tour (captured from the local engine on test6 with the answer contract, 2026-11-02; the decline a permanent one: causes); the tour never asks the engine or the model.",
+ "_note": "Fixed example answers for the tour (captured from the local engine on test6 with the answer contract, 2026-11-02, recaptured after #100; the decline a permanent one: causes); the tour never asks the engine or the model.",
  "answer": {
   "typed": "same for 2024",
   "reply": {
@@ -80,11 +80,14 @@
      "default": "horizontal_bar",
      "exclusive": true,
      "exclusiveByColumn": {
-      "Carjacking offenses": true,
-      "Incidents": true
-     }
+      "Carjacking offenses": true
+     },
+     "columns": [
+      "Carjacking offenses"
+     ]
     },
-    "ordered": []
+    "ordered": [],
+    "series": {}
    },
    "asked": "Carjacking offenses in Memphis by clearance status in 2024",
    "rewrite": null
