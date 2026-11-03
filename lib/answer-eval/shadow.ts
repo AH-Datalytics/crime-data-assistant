@@ -934,7 +934,7 @@ function walkAnswers(prefix: string, key: string, o: ShadowOutcome, r: Release, 
     const own = ctx.checked.has(o) ? none() : deliveredCheck(prefix, key, o, null, r, ev, ctx);
     return (o.buttons ?? []).reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}button "${x.label}" `, `${key}|button`, x.continuation, r, ev, ctx)) : acc), own);
   }
-  if (o.kind === "srs" || o.kind === "historical" || o.kind === "route") return none();
+  if (o.kind === "srs" || o.kind === "historical" || o.kind === "current" || o.kind === "route") return none();
   if (o.kind === "clarify") return o.options.reduce((acc, x) => (x.continuation ? merge(acc, walkAnswers(`${prefix}option "${x.label}" `, `${key}|${x.label}`, x.continuation, r, ev, ctx)) : acc), none());
   return o.alternative?.continuation ? walkAnswers(`${prefix}alternative `, `${key}|alternative`, o.alternative.continuation, r, ev, ctx) : none();
 }
@@ -961,7 +961,7 @@ function continuationCheck(prefix: string, key: string, want: Meaning | null, wa
   // Not available yet (a capability the shadow doesn't have): the plain prefix, or the plain sentence for an internal reason (P74).
   if (c.kind === "decline" && (/^This isn't available yet/.test(c.explanation) || c.explanation === NOT_YET)) return one(d("", wantLeads, c.explanation, "unverified"));
   // A historical-file answer or a route behind a button: not scored as a NIBRS answer here.
-  if (c.kind === "srs" || c.kind === "historical" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
+  if (c.kind === "srs" || c.kind === "historical" || c.kind === "current" || c.kind === "route") return one(d("", wantLeads, c.kind === "route" ? `routed to ${c.source}` : "a historical-file answer", "unverified"));
   if (wantLeads === "answer") {
     if (c.kind !== "answer") return one(d("", "answer", `${c.kind}: ${c.kind === "decline" ? c.explanation.slice(0, 160) : c.about}`, "material"));
     return deliveredCheck(prefix, key, c, want, r, ev, ctx);
@@ -1017,7 +1017,7 @@ export function withRewrite(res: CaseResult, c: Case, o: { rewrite: string | nul
 
 export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capability: string; era: string }, expectedValues?: ExpectedValues): ShadowScore {
   const e = c.expected!;
-  if (o.kind === "srs" || o.kind === "historical" || o.kind === "route") return { result: scoreOther(c, o, r, ctx, expectedValues) };
+  if (o.kind === "srs" || o.kind === "historical" || o.kind === "current" || o.kind === "route") return { result: scoreOther(c, o, r, ctx, expectedValues) };
   const actual: ActualAction = o.kind;
   const notes: string[] = [];
   let diffs: Diff[] = [];
@@ -1090,7 +1090,7 @@ export function scoreShadow(c: Case, o: ShadowOutcome, r: Release, ctx: { capabi
 /* ------------------------------------------------------------------ increment 5: the historical file and routes ---- */
 
 /** A figure read from a Crime Index file: the states and nation file (P53) or the agencies build (Historical). */
-type SrsOutcome = Extract<ShadowOutcome, { kind: "srs" | "historical" }>;
+type SrsOutcome = Extract<ShadowOutcome, { kind: "srs" | "historical" | "current" }>;
 /** A historical-file answer as the comparator's view: its own meaning (it has no NIBRS plan). */
 function srsView(o: SrsOutcome): PlanView {
   const m = o.meaning;

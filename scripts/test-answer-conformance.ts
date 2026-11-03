@@ -39,6 +39,7 @@ import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
 import { missingGroupings } from "../lib/nibrs-shadow/named-groupings";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
+import type { CurrentBuild } from "../lib/nibrs-shadow/current";
 import type { ResultTable } from "../lib/nibrs-plan/result";
 import { ORI_PREFIX_STATES } from "../lib/nibrs-plan/state-codes";
 
@@ -109,17 +110,29 @@ function crimeIndex(sql: string): unknown[][] {
   return oris.flatMap((o) => rows.filter(([y]) => !years || y === Number(years[1]) || y === Number(years[2])).map(([y, t, c, p]) => (years ? [y, t] : [o, y, t, c, p])));
 }
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
+// Current Trends stub: every agency asked is in it, 30 a month (March 2025 unknown); a group's month is 3,000 from 547
+// agencies of 111 million people, 14 of them blank.
+function currentStub(sql: string): unknown[][] {
+  if (/count\(\*\) FROM read_parquet\('[^']*current_crime/.test(sql) && !/GROUP BY/.test(sql)) return [[20]];
+  const [, a, b] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql) ?? [];
+  const ms: string[] = [];
+  for (let y = Number(a.slice(0, 4)), m = Number(a.slice(5)); `${y}-${String(m).padStart(2, "0")}` <= b; m === 12 ? (y++, (m = 1)) : m++) ms.push(`${y}-${String(m).padStart(2, "0")}`);
+  if (/WHERE sample/.test(sql)) return ms.filter((m) => m >= "2025-01").map((m) => [m, 3000, 547, 111272916, 14]);
+  return ms.map((m) => [m, m === "2025-03" ? null : 30]);
+}
+const current: CurrentBuild = { root: "/ct", release: "crimeindex-20261101", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" };
 // 20: the months run through the month before the build's CDE release's month (Jeff 2026-11-03), from release.json.
 const nibrsRelease = loadNibrsRelease();
 const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: nibrsRelease.lastMonth, asOf: "2026-10-29" },
-  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (/crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build } as ShadowDeps;
+  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (/current_crime|current_final/.test(sql) ? currentStub(sql) : /crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build, current } as ShadowDeps;
 
 /** Fixtures for each live source: the questions its answers are checked on. */
 const FIXTURES: Record<string, string[]> = {
   nibrs: [
     "Shoplifting in Memphis in 2024", "Shoplifting in Memphis by month in 2024", "Shoplifting in Memphis by year from 2022 to 2025",
     "Simple assault victims in Memphis by sex in 2024", "Simple assault victims in Memphis by age in 2024", "Robberies in Memphis in 2024 by weapon",
-    "Rolling 12-month shoplifting in Memphis since 2024", "Memphis robberies per month in 2024",
+    // A Part I crime by month at a Current Trends agency is Current Trends' (design note 2026-11-03), so NIBRS is named here.
+    "Rolling 12-month shoplifting in Memphis since 2024", "Memphis robberies per month in 2024 according to NIBRS",
     "Shoplifting in Kansas by year from 2023 to 2024", "Shoplifting in Kansas in 2024, with the number of agencies reporting",
     "Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", "Drug crimes in Memphis in 2024",
     "Shoplifting in Memphis in March 2024",
@@ -136,6 +149,8 @@ const FIXTURES: Record<string, string[]> = {
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
     // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.
     "Memphis murders since 1930", "Memphis homicides by year", "Memphis murders over the past 3 years"],
+  // Current Trends (design note 2026-11-03): an agency by month (a blank month), the nation by month, a state's month.
+  rtci: ["Memphis murders by month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026", "Memphis murders by month in 2018"],
 };
 /** Choices and declines: their buttons are checked (9, 11). */
 const CHOICES = ["Memphis crime in 2024", "Memphis crime per month in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024",
@@ -161,7 +176,7 @@ const ORI_PREFIX = new RegExp(`\\b(?:${Object.keys(ORI_PREFIX_STATES).join("|")}
 const check = (ok: boolean, what: string) => { if (!ok) fail.push(what); };
 const shown = (p: Presentation) => [titleOf(p.titleParts).title, titleOf(p.titleParts).subtitle ?? "", ...leadOf(p).sentences,
   ...p.offers.flatMap((o) => (o.text ? [o.text.before + o.text.link + o.text.after] : [])), ...notesOf(p)].join(" ");
-const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" ? o.delivered : null);
+const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" || o.kind === "current" ? o.delivered : null);
 
 // 10: complete profiles, every field filled, for each live source.
 const FIELDS: (keyof SourceProfile)[] = ["units", "grain", "coverage", "rateBasis", "breakdowns", "caveats", "vocabulary", "name"];

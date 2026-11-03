@@ -17,6 +17,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { ResultTable } from "../nibrs-plan/result";
+import type { Meaning } from "../answer-eval/case";
+import { HISTORICAL_MEASURE } from "./historical";
+import { stateName } from "./places";
 import { fmt } from "./deliver";
 
 /** Where the Crime Index build's Current Trends tables are, and the months they hold. */
@@ -128,11 +131,11 @@ export type CurrentQuestion = {
   agencyLine?: string;
 };
 export type CurrentAnswer = {
-  kind: "current"; question: CurrentQuestion; period: { from: Month; to: Month };
+  kind: "current"; question: CurrentQuestion; period: { from: Month; to: Month }; meaning: Meaning;
   delivered: { table: ResultTable; text: string[] };
   /** Group months: the agencies counted and their population, and how many had no figure (P90, P91). */
   coverage: { month: Month; agencies: number; population: number; blank: number }[];
-  read: { tables: string[]; release: string };
+  read: { tables: string[]; table: string; column: string; release: string };
 };
 export type CurrentDecline = { kind: "current-decline"; explanation: string };
 
@@ -173,19 +176,25 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   // Agencies with no figure in a group's month are left out of its total and named (Codex design check 01.2).
   const leftOut = coverage.filter((c) => c.blank > 0).map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
   const leftOutLine = leftOut.length ? [`Agencies with no ${one} figure are left out of the total: ${leftOut.join(", ")}.`] : [];
-  const read = { tables: [...(covered[0] < b.firstMonth ? ["current_final"] : []), ...(covered[covered.length - 1] >= b.firstMonth ? ["current_crime"] : [])], release: b.release };
+  const tables = [...(covered[0] < b.firstMonth ? ["current_final"] : []), ...(covered[covered.length - 1] >= b.firstMonth ? ["current_crime"] : [])];
+  const read = { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release };
   const period = { from: covered[0], to: covered[covered.length - 1] };
+  const hm = HISTORICAL_MEASURE[cq.measure];
+  const places: Meaning["places"] = cq.place.kind === "agency" ? [{ kind: "agency", name: cq.place.name, state: cq.place.state }]
+    : cq.place.states === null ? [{ kind: "national", name: "United States" }] : cq.place.states.map((st) => ({ kind: "state" as const, name: stateName(st), state: st }));
+  const meaning = (groupings: string[]): Meaning => ({ source: "rtci", places, period, measures: [{ name: hm.name, unit: hm.unit }], filters: [], groupings, statistic: "count",
+    ...(group ? { cohort: "same_agencies" as const } : {}) });
   if (cq.form !== "months") {
     const c = cumulative(vals, covered);
     const what = cq.form === "ytd" ? `year to date (${spanWords(period.from, period.to)})` : `12 months from ${spanWords(period.from, period.to)}`;
     if (c.value === null) return { kind: "current-decline", explanation: `Crime Index has no ${one} figure for ${where} in ${c.missing.map(monthWords).join(", ")}, so there is no total for the ${what}.` };
-    return { kind: "current", question: cq, period, coverage, read,
+    return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }], rows: [[c.value]] },
         text: [`${where}: ${fmt(c.value)} ${words}, ${what}.`, ...head, ...leftOutLine, source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);
   const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];
-  return { kind: "current", question: cq, period, coverage, read,
+  return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
     delivered: { table: { columns, rows: covered.map((m, i) => [m, vals[i]]) },
       text: [`${where}: ${words} by month, ${spanWords(period.from, period.to)}.`, ...head, ...outside, ...leftOutLine,
         ...(blanks.length ? [`No figure is known for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };

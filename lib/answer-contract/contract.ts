@@ -106,6 +106,23 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
     name: { short: "Crime Index", long: "Crime Index's historical data", reportedToShort: "the FBI", reportedToLong: "the FBI",
       asPublished: "as published by Crime Index", sourceLine: "Source: Crime Index." },
   },
+  // Current Trends (design note 2026-11-03; P90, P91; Jeff's decisions A-C). Never "RTCI" or "Real-Time Crime Index" to a user.
+  rtci: {
+    units: ["offenses", "victims"],
+    grain: { finest: "month", partial: "named_by_months" },
+    coverage: { published: true, cohortView: { label: "Consistent Reporting Agencies", definition: "the agencies in Crime Index's Current Trends sample, which reported every month", levels: ["state", "national"] } },
+    rateBasis: "computed",
+    breakdowns: [],
+    caveats: ["blank_not_available"],
+    vocabulary: {
+      terms: { murder: ["murders", "homicides", "homicide", "killings"], rape: ["rapes"], robbery: ["robberies"], aggravated_assault: ["aggravated assaults"],
+        burglary: ["burglaries", "break-ins"], theft: ["thefts", "larceny", "larceny-theft"], motor_vehicle_theft: ["motor vehicle thefts", "car theft", "auto theft", "stolen cars"],
+        violent_crime: ["violent crime", "violent crimes"], property_crime: ["property crime", "property crimes"] },
+      not: { murder: ["shootings"] },
+    },
+    name: { short: "Current Trends", long: "Crime Index's Current Trends data", reportedToShort: "Crime Index", reportedToLong: "Crime Index",
+      asPublished: "as published by Crime Index", sourceLine: "Source: Crime Index." },
+  },
 };
 
 export const NOTE_TEXT: Record<Exclude<NoteKey, "blank_not_available">, string> = {

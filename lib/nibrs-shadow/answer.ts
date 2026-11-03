@@ -47,13 +47,14 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
+import { answerCurrent, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -63,6 +64,8 @@ export type ShadowDeps = {
   execute(sql: string): unknown[][];
   /** The Crime Index build (scripts/build-crimeindex.py): with it, agencies' Part I questions are Historical's answers; without it, routed. */
   historical?: HistoricalBuild;
+  /** The Crime Index build's Current Trends tables (current.ts): with them, Part I questions by month are Current Trends' answers. */
+  current?: CurrentBuild;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
 };
@@ -160,7 +163,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     const got = named(q);
     if (![...asks].every((x) => got.has(x))) return false;
     const r = shadowAnswer(q, { ...deps, checkingOffer: true });
-    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs";
+    return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current";
   };
   const question = ledger.question;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
@@ -226,7 +229,7 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   // never an unrelated one; the generic example only when it named neither (Jeff's rule: every decline a next step).
   if (/\bfor example\b/i.test(o.explanation)) return o;
   const lastYear = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
-  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs"; };
+  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current"; };
   const related = [...(place ? [`robberies in ${place} in ${lastYear}`] : []), ...(measure ? [`${measure} in Denver in ${lastYear}`] : [])]
     .map(tidy).find((q) => readsWhole(q, year) && answers(q));
   return { ...o, explanation: `${o.explanation} ${related ? `For example: "${related}".` : EXAMPLE}` };
@@ -240,6 +243,8 @@ export type ShadowOutcome =
   | SrsAnswer
   /** A Part I figure for one or several agencies, read from the Crime Index build (Historical, P75-P79; historical.ts). */
   | HistoricalAnswer
+  /** A Part I figure by month for an agency, a state, a region or the nation, from Current Trends (current.ts). */
+  | CurrentAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
   | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
@@ -313,6 +318,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
 export function answerDimensions(o: ShadowOutcome): string[] | null {
   if (o.kind === "answer") return o.plan.groupings.map((g) => g.dimension);
   if (o.kind === "historical" || o.kind === "srs") return o.question.byYear ? ["time.year"] : [];
+  if (o.kind === "current") return o.question.form === "months" ? ["time.month"] : [];
   return null;
 }
 /**
@@ -432,6 +438,22 @@ function yearSpan(sp: { period: NPeriod; grain: string }, thisYear: number, firs
   if (p.form === "last") return [lastComplete - p.n + 1, lastComplete];
   if (p.form === "lastyear") return [lastComplete, lastComplete];
   if (p.form === "none" && sp.grain === "year") return [firstYear, lastComplete];
+  return null;
+}
+/**
+ * The months a Current Trends question covers (design note, section 3): a month, a range of months, a year or years by
+ * month, "since YEAR" by month through the build's last month, or "by month" alone (the months current_crime holds).
+ * Null for a form that isn't monthly.
+ */
+function monthSpan(sp: { period: NPeriod; grain: string }, b: CurrentBuild): [string, string] | null {
+  const p = sp.period, mm = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}`;
+  if (p.form === "month") return [mm(p.year, p.month), mm(p.year, p.month)];
+  if (p.form === "monthrange") return [mm(...p.from), mm(...p.to)];
+  if (sp.grain !== "month") return null;
+  if (p.form === "year") return [mm(p.year, 1), mm(p.year, 12)];
+  if (p.form === "range") return [mm(p.from, 1), mm(p.to, 12)];
+  if (p.form === "since") return [mm(p.from, 1), b.lastMonth];
+  if (p.form === "none") return [b.firstMonth, b.lastMonth];
   return null;
 }
 /** A span asked as open words ("since 1990", "the past 10 years", "by year" alone) is shown year by year. */
@@ -572,6 +594,29 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // (FBI SRS), Current Trends' this year; unless NIBRS is asked for in words (P01). Its clearance rate is the
   // historical clearances' for the nation (P57) and declined for a state (P18).
   // An every-month cohort (P61's button, typed) keeps the question in NIBRS: the historical file has no cohorts.
+  // Current Trends (design note 2026-11-03, section 4): a Part I offense by month for a Current Trends agency, a state,
+  // a region or the nation, unless another source is named (P01) or a detail is asked (NIBRS's or SHR's). Counts only
+  // for now. An agency Current Trends doesn't have goes on to NIBRS (P01's fallback).
+  if (deps.current && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance
+    && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite && d.spec.statistic === "count" && d.spec.measures.length === 1
+    && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length === 1
+    && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
+    const sp = d.spec, cur = deps.current, span = monthSpan(sp, cur), pl = sp.places[0];
+    let place: CurrentPlace | null = null;
+    if (pl.kind === "national") place = { kind: "group", states: null, label: "The United States" };
+    else if (pl.kind === "state") place = { kind: "group", states: [pl.code], label: stateName(pl.code) };
+    else if (pl.kind === "agency") {
+      const a = resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`);
+      const has = a?.kind === "agency" && Number(deps.execute(`SELECT count(*) FROM read_parquet('${cur.root}/current_crime.parquet') WHERE ori = '${a.ori.replace(/'/g, "''")}'`)[0]?.[0] ?? 0) > 0;
+      if (a?.kind === "agency" && has) place = { kind: "agency", ori: a.ori, label: a.label, name: pl.name, state: pl.state };
+    }
+    if (span && place) {
+      const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form: "months",
+        ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
+      if (r.kind === "current") return r;
+      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+    }
+  }
   if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).people) {
     const sp = d.spec;
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
