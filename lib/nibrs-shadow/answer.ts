@@ -123,6 +123,15 @@ function keeps(t: string, asked: string, year: number, except: (typeof CONDITION
 }
 /** A plain example of a question that works, for a decline with no button (Jeff's rule: every decline a next step). */
 export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
+/** Asks outside the data (Historical step one, cause 7), first match wins: [words, only when no crime is named, the limit said plainly]. */
+const OUTSIDE: [RegExp, boolean, string][] = [
+  [/\bon\s+a\s+map\b|\bmaps?\s+of\b/i, false, "Maps aren't available here; answers come as tables and charts."],
+  [/\bcampus(?:es)?\b/i, false, "College and university police agencies aren't among the places here yet."],
+  [/\bcyber\s*-?\s*crimes?\b/i, false, "Cybercrime isn't one category in this data: hacking/computer invasion and several kinds of fraud are separate crimes in NIBRS."],
+  [/\b(?:list|lists)\s+of\b[^?]*\bagencies\b|\bagency\s+coverage\b|\bwhich\s+agencies\s+report/i, true, "A list of agencies, or of the years an agency reported, isn't available here yet."],
+  [/\bpopulations?\b/i, true, "Population figures on their own aren't available here. A rate per 100,000 uses the place's population."],
+  [/\bdata\s*-?\s*sets?\b|\braw\s+data\b|\bdownload\b/i, false, "A whole data set isn't available here; each answer's table can be downloaded."],
+];
 
 /**
  * Jeff's rule (coordinator, 2026-11-01): every decline offers a concrete next step, a button where one is possible and
@@ -198,7 +207,10 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   if (o.alternative && offerable(o.alternative.question)) return o;
   if (o.alternative) o = { ...o, alternative: null };
   const text =(c: string) => own.find((p) => p.concept === c && p.state === "recognized")?.text.trim();
-  const measure = text("measure"), place = text("place");
+  // The nation in words a question can take after "in": "nationwide", "the whole country" (Historical step one: an
+  // example read "robberies in nationwide in 2025").
+  const placePart = own.find((p) => p.concept === "place" && p.state === "recognized");
+  const measure = text("measure"), place = placePart?.value === "national" ? "the United States" : placePart?.text.trim();
   if (measure && place) {
     const period = text("period") ?? `in ${Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1)}`;
     // The nearest question for the same place and crime (coordinator 2026-11-02): as asked with only its period, then
@@ -496,6 +508,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return { kind: "clarify", about: `which ${named?.kind === "agency" ? named.agency.name.replace(/ County$/, "") : a.name}`, question: ledger0.question, options };
   }
 
+  // A place the index doesn't have says so, whatever else the question asks (coordinator 2026-11-03, Historical step
+  // one): never P01's "figures don't answer this question", which named the wrong limit.
+  const unfound = parts.find((p) => p.clause === 0 && p.concept === "place" && /^(city|county|ambiguous):/.test(p.value ?? "") && !resolved.has(p.value!));
+  if (unfound) return decline("unresolved_place", `I couldn't find "${unfound.text.trim().replace(/[?.!,]+$/, "")}" among the places here: city and county police agencies serving 10,000 people or more, the states and the nation.`);
+
   // D31 for the Crime Index's annual figures (query-log step one, 2026-11-02: "murders in Philadelphia"): every year it
   // has, by year; the latest complete year; or another year.
   function askCrimeIndexPeriod(): ShadowOutcome {
@@ -535,6 +552,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Police staffing (Crime Index's staffing tables: officers and civilian employees) isn't built here yet: said plainly,
   // never "couldn't tell what this asks" (query-log step one, 2026-11-02: 1 in 8 of the Historical tab's first questions).
   if (STAFFING.test(ledger0.question) && !/\b(?:on|against|of)\s+(?:police\s+)?officers\b/i.test(ledger0.question) && !ledger0.parts.some((p) => p.concept === "measure" && p.state === "recognized")) return decline("unsupported_capability", "Police staffing (officers and civilian employees) isn't available here yet.");
+  // Asks outside the data, each with its own limit (coordinator 2026-11-03, Historical step one cause 7), never "I couldn't
+  // tell what this asks". The measure-less ones only when no crime was recognized.
+  const noMeasure = !ledger0.parts.some((p) => p.concept === "measure" && p.state === "recognized");
+  const outside = OUTSIDE.find(([re, needsNoMeasure]) => re.test(ledger0.question) && (!needsNoMeasure || noMeasure));
+  if (outside) return decline("unsupported_capability", outside[2]);
   if (d.kind === "none") return decline("reader", "I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example \"robberies in Denver in 2024\".");
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
   if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
