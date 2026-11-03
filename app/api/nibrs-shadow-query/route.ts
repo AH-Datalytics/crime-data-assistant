@@ -19,7 +19,7 @@ let deps: ShadowDeps | null = null;
 function shadowDeps(): ShadowDeps {
   // The pinned build (agreed with nibrs-model): its id is in every answer's source statement. Its months run through the
   // month before its CDE release's month (Jeff 2026-11-03), from the release recorded with it (release.json).
-  const rel = loadNibrsRelease();
+  const rel = loadNibrsRelease(undefined, process.env.NIBRS_SHADOW_ROOT);
   deps ??= {
     // The bundled route has no source __dirname: the index is read from the project root.
     places: loadPlaceIndex(path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agencies.json")),

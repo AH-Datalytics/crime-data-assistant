@@ -60,7 +60,7 @@ const RUN_NAME = MODEL ? `${CANDIDATE}-model-rewriter` : CANDIDATE;
 const release: Release & { id: string; asOf: string } = SHADOW
   // The build's months run through the month before its CDE release's month (Jeff 2026-11-03), from the release recorded
   // with it (release.json; --release-file names another build's, given with --root).
-  ? (() => { const r = loadNibrsRelease(arg("--release-file")); return { id: r.id, firstMonth: r.firstMonth, lastMonth: r.lastMonth, asOf: "2026-10-29" }; })()
+  ? (() => { const r = loadNibrsRelease(arg("--release-file"), arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")); return { id: r.id, firstMonth: r.firstMonth, lastMonth: r.lastMonth, asOf: "2026-10-29" }; })()
   : { id: "eval", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
 const shadowDeps = (): ShadowDeps => ({
   places: loadPlaceIndex(), release,

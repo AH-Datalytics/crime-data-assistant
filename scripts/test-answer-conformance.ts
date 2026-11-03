@@ -392,12 +392,13 @@ check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.
   }
 }
 // 20: the rule itself, and the release's own month never answered (month M appears after the update of M+1).
-check(latestShownMonth("2026-10-15T12:01:34Z") === "2026-09" && latestShownMonth("2027-01-15T00:00:00Z") === "2026-12", "20: latestShownMonth");
+check(latestShownMonth("2026-10-15T12:01:34Z") === "2026-09" && latestShownMonth("2027-01-15T00:00:00Z") === "2026-12"
+  && latestShownMonth("2026-10-31T22:00:00-05:00") === "2026-10", "20: latestShownMonth (in UTC: 31 October 22:00 at UTC-5 is a November release)");
 check(nibrsRelease.lastMonth === "2026-09" && nibrsRelease.released.startsWith("2026-10-15"), "20: release.json is the 2026-10-15 release, shown through September 2026");
 check(Object.values(PROFILES).every((x) => x!.latestMonth === "month_before_release" || x!.latestMonth === "as_published"), "20: every profile names its latest-month rule");
 {
   const o = shadowAnswer(`Shoplifting in Memphis in ${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][Number(nibrsRelease.released.slice(5, 7)) - 1]} ${nibrsRelease.released.slice(0, 4)}`, deps);
-  check(o.kind !== "answer", "20: the release's own month answered");
+  check(o.kind === "decline" && o.reason === "outside_release_coverage", "20: the release's own month is not declined as outside the data");
 }
 assert.deepEqual(fail, [], fail.join("\n"));
 console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 20 checks`);

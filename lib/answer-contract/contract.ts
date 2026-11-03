@@ -56,9 +56,10 @@ export type SourceProfile = {
  * month ("2026-10-15T12:01:34Z" -> "2026-09"). Month M appears only after the update of month M+1 has run.
  */
 export function latestShownMonth(released: string): string {
-  const m = /^(\d{4})-(\d{2})-\d{2}/.exec(released);
-  if (!m) throw new Error(`not a release date: ${released}`);
-  const y = Number(m[1]), mo = Number(m[2]);
+  // The release's month in UTC, whatever offset the time is written with (Codex release review 01.4).
+  const t = new Date(released);
+  if (Number.isNaN(t.getTime())) throw new Error(`not a release date: ${released}`);
+  const y = t.getUTCFullYear(), mo = t.getUTCMonth() + 1;
   return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`;
 }
 

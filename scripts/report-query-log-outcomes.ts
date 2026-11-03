@@ -23,7 +23,7 @@ const SOURCE = arg("--source")!;
 const QUESTIONS = arg("--questions")!;
 if (!SOURCE || !QUESTIONS) throw new Error("--source and --questions are required");
 // Through the month before the build's CDE release's month (Jeff 2026-11-03), from the release recorded with it.
-const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"));
+const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical"));
 const deps: ShadowDeps = {
   places: loadPlaceIndex(), release: { ...release, asOf: "2026-10-29" },
   target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
