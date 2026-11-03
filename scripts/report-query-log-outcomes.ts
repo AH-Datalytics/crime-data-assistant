@@ -39,7 +39,7 @@ const WELL = /court outcomes|below the level of an agency|cannot predict|staffin
 const HONEST = new Set(["explanation_requested", "court_outcome", "below_agency_level", "outside_release_coverage"]);
 type Class = "answered" | "asked" | "declined well" | "declined badly" | "error";
 function classify(o: ShadowOutcome): Class {
-  if (o.kind === "answer" || o.kind === "historical" || o.kind === "srs") return "answered";
+  if (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" || o.kind === "current") return "answered";
   if (o.kind === "clarify") return "asked";
   if (o.kind === "route") return "declined well";
   // A decline whose reason is an honest, specific limit (causes, court outcomes, below an agency, a period outside the
