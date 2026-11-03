@@ -21,6 +21,7 @@ import type { Meaning } from "../answer-eval/case";
 import { HISTORICAL_MEASURE } from "./historical";
 import { stateName } from "./places";
 import { fmt } from "./deliver";
+import { aboutPeople } from "./presentation";
 
 /** Where the Crime Index build's Current Trends tables are, and the months they hold. */
 export type CurrentBuild = { root: string; release: string; firstMonth: string; lastMonth: string; finalFirstMonth: string };
@@ -175,6 +176,9 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const vals = covered.map((m) => values.get(m) ?? null);
   // Agencies with no figure in a group's month are left out of its total and named (Codex design check 01.2).
   const leftOut = coverage.filter((c) => c.blank > 0).map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
+  // P90's sentence, in the shared wording: the agencies counted and the people they cover, as of the latest month shown.
+  const lastCov = coverage[coverage.length - 1];
+  const cohortLine = lastCov ? [`This counts only the ${fmt(lastCov.agencies)} Consistent Reporting ${lastCov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(lastCov.population)} people, that reported every month from ${monthWords(b.firstMonth)} through ${monthWords(b.lastMonth)}.`] : [];
   const leftOutLine = leftOut.length ? [`Agencies with no ${one} figure are left out of the total: ${leftOut.join(", ")}.`] : [];
   const tables = [...(covered[0] < b.firstMonth ? ["current_final"] : []), ...(covered[covered.length - 1] >= b.firstMonth ? ["current_crime"] : [])];
   const read = { tables, table: tables.join(" + "), column: `${col}_total`, release: b.release };
@@ -190,12 +194,12 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     if (c.value === null) return { kind: "current-decline", explanation: `Crime Index has no ${one} figure for ${where} in ${c.missing.map(monthWords).join(", ")}, so there is no total for the ${what}.` };
     return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }], rows: [[c.value]] },
-        text: [`${where}: ${fmt(c.value)} ${words}, ${what}.`, ...head, ...leftOutLine, source] } };
+        text: [`${where}: ${fmt(c.value)} ${words}, ${what}.`, ...head, ...cohortLine, ...leftOutLine, source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);
   const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];
   return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
     delivered: { table: { columns, rows: covered.map((m, i) => [m, vals[i]]) },
-      text: [`${where}: ${words} by month, ${spanWords(period.from, period.to)}.`, ...head, ...outside, ...leftOutLine,
+      text: [`${where}: ${words} by month, ${spanWords(period.from, period.to)}.`, ...head, ...cohortLine, ...outside, ...leftOutLine,
         ...(blanks.length ? [`No figure is known for ${blanks.join(", ")}: shown blank, not zero.`] : []), source] } };
 }
