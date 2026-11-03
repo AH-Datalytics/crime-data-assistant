@@ -1,6 +1,6 @@
 # Current Trends in the new engine: design note
 
-**Status:** design. Decisions for Jeff are in section 8. No build yet.
+**Status:** design, revised after Codex design check 01 (REVISE; all eight findings applied). Decisions for Jeff are in section 8. No build yet.
 
 **The ruling this note follows.** Jeff: "Historical data strictly comes from the Crime Index", "as does current". So Current Trends is the Crime Index's data, not the app's live RTCI tables.
 
@@ -16,7 +16,7 @@
 | File | Rows | Span |
 |---|---|---|
 | current_crime_2025-2026.csv | 17,567 | 2025-01 to 2026-08 |
-| 082026 - Final.csv (the Final panel the site is built from, archived with it) | 83,415 agency-months | 2017-01 to 2026-08, 719 agencies |
+| 082026 - Final.csv (the Final panel the site is built from, archived with it) | 83,415 rows: 83,404 agency-months with an ORI, 11 without | 2017-01 to 2026-08, 719 agencies |
 
 **Rows of current_crime.** Each row is a place, a size and a month. The places are:
 - an agency (an ORI; 719 of them, the same agencies as the Final panel, where Pontiac, MI has a known ORI alias);
@@ -26,24 +26,28 @@
 
 Groups also come by population size (sm, md, lg, xl).
 
-**Columns of current_crime.**
-- For the nine offenses (violent, murder, rape, robbery, assault, property, burglary, theft, motor): the month's count `*_total`, the year to date `*_ytd`, the rolling 12 months `*_roll`, and the published change `*_change`.
-- Also: `population`, `agencies` (the group's agency count) and `sample` (on agency rows: whether the agency is in the Consistent Reporting Agencies).
+**Columns of current_crime.** For the nine offenses (violent, murder, rape, robbery, assault, property, burglary, theft, motor):
+- `*_total`: the month's count.
+- `*_ytd`: the year to date through that month.
+- `*_roll`: the rolling 12 months.
+- `*_change`: **the percent change of the year to date against the same months of the year before.** It is not the month's change (Codex 01.1, checked on all 44,668 comparable 2026 values). For example, MN0270600's August property count is 88 against 87, but its published change, 8.3%, is year to date 524 against 484.
+
+Also: `population`, `agencies` (the group's agency count) and `sample` (on agency rows: whether the agency is in the Consistent Reporting Agencies).
+
+**The Final panel** has agency-month counts for the seven Part I offenses, with no population and no sample flag. 80 of its rows before 2025 are entirely blank.
 
 **The build.** The Crime Index build (scripts/build-crimeindex.py) gains:
 - `current_crime` (agency rows; NULL stays NULL);
-- `current_final` (the Final panel's agency-months, as the independent second check).
+- `current_final` (the Final panel's agency-months with an ORI).
 
-A month the site doesn't publish has no row, and it is read as unknown, never zero. This is nibrs-model's reader rule (correctness/current_trends.py).
+The Final panel is a **cross-path check**, not an independent one (Codex 01.8). It is the panel the site is built from, so matching it shows the snapshot was read faithfully; it doesn't confirm the underlying counts. A month the site doesn't publish has no row, and it is unknown, never zero (nibrs-model's reader rule, correctness/current_trends.py).
 
-**Group totals (P90, P91, settled).** A state, region, size group or the nation is the sum of its agencies with `sample = true`, computed by the engine.
+**Group totals (P90, P91, settled).** A state, region or the nation is the sum of its agencies with `sample = true`, computed by the engine.
 - Blank cells are left out and counted.
 - A cell is null when every agency's value is blank.
 - The population is the summed current population, and the sentence is P90's.
 
-The published group rows are never shown. They print 0 where every agency in the group is blank, and an unknown period is never 0.
-
-nibrs-model's V173–V176 are the expected values for 2026-08 under exactly this rule: the nation, regions, states and size groups, with 547 agencies nationally.
+The published group rows are never shown. They print 0 where every agency in the group is blank, and an unknown period is never 0. nibrs-model's V173–V176 are the expected values for 2026-08 under exactly this rule (547 agencies nationally); Codex 01 reproduced them.
 
 ## 2. The tab's real first questions (step one)
 
@@ -82,7 +86,7 @@ The asks are mostly "which period" and "which place". The bad declines are mostl
 - "LA" and "NY".
 
 **What this says.**
-- (a) The archived current_crime covers only 2025–2026, but nearly a third of the questions reach 2017–2024 by month. The Final panel has those months for its 719 agencies (decision A).
+- (a) The archived current_crime covers only 2025–2026, while 511 questions reach into 2017–2024. Some of them could use the Final panel's agency months (decision A). How many would then be answered isn't established until it's built and measured.
 - (b) Murder is almost half the tab, so homicide routing (section 4) matters most.
 - (c) Rolling 12 and "to present" are reader work, shared with every source.
 
@@ -96,41 +100,60 @@ The asks are mostly "which period" and "which place". The bad declines are mostl
   - a region ("the Northeast"; reader work);
   - the nation;
   - several named agencies side by side.
-- **Periods:**
+- **Periods**, 2025-01 through 2026-08 (earlier: decision A):
   - one month;
   - a range of months, by month;
   - the year to date, through the latest month (named by months, D06);
   - the rolling 12 months;
   - the same months a year earlier, compared.
 
-  Months from 2025-01 through 2026-08. Earlier months depend on decision A.
-- **Statistics:**
-  - counts;
-  - the published change for an agency;
-  - for a group, the change computed from two consistent sums, never mixed with the published group change.
-  - Rates: decision C.
+**Missing months (Codex 01.2): a total is never shown as complete when its months aren't.**
+- **An agency's one month:** the snapshot's cell, blank when unknown.
+- **An agency's year to date or rolling 12 months:** the published value only when every month in its span is known for that offense. Otherwise it's blank, with a note naming the unknown months.
+
+  The published cumulative values can span unknown months. MO0922400's property counts for January–March 2025 are 37, blank, 16, yet its March year to date is 53. MA0110400 has no May 2025, yet its December rolling property total is 449.
+- **A group:** the consistent sum, with each offense's left-out agencies named in a note. V173's national rape total for August 2026 leaves out 14 of the 547 agencies, and the coverage sentence alone doesn't say so.
+
+**Statistics:**
+- Counts.
+- **Change:**
+  - the published change, only for the year to date against the same months a year earlier;
+  - any other comparison (one month or the rolling 12 against a year earlier, or a group) is computed from two complete values;
+  - it is blank when either side is unknown, and when the earlier value is 0 (P55's zero base).
+
+  The published change is never shown for a month.
+- **Rates:** decision B.
 
 **Out (declined plainly, with the nearest question):**
 - clearances (current_clearances: a later increment);
+- size groups (sm, md, lg, xl): a later increment, since the reader has no words for them yet;
 - any offense outside Part I (that's NIBRS, routed);
-- details such as weapon, demographics or relationship (NIBRS or SHR, routed);
-- rankings: decision D.
+- details such as weapon, demographics or relationship (routed; section 4);
+- rankings (decision C).
 
 ## 4. Routing between sources
 
-Routing is decided by what's asked, never by which tab it was asked in. Each rule is a scored routing case, with real questions where the log has them.
+Routing is decided by what's asked, never by which tab it was asked in. **Precedence (Codex 01.5):**
+1. a source named in the question (P01's override, on every row below);
+2. the measure and its details;
+3. the grain asked;
+4. which sources actually hold that place and period.
 
-| Asked | Goes to | Why |
+An offered alternative (Historical by year for a monthly question it can't answer) is a button, never the answer to the question asked.
+
+| Asked | Goes to | Policy |
 |---|---|---|
-| A Part I offense, by month, 2025-01 or later, at a Current Trends agency, state, region or the nation | Current Trends | its grain and its period |
-| The same, for an agency not in Current Trends | NIBRS monthly, with its own source line | the only monthly source for that agency |
-| A completed year, a Part I offense | Historical (Crime Index annual) | P01, P75 |
-| This year so far, or the latest months | Current Trends (NIBRS when it's asked by name) | Current Trends has the latest month, NIBRS lags |
-| Homicide count, recent months | Current Trends | same |
-| Homicide count, completed years | Historical | P01 |
-| Homicide with victim or offender details (age, sex, race, relationship, weapon, circumstance) | decision B | |
-| Victim demographics for other crimes | NIBRS | only NIBRS has them |
-| A month before 2025 | decision A | |
+| Homicide with victim or offender details (age, sex, race, relationship, weapon, circumstance) | Homicide Reports (routed until built; P92's all-reporting-agencies default) | P01, P53: settled |
+| Victim or offender details for other crimes | NIBRS | P01 |
+| Clearance, an agency, a completed year | Historical (Crime Index clearances) | P57 |
+| A Part I offense by month, 2025-01 to 2026-08, at a Current Trends agency, a state, a region or the nation | Current Trends | its grain and period |
+| The same at an agency Current Trends doesn't have | NIBRS monthly, with its own source line | P01's fallback |
+| A Part I offense, a completed year (no month asked) | Historical | P01, P75 |
+| The same at an agency Historical doesn't have | NIBRS | P01's fallback |
+| A Part I offense, months before 2025 | decision A | |
+| A Part I offense, months after 2026-08 (NIBRS's build runs to 2026-09) | NIBRS when it has the agency; otherwise the period is outside the data | availability |
+
+The details rows come before the count rows (precedence 2). A monthly question keeps its monthly grain (precedence 3): it is never answered by a year's total.
 
 **The measure.** Report routing accuracy (the share of routing cases sent to the labeled source) beside each source's answered / declines well / declines badly on its own query log.
 
@@ -144,24 +167,32 @@ Routing is decided by what's asked, never by which tab it was asked in. Each rul
 
 Each of these is a class. A fix that helps only one question is said so in the PR.
 
-## 6. Profile (contract)
+## 6. Profile and contract changes
 
 - `units`: offenses by agency by month.
 - `grain`: monthly, with the latest month of the build (2026-08) named.
 - `coverage.published`: true for agencies.
 - `coverage.cohortView`: groups are Consistent Reporting Agencies only (P91), with P90's sentence. There is no all-agencies view.
-- `rateBasis`: decision C.
+- `rateBasis`: decision B.
 - `breakdowns`: none.
-- `caveats`: the group sentence (which agencies a total covers). A blank month is shown blank, never zero.
+- `caveats`:
+  - the group sentence (which agencies a total covers);
+  - each offense's left-out agencies;
+  - a cumulative total left blank for its unknown months.
 - `vocabulary`: the Historical terms, plus "homicides" and "killings".
+
+**Contract changes (Codex 01.7)**, declared in the same PR so conformance can't silently misstate the scope:
+- the cohort's place levels gain region;
+- `rateBasis` gains "none", in case decision B is no.
 
 ## 7. Checks
 
-- **Expected values.** nibrs-model's V173–V176 (group sums for 2026-08). An agency's values are the snapshot's own row, checked against the Final panel (current_trends.py --check-final).
+- **Expected values.** nibrs-model's V173–V176 (group sums for 2026-08). An agency's values are the snapshot's own row, checked against the Final panel (current_trends.py --check-final; August 2026: 558 rows equal, 161 blank rows in the Final panel only, no differences).
 - **Scored cases.** LS-441 onward:
-  - groups (nation, region, state, size) against V173–V176;
+  - groups (nation, region, state) against V173–V176, including the rape total that leaves out 14 agencies;
   - agency months;
-  - year to date and rolling 12;
+  - year to date and rolling 12, complete and incomplete (MO0922400, MA0110400);
+  - a change: the published year to date, a computed month, and a zero base;
   - a blank month;
   - the routing rows above.
 - **Conformance.** The Current Trends profile joins the fixtures, so every shared check runs on it.
@@ -169,18 +200,22 @@ Each of these is a class. A fix that helps only one question is said so in the P
 
 ## 8. Decisions for Jeff
 
-**A. Should months before 2025 for Current Trends agencies come from the archived Final panel?**
-- Yes: 2017-01 to 2024-12 for its 719 agencies. These are the agency counts the site was built from, archived and hashed, so 511 questions reaching 2017–2024 can be answered from Crime Index data. Group sums for those years would use each year's consistent agencies.
-- No: months before 2025 go to NIBRS (agencies that report to it) or to Historical by year.
+**A. Should earlier months for Current Trends agencies come from the archived Final panel?**
+- Yes: the agency months it has for 2017-01 to 2024-12, as published input to the site (unknown months stay blank). Group totals for those years wait for a later decision on which agencies count. The Final panel has no sample flag or population, so a group's cohort would have to be derived; until then, a group before 2025 is declined with the nearest question.
+- No: months before 2025 go to NIBRS (agencies that report to it), with Historical by year offered as a button.
 
-**B. Should a homicide question with victim or offender details go to Homicide Reports (SHR) first?**
-- Yes: SHR, routed until it's built, and NIBRS only when NIBRS is asked by name.
-- No: NIBRS, which has the same details for the agencies that report to it.
+**B. Should a Current Trends rate follow P58 and P59?**
 
-**C. Should a Current Trends rate be computed as count ÷ current population × 100,000 (P75's rule)?**
-- Yes: computed for the year to date and the rolling 12 months only, never for one month.
-- No: Current Trends gives counts and changes only.
+P75 covers Historical's published rates, not this, so this is a new rule (Codex 01.3).
+- Yes: count ÷ the agency's current population × 100,000, and for a group, ÷ the summed population of the agencies with a value for that offense. The rate is:
+  - only for a period whose every month is known (P58);
+  - named by its months and never annualized (P59);
+  - never given for a single month (a scope choice);
+  - never given when the population is missing or zero.
+- No: Current Trends gives counts and changes only, and `rateBasis` is "none".
 
-**D. Should rankings of Current Trends agencies wait for a later increment?**
+**C. Should rankings of Current Trends agencies wait for a later increment?**
 - Yes: declined plainly with the nearest question until then.
-- No: they're in the first increment (by count or rate, for the latest year to date).
+- No: in the first increment, by count, or by rate if B is yes: the latest year to date, among agencies whose every month is known, with the others named as left out.
+
+Homicide details are not a decision: P01 and P53 already send them to Homicide Reports (section 4). An amendment would be Jeff's call.
