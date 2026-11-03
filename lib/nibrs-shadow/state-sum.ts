@@ -22,12 +22,13 @@ import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
 import { stateName, STATE_NAMES } from "./places";
 import { srsPopulation } from "./srs";
+import { headerStates } from "../nibrs-plan/state-codes";
 import type { ShadowDeps, ShadowOption, ShadowOutcome } from "./answer";
 
 type Decline = (explanation: string, detail?: string) => ShadowOutcome;
-/** The nation's header states: the 50 states and DC; Nebraska's header code is NB. */
-const NATION = [...Object.keys(STATE_NAMES).filter((c) => c !== "NE"), "NB"];
-const headerCodes = (code: string) => (code === "NE" ? ["NB", "NE"] : [code]);
+/** The nation's header states: the 50 states and DC, each under every header code it is filed under (Nebraska: NE, NB). */
+const NATION = Object.keys(STATE_NAMES).flatMap(headerStates);
+const headerCodes = headerStates;
 const list = (xs: string[]) => xs.map((x) => `'${x.replace(/'/g, "''")}'`).join(", ");
 const pct = (part: number, whole: number) => Math.round((1000 * part) / whole) / 10;
 

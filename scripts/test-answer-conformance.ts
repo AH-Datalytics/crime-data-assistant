@@ -39,6 +39,7 @@ import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
 import { missingGroupings } from "../lib/nibrs-shadow/named-groupings";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
 import type { ResultTable } from "../lib/nibrs-plan/result";
+import { ORI_PREFIX_STATES } from "../lib/nibrs-plan/state-codes";
 
 const places = loadPlaceIndex();
 
@@ -123,6 +124,8 @@ const FIXTURES: Record<string, string[]> = {
     // from a typed consistent view stays on NIBRS.
     "Shoplifting rate in Nebraska in 2024, with the number of agencies reporting",
     "Murder in Kansas by year from 2023 to 2024, only agencies that reported every month",
+    // 19: a Nebraska agency, whose ORI prefix (NB) is not its state's postal code.
+    "Shoplifting in Omaha, NE in 2024",
     // Jeff 2026-11-02: a breakdown by month or quarter (Unknown last within each period; the month order kept).
     "Simple assault victims in Memphis by sex and month in 2024", "Simple assault victims in Memphis by sex by quarter in 2024",
     "Simple assault victims in Memphis by sex and year from 2023 to 2024",
@@ -151,6 +154,7 @@ function parseCsv(text: string): string[][] {
 }
 const SMALL = new Set(["by", "of", "per", "in", "on", "at", "to", "for", "with", "from", "vs", "as", "the", "a", "an", "or", "into"]);
 const fail: string[] = [];
+const ORI_PREFIX = new RegExp(`\\b(?:${Object.keys(ORI_PREFIX_STATES).join("|")})\\b`);
 const check = (ok: boolean, what: string) => { if (!ok) fail.push(what); };
 const shown = (p: Presentation) => [titleOf(p.titleParts).title, titleOf(p.titleParts).subtitle ?? "", ...leadOf(p).sentences,
   ...p.offers.flatMap((o) => (o.text ? [o.text.before + o.text.link + o.text.after] : [])), ...notesOf(p)].join(" ");
@@ -179,6 +183,8 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     sourcesSeen.add(p.source);
     check(p.source === want, `${tag}: answered from ${p.source}, fixture is ${want}'s`);
     const prof = PROFILES[p.source]!;
+    // 19: an ORI prefix or header state ("NB", "GM") is never shown as a state (coordinator 2026-11-03).
+    check(!ORI_PREFIX.test(shown(p)) && !p.titleParts.places.some((x) => ORI_PREFIX.test(x)), `19 ${tag}: an ORI prefix shown as a state`);
     // 1
     const { title } = titleOf(p.titleParts);
     check(!!title && title.startsWith(`${joinAmp(p.titleParts.places)} `) && !title.includes(":") && !/\.$/.test(title) && !/\band\b/.test(title)
@@ -381,4 +387,4 @@ check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.
   }
 }
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 18 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 19 checks`);
