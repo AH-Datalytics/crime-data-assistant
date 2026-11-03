@@ -99,6 +99,50 @@ class CrimeIndexBuild(unittest.TestCase):
         import duckdb
         return duckdb.sql(sql.replace("{out}", out.replace("\\", "/"))).fetchall()
 
+    def add_current(self, final_extra=""):
+        """current_crime and its Final panel (Current Trends), added to the manifest as nibrs-model archives them."""
+        cur_head = "uid,id,size,month,year,population,agencies,sample," + ",".join(f"{o}_{k}" for k in ("total", "ytd", "roll") for o in OFF) + "," + ",".join(f"{o}_change" for o in OFF) + ",date"
+        def row(id_, size, month, sample, murder, pop="500000"):
+            vals = {"total": murder, "ytd": "", "roll": ""}
+            cells = [vals[k] if o == "murder" else "" for k in ("total", "ytd", "roll") for o in OFF]
+            return ",".join([f"{id_}_{size}_2026_{month}", id_, size, str(month), "2026", pop, "", sample] + cells + [""] * 9 + [""])
+        lines = [cur_head, row("NB0280200", "all", 8, "true", "4"), row("TNMPD0000", "all", 8, "true", ""),  # Omaha (NB -> NE); a blank
+                 row("tn", "all", 8, "", "0")]  # a group row: never kept
+        final = ["ori,Agency Name,Murder,Rape,Robbery,Aggravated Assault,Burglary,Theft,Motor Vehicle Theft,Year,Month,State,Type",
+                 'TNMPD0000,Memphis,25,10,"1,204",500,300,"2,000",100,2018,3,TN,City', "TNMPD0000,Memphis,-1,,,,,,,2018,4,TN,City",
+                 ",No ORI,1,1,1,1,1,1,1,2018,3,TN,City"] + ([final_extra] if final_extra else [])
+        d = os.path.join(self.root, "snapshots", "20261101", "current_crime")
+        os.makedirs(os.path.join(d, "final"), exist_ok=True)
+        for path, ls in ((os.path.join(d, "current_crime_2025-2026.csv"), lines), (os.path.join(d, "final", "082026 - Final.csv"), final)):
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write("\n".join(ls) + "\n")
+        self.files[("20261101", "current_crime")] = [{"file_name": "current_crime_2025-2026.csv", "sha256": digest(os.path.join(d, "current_crime_2025-2026.csv"))}]
+        self.write_manifest()
+        with open(self.manifest, encoding="utf-8") as f:
+            m = json.load(f)
+        for s_ in m["snapshots"]:
+            if s_["dataset"] == "current_crime":
+                s_["final_file"] = {"source_name": "082026 - Final.csv", "sha256": digest(os.path.join(d, "final", "082026 - Final.csv"))}
+        with open(self.manifest, "w", encoding="utf-8") as f:
+            json.dump(m, f)
+
+    def test_current_trends_tables(self):
+        self.add_current()
+        out, rec = self.run_build()
+        # Agency rows only, postal state codes, a blank stays NULL; the group row is not kept.
+        self.assertEqual(self.q(out, "SELECT state, ori, month, sample, murder_total, population FROM '{out}/current_crime.parquet' ORDER BY ori"),
+                         [("NE", "NB0280200", 8, True, 4, 500000), ("TN", "TNMPD0000", 8, True, None, 500000)])
+        # The Final panel: thousands separators read, a negative month kept as published, blanks NULL, no-ORI rows set aside.
+        self.assertEqual(self.q(out, "SELECT month, murder_total, robbery_total, theft_total, rape_total FROM '{out}/current_final.parquet' ORDER BY month"),
+                         [(3, 25, 1204, 2000, 10), (4, -1, None, None, None)])
+        self.assertEqual(rec["set_aside"]["current_final"]["count"], 1)
+        self.assertEqual(rec["inputs"]["current_crime"]["snapshot"], "20261101")
+
+    def test_current_trends_bad_cell_stops(self):
+        self.add_current(final_extra="TNMPD0000,Memphis,1.5,,,,,,,2018,5,TN,City")
+        with self.assertRaises(SystemExit):
+            self.run_build()
+
     def test_tables_values_and_manifest(self):
         out, rec = self.run_build()
         self.assertEqual(rec["tables"]["agency_crime"], 3)
