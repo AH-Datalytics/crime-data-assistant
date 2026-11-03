@@ -1,6 +1,6 @@
 # Current Trends in the new engine: design note
 
-**Status:** design, revised after Codex design check 01 (REVISE; all eight findings applied). Decisions for Jeff are in section 8. No build yet.
+**Status:** design, revised after Codex design check 01 (REVISE; all eight findings applied; confirmation ACCEPT). Jeff decided A, B and C as recommended (2026-11-03, section 8). No build yet.
 
 **The ruling this note follows.** Jeff: "Historical data strictly comes from the Crime Index", "as does current". So Current Trends is the Crime Index's data, not the app's live RTCI tables.
 
@@ -100,7 +100,7 @@ The asks are mostly "which period" and "which place". The bad declines are mostl
   - a region ("the Northeast"; reader work);
   - the nation;
   - several named agencies side by side.
-- **Periods**, 2025-01 through 2026-08 (earlier: decision A):
+- **Periods**, 2025-01 through 2026-08 from current_crime; for an agency, also 2017-01 through 2024-12 from the Final panel (decision A). A group before 2025 is declined, with the nearest question, until a cohort rule is decided:
   - one month;
   - a range of months, by month;
   - the year to date, through the latest month (named by months, D06);
@@ -122,14 +122,14 @@ The asks are mostly "which period" and "which place". The bad declines are mostl
   - it is blank when either side is unknown, and when the earlier value is 0 (P55's zero base).
 
   The published change is never shown for a month.
-- **Rates:** decision B.
+- **Rates** (decision B): count ÷ current population × 100,000, by P58 and P59 (section 8).
 
 **Out (declined plainly, with the nearest question):**
 - clearances (current_clearances: a later increment);
 - size groups (sm, md, lg, xl): a later increment, since the reader has no words for them yet;
 - any offense outside Part I (that's NIBRS, routed);
 - details such as weapon, demographics or relationship (routed; section 4);
-- rankings (decision C).
+- rankings (decision C): a later increment, done once for every source with the agency-set work.
 
 ## 4. Routing between sources
 
@@ -150,7 +150,8 @@ An offered alternative (Historical by year for a monthly question it can't answe
 | The same at an agency Current Trends doesn't have | NIBRS monthly, with its own source line | P01's fallback |
 | A Part I offense, a completed year (no month asked) | Historical | P01, P75 |
 | The same at an agency Historical doesn't have | NIBRS | P01's fallback |
-| A Part I offense, months before 2025 | decision A | |
+| A Part I offense, months before 2025, at a Current Trends agency | Current Trends (Final panel) | decision A |
+| The same for a state, region or the nation | declined until a cohort rule; the nearest question offered | decision A |
 | A Part I offense, months after 2026-08 (NIBRS's build runs to 2026-09) | NIBRS when it has the agency; otherwise the period is outside the data | availability |
 
 The details rows come before the count rows (precedence 2). A monthly question keeps its monthly grain (precedence 3): it is never answered by a year's total.
@@ -173,7 +174,7 @@ Each of these is a class. A fix that helps only one question is said so in the P
 - `grain`: monthly, with the latest month of the build (2026-08) named.
 - `coverage.published`: true for agencies.
 - `coverage.cohortView`: groups are Consistent Reporting Agencies only (P91), with P90's sentence. There is no all-agencies view.
-- `rateBasis`: decision B.
+- `rateBasis`: count ÷ current population × 100,000 (decision B).
 - `breakdowns`: none.
 - `caveats`:
   - the group sentence (which agencies a total covers);
@@ -183,7 +184,7 @@ Each of these is a class. A fix that helps only one question is said so in the P
 
 **Contract changes (Codex 01.7)**, declared in the same PR so conformance can't silently misstate the scope:
 - the cohort's place levels gain region;
-- `rateBasis` gains "none", in case decision B is no.
+- (`rateBasis` "none" isn't needed: decision B is yes.)
 
 ## 7. Checks
 
@@ -198,13 +199,13 @@ Each of these is a class. A fix that helps only one question is said so in the P
 - **Conformance.** The Current Trends profile joins the fixtures, so every shared check runs on it.
 - **The milestone report** gains a Current Trends table.
 
-## 8. Decisions for Jeff
+## 8. Decisions for Jeff (decided 2026-11-03: A, B and C yes, as recommended)
 
-**A. Should earlier months for Current Trends agencies come from the archived Final panel?**
+**A. Should earlier months for Current Trends agencies come from the archived Final panel?** Jeff: yes.
 - Yes: the agency months it has for 2017-01 to 2024-12, as published input to the site (unknown months stay blank). Group totals for those years wait for a later decision on which agencies count. The Final panel has no sample flag or population, so a group's cohort would have to be derived; until then, a group before 2025 is declined with the nearest question.
 - No: months before 2025 go to NIBRS (agencies that report to it), with Historical by year offered as a button.
 
-**B. Should a Current Trends rate follow P58 and P59?**
+**B. Should a Current Trends rate follow P58 and P59?** Jeff: yes.
 
 P75 covers Historical's published rates, not this, so this is a new rule (Codex 01.3).
 - Yes: count ÷ the agency's current population × 100,000, and for a group, ÷ the summed population of the agencies with a value for that offense. The rate is:
@@ -214,7 +215,7 @@ P75 covers Historical's published rates, not this, so this is a new rule (Codex 
   - never given when the population is missing or zero.
 - No: Current Trends gives counts and changes only, and `rateBasis` is "none".
 
-**C. Should rankings of Current Trends agencies wait for a later increment?**
+**C. Should rankings of Current Trends agencies wait for a later increment?** Jeff: yes, done once for every source with the agency-set work.
 - Yes: declined plainly with the nearest question until then.
 - No: in the first increment, by count, or by rate if B is yes: the latest year to date, among agencies whose every month is known, with the others named as left out.
 
