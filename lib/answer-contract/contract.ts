@@ -40,9 +40,28 @@ export type SourceProfile = {
    * `not` lists words that must never read as that crime ("shootings" is not murder).
    */
   vocabulary: { terms: Readonly<Record<string, readonly string[]>>; not: Readonly<Record<string, readonly string[]>> };
+  /**
+   * The latest month the source shows (Jeff 2026-11-03). "month_before_release": a source from the FBI's monthly CDE
+   * releases (NIBRS, SHR, Hate Crime) shows through the month before its latest release's month, keyed to the release
+   * date recorded with the build, never the calendar (latestShownMonth); a partial month that trickled in early is never
+   * shown. "as_published": the source's own publishing decides (Historical, Current Trends).
+   */
+  latestMonth: "month_before_release" | "as_published";
   /** `reportedTo`: how the lead names where figures went; `asPublished`: added when the source publishes them. */
   name: { short: string; long: string; reportedToShort: string; reportedToLong: string; asPublished: string | null; sourceLine: string };
 };
+
+/**
+ * Jeff's rule (2026-11-03) for the FBI's monthly CDE releases: the latest month shown is the one before the release's
+ * month ("2026-10-15T12:01:34Z" -> "2026-09"). Month M appears only after the update of month M+1 has run.
+ */
+export function latestShownMonth(released: string): string {
+  // The release's month in UTC, whatever offset the time is written with (Codex release review 01.4).
+  const t = new Date(released);
+  if (Number.isNaN(t.getTime())) throw new Error(`not a release date: ${released}`);
+  const y = t.getUTCFullYear(), mo = t.getUTCMonth() + 1;
+  return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`;
+}
 
 /** The live sources (NIBRS and Historical, which includes the historical file's state and national figures). */
 export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
@@ -60,6 +79,7 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
       { dimension: "offender.sex", exclusive: false, ordinal: false }, { dimension: "offender.age", exclusive: false, ordinal: true },
     ],
     caveats: ["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file", "car_break_ins"],
+    latestMonth: "month_before_release",
     vocabulary: {
       terms: { shoplifting: ["shoplifting"], carjacking: ["carjackings", "car jackings"], simple_assault: ["simple assaults"],
         theft_from_motor_vehicle: ["car break-ins", "thefts from cars"], murder: ["murders", "killings", "homicides"], motor_vehicle_theft: ["car theft", "stolen cars"] },
@@ -75,6 +95,7 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
     rateBasis: "published_or_computed",
     breakdowns: [],
     caveats: ["blank_not_available"],
+    latestMonth: "as_published",
     // Crime Index's Part I offenses and the names people use (Jeff 2026-11-02: "Memphis homicides by year").
     vocabulary: {
       terms: { murder: ["murders", "homicides", "homicide", "killings"], rape: ["rapes"], robbery: ["robberies"], aggravated_assault: ["aggravated assaults"],
