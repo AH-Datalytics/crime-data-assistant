@@ -486,12 +486,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // value. A name with several real candidates is asked about.
   const resolved = new Map<string, Place>();
   let ask: { part: Part; name: string; candidates: Candidate[] } | null = null;
+  let unfound: Part | null = null;
   const parts = ledger0.parts.map((p) => {
     if (p.clause !== 0 || p.concept !== "place" || !p.value || !/^(city|county|ambiguous):/.test(p.value)) return p;
     const pin = pins.get(p.span[0]);
     const r: PlaceResolution = pin ? (pin.kind === "state" ? { kind: "unresolved", why: "state" } : { kind: "agency", place: { kind: "agency", ori: pin.agency.ori, label: agencyLabel(pin.agency) }, agency: pin.agency }) : resolvePlace(deps.places, p.value, p.text);
     if (pin?.kind === "state") return { ...p, value: `state:${pin.name}` };
-    if (r.kind === "unresolved") return p;
+    if (r.kind === "unresolved") { if (r.named) unfound ??= p; return p; }
     if (r.kind === "ask") { ask ??= { part: p, name: r.name, candidates: r.candidates }; return p; }
     const value = `${r.agency.kind}:${r.agency.name}:${r.agency.state}`;
     resolved.set(value, r.place);
@@ -509,9 +510,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
 
   // A place the index doesn't have says so, whatever else the question asks (coordinator 2026-11-03, Historical step
-  // one): never P01's "figures don't answer this question", which named the wrong limit.
-  const unfound = parts.find((p) => p.clause === 0 && p.concept === "place" && /^(city|county|ambiguous):/.test(p.value ?? "") && !resolved.has(p.value!));
-  if (unfound) return decline("unresolved_place", `I couldn't find "${unfound.text.trim().replace(/[?.!,]+$/, "")}" among the places here: city and county police agencies serving 10,000 people or more, the states and the nation.`);
+  // one): never P01's "figures don't answer this question", which named the wrong limit. Only a place named as one (with
+  // its state, or as a county): a word the reader took for a place ("index", "summer") or a misspelling goes on as before.
+  if (unfound) {
+    const u: Part = unfound;
+    return decline("unresolved_place", `I couldn't find "${u.text.trim().replace(/[?.!,]+$/, "")}" among the places here: city and county police agencies serving 10,000 people or more, the states and the nation.`);
+  }
 
   // D31 for the Crime Index's annual figures (query-log step one, 2026-11-02: "murders in Philadelphia"): every year it
   // has, by year; the latest complete year; or another year.
