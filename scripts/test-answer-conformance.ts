@@ -27,7 +27,7 @@
  *  16  the coverage columns never change the chart: the same answer with and without them has the same chart options
  */
 import assert from "node:assert/strict";
-import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
+import { latestShownMonth, chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
   type SourceId, type SourceProfile } from "../lib/answer-contract/contract";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { aboutPeople, presentationOf, sourceOf } from "../lib/nibrs-shadow/presentation";
@@ -35,6 +35,7 @@ import { follow, toPreview } from "../lib/nibrs-shadow/preview";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { BANNED } from "../lib/nibrs-shadow/wording";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
+import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
 import { missingGroupings } from "../lib/nibrs-shadow/named-groupings";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
@@ -108,7 +109,9 @@ function crimeIndex(sql: string): unknown[][] {
   return oris.flatMap((o) => rows.filter(([y]) => !years || y === Number(years[1]) || y === Number(years[2])).map(([y, t, c, p]) => (years ? [y, t] : [o, y, t, c, p])));
 }
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
-const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
+// 20: the months run through the month before the build's CDE release's month (Jeff 2026-11-03), from release.json.
+const nibrsRelease = loadNibrsRelease();
+const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: nibrsRelease.lastMonth, asOf: "2026-10-29" },
   target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (/crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build } as ShadowDeps;
 
 /** Fixtures for each live source: the questions its answers are checked on. */
@@ -183,6 +186,8 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     sourcesSeen.add(p.source);
     check(p.source === want, `${tag}: answered from ${p.source}, fixture is ${want}'s`);
     const prof = PROFILES[p.source]!;
+    // 20: a source from the FBI's monthly releases never shows a month past the one before its release's month.
+    if (prof.latestMonth === "month_before_release") check("period" in o && (o as { period: { to: string } }).period.to <= latestShownMonth(nibrsRelease.released), `20 ${tag}: a month past ${latestShownMonth(nibrsRelease.released)}`);
     // 19: an ORI prefix or header state ("NB", "GM") is never shown as a state (coordinator 2026-11-03).
     check(!ORI_PREFIX.test(shown(p)) && !p.titleParts.places.some((x) => ORI_PREFIX.test(x)), `19 ${tag}: an ORI prefix shown as a state`);
     // 1
@@ -386,5 +391,13 @@ check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.
     check(notesOf(p).includes("Nebraska: no rate is given for 2024.") && p.lead.kind === "described", "a blank rate beside the agencies column lost its explanation");
   }
 }
+// 20: the rule itself, and the release's own month never answered (month M appears after the update of M+1).
+check(latestShownMonth("2026-10-15T12:01:34Z") === "2026-09" && latestShownMonth("2027-01-15T00:00:00Z") === "2026-12", "20: latestShownMonth");
+check(nibrsRelease.lastMonth === "2026-09" && nibrsRelease.released.startsWith("2026-10-15"), "20: release.json is the 2026-10-15 release, shown through September 2026");
+check(Object.values(PROFILES).every((x) => x!.latestMonth === "month_before_release" || x!.latestMonth === "as_published"), "20: every profile names its latest-month rule");
+{
+  const o = shadowAnswer(`Shoplifting in Memphis in ${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][Number(nibrsRelease.released.slice(5, 7)) - 1]} ${nibrsRelease.released.slice(0, 4)}`, deps);
+  check(o.kind !== "answer", "20: the release's own month answered");
+}
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 19 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 20 checks`);

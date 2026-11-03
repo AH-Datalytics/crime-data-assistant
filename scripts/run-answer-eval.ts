@@ -38,6 +38,7 @@ import { quarterCells, scoreShadow, sliceGroup, sliceValues, sameRewrite, withRe
 import { shadowAnswer, shadowFollowUp, type FollowUpOutcome, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { bindingOf, cachedModelRewriter, GUARD_VERSION, hybridRewriter, MODEL_ID, type RewriteCache } from "../lib/nibrs-shadow/model-rewriter";
 import { SYSTEM_PROMPT } from "../lib/nibrs-shadow/model-rewriter-prompt";
+import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
@@ -57,9 +58,9 @@ const MODEL = SHADOW && arg("--rewriter") === "model" ? (() => {
 })() : null;
 const RUN_NAME = MODEL ? `${CANDIDATE}-model-rewriter` : CANDIDATE;
 const release: Release & { id: string; asOf: string } = SHADOW
-  // P52: the FBI uploaded the 2026 file on 2026-10-15; the upload month is partial and not reported, so data runs through 2026-09.
-  // --release and --last-month name another canonical build (test6, 2026-11-02: given with --root).
-  ? { id: arg("--release", "test6-20261031-host")!, firstMonth: "2017-01", lastMonth: arg("--last-month", "2026-09")!, asOf: "2026-10-29" }
+  // The build's months run through the month before its CDE release's month (Jeff 2026-11-03), from the release recorded
+  // with it (release.json; --release-file names another build's, given with --root).
+  ? (() => { const r = loadNibrsRelease(arg("--release-file")); return { id: r.id, firstMonth: r.firstMonth, lastMonth: r.lastMonth, asOf: "2026-10-29" }; })()
   : { id: "eval", firstMonth: "1991-01", lastMonth: "2026-10", asOf: "2026-10-28" };
 const shadowDeps = (): ShadowDeps => ({
   places: loadPlaceIndex(), release,
