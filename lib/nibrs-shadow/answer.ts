@@ -47,7 +47,7 @@ import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
 import { validateBindings } from "../nibrs-plan/validate";
 import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
-import { agencyLabel, agencyName, candidateLabel, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
+import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
 import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
 import { missingGroupings } from "./named-groupings";
@@ -309,8 +309,25 @@ function readerReason(explanation: string): LimitationReason | "reader" {
   return "reader";
 }
 
+/** "LA" for a place (not after a place it qualifies, "Shreveport, LA"): Los Angeles or Louisiana, asked. */
+const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][a-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
+  // "LA" (coordinator 2026-11-03): the city or the state, asked; each choice is the question with the place named.
+  if (LA.test(question)) {
+    const as = (name: string) => question.replace(LA, name);
+    return { kind: "clarify", about: "which LA", question, options: [
+      { label: "Los Angeles", continuation: shadowAnswer(as("Los Angeles"), deps) }, { label: "Louisiana", continuation: shadowAnswer(as("Louisiana"), deps) }] };
+  }
   const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
+  // A misspelled large place (coordinator 2026-11-03: "batlimore", "phialdelphia"): the question with the place's name,
+  // when exactly one large place is that close and the words aren't a place the index has.
+  for (const p of ledger.parts) {
+    if (p.clause !== 0 || p.concept !== "place" || !/^(city|ambiguous):/.test(p.value ?? "")) continue;
+    if (resolvePlace(deps.places, p.value!, p.text).kind !== "unresolved") continue;
+    const word = p.text.trim().replace(/[?.!,]+$/, "");
+    const near = nearestPlaceName(deps.places, word);
+    if (near && question.includes(word)) return shadowAnswer(question.replace(word, near), deps);
+  }
   return withNextStep(everyBreakdown(question, fromLedger(ledger, deps)), ledger, deps, question);
 }
 
@@ -611,7 +628,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     else if (sp.grain === "total" && sp.period.form === "year" && sp.period.year === ctYear) { form = "ytd"; span = [`${ctYear}-01`, cur.lastMonth]; }
     else if ((span = monthSpan(sp, cur))) form = sp.grain === "month" || span[0] === span[1] ? "months" : "total";
     let place: CurrentPlace | null = null;
-    if (pl.kind === "national") place = { kind: "group", states: null, label: "The United States" };
+    const region = flags(ledger0).region;
+    if (pl.kind === "national") place = region ? { kind: "group", states: REGIONS[region].states, label: REGIONS[region].name.replace(/^the/, "The") } : { kind: "group", states: null, label: "The United States" };
     else if (pl.kind === "state") place = { kind: "group", states: [pl.code], label: stateName(pl.code) };
     else if (pl.kind === "agency") {
       const a = resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`);
@@ -625,6 +643,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
   }
+  // A Census region is a Current Trends group only: anything else asked of one is said plainly, never answered for the nation.
+  if (flags(ledger0).region)
+    return decline("unsupported_capability", `Census regions (${Object.values(REGIONS).map((r) => r.name.replace(/^the /, "")).join(", ")}) are answered from Current Trends only: a Part I crime by month, the year to date or the past 12 months, from January 2025.`);
   if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).people) {
     const sp = d.spec;
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;

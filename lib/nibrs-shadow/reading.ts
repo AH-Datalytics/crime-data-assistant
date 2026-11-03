@@ -51,6 +51,8 @@ export type Span = { from: string; to: string };
 export type Comparison = { earlier: Span; later: Span; matched: boolean };
 export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; offenders: boolean; composite: Composite | null;
   undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
+  /** A Census region named ("the Northeast"): read as the nation, flagged; only Current Trends answers it (current.ts REGIONS). */
+  region: "noe" | "mdw" | "sth" | "wst" | null;
   /** "According to NIBRS": the source asked for in words is used and labelled (P01). */
   nibrsAsked: boolean;
   /** "Only agencies that reported every month": P61's consistent-reporters view. */
@@ -117,6 +119,10 @@ const PHRASES: [RegExp, string][] = [
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
   [/\bnola\b/gi, "New Orleans"],
+  // "NY" for a place (not after a place it qualifies, "Suffern (NY)", "Rochester NY"): New York, which asks between the
+  // city and the state (P26); "NY city" is the city.
+  [/\bny\s+city\b/gi, "New York City"],
+  [/(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)\b(?:NY|ny|Ny)\b(?!\s*\))/g, "New York"],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];
@@ -220,6 +226,17 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // P08: "large Texas cities" -> Texas cities of 250,000+, flagged; the reader reads the rest.
   let largeCities = false;
   text = text.replace(/\b(?:large|big)\s+(?=(?:[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
+  // A Census region (Current Trends' groups; coordinator 2026-11-03): "the Northeast", "the midwest US", "southern
+  // states". Read as the nation and flagged, so the shadow answers it from Current Trends or says it can't; never "the
+  // South Side", "South Carolina" or "West Memphis".
+  let region: Flags["region"] = null;
+  const REGION_CODE: Record<string, NonNullable<Flags["region"]>> = { northeast: "noe", midwest: "mdw", south: "sth", west: "wst" };
+  text = text.replace(/\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west|south|west)(?:ern)?\s+(?:region|u\.?s\.?|united\s+states|states)\b|\b(?:in\s+)?the\s+(north[\s-]?east|mid[\s-]?west|south|west)\b(?=\s*$|\s*[?.,!]|\s+(?:by|in|since|from|during|over|for|between|this|last|so|per|year|month)\b)|\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west)(?:ern)?\b/i,
+    (m, a?: string, b?: string, c?: string) => {
+      region = REGION_CODE[(a ?? b ?? c ?? "").toLowerCase().replace(/[\s-]/g, "")];
+      readings.push({ kind: "phrase", from: m.trim(), to: "a Census region" });
+      return " in the United States";
+    });
   let last12 = false;
   const L12 = /\b(?:over|in|during|for)\s+the\s+(?:last|past|previous)\s+(?:12|twelve)\s+months\b/i;
   if (lastMonth && L12.test(text)) {
@@ -329,7 +346,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, region, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
-import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
+import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
 import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
@@ -146,6 +146,19 @@ assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: st
   assert.equal(c.options.length, 4);
   assert.deepEqual(c.options.at(-1), { label: "Another Clinton", entry: "which city or agency" });
 }
+
+// "LA" asks Los Angeles or Louisiana; after a place it qualifies, it stays the state (coordinator 2026-11-03).
+{
+  const la = as(ask("LA murder trend"), "clarify");
+  assert.deepEqual(la.options.map((o) => o.label), ["Los Angeles", "Louisiana"]);
+  assert.notEqual(ask("Shoplifting in Baton Rouge, LA in 2024").kind, "clarify");
+  assert.notEqual((ask("Shoplifting in La Crosse in 2024") as { about?: string }).about, "which LA");
+}
+// A misspelled large place is read as it: one large place within two edits, same first letter (coordinator 2026-11-03).
+assert.equal(nearestPlaceName(places, "batlimore"), "Baltimore");
+assert.equal(nearestPlaceName(places, "phialdelphia"), "Philadelphia");
+assert.equal(nearestPlaceName(places, "Memphis"), null, "a place the index has is not corrected");
+assert.equal(nearestPlaceName(places, "index"), null);
 
 // A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").
 assert.ok([...places.byName.values()].flat().every((x) => x.state in STATE_NAMES), "every agency's state is a postal code");
