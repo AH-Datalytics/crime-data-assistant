@@ -4771,168 +4771,112 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start in 1932. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-434",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start in 1932. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-435",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start in 1932. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-436",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: robberies by year, 1990 through 2025. / Figures for the Memphis Police Department. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-437",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Philadelphia, Pennsylvania: murders by year, 1990 through 1999. / Figures for the Philadelphia Police Department. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "before 2021",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-438",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Philadelphia, Pennsylvania: murders by year, 2016 through 2025. / Figures for the Philadelphia Police Department. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-439",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Chicago, Illinois: robberies by year, 2011 through 2025. / Figures for the Chicago Police Department. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
-   "values": "not measured"
+   "values": "match"
   },
   {
    "id": "LS-440",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Tennessee: robberies by year, 2000 to 2025. / Source: Crime Index."
    ],
    "capability": "answer:historical count",
    "era": "spans 2021",
-   "values": "not measured"
+   "values": "match"
   }
  ]
 }

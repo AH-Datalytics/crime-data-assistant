@@ -113,6 +113,10 @@ const PHRASES: [RegExp, string][] = [
   [/\bhomo?cides?\b/gi, (m: string) => (m.toLowerCase().endsWith("s") ? "homicides" : "homicide")] as unknown as [RegExp, string],
   [/\bauto\s*thefts?\b/gi, "auto theft"],
   [/\bagg\.?\s+ass(?:au|ua)lt(s?)\b|\baggravated\s+assualt(s?)\b/gi, (_m: string, a: string, b: string) => `aggravated assault${a || b || ""}`] as unknown as [RegExp, string],
+  // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
+  // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
+  [/\bphilly\b/gi, "Philadelphia"],
+  [/\bnola\b/gi, "New Orleans"],
   // P48: people arrested for a crime are its arrests.
   [/\bpeople\s+(?:were\s+|got\s+|have\s+been\s+)?arrested\s+for\s+([a-z][a-z ]*?)(?=\s+(?:in|during|from|since)\b|\s*[?.!]|\s*$)/gi, "$1 arrests"],
 ];

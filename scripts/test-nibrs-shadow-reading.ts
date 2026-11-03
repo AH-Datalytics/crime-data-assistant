@@ -94,6 +94,10 @@ assert.equal(cmp("Will shoplifting go up in Tulsa next year?").forecast, true, "
 // P56: the last 12 months end at the release's latest month.
 assert.deepEqual([cmp("Shoplifting in Tulsa over the last 12 months").text, cmp("Shoplifting in Tulsa over the last 12 months").last12], ["Shoplifting in Tulsa from October 2025 to September 2026", true]);
 assert.equal(readQuestion("Shoplifting in Tulsa over the last 12 months", 2026).last12, false, "without a release month the wording is left to the reader");
+// Places' nicknames, read for every source (coordinator 2026-11-02).
+assert.match(readQuestion("Philly homicides 2010 to 2020", 2026).text, /^Philadelphia homicides/);
+assert.match(readQuestion("murders in NOLA since 2015", 2026).text, /in New Orleans since/);
+assert.equal(readQuestion("Nolan County robberies in 2020", 2026).text.includes("New Orleans"), false, "a whole word only");
 
 // Every rewrite is recorded on the ledger the reader reads.
 const l = read("Shoplfting in Tulsa so far this year").ledger;

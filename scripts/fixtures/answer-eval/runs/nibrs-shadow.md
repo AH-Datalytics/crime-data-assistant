@@ -297,7 +297,7 @@ Discrepancies and unverified cases:
 
 ### Development
 
-8 cases. Correct 0; unverified 8; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
+8 cases. Correct 8; unverified 0; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -307,35 +307,11 @@ Expected (rows) by actual (columns):
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
-| answer:historical count | before 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
-| answer:historical count | spans 2021 | 7 | not measured | wrong answers: not measured (0, 7 answers unverified); initial action: pass (100% (7/7)); direct answers: not measured (0% verified, 7 unverified); numeric fixtures: not measured (0/7 match, 7 not measured) |
+| answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
 
 Discrepancies and unverified cases:
 
-- **LS-433** (unverified; expected answer, got answer) "Memphis murders since 1930"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
-- **LS-434** (unverified; expected answer, got answer) "Memphis homicides by year"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
-- **LS-435** (unverified; expected answer, got answer) "Memphis murders over time"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
-- **LS-436** (unverified; expected answer, got answer) "Memphis robberies since 1990"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: robberies by year, 1990 through 2025. / Figures for the Memphis Police Department. / Source: Crime Index.
-- **LS-437** (unverified; expected answer, got answer) "Philadelphia murders in the 90s"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Philadelphia, Pennsylvania: murders by year, 1990 through 1999. / Figures for the Philadelphia Police Department. / Source: Crime Index.
-- **LS-438** (unverified; expected answer, got answer) "Philadelphia murders over the past 10 years"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Philadelphia, Pennsylvania: murders by year, 2016 through 2025. / Figures for the Philadelphia Police Department. / Source: Crime Index.
-- **LS-439** (unverified; expected answer, got answer) "Chicago robberies after 2010"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Chicago, Illinois: robberies by year, 2011 through 2025. / Figures for the Chicago Police Department. / Source: Crime Index.
-- **LS-440** (unverified; expected answer, got answer) "Tennessee robberies since 2000"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Tennessee: robberies by year, 2000 to 2025. / Source: Crime Index.
 
 ### Held out
 
