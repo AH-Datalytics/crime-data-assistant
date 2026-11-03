@@ -130,7 +130,7 @@ const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bcyber\s*-?\s*crimes?\b/i, false, "Cybercrime isn't one category in this data: hacking/computer invasion and several kinds of fraud are separate crimes in NIBRS."],
   [/\b(?:list|lists)\s+of\b[^?]*\bagencies\b|\bagency\s+coverage\b|\bwhich\s+agencies\s+report/i, true, "A list of agencies, or of the years an agency reported, isn't available here yet."],
   [/\bpopulations?\b/i, true, "Population figures on their own aren't available here. A rate per 100,000 uses the place's population."],
-  [/\bdata\s*-?\s*sets?\b|\braw\s+data\b|\bdownload\b/i, false, "A whole data set isn't available here; each answer's table can be downloaded."],
+  [/\bdata\s*-?\s*sets?\b|\braw\s+data\b|\bdownload\b/i, false, "A whole data set isn't available here; ask for one crime in one place at a time."],
 ];
 
 /**
