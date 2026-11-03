@@ -64,11 +64,13 @@ const pageRate = ok({ agencies: [{ ori: "TX0200000", label: "Brazoria County, Te
 assert.deepEqual(pageRate.delivered.table.rows, [[23.9]]);
 assert.ok(!pageRate.delivered.text.some((t) => /as crimeindex\.org shows it/.test(t)), "P86: the computed rate needs no note");
 
-// A blank is not available, never zero: a single year declines, a series shows it blank and names it.
+// A blank is not available, never zero: a single year declines. A series starts at its first year with a figure
+// (coordinator 2026-11-02): a leading blank year is left out, the first year named and the period starting there.
 assert.match(no({ from: 2021, to: 2021 }), /not available in this data/);
 const series = ok({ from: 2021, to: 2023, byYear: true });
-assert.deepEqual(series.delivered.table.rows, [["2021", null], ["2022", 252], ["2023", 351]]);
-assert.ok(series.delivered.text.includes("Not available in this data: 2021."));
+assert.deepEqual(series.delivered.table.rows, [["2022", 252], ["2023", 351]]);
+assert.ok(series.delivered.text.includes("Crime Index has no murder figure for Memphis, Tennessee in 2021, so the chart and table start in 2022."), series.delivered.text.join(" / "));
+assert.deepEqual(series.period, { from: "2022-01", to: "2023-12" });
 
 // P76: the build's years; outside them named, never "doesn't exist"; part of a span outside: the rest answered.
 assert.match(no({ from: 1925, to: 1925 }), /cover 1930 through 2025, so 1925 is outside them/);

@@ -1,19 +1,19 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 432 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 440 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release test6-20261031-host).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
-- 228: run by this candidate
+- 236: run by this candidate
 - 204: outside the shadow slice
 
 ## Label eligibility (can the case be scored)
 
 - 377: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 1: label drafted
+- 9: label drafted
 
 ## Refused as not built (not scored)
 
@@ -38,9 +38,9 @@ Expected (rows) by actual (columns):
 | answer:nibrs count | 2021 and later | 16 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (16/16)); direct answers: not measured (88% verified, 2 unverified); numeric fixtures: not measured (14/16 match, 2 not measured) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
-| clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: pass (0); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: pass (1/1 match) |
+| clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
 | decline:nibrs count | 2021 and later | 2 | not measured | wrong answers: not measured (0, 1 answers unverified); declines: not measured (1/2 verified correct, 1 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/2 match, 1 not measured) |
-| decline:nibrs count | spans 2021 | 1 | not measured | wrong answers: pass (0); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | spans 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
 | decline:no meaning | no period | 1 | not measured | wrong answers: pass (0); declines: pass (1/1 verified correct); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
@@ -52,6 +52,8 @@ Discrepancies and unverified cases:
   - asked which place: The United States | A state | A city or agency
 - **LS-234** (unverified; expected clarify, got clarify) "Carjackings in Memphis by month"
   - unverified option "The last 10 complete years" : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - unverified option "The last 10 complete years" alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2025-12`
+  - unverified option "The last 10 complete years" alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which range of years: The last 10 complete years | Every year available | Another range
 - **LS-235** (incomplete; expected clarify, got clarify) "How many crimes were there in Detroit in 2024?"
   - unverified option "Violent crime" : expected `answer`, got `a historical-file answer`
@@ -63,6 +65,8 @@ Discrepancies and unverified cases:
   - declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants).
 - **LS-240** (unverified; expected decline, got decline) "Will carjackings go up in Memphis next year?"
   - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - unverified alternative alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2025-12`
+  - unverified alternative alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-241** (unverified; expected answer, got answer) "Shoplifting arrests in Memphis in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
@@ -106,7 +110,7 @@ Expected (rows) by actual (columns):
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 4 answers unverified); clarifications: not measured (2/6 verified correct, 4 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/6 match, 4 not measured) |
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | 2021 and later | 5 | not measured | wrong answers: not measured (0, 4 answers unverified); declines: not measured (1/5 verified correct, 4 unverified); initial action: pass (100% (5/5)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/5 match, 4 not measured) |
-| decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: pass (0); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: not measured (0, 4 answers unverified); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/4 match, 4 not measured) |
 | decline:no meaning | no period | 7 | not measured | wrong answers: pass (0); declines: not measured (6/7 verified correct, 1 unverified); initial action: pass (100% (7/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
@@ -118,15 +122,23 @@ Discrepancies and unverified cases:
   - asked which New York: New York City | New York state
 - **LS-260** (unverified; expected decline, got decline) "Will shoplifting rise in Denver next year?"
   - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - unverified alternative alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.shoplifting 2017-01..2025-12`
+  - unverified alternative alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-261** (unverified; expected decline, got decline) "Can you forecast carjackings in Atlanta for 2027?"
   - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - unverified alternative alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2025-12`
+  - unverified alternative alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-262** (unverified; expected decline, got decline) "Predict simple assaults in Portland, Oregon next year"
   - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - unverified alternative alternative meaning: expected `(the label gives no meaning past this button)`, got `victims.simple_assault 2017-01..2025-12`
+  - unverified alternative alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-263** (unverified; expected decline, got decline) "What will carjackings be in Nashville in 2027?"
   - unverified alternative : expected `answer`, got `refused: this build does not hold the months (not built)`
+  - unverified alternative alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2025-12`
+  - unverified alternative alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (forecast): The data records past crime and cannot predict the future.
 - **LS-264** (unverified; expected decline, got decline) "How many simple assault arrests in Denver in 2023 resulted in a conviction?"
   - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
@@ -199,7 +211,11 @@ Expected (rows) by actual (columns):
 Discrepancies and unverified cases:
 
 - **LS-140** (unverified; expected clarify, got clarify) "St Louis carjackings per month"
+  - unverified option "St. Louis city, Missouri" option "The last 10 complete years" alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2025-12`
+  - unverified option "St. Louis city, Missouri" option "The last 10 complete years" alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "St. Louis city, Missouri" option "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-09`
+  - unverified option "St. Louis County, Missouri" option "The last 10 complete years" alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2025-12`
+  - unverified option "St. Louis County, Missouri" option "The last 10 complete years" alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "St. Louis County, Missouri" option "Every year available" meaning: expected `(the label gives no meaning past this button)`, got `offenses.carjacking 2017-01..2026-09`
   - unverified option "St. Louis County, Missouri" option "Every year available" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which St. Louis: St. Louis city, Missouri | St. Louis County, Missouri
@@ -250,6 +266,8 @@ Discrepancies and unverified cases:
 - **LS-150** (unverified; expected clarify, got clarify) "houston vehicle burglaries by month by clearance status"
   - unverified option "Last 10 complete years" : expected `answer`, got `refused: this build does not hold the months (not built)`
   - unverified option "Every year available" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified option "The last 10 complete years" alternative meaning: expected `(the label gives no meaning past this button)`, got `offenses.theft_from_motor_vehicle 2017-01..2025-12`
+  - unverified option "The last 10 complete years" alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - asked which range of years: The last 10 complete years | Every year available | Another range
 - **LS-160** (avoidable_decline; expected answer, got decline) "What weapons were used in robberies in Atlanta in 2024?"
   - declined (reader): I didn't understand "weapons were used in". Try asking it another way.
@@ -279,7 +297,45 @@ Discrepancies and unverified cases:
 
 ### Development
 
-No cases.
+8 cases. Correct 0; unverified 8; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
+
+Expected (rows) by actual (columns):
+
+| | answer | clarify | decline | no reading |
+|---|---|---|---|---|
+| answer | 8 | 0 | 0 | 0 |
+
+| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
+|---|---|---|---|---|
+| answer:historical count | before 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
+| answer:historical count | spans 2021 | 7 | not measured | wrong answers: not measured (0, 7 answers unverified); initial action: pass (100% (7/7)); direct answers: not measured (0% verified, 7 unverified); numeric fixtures: not measured (0/7 match, 7 not measured) |
+
+Discrepancies and unverified cases:
+
+- **LS-433** (unverified; expected answer, got answer) "Memphis murders since 1930"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
+- **LS-434** (unverified; expected answer, got answer) "Memphis homicides by year"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
+- **LS-435** (unverified; expected answer, got answer) "Memphis murders over time"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
+- **LS-436** (unverified; expected answer, got answer) "Memphis robberies since 1990"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: robberies by year, 1990 through 2025. / Figures for the Memphis Police Department. / Source: Crime Index.
+- **LS-437** (unverified; expected answer, got answer) "Philadelphia murders in the 90s"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Philadelphia, Pennsylvania: murders by year, 1990 through 1999. / Figures for the Philadelphia Police Department. / Source: Crime Index.
+- **LS-438** (unverified; expected answer, got answer) "Philadelphia murders over the past 10 years"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Philadelphia, Pennsylvania: murders by year, 2016 through 2025. / Figures for the Philadelphia Police Department. / Source: Crime Index.
+- **LS-439** (unverified; expected answer, got answer) "Chicago robberies after 2010"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Chicago, Illinois: robberies by year, 2011 through 2025. / Figures for the Chicago Police Department. / Source: Crime Index.
+- **LS-440** (unverified; expected answer, got answer) "Tennessee robberies since 2000"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: robberies by year, 2000 to 2025. / Source: Crime Index.
 
 ### Held out
 

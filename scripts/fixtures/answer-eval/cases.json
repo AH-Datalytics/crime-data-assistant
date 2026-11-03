@@ -26106,6 +26106,469 @@
     "reviewed_by": "codex:month-labels-1",
     "notes": "Breakdowns by month or quarter (Jeff 2026-11-02)."
    }
+  },
+  {
+   "id": "LS-433",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Memphis murders since 1930",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "1932-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-434",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Memphis homicides by year",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "1932-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-435",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Memphis murders over time",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "1932-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-436",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Memphis robberies since 1990",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "1990-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-437",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Philadelphia murders in the 90s",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Philadelphia Police Department",
+       "state": "PA"
+      }
+     ],
+     "period": {
+      "from": "1990-01",
+      "to": "1999-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Philadelphia Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-438",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Philadelphia murders over the past 10 years",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Philadelphia Police Department",
+       "state": "PA"
+      }
+     ],
+     "period": {
+      "from": "2016-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Philadelphia Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-439",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Chicago robberies after 2010",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Chicago Police Department",
+       "state": "IL"
+      }
+     ],
+     "period": {
+      "from": "2011-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Chicago Police Department)",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
+  },
+  {
+   "id": "LS-440",
+   "group": "designed:period-phrasings",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "historical",
+   "setup": [],
+   "question": "Tennessee robberies since 2000",
+   "policy": [
+    "D04",
+    "P01",
+    "P75"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "historical",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2000-01",
+      "to": "2025-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-period",
+    "reviewed_by": null,
+    "notes": "Everyday period words in Crime Index questions (Jeff 2026-11-02)."
+   }
   }
  ]
 }

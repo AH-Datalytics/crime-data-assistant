@@ -49,7 +49,18 @@ export const universeStates = (p: NibrsPlan["geography"]["places"][number]) => (
 /** `noPopulation`: agencies counted with no FBI population (coverage is then a lower bound, and no rate is given). */
 export type StateSumYear = { year: number; sum: number; agencies: number; partial: number; population: number; share: number; noPopulation: number; conflicts: number;
   every: { agencies: number; sum: number; population: number; share: number; noPopulation: number } };
-export type StateSumMeta = { years: StateSumYear[]; everyAgencies: number; crimeIndexPopulation: Record<number, number> };
+/**
+ * `everyCurrentPopulation` (P90, Jeff 2026-11-02: "population should be sum of current population of consistent
+ * agencies"): the Consistent Reporting Agencies' current populations summed, each agency's most recent FBI population
+ * in the build whatever the answer's span; `missing` agencies have none.
+ */
+export type StateSumMeta = { years: StateSumYear[]; everyAgencies: number; crimeIndexPopulation: Record<number, number>; everyCurrentPopulation: { sum: number; missing: number } };
+/** Each agency's most recent FBI population in the build (P90). */
+export function currentPopulationSql(root: string, oris: string[]): string {
+  return `SELECT ori, arg_max(u.population, u.data_year) AS current_population
+    FROM read_parquet('${root.replace(/'/g, "''")}/agency/data.parquet'), unnest(by_year) AS t(u)
+    WHERE ori IN (${list(oris)}) AND u.population IS NOT NULL GROUP BY ori`;
+}
 
 export function answerStateSum(plan: NibrsPlan, period: { from: string; to: string }, yearSet: number[] | null, deps: ShadowDeps, statements: AnswerStatement[],
   readings: string[], consistent: boolean, decline: Decline): ShadowOutcome {
@@ -133,7 +144,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     ev.share = pct(ev.population, ciPop[y]);
     return { year: y, sum, agencies, partial, population, share: pct(population, ciPop[y]), noPopulation, conflicts, every: ev };
   });
-  const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop };
+  const current = new Map(everySet.length ? deps.execute(currentPopulationSql(deps.target.root, everySet)).map((r) => [String(r[0]), Number(r[1])]) : []);
+  const everyCurrentPopulation = { sum: everySet.reduce((a, o) => a + (current.get(o) ?? 0), 0), missing: everySet.filter((o) => !current.has(o)).length };
+  const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop, everyCurrentPopulation };
 
   // Jeff (2026-11-01, "WAAAAY too much disclaimer"): no "counts reported to NIBRS" line; the lead says where they come from.
   const what = measureWords(plan);

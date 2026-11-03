@@ -34,7 +34,7 @@ import { NOT_YET, plainReaderExplanation } from "./wording";
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
-import { matchNibrsType, MEASURE_CODES, type MatchOptions } from "../nibrs-question-types";
+import { matchNibrsType, MEASURE_CODES, type MatchOptions, type NPeriod } from "../nibrs-question-types";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
 const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
@@ -134,7 +134,8 @@ export const EXAMPLE = "For example: \"robberies in Denver in 2024\".";
  *   - and when no button reads, an example in the text.
  */
 function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps, asked: string): ShadowOutcome {
-  if (o.kind !== "decline" || o.notBuilt || deps.checkingOffer) return o;
+  // A decline outside the data with no button of its own still gets the nearest question (coordinator 2026-11-02).
+  if (o.kind !== "decline" || (o.notBuilt && o.alternative) || deps.checkingOffer) return o;
   const year = Number(deps.release.lastMonth.slice(0, 4));
   // Jeff (2026-11-01): an offered question must actually answer, and keep every place and crime the user named
   // ("chicago vs memphis carjackings per year since 2022" was offered "chicago memphis carjackings ..."). It is run
@@ -200,12 +201,23 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
   const measure = text("measure"), place = text("place");
   if (measure && place) {
     const period = text("period") ?? `in ${Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1)}`;
-    const simple = tidy(`${measure} in ${place} ${/^(?:in|from|since|during)\b/i.test(period) ? period : `in ${period}`}`);
-    // Compared with what the user typed (the reader's text may have dropped words it set aside, such as a column).
-    if (simple.toLowerCase() !== asked.trim().replace(/[?.!]+$/, "").toLowerCase() && readsWhole(simple, year) && offerable(simple))
-      return { ...o, alternative: { label: `Ask instead: "${simple}"`, question: simple } };
+    // The nearest question for the same place and crime (coordinator 2026-11-02): as asked with only its period, then
+    // the place's whole series by year, then from the first year the data holds (a period before it, asked of NIBRS).
+    // Compared with what the user typed (the reader's text may have dropped words).
+    const candidates = [tidy(`${measure} in ${place} ${/^(?:in|from|since|during)\b/i.test(period) ? period : `in ${period}`}`), tidy(`${measure} in ${place} by year`),
+      tidy(`${measure} in ${place} since ${deps.release.firstMonth.slice(0, 4)}`)];
+    for (const simple of candidates)
+      if (simple.toLowerCase() !== asked.trim().replace(/[?.!]+$/, "").toLowerCase() && readsWhole(simple, year) && offerable(simple))
+        return { ...o, alternative: { label: `Ask instead: "${simple}"`, question: simple } };
   }
-  return /\bfor example\b/i.test(o.explanation) ? o : { ...o, explanation: `${o.explanation} ${EXAMPLE}` };
+  // No question that runs keeps both: an example that works for what the question did name (its place, else its crime),
+  // never an unrelated one; the generic example only when it named neither (Jeff's rule: every decline a next step).
+  if (/\bfor example\b/i.test(o.explanation)) return o;
+  const lastYear = Number(deps.release.lastMonth.slice(0, 4)) - (deps.release.lastMonth.endsWith("-12") ? 0 : 1);
+  const answers = (q: string) => { const r = shadowAnswer(q, { ...deps, checkingOffer: true }); return r.kind === "answer" || r.kind === "historical" || r.kind === "srs"; };
+  const related = [...(place ? [`robberies in ${place} in ${lastYear}`] : []), ...(measure ? [`${measure} in Denver in ${lastYear}`] : [])]
+    .map(tidy).find((q) => readsWhole(q, year) && answers(q));
+  return { ...o, explanation: `${o.explanation} ${related ? `For example: "${related}".` : EXAMPLE}` };
 }
 export type ShadowOutcome =
   /** `buttons`: continuations offered beside the answer (P61's consistent-reporters view). */
@@ -395,6 +407,27 @@ const wholeYear = (s: { from: string; to: string }) => s.from.endsWith("-01") &&
 const partYear = (sp: { grain: string }, cmp: { earlier: { from: string; to: string }; later: { from: string; to: string } } | null | undefined) =>
   (sp.grain !== "total" && sp.grain !== "year") || (!!cmp && !(wholeYear(cmp.earlier) && wholeYear(cmp.later)));
 
+/**
+ * The years a Crime Index question covers (coordinator 2026-11-02, Jeff's "Memphis murders since 1930"): one year, a
+ * range, "since YEAR" through the latest complete year, "the past N years" ending there, "last year", and a series by
+ * year with no range: every year the source has. Null for a form these annual sources do not answer.
+ */
+function yearSpan(sp: { period: NPeriod; grain: string }, thisYear: number, firstYear: number): [number, number] | null {
+  const lastComplete = thisYear - 1, p = sp.period;
+  if (p.form === "year") return [p.year, p.year];
+  if (p.form === "range") return [p.from, p.to];
+  if (p.form === "since") return [p.from, lastComplete];
+  if (p.form === "last") return [lastComplete - p.n + 1, lastComplete];
+  if (p.form === "lastyear") return [lastComplete, lastComplete];
+  if (p.form === "none" && sp.grain === "year") return [firstYear, lastComplete];
+  return null;
+}
+/** A span asked as open words ("since 1990", "the past 10 years", "by year" alone) is shown year by year. */
+const openSpan = (sp: { period: NPeriod }) => sp.period.form === "since" || (sp.period.form === "last" && sp.period.n > 1) || sp.period.form === "none";
+
+/** Police staffing in words: officers, sworn or civilian employees, staffing, headcount (Crime Index's staffing tables). */
+const STAFFING = /\b(?:staffing|staff levels?|(?:police )?officers?(?: per (?:capita|1,?000|100,?000))?|sworn|civilian employees|police employees|headcount|police force size)\b/i;
+
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
 function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<number, Candidate>()): ShadowOutcome {
   const { release } = deps;
@@ -463,6 +496,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return { kind: "clarify", about: `which ${named?.kind === "agency" ? named.agency.name.replace(/ County$/, "") : a.name}`, question: ledger0.question, options };
   }
 
+  // D31 for the Crime Index's annual figures (query-log step one, 2026-11-02: "murders in Philadelphia"): every year it
+  // has, by year; the latest complete year; or another year.
+  function askCrimeIndexPeriod(): ShadowOutcome {
+    const lcy = Number(release.lastMonth.slice(0, 4)) - 1;
+    return { kind: "clarify", about: "which period", question: ledger0.question, options: [
+      { label: "Every year available", continuation: fromLedger(filled(ledger, "grain", "year", "by year"), deps, pins) },
+      { label: `The latest complete year (${lcy})`, continuation: fromLedger(filled(ledger, "period", `year:${lcy}`, `in ${lcy}`), deps, pins) },
+      { label: "Another year", entry: "which year" }] };
+  }
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
   const named = clause0("measure").some((p) => p.value !== "unspecified");
   if (!named && clause0("measure").length) {
@@ -490,6 +532,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
   const d = matchNibrsType(ledger, SHADOW_MATCH);
+  // Police staffing (Crime Index's staffing tables: officers and civilian employees) isn't built here yet: said plainly,
+  // never "couldn't tell what this asks" (query-log step one, 2026-11-02: 1 in 8 of the Historical tab's first questions).
+  if (STAFFING.test(ledger0.question) && !/\b(?:on|against|of)\s+(?:police\s+)?officers\b/i.test(ledger0.question) && !ledger0.parts.some((p) => p.concept === "measure" && p.state === "recognized")) return decline("unsupported_capability", "Police staffing (officers and civilian employees) isn't available here yet.");
   if (d.kind === "none") return decline("reader", "I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example \"robberies in Denver in 2024\".");
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
   if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
@@ -504,7 +549,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
       || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
-    const yrs = sp.period.form === "year" ? [sp.period.year, sp.period.year] : sp.period.form === "range" ? [sp.period.from, sp.period.to] : null;
+    // A Crime Index question with no period asks which (D31), never P01's decline (query-log step one, 2026-11-02).
+    if (geo && sp.period.form === "none" && sp.grain === "total" && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !details) return askCrimeIndexPeriod();
+    const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), 1960);
     // The file's own unit only (offenses; victims for murder, rape, assault): incidents are another quantity (Codex
     // increment-5 review 2.3) and stay with P01's decline.
     if (geo && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
@@ -525,7 +572,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // spliced in; review 2.6).
       const reachesNow = yrs[1] === thisYear && sp.statistic !== "clearance_rate";
       const r = answerSrs({ measure: sp.measures[0], place: geo.kind === "state" ? { kind: "state", code: geo.code } : { kind: "national" }, from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1],
-        byYear: sp.grain === "year", statistic: sp.statistic,
+        byYear: sp.grain === "year" || openSpan(sp), statistic: sp.statistic,
         comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [] });
       if (r.kind === "srs") return r;
@@ -542,7 +589,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const agencies = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : undefined));
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
       || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
-    const yrs = sp.period.form === "year" ? [sp.period.year, sp.period.year] : sp.period.form === "range" ? [sp.period.from, sp.period.to] : null;
+    if (agencies.length && agencies.every((a) => a?.kind === "agency") && sp.period.form === "none" && sp.grain === "total" && sp.measures.length === 1
+      && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details) return askCrimeIndexPeriod();
+    const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
     const historicalShape = agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
       && (sp.statistic === "count" || sp.statistic === "rate");
     // The crime counted in the other of its two units ("robbery victims"): said plainly, with NIBRS's count of that unit
@@ -572,7 +621,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const reachesNow = yrs[1] === thisYear && sp.statistic !== "clearance_rate";
       const list = agencies as Extract<Place, { kind: "agency" }>[];
       const r = answerHistorical({ measure: sp.measures[0], agencies: list.map((a, i) => ({ ori: a.ori, label: a.label, name: (sp.places[i] as { name: string }).name, state: (sp.places[i] as { state: string }).state })),
-        from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year", statistic: sp.statistic,
+        from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp), statistic: sp.statistic,
         comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
         agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for ") }, deps.historical, deps.execute);
@@ -634,11 +683,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const months = d.spec.type === "series" && partYear(d.spec, flags(ledger0).comparison);
   if (!flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !months && asked.some((x) => PART_ONE.has(x))) {
     const withNibrs = `${ledger0.question.replace(/[?.!\s]+$/, "")} according to NIBRS`;
-    // With the Crime Index build, Historical answers the plain counts above; what reaches here is a form it doesn't
-    // answer yet (coordinator, 2026-11-01: never "not available here" when it is).
+    // Plain words, and no source that isn't loaded (coordinator 2026-11-02, after Jeff's "Memphis murders since 1930"):
+    // with the Crime Index build, its figures don't answer this question as asked; without it, only NIBRS is here. The
+    // button is the nearest question that runs for the same place and crime (withNextStep's nearest, then NIBRS's).
     return decline("unsupported_capability", deps.historical
-      ? "The official counts of this crime come from Crime Index's Historical and Current Trends data, which don't answer this form of the question yet. NIBRS has its own counts, from the agencies that report to it."
-      : "The official counts of this crime come from the Historical and Current Trends data, which aren't available here yet. NIBRS has its own counts, from the agencies that report to it.",
+      ? "Crime Index's figures for this crime don't answer this question as it's asked. NIBRS has its own counts, from the agencies that report to it."
+      : "This isn't available here yet.",
       { alternative: { label: `Ask instead: "${withNibrs}"`, question: withNibrs, role: "other_source", targetSource: "nibrs" } });
   }
 
@@ -944,7 +994,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       { alternative: { label: `This year so far (${periodWordsShort(`${y}-01`, release.lastMonth)})`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, "this year so far"), deps, pins) } });
   }
   if (period.from < release.firstMonth) {
-    return decline("outside_release_coverage", `The data here covers ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so it doesn't include ${periodWords(period.from, period.to)}.`, { notBuilt: true });
+    // The nearest question that runs (coordinator 2026-11-02): the same one from the data's first year, when the period
+    // reaches into the data (a button, run when chosen); otherwise none.
+    // The asked end kept to the month (Codex period review 01.1), never widened; a set of years gets none.
+    const firstY = release.firstMonth.slice(0, 4), to = period.to > release.lastMonth ? release.lastMonth : period.to;
+    const value = to.endsWith("-12") ? (firstY === to.slice(0, 4) ? `year:${firstY}` : `range:${firstY}:${to.slice(0, 4)}`) : `monthrange:${release.firstMonth}:${to}`;
+    const covered = period.to >= release.firstMonth && !yearSet ? fromLedger(filled(ledger, "period", value, `from ${firstY}`), deps, pins) : null;
+    return decline("outside_release_coverage", `The data here covers ${monthName(release.firstMonth)} through ${monthName(release.lastMonth)}, so it doesn't include ${periodWords(period.from, period.to)}.`,
+      { notBuilt: true, alternative: covered && runsNow(covered) ? { label: `From ${firstY}, the first year in the data`, continuation: covered, role: "nearest_question" } : null });
   }
   const requestedTo = period.to;
   // A year still in progress runs through the release's last month (D06: the answer names the months covered). The
