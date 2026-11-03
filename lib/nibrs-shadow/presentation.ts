@@ -26,6 +26,20 @@ const shortLabel = (label: string) => { const m = /^(.*), ([A-Za-z .]+)$/.exec(l
 /** "the Memphis Police Department", as reportedBy names it, without "Reported by". */
 const reporter = (places: PlaceIndex, oris: string[]) => reportedBy(oris.map((o) => agencyName(places, o))).replace(/^Reported by /, "").replace(/\.$/, "");
 
+/**
+ * A number of people in round words (P90): two significant figures, millions in words ("4.1 million", "12 million",
+ * "850,000").
+ */
+export function aboutPeople(n: number): string {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000, digits = Math.floor(Math.log10(m)) + 1;
+    const r = digits >= 2 ? Math.round(m / 10 ** (digits - 2)) * 10 ** (digits - 2) : Math.round(m * 10) / 10;
+    return `${r.toLocaleString("en-US", { maximumFractionDigits: 1 })} million`;
+  }
+  if (n <= 0) return "0";
+  const step = 10 ** (Math.floor(Math.log10(n)) - 1);
+  return (Math.round(n / step) * step).toLocaleString("en-US");
+}
 /** Statistics shown in the table only, never charted. */
 const TABLE_ONLY = new Set(["agencies", "coverage", "population", "incidents"]);
 /** The headers of grouping columns in natural order (time; age groups, Unknown last). */
@@ -180,7 +194,8 @@ function nibrsPresentation(o: Extract<ShadowOutcome, { kind: "answer" }>, places
     const back = path.length && path[path.length - 1] === "Consistent Reporting Agencies" ? { path: path.slice(0, -1) }
       : at.question ? { question: allAgencies(at.question) } : null;
     if (every && back) offers.push({ role: "all_agencies", targetSource: "nibrs", label: "All reporting agencies", run: back,
-      text: { before: `This counts only the ${fmt(meta.everyAgencies)} Consistent Reporting ${meta.everyAgencies === 1 ? "Agency" : "Agencies"} that reported every month. `, link: "See all reporting agencies instead", after: "." } });
+      // Jeff 2026-11-02: the agencies, the people they cover now (P90), and the span they reported every month of.
+      text: { before: `This counts only the ${fmt(meta.everyAgencies)} Consistent Reporting ${meta.everyAgencies === 1 ? "Agency" : "Agencies"}, covering ${meta.everyCurrentPopulation.missing ? "at least" : "roughly"} ${aboutPeople(meta.everyCurrentPopulation.sum)} people, that reported every month from ${from} through ${to}. `, link: "See all reporting agencies instead", after: "." } });
     else {
       const i = offers.findIndex((x) => x.role === "consistent_agencies");
       if (i >= 0 && participationChanged(meta)) offers[i] = { ...offers[i], text: {
