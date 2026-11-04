@@ -122,7 +122,10 @@ export function standsAlone(turn: string): boolean {
   const t = turn.trim();
   if (BACK_LEAD.test(t) || BACK_WORD.test(t)) return false;
   const own = partsOf(t);
-  return own.measures.length > 0 && own.places.length > 0;
+  // A place the reader doesn't know ("murders in Zzyzxville in 2024") is still a place named: the question stands on its
+  // own and is answered or declined as a new one, never read as a change to the last (redesign test, 2026-11-04).
+  const unknownPlace = own.all.some((p) => p.state === "not-interpreted" && /^in\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z]{2})?$/.test(p.text.trim()));
+  return own.measures.length > 0 && (own.places.length > 0 || unknownPlace);
 }
 
 export const deterministicRewriter: FollowUpRewriter = {

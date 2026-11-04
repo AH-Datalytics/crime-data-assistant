@@ -121,8 +121,10 @@ export const PROFILES: Readonly<Partial<Record<SourceId, SourceProfile>>> = {
         violent_crime: ["violent crime", "violent crimes"], property_crime: ["property crime", "property crimes"] },
       not: { murder: ["shootings"] },
     },
+    // "Reported to Crime Index" says whose figures they are; "as published by Crime Index" beside it said it twice
+    // (redesign test, coordinator 2026-11-04).
     name: { short: "Current Trends", long: "Crime Index's Current Trends data", reportedToShort: "Crime Index", reportedToLong: "Crime Index",
-      asPublished: "as published by Crime Index", sourceLine: "Source: Crime Index." },
+      asPublished: null, sourceLine: "Source: Crime Index." },
   },
 };
 

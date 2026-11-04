@@ -97,7 +97,7 @@ assert.deepEqual(pair.delivered.table.rows, [["Memphis, Tennessee", 351], ["Dall
 assert.deepEqual(pair.meaning.groupings, ["agency"]);
 const pairs = ok({ agencies: [memphis, dallas], from: 2022, to: 2023, byYear: true });
 assert.deepEqual(pairs.delivered.table.rows, [["2022", 252, null], ["2023", 351, 246]]);
-assert.ok(pairs.delivered.text.includes("Not available in this data: Dallas, Texas 2022."));
+assert.ok(pairs.delivered.text.includes("Crime Index has no murder figure for Dallas, Texas in 2022, shown blank."), JSON.stringify(pairs.delivered.text));
 assert.ok(!pairs.delivered.text.some((t) => /combined|total of/i.test(t)));
 
 // The agencies named by their FBI names, second, and never "reported by" (the file is what Crime Index published).
