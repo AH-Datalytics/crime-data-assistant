@@ -6,7 +6,7 @@
  * measures are columns side by side; a combined total (D19, P31) is a sentence that adds the table's own cells, given only
  * when every part is known. No commentary, no causes, no comparisons the question did not ask for.
  */
-import { CIRCUMSTANCE } from "../nibrs-plan/draft-layer";
+import { CIRCUMSTANCE, CIRCUMSTANCE_HELD } from "../nibrs-plan/draft-layer";
 import { stateName } from "./places";
 import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
 import type { NibrsPlan } from "../nibrs-plan/plan";
@@ -326,6 +326,15 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     rows = [...rows].sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || last(x) - last(y) || n(y) - n(x)
       || categoryName(cats[0], x[at(cats[0])]).localeCompare(categoryName(cats[0], y[at(cats[0])])));
   }
+  // A held-back circumstance (CIRCUMSTANCE_HELD: code 06 until the domestic violence note, Jeff 2026-11-04) is left out
+  // of the table, the chart and the export; the note gives its count, so the rows don't look short with nothing said.
+  const held: { period: string; n: number }[] = [];
+  const ih = at("victim_circumstance.circumstance");
+  if (cats.includes("victim_circumstance.circumstance") && ih >= 0) {
+    for (const r of rows) if (CIRCUMSTANCE_HELD.has(String(r[ih])) && r[at(count)] !== null && r[at(count)] !== undefined && Number(r[at(count)]) > 0)
+      held.push({ period: ip >= 0 ? String(r[ip]) : "", n: Number(r[at(count)]) });
+    rows = rows.filter((r) => !CIRCUMSTANCE_HELD.has(String(r[ih])));
+  }
   // A series that begins with periods no report is known for starts at the first reported one (owner 2026-10-31; the
   // engine, not the page, since 2026-11-02): those leading rows are left out of the table, the chart and the export,
   // and the note says where the series starts. Months only: a blank year may be partly reported (Codex month review
@@ -407,6 +416,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
       ? `${named(whole)} ${whole.length === 1 ? "is" : "are"} shown blank, not zero: reporting for ${whole.length === 1 ? named(whole) : "those periods"} isn't complete.`
       : `Every category is shown blank, not zero: reporting for ${when} isn't complete.`);
     if (partial.length) text.push(`Shown blank, not zero, because reporting isn't complete: ${partial.map(([p, cs]) => (p ? `${p}: ${cs.join("; ")}` : cs.join("; "))).join(". ")}.`);
+  }
+  if (held.length) {
+    const when1 = (p: string) => (/^\d{4}-\d{2}$/.test(p) ? monthName(p) : /^\d{4}-Q\d$/.test(p) ? `Q${p.slice(6)} ${p.slice(0, 4)}` : p);
+    const counts = held.map((h, i) => `${fmt(h.n)}${i === 0 ? ` ${one(h.n, what)}` : ""}${h.period && ip >= 0 ? ` in ${when1(h.period)}` : ""}`);
+    text.push(`One circumstance category is left out of this table for now: ${andList(counts)} ${held.length === 1 && held[0].n === 1 ? "was" : "were"} recorded under it.`);
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   // How a misspelled word was read (reading.ts), then the fixed statements; the source stays last.

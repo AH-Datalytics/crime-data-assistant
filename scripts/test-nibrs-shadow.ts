@@ -4,6 +4,7 @@
  * that returns rows shaped like the compiled query's, so this checks the pipeline and the delivered answer, never the
  * numbers (scripts/nibrs-compile-gate.ts and the runner do that against a canonical build). No database, no model.
  */
+import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
@@ -11,7 +12,7 @@ import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
 import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
-import { periodWords } from "../lib/nibrs-shadow/deliver";
+import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { matchNibrsType } from "../lib/nibrs-question-types";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
@@ -904,6 +905,18 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   {
     const by = as(ask("Murder victims in Memphis by circumstance in 2024"), "answer");
     assert.ok(by.plan.groupings.some((x) => x.dimension === "victim_circumstance.circumstance" && x.multiValue === "each_value"));
+    // Code 06 is held back until the domestic violence note (Jeff 2026-11-04): no row, no name, its count in a plain note
+    // with no DV wording; and no filter can name it.
+    {
+      const stats = by.plan.statistics.map((x) => x.as);
+      const cols = ["victim_circumstance.circumstance", ...stats.flatMap((x) => [x, `${x}_status`])];
+      const row = (c: string, n: number) => [c, ...stats.flatMap((x, i) => [i === 0 ? n : n / 251, "VALUE"])];
+      const d = deliver(by.plan, { from: "2024-01", to: "2024-12" }, "2024-12", cols, [row("01", 54), row("06", 3), row("10", 170)], [], "r", [], null);
+      assert.deepEqual(d.table.rows.map((r) => r[0]), ["Argument", "Unknown circumstances"]);
+      assert.ok(d.text.includes("One circumstance category is left out of this table for now: 3 murder victims were recorded under it."), JSON.stringify(d.text));
+      assert.ok(!/lover|domestic|intimate|partner/i.test(JSON.stringify(d)), "no DV wording, no FBI name for 06");
+      assert.ok(!("06" in CIRCUMSTANCE));
+    }
     const f = as(ask("Gang-related murders in Memphis in 2024"), "answer");
     assert.ok(f.plan.filters.some((x) => x.kind === "exists" && x.entity === "victim_circumstance"));
     assert.ok(f.delivered.text[0].includes("where the circumstance was gangland (organized crime involvement) or juvenile gang"));

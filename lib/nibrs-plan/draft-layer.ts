@@ -26,10 +26,16 @@ const INC = ["data_year", "ori", "incident_num"];
  */
 export const CIRCUMSTANCE: Record<string, string> = {
   "01": "Argument", "02": "Assault on law enforcement officer(s)", "03": "Drug dealing", "04": "Gangland (organized crime involvement)",
-  "05": "Juvenile gang", "06": "Lovers' quarrel", "07": "Mercy killing", "08": "Other felony involved", "09": "Other circumstances",
+  "05": "Juvenile gang", "07": "Mercy killing", "08": "Other felony involved", "09": "Other circumstances",
   "10": "Unknown circumstances", "20": "Criminal killed by private citizen", "21": "Criminal killed by police officer",
   "30": "Child playing with weapon", "31": "Gun-cleaning accident", "32": "Hunting accident", "33": "Other negligent weapon handling", "34": "Other negligent killing",
 };
+/**
+ * Circumstance codes held back (Jeff 2026-11-04, "Hold until DV note"; nibrs-model V192-V195 leave them out the same
+ * way): code 06 has no name here, so no filter can name it (S11), and a breakdown leaves its row out and says so
+ * (deliver.ts), until the domestic violence gap note is done.
+ */
+export const CIRCUMSTANCE_HELD: ReadonlySet<string> = new Set(["06"]);
 const ENTITIES: SemanticEntity[] = [
   entity("incident", INC), entity("offense", [...INC, "offense_code"]), entity("victim", [...INC, "victim_seq"]),
   entity("offender", [...INC, "offender_seq"]), entity("arrestee", [...INC, "arrestee_seq"], { incident_date: "incident_date", arrest_date: "arrest_date" }),
