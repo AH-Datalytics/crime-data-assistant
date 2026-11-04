@@ -30022,19 +30022,20 @@
    "question": "can I see the salem murder rate per 100,000 since 1960?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Salem",
-    "about_any": [
-     "which Salem"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "a Part I figure by year (Crime Index)"
    }
   },
   {
@@ -39348,19 +39349,20 @@
    "question": "show me sworn officers in salem since 1960",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Salem",
-    "about_any": [
-     "which Salem"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R11",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "staffing (Crime Index)"
    }
   },
   {
@@ -46261,7 +46263,6 @@
     "about": "crime",
     "about_any": [
      "crime",
-     "which Clark County",
      "period"
     ]
    },
@@ -49486,18 +49487,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "which Urbana",
+    "about": "period",
     "about_any": [
-     "which Urbana",
      "period"
     ]
    },
    "label": {
     "status": "draft",
-    "rule": "R11",
+    "rule": "R13",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "P06/D31"
    }
   },
   {
@@ -52214,17 +52214,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which Orange County",
     "about_any": [
+     "which Orange County",
      "period"
     ]
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -82934,15 +82935,20 @@
    "question": "Pittsburgh PA",
    "previous": "Homicide rates in Pittsburg from 2022 to 2026.",
    "expected": {
-    "outcome": "exclude",
-    "source": null
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the earlier question, changed as asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "F4",
+    "rule": "F3",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D4 (Jeff 2026-11-04): left out"
+    "notes": "a follow-up to an answerable question"
    }
   },
   {
@@ -85327,19 +85333,20 @@
    "question": "Homicide rates in Pittsburg from 2022 to 2026.",
    "previous": "Homicide rates in Phoenix from 2022 to 2025.",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Pittsburg",
-    "about_any": [
-     "which Pittsburg"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "a Part I figure by year (Crime Index)"
    }
   },
   {

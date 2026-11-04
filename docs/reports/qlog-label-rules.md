@@ -60,7 +60,7 @@ Frequency and trend words don't name a period. But a trend or a series ("per yea
 | R06 | A definition or method question | answer: the FBI's definition (D1) |
 | R07 | A lookup: coverage, codes, a list of agencies | answer (a lookup); a gap today |
 | R08 | No crime, and either no place or a lead-in that points back ("now detroit", "how about the national average") | clarify: the whole question |
-| R09 / R09b / R10 / R11 / R13 | A part is missing: the crime, or which kind of crime (D09); the place (P12); which of several same-named places (none five times the next in population); the period (P06) | clarify. `about` is the first missing part in D31's order; `about_any` lists every missing part. Asking about any of them is right, because D31 asks one part at a time. |
+| R09 / R09b / R10 / R11 / R13 | A part is missing: the crime, or which kind of crime (D09); the place (P12); which of several same-named places (the app's rule: two of 100,000+ people, or the largest under twice the next); the period (P06) | clarify. `about` is the first missing part in D31's order; `about_any` lists every missing part. Asking about any of them is right, because D31 asks one part at a time. |
 | R12 | A year after 2026 | decline: no future figures |
 | R14 | Otherwise | answer, from the source below |
 

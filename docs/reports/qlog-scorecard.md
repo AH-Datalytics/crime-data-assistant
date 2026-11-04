@@ -4,20 +4,20 @@ Every logged question gets one expected outcome: answer (with its source), clari
 
 Release test6-20261031-host; run 2026-11-04. A first question is the first row of each session in each tab; a follow-up is any later row, labeled with the row before it. Distinct questions per tab (the same words counted once; "times" in the label file says how often each was asked).
 
-**Label status: 0 confirmed, 3943 draft.** This is a draft scorecard: a draft label can itself be wrong, so a miss here is a candidate, not a finding.
+**Label status: 0 confirmed, 3944 draft.** This is a draft scorecard: a draft label can itself be wrong, so a miss here is a candidate, not a finding.
 
 **Unverified is not correct.** An answer from the right source counts as correct only once its numbers match independent values (nibrs-model's files, or SQL against the source build); until then it is unverified.
 
 | Source | Labels scored | Correct | Unverified | Wrong answer | Bad decline | Wrong clarify | Follow-up error | Error | Draft labels | Disputed (not scored) | Not run yet |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Historical | 1020 | 227 | 228 | 1 | 319 | 90 | 155 | 0 | 1020 | 0 | 0 |
-| Current Trends | 1027 | 283 | 181 | 0 | 283 | 125 | 155 | 0 | 1027 | 0 | 0 |
-| NIBRS | 1245 | 459 | 142 | 2 | 336 | 127 | 178 | 1 | 1245 | 0 | 0 |
+| Historical | 1020 | 227 | 229 | 0 | 319 | 90 | 155 | 0 | 1020 | 0 | 0 |
+| Current Trends | 1028 | 283 | 183 | 0 | 283 | 125 | 154 | 0 | 1028 | 0 | 0 |
+| NIBRS | 1245 | 460 | 142 | 2 | 336 | 126 | 178 | 1 | 1245 | 0 | 0 |
 | Homicide Reports | 583 | 192 | 73 | 0 | 198 | 25 | 95 | 0 | 583 | 0 | 0 |
 | Hate Crime | 68 | 16 | 1 | 0 | 18 | 6 | 27 | 0 | 68 | 0 | 0 |
-| **All** | **3943** | **1177** | **625** | **3** | **1154** | **373** | **610** | **1** | **3943** | **0** | **0** |
+| **All** | **3944** | **1178** | **628** | **2** | **1154** | **372** | **609** | **1** | **3944** | **0** | **0** |
 
-Hard gate, wrong answers = 0 (undisputed labels): **NOT met: 3 wrong answers**.
+Hard gate, wrong answers = 0 (undisputed labels): **NOT met: 2 wrong answers**.
 
 **Disputed: 0 labels wait on Jeff and are set aside** (not in any bucket or the gate): . The questions are in docs/reports/qlog-label-rules.md.
 

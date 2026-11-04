@@ -89,9 +89,11 @@ for a in agencies:
             pop_of[n][a["state"]] = max(pop_of[n][a["state"]], a.get("population") or 0)
 
 def ambiguous(name):
-    """Several states have it and none is plainly the one meant: the largest is not at least five times the next."""
+    """Several states have it and none is plainly the one meant, by the app's reviewed rule (places.ts resolvePlace):
+    two or more of 100,000+ people, or the largest less than twice the next ("Clinton"). Salem, Oregon (about four
+    times Salem, Massachusetts) is Salem, Oregon."""
     ps = sorted(pop_of[name].values(), reverse=True)
-    return len(ps) > 1 and ps[0] < 5 * max(ps[1], 1)
+    return len(ps) > 1 and (sum(p >= 100_000 for p in ps) >= 2 or ps[0] < 2 * max(ps[1], 1))
 # Only names of real size are taken as the place a question names (a single-word city of population 25,000+, or any
 # multi-word name), so ordinary words that are also tiny towns ("Justice", "Commerce") are not read as places.
 big = {n.lower() for a in agencies if a.get("kind") in ("city", "county") and (a.get("population") or 0) >= 25000
