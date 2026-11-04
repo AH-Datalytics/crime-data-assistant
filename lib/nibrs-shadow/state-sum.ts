@@ -16,7 +16,7 @@
  */
 import { NOT_YET } from "./wording";
 import type { NibrsPlan } from "../nibrs-plan/plan";
-import { compilePlan } from "../nibrs-plan/compile";
+import { compilePlan, NO_CATEGORY } from "../nibrs-plan/compile";
 import { rate } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
 import { deliver as deliverRows, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
@@ -245,7 +245,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
     // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
     const sums2 = deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
         coalesce(sum(n) FILTER (WHERE ori IN (SELECT unnest([${list(everySet.length ? everySet : [""])}]))), 0) AS n_every
-      FROM (${gridSql}) WHERE n_status IN ('VALUE', 'REPORTED_ZERO') GROUP BY ALL ORDER BY 1, 2`);
+      FROM (${gridSql}) WHERE n_status IN ('VALUE', 'REPORTED_ZERO') AND g0 IS DISTINCT FROM '${NO_CATEGORY}' GROUP BY ALL ORDER BY 1, 2`);
     const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2]]);
     const deliverView = (every: boolean, p: NibrsPlan) => {
       const sums = sumsFor(every).filter((r) => keptYears.includes(Number(r[0])));
@@ -262,7 +262,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
       const span = yearSet && yearSet.length > 1 ? `in ${yearSet.join(", ")}` : `from ${monthName(period.from)} through ${monthName(period.to)}`;
       const covered = every ? `Counting only the ${fmt(meta.everyAgencies)} Consistent Reporting Agencies that reported every month ${span}.`
         : keptYears.length === 1 ? `Summed over the ${fmt(byYear.find((x) => x.year === keptYears[0])!.agencies)} agencies that reported.` : "Summed over the agencies that reported each year.";
-      return { ...d, text: [d.text[0], covered, every ? "Includes only agencies that reported complete data." : "Includes all agencies.", ...d.text.slice(1)] };
+      // No units at all in the agencies counted: a verified zero, said (Codex state-categories review 01.1).
+      const none = !rows.length && (every ? meta.everyAgencies : byYear.some((x) => x.agencies)) ? [`None were reported${every ? " by the Consistent Reporting Agencies" : ""} in ${periodWords(period.from, period.to)}.`] : [];
+      return { ...d, text: [d.text[0], covered, ...none, every ? "Includes only agencies that reported complete data." : "Includes all agencies.", ...d.text.slice(1)] };
     };
     const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
     const everyDelivered = deliverView(true, everyPlan);

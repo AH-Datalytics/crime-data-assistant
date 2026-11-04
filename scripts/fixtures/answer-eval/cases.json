@@ -27369,7 +27369,7 @@
    },
    "tab": "nibrs",
    "setup": [],
-   "question": "Murder victims in the United States by race in 2024",
+   "question": "Murder victims in the United States by race in 2024, according to NIBRS",
    "policy": [
     "P29",
     "P53",
@@ -27548,8 +27548,9 @@
    },
    "tab": "nibrs",
    "setup": [],
-   "question": "Aggravated assault offenses in Texas by location type in 2024",
+   "question": "Burglary offenses in Texas by location type in 2024",
    "policy": [
+    "P11",
     "P29",
     "P53",
     "P61",
@@ -27572,7 +27573,7 @@
      },
      "measures": [
       {
-       "name": "aggravated assault",
+       "name": "burglary",
        "unit": "offense"
       }
      ],
@@ -27668,7 +27669,7 @@
    },
    "tab": "nibrs",
    "setup": [],
-   "question": "Murder victims in the United States by race in 2024, only agencies that reported every month",
+   "question": "Murder victims in the United States by race in 2024 according to NIBRS, only agencies that reported every month",
    "policy": [
     "P29",
     "P53",
@@ -27711,6 +27712,59 @@
      "names the Consistent Reporting Agencies it counts",
      "names its source at the end"
     ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-458",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murder victims in the United States by race in 2024",
+   "policy": [
+    "P01",
+    "P53"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "shr",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim race"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": []
    },
    "label": {
     "status": "drafted",

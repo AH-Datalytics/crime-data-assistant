@@ -307,6 +307,9 @@ export function agencyPopulationSql(root: string, who: { oris: string[] } | { st
     WHERE ${where} AND u.data_year IN (${years.map(Number).join(", ")}) ORDER BY ori, u.data_year`;
 }
 
+/** The grid's placeholder category when the place and period have no units (state-sum.ts skips it). */
+export const NO_CATEGORY = "__none__";
+
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
   // A set of years ("in 2019 and 2024"): each year's months only, the last clipped to `through`, grouped by year.
@@ -496,7 +499,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   ];
   if (g.length) {
     // Every category that occurs in the place and period, in every month.
-    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped)`);
+    // In grid mode, a placeholder category when none occurs (Codex state-categories review 01.1): the cross join below
+    // would otherwise drop every agency-month and its status; the state sum reads coverage from it and skips it in sums.
+    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped${grid ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM scoped)` : ""})`);
     // In grid mode (a state's or the nation's agencies, state-sum.ts) each agency's categories are its own: the agency is
     // carried through and joined on (coordinator 2026-11-04: a state or national sum by category).
     parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.ym${g.map((x) => `, u.${x}`).join("")}, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ALL)`);

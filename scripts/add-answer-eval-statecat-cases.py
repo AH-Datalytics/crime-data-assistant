@@ -44,15 +44,22 @@ def case(question, places, measure, unit, frm, to, groupings, cohort="all_report
 
 NEW = [
     case("Simple assault victims in Tennessee by sex in 2024", TN, "simple assault", "victim", "2024-01", "2024-12", ["victim sex"], statements=[COUNTED]),
-    case("Murder victims in the United States by race in 2024", US, "murder", "victim", "2024-01", "2024-12", ["victim race"], statements=[COUNTED]),
+    case("Murder victims in the United States by race in 2024, according to NIBRS", US, "murder", "victim", "2024-01", "2024-12", ["victim race"], statements=[COUNTED]),
     case("Robbery offenders in Tennessee by race in 2024", TN, "robbery", "offender", "2024-01", "2024-12", ["offender race"], statements=[COUNTED]),
     case("Robbery arrests in Tennessee by age in 2024", TN, "robbery", "arrest", "2024-01", "2024-12", ["arrestee age"], statements=[COUNTED]),
-    case("Aggravated assault offenses in Texas by location type in 2024", TX, "aggravated assault", "offense", "2024-01", "2024-12", ["location type"], statements=[COUNTED]),
+    case("Burglary offenses in Texas by location type in 2024", TX, "burglary", "offense", "2024-01", "2024-12", ["location type"], statements=[COUNTED]),
     case("Simple assault victims in Tennessee by sex by year from 2023 to 2024", TN, "simple assault", "victim", "2023-01", "2024-12", ["year", "victim sex"]),
     # The button's view, asked in words (P80): the agencies that reported every month of the period.
-    case("Murder victims in the United States by race in 2024, only agencies that reported every month", US, "murder", "victim", "2024-01", "2024-12", ["victim race"],
+    case("Murder victims in the United States by race in 2024 according to NIBRS, only agencies that reported every month", US, "murder", "victim", "2024-01", "2024-12", ["victim race"],
          cohort="same_agencies", statements=["names the Consistent Reporting Agencies it counts"], filters=["agencies that reported every month of 2024"]),
+    # P53 (Codex state-categories review 01.2): murder by a Homicide Report detail for the nation, NIBRS not named, is
+    # Homicide Reports' (a route until it is built).
+    case("Murder victims in the United States by race in 2024", US, "murder", "victim", "2024-01", "2024-12", ["victim race"]),
 ]
+NEW[-1]["policy"] = ["P01", "P53"]
+NEW[-1]["expected"]["meaning"]["source"] = "shr"
+NEW[-1]["expected"]["meaning"].pop("cohort")
+NEW[-1]["expected"]["statements"] = []
 
 
 def split_of(group):

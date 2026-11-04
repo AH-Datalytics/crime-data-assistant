@@ -899,6 +899,10 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(g("Aggravated assault victims in Memphis in 2024, by victim race"), ["victim.race"]);
   // Codex 04.2: a victim's attribute on arrests is declined, never answered as the arrestee's.
   assert.match(as(ask("Arrests in Denver in 2023 by victim race"), "decline").explanation, /a victim's race for arrests/);
+  // P53 (Codex state-categories review 01.2): murder by a Homicide Report detail for a state or the nation, NIBRS not
+  // named, is Homicide Reports'; named, NIBRS sums it.
+  assert.equal(as(ask("Murder victims in Tennessee by race in 2024"), "route").source, "shr");
+  assert.equal(ask("Murder victims in Tennessee by race in 2024, according to NIBRS").kind, "answer");
   // A people breakdown for a state is NIBRS's sum by category (coordinator 2026-11-04), never the historical file's.
   {
     const o = as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "answer");
