@@ -54,6 +54,7 @@ Frequency and trend words don't count. "Per year", "monthly", "by year", "over t
 |---|---|---|
 | R01 | A greeting, a test or one word | not scored (excluded) |
 | R03 | Not about crime data; court outcomes or corrections; a "why"; a prediction; advice or a safety judgment | decline, with the plain limit |
+| R15 | A decided limit: a state clearance rate (P18); a rate for a group of people rather than a place (D03); calls for service (P47) | decline, with the limit |
 | R05 | A place outside the U.S. | decline: U.S. agencies only |
 | R04 | Below an agency: a neighborhood, ZIP code, census tract, block, address, precinct, beat or ward | decline: down to the agency, not below it |
 | R06 | A definition or method question | answer in text: **disputed** (D1) |
@@ -119,3 +120,12 @@ A clarify is correct when the engine asks about any missing part. A route to ano
 - "Which kind of crime" versus "violent or property" is read loosely.
 - A decline's reason is drafted, not checked.
 - Answers count as unverified until their numbers are checked against independent values.
+
+## Label quality
+
+Codex checked three random samples, each fixed before the next:
+- the first 200 labels: 46 wrong (23%);
+- a fresh 100: 11 wrong (11%);
+- a fresh 94 of the undisputed labels: 14 wrong (15%).
+
+Each round found a different long tail: period wording, unsupported requests, follow-up context. So these rules give drafts that are roughly 85–90% right. A miss on the scorecard is a candidate to check, not a finding.

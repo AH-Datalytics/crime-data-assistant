@@ -11847,8 +11847,7 @@
     "source": null,
     "about": "place",
     "about_any": [
-     "place",
-     "period"
+     "place"
     ]
    },
    "label": {
@@ -13055,19 +13054,24 @@
    "question": "Show me theft in Omaha rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -13651,19 +13655,16 @@
    "question": "Please show me the juvenile crime rate over time, 2020-2025, in Minneapolis, MN.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R09b",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D09"
+    "notes": "D03"
    }
   },
   {
@@ -15587,8 +15588,7 @@
     "source": null,
     "about": "place",
     "about_any": [
-     "place",
-     "period"
+     "place"
     ]
    },
    "label": {
@@ -16094,21 +16094,16 @@
    "question": "How do juvenile crime rates compare to criminal rates",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "place",
-     "period"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R09b",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D09"
+    "notes": "D03"
    }
   },
   {
@@ -16278,19 +16273,24 @@
    "question": "new orleans murders rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -16480,19 +16480,24 @@
    "question": "Show me property crimes in Independence Missouri rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -16604,19 +16609,24 @@
    "question": "kentucky murders rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -21449,19 +21459,20 @@
    "question": "Houston hate crimes rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "hate_crime",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": ""
    }
   },
   {
@@ -30699,19 +30710,16 @@
    "question": "What is the clearance rate for rape in Florida by year?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
-    "status": "disputed",
-    "rule": "R13",
+    "status": "draft",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D5: a series with no years named: ask (P06) or every year"
+    "notes": "P18"
    }
   },
   {
@@ -32743,20 +32751,16 @@
    "question": "Show the burglary clearance rate in Ohio since 2000",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
     "status": "draft",
-    "rule": "R14",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "P18"
    }
   },
   {
@@ -38667,19 +38671,24 @@
    "question": "can I see new orleans 12-month rolling murder count from beginning of records",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -40881,19 +40890,16 @@
    "question": "What is the rape clearance rate in Florida by year?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
-    "status": "disputed",
-    "rule": "R13",
+    "status": "draft",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D5: a series with no years named: ask (P06) or every year"
+    "notes": "P18"
    }
   },
   {
@@ -41922,19 +41928,16 @@
    "question": "What is the murder clearance rate in Texas by year?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
-    "status": "disputed",
-    "rule": "R13",
+    "status": "draft",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D5: a series with no years named: ask (P06) or every year"
+    "notes": "P18"
    }
   },
   {
@@ -42660,19 +42663,16 @@
    "question": "violent crime rates by race 2006 to 2026",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R10",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P12/D31"
+    "notes": "D03"
    }
   },
   {
@@ -56439,19 +56439,16 @@
    "question": "show the shoplifting rate by race of offender for 2019 and 2023",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R10",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P12/D31"
+    "notes": "D03"
    }
   },
   {
@@ -58996,19 +58993,16 @@
    "question": "show the shoplifting rate since 2010 by race of offender",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R10",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P12/D31"
+    "notes": "D03"
    }
   },
   {
@@ -60060,19 +60054,16 @@
    "question": "Please show me the juvenile crime rate over time, 2020-2025, in Minneapolis, MN.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R09b",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D09"
+    "notes": "D03"
    }
   },
   {
@@ -60722,7 +60713,7 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "historical",
+    "source": "nibrs",
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -60734,7 +60725,7 @@
     "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
    }
   },
   {
@@ -63489,21 +63480,16 @@
    "question": "How do juvenile crime rates compare to criminal rates",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "place",
-     "period"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R09b",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D09"
+    "notes": "D03"
    }
   },
   {
@@ -65687,19 +65673,16 @@
    "question": "exceptional clearance rate for robbery in Texas",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "P18"
    }
   },
   {
@@ -68579,19 +68562,24 @@
    "question": "murders in the us rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -69048,19 +69036,16 @@
    "question": "What is the homicide clearance rate over time for Kansas?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
-    "status": "disputed",
-    "rule": "R13",
+    "status": "draft",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D5: a series with no years named: ask (P06) or every year"
+    "notes": "P18"
    }
   },
   {
@@ -69978,20 +69963,16 @@
    "question": "murder rates by race and sex per 100000",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "place",
-    "about_any": [
-     "place",
-     "period"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R10",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P12/D31"
+    "notes": "D03"
    }
   },
   {
@@ -70309,20 +70290,16 @@
    "question": "Murders per 100,000 Black residents in Detroit, 2023",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
-    "status": "disputed",
-    "rule": "R14",
+    "status": "draft",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D3: a Homicide Reports tab's plain murder count, Crime Index or SHR"
+    "notes": "D03"
    }
   },
   {
@@ -70439,19 +70416,24 @@
    "question": "Show me theft in Asheville rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -75718,19 +75700,24 @@
    "question": "Show me theft in Omaha rolling over 12 months",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -76990,19 +76977,16 @@
    "question": "Population by race and sex and rate per 100000",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R08",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "no crime, and no place or a word pointing back"
+    "notes": "D03"
    }
   },
   {
@@ -77916,19 +77900,16 @@
    "question": "i want ir in per capita seperated by race and sex",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R08",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "no crime, and no place or a word pointing back"
+    "notes": "D03"
    }
   },
   {
@@ -78146,19 +78127,16 @@
    "question": "What is the homicide clearance rate in Kansas?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "P18"
    }
   },
   {
@@ -78912,19 +78890,24 @@
    "question": "can I see new orleans 12-month rolling murder count from beginning of records",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "R13",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -79219,20 +79202,16 @@
    "question": "what states had the highest rate of female victims killed by a firearm in intimate partner in 2025?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "R14",
+    "rule": "R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "D03"
    }
   },
   {
@@ -84850,19 +84829,24 @@
    "question": "Show me theft in Omaha rolling over 12 months",
    "previous": "detroit auto theft per month",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -86748,19 +86732,24 @@
    "question": "murders in the us rolling over 12 months",
    "previous": "KENTUCKY murders rolling over 12 months",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -86775,18 +86764,22 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "the earlier question with the part asked for",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the earlier question, changed as asked",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "disputed",
-    "rule": "F4",
+    "status": "draft",
+    "rule": "F3",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D4: a reply to the old app's clarifying question"
+    "notes": "a follow-up to an answerable question"
    }
   },
   {
@@ -88742,19 +88735,20 @@
    "question": "Houston hate crimes rolling over 12 months",
    "previous": "Houston hate crimes rolling over 12 months since 2000",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "hate_crime",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": ""
    }
   },
   {
@@ -89025,19 +89019,20 @@
    "question": "Houston hate crimes rolling over 12 months",
    "previous": "Houston hate crimes per month",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "hate_crime",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": ""
    }
   },
   {
@@ -89128,19 +89123,20 @@
    "question": "Houston hate crimes rolling over 12 months",
    "previous": "Houston hate crimes rolling over 12 months",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "answer",
+    "source": "hate_crime",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": ""
    }
   },
   {
@@ -89155,18 +89151,18 @@
    "expected": {
     "outcome": "answer",
     "source": "hate_crime",
-    "answer": "the earlier question with the part asked for",
+    "answer": "the earlier question, changed as asked",
     "meaning": null,
     "values": {
      "status": "pending"
     }
    },
    "label": {
-    "status": "disputed",
-    "rule": "F4",
+    "status": "draft",
+    "rule": "F3",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D4: a reply to the old app's clarifying question"
+    "notes": "a follow-up to an answerable question"
    }
   },
   {
@@ -100180,19 +100176,16 @@
    "question": "exceptional clearance rate for robbery in Texas",
    "previous": "robberies by time of day nationally",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "there is no state clearance rate in the data"
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13",
+    "rule": "F1+R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "P18"
    }
   },
   {
@@ -105700,20 +105693,19 @@
    "question": "National",
    "previous": "See trends for juvenile offenders for violent crimes per 100,000 population over time",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the earlier question with the part asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "disputed",
-    "rule": "F4",
+    "status": "draft",
+    "rule": "F5",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "D4: a reply to the old app's clarifying question"
+    "notes": "a follow-up to a question that was declined or excluded"
    }
   },
   {
@@ -109124,19 +109116,16 @@
    "question": "arrest rate by race for robbery in Chicago",
    "previous": "murders per 10,000 Black residents",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "rates are for places, not groups of people (counts or shares instead)"
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13",
+    "rule": "F1+R15",
     "drafted_by": "rules-v1",
     "reviewed_by": null,
-    "notes": "P06/D31"
+    "notes": "D03"
    }
   },
   {
