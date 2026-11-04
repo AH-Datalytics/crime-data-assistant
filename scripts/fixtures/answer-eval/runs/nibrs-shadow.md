@@ -11,9 +11,9 @@ Labeled set: 464 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ## Label eligibility (can the case be scored)
 
-- 403: scorable (reviewed, decided policy)
+- 409: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 7: label drafted
+- 1: label drafted
 
 ## Refused as not built (not scored)
 
@@ -23,28 +23,28 @@ Labeled set: 464 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ### Development
 
-44 cases. Correct 28; unverified 15; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
+50 cases. Correct 28; unverified 21; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 32 | 0 | 0 | 0 |
+| answer | 37 | 0 | 0 | 0 |
 | clarify | 0 | 8 | 0 | 0 |
-| decline | 0 | 0 | 4 | 0 |
+| decline | 0 | 0 | 5 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
-| answer:nibrs count | 2021 and later | 23 | not measured | wrong answers: not measured (0, 9 answers unverified); initial action: pass (100% (23/23)); direct answers: not measured (61% verified, 9 unverified); numeric fixtures: not measured (14/23 match, 9 not measured) |
-| answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
+| answer:nibrs count | 2021 and later | 27 | not measured | wrong answers: not measured (0, 13 answers unverified); initial action: pass (100% (27/27)); direct answers: not measured (52% verified, 13 unverified); numeric fixtures: not measured (14/27 match, 13 not measured) |
+| answer:shr count | 2021 and later | 2 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (2/2)); direct answers: not measured (0% verified, 2 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
 | clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
 | decline:nibrs count | 2021 and later | 2 | not measured | wrong answers: not measured (0, 1 answers unverified); declines: not measured (1/2 verified correct, 1 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/2 match, 1 not measured) |
 | decline:nibrs count | spans 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
-| decline:no meaning | no period | 1 | not measured | wrong answers: pass (0); declines: pass (1/1 verified correct); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 2 | not measured | wrong answers: pass (0); declines: not measured (1/2 verified correct, 1 unverified); initial action: pass (100% (2/2)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -112,6 +112,30 @@ Discrepancies and unverified cases:
 - **LS-458** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
+- **LS-459** (unverified; expected answer, got answer) "Murder victims in Memphis by circumstance in 2024"
+  - unverified groupings: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murder victims by circumstance, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up 
+- **LS-460** (unverified; expected answer, got answer) "Aggravated assault victims in Tennessee by circumstance in 2024"
+  - unverified groupings: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" groupings: expected `?`, got `?`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, 
+- **LS-461** (unverified; expected answer, got answer) "Gang-related murders in Memphis in 2024"
+  - unverified filters: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: 1 murder victim where the circumstance was gangland (organized crime involvement) or juvenile gang in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's ci
+- **LS-462** (unverified; expected answer, got answer) "Aggravated assault victims in Memphis from arguments in 2024"
+  - unverified filters: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: 4,189 aggravated assault victims where the circumstance was argument in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a co
+- **LS-463** (unverified; expected answer, got answer) "Gang-related murders in Tennessee in 2024"
+  - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
+  - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
+- **LS-464** (unverified; expected decline, got decline) "Gang-related robberies in Memphis in 2024"
+  - unverified reason: expected `Circumstances (element 31) are recorded for murder and aggravated assault victims, not robberies.`, got `unsupported_capability`
+  - declined (unsupported_capability): Circumstances (such as gang-related or an argument) are recorded for murder and aggravated assault victims; ask for those. For example: "robberies in Memphis in 2025".
 
 ### Held out
 
@@ -341,47 +365,7 @@ Discrepancies and unverified cases:
 
 ### Development
 
-6 cases. Correct 0; unverified 6; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
-
-Expected (rows) by actual (columns):
-
-| | answer | clarify | decline | no reading |
-|---|---|---|---|---|
-| answer | 5 | 0 | 0 | 0 |
-| decline | 0 | 0 | 1 | 0 |
-
-| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
-|---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 4 | not measured | wrong answers: not measured (0, 4 answers unverified); initial action: pass (100% (4/4)); direct answers: not measured (0% verified, 4 unverified); numeric fixtures: not measured (0/4 match, 4 not measured) |
-| answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
-| decline:no meaning | no period | 1 | not measured | wrong answers: pass (0); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
-
-Discrepancies and unverified cases:
-
-- **LS-459** (unverified; expected answer, got answer) "Murder victims in Memphis by circumstance in 2024"
-  - unverified groupings: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murder victims by circumstance, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up 
-- **LS-460** (unverified; expected answer, got answer) "Aggravated assault victims in Tennessee by circumstance in 2024"
-  - unverified groupings: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - unverified button "Consistent Reporting Agencies" groupings: expected `?`, got `?`
-  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, 
-- **LS-461** (unverified; expected answer, got answer) "Gang-related murders in Memphis in 2024"
-  - unverified filters: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: 1 murder victim where the circumstance was gangland (organized crime involvement) or juvenile gang in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's ci
-- **LS-462** (unverified; expected answer, got answer) "Aggravated assault victims in Memphis from arguments in 2024"
-  - unverified filters: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: 4,189 aggravated assault victims where the circumstance was argument in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a co
-- **LS-463** (unverified; expected answer, got answer) "Gang-related murders in Tennessee in 2024"
-  - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
-  - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
-- **LS-464** (unverified; expected decline, got decline) "Gang-related robberies in Memphis in 2024"
-  - unverified reason: expected `Circumstances (element 31) are recorded for murder and aggravated assault victims, not robberies.`, got `unsupported_capability`
-  - declined (unsupported_capability): Circumstances (such as gang-related or an argument) are recorded for murder and aggravated assault victims; ask for those.
+No cases.
 
 ### Held out
 

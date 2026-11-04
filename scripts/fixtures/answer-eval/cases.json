@@ -27825,9 +27825,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-circumstance",
-    "reviewed_by": null,
+    "reviewed_by": "codex:circumstance-labels-1",
     "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
    }
   },
@@ -27884,9 +27884,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-circumstance",
-    "reviewed_by": null,
+    "reviewed_by": "codex:circumstance-labels-1",
     "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
    }
   },
@@ -27942,9 +27942,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-circumstance",
-    "reviewed_by": null,
+    "reviewed_by": "codex:circumstance-labels-1",
     "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
    }
   },
@@ -28000,9 +28000,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-circumstance",
-    "reviewed_by": null,
+    "reviewed_by": "codex:circumstance-labels-1",
     "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
    }
   },
@@ -28054,9 +28054,9 @@
     "statements": []
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-circumstance",
-    "reviewed_by": null,
+    "reviewed_by": "codex:circumstance-labels-1",
     "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
    }
   },
@@ -28080,9 +28080,9 @@
     "alternative": null
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-circumstance",
-    "reviewed_by": null,
+    "reviewed_by": "codex:circumstance-labels-1",
     "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
    }
   }
