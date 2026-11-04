@@ -158,10 +158,14 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     return new Set(parts.map((p) => `${p.concept}:${String(p.value ?? p.text).toLowerCase()}`));
   };
   const asks = named(asked);
+  // A condition read out of the words (a circumstance, a region) is kept too (Codex circumstance review 01.1: the offered
+  // question had dropped "gang-related" and counted 12,890 victims for 14).
+  const kept = (q: string) => { const r = readQuestion(q, year); return JSON.stringify([r.circumstance, r.region]); };
   const offerable = (q: string | undefined) => {
     if (!q) return true;
     const got = named(q);
     if (![...asks].every((x) => got.has(x))) return false;
+    if (kept(q) !== kept(asked)) return false;
     const r = shadowAnswer(q, { ...deps, checkingOffer: true });
     return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current";
   };

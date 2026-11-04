@@ -910,6 +910,9 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.ok(f.delivered.answerStatements.includes("circumstance_unknown"));
     assert.match(as(ask("Gang-related robberies in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
     assert.equal(as(ask("Gang-related murders in Tennessee in 2024"), "route").source, "shr");
+    // Codex circumstance review 01.1: an offered question keeps the circumstance, or none is offered.
+    const fb = ask("Gang-related aggravated assaults in Memphis by sex and race in 2024");
+    if (fb.kind === "decline" && fb.alternative) assert.match(fb.alternative.question ?? "", /gang-related/i);
   }
   // P53 (Codex state-categories review 01.2): murder by a Homicide Report detail for a state or the nation, NIBRS not
   // named, is Homicide Reports'; named, NIBRS sums it.

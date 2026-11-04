@@ -112,6 +112,8 @@ assert.deepEqual(readQuestion("Gang-related murders in Chicago by year since 202
 assert.match(readQuestion("Gang-related murders in Chicago by year since 2020", 2026).text, /^murders in Chicago/);
 assert.deepEqual(readQuestion("Aggravated assault victims in Memphis from arguments in 2024", 2026).circumstance, ["01"]);
 assert.equal(readQuestion("Domestic violence murders in Texas in 2024", 2026).circumstance, null);
+assert.equal(readQuestion("Arrests in arguments in Memphis in 2024", 2026).circumstance, null);
+assert.equal(readQuestion("Assaults during an argumentative dispute in Memphis in 2024", 2026).circumstance, null);
 assert.equal(readQuestion("Drug-related arrests in Memphis in 2024", 2026).circumstance, null, "drug crimes, not a circumstance");
 // Places' nicknames, read for every source (coordinator 2026-11-02).
 assert.match(readQuestion("Philly homicides 2010 to 2020", 2026).text, /^Philadelphia homicides/);

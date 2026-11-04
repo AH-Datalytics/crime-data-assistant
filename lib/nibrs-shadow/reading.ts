@@ -238,7 +238,9 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   for (const [re, codes, name] of [
     [/\b(?:gang[-\s]?(?:related|involved|motivated)|gangland)\s*/gi, ["04", "05"], "gang-related"],
     [/\bdrug[-\s]?deal(?:ing|er)[-\s]?related\s*|\bdrug[-\s]?dealing[-\s]related\s*|\bin\s+drug\s+deals?\b|\bover\s+drug\s+deals?\b/gi, ["03"], "drug dealing"],
-    [/\b(?:argument[-\s]related|from\s+(?:an\s+)?arguments?|during\s+(?:an\s+)?arguments?|in\s+arguments?)\s*/gi, ["01"], "an argument"],
+    // Whole words, and only "from", "during" or "over" an argument (Codex circumstance review 01.2: "arrests in arguments",
+    // "argumentative").
+    [/\b(?:argument[-\s]related|(?:from|during|over)\s+(?:an\s+)?arguments?)\b\s*/gi, ["01"], "an argument"],
     [/\b(?:during|in\s+the\s+course\s+of)\s+(?:another|other)\s+felon(?:y|ies)\s*|\bfelony[-\s]related\s*/gi, ["08"], "another felony"],
   ] as [RegExp, string[], string][]) {
     text = text.replace(re, (m) => { circumstance = [...(circumstance ?? []), ...codes]; readings.push({ kind: "phrase", from: m.trim(), to: `(circumstance: ${name})` }); return ""; });
