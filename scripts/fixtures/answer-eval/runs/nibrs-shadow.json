@@ -5111,12 +5111,6 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
      "field": "button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
@@ -5129,35 +5123,21 @@
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "not measured",
-   "unverifiedAnswers": 2
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-452",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: United States: murder victims by race, 2024. / Summed over the 14,947 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 2
+   "values": "match"
   },
   {
    "id": "LS-453",
@@ -5166,12 +5146,6 @@
    "actual": "answer",
    "outcome": "unverified",
    "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
     {
      "field": "button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
@@ -5185,7 +5159,7 @@
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "not measured",
-   "unverifiedAnswers": 2
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-454",
@@ -5194,12 +5168,6 @@
    "actual": "answer",
    "outcome": "unverified",
    "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
     {
      "field": "button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
@@ -5213,7 +5181,7 @@
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "not measured",
-   "unverifiedAnswers": 2
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-455",
@@ -5251,12 +5219,6 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
      "field": "button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
@@ -5269,29 +5231,21 @@
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "not measured",
-   "unverifiedAnswers": 2
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-457",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: United States: murder victims by race, 2024. / Counting only the 13,014 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Includes only agencies that reported complete data. / Source: FBI NIB"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-458",
@@ -5318,28 +5272,14 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "groupings",
-     "expected": "?",
-     "actual": "?",
-     "kind": "unverified"
-    },
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
-    "delivered: Memphis, Tennessee: murder victims by circumstance, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / Sourc"
+    "delivered: Memphis, Tennessee: murder victims by circumstance, 2024. / Reported by the Memphis Police Department. / One circumstance category is left out of this table for now: 3 murder victims were recorded under it. / A crime that falls in several o"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-460",
@@ -5349,24 +5289,6 @@
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "groupings",
-     "expected": "?",
-     "actual": "?",
-     "kind": "unverified"
-    },
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
-     "field": "button \"Consistent Reporting Agencies\" groupings",
-     "expected": "?",
-     "actual": "?",
-     "kind": "unverified"
-    },
-    {
      "field": "button \"Consistent Reporting Agencies\" values",
      "expected": "independent expected values",
      "actual": "none given: NOT MEASURED",
@@ -5374,68 +5296,40 @@
     }
    ],
    "notes": [
-    "delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, so the categories can add up to"
+    "delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / One circumstance category is left out of this table for now: 5,275 aggravated assault victims were recorde"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "not measured",
-   "unverifiedAnswers": 2
+   "unverifiedAnswers": 1
   },
   {
    "id": "LS-461",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "filters",
-     "expected": "?",
-     "actual": "?",
-     "kind": "unverified"
-    },
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: 1 murder victim where the circumstance was gangland (organized crime involvement) or juvenile gang in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a cou"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-462",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "filters",
-     "expected": "?",
-     "actual": "?",
-     "kind": "unverified"
-    },
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Memphis, Tennessee: 4,189 aggravated assault victims where the circumstance was argument in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a count for one circumstance can be"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-463",

@@ -23,7 +23,7 @@ Labeled set: 464 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ### Development
 
-50 cases. Correct 28; unverified 21; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
+50 cases. Correct 33; unverified 16; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -37,7 +37,7 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
-| answer:nibrs count | 2021 and later | 27 | not measured | wrong answers: not measured (0, 13 answers unverified); initial action: pass (100% (27/27)); direct answers: not measured (52% verified, 13 unverified); numeric fixtures: not measured (14/27 match, 13 not measured) |
+| answer:nibrs count | 2021 and later | 27 | not measured | wrong answers: not measured (0, 8 answers unverified); initial action: pass (100% (27/27)); direct answers: not measured (70% verified, 8 unverified); numeric fixtures: not measured (19/27 match, 8 not measured) |
 | answer:shr count | 2021 and later | 2 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (2/2)); direct answers: not measured (0% verified, 2 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
@@ -83,19 +83,12 @@ Discrepancies and unverified cases:
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Memphis, Tennessee: robbery offenders by month and offender age group, 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
 - **LS-451** (unverified; expected answer, got answer) "Simple assault victims in Tennessee by sex in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: simple assault victims by sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
-- **LS-452** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024, according to NIBRS"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: United States: murder victims by race, 2024. / Summed over the 14,947 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
 - **LS-453** (unverified; expected answer, got answer) "Robbery offenders in Tennessee by race in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: robbery offenders by offender race, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
 - **LS-454** (unverified; expected answer, got answer) "Robbery arrests in Tennessee by age in 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: robbery arrests by arrestee age group, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
 - **LS-455** (unverified; expected answer, got answer) "Burglary offenses in Texas by location type in 2024"
@@ -103,33 +96,14 @@ Discrepancies and unverified cases:
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Texas: burglary offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
 - **LS-456** (unverified; expected answer, got answer) "Simple assault victims in Tennessee by sex by year from 2023 to 2024"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: simple assault victims by year and sex, 2023 to 2024. / Summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS.
-- **LS-457** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024 according to NIBRS, only agencies that reported every month"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: United States: murder victims by race, 2024. / Counting only the 13,014 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Includes only agencies that reported c
 - **LS-458** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
-- **LS-459** (unverified; expected answer, got answer) "Murder victims in Memphis by circumstance in 2024"
-  - unverified groupings: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murder victims by circumstance, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up 
 - **LS-460** (unverified; expected answer, got answer) "Aggravated assault victims in Tennessee by circumstance in 2024"
-  - unverified groupings: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - unverified button "Consistent Reporting Agencies" groupings: expected `?`, got `?`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, 
-- **LS-461** (unverified; expected answer, got answer) "Gang-related murders in Memphis in 2024"
-  - unverified filters: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: 1 murder victim where the circumstance was gangland (organized crime involvement) or juvenile gang in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's ci
-- **LS-462** (unverified; expected answer, got answer) "Aggravated assault victims in Memphis from arguments in 2024"
-  - unverified filters: expected `?`, got `?`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: 4,189 aggravated assault victims where the circumstance was argument in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a co
+  - delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / One circumstance category is left out of this table for now: 5,275 aggravat
 - **LS-463** (unverified; expected answer, got answer) "Gang-related murders in Tennessee in 2024"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'

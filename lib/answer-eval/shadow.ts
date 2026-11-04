@@ -107,6 +107,10 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     // a case names its cell in values.source and bindValueSources hands it over.
     const cur = currentCells(v as unknown as CurrentFile);
     if (cur) { for (const [k, c] of cur) out.set(k, c); continue; }
+    // One case per file (V185 on: "nibrsai_case"): a state or national sum by one category, or a circumstance breakdown
+    // or filter (V192-V195, code 06 held back and not in the file's rows).
+    const one = singleCaseCells(v as unknown as SingleCaseFile, f.name);
+    if (one) { out.set(one.lsCase, one.cells); for (const k of SAME_VALUES[one.lsCase] ?? []) out.set(k, one.cells); continue; }
     // A file that lists no cases (SHR's V177-V184) is read only through a case's binding: never a crash.
     if (typeof v.nibrsai_cases !== "string") continue;
     // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
@@ -201,6 +205,44 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+/**
+ * Files of one case each (nibrs-model V185 on). A sum by one category (V185-V191): each year's categories, keyed as the
+ * answer shows them ("<year>|<name>" when several years), each with its share of the year's total. A circumstance
+ * breakdown (V192-V193): each circumstance with its share of the victims (a victim can have two, so the shares are over
+ * the victims, not the rows); code 06 is held back in the file as in the answer. A circumstance filter (V194-V195): one
+ * count. A file whose question is no longer its case's is left out (SUPERSEDED_VALUES), so its case stays unverified.
+ */
+type SingleCaseFile = { nibrsai_case?: string; unit?: string; grouping?: string; years?: number[];
+  by_year?: { year: number; by_category: Record<string, number>; total: number }[];
+  victims?: number; by_circumstance?: Record<string, number>; filter?: string[]; count?: number };
+const SUPERSEDED_VALUES: Record<string, string> = {
+  // Request 13 asked for aggravated assault (13A) by location type; LS-455 was changed to burglary in #108's review.
+  "V189": "LS-455",
+};
+/** A case's values that are also another answer's: LS-452's button is LS-457's question (the nation's Consistent Reporting Agencies). */
+const SAME_VALUES: Record<string, string[]> = { "LS-457": ["LS-452|button"] };
+const UNIT_ENTITY: Record<string, string> = { victims: "victim", offenders: "offender", arrests: "arrestee", offenses: "offense" };
+const share1 = (n: number, total: number) => (total > 0 ? Math.round((1000 * n) / total) / 10 : null);
+function singleCaseCells(v: SingleCaseFile, file: string): { lsCase: string; cells: ExpectedCell[] } | null {
+  if (typeof v.nibrsai_case !== "string" || !/^LS-\d{3}$/.test(v.nibrsai_case)) return null;
+  const name = /V\d+(?=\.json$)/.exec(file)?.[0];
+  if (name && SUPERSEDED_VALUES[name] === v.nibrsai_case) return null;
+  if (v.by_circumstance && typeof v.victims === "number") {
+    const dim = "victim_circumstance.circumstance";
+    return { lsCase: v.nibrsai_case, cells: Object.entries(v.by_circumstance).map(([code, n]) =>
+      ({ key: categoryName(dim, code), value: n, status: "VALUE", share: share1(n, v.victims!) })) };
+  }
+  if (v.filter && typeof v.count === "number") return { lsCase: v.nibrsai_case, cells: [{ key: "", value: v.count, status: "VALUE" }] };
+  if (v.by_year?.length && v.grouping && v.unit && UNIT_ENTITY[v.unit]) {
+    const dim = `${UNIT_ENTITY[v.unit]}.${v.grouping}`;
+    const many = v.by_year.length > 1;
+    // Age groups are named by their labels in the file and the answer alike; other codes by the answer's names.
+    const label = (code: string) => (v.grouping === "age" ? code : categoryName(dim, code));
+    return { lsCase: v.nibrsai_case, cells: v.by_year.flatMap((y) => Object.entries(y.by_category).map(([code, n]) =>
+      ({ key: `${many ? `${y.year}|` : ""}${label(code)}`, value: n, status: "VALUE", share: share1(n, y.total) }))) };
+  }
+  return null;
+}
 /** Batch 9: units and their incidents (P66), per status or type, or for one selection. */
 type UnitsIncidents = { units: number; incidents: number };
 type ClearanceValues = { by_status?: Record<string, UnitsIncidents>; by_type?: Record<string, UnitsIncidents> } & Record<string, unknown>;
