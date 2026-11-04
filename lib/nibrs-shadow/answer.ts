@@ -599,7 +599,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A "crimes" right after a crime named is that crime's own word ("drug crimes and shoplifting", "gun crimes").
   const owned = (p: Part) => clause0("measure").some((o) => o !== p && o.value !== "unspecified" && o.span[1] <= p.span[0] && /^[\s-]*$/.test(ledger0.question.slice(o.span[1], p.span[0])));
   const joined = (p: Part) => !owned(p) && !/^\s*against\b/i.test(after(p))
-    && (/(?:\band|&|,|\bplus)\s+(?:overall\s+|total\s+|general\s+)?$/i.test(before(p)) || /^\s*(?:rates?\s+)?(?:and|&|,|plus)\s+\w/i.test(after(p)));
+    && (/(?:\band|&|,|\bplus)\s+(?:overall\s+|total\s+|general\s+)?$/i.test(before(p))
+      // After it: "and" a crime named ("crime and murder rates"), never a list of columns ("Part 1 Crimes, Total Rate").
+      || /^\s*(?:rates?\s+)?(?:and|&|plus)\s+(?:\w+\s+){0,2}?(?:murders?|homicides?|robber\w*|rapes?|assaults?|burglar\w*|thefts?|larcen\w*|arsons?|shootings?|carjack\w*)\b/i.test(after(p)));
   const bare = clause0("measure").filter((p) => p.value === "unspecified" && joined(p));
   if (named && bare.length) {
     const keep = others.map((p) => [String(p.value), p.text.trim()]);
@@ -616,7 +618,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // P32 (Jeff 2026-10-29): "sex offenses", "sex crimes", "sexual assaults" name no one offense. Ask which, with buttons
   // (rape; all sex offenses), rather than choose a definition. "All sex offenses" (or "forcible") names it.
-  const sexPart = clause0("measure").find((p) => p.value === "sex_offense");
+  // Not when the words leave them out ("violent crimes, excluding sexual offenses").
+  const sexPart = clause0("measure").find((p) => p.value === "sex_offense"
+    && !/\b(?:excluding|exclude|except|without|not including|other than|minus|but not)\s+(?:the\s+)?$/i.test(ledger0.question.slice(Math.max(0, p.span[0] - 24), p.span[0])));
   // "Forcible sex offenses" (11A-11D) is not a measure yet, so it is asked about too, never answered as all six codes.
   if (sexPart && sexPart.rule !== "shadow:button" && !(/\b(?:all|every|total)\b/i.test(sexPart.text) && !/\bforcible\b/i.test(sexPart.text))) {
     const keep = clause0("measure").filter((p) => p !== sexPart).map((p) => [String(p.value), p.text.trim()]);

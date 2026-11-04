@@ -321,18 +321,22 @@ if os.path.exists(REVIEW):
         if not v:
             continue
         lab = r["label"]
-        if v["status"] == "reviewed":
-            lab.update(status="reviewed", reviewed_by=v["by"])
-        elif v["status"] == "disputed":
+        if v["status"] == "disputed":
             lab.update(status="disputed", reviewed_by=v["by"], notes=f"second labeler unclear: {v.get('why', '')}")
-        else:
+            continue
+        if "expected" in v:
             e = {"outcome": v["expected"]["outcome"], "source": v["expected"].get("source")}
             for k in ("source_any", "about_any", "reason"):
                 if k in v["expected"]: e[k] = v["expected"][k]
             if e["outcome"] == "clarify" and "about_any" in e: e["about"] = e["about_any"][0]
             if e["outcome"] == "answer": e.update(answer="the figures asked for", meaning=None, values={"status": "pending"})
             r["expected"] = e
-            lab.update(status="draft", drafted_by=v["by"], rule=lab["rule"] + ">2nd", notes=v.get("why", ""))
+            lab.update(drafted_by=v["by"], rule=lab["rule"] + ">2nd", notes=v.get("why", ""))
+        # A correction is a draft; an agreed label, or one an owner decision settles, is reviewed.
+        if v["status"] == "reviewed":
+            lab.update(status="reviewed", reviewed_by=v["by"])
+        else:
+            lab.update(status="draft")
 
 # Ids are unique (a follow-up id joins both hashes; a clash is a bug, never silently merged).
 ids = collections.Counter(r["id"] for r in repo)
