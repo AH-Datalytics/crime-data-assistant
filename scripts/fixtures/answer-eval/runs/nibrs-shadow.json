@@ -809,6 +809,7 @@
    "LS-389",
    "LS-390",
    "LS-391",
+   "LS-392",
    "LS-393",
    "LS-394",
    "LS-395",
@@ -865,7 +866,15 @@
    "LS-447",
    "LS-448",
    "LS-449",
-   "LS-450"
+   "LS-450",
+   "LS-451",
+   "LS-452",
+   "LS-453",
+   "LS-454",
+   "LS-455",
+   "LS-456",
+   "LS-457",
+   "LS-458"
   ],
   "label unresolved": [
    "LS-024",
@@ -924,16 +933,7 @@
    "LS-218"
   ],
   "label drafted": [
-   "LS-392",
-   "LS-419",
-   "LS-451",
-   "LS-452",
-   "LS-453",
-   "LS-454",
-   "LS-455",
-   "LS-456",
-   "LS-457",
-   "LS-458"
+   "LS-419"
   ]
  },
  "notBuilt": [
@@ -4215,6 +4215,34 @@
    "unverifiedAnswers": 1
   },
   {
+   "id": "LS-392",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: aggravated assault victims by offender sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, so the categories can add up to"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
    "id": "LS-393",
    "split": "heldout",
    "expected": "answer",
@@ -5056,63 +5084,6 @@
    "era": "2021 and later",
    "values": "not measured",
    "unverifiedAnswers": 1
-  }
- ],
- "provisional": [
-  {
-   "id": "LS-392",
-   "split": "heldout",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
-   "notes": [
-    "delivered: Tennessee: aggravated assault victims by offender sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, so the categories can add up to"
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 2
-  },
-  {
-   "id": "LS-419",
-   "split": "heldout",
-   "expected": "answer",
-   "actual": "answer",
-   "outcome": "wrong_answer",
-   "diffs": [
-    {
-     "field": "statement",
-     "expected": "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)",
-     "actual": "(no check defined)",
-     "kind": "unverified"
-    },
-    {
-     "field": "statement",
-     "expected": "Changes the existing chart to bars using the existing result; makes no data-engine request.",
-     "actual": "Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.",
-     "kind": "material"
-    }
-   ],
-   "notes": [
-    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
-   ],
-   "capability": "answer:nibrs count",
-   "era": "2021 and later",
-   "values": "match"
   },
   {
    "id": "LS-451",
@@ -5323,6 +5294,35 @@
    ],
    "capability": "answer:shr count",
    "era": "2021 and later"
+  }
+ ],
+ "provisional": [
+  {
+   "id": "LS-419",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "wrong_answer",
+   "diffs": [
+    {
+     "field": "statement",
+     "expected": "gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)",
+     "actual": "(no check defined)",
+     "kind": "unverified"
+    },
+    {
+     "field": "statement",
+     "expected": "Changes the existing chart to bars using the existing result; makes no data-engine request.",
+     "actual": "Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.",
+     "kind": "material"
+    }
+   ],
+   "notes": [
+    "delivered: Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "match"
   }
  ]
 }

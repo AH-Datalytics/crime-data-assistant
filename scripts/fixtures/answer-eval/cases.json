@@ -23420,9 +23420,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "Relabelled 2026-11-04: state and national sums by one category are built (coordinator 2026-11-04), so the former negative control (P29 decline) is now an answer: victims (D18) by the sexes of their incident's offenders (P49), summed over the agencies that reported (P61). Was reviewed by codex:inc7-labels-1 as a decline."
    }
   },
@@ -27353,9 +27353,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   },
@@ -27412,9 +27412,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   },
@@ -27472,9 +27472,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   },
@@ -27532,9 +27532,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   },
@@ -27593,9 +27593,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   },
@@ -27653,9 +27653,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   },
@@ -27714,9 +27714,9 @@
     ]
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   },
@@ -27767,9 +27767,9 @@
     "statements": []
    },
    "label": {
-    "status": "drafted",
+    "status": "reviewed",
     "drafted_by": "claude-statecat",
-    "reviewed_by": null,
+    "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   }
