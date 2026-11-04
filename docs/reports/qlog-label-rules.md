@@ -123,9 +123,17 @@ A clarify is correct when the engine asks about any missing part. A route to ano
 
 ## Label quality
 
-Codex checked three random samples, each fixed before the next:
-- the first 200 labels: 46 wrong (23%);
-- a fresh 100: 11 wrong (11%);
-- a fresh 94 of the undisputed labels: 14 wrong (15%).
+**Rules alone.** Codex checked three random samples, each fixed before the next: 23% wrong, then 11%, then 15%. The rules reached about 85–90%.
 
-Each round found a different long tail: period wording, unsupported requests, follow-up context. So these rules give drafts that are roughly 85–90% right. A miss on the scorecard is a candidate to check, not a finding.
+**Second labeler** (Jeff: "Yes, run it"). Codex read every undisputed label against only the question, this doc and the decided policy, never the engine's output.
+- It agreed with 3,182 of 3,944 and flagged 762 (19%), 17 of them as unclear.
+- A hand check of 30 flags found about 26 corrections right. Most rested on decided policy the rules don't encode, such as P13, P18, P27, P28, P34, P40 and P70. Others caught rule bugs, such as "New Mexico" read as a foreign country.
+- So the corrections replace the rules' labels: they are drafts, drafted by the second labeler. The 17 unclear labels are disputed. Agreed labels are **reviewed**.
+- Each verdict is in `scripts/fixtures/answer-eval/qlog-label-review.json`, applied by the drafter.
+
+**After the review.** Codex checked a fresh uniform sample of 100 labels:
+- 3 wrong and 3 unclear: **ACCEPT** (3%, under the 10% bar);
+- reviewed labels: 3 of 82 wrong; corrected drafts: 0 of 18.
+The three corrections are applied as review entries (codex-check-4).
+
+**Still to do.** No label is confirmed: a reviewed label is two labelers agreeing, not a human check. A miss on the scorecard is a strong candidate, not yet a finding.

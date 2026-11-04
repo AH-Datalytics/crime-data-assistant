@@ -149,17 +149,18 @@ const per = (tab: string) => {
   const ls = scored.filter((l) => l.tab === tab && l.label.status !== "disputed");
   const c = Object.fromEntries(BUCKETS.map((b) => [b, 0])) as Record<Bucket, number>;
   for (const l of ls) { const b = bucket(l, done.get(l.id) ?? null); if (b !== "excluded") c[b]++; }
-  const drafts = ls.filter((l) => l.label.status !== "confirmed").length;
-  return { n: ls.length, c, drafts, disputed, notRun: labels.filter((l) => l.tab === tab && l.expected.outcome !== "exclude" && !done.has(l.id)).length };
+  const drafts = ls.filter((l) => l.label.status === "draft").length;
+  const reviewed = ls.filter((l) => l.label.status === "reviewed").length;
+  return { n: ls.length, c, drafts, reviewed, disputed, notRun: labels.filter((l) => l.tab === tab && l.expected.outcome !== "exclude" && !done.has(l.id)).length };
 };
 const rows = TABS.map((t) => ({ t, ...per(t) }));
-const all = rows.reduce((a, r) => { a.n += r.n; a.drafts += r.drafts; a.disputed += r.disputed; a.notRun += r.notRun; for (const b of BUCKETS) a.c[b] += r.c[b]; return a; },
-  { n: 0, drafts: 0, disputed: 0, notRun: 0, c: Object.fromEntries(BUCKETS.map((b) => [b, 0])) as Record<Bucket, number> });
+const all = rows.reduce((a, r) => { a.n += r.n; a.drafts += r.drafts; a.reviewed += r.reviewed; a.disputed += r.disputed; a.notRun += r.notRun; for (const b of BUCKETS) a.c[b] += r.c[b]; return a; },
+  { n: 0, drafts: 0, reviewed: 0, disputed: 0, notRun: 0, c: Object.fromEntries(BUCKETS.map((b) => [b, 0])) as Record<Bucket, number> });
 const table = [
-  `| Source | Labels scored | ${BUCKETS.map((b) => b[0].toUpperCase() + b.slice(1)).join(" | ")} | Draft labels | Disputed (not scored) | Not run yet |`,
-  `|---|---|${BUCKETS.map(() => "---").join("|")}|---|---|---|`,
-  ...rows.map((r) => `| ${NAME[r.t]} | ${r.n} | ${BUCKETS.map((b) => r.c[b]).join(" | ")} | ${r.drafts} | ${r.disputed} | ${r.notRun} |`),
-  `| **All** | **${all.n}** | ${BUCKETS.map((b) => `**${all.c[b]}**`).join(" | ")} | **${all.drafts}** | **${all.disputed}** | **${all.notRun}** |`,
+  `| Source | Labels scored | ${BUCKETS.map((b) => b[0].toUpperCase() + b.slice(1)).join(" | ")} | Reviewed labels | Draft labels | Disputed (not scored) | Not run yet |`,
+  `|---|---|${BUCKETS.map(() => "---").join("|")}|---|---|---|---|`,
+  ...rows.map((r) => `| ${NAME[r.t]} | ${r.n} | ${BUCKETS.map((b) => r.c[b]).join(" | ")} | ${r.reviewed} | ${r.drafts} | ${r.disputed} | ${r.notRun} |`),
+  `| **All** | **${all.n}** | ${BUCKETS.map((b) => `**${all.c[b]}**`).join(" | ")} | **${all.reviewed}** | **${all.drafts}** | **${all.disputed}** | **${all.notRun}** |`,
 ].join("\n");
 console.log(table);
 const gate = all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
@@ -173,12 +174,12 @@ for (const [r, c] of [...byRule].sort()) console.log(r, JSON.stringify(c));
 const disputedGroups = new Map<string, number>();
 for (const l of labels) if (l.label.status === "disputed") { const k = (l.label as { notes?: string }).notes?.split(":")[0] ?? "?"; disputedGroups.set(k, (disputedGroups.get(k) ?? 0) + 1); }
 if (process.argv.includes("--report")) {
-  const draftAll = all.drafts === all.n;
+  const draftAll = all.n - all.drafts - all.reviewed === 0;
   const out = [
-    `# Query-log scorecard${draftAll ? " (DRAFT: every label is a draft)" : ""}`, "",
+    `# Query-log scorecard${draftAll ? " (DRAFT: no label is confirmed yet)" : ""}`, "",
     "Every logged question gets one expected outcome: answer (with its source), clarify (with what is asked) or decline (with the plain reason). Labels come from written rules (scripts/draft-qlog-labels.py), never from the engine's output; this run compares the engine with them (scripts/run-qlog-scorecard.ts). The labels, with each question as written (Jeff 2026-11-04), are scripts/fixtures/answer-eval/qlog-labels.json, keyed by a hash of the normalized question; the rules are docs/reports/qlog-label-rules.md. The log copy itself stays outside the repo.", "",
     `Release ${deps.release.id}; run ${new Date().toISOString().slice(0, 10)}. A first question is the first row of each session in each tab; a follow-up is any later row, labeled with the row before it. Distinct questions per tab (the same words counted once; "times" in the label file says how often each was asked).`, "",
-    `**Label status: ${all.n - all.drafts} confirmed, ${all.drafts} draft.** ${draftAll ? "This is a draft scorecard: a draft label can itself be wrong, so a miss here is a candidate, not a finding." : ""}`, "",
+    `**Label status: ${all.n - all.drafts - all.reviewed} confirmed, ${all.reviewed} reviewed (two labelers agree: the rules and an independent second labeler), ${all.drafts} draft (a second-labeler correction, or a rule label not yet reviewed).** No label is confirmed, so this is still a draft scorecard: a miss here is a candidate, not a finding.`, "",
     "**Unverified is not correct.** An answer from the right source counts as correct only once its numbers match independent values (nibrs-model's files, or SQL against the source build); until then it is unverified.", "",
     table, "",
     `Hard gate, wrong answers = 0 (undisputed labels): **${gate}**.`, "",

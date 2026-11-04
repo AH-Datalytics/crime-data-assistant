@@ -55,7 +55,7 @@ PLACE_SET = R(r"\b(?:top \d+|top (?:five|ten|twenty)|(?:\d+|five|ten|twenty) (?:
 # Common short names of big cities and their departments.
 PLACE_ABBR = re.compile(r"\b(?:nyc|NYC|LA|DC|D\.C\.|SF|philly|nola|NOLA|nopd|NOPD|lapd|LAPD|nypd|NYPD|mpd|MPD|cpd|CPD|sfpd|SFPD|dcpd|DCPD|chi-?town)\b")
 REGION = R(r"\b(?:midwest|northeast|south(?:east|west)?|west coast|east coast|new england|pacific northwest|mountain west|sun ?belt|rust ?belt)\b")
-FOREIGN = R(r"\b(?:canada|mexico|england|britain|united kingdom|\buk\b|london|paris,? france|france|germany|berlin|italy|spain|japan|tokyo|china|india|brazil|australia|toronto|vancouver|montreal|ontario|quebec|europe|africa|russia|ukraine|ireland|scotland|israel|nigeria|jamaica|philippines|el salvador|honduras|guatemala|colombia|venezuela)\b")
+FOREIGN = R(r"\b(?:canada|(?<!new )mexico|england|britain|united kingdom|\buk\b|london|paris,? france|france|germany|berlin|italy|spain|japan|tokyo|china|india|brazil|australia|toronto|vancouver|montreal|ontario|quebec|europe|africa|russia|ukraine|ireland|scotland|israel|nigeria|jamaica|philippines|el salvador|honduras|guatemala|colombia|venezuela)\b")
 MONTHS = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
 PERIOD = R(r"\b(?:1[89]\d\d|20[0-3]\d)s?\b|\b(?:the )?(?:fifties|sixties|seventies|eighties|nineties)\b|\b(?:since|as far back|as many years as|all (?:available )?years|every year available|all available|full history|this year|last year|ytd|year[- ]to[- ]date|so far this year|(?:last|past) (?:\d+|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|thirty|fifty|few|several|couple of) (?:years?|months?|decades?)|(?:last|past) (?:year|decade|month|quarter)|rolling(?: over)? (?:12|twelve)(?:[- ]months?)?|(?:12|twelve)[- ]month rolling|latest (?:year|month|data|figures?)|most recent (?:year|month|data|figures?))\b")
 HATE = R(r"\bhate\b|\bbias\b|anti-?(?:black|white|jewish|semit|muslim|islam|asian|hispanic|latino|gay|lesbian|trans|lgbt)")
@@ -308,6 +308,31 @@ for (tab, h), v in sorted(firsts.items()):
 for (tab, ph, h), v in sorted(follows.items()):
     prev_o = first_label.get((tab, ph)) or label_first(v["prev"], tab)
     emit("follow-up", tab, h, v["q"], v["times"], label_follow(prev_o, v["q"], tab), v["prev"], ph)
+
+# The second labeler's review (scripts/fixtures/answer-eval/qlog-label-review.json): agreed labels are reviewed; a
+# correction replaces the rule's label (a draft, drafted by the second labeler); unclear ones are disputed. A label the
+# rules have changed since the review keeps the rules' version (the review was of the old one) as a draft.
+import os
+REVIEW = "scripts/fixtures/answer-eval/qlog-label-review.json"
+if os.path.exists(REVIEW):
+    review = json.load(open(REVIEW, encoding="utf-8"))["labels"]
+    for r in repo:
+        v = review.get(r["id"])
+        if not v:
+            continue
+        lab = r["label"]
+        if v["status"] == "reviewed":
+            lab.update(status="reviewed", reviewed_by=v["by"])
+        elif v["status"] == "disputed":
+            lab.update(status="disputed", reviewed_by=v["by"], notes=f"second labeler unclear: {v.get('why', '')}")
+        else:
+            e = {"outcome": v["expected"]["outcome"], "source": v["expected"].get("source")}
+            for k in ("source_any", "about_any", "reason"):
+                if k in v["expected"]: e[k] = v["expected"][k]
+            if e["outcome"] == "clarify" and "about_any" in e: e["about"] = e["about_any"][0]
+            if e["outcome"] == "answer": e.update(answer="the figures asked for", meaning=None, values={"status": "pending"})
+            r["expected"] = e
+            lab.update(status="draft", drafted_by=v["by"], rule=lab["rule"] + ">2nd", notes=v.get("why", ""))
 
 # Ids are unique (a follow-up id joins both hashes; a clash is a bug, never silently merged).
 ids = collections.Counter(r["id"] for r in repo)
