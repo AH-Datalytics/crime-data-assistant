@@ -938,6 +938,9 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(as(ask("Handgun murders in the United States in 2024"), "route").source, "shr");
   assert.equal(ask("Female murder victims in Memphis in 2023").kind, "answer");
   assert.equal(ask("Murders of females in Minnesota in 2023 according to NIBRS").kind, "answer");
+  // Codex P53 review 01: only when every filter is such a detail, and only for victims.
+  assert.notEqual(ask("Female murder victims in Texas in 2024 cleared by arrest").kind, "route");
+  assert.notEqual(ask("Female murder offenders in Ohio in 2022").kind, "route");
   // A people breakdown for a state is NIBRS's sum by category (coordinator 2026-11-04), never the historical file's.
   {
     const o = as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "answer");
