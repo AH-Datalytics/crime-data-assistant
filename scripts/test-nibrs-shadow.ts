@@ -949,6 +949,15 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.ok(c.options.some((o) => o.label === "All sex offenses") && c.options.every((o) => ["Rape", "All sex offenses"].includes(o.label)), JSON.stringify(c.options.map((o) => o.label)));
     assert.ok(c.options.every((o) => o.continuation && o.continuation.kind !== "decline"), q);
   }
+  // Codex P32 review 01: "forcible sex offenses" is read and asked about (not all six codes); kits are not an offense.
+  assert.equal(as(ask("forcible sex offenses in Denver in 2023"), "clarify").about, "which sex offenses");
+  assert.notEqual(ask("all sex offenses in Denver in 2023").kind, "clarify");
+  assert.ok(!(ask("sexual assault kits in Denver in 2023").kind === "clarify"));
+  for (const q of ["crime and murder rates in Chicago in 2024", "murder and crime in Chicago in 2024"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "clarify" ? o.about === "which kind of crime" : o.kind === "decline" && /isn't one category/.test(o.explanation), q);
+  }
+  assert.ok(!/isn't one category/.test(JSON.stringify(ask("murders and crimes against persons in Chicago in 2024"))));
   // D09 beside another crime: the bare "crime" is never dropped; the crime named is offered on its own.
   {
     const o = ask("murder and crime in Chicago in 2024");
