@@ -466,7 +466,8 @@
    "LS-454",
    "LS-455",
    "LS-456",
-   "LS-457"
+   "LS-457",
+   "LS-458"
   ]
  },
  "eligibility": {
@@ -931,7 +932,8 @@
    "LS-454",
    "LS-455",
    "LS-456",
-   "LS-457"
+   "LS-457",
+   "LS-458"
   ]
  },
  "notBuilt": [
@@ -1189,7 +1191,8 @@
   "LS-454": "designed",
   "LS-455": "designed",
   "LS-456": "designed",
-  "LS-457": "designed"
+  "LS-457": "designed",
+  "LS-458": "designed"
  },
  "scored": [
   {
@@ -5244,7 +5247,7 @@
     }
    ],
    "notes": [
-    "delivered: Texas: aggravated assault offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
+    "delivered: Texas: burglary offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
@@ -5300,6 +5303,26 @@
    "era": "2021 and later",
    "values": "not measured",
    "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-458",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "shr answer",
+     "actual": "routed to shr: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'"
+   ],
+   "capability": "answer:shr count",
+   "era": "2021 and later"
   }
  ]
 }

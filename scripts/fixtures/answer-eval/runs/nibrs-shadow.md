@@ -1,19 +1,19 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 457 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 458 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release test6-20261031-host).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
-- 253: run by this candidate
+- 254: run by this candidate
 - 204: outside the shadow slice
 
 ## Label eligibility (can the case be scored)
 
 - 394: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 9: label drafted
+- 10: label drafted
 
 ## Refused as not built (not scored)
 
@@ -306,17 +306,18 @@ Discrepancies and unverified cases:
 
 ### Development
 
-7 cases. Correct 0; unverified 7; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
+8 cases. Correct 0; unverified 8; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 7 | 0 | 0 | 0 |
+| answer | 8 | 0 | 0 | 0 |
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
 | answer:nibrs count | 2021 and later | 7 | not measured | wrong answers: not measured (0, 7 answers unverified); initial action: pass (100% (7/7)); direct answers: not measured (0% verified, 7 unverified); numeric fixtures: not measured (0/7 match, 7 not measured) |
+| answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -324,7 +325,7 @@ Discrepancies and unverified cases:
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: simple assault victims by sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
-- **LS-452** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024"
+- **LS-452** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024, according to NIBRS"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: United States: murder victims by race, 2024. / Summed over the 14,947 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
@@ -336,17 +337,20 @@ Discrepancies and unverified cases:
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: robbery arrests by arrestee age group, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
-- **LS-455** (unverified; expected answer, got answer) "Aggravated assault offenses in Texas by location type in 2024"
+- **LS-455** (unverified; expected answer, got answer) "Burglary offenses in Texas by location type in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Texas: aggravated assault offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
+  - delivered: Texas: burglary offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
 - **LS-456** (unverified; expected answer, got answer) "Simple assault victims in Tennessee by sex by year from 2023 to 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: simple assault victims by year and sex, 2023 to 2024. / Summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS.
-- **LS-457** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024, only agencies that reported every month"
+- **LS-457** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024 according to NIBRS, only agencies that reported every month"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: United States: murder victims by race, 2024. / Counting only the 13,014 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Includes only agencies that reported c
+- **LS-458** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024"
+  - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
+  - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
 
 ### Held out
 
