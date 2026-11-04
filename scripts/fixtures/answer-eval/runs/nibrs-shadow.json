@@ -808,7 +808,6 @@
    "LS-389",
    "LS-390",
    "LS-391",
-   "LS-392",
    "LS-393",
    "LS-394",
    "LS-395",
@@ -924,6 +923,7 @@
    "LS-218"
   ],
   "label drafted": [
+   "LS-392",
    "LS-419",
    "LS-451",
    "LS-452",
@@ -4212,44 +4212,6 @@
    "unverifiedAnswers": 1
   },
   {
-   "id": "LS-392",
-   "split": "heldout",
-   "expected": "decline",
-   "actual": "answer",
-   "outcome": "wrong_answer",
-   "diffs": [
-    {
-     "field": "meaning",
-     "expected": "(the label gives no meaning past this button)",
-     "actual": "victims.aggravated_assault 2024-01..2024-12",
-     "kind": "unverified"
-    },
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
-     "field": "button \"Consistent Reporting Agencies\" meaning",
-     "expected": "(the label gives no meaning past this button)",
-     "actual": "victims.aggravated_assault 2024-01..2024-12",
-     "kind": "unverified"
-    },
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
-   "notes": [],
-   "capability": "decline:no meaning",
-   "era": "no period",
-   "values": "not measured",
-   "unverifiedAnswers": 2
-  },
-  {
    "id": "LS-393",
    "split": "heldout",
    "expected": "answer",
@@ -5095,6 +5057,34 @@
  ],
  "provisional": [
   {
+   "id": "LS-392",
+   "split": "heldout",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: aggravated assault victims by offender sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, so the categories can add up to"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
    "id": "LS-419",
    "split": "heldout",
    "expected": "answer",
@@ -5294,14 +5284,8 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "wrong_answer",
+   "outcome": "unverified",
    "diffs": [
-    {
-     "field": "filters",
-     "expected": "",
-     "actual": "reporters:every month",
-     "kind": "material"
-    },
     {
      "field": "values",
      "expected": "independent expected values",

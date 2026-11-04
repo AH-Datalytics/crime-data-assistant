@@ -11,9 +11,9 @@ Labeled set: 457 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ## Label eligibility (can the case be scored)
 
-- 395: scorable (reviewed, decided policy)
+- 394: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 8: label drafted
+- 9: label drafted
 
 ## Refused as not built (not scored)
 
@@ -84,7 +84,7 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-194 cases. Correct 170; unverified 18; wrong answers 1; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 170 (trend only).
+193 cases. Correct 170; unverified 18; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -92,7 +92,7 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer | 167 | 0 | 3 | 0 |
 | clarify | 0 | 6 | 2 | 0 |
-| decline | 1 | 0 | 15 | 0 |
+| decline | 0 | 0 | 15 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
@@ -114,7 +114,7 @@ Expected (rows) by actual (columns):
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | 2021 and later | 5 | not measured | wrong answers: not measured (0, 4 answers unverified); declines: not measured (1/5 verified correct, 4 unverified); initial action: pass (100% (5/5)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/5 match, 4 not measured) |
 | decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: not measured (0, 4 answers unverified); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/4 match, 4 not measured) |
-| decline:no meaning | no period | 7 | fail | wrong answers: fail (1); declines: fail (6/7 verified correct, 1 failing); initial action: fail (86% (6/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
+| decline:no meaning | no period | 6 | not measured | wrong answers: pass (0); declines: pass (6/6 verified correct); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -186,11 +186,6 @@ Discrepancies and unverified cases:
 - **LS-391** (unverified; expected decline, got decline) "People charged with robbery in Memphis in 2024"
   - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants).
-- **LS-392** (wrong_answer; expected decline, got answer) "Aggravated assaults in Tennessee in 2024 by offender sex"
-  - unverified meaning: expected `(the label gives no meaning past this button)`, got `victims.aggravated_assault 2024-01..2024-12`
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - unverified button "Consistent Reporting Agencies" meaning: expected `(the label gives no meaning past this button)`, got `victims.aggravated_assault 2024-01..2024-12`
-  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
 - **LS-422** (unverified; expected clarify, got clarify) "what about Wichita?"
   - unverified option "Wichita only" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "Add Wichita; show all three separately" values: expected `independent expected values`, got `none given: NOT MEASURED`
@@ -311,7 +306,7 @@ Discrepancies and unverified cases:
 
 ### Development
 
-7 cases. Correct 0; unverified 6; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 100 (trend only).
+7 cases. Correct 0; unverified 7; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -321,7 +316,7 @@ Expected (rows) by actual (columns):
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 7 | fail | wrong answers: fail (1, 6 answers unverified); initial action: pass (100% (7/7)); direct answers: fail (0% (6 unverified)); numeric fixtures: not measured (0/7 match, 7 not measured) |
+| answer:nibrs count | 2021 and later | 7 | not measured | wrong answers: not measured (0, 7 answers unverified); initial action: pass (100% (7/7)); direct answers: not measured (0% verified, 7 unverified); numeric fixtures: not measured (0/7 match, 7 not measured) |
 
 Discrepancies and unverified cases:
 
@@ -349,27 +344,30 @@ Discrepancies and unverified cases:
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Tennessee: simple assault victims by year and sex, 2023 to 2024. / Summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS.
-- **LS-457** (wrong_answer; expected answer, got answer) "Murder victims in the United States by race in 2024, only agencies that reported every month"
-  - material filters: expected ``, got `reporters:every month`
+- **LS-457** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024, only agencies that reported every month"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: United States: murder victims by race, 2024. / Counting only the 13,014 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Includes only agencies that reported c
 
 ### Held out
 
-1 cases. Correct 0; unverified 0; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 100 (trend only).
+2 cases. Correct 0; unverified 1; wrong answers 1; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 100 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 1 | 0 | 0 | 0 |
+| answer | 2 | 0 | 0 | 0 |
 
 | Capability | Era | Cases | Would-be gate (not a gate) | Categories |
 |---|---|---|---|---|
-| answer:nibrs count | 2021 and later | 1 | fail | wrong answers: fail (1); initial action: pass (100% (1/1)); direct answers: fail (0% (0 unverified)); numeric fixtures: pass (1/1 match) |
+| answer:nibrs count | 2021 and later | 2 | fail | wrong answers: fail (1, 1 answers unverified); initial action: pass (100% (2/2)); direct answers: fail (0% (1 unverified)); numeric fixtures: not measured (1/2 match, 1 not measured) |
 
 Discrepancies and unverified cases:
 
+- **LS-392** (unverified; expected answer, got answer) "Aggravated assaults in Tennessee in 2024 by offender sex"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: aggravated assault victims by offender sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, 
 - **LS-419** (wrong_answer; expected answer, got answer) "make it a bar chart"
   - unverified statement: expected `gives the same numbers as the previous answer: the chart form is the page's, not a new question (P69)`, got `(no check defined)`
   - material statement: expected `Changes the existing chart to bars using the existing result; makes no data-engine request.`, got `Detroit, Michigan: simple assault victims by month, 2023. / Reported by the Detroit Police Department. / Source: FBI NIBRS.`
