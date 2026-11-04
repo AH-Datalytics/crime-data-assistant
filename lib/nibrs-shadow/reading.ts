@@ -213,7 +213,7 @@ function readComparison(text: string, currentYear: number): { comparison: Compar
  * answer contract to give the all-agencies question. */
 /** "according to NIBRS": the source asked for in words (P01). */
 export const NIBRS_WORDS = /,?\s*\b(?:according\s+to|from|in|per)\s+(?:the\s+)?(?:NIBRS|National\s+Incident[-\s]Based\s+Reporting\s+System)\b/i;
-export const CONSISTENT_WORDS = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters)\b/i;
+export const CONSISTENT_WORDS = /,?\s*\b(?:(?:counting\s+)?only\s+(?:the\s+)?agencies\s+that\s+reported\s+(?:every|all|each)\s+(?:\d+\s+)?months?(?:\s+of\s+the\s+(?:year|period))?|consistent(?:ly)?\s+reporting\s+agencies|only\s+consistent\s+reporters|(?:for|among|with)\s+(?:the\s+)?(?:consistent|continuous)(?:ly)?\s+(?:reporters|reporting\s+agencies))\b/i;
 
 export function readQuestion(question: string, currentYear: number, lastMonth?: string): ReadQuestion {
   const readings: Reading[] = [];

@@ -1048,10 +1048,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const catG = plan.groupings.filter((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo."));
   // Several agencies, rates and rankings take the places path (increment 4).
   const stateMode = plan.geography.places[0].kind === "state" || plan.geography.places[0].kind === "national";
-  // P29: an offender or arrestee breakdown that is not built is declined with that reason, never answered as victims.
-  if (stateMode && ppl?.by)
-    return decline("unsupported_capability", `${ppl.by.who === "arrestee" ? "Arrestee" : "Offender"} breakdowns for a whole state or the nation aren't available yet; they are for one agency or several named agencies.`);
-  if (stateMode && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
+  // Offender and arrestee breakdowns for a state or the nation are summed like victims' (coordinator 2026-11-04; P29's
+  // words, by/against, still decide whose attribute is grouped).
+  // A state or national sum by one category (coordinator 2026-11-04): its count and each category's share, never a rate
+  // (D03: no population by group).
+  // P53: murder broken down by a Homicide Report detail (victim or offender age, sex, race, relationship, weapon,
+  // circumstance) for a state or the nation is Homicide Reports', unless NIBRS is named (Codex state-categories review 01.2).
+  if (stateMode && catG.length && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
+    return { kind: "route", source: "shr", explanation: "Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
+  const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
+    && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
+  if (stateMode && !stateBreakdown && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
     return decline("unsupported_capability", "This isn't available yet: a state or national sum of several crimes, a breakdown, a change or a ranking.");
   const placesMode = !stateMode && (plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate"));
   if (placesMode && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))

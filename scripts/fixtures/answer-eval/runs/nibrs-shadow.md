@@ -1,17 +1,17 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 450 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 458 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release test6-20261031-host).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
-- 246: run by this candidate
+- 254: run by this candidate
 - 204: outside the shadow slice
 
 ## Label eligibility (can the case be scored)
 
-- 395: scorable (reviewed, decided policy)
+- 403: scorable (reviewed, decided policy)
 - 54: label unresolved
 - 1: label drafted
 
@@ -23,13 +23,13 @@ Labeled set: 450 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ### Development
 
-36 cases. Correct 28; unverified 7; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
+44 cases. Correct 28; unverified 15; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 24 | 0 | 0 | 0 |
+| answer | 32 | 0 | 0 | 0 |
 | clarify | 0 | 8 | 0 | 0 |
 | decline | 0 | 0 | 4 | 0 |
 
@@ -37,7 +37,8 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
-| answer:nibrs count | 2021 and later | 16 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (16/16)); direct answers: not measured (88% verified, 2 unverified); numeric fixtures: not measured (14/16 match, 2 not measured) |
+| answer:nibrs count | 2021 and later | 23 | not measured | wrong answers: not measured (0, 9 answers unverified); initial action: pass (100% (23/23)); direct answers: not measured (61% verified, 9 unverified); numeric fixtures: not measured (14/23 match, 9 not measured) |
+| answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
 | clarify:nibrs count | spans 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); clarifications: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/1 match, 1 not measured) |
@@ -81,6 +82,36 @@ Discrepancies and unverified cases:
 - **LS-432** (unverified; expected answer, got answer) "Robbery offenders in Memphis by age and month in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Memphis, Tennessee: robbery offenders by month and offender age group, 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
+- **LS-451** (unverified; expected answer, got answer) "Simple assault victims in Tennessee by sex in 2024"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: simple assault victims by sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
+- **LS-452** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024, according to NIBRS"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: United States: murder victims by race, 2024. / Summed over the 14,947 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
+- **LS-453** (unverified; expected answer, got answer) "Robbery offenders in Tennessee by race in 2024"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: robbery offenders by offender race, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
+- **LS-454** (unverified; expected answer, got answer) "Robbery arrests in Tennessee by age in 2024"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: robbery arrests by arrestee age group, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
+- **LS-455** (unverified; expected answer, got answer) "Burglary offenses in Texas by location type in 2024"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Texas: burglary offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
+- **LS-456** (unverified; expected answer, got answer) "Simple assault victims in Tennessee by sex by year from 2023 to 2024"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: simple assault victims by year and sex, 2023 to 2024. / Summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS.
+- **LS-457** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024 according to NIBRS, only agencies that reported every month"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: United States: murder victims by race, 2024. / Counting only the 13,014 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Includes only agencies that reported c
+- **LS-458** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024"
+  - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
+  - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
 
 ### Held out
 
@@ -90,9 +121,9 @@ Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 167 | 0 | 3 | 0 |
+| answer | 168 | 0 | 3 | 0 |
 | clarify | 0 | 6 | 2 | 0 |
-| decline | 0 | 0 | 16 | 0 |
+| decline | 0 | 0 | 15 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
@@ -102,7 +133,7 @@ Expected (rows) by actual (columns):
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: not measured (2/3 match, 1 not measured) |
 | answer:nibrs change | 2021 and later | 12 | pass | wrong answers: pass (0); initial action: pass (100% (12/12)); direct answers: pass (100%); numeric fixtures: pass (12/12 match) |
-| answer:nibrs count | 2021 and later | 119 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (97% (116/119)); direct answers: pass (97%); numeric fixtures: not measured (115/116 match, 1 not measured) |
+| answer:nibrs count | 2021 and later | 120 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (98% (117/120)); direct answers: pass (96%); numeric fixtures: not measured (115/117 match, 2 not measured) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 14 | pass | wrong answers: pass (0); initial action: pass (100% (14/14)); direct answers: pass (100%); numeric fixtures: pass (14/14 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
@@ -114,7 +145,7 @@ Expected (rows) by actual (columns):
 | clarify:shr count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | decline:nibrs count | 2021 and later | 5 | not measured | wrong answers: not measured (0, 4 answers unverified); declines: not measured (1/5 verified correct, 4 unverified); initial action: pass (100% (5/5)); direct answers: pass (no answerable cases); numeric fixtures: not measured (1/5 match, 4 not measured) |
 | decline:nibrs count | spans 2021 | 4 | not measured | wrong answers: not measured (0, 4 answers unverified); declines: not measured (0/4 verified correct, 4 unverified); initial action: pass (100% (4/4)); direct answers: pass (no answerable cases); numeric fixtures: not measured (0/4 match, 4 not measured) |
-| decline:no meaning | no period | 7 | not measured | wrong answers: pass (0); declines: not measured (6/7 verified correct, 1 unverified); initial action: pass (100% (7/7)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 6 | not measured | wrong answers: pass (0); declines: pass (6/6 verified correct); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 
 Discrepancies and unverified cases:
 
@@ -186,9 +217,10 @@ Discrepancies and unverified cases:
 - **LS-391** (unverified; expected decline, got decline) "People charged with robbery in Memphis in 2024"
   - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants).
-- **LS-392** (unverified; expected decline, got decline) "Aggravated assaults in Tennessee in 2024 by offender sex"
-  - unverified reason: expected `Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.`, got `unsupported_capability`
-  - declined (unsupported_capability): Offender breakdowns for a whole state or the nation aren't available yet; they are for one agency or several named agencies.
+- **LS-392** (unverified; expected answer, got answer) "Aggravated assaults in Tennessee in 2024 by offender sex"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: aggravated assault victims by offender sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, 
 - **LS-422** (unverified; expected clarify, got clarify) "what about Wichita?"
   - unverified option "Wichita only" values: expected `independent expected values`, got `none given: NOT MEASURED`
   - unverified option "Add Wichita; show all three separately" values: expected `independent expected values`, got `none given: NOT MEASURED`

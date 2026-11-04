@@ -145,6 +145,8 @@ const FIXTURES: Record<string, string[]> = {
     // Jeff 2026-11-02: a breakdown by month or quarter (Unknown last within each period; the month order kept).
     "Simple assault victims in Memphis by sex and month in 2024", "Simple assault victims in Memphis by sex by quarter in 2024",
     "Simple assault victims in Memphis by sex and year from 2023 to 2024",
+    // A state sum by category (coordinator 2026-11-04): each category over the reporting agencies, the button's view too.
+    "Simple assault victims in Kansas by sex in 2024", "Simple assault victims in Kansas by sex by year from 2023 to 2024",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
     // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.

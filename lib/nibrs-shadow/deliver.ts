@@ -6,6 +6,7 @@
  * measures are columns side by side; a combined total (D19, P31) is a sentence that adds the table's own cells, given only
  * when every part is known. No commentary, no causes, no comparisons the question did not ask for.
  */
+import { stateName } from "./places";
 import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
 import type { NibrsPlan } from "../nibrs-plan/plan";
 type Measure = NibrsPlan["measures"][number];
@@ -238,10 +239,13 @@ export type TimeOptions = { years?: number[]; rolling?: { months: number; missin
 export function incidentsBeside(plan: NibrsPlan): string | null {
   return plan.statistics.find((s) => s.kind === "incidents")?.as ?? null;
 }
+/** The place an answer names: the agency's label, a state's name, or the United States (a state or national sum by category). */
+const placeLabel = (p: NibrsPlan["geography"]["places"][number]) =>
+  p.kind === "agency" ? p.label : p.kind === "state" ? stateName((p as { code: string }).code) : p.kind === "national" ? "United States" : "the place";
 export function deliver(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[] = [], combined: Combined | null = null, opts: TimeOptions = {}): Delivered {
   const place = plan.geography.places[0];
-  const agency = place.kind === "agency" ? place.label : "the place";
+  const agency = placeLabel(place);
   // Several measures: a count each, side by side (no categories, no shares). One measure: a count and optionally its share.
   const beside = incidentsBeside(plan);
   if (plan.statistics.some((x) => x.kind === "ratio")) return deliverShare(plan, effective, requestedTo, columns, rows, statements, release, readings);
@@ -419,7 +423,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
 function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[]): Delivered {
   const place = plan.geography.places[0];
-  const agency = place.kind === "agency" ? place.label : "the place";
+  const agency = placeLabel(place);
   const [cleared, all] = plan.measures;
   const [cCount, cInc, aCount, ratio] = plan.statistics.map((s) => s.as);
   const r = rows[0] ?? [];
@@ -453,7 +457,7 @@ function deliverShare(plan: NibrsPlan, effective: { from: string; to: string }, 
 function deliverSeveral(plan: NibrsPlan, effective: { from: string; to: string }, requestedTo: string, columns: string[], rows: unknown[][],
   statements: AnswerStatement[], release: string, readings: string[], combined: Combined | null): Delivered {
   const place = plan.geography.places[0];
-  const agency = place.kind === "agency" ? place.label : "the place";
+  const agency = placeLabel(place);
   const time = plan.groupings.find((g) => g.dimension.startsWith("time."))?.dimension;
   const at = (name: string) => columns.indexOf(name);
   const ip = at("period");
@@ -525,7 +529,7 @@ function monthsOf(p: { from: string; to: string }): string | null {
 export function deliverComparison(plan: NibrsPlan, periods: { earlier: { from: string; to: string }; later: { from: string; to: string } }, cmp: Comparison,
   statements: AnswerStatement[], release: string, readings: string[] = []): Delivered {
   const place = plan.geography.places[0];
-  const agency = place.kind === "agency" ? place.label : "the place";
+  const agency = placeLabel(place);
   const what = measureWords(plan);
   const Header = `${what[0].toUpperCase()}${what.slice(1)}`;
   const [E, L] = [periodWords(periods.earlier.from, periods.earlier.to), periodWords(periods.later.from, periods.later.to)];

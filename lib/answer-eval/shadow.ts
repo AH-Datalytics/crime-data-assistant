@@ -539,6 +539,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     // Department"): either is accepted for an agency the plan names.
     if (ag) ok = all.includes(ag[1]) || o.plan.geography.places.some((p) => p.kind === "agency" && (() => { const f = fbiNameFor(ag[1], p.ori); return !!f && all.includes(f); })());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
+    // A state or national sum by category (coordinator 2026-11-04): the agencies it sums over, or the fixed set it counts.
+    else if (s === "names how many agencies it sums over") ok = /Summed over the [\d,]+ agencies that reported\./.test(all) && !!o.stateSum;
+    else if (s === "names the Consistent Reporting Agencies it counts") ok = /Counting only the [\d,]+ Consistent Reporting Agencies that reported every month/.test(all) && !!o.stateSum;
     else if (s === "lists the unknown category after the known ones in each period") {
       // P86 (coordinator 2026-11-02): within each period, the not-known categories after the known ones, Unknown once.
       const cols = o.delivered.table.columns;

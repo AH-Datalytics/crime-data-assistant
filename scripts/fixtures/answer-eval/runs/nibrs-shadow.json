@@ -459,7 +459,15 @@
    "LS-447",
    "LS-448",
    "LS-449",
-   "LS-450"
+   "LS-450",
+   "LS-451",
+   "LS-452",
+   "LS-453",
+   "LS-454",
+   "LS-455",
+   "LS-456",
+   "LS-457",
+   "LS-458"
   ]
  },
  "eligibility": {
@@ -858,7 +866,15 @@
    "LS-447",
    "LS-448",
    "LS-449",
-   "LS-450"
+   "LS-450",
+   "LS-451",
+   "LS-452",
+   "LS-453",
+   "LS-454",
+   "LS-455",
+   "LS-456",
+   "LS-457",
+   "LS-458"
   ],
   "label unresolved": [
    "LS-024",
@@ -1168,7 +1184,15 @@
   "LS-447": "designed",
   "LS-448": "designed",
   "LS-449": "designed",
-  "LS-450": "designed"
+  "LS-450": "designed",
+  "LS-451": "designed",
+  "LS-452": "designed",
+  "LS-453": "designed",
+  "LS-454": "designed",
+  "LS-455": "designed",
+  "LS-456": "designed",
+  "LS-457": "designed",
+  "LS-458": "designed"
  },
  "scored": [
   {
@@ -4193,22 +4217,30 @@
   {
    "id": "LS-392",
    "split": "heldout",
-   "expected": "decline",
-   "actual": "decline",
+   "expected": "answer",
+   "actual": "answer",
    "outcome": "unverified",
    "diffs": [
     {
-     "field": "reason",
-     "expected": "Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.",
-     "actual": "unsupported_capability",
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
      "kind": "unverified"
     }
    ],
    "notes": [
-    "declined (unsupported_capability): Offender breakdowns for a whole state or the nation aren't available yet; they are for one agency or several named agencies."
+    "delivered: Tennessee: aggravated assault victims by offender sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, so the categories can add up to"
    ],
-   "capability": "decline:no meaning",
-   "era": "no period"
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
   },
   {
    "id": "LS-393",
@@ -5052,6 +5084,216 @@
    "era": "2021 and later",
    "values": "not measured",
    "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-451",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: simple assault victims by sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-452",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: United States: murder victims by race, 2024. / Summed over the 14,947 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-453",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: robbery offenders by offender race, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-454",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: robbery arrests by arrestee age group, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-455",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Texas: burglary offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-456",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: simple assault victims by year and sex, 2023 to 2024. / Summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS."
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-457",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: United States: murder victims by race, 2024. / Counting only the 13,014 Consistent Reporting Agencies that reported every month from January 2024 through December 2024. / Includes only agencies that reported complete data. / Source: FBI NIB"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-458",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "shr answer",
+     "actual": "routed to shr: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'"
+   ],
+   "capability": "answer:shr count",
+   "era": "2021 and later"
   }
  ],
  "provisional": [
