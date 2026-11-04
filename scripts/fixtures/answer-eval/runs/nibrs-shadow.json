@@ -5108,22 +5108,14 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Tennessee: simple assault victims by sex, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-452",
@@ -5144,94 +5136,56 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Tennessee: robbery offenders by offender race, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-454",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Tennessee: robbery arrests by arrestee age group, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-455",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    },
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Texas: burglary offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 2
+   "values": "match"
   },
   {
    "id": "LS-456",
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Tennessee: simple assault victims by year and sex, 2023 to 2024. / Summed over the agencies that reported each year. / Includes all agencies. / Source: FBI NIBRS."
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-457",
@@ -5262,7 +5216,7 @@
     }
    ],
    "notes": [
-    "routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'"
+    "routed to shr: Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide"
    ],
    "capability": "answer:shr count",
    "era": "2021 and later"
@@ -5286,22 +5240,14 @@
    "split": "dev",
    "expected": "answer",
    "actual": "answer",
-   "outcome": "unverified",
-   "diffs": [
-    {
-     "field": "button \"Consistent Reporting Agencies\" values",
-     "expected": "independent expected values",
-     "actual": "none given: NOT MEASURED",
-     "kind": "unverified"
-    }
-   ],
+   "outcome": "correct",
+   "diffs": [],
    "notes": [
     "delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / One circumstance category is left out of this table for now: 5,275 aggravated assault victims were recorde"
    ],
    "capability": "answer:nibrs count",
    "era": "2021 and later",
-   "values": "not measured",
-   "unverifiedAnswers": 1
+   "values": "match"
   },
   {
    "id": "LS-461",
@@ -5346,7 +5292,7 @@
     }
    ],
    "notes": [
-    "routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'"
+    "routed to shr: Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide"
    ],
    "capability": "answer:shr count",
    "era": "2021 and later"
