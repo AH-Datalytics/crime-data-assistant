@@ -1,19 +1,19 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 458 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 464 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release test6-20261031-host).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
-- 254: run by this candidate
+- 260: run by this candidate
 - 204: outside the shadow slice
 
 ## Label eligibility (can the case be scored)
 
 - 403: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 1: label drafted
+- 7: label drafted
 
 ## Refused as not built (not scored)
 
@@ -341,7 +341,47 @@ Discrepancies and unverified cases:
 
 ### Development
 
-No cases.
+6 cases. Correct 0; unverified 6; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
+
+Expected (rows) by actual (columns):
+
+| | answer | clarify | decline | no reading |
+|---|---|---|---|---|
+| answer | 5 | 0 | 0 | 0 |
+| decline | 0 | 0 | 1 | 0 |
+
+| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
+|---|---|---|---|---|
+| answer:nibrs count | 2021 and later | 4 | not measured | wrong answers: not measured (0, 4 answers unverified); initial action: pass (100% (4/4)); direct answers: not measured (0% verified, 4 unverified); numeric fixtures: not measured (0/4 match, 4 not measured) |
+| answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
+| decline:no meaning | no period | 1 | not measured | wrong answers: pass (0); declines: not measured (0/1 verified correct, 1 unverified); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
+
+Discrepancies and unverified cases:
+
+- **LS-459** (unverified; expected answer, got answer) "Murder victims in Memphis by circumstance in 2024"
+  - unverified groupings: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murder victims by circumstance, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up 
+- **LS-460** (unverified; expected answer, got answer) "Aggravated assault victims in Tennessee by circumstance in 2024"
+  - unverified groupings: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - unverified button "Consistent Reporting Agencies" groupings: expected `?`, got `?`
+  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, 
+- **LS-461** (unverified; expected answer, got answer) "Gang-related murders in Memphis in 2024"
+  - unverified filters: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: 1 murder victim where the circumstance was gangland (organized crime involvement) or juvenile gang in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's ci
+- **LS-462** (unverified; expected answer, got answer) "Aggravated assault victims in Memphis from arguments in 2024"
+  - unverified filters: expected `?`, got `?`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: 4,189 aggravated assault victims where the circumstance was argument in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a co
+- **LS-463** (unverified; expected answer, got answer) "Gang-related murders in Tennessee in 2024"
+  - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
+  - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
+- **LS-464** (unverified; expected decline, got decline) "Gang-related robberies in Memphis in 2024"
+  - unverified reason: expected `Circumstances (element 31) are recorded for murder and aggravated assault victims, not robberies.`, got `unsupported_capability`
+  - declined (unsupported_capability): Circumstances (such as gang-related or an argument) are recorded for murder and aggravated assault victims; ask for those.
 
 ### Held out
 

@@ -467,7 +467,13 @@
    "LS-455",
    "LS-456",
    "LS-457",
-   "LS-458"
+   "LS-458",
+   "LS-459",
+   "LS-460",
+   "LS-461",
+   "LS-462",
+   "LS-463",
+   "LS-464"
   ]
  },
  "eligibility": {
@@ -933,7 +939,13 @@
    "LS-218"
   ],
   "label drafted": [
-   "LS-419"
+   "LS-419",
+   "LS-459",
+   "LS-460",
+   "LS-461",
+   "LS-462",
+   "LS-463",
+   "LS-464"
   ]
  },
  "notBuilt": [
@@ -1192,7 +1204,13 @@
   "LS-455": "designed",
   "LS-456": "designed",
   "LS-457": "designed",
-  "LS-458": "designed"
+  "LS-458": "designed",
+  "LS-459": "designed",
+  "LS-460": "designed",
+  "LS-461": "designed",
+  "LS-462": "designed",
+  "LS-463": "designed",
+  "LS-464": "designed"
  },
  "scored": [
   {
@@ -5323,6 +5341,170 @@
    "capability": "answer:nibrs count",
    "era": "2021 and later",
    "values": "match"
+  },
+  {
+   "id": "LS-459",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "groupings",
+     "expected": "?",
+     "actual": "?",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: murder victims by circumstance, 2024. / Reported by the Memphis Police Department. / A crime that falls in several of these categories is counted once in each, so the categories can add up to more than the total. / Sourc"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-460",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "groupings",
+     "expected": "?",
+     "actual": "?",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" groupings",
+     "expected": "?",
+     "actual": "?",
+     "kind": "unverified"
+    },
+    {
+     "field": "button \"Consistent Reporting Agencies\" values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Tennessee: aggravated assault victims by circumstance, 2024. / Summed over the 398 agencies that reported. / Includes all agencies. / A crime that falls in several of these categories is counted once in each, so the categories can add up to"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 2
+  },
+  {
+   "id": "LS-461",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "filters",
+     "expected": "?",
+     "actual": "?",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: 1 murder victim where the circumstance was gangland (organized crime involvement) or juvenile gang in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a cou"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-462",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "filters",
+     "expected": "?",
+     "actual": "?",
+     "kind": "unverified"
+    },
+    {
+     "field": "values",
+     "expected": "independent expected values",
+     "actual": "none given: NOT MEASURED",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "delivered: Memphis, Tennessee: 4,189 aggravated assault victims where the circumstance was argument in 2024. / Reported by the Memphis Police Department. / Many agencies record a victim's circumstance as unknown, so a count for one circumstance can be"
+   ],
+   "capability": "answer:nibrs count",
+   "era": "2021 and later",
+   "values": "not measured",
+   "unverifiedAnswers": 1
+  },
+  {
+   "id": "LS-463",
+   "split": "dev",
+   "expected": "answer",
+   "actual": "answer",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "route",
+     "expected": "shr answer",
+     "actual": "routed to shr: not run by this NIBRS shadow",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'"
+   ],
+   "capability": "answer:shr count",
+   "era": "2021 and later"
+  },
+  {
+   "id": "LS-464",
+   "split": "dev",
+   "expected": "decline",
+   "actual": "decline",
+   "outcome": "unverified",
+   "diffs": [
+    {
+     "field": "reason",
+     "expected": "Circumstances (element 31) are recorded for murder and aggravated assault victims, not robberies.",
+     "actual": "unsupported_capability",
+     "kind": "unverified"
+    }
+   ],
+   "notes": [
+    "declined (unsupported_capability): Circumstances (such as gang-related or an argument) are recorded for murder and aggravated assault victims; ask for those."
+   ],
+   "capability": "decline:no meaning",
+   "era": "no period"
   }
  ]
 }
