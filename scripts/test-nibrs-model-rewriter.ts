@@ -115,5 +115,21 @@ assert.equal(ran, 0);
   assert.equal((await hybridRewriteAsync(P, "and maybe the one two years back", async () => null)).kind, "ask");
   assert.equal((await hybridRewriteAsync(P, "and maybe the one two years back", async () => { throw new Error("quota"); })).kind, "ask");
   assert.equal((await hybridRewriteAsync(P, "hmm that seems off", async () => ({ kind: "rewrite", question: "Murders in Chicago in 1990" }))).kind, "ask", "the guards still apply");
+  // A question of its own is new before any rewrite or model call (redesign test 2026-11-04): the five turns it typed.
+  for (const [prev, q] of [
+    ["murders in Tennessee year to date", "robberies in the Midwest rolling 12 months"],
+    ["robberies in the United States by month in 2025", "robbery rate in Memphis rolling 12 months"],
+    ["murders in Tennessee by month in 2026", "robberies in Clinton"],
+    ["robberies in Zzyzxville in 2025", "robberies in Paris, France in 2025"],
+    ["robberies in Paris, France in 2025", "Memphis and Nashville robberies by year"],
+    ["Memphis murders in 2024", "How many murders were there in Zzyzxville in 2024?"],
+  ]) {
+    let called = false;
+    const r = await hybridRewriteAsync(prev, q, async () => { called = true; return null; });
+    assert.ok(r.kind === "new" && r.question === q && !called, `${prev} || ${q}: ${JSON.stringify(r)}`);
+    assert.equal(hybridRewriter({ rewrite: () => { throw new Error("no model call"); } }).rewrite(prev, q).kind, "new");
+  }
+  // A follow-up still is one.
+  assert.notEqual((await hybridRewriteAsync(P, "now in Nashville", async () => null)).kind, "new");
   console.log("nibrs model rewriter: guarded rewrites keep the reader's meaning; the rest, malformed answers and misses are asked");
 })().catch((e) => { console.error(e); process.exit(1); });

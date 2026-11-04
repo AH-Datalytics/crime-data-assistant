@@ -124,7 +124,9 @@ export function standsAlone(turn: string): boolean {
   const own = partsOf(t);
   // A place the reader doesn't know ("murders in Zzyzxville in 2024") is still a place named: the question stands on its
   // own and is answered or declined as a new one, never read as a change to the last (redesign test, 2026-11-04).
-  const unknownPlace = own.all.some((p) => p.state === "not-interpreted" && /^in\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z]{2})?$/.test(p.text.trim()));
+  // "How many murders were there in Zzyzxville": the verb before the place is read with it (Codex contract-fixes 01.1).
+  const unknownPlace = own.all.some((p) => p.state === "not-interpreted"
+    && /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z]{2})?$/.test(p.text.trim()));
   return own.measures.length > 0 && (own.places.length > 0 || unknownPlace);
 }
 

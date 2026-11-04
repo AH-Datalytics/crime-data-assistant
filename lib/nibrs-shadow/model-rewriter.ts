@@ -10,7 +10,7 @@
  * (7b's rule 2). The model's own options are not used (each would be run as a continuation).
  */
 import { createHash } from "node:crypto";
-import { deterministicRewriter, PLACE_ASK, type FollowUpRewriter, type Rewrite } from "./follow-up";
+import { deterministicRewriter, PLACE_ASK, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { readQuestion } from "./reading";
 
 export const MODEL_ID = "gemini-3.8-flash";
@@ -149,9 +149,21 @@ export function guarded(a: ModelAnswer | null, previous: string, followUp: strin
  * model's guarded answer (a proposal, or a new question the baseline's check confirms); where both ask, the baseline's
  * ask, with its options.
  */
+/**
+ * A turn that stands on its own (its own crime and place, nothing pointing back) is a new question, before any rewrite
+ * (Jeff 2026-11-01; shadowFollowUp's rule). The live preview reads follow-ups through the hybrids below, not through
+ * shadowFollowUp, so they say so too (redesign test 2026-11-04: "robberies in the Midwest rolling 12 months" after
+ * another question came back as "ask it as a new question", and "robberies in Clinton" as a proposal).
+ */
+function ownQuestion(followUp: string): Rewrite | null {
+  return standsAlone(followUp) ? { kind: "new", question: followUp.trim(), confidence: "certain", how: "a question of its own: its own crime and place" } : null;
+}
+
 export function hybridRewriter(model: FollowUpRewriter): FollowUpRewriter {
   return {
     rewrite(previous: string, followUp: string): Rewrite {
+      const own = ownQuestion(followUp);
+      if (own) return own;
       const d = deterministicRewriter.rewrite(previous, followUp);
       if (d.kind !== "ask") return d;
       const m = model.rewrite(previous, followUp);
@@ -198,6 +210,8 @@ function derivedYears(previous: string, followUp: string): number[] {
  */
 export async function hybridRewriteAsync(previous: string, followUp: string,
   callModel: (previous: string, followUp: string) => Promise<unknown | null>): Promise<Rewrite> {
+  const own = ownQuestion(followUp);
+  if (own) return own;
   const d = deterministicRewriter.rewrite(previous, followUp);
   if (d.kind !== "ask") return d;
   let answer: ModelAnswer | null = null;
