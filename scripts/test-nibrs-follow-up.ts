@@ -214,4 +214,11 @@ assert.equal(ran, before, "an ask with no options runs nothing");
   assert.equal(q(rw("Robberies in Memphis in 2024", "what about Nashville")), "Robberies in Nashville in 2024");
 }
 
+// A full question naming a place the reader doesn't know stands on its own (redesign test, 2026-11-04): answered or
+// declined as a new question, never read as a change to the previous one; a bare place or year still follows up.
+assert.equal(standsAlone("murders in Zzyzxville in 2024"), true);
+assert.equal(standsAlone("How many murders were there in Zzyzxville in 2024?"), true);
+assert.equal(standsAlone("now in Nashville"), false);
+assert.equal(standsAlone("and in 2023"), false);
+
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");

@@ -221,7 +221,11 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   }
   const vals = covered.map((m) => values.get(m) ?? null);
   // Agencies with no figure in a group's month are left out of its total and named (Codex design check 01.2).
-  const leftOut = coverage.filter((c) => c.blank > 0).map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
+  // The same count every month is said once (redesign test, coordinator 2026-11-04: "January 2025 (5 of 547), February
+  // 2025 (5 of 547) ..."); otherwise each month with its own.
+  const gaps = coverage.filter((c) => c.blank > 0);
+  const same = gaps.length > 1 && gaps.length === coverage.length && gaps.every((c) => c.blank === gaps[0].blank && c.agencies === gaps[0].agencies);
+  const leftOut = same ? [`${fmt(gaps[0].blank)} of ${fmt(gaps[0].agencies)} in every month`] : gaps.map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
   // P90's sentence, in the shared wording: the agencies counted and the people they cover, as of the latest month shown.
   const lastCov = coverage[coverage.length - 1];
   const cohortLine = lastCov ? [`This counts only the ${fmt(lastCov.agencies)} Consistent Reporting ${lastCov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(lastCov.population)} people, that reported every month from ${monthWords(b.firstMonth)} through ${monthWords(b.lastMonth)}.`] : [];

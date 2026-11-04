@@ -52,6 +52,13 @@ assert.match((early as { explanation: string }).explanation, /^Current Trends to
 const ytdOut = answerCurrent({ measure: "murder", place: nation, from: "2024-12", to: "2025-02", form: "rolling" }, b, stub([]));
 assert.equal(ytdOut.kind, "current-decline", "a rolling 12 reaching before the group's first month is never the part held");
 
+// The same agencies left out every month is said once (redesign test, 2026-11-04).
+{
+  const g = answerCurrent({ measure: "rape", place: nation, from: "2026-01", to: "2026-03", form: "months" }, b,
+    stub(["2026-01", "2026-02", "2026-03"].map((m) => [m, 3000, 547, 111272916, 5])));
+  assert.ok(g.kind === "current" && g.delivered.text.includes("Agencies with no rape figure are left out of the total: 5 of 547 in every month."), JSON.stringify(g));
+}
+
 // Against the build, when it is here.
 const root = process.env.CURRENT_BUILD ?? "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct";
 const python = process.env.NIBRS_SHADOW_PYTHON ?? "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe";
