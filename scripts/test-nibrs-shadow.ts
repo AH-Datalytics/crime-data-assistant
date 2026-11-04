@@ -932,6 +932,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(as(ask("Murder victims in Tennessee by race in 2024"), "route").source, "shr");
   assert.equal(ask("Murder victims in Tennessee by race in 2024, according to NIBRS").kind, "answer");
   assert.notEqual(ask("Murders in Tennessee in 2024 by clearance type").kind, "route", "a clearance is not a Homicide Report detail");
+  // A detail selected, not only broken down (query-log scorecard 2026-11-04): a state's female victims, the nation's
+  // handgun murders; a city stays NIBRS's, and so does a state with NIBRS named.
+  assert.equal(as(ask("How many murders of females were there in Minnesota in 2023"), "route").source, "shr");
+  assert.equal(as(ask("Handgun murders in the United States in 2024"), "route").source, "shr");
+  assert.equal(ask("Female murder victims in Memphis in 2023").kind, "answer");
+  assert.equal(ask("Murders of females in Minnesota in 2023 according to NIBRS").kind, "answer");
   // A people breakdown for a state is NIBRS's sum by category (coordinator 2026-11-04), never the historical file's.
   {
     const o = as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "answer");
