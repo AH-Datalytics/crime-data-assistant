@@ -102,6 +102,7 @@ export function filterFor(value: string, unit: CountingUnit): Filter | null {
     case "drug": return { kind: "exists", scope: "incident", entity: "property_drug", attribution: "incident_level_only", where: [attr("property_drug.drug_type", [val])] };
     case "dv": return DV[val] ? { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", DV[val])] } : null;
     case "relationship": return { kind: "exists", scope: "victim", entity: "victim_offender", where: [attr("victim_offender.relationship", [val])] };
+    case "circumstance": return { kind: "exists", scope: "victim", entity: "victim_circumstance", where: [attr("victim_circumstance.circumstance", val.split("+"))] };
     case "bias": return { kind: "exists", scope: "offense", entity: "offense_bias", where: [attr("offense_bias.bias", [val])] };
     case "clearance":
       return ["arrest", "exceptional"].includes(val) ? onEntity("offense", attr("offense.clearance_method", [val])) : onEntity("offense", attr("offense.clearance_type", [val]));
@@ -125,6 +126,8 @@ export function groupingFor(dim: string, unit: CountingUnit): Grouping | null {
     case "clearance-type": return g("offense.clearance_type");
     case "clearance-method": return g("offense.clearance_method");
     case "relationship": return g("victim_offender.relationship", { multiValue: "each_value" });
+    // Element 31 is on the victim: counted victims only (a murder or aggravated assault is counted by victim, D18).
+    case "circumstance": return ent === "victim" ? g("victim_circumstance.circumstance", { multiValue: "each_value" }) : null;
     case "offense": return ent === "offense" ? g("offense.offense") : g("victim_offense.offense", { multiValue: "each_value" });
     case "victim-offender-race": return g("victim_offender.victim_offender_race");
     case "hour": return g("incident.hour");

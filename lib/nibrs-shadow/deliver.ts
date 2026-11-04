@@ -6,6 +6,7 @@
  * measures are columns side by side; a combined total (D19, P31) is a sentence that adds the table's own cells, given only
  * when every part is known. No commentary, no causes, no comparisons the question did not ask for.
  */
+import { CIRCUMSTANCE } from "../nibrs-plan/draft-layer";
 import { stateName } from "./places";
 import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
 import type { NibrsPlan } from "../nibrs-plan/plan";
@@ -194,6 +195,7 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "offense.location_type": { header: "Location type", plural: "location type", names: LOCATION_TYPES },
   "offense_weapon.weapon": { header: "Weapon", plural: "weapon", names: WEAPON_TYPES },
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
+  "victim_circumstance.circumstance": { header: "Circumstance", plural: "circumstance", names: CIRCUMSTANCE },
   // A crime by its offenders' sexes, races, ethnicities or ages (P49), or offenders by their own (P44).
   "offender.sex": { header: "Offender sex", plural: "offender sex", names: { ...SEX, unknown_offender: "Unknown offender" } },
   "offender.race": { header: "Offender race", plural: "offender race", names: { ...RACE_CODES, unknown_offender: "Unknown offender" } },
