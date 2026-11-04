@@ -23,7 +23,7 @@ Labeled set: 464 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ### Development
 
-50 cases. Correct 38; unverified 11; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
+50 cases. Correct 39; unverified 10; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
 
 Expected (rows) by actual (columns):
 
@@ -37,7 +37,7 @@ Expected (rows) by actual (columns):
 |---|---|---|---|---|
 | answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
-| answer:nibrs count | 2021 and later | 27 | not measured | wrong answers: not measured (0, 3 answers unverified); initial action: pass (100% (27/27)); direct answers: not measured (89% verified, 3 unverified); numeric fixtures: not measured (24/27 match, 3 not measured) |
+| answer:nibrs count | 2021 and later | 27 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (27/27)); direct answers: not measured (93% verified, 2 unverified); numeric fixtures: not measured (25/27 match, 2 not measured) |
 | answer:shr count | 2021 and later | 2 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (2/2)); direct answers: not measured (0% verified, 2 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
@@ -82,15 +82,12 @@ Discrepancies and unverified cases:
 - **LS-432** (unverified; expected answer, got answer) "Robbery offenders in Memphis by age and month in 2024"
   - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
   - delivered: Memphis, Tennessee: robbery offenders by month and offender age group, 2024. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
-- **LS-455** (unverified; expected answer, got answer) "Burglary offenses in Texas by location type in 2024"
-  - unverified button "Consistent Reporting Agencies" values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Texas: burglary offenses by location type, 2024. / Summed over the 1,533 agencies that reported. / Includes all agencies. / Source: FBI NIBRS.
 - **LS-458** (unverified; expected answer, got answer) "Murder victims in the United States by race in 2024"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
-  - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
+  - routed to shr: Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide
 - **LS-463** (unverified; expected answer, got answer) "Gang-related murders in Tennessee in 2024"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
-  - routed to shr: Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren'
+  - routed to shr: Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide
 - **LS-464** (unverified; expected decline, got decline) "Gang-related robberies in Memphis in 2024"
   - unverified reason: expected `Circumstances (element 31) are recorded for murder and aggravated assault victims, not robberies.`, got `unsupported_capability`
   - declined (unsupported_capability): Circumstances (such as gang-related or an argument) are recorded for murder and aggravated assault victims; ask for those. For example: "robberies in Memphis in 2025".

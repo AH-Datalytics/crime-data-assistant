@@ -1069,8 +1069,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Only a Homicide Report detail: a person's attributes, the relationship, the weapon, the circumstance; never a
   // clearance or a location (query-log rerun 2026-11-04: "Virginia murder clearances by type" had been routed).
   const shrDetailDim = (d: string) => /^(?:victim|offender|victim_offender|offense_weapon|victim_circumstance)\./.test(d);
-  if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
-    return { kind: "route", source: "shr", explanation: "Murder broken down by the victims' or offenders' details for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
+  // A detail selected counts as one broken down (query-log scorecard 2026-11-04: "murders of females in MN in 2023" and
+  // "murders with handguns versus rifles nationally" had been NIBRS sums).
+  // Only when every filter is such a detail (Codex P53 review 01.1: a clearance or location beside it keeps its own
+  // path), and only for victims, the unit Homicide Reports count (01.2: murder offenders stay NIBRS's).
+  const filterDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
+  const detailSelected = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim))
+    && plan.measures.every((m) => /^victims\.(?:murder|homicide)/.test(m.id));
+  if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
+    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
   const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
     && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
   if (stateMode && !stateBreakdown && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
