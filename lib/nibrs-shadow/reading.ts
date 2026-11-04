@@ -53,6 +53,8 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
   undefinedTerm: "shooters" | "gun violence" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
   /** A Census region named ("the Northeast"): read as the nation, flagged; only Current Trends answers it (current.ts REGIONS). */
   region: "noe" | "mdw" | "sth" | "wst" | null;
+  /** A circumstance named ("gang-related murders"): element 31's codes, a filter on the victims (null when none). */
+  circumstance: string[] | null;
   /** "According to NIBRS": the source asked for in words is used and labelled (P01). */
   nibrsAsked: boolean;
   /** "Only agencies that reported every month": P61's consistent-reporters view. */
@@ -229,6 +231,20 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // A Census region (Current Trends' groups; coordinator 2026-11-03): "the Northeast", "the midwest US", "southern
   // states". Read as the nation and flagged, so the shadow answers it from Current Trends or says it can't; never "the
   // South Side", "South Carolina" or "West Memphis".
+  // Circumstances (NIBRS data element 31, coordinator 2026-11-04): a victim's murder or aggravated assault circumstance,
+  // read as a filter and taken out of the words. Domestic violence is a relationship, not read here (blocked until the
+  // DV gap note); "drug-related" is left to the drug crimes.
+  let circumstance: string[] | null = null;
+  for (const [re, codes, name] of [
+    [/\b(?:gang[-\s]?(?:related|involved|motivated)|gangland)\s*/gi, ["04", "05"], "gang-related"],
+    [/\bdrug[-\s]?deal(?:ing|er)[-\s]?related\s*|\bdrug[-\s]?dealing[-\s]related\s*|\bin\s+drug\s+deals?\b|\bover\s+drug\s+deals?\b/gi, ["03"], "drug dealing"],
+    // Whole words, and only "from", "during" or "over" an argument (Codex circumstance review 01.2: "arrests in arguments",
+    // "argumentative").
+    [/\b(?:argument[-\s]related|(?:from|during|over)\s+(?:an\s+)?arguments?)\b\s*/gi, ["01"], "an argument"],
+    [/\b(?:during|in\s+the\s+course\s+of)\s+(?:another|other)\s+felon(?:y|ies)\s*|\bfelony[-\s]related\s*/gi, ["08"], "another felony"],
+  ] as [RegExp, string[], string][]) {
+    text = text.replace(re, (m) => { circumstance = [...(circumstance ?? []), ...codes]; readings.push({ kind: "phrase", from: m.trim(), to: `(circumstance: ${name})` }); return ""; });
+  }
   let region: Flags["region"] = null;
   const REGION_CODE: Record<string, NonNullable<Flags["region"]>> = { northeast: "noe", midwest: "mdw", south: "sth", west: "wst" };
   text = text.replace(/\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west|south|west)(?:ern)?\s+(?:region|u\.?s\.?|united\s+states|states)\b|\b(?:in\s+)?the\s+(north[\s-]?east|mid[\s-]?west|south|west)\b(?=\s*$|\s*[?.,!]|\s+(?:by|in|since|from|during|over|for|between|this|last|so|per|year|month)\b)|\b(?:in\s+)?(?:the\s+)?(north[\s-]?east|mid[\s-]?west)(?:ern)?\b(?!\s+(?:city|county|township|village|town|heights|park|borough)\b|\s*,)/i,
@@ -346,7 +362,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, region, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }

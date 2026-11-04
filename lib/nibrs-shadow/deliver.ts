@@ -6,6 +6,7 @@
  * measures are columns side by side; a combined total (D19, P31) is a sentence that adds the table's own cells, given only
  * when every part is known. No commentary, no causes, no comparisons the question did not ask for.
  */
+import { CIRCUMSTANCE, CIRCUMSTANCE_HELD } from "../nibrs-plan/draft-layer";
 import { stateName } from "./places";
 import { DRAFT_LAYER } from "../nibrs-plan/draft-layer";
 import type { NibrsPlan } from "../nibrs-plan/plan";
@@ -67,6 +68,12 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     const loss = at("property.loss_type")?.values?.map(String), desc = at("property.description")?.values?.map(String);
     const what = desc && PROPERTY_WORDS[[...desc].sort().join(",")], how = loss && loss.length === 1 ? LOSS_WORDS[loss[0]] : undefined;
     return what && how && f.where.length === 2 ? `where ${what} was ${how}` : null;
+  }
+  // Element 31 (coordinator 2026-11-04): the victims whose circumstance was one of these, in the FBI's code names.
+  if (f.kind === "exists" && !f.negate && f.entity === "victim_circumstance" && f.scope === "victim" && f.where.length === 1 && f.where[0].kind === "attribute"
+    && f.where[0].dimension === "victim_circumstance.circumstance" && f.where[0].values?.length) {
+    const names = f.where[0].values.map((v) => CIRCUMSTANCE[String(v)]?.toLowerCase());
+    return names.every(Boolean) ? `where the circumstance was ${names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0]}` : null;
   }
   // Increment 6: a clearance selection (P64, P66): "cleared", "not cleared", "cleared by arrest", "cleared by exceptional means".
   if (f.kind === "attribute" && f.op === "in" && f.values?.length === 1) {
@@ -194,6 +201,7 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
   "offense.location_type": { header: "Location type", plural: "location type", names: LOCATION_TYPES },
   "offense_weapon.weapon": { header: "Weapon", plural: "weapon", names: WEAPON_TYPES },
   "victim_offender.relationship": { header: "Victim's relationship to offender", plural: "relationship to the offender", names: RELATIONSHIP_LABEL },
+  "victim_circumstance.circumstance": { header: "Circumstance", plural: "circumstance", names: CIRCUMSTANCE },
   // A crime by its offenders' sexes, races, ethnicities or ages (P49), or offenders by their own (P44).
   "offender.sex": { header: "Offender sex", plural: "offender sex", names: { ...SEX, unknown_offender: "Unknown offender" } },
   "offender.race": { header: "Offender race", plural: "offender race", names: { ...RACE_CODES, unknown_offender: "Unknown offender" } },
@@ -216,7 +224,7 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
     C: "Exceptional: in custody of another jurisdiction", D: "Exceptional: victim refused to cooperate", E: "Exceptional: juvenile, no custody", none: "Uncleared" } },
 };
 /** The category names that say a detail is not known: always listed after the known categories. */
-export const UNKNOWN_NAMES: ReadonlySet<string> = new Set(["Unknown", "Not recorded", "Unknown offender", "No relationship reported"]);
+export const UNKNOWN_NAMES: ReadonlySet<string> = new Set(["Unknown", "Not recorded", "Unknown offender", "No relationship reported", "Unknown circumstances"]);
 /** A category's name: the code's name; a blank field is "Not recorded"; a code with no name keeps its code. */
 export function categoryName(dimension: string, code: unknown): string {
   const c = code === null || code === undefined ? "" : String(code).trim();
@@ -318,6 +326,15 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
     rows = [...rows].sort((x, y) => (ip >= 0 ? String(x[ip]).localeCompare(String(y[ip])) : 0) || last(x) - last(y) || n(y) - n(x)
       || categoryName(cats[0], x[at(cats[0])]).localeCompare(categoryName(cats[0], y[at(cats[0])])));
   }
+  // A held-back circumstance (CIRCUMSTANCE_HELD: code 06 until the domestic violence note, Jeff 2026-11-04) is left out
+  // of the table, the chart and the export; the note gives its count, so the rows don't look short with nothing said.
+  const held: { period: string; n: number }[] = [];
+  const ih = at("victim_circumstance.circumstance");
+  if (cats.includes("victim_circumstance.circumstance") && ih >= 0) {
+    for (const r of rows) if (CIRCUMSTANCE_HELD.has(String(r[ih])) && r[at(count)] !== null && r[at(count)] !== undefined && Number(r[at(count)]) > 0)
+      held.push({ period: ip >= 0 ? String(r[ip]) : "", n: Number(r[at(count)]) });
+    rows = rows.filter((r) => !CIRCUMSTANCE_HELD.has(String(r[ih])));
+  }
   // A series that begins with periods no report is known for starts at the first reported one (owner 2026-10-31; the
   // engine, not the page, since 2026-11-02): those leading rows are left out of the table, the chart and the export,
   // and the note says where the series starts. Months only: a blank year may be partly reported (Codex month review
@@ -399,6 +416,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
       ? `${named(whole)} ${whole.length === 1 ? "is" : "are"} shown blank, not zero: reporting for ${whole.length === 1 ? named(whole) : "those periods"} isn't complete.`
       : `Every category is shown blank, not zero: reporting for ${when} isn't complete.`);
     if (partial.length) text.push(`Shown blank, not zero, because reporting isn't complete: ${partial.map(([p, cs]) => (p ? `${p}: ${cs.join("; ")}` : cs.join("; "))).join(". ")}.`);
+  }
+  if (held.length) {
+    const when1 = (p: string) => (/^\d{4}-\d{2}$/.test(p) ? monthName(p) : /^\d{4}-Q\d$/.test(p) ? `Q${p.slice(6)} ${p.slice(0, 4)}` : p);
+    const counts = held.map((h, i) => `${fmt(h.n)}${i === 0 ? ` ${one(h.n, what)}` : ""}${h.period && ip >= 0 ? ` in ${when1(h.period)}` : ""}`);
+    text.push(`One circumstance category is left out of this table for now: ${andList(counts)} ${held.length === 1 && held[0].n === 1 ? "was" : "were"} recorded under it.`);
   }
   if (effective.to < requestedTo) text.push(`The data runs through ${monthName(effective.to)}: this covers ${periodWords(effective.from, effective.to)}.`);
   // How a misspelled word was read (reading.ts), then the fixed statements; the source stays last.

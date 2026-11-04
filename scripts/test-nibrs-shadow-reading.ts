@@ -107,6 +107,14 @@ assert.match(readQuestion("NY murders in 2023", 2026).text, /^New York murders/)
 assert.match(readQuestion("homicides in ny city in 2023", 2026).text, /in New York City in 2023/);
 assert.match(readQuestion("Rochester NY murders in 2023", 2026).text, /^Rochester NY murders/);
 assert.match(readQuestion("homicides reported by the Suffern (NY) Police Department", 2026).text, /\(NY\)/);
+// Circumstances (element 31, coordinator 2026-11-04): a filter, taken out of the words; domestic violence is not one.
+assert.deepEqual(readQuestion("Gang-related murders in Chicago by year since 2020", 2026).circumstance, ["04", "05"]);
+assert.match(readQuestion("Gang-related murders in Chicago by year since 2020", 2026).text, /^murders in Chicago/);
+assert.deepEqual(readQuestion("Aggravated assault victims in Memphis from arguments in 2024", 2026).circumstance, ["01"]);
+assert.equal(readQuestion("Domestic violence murders in Texas in 2024", 2026).circumstance, null);
+assert.equal(readQuestion("Arrests in arguments in Memphis in 2024", 2026).circumstance, null);
+assert.equal(readQuestion("Assaults during an argumentative dispute in Memphis in 2024", 2026).circumstance, null);
+assert.equal(readQuestion("Drug-related arrests in Memphis in 2024", 2026).circumstance, null, "drug crimes, not a circumstance");
 // Places' nicknames, read for every source (coordinator 2026-11-02).
 assert.match(readQuestion("Philly homicides 2010 to 2020", 2026).text, /^Philadelphia homicides/);
 assert.match(readQuestion("murders in NOLA since 2015", 2026).text, /in New Orleans since/);
