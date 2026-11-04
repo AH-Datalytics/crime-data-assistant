@@ -96,6 +96,10 @@ function mergedCells(v: MergedFile): ExpectedCell[] | null {
 
 export function sliceValues(files: { name: string; json: string }[]): ExpectedValues {
   const out: ExpectedValues = new Map();
+  // One-case files (V185 on): a case's all-agencies values, and its Consistent Reporting Agencies values. A case with
+  // both asks for all agencies, so the consistent values are its button's ("<case>|button", V197-V201); a case with
+  // only the consistent file asks for that view itself (LS-457, V191).
+  const allOf = new Map<string, ExpectedCell[]>(), consistentOf = new Map<string, ExpectedCell[]>();
   // The merged-Unknown files last, so they win over the earlier files they restate.
   const merged = (f: { json: string }) => /"unknown_rule"/.test(f.json);
   for (const f of [...files.filter((x) => !merged(x)), ...files.filter(merged)]) {
@@ -110,7 +114,7 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     // One case per file (V185 on: "nibrsai_case"): a state or national sum by one category, or a circumstance breakdown
     // or filter (V192-V195, code 06 held back and not in the file's rows).
     const one = singleCaseCells(v as unknown as SingleCaseFile, f.name);
-    if (one) { out.set(one.lsCase, one.cells); for (const k of SAME_VALUES[one.lsCase] ?? []) out.set(k, one.cells); continue; }
+    if (one) { (one.consistent ? consistentOf : allOf).set(one.lsCase, one.cells); continue; }
     // A file that lists no cases (SHR's V177-V184) is read only through a case's binding: never a crash.
     if (typeof v.nibrsai_cases !== "string") continue;
     // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
@@ -202,6 +206,9 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       out.set(P28_VALUE_KEYS[k] ?? k, cells);
     }
   }
+  for (const [c, cells] of allOf) out.set(c, cells);
+  for (const [c, cells] of consistentOf) out.set(allOf.has(c) ? `${c}|button` : c, cells);
+  for (const [c, keys] of Object.entries(SAME_VALUES)) { const cells = consistentOf.get(c) ?? allOf.get(c); if (cells) for (const k of keys) if (!out.has(k)) out.set(k, cells); }
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
@@ -212,7 +219,7 @@ const pick = (c: { status: string; value: number | null }) => ({ value: c.value,
  * the victims, not the rows); code 06 is held back in the file as in the answer. A circumstance filter (V194-V195): one
  * count. A file whose question is no longer its case's is left out (SUPERSEDED_VALUES), so its case stays unverified.
  */
-type SingleCaseFile = { nibrsai_case?: string; unit?: string; grouping?: string; years?: number[];
+type SingleCaseFile = { nibrsai_case?: string; unit?: string; grouping?: string; years?: number[]; view?: string; place?: string;
   by_year?: { year: number; by_category: Record<string, number>; total: number }[];
   victims?: number; by_circumstance?: Record<string, number>; filter?: string[]; count?: number };
 const SUPERSEDED_VALUES: Record<string, string> = {
@@ -223,22 +230,24 @@ const SUPERSEDED_VALUES: Record<string, string> = {
 const SAME_VALUES: Record<string, string[]> = { "LS-457": ["LS-452|button"] };
 const UNIT_ENTITY: Record<string, string> = { victims: "victim", offenders: "offender", arrests: "arrestee", offenses: "offense" };
 const share1 = (n: number, total: number) => (total > 0 ? Math.round((1000 * n) / total) / 10 : null);
-function singleCaseCells(v: SingleCaseFile, file: string): { lsCase: string; cells: ExpectedCell[] } | null {
+function singleCaseCells(v: SingleCaseFile, file: string): { lsCase: string; cells: ExpectedCell[]; consistent: boolean } | null {
   if (typeof v.nibrsai_case !== "string" || !/^LS-\d{3}$/.test(v.nibrsai_case)) return null;
   const name = /V\d+(?=\.json$)/.exec(file)?.[0];
   if (name && SUPERSEDED_VALUES[name] === v.nibrsai_case) return null;
+  // The Consistent Reporting Agencies view: named in "view", or (circumstance files) in the place ("TN-consistent").
+  const consistent = /consistent/i.test(v.view ?? "") || /-consistent$/i.test(v.place ?? "");
   if (v.by_circumstance && typeof v.victims === "number") {
     const dim = "victim_circumstance.circumstance";
-    return { lsCase: v.nibrsai_case, cells: Object.entries(v.by_circumstance).map(([code, n]) =>
+    return { consistent, lsCase: v.nibrsai_case, cells: Object.entries(v.by_circumstance).map(([code, n]) =>
       ({ key: categoryName(dim, code), value: n, status: "VALUE", share: share1(n, v.victims!) })) };
   }
-  if (v.filter && typeof v.count === "number") return { lsCase: v.nibrsai_case, cells: [{ key: "", value: v.count, status: "VALUE" }] };
+  if (v.filter && typeof v.count === "number") return { consistent, lsCase: v.nibrsai_case, cells: [{ key: "", value: v.count, status: "VALUE" }] };
   if (v.by_year?.length && v.grouping && v.unit && UNIT_ENTITY[v.unit]) {
     const dim = `${UNIT_ENTITY[v.unit]}.${v.grouping}`;
     const many = v.by_year.length > 1;
     // Age groups are named by their labels in the file and the answer alike; other codes by the answer's names.
     const label = (code: string) => (v.grouping === "age" ? code : categoryName(dim, code));
-    return { lsCase: v.nibrsai_case, cells: v.by_year.flatMap((y) => Object.entries(y.by_category).map(([code, n]) =>
+    return { consistent, lsCase: v.nibrsai_case, cells: v.by_year.flatMap((y) => Object.entries(y.by_category).map(([code, n]) =>
       ({ key: `${many ? `${y.year}|` : ""}${label(code)}`, value: n, status: "VALUE", share: share1(n, y.total) }))) };
   }
   return null;
