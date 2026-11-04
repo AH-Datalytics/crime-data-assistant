@@ -19,6 +19,8 @@ import { shadowAnswer, type ShadowDeps } from "@/lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "@/lib/nibrs-shadow/places";
 import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "@/lib/nibrs-shadow/historical";
+import { loadNibrsRelease } from "@/lib/nibrs-shadow/release";
+import { currentBuildAt } from "@/lib/nibrs-shadow/current";
 import { MAX_QUESTION, follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
 import { liveModelRewrite } from "./live-rewriter";
 
@@ -27,14 +29,19 @@ const notFound = () => new NextResponse("Not Found", { status: 404 });
 
 let deps: ShadowDeps | null = null;
 function shadowDeps(): ShadowDeps {
-  // As /api/nibrs-shadow-query: the pinned canonical build, read-only, through the local DuckDB executor.
-  deps ??= {
+  // As /api/nibrs-shadow-query: the pinned canonical build, read-only, through the local DuckDB executor; its months run
+  // through the month before its CDE release's month (P93), from the release recorded with it.
+  if (deps) return deps;
+  const rel = loadNibrsRelease(undefined, process.env.NIBRS_SHADOW_ROOT);
+  const execute = duckdbExecutor(process.env.NIBRS_SHADOW_PYTHON ?? "python");
+  deps = {
     places: loadPlaceIndex(path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agencies.json")),
-    release: { id: process.env.NIBRS_SHADOW_RELEASE ?? "20261028-test5", firstMonth: "2017-01", lastMonth: process.env.NIBRS_SHADOW_LAST_MONTH ?? "2026-09", asOf: new Date().toISOString().slice(0, 10) },
+    release: { id: rel.id, firstMonth: rel.firstMonth, lastMonth: rel.lastMonth, asOf: new Date().toISOString().slice(0, 10) },
     target: { root: process.env.NIBRS_SHADOW_ROOT!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
-    execute: duckdbExecutor(process.env.NIBRS_SHADOW_PYTHON ?? "python"),
-    // Historical (P75-P79): the Crime Index build, when NIBRS_HISTORICAL_ROOT names one (as /api/nibrs-shadow-query).
+    execute,
+    // Historical (P75-P79) and Current Trends: the Crime Index build, when NIBRS_HISTORICAL_ROOT names one.
     historical: historicalBuildAt(process.env.NIBRS_HISTORICAL_ROOT),
+    current: currentBuildAt(process.env.NIBRS_HISTORICAL_ROOT, execute),
   };
   return deps;
 }
