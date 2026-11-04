@@ -169,7 +169,7 @@ def label_first(q, tab):
     if R(r"calls? for service|911 calls|dispatch(?:es)?").search(q):
         return ("decline", "there are no calls-for-service data", None, "R15", "draft", "P47")
     if METHOD.search(q):
-        return ("answer", "a definition or method, in text", TAB_SOURCE.get(tab), "R06", "disputed", "D1: definitions and method questions")
+        return ("answer", "the FBI's definition, named as the FBI's", TAB_SOURCE.get(tab), "R06", "draft", "D1 (Jeff 2026-11-04): FBI definitions")
     if LOOKUP.search(q) and not (CRIME.search(q) and R(r"\b(?:most|highest|lowest|least|top|rank\w*)\b").search(q)):
         return ("answer", "a lookup (coverage, codes, agency list)", TAB_SOURCE.get(tab), "R07", "draft", "a capability gap today")
     # Misspellings the engine reads ("new orlens", "homocide") are read here too, so a label never asks about a part
@@ -200,13 +200,9 @@ def label_first(q, tab):
         missing.insert(0, "fatal or non-fatal shootings")
     if NEW_YORK.search(q) and not has_state(q.replace("New York", "").replace("new york", "")) and not any(p for p in named if p != "new york"):
         missing.append("which New York")
-    if not PERIOD.search(q):
+    if not PERIOD.search(q) and not SERIES.search(q):
         missing.append("period")
     if missing:
-        # D5: a series by year or month with no years named ("Houston murders per year", "murder trend in Texas"). P06
-        # says ask which period; the engine shows every year it has. Disputed until Jeff decides.
-        if missing == ["period"] and SERIES.search(q):
-            return ("clarify", "period", None, "R13", "disputed", "D5: a series with no years named: ask (P06) or every year")
         rule = {"crime": "R09", "violent, property or both": "R09b", "place": "R10", "period": "R13", "fatal or non-fatal shootings": "R09s", "which New York": "R11"}.get(missing[0], "R11")
         note = {"R09": "D31", "R09b": "D09", "R09s": "D14", "R10": "P12/D31", "R13": "P06/D31", "R11": "several places have this name (P26 for New York)"}[rule]
         return ("clarify", " / ".join(missing), None, rule, "draft", note)
@@ -237,7 +233,7 @@ def label_first(q, tab):
         if PLACE_SET.search(q):
             return ("answer", "", "historical|nibrs", "R14", "draft", "a ranking or set of places (Crime Index or NIBRS)")
         if tab == "shr" and MURDER.search(q):
-            return ("answer", "", "historical", "R14", "disputed", "D3: a Homicide Reports tab's plain murder count, Crime Index or SHR")
+            return ("answer", "", "historical", "R14", "draft", "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's")
         return ("answer", "", "historical", "R14", "draft", "a Part I figure by year (Crime Index)")
     return ("answer", "", TAB_SOURCE.get(tab), "R14", "draft", "")
 
@@ -262,7 +258,7 @@ def label_follow(prev_label, q, tab):
         src = "nibrs" if NIBRS_DETAIL.search(q) and prev_label[2] in ("historical", "rtci") else prev_label[2]
         return ("answer", "the earlier question, changed as asked", src, "F3", "draft", "a follow-up to an answerable question")
     if prev_label[0] == "clarify":
-        return ("answer", "the earlier question with the part asked for", TAB_SOURCE.get(tab), "F4", "disputed", "D4: a reply to the old app's clarifying question")
+        return ("exclude", "a reply to the old app's clarifying question", None, "F4", "draft", "D4 (Jeff 2026-11-04): left out")
     return ("clarify", "the whole question", None, "F5", "draft", "a follow-up to a question that was declined or excluded")
 
 

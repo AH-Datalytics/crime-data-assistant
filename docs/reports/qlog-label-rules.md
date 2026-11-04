@@ -6,7 +6,7 @@ The rules read only two things:
 - the question's own words;
 - the agency list, used as a gazetteer.
 
-They never read the engine's output. Every label is a **draft** until it is reviewed. A label that waits on a decision of Jeff's is **disputed**, and is set aside from the scorecard (and its gate) until he decides; the open decisions are listed under Disputed below.
+They never read the engine's output. Every label is a **draft** until it is reviewed. A label that waits on a decision of Jeff's is **disputed** and set aside from the scorecard and its gate until he decides. None is open now: his decisions of 2026-11-04 are below.
 
 ## The unit
 
@@ -44,7 +44,7 @@ The bare word "crime", or "dangerous" or "safest", with no kind of crime named, 
 - "this year", "last year", "YTD", "so far this year";
 - "last five years", "past decade", "rolling 12 months", "latest year".
 
-Frequency and trend words don't count. "Per year", "monthly", "by year", "over time", "trends" and "history" say how to show a period, not which one.
+Frequency and trend words don't name a period. But a trend or a series ("per year", "monthly", "over time", "trends", "history") with no years named isn't missing one: it answers with every year the source has (D5).
 
 **Shootings** with no "fatal", "non-fatal", "killed" or "homicide" ask which (D14). **"New York" alone**, not "New York City", "NYC" or "New York state", asks city or state (P26).
 
@@ -57,7 +57,7 @@ Frequency and trend words don't count. "Per year", "monthly", "by year", "over t
 | R15 | A decided limit: a state clearance rate (P18); a rate for a group of people rather than a place (D03); calls for service (P47) | decline, with the limit |
 | R05 | A place outside the U.S. | decline: U.S. agencies only |
 | R04 | Below an agency: a neighborhood, ZIP code, census tract, block, address, precinct, beat or ward | decline: down to the agency, not below it |
-| R06 | A definition or method question | answer in text: **disputed** (D1) |
+| R06 | A definition or method question | answer: the FBI's definition (D1) |
 | R07 | A lookup: coverage, codes, a list of agencies | answer (a lookup); a gap today |
 | R08 | No crime, and either no place or a lead-in that points back ("now detroit", "how about the national average") | clarify: the whole question |
 | R09 / R09b / R10 / R11 / R13 | A part is missing: the crime, or which kind of crime (D09); the place (P12); which of several same-named places (none five times the next in population); the period (P06) | clarify. `about` is the first missing part in D31's order; `about_any` lists every missing part. Asking about any of them is right, because D31 asks one part at a time. |
@@ -77,7 +77,7 @@ Frequency and trend words don't count. "Per year", "monthly", "by year", "over t
 4. Staffing (officers, sworn, police employees): Historical (Crime Index).
 5. A Part I crime by month, year to date, rolling, a span ending in a named month, or within 2026 with no yearly series: Current Trends. NIBRS is also right (`source_any`) where Current Trends lacks the place.
 6. A ranking or set of places for a Part I crime: Historical or NIBRS (`source_any`).
-7. A Part I crime by year: Historical (Crime Index), from any tab (P75–P79). A plain murder count asked in the Homicide Reports tab is **disputed** (D3).
+7. A Part I crime by year: Historical (Crime Index), from any tab (P75–P79). A plain murder count asked in the Homicide Reports tab is Historical's too (D3).
 8. Otherwise the tab's own source.
 
 People are read as people only when named that way: "Black victims", "females", "Asians". "White Plains" is a place.
@@ -89,16 +89,16 @@ People are read as people only when named that way: "Black victims", "females", 
 | F1 | It stands alone: a crime and a place, and no lead-in pointing back | labelled as a first question (F1+Rnn) |
 | F2 | Presentation only (a chart, table or export), eight words or fewer | answer: the same data shown another way |
 | F3 | The earlier question's label is answer | answer: the earlier question changed as asked, from its source |
-| F4 | The earlier question's label is clarify | answer: the earlier question with the part supplied. **Disputed** (D4). |
+| F4 | The earlier question's label is clarify | left out (D4) |
 | F5 | The earlier question's label is decline or excluded | clarify: the whole question |
 
-## Disputed (for Jeff)
+## Jeff's decisions (2026-11-04)
 
-- **D1. Definition and method questions** ("what does clearance rate mean"): answer in text, or decline?
+- **D1. Definition and method questions** are answered with the FBI's own definitions, named as the FBI's (Jeff: "ideally we'd offer definitions from the FBI on every term we reference"). Rule R06.
 - **D2.** None open: a set of places with no scope asks the place (P12).
-- **D3. A plain murder count asked in the Homicide Reports tab** ("Florida murders per year"): from Crime Index, the Part I figure the engine gives today, or from SHR?
-- **D5. A series with no years named** ("Houston murders per year", "murder trend in Texas"). P06 says ask which period. The engine shows every year it has. Which is right? This is the largest group by far.
-- **D4. Replies to the old app's clarifying questions.** The old app asked its own questions, which aren't the engine's. A typed reply ("Pittsburgh PA", "nationwide total") may answer something the engine never asked. Score these as follow-ups, or leave them out?
+- **D3. A plain murder count asked in the Homicide Reports tab** ("Florida murders per year") is answered from Historical (Jeff: "historical would be the right tab for Florida murders per year, not current data").
+- **D4. Typed replies to the old app's own clarifying questions** are left out of the scorecard (Jeff: "leave out"). Rule F4.
+- **D5. A trend or a series by year or month with no years named** answers with every year the source has (Jeff: "show every year we have"). P06 is amended to match: it is not a missing period.
 
 ## Scoring
 
