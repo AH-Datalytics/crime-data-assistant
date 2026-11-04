@@ -147,6 +147,8 @@ const FIXTURES: Record<string, string[]> = {
     "Simple assault victims in Memphis by sex and year from 2023 to 2024",
     // A state sum by category (coordinator 2026-11-04): each category over the reporting agencies, the button's view too.
     "Simple assault victims in Kansas by sex in 2024", "Simple assault victims in Kansas by sex by year from 2023 to 2024",
+    // Element 31 (coordinator 2026-11-04): a breakdown by circumstance, and a filter on one.
+    "Murder victims in Memphis by circumstance in 2024", "Gang-related murders in Memphis in 2024",
   ],
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
     // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.

@@ -466,6 +466,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter });
   if ("error" in units) return no(units.error);
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
+  // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
+  if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
   if (units.entity === "arrestee") statements.push("arrests_counted_once");
   const people = peopleFacts(plan);
   if (people.throughIncident) statements.push("arrests_through_incident");

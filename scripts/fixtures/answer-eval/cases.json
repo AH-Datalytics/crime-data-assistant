@@ -27772,6 +27772,319 @@
     "reviewed_by": "codex:statecat-labels-1",
     "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
+  },
+  {
+   "id": "LS-459",
+   "group": "designed:category-circumstance",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murder victims in Memphis by circumstance in 2024",
+   "policy": [
+    "D18",
+    "P01"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "circumstance"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "says a unit with several categories counts once in each, so the categories can add up to more than the total",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-circumstance",
+    "reviewed_by": null,
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-460",
+   "group": "designed:category-circumstance",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Tennessee by circumstance in 2024",
+   "policy": [
+    "D18",
+    "P53",
+    "P61"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "circumstance"
+     ],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names how many agencies it sums over",
+     "says a unit with several categories counts once in each, so the categories can add up to more than the total",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-circumstance",
+    "reviewed_by": null,
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-461",
+   "group": "designed:category-circumstance",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Gang-related murders in Memphis in 2024",
+   "policy": [
+    "D18",
+    "P01"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "circumstance: gangland (organized crime involvement) or juvenile gang"
+     ],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "says agencies often record the circumstance as unknown, so the count can be lower",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-circumstance",
+    "reviewed_by": null,
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-462",
+   "group": "designed:category-circumstance",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault victims in Memphis from arguments in 2024",
+   "policy": [
+    "D18",
+    "P01"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "agency",
+       "name": "Memphis Police Department",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "circumstance: argument"
+     ],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the agency (Memphis Police Department)",
+     "says agencies often record the circumstance as unknown, so the count can be lower",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-circumstance",
+    "reviewed_by": null,
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-463",
+   "group": "designed:category-circumstance",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Gang-related murders in Tennessee in 2024",
+   "policy": [
+    "P01",
+    "P53"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "shr",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "circumstance: gangland (organized crime involvement) or juvenile gang"
+     ],
+     "groupings": [],
+     "statistic": "count"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": []
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-circumstance",
+    "reviewed_by": null,
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-464",
+   "group": "designed:category-circumstance",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Gang-related robberies in Memphis in 2024",
+   "policy": [
+    "D18"
+   ],
+   "expected": {
+    "action": "decline",
+    "reason": "Circumstances (element 31) are recorded for murder and aggravated assault victims, not robberies.",
+    "alternative": null
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-circumstance",
+    "reviewed_by": null,
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+   }
   }
  ]
 }

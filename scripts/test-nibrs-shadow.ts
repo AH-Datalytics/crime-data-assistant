@@ -899,6 +899,18 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(g("Aggravated assault victims in Memphis in 2024, by victim race"), ["victim.race"]);
   // Codex 04.2: a victim's attribute on arrests is declined, never answered as the arrestee's.
   assert.match(as(ask("Arrests in Denver in 2023 by victim race"), "decline").explanation, /a victim's race for arrests/);
+  // Element 31 (coordinator 2026-11-04): a breakdown of victims; a filter on murder or aggravated assault victims, named
+  // and with the unknown-circumstance note; other crimes declined; a state's murder by circumstance is Homicide Reports'.
+  {
+    const by = as(ask("Murder victims in Memphis by circumstance in 2024"), "answer");
+    assert.ok(by.plan.groupings.some((x) => x.dimension === "victim_circumstance.circumstance" && x.multiValue === "each_value"));
+    const f = as(ask("Gang-related murders in Memphis in 2024"), "answer");
+    assert.ok(f.plan.filters.some((x) => x.kind === "exists" && x.entity === "victim_circumstance"));
+    assert.ok(f.delivered.text[0].includes("where the circumstance was gangland (organized crime involvement) or juvenile gang"));
+    assert.ok(f.delivered.answerStatements.includes("circumstance_unknown"));
+    assert.match(as(ask("Gang-related robberies in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
+    assert.equal(as(ask("Gang-related murders in Tennessee in 2024"), "route").source, "shr");
+  }
   // P53 (Codex state-categories review 01.2): murder by a Homicide Report detail for a state or the nation, NIBRS not
   // named, is Homicide Reports'; named, NIBRS sums it.
   assert.equal(as(ask("Murder victims in Tennessee by race in 2024"), "route").source, "shr");

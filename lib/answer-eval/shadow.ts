@@ -504,6 +504,8 @@ function peopleStatement(s: string, o: Extract<ShadowOutcome, { kind: "answer" }
   if (/^reads "by juveniles" as offenders under 18/.test(s) || /^counts victims of incidents with at least one offender under 18, each once/.test(s))
     return conds((scope, entity, w) => scope === "incident" && entity === "offender" && w.dimension === "offender.age" && under18(w));
   if (/^says (?:offenders|victims|arrestees) of unknown age(?: or sex)? are not counted/.test(s)) return says("unknown_not_counted");
+  // Element 31 (coordinator 2026-11-04): a filtered count says agencies often record the circumstance as unknown.
+  if (/^says agencies often record the circumstance as unknown/.test(s)) return says("circumstance_unknown");
   if (/^reads "against juveniles" as victims under 18/.test(s) || /^counts victims under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
   if (/^counts female victims whose aggravated assault involved a firearm/.test(s))
     return unit === "victim" && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, e) => sc === "victim" && e === "offense_weapon");

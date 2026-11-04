@@ -69,6 +69,12 @@ export function filterWords(f: NonNullable<Measure["filters"]>[number]): string 
     const what = desc && PROPERTY_WORDS[[...desc].sort().join(",")], how = loss && loss.length === 1 ? LOSS_WORDS[loss[0]] : undefined;
     return what && how && f.where.length === 2 ? `where ${what} was ${how}` : null;
   }
+  // Element 31 (coordinator 2026-11-04): the victims whose circumstance was one of these, in the FBI's code names.
+  if (f.kind === "exists" && !f.negate && f.entity === "victim_circumstance" && f.scope === "victim" && f.where.length === 1 && f.where[0].kind === "attribute"
+    && f.where[0].dimension === "victim_circumstance.circumstance" && f.where[0].values?.length) {
+    const names = f.where[0].values.map((v) => CIRCUMSTANCE[String(v)]?.toLowerCase());
+    return names.every(Boolean) ? `where the circumstance was ${names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0]}` : null;
+  }
   // Increment 6: a clearance selection (P64, P66): "cleared", "not cleared", "cleared by arrest", "cleared by exceptional means".
   if (f.kind === "attribute" && f.op === "in" && f.values?.length === 1) {
     const v = String(f.values[0]);
@@ -218,7 +224,7 @@ export const CATEGORY: Record<string, { header: string; plural: string; names: R
     C: "Exceptional: in custody of another jurisdiction", D: "Exceptional: victim refused to cooperate", E: "Exceptional: juvenile, no custody", none: "Uncleared" } },
 };
 /** The category names that say a detail is not known: always listed after the known categories. */
-export const UNKNOWN_NAMES: ReadonlySet<string> = new Set(["Unknown", "Not recorded", "Unknown offender", "No relationship reported"]);
+export const UNKNOWN_NAMES: ReadonlySet<string> = new Set(["Unknown", "Not recorded", "Unknown offender", "No relationship reported", "Unknown circumstances"]);
 /** A category's name: the code's name; a blank field is "Not recorded"; a code with no name keeps its code. */
 export function categoryName(dimension: string, code: unknown): string {
   const c = code === null || code === undefined ? "" : String(code).trim();
