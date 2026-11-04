@@ -918,6 +918,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // named, is Homicide Reports'; named, NIBRS sums it.
   assert.equal(as(ask("Murder victims in Tennessee by race in 2024"), "route").source, "shr");
   assert.equal(ask("Murder victims in Tennessee by race in 2024, according to NIBRS").kind, "answer");
+  assert.notEqual(ask("Murders in Tennessee in 2024 by clearance type").kind, "route", "a clearance is not a Homicide Report detail");
   // A people breakdown for a state is NIBRS's sum by category (coordinator 2026-11-04), never the historical file's.
   {
     const o = as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "answer");
