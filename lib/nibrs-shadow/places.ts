@@ -1,9 +1,10 @@
 /**
- * The shadow slice's place resolution: a place named in a question -> one agency, a state, or a choice to ask about. It
- * reads scripts/fixtures/nibrs-shadow/agencies.json (city police and county agencies of the canonical build with
- * 10,000+ residents) and stands in for the app's resolveNibrsPlaces, which needs nibrs.db.
+ * The shared place resolution (every source): a place named in a question -> one agency, a state, or a choice to ask
+ * about. It reads scripts/fixtures/nibrs-shadow/agencies.json: the city police and county agencies of NIBRS's canonical
+ * build and of the Crime Index, whatever their size (Jeff 2026-11-03: no population floor), each with the place names the agency crosswalk gives
+ * it ("new york city" for New York's police) as aliases. It stands in for the app's resolveNibrsPlaces, which needs nibrs.db.
  *
- * The rule (P28, Jeff 2026-10-29): a name is asked about when it fits two or more real candidates of 100,000+ residents:
+ * The rule (P28, Jeff 2026-10-29): a name is asked about when it fits two or more real candidates serving 100,000+ people:
  * cities of that name in different states, a city and a county of that name ("Baltimore": the city or Baltimore County),
  * or counties of that name in different states. A name that is also a state ("Washington") always offers the state
  * beside its large cities and counties. Otherwise the most populous match is used without a question (P16: a city
@@ -12,22 +13,26 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Place } from "../nibrs-plan/plan";
+import { postalState } from "../nibrs-plan/state-codes";
 
-export type Agency = { ori: string; kind: "city" | "county"; name: string; state: string; population: number; year: number };
+/** `aliases`: the crosswalk's place names for the agency; `sources`: "nibrs", "crime_index" (which builds have it). */
+export type Agency = { ori: string; kind: "city" | "county"; name: string; state: string; population: number; year: number; aliases?: string[]; sources?: string[] };
 export type Candidate = { kind: "agency"; agency: Agency } | { kind: "state"; code: string; name: string };
 export type PlaceResolution =
   | { kind: "agency"; place: Extract<Place, { kind: "agency" }>; agency: Agency }
-  | { kind: "ask"; name: string; candidates: Candidate[] }
-  | { kind: "unresolved"; why: string };
+  | { kind: "ask"; name: string; candidates: Candidate[]; more?: boolean }
+  | { kind: "unresolved"; why: string; named?: boolean };
 
 export const ASK_POPULATION = 100_000;
+/** Same-name towns (Jeff 2026-11-03, no population floor): at most this many cities are offered, one per state. */
+export const ASK_TOWNS = 3;
 export const STATE_NAMES: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
 export const stateName = (code: string) => STATE_NAMES[code] ?? code;
 const STATE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAMES).filter(([c]) => c !== "DC").map(([c, n]) => [n.toLowerCase(), c]));
 
-/** Names compared without case, punctuation, the St./Saint difference or a trailing "County". */
+/** Names compared without case, punctuation, the St./Saint difference or a trailing "County" or "Parish" (never "Borough": Baldwin Borough, PA is a town, not Baldwin County). */
 const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\bsaint\b/g, "st").replace(/\s+/g, " ").trim();
-const base = (s: string) => key(s).replace(/ county$/, "");
+const base = (s: string) => key(s).replace(/ (county|parish)$/, "");
 
 /**
  * City agencies the index names by their department instead of their place (crime_data.db's Historical names), named
@@ -59,12 +64,39 @@ export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures
   const namesFile = JSON.parse(fs.readFileSync(NAMES_FILE, "utf8")) as { names: Record<string, string>; return_a?: string[] };
   const names = new Map<string, string>(Object.entries(namesFile.names));
   const returnA = new Set(namesFile.return_a ?? []);
-  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => (PLACE_NAMES[a.ori] ? { ...a, name: PLACE_NAMES[a.ori] } : a));
+  const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => ({ ...a, state: postalState(a.state), ...(PLACE_NAMES[a.ori] ? { name: PLACE_NAMES[a.ori] } : {}) }));
   const byName = new Map<string, Agency[]>();
   const add = (name: string, a: Agency) => (byName.get(base(name)) ?? byName.set(base(name), []).get(base(name))!).push(a);
   for (const a of agencies) { add(a.name, a); if (PLACE_ALIASES[a.ori]) add(PLACE_ALIASES[a.ori], a); }
+  // The crosswalk's aliases, unless the name is another agency's own in that state (after PLACE_NAMES): "louisville"
+  // stays Louisville Metro's, not the old Jefferson County police's ("louisville county").
+  const owned = new Set(agencies.map((a) => `${base(a.name)}|${a.state}`));
+  for (const a of agencies) for (const al of new Set((a.aliases ?? []).map(base))) if (al !== base(a.name) && !owned.has(`${al}|${a.state}`)) add(al, a);
   for (const xs of byName.values()) xs.sort((a, b) => b.population - a.population);
   return { byName, names, returnA };
+}
+
+/** Edit distance with adjacent transposition (optimal string alignment). */
+function distance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+/**
+ * A misspelled large place ("batlimore", "phialdelphia", "el paos"): the one city or county name of 100,000+ people
+ * within two edits (one for a name under six letters), same first letter; null when none or several are that close.
+ */
+export function nearestPlaceName(idx: PlaceIndex, name: string): string | null {
+  const k = base(name);
+  if (k.length < 4 || idx.byName.has(k)) return null;
+  const limit = k.length < 6 ? 1 : 2;
+  const near = [...idx.byName.entries()].filter(([n, xs]) => n[0] === k[0] && xs[0].population >= ASK_POPULATION && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit);
+  // The place's name (the city's, when there is one): "Baltimore", which then asks the city or the county (P28).
+  return near.length === 1 ? (near[0][1].find((x) => x.kind === "city") ?? near[0][1][0]).name : null;
 }
 
 /**
@@ -104,14 +136,17 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
   if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };
   const name = (m[2] ?? m[4]).trim();
-  const countyNamed = m[1] === "county" || / county$/.test(key(name));
+  const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
   const words = key(text).replace(/ (city|county)$/, "");
   const stateNamed = m[3] && words !== base(name) ? m[3] : null;
-  let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed));
+  // A parish is Louisiana's (Codex places review 02: "Orleans Parish" had found Orleans County, New York).
+  const parish = / parish$/.test(key(name)) || /\bparish\b/.test(key(text));
+  let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
   if (/ city$|\bpolice\b/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
   else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");
-  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} with a population of 10,000 or more in this build` };
+  // `named`: the words name a real place (with its state, or as a county), not a word the reader took for one ("index").
+  if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} in this build`, named: !!stateNamed || countyNamed };
   // The most populous agency of each kind in each state; the large ones are the real candidates.
   const firsts = pool.filter((a, i) => pool.findIndex((b) => b.kind === a.kind && b.state === a.state) === i);
   // Buttons, most likely first: cities, then counties, each by population; the state (when the name is one) second.
@@ -119,5 +154,17 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
     .sort((x, y) => (x.kind === y.kind ? y.population - x.population : x.kind === "city" ? -1 : 1)).map((a) => ({ kind: "agency", agency: a }));
   const asState = !countyNamed && !stateNamed ? STATE_BY_NAME[base(name)] : undefined;
   if (asState) large.splice(1, 0, { kind: "state", code: asState, name: stateName(asState) });
-  return large.length >= 2 ? { kind: "ask", name, candidates: large } : asPlace(pool[0]);
+  if (large.length >= 2) return { kind: "ask", name, candidates: large };
+  // Same-name towns with no large candidate ("Clinton": 29 agencies): when no city of the name is clearly the main one
+  // (the largest at least twice the next), ask which, the largest few one per state, and "another place" for the rest.
+  const towns = firsts.filter((a) => a.kind === "city").sort((x, y) => y.population - x.population);
+  // A large county of the name ("Greenville County, South Carolina") is offered after the towns.
+  if (!countyNamed && !stateNamed && towns.length >= 2 && towns[0].population < 2 * towns[1].population)
+    return { kind: "ask", name, candidates: [...towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), ...large.filter((c) => c.kind === "agency" && c.agency.kind === "county")],
+      more: towns.length > ASK_TOWNS };
+  // No question: a city's name means its principal police agency (P16), so the most populous city agency of that name,
+  // unless the words name a county (or the only large candidate is the county asked by name). "Clinton" is the city of
+  // Clinton, not Clinton County, New York; with every agency in the index (Jeff 2026-11-03) small cities share names
+  // with large counties far more often.
+  return asPlace(countyNamed ? pool[0] : pool.find((a) => a.kind === "city") ?? pool[0]);
 }

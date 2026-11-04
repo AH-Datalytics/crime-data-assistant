@@ -199,6 +199,6 @@ assert.match(String((() => { const r = compilePlan({ ...monthly, groupings: [] }
 // Populations: the canonical agency file, per data year, by ORI or a state's city agencies.
 const pops = agencyPopulationSql(t.root, { oris: ["OK0550900"] }, [2024]);
 for (const s of ["/build/canonical/agency/data.parquet", "unnest(by_year)", "ori IN ('OK0550900')", "u.data_year IN (2024)"]) assert.ok(pops.includes(s), s);
-assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024]).includes("u.state_abbr = 'TX' AND u.agency_indicator = '1'"));
+assert.ok(agencyPopulationSql(t.root, { state: "TX", city: true }, [2023, 2024]).includes("u.state_abbr IN ('TX') AND u.agency_indicator = '1'"));
 
 console.log("nibrs compile v0: agency-level forms compile; the rest refuse with a reason");

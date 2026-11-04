@@ -27,7 +27,7 @@
  *  16  the coverage columns never change the chart: the same answer with and without them has the same chart options
  */
 import assert from "node:assert/strict";
-import { chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
+import { latestShownMonth, chartOptionsOf, csvOf, joinAmp, leadOf, notesOf, pngSpecOf, PROFILES, titleOf, NOTE_TEXT, type ChoicePresentation, type Presentation,
   type SourceId, type SourceProfile } from "../lib/answer-contract/contract";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { aboutPeople, presentationOf, sourceOf } from "../lib/nibrs-shadow/presentation";
@@ -35,10 +35,13 @@ import { follow, toPreview } from "../lib/nibrs-shadow/preview";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 import { BANNED } from "../lib/nibrs-shadow/wording";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
+import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { UNKNOWN_NAMES } from "../lib/nibrs-shadow/deliver";
 import { missingGroupings } from "../lib/nibrs-shadow/named-groupings";
 import type { HistoricalBuild } from "../lib/nibrs-shadow/historical";
+import type { CurrentBuild } from "../lib/nibrs-shadow/current";
 import type { ResultTable } from "../lib/nibrs-plan/result";
+import { ORI_PREFIX_STATES } from "../lib/nibrs-plan/state-codes";
 
 const places = loadPlaceIndex();
 
@@ -107,15 +110,29 @@ function crimeIndex(sql: string): unknown[][] {
   return oris.flatMap((o) => rows.filter(([y]) => !years || y === Number(years[1]) || y === Number(years[2])).map(([y, t, c, p]) => (years ? [y, t] : [o, y, t, c, p])));
 }
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
-const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" },
-  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (/crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build } as ShadowDeps;
+// Current Trends stub: every agency asked is in it, 30 a month (March 2025 unknown); a group's month is 3,000 from 547
+// agencies of 111 million people, 14 of them blank.
+function currentStub(sql: string): unknown[][] {
+  if (/count\(\*\) FROM read_parquet\('[^']*current_crime/.test(sql) && !/GROUP BY/.test(sql)) return [[20]];
+  const [, a, b] = /BETWEEN '(\d{4}-\d{2})' AND '(\d{4}-\d{2})'/.exec(sql) ?? [];
+  const ms: string[] = [];
+  for (let y = Number(a.slice(0, 4)), m = Number(a.slice(5)); `${y}-${String(m).padStart(2, "0")}` <= b; m === 12 ? (y++, (m = 1)) : m++) ms.push(`${y}-${String(m).padStart(2, "0")}`);
+  if (/WHERE sample/.test(sql)) return ms.filter((m) => m >= "2025-01").map((m) => [m, 3000, 547, 111272916, 14]);
+  return ms.map((m) => [m, m === "2025-03" ? null : 30]);
+}
+const current: CurrentBuild = { root: "/ct", release: "crimeindex-20261101", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" };
+// 20: the months run through the month before the build's CDE release's month (Jeff 2026-11-03), from release.json.
+const nibrsRelease = loadNibrsRelease();
+const deps: ShadowDeps = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: nibrsRelease.lastMonth, asOf: "2026-10-29" },
+  target: { root: "/b", builtYears: [2022, 2023, 2024, 2025, 2026] }, execute: (sql: string) => (/current_crime|current_final/.test(sql) ? currentStub(sql) : /crimeindex|agency_crime|agency_clearances/.test(sql) ? crimeIndex(sql) : nibrs(sql)), historical: build, current } as ShadowDeps;
 
 /** Fixtures for each live source: the questions its answers are checked on. */
 const FIXTURES: Record<string, string[]> = {
   nibrs: [
     "Shoplifting in Memphis in 2024", "Shoplifting in Memphis by month in 2024", "Shoplifting in Memphis by year from 2022 to 2025",
     "Simple assault victims in Memphis by sex in 2024", "Simple assault victims in Memphis by age in 2024", "Robberies in Memphis in 2024 by weapon",
-    "Rolling 12-month shoplifting in Memphis since 2024", "Memphis robberies per month in 2024",
+    // A Part I crime by month at a Current Trends agency is Current Trends' (design note 2026-11-03), so NIBRS is named here.
+    "Rolling 12-month shoplifting in Memphis since 2024", "Memphis robberies per month in 2024 according to NIBRS",
     "Shoplifting in Kansas by year from 2023 to 2024", "Shoplifting in Kansas in 2024, with the number of agencies reporting",
     "Shoplifting in Kansas by year from 2023 to 2024, only agencies that reported every month", "Drug crimes in Memphis in 2024",
     "Shoplifting in Memphis in March 2024",
@@ -123,6 +140,8 @@ const FIXTURES: Record<string, string[]> = {
     // from a typed consistent view stays on NIBRS.
     "Shoplifting rate in Nebraska in 2024, with the number of agencies reporting",
     "Murder in Kansas by year from 2023 to 2024, only agencies that reported every month",
+    // 19: a Nebraska agency, whose ORI prefix (NB) is not its state's postal code.
+    "Shoplifting in Omaha, NE in 2024",
     // Jeff 2026-11-02: a breakdown by month or quarter (Unknown last within each period; the month order kept).
     "Simple assault victims in Memphis by sex and month in 2024", "Simple assault victims in Memphis by sex by quarter in 2024",
     "Simple assault victims in Memphis by sex and year from 2023 to 2024",
@@ -130,6 +149,8 @@ const FIXTURES: Record<string, string[]> = {
   historical: ["Murders in Memphis in 2023", "Murders in Memphis by year from 2022 to 2023", "Murder rate in Memphis in 2023",
     // Jeff 2026-11-02: everyday period words, the series starting at its first year with a figure.
     "Memphis murders since 1930", "Memphis homicides by year", "Memphis murders over the past 3 years"],
+  // Current Trends (design note 2026-11-03): an agency by month (a blank month), the nation by month, a state's month.
+  rtci: ["Memphis murders by month in 2025", "Murders in the United States by month in 2026", "Robberies in Tennessee in August 2026", "Memphis murders by month in 2018"],
 };
 /** Choices and declines: their buttons are checked (9, 11). */
 const CHOICES = ["Memphis crime in 2024", "Memphis crime per month in 2024", "Shoplifting in Memphis in 2027", "Shoplifting in Kansas City in 2024",
@@ -151,10 +172,11 @@ function parseCsv(text: string): string[][] {
 }
 const SMALL = new Set(["by", "of", "per", "in", "on", "at", "to", "for", "with", "from", "vs", "as", "the", "a", "an", "or", "into"]);
 const fail: string[] = [];
+const ORI_PREFIX = new RegExp(`\\b(?:${Object.keys(ORI_PREFIX_STATES).join("|")})\\b`);
 const check = (ok: boolean, what: string) => { if (!ok) fail.push(what); };
 const shown = (p: Presentation) => [titleOf(p.titleParts).title, titleOf(p.titleParts).subtitle ?? "", ...leadOf(p).sentences,
   ...p.offers.flatMap((o) => (o.text ? [o.text.before + o.text.link + o.text.after] : [])), ...notesOf(p)].join(" ");
-const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" ? o.delivered : null);
+const answerOf = (o: ShadowOutcome): { table: ResultTable; text: string[]; headline?: string } | null => (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" || o.kind === "current" ? o.delivered : null);
 
 // 10: complete profiles, every field filled, for each live source.
 const FIELDS: (keyof SourceProfile)[] = ["units", "grain", "coverage", "rateBasis", "breakdowns", "caveats", "vocabulary", "name"];
@@ -179,6 +201,10 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
     sourcesSeen.add(p.source);
     check(p.source === want, `${tag}: answered from ${p.source}, fixture is ${want}'s`);
     const prof = PROFILES[p.source]!;
+    // 20: a source from the FBI's monthly releases never shows a month past the one before its release's month.
+    if (prof.latestMonth === "month_before_release") check("period" in o && (o as { period: { to: string } }).period.to <= latestShownMonth(nibrsRelease.released), `20 ${tag}: a month past ${latestShownMonth(nibrsRelease.released)}`);
+    // 19: an ORI prefix or header state ("NB", "GM") is never shown as a state (coordinator 2026-11-03).
+    check(!ORI_PREFIX.test(shown(p)) && !p.titleParts.places.some((x) => ORI_PREFIX.test(x)), `19 ${tag}: an ORI prefix shown as a state`);
     // 1
     const { title } = titleOf(p.titleParts);
     check(!!title && title.startsWith(`${joinAmp(p.titleParts.places)} `) && !title.includes(":") && !/\.$/.test(title) && !/\band\b/.test(title)
@@ -380,5 +406,14 @@ check(ksCov.lead.kind === "single" && ksCov.coverage.requested && !ksCov.offers.
     check(notesOf(p).includes("Nebraska: no rate is given for 2024.") && p.lead.kind === "described", "a blank rate beside the agencies column lost its explanation");
   }
 }
+// 20: the rule itself, and the release's own month never answered (month M appears after the update of M+1).
+check(latestShownMonth("2026-10-15T12:01:34Z") === "2026-09" && latestShownMonth("2027-01-15T00:00:00Z") === "2026-12"
+  && latestShownMonth("2026-10-31T22:00:00-05:00") === "2026-10", "20: latestShownMonth (in UTC: 31 October 22:00 at UTC-5 is a November release)");
+check(nibrsRelease.lastMonth === "2026-09" && nibrsRelease.released.startsWith("2026-10-15"), "20: release.json is the 2026-10-15 release, shown through September 2026");
+check(Object.values(PROFILES).every((x) => x!.latestMonth === "month_before_release" || x!.latestMonth === "as_published"), "20: every profile names its latest-month rule");
+{
+  const o = shadowAnswer(`Shoplifting in Memphis in ${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][Number(nibrsRelease.released.slice(5, 7)) - 1]} ${nibrsRelease.released.slice(0, 4)}`, deps);
+  check(o.kind === "decline" && o.reason === "outside_release_coverage", "20: the release's own month is not declined as outside the data");
+}
 assert.deepEqual(fail, [], fail.join("\n"));
-console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 18 checks`);
+console.log(`answer conformance: ${Object.values(FIXTURES).flat().length} answers and ${CHOICES.length} choices from ${Object.keys(PROFILES).length} sources pass the 20 checks`);

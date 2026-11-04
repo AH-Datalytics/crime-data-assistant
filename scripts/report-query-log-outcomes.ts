@@ -14,6 +14,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { shadowAnswer, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
+import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
+import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
 
@@ -21,21 +23,29 @@ const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(na
 const SOURCE = arg("--source")!;
 const QUESTIONS = arg("--questions")!;
 if (!SOURCE || !QUESTIONS) throw new Error("--source and --questions are required");
+// Through the month before the build's CDE release's month (Jeff 2026-11-03), from the release recorded with it.
+const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical"));
+const execute = duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!);
+// The Crime Index build: Historical and, when it has them, Current Trends' tables.
+const crimeIndex = arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct");
 const deps: ShadowDeps = {
-  places: loadPlaceIndex(), release: { id: arg("--release", "test6-20261031-host")!, firstMonth: "2017-01", lastMonth: arg("--last-month", "2026-09")!, asOf: "2026-10-29" },
+  places: loadPlaceIndex(), release: { ...release, asOf: "2026-10-29" },
   target: { root: arg("--root", "C:/Users/jeffm/nibrs-model/work/buildhost/test6-20261031/release/canonical")!, builtYears: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] },
-  execute: duckdbExecutor(arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!),
-  historical: historicalBuildAt(arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101")),
+  execute, historical: historicalBuildAt(crimeIndex), current: currentBuildAt(crimeIndex, execute),
 } as ShadowDeps;
 
 /** A decline is "well" when it gives a runnable next step or names an honest, specific limit; otherwise "badly". */
-const WELL = /court outcomes|below the level of an agency|cannot predict|staffing .* isn't available|no state clearance rate|is outside them|is not in the data|doesn't include/;
+const WELL = /court outcomes|below the level of an agency|cannot predict|staffing .* isn't available|no state clearance rate|is outside them|is not in the data|doesn't include|aren't available here|isn't available here|isn't one category|among the places here|states and the nation here/;
+const HONEST = new Set(["explanation_requested", "court_outcome", "below_agency_level", "outside_release_coverage"]);
 type Class = "answered" | "asked" | "declined well" | "declined badly" | "error";
 function classify(o: ShadowOutcome): Class {
-  if (o.kind === "answer" || o.kind === "historical" || o.kind === "srs") return "answered";
+  if (o.kind === "answer" || o.kind === "historical" || o.kind === "srs" || o.kind === "current") return "answered";
   if (o.kind === "clarify") return "asked";
   if (o.kind === "route") return "declined well";
-  if (o.kind === "decline") return o.alternative || WELL.test(o.explanation) ? "declined well" : "declined badly";
+  // A decline whose reason is an honest, specific limit (causes, court outcomes, below an agency, a period outside the
+  // data) is "well" by that reason, not only by its words. A place not found is "well" only in the shared wording that
+  // names the places here, never the reader's older refusal (a misspelling such as "batlimore" has the same reason).
+  if (o.kind === "decline") return o.alternative || WELL.test(o.explanation) || HONEST.has(o.reason) ? "declined well" : "declined badly";
   return "error";
 }
 

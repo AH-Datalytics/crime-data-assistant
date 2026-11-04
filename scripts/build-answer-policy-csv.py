@@ -592,6 +592,12 @@ ROWS = [
      "All reporting agencies by default; the consistent view as a link.",
      "As NIBRS's sums (P61, P80).",
      "Decided 2026-11-02 (Jeff: \"Yes on SHR but don't default to that\")", NEW),
+    ("P93", "The latest month of NIBRS, SHR and Hate Crime (the FBI's monthly CDE releases, around the 15th)",
+     "Through a configured month (2026-09).",
+     "The latest month shown is the one before the latest release's month: month M appears only after the update of month M+1. Keyed to the release date recorded with the build (scripts/fixtures/nibrs-shadow/release.json), never the calendar; a partial month that trickled in early is never shown. Not Current Trends, which follows Crime Index's own publishing.",
+     "Through the month before the release's month.",
+     "A release month holds only the reports that arrived before the upload, so it would read as a drop.",
+     "Decided 2026-11-03 (Jeff, relayed by the coordinator)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),

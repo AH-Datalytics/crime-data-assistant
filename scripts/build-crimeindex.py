@@ -20,6 +20,15 @@ Tables (one row per place and year; values exactly as published, a blank is NULL
     agency_staffing     all_total, officer_total, civilian_total and their *_capita; rows with no name or type are
                         kept (they are ORI-keyed agencies) with type NULL and counted in the manifest
     state_staffing, nation_staffing
+    current_crime       Current Trends (design note docs/superpowers/specs/2026-11-03-current-trends-design.md): the
+                        current_crime snapshot's agency rows, one per ORI and month (2025-01 on): state (postal code),
+                        ori, year, month, population, sample (in the Consistent Reporting Agencies), and for the nine
+                        offenses *_total (the month), *_ytd, *_roll (12 months) and *_change (the year to date against
+                        the same months a year earlier, as published). Group rows (states, regions, sizes, the nation)
+                        are not kept: the engine sums the sample agencies (P90, P91).
+    current_final       the Final panel archived with it (the site's input), one row per ORI and month from 2017-01,
+                        the seven Part I offenses as *_total; rows with no ORI are set aside and counted. A cross-path
+                        check for current_crime, and the source of agency months before 2025 (decision A).
 """
 import argparse
 import hashlib
@@ -40,6 +49,14 @@ COLUMNS = {
     + [(f"{o}_cleared_rate", "DOUBLE") for o in OFFENSES],
     "historical_staffing": [(f"{k}_total", "BIGINT") for k in ("all", "officer", "civilian")] + [(f"{k}_capita", "DOUBLE") for k in ("all", "officer", "civilian")],
 }
+
+# Current Trends: the current_crime snapshot and its Final panel (nibrs-model 8bc9eca's manifest).
+CURRENT = ("current_crime", "20261101")
+CURRENT_COLUMNS = [(f"{o}_{k}", "BIGINT") for k in ("total", "ytd", "roll") for o in OFFENSES] + [(f"{o}_change", "DOUBLE") for o in OFFENSES]
+FINAL_COLUMNS = {"murder": "Murder", "rape": "Rape", "robbery": "Robbery", "assault": "Aggravated Assault",
+                 "burglary": "Burglary", "theft": "Theft", "motor": "Motor Vehicle Theft"}
+# A place's state is its postal code, never its ORI prefix (lib/nibrs-plan/state-codes.ts): Nebraska's ORIs are NB.
+POSTAL = "CASE upper(substr(id, 1, 2)) WHEN 'NB' THEN 'NE' WHEN 'GM' THEN 'GU' ELSE upper(substr(id, 1, 2)) END"
 
 
 def sha256(path):
@@ -78,6 +95,57 @@ def verified_files(manifest, snapshots_dir):
             raise SystemExit(f"{dataset} {snapshot}: expected an agency file and a states/nation file, found {sorted(files)}")
         out[dataset] = {"snapshot": snapshot, "years": entry.get("years"), **files}
     return out
+
+
+def current_files(manifest, snapshots_dir):
+    """current_crime's file and its Final panel, hashed against the manifest; None when the manifest has no entry."""
+    dataset, snapshot = CURRENT
+    entry = next((s for s in manifest["snapshots"] if s.get("dataset") == dataset and s["snapshot"] == snapshot), None)
+    if entry is None:
+        return None
+    [rec] = [f for f in entry["files"] if f["file_name"].endswith(".csv")]
+    out = {"snapshot": snapshot, "years": entry.get("years")}
+    for key, name, sha, path in (("current", rec["file_name"], rec["sha256"], find_file(snapshots_dir, snapshot, dataset, rec["file_name"])),
+                                 ("final", entry["final_file"]["source_name"], entry["final_file"]["sha256"],
+                                  os.path.join(snapshots_dir, snapshot, dataset, "final", entry["final_file"]["source_name"]))):
+        if not os.path.isfile(path):
+            raise SystemExit(f"missing: {path}")
+        got = sha256(path)
+        if got != sha:
+            raise SystemExit(f"SHA-256 mismatch for {name}: manifest {sha}, file {got}")
+        out[key] = {"path": path, "file_name": name, "sha256": got}
+    return out
+
+
+def build_current(con, cur, write, record):
+    """current_crime and current_final (see the module docstring). A cell that is not exactly a number stops the build."""
+    path, final = cur["current"]["path"], cur["final"]["path"]
+    read = f"read_csv('{path}', all_varchar=true, header=true, delim=',', strict_mode=true)"
+    cols = [("year", "INTEGER"), ("month", "INTEGER"), ("population", "BIGINT")] + CURRENT_COLUMNS
+    sums = ", ".join(f"sum(CASE WHEN NULLIF(trim(\"{c}\"), '') IS NOT NULL AND NOT regexp_full_match(trim(\"{c}\"), '{PATTERN[t]}') THEN 1 ELSE 0 END)" for c, t in cols)
+    bad = {c: n for (c, _), n in zip(cols, con.execute(f"SELECT {sums} FROM {read}").fetchone()) if n}
+    if bad:
+        raise SystemExit(f"current_crime: cells that are not exactly a number of their column's type: {bad}")
+    casts = ", ".join(f"TRY_CAST(NULLIF(trim(\"{c}\"), '') AS {t}) AS \"{c}\"" for c, t in CURRENT_COLUMNS)
+    write("current_crime", f"SELECT {POSTAL} AS state, id AS ori, TRY_CAST(year AS INTEGER) AS year, TRY_CAST(month AS INTEGER) AS month, "
+          f"TRY_CAST(NULLIF(trim(population), '') AS BIGINT) AS population, sample = 'true' AS sample, {casts} "
+          f"FROM {read} WHERE size = 'all' AND regexp_full_match(id, '[A-Z]{{2}}[A-Z0-9]{{7}}')")
+    # The Final panel prints counts with thousands separators; a blank stays NULL. A negative month (a correction an
+    # agency reported, -1 to -7 in 2017-2026) is kept as published, as nibrs-model's reader keeps it.
+    fread = f"read_csv('{final}', all_varchar=true, header=true, delim=',', strict_mode=true)"
+    fbad = con.execute("SELECT " + ", ".join(f"sum(CASE WHEN NULLIF(trim(\"{c}\"), '') IS NOT NULL AND NOT regexp_full_match(replace(trim(\"{c}\"), ',', ''), '^-?[0-9]+$') THEN 1 ELSE 0 END)" for c in FINAL_COLUMNS.values()) + f" FROM {fread}").fetchone()
+    if any(fbad):
+        raise SystemExit(f"current_final: cells that are not counts: {dict(zip(FINAL_COLUMNS, fbad))}")
+    fcasts = ", ".join(f"TRY_CAST(NULLIF(replace(trim(\"{c}\"), ',', ''), '') AS BIGINT) AS {o}_total" for o, c in FINAL_COLUMNS.items())
+    write("current_final", f"SELECT {POSTAL.replace('id', 'trim(ori)')} AS state, trim(ori) AS ori, CAST(\"Year\" AS INTEGER) AS year, "
+          f"CAST(\"Month\" AS INTEGER) AS month, {fcasts} FROM {fread} WHERE NULLIF(trim(ori), '') IS NOT NULL")
+    no_ori = con.execute(f"SELECT count(*) FROM {fread} WHERE NULLIF(trim(ori), '') IS NULL").fetchone()[0]
+    if no_ori:
+        record["set_aside"]["current_final"] = {"reason": "no ORI", "count": no_ori, "rows": []}
+    for table in ("current_crime", "current_final"):
+        dup = con.execute(f"SELECT count(*) FROM (SELECT ori, year, month FROM {table} GROUP BY ALL HAVING count(*) > 1)").fetchone()[0]
+        if dup:
+            raise SystemExit(f"{table}: {dup} agency-months appear more than once")
 
 
 def typed(con, dataset, path, where):
@@ -183,6 +251,10 @@ def build(manifest_path, snapshots_dir, out_dir):
             dup = con.execute(f"SELECT count(*) FROM (SELECT {key}, year FROM {table} GROUP BY ALL HAVING count(*) > 1)").fetchone()[0]
             if dup:
                 raise SystemExit(f"{table}: {dup} place-years appear more than once")
+    cur = current_files(manifest, snapshots_dir)
+    if cur:
+        record["inputs"]["current_crime"] = cur
+        build_current(con, cur, write, record)
     record["diagnostics"] = diagnostics(con)
     record["notes"] = [
         "Crime Index publishes no state or national staffing: its staffing states/nation file has only a header, so "
@@ -207,7 +279,7 @@ def main(argv=None):
     if os.path.splitdrive(repo)[0] == os.path.splitdrive(out)[0] and os.path.commonpath([repo, out]) == repo:
         raise SystemExit("--out must be outside the repository")
     rec = build(a.manifest, a.snapshots, a.out)
-    print(json.dumps({"release": rec["release"], "tables": rec["tables"], "set_aside": {k: len(v["rows"]) for k, v in rec["set_aside"].items()},
+    print(json.dumps({"release": rec["release"], "tables": rec["tables"], "set_aside": {k: v.get("count", len(v["rows"])) for k, v in rec["set_aside"].items()},
                       "unparsed_cells": rec["unparsed_cells"], "flags": rec["flags"],
                       "diagnostics_outside_rounding": {k: v["outside_rounding"] for k, v in rec["diagnostics"].items() if v["outside_rounding"]}}, indent=1))
 

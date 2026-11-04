@@ -1,19 +1,19 @@
 # Answer evaluation: nibrs-shadow
 
-Labeled set: 440 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
+Labeled set: 450 cases. Release for resolution: 2017-01..2026-09, request date 2026-10-29.
 
 **Level: question -> delivered answer (shadow slice, release test6-20261031-host).** Scored: the action; the interpretation of every answer, option continuation and alternative; the required statements on the delivered text; decline reasons by class; delivered values, directly and behind every button and alternative, against nibrs-model's independent values (raw master files; NOT MEASURED where none is given). Not measured: other sources (an option routed to Historical is not run), follow-up turns.
 
 ## Execution coverage (can this candidate take the case)
 
-- 236: run by this candidate
+- 246: run by this candidate
 - 204: outside the shadow slice
 
 ## Label eligibility (can the case be scored)
 
-- 377: scorable (reviewed, decided policy)
+- 395: scorable (reviewed, decided policy)
 - 54: label unresolved
-- 9: label drafted
+- 1: label drafted
 
 ## Refused as not built (not scored)
 
@@ -23,18 +23,20 @@ Labeled set: 440 cases. Release for resolution: 2017-01..2026-09, request date 2
 
 ### Development
 
-28 cases. Correct 20; unverified 7; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
+36 cases. Correct 28; unverified 7; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 1. Severity score 1 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 16 | 0 | 0 | 0 |
+| answer | 24 | 0 | 0 | 0 |
 | clarify | 0 | 8 | 0 | 0 |
 | decline | 0 | 0 | 4 | 0 |
 
 | Capability | Era | Cases | Gate | Categories |
 |---|---|---|---|---|
+| answer:historical count | before 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
+| answer:historical count | spans 2021 | 7 | pass | wrong answers: pass (0); initial action: pass (100% (7/7)); direct answers: pass (100%); numeric fixtures: pass (7/7 match) |
 | answer:nibrs count | 2021 and later | 16 | not measured | wrong answers: not measured (0, 2 answers unverified); initial action: pass (100% (16/16)); direct answers: not measured (88% verified, 2 unverified); numeric fixtures: not measured (14/16 match, 2 not measured) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: pass (100% (1/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 2 answers unverified); clarifications: not measured (4/6 verified correct, 2 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (4/6 match, 2 not measured) |
@@ -82,13 +84,13 @@ Discrepancies and unverified cases:
 
 ### Held out
 
-184 cases. Correct 162; unverified 17; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
+194 cases. Correct 170; unverified 19; wrong answers 0; avoidable declines 3; unnecessary clarifications 0; wrong actions 2; incomplete 0. Severity score 70 (trend only).
 
 Expected (rows) by actual (columns):
 
 | | answer | clarify | decline | no reading |
 |---|---|---|---|---|
-| answer | 157 | 0 | 3 | 0 |
+| answer | 167 | 0 | 3 | 0 |
 | clarify | 0 | 6 | 2 | 0 |
 | decline | 0 | 0 | 16 | 0 |
 
@@ -100,11 +102,12 @@ Expected (rows) by actual (columns):
 | answer:historical count | spans 2021 | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
 | answer:historical rate | 2021 and later | 3 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (3/3)); direct answers: not measured (67% verified, 1 unverified); numeric fixtures: not measured (2/3 match, 1 not measured) |
 | answer:nibrs change | 2021 and later | 12 | pass | wrong answers: pass (0); initial action: pass (100% (12/12)); direct answers: pass (100%); numeric fixtures: pass (12/12 match) |
-| answer:nibrs count | 2021 and later | 118 | pass | wrong answers: pass (0); initial action: pass (97% (115/118)); direct answers: pass (97%); numeric fixtures: pass (115/115 match) |
+| answer:nibrs count | 2021 and later | 119 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (97% (116/119)); direct answers: pass (97%); numeric fixtures: not measured (115/116 match, 1 not measured) |
 | answer:nibrs count | spans 2021 | 2 | pass | wrong answers: pass (0); initial action: pass (100% (2/2)); direct answers: pass (100%); numeric fixtures: pass (2/2 match) |
 | answer:nibrs rate | 2021 and later | 14 | pass | wrong answers: pass (0); initial action: pass (100% (14/14)); direct answers: pass (100%); numeric fixtures: pass (14/14 match) |
 | answer:nibrs share | 2021 and later | 1 | pass | wrong answers: pass (0); initial action: pass (100% (1/1)); direct answers: pass (100%); numeric fixtures: pass (1/1 match) |
-| answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
+| answer:rtci count | 2021 and later | 9 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (9/9)); direct answers: not measured (89% verified, 1 unverified); numeric fixtures: not measured (8/9 match, 1 not measured) |
+| answer:rtci count | period not mapped | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
 | answer:shr count | 2021 and later | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (no delivered values) |
 | clarify:historical count | 2021 and later | 1 | fail | wrong answers: pass (0); clarifications: fail (0/1 verified correct, 1 failing); initial action: fail (0% (0/1)); direct answers: pass (no answerable cases); numeric fixtures: not measured (no delivered values) |
 | clarify:nibrs count | 2021 and later | 6 | not measured | wrong answers: not measured (0, 4 answers unverified); clarifications: not measured (2/6 verified correct, 4 unverified); initial action: pass (100% (6/6)); direct answers: pass (no answerable cases); numeric fixtures: not measured (2/6 match, 4 not measured) |
@@ -160,8 +163,11 @@ Discrepancies and unverified cases:
 - **LS-294** (avoidable_decline; expected answer, got decline) "Aggravated assault victims in Mesa by race and sex in 2024"
   - declined (reader): I can break the numbers down one way at a time; "and sex" would be a second breakdown.
 - **LS-348** (unverified; expected answer, got answer) "Robberies in Texas this year"
-  - unverified route: expected `rtci answer`, got `routed to rtci: not run by this NIBRS shadow`
-  - routed to rtci: This year's robbery figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.
+  - unverified period: expected `{"rule":"year to date through the latest reported month"}`, got `2026-01..2026-08`
+  - unverified statement: expected `names the months covered, through the latest reported month (P52)`, got `(no check defined)`
+  - unverified statement: expected `says the current year is incomplete and which agencies the current source covers (P53)`, got `(no check defined)`
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Texas: 4,317 robberies in the year to date, January 2026 through August 2026. / This counts only the 76 Consistent Reporting Agencies, covering roughly 15 million people, that reported every month from January
 - **LS-349** (unverified; expected answer, got answer) "Murders in the US by victim-offender relationship in 2023"
   - unverified route: expected `shr answer`, got `routed to shr: not run by this NIBRS shadow`
   - routed to shr: Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't availabl
@@ -190,6 +196,12 @@ Discrepancies and unverified cases:
 - **LS-426** (unverified; expected decline, got decline) "what about Detroit?"
   - unverified alternative values: expected `independent expected values`, got `none given: NOT MEASURED`
   - declined (court_outcome): NIBRS covers crimes reported to police, arrests and clearances. It doesn't include charges or court outcomes (prosecutions, trials, convictions, sentences or defendants).
+- **LS-449** (unverified; expected answer, got answer) "Memphis murders by month in 2025"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murders by month, January 2025 through December 2025. / Figures for the Memphis Police Department. / Source: Crime Index.
+- **LS-450** (unverified; expected answer, got answer) "Memphis murders by month in 2025 according to NIBRS"
+  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
+  - delivered: Memphis, Tennessee: murder victims by month, 2025. / Reported by the Memphis Police Department. / Source: FBI NIBRS.
 
 ## Scored (reviewed labels, decided policy): replay cases inside the slice
 
@@ -297,45 +309,7 @@ Discrepancies and unverified cases:
 
 ### Development
 
-8 cases. Correct 0; unverified 8; wrong answers 0; avoidable declines 0; unnecessary clarifications 0; wrong actions 0; incomplete 0. Severity score 0 (trend only).
-
-Expected (rows) by actual (columns):
-
-| | answer | clarify | decline | no reading |
-|---|---|---|---|---|
-| answer | 8 | 0 | 0 | 0 |
-
-| Capability | Era | Cases | Would-be gate (not a gate) | Categories |
-|---|---|---|---|---|
-| answer:historical count | before 2021 | 1 | not measured | wrong answers: not measured (0, 1 answers unverified); initial action: pass (100% (1/1)); direct answers: not measured (0% verified, 1 unverified); numeric fixtures: not measured (0/1 match, 1 not measured) |
-| answer:historical count | spans 2021 | 7 | not measured | wrong answers: not measured (0, 7 answers unverified); initial action: pass (100% (7/7)); direct answers: not measured (0% verified, 7 unverified); numeric fixtures: not measured (0/7 match, 7 not measured) |
-
-Discrepancies and unverified cases:
-
-- **LS-433** (unverified; expected answer, got answer) "Memphis murders since 1930"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
-- **LS-434** (unverified; expected answer, got answer) "Memphis homicides by year"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
-- **LS-435** (unverified; expected answer, got answer) "Memphis murders over time"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: murders by year, 1932 through 2025. / Figures for the Memphis Police Department. / Crime Index has no murder figures for Memphis, Tennessee from 1930 to 1931, so the chart and table start i
-- **LS-436** (unverified; expected answer, got answer) "Memphis robberies since 1990"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Memphis, Tennessee: robberies by year, 1990 through 2025. / Figures for the Memphis Police Department. / Source: Crime Index.
-- **LS-437** (unverified; expected answer, got answer) "Philadelphia murders in the 90s"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Philadelphia, Pennsylvania: murders by year, 1990 through 1999. / Figures for the Philadelphia Police Department. / Source: Crime Index.
-- **LS-438** (unverified; expected answer, got answer) "Philadelphia murders over the past 10 years"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Philadelphia, Pennsylvania: murders by year, 2016 through 2025. / Figures for the Philadelphia Police Department. / Source: Crime Index.
-- **LS-439** (unverified; expected answer, got answer) "Chicago robberies after 2010"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Chicago, Illinois: robberies by year, 2011 through 2025. / Figures for the Chicago Police Department. / Source: Crime Index.
-- **LS-440** (unverified; expected answer, got answer) "Tennessee robberies since 2000"
-  - unverified values: expected `independent expected values`, got `none given: NOT MEASURED`
-  - delivered: Tennessee: robberies by year, 2000 to 2025. / Source: Crime Index.
+No cases.
 
 ### Held out
 

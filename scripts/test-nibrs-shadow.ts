@@ -8,7 +8,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
-import { agencyName, candidateLabel, loadPlaceIndex, reportedBy, resolvePlace } from "../lib/nibrs-shadow/places";
+import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
+import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
@@ -117,6 +118,81 @@ assert.equal(ori(at("city:Washington:DC", "Washington DC")), "DCMPD0000");
 assert.equal(ori(at("county:Baltimore County:MD", "Baltimore County")), "MD0030100");
 assert.equal(ori(at("city:Portland:OR", "Portland")), "OR0260200", "Portland, Maine is under 100,000");
 assert.equal(at("city:Nowhere:TX", "Nowhere").kind, "unresolved");
+// The shared index (coordinator 2026-11-02): the crosswalk's place names are aliases; Crime Index agencies NIBRS lacks are
+// in it; an agency's own name wins over another's alias in the same state.
+assert.equal(ori(at("city:New York City:NY", "New York City")), "NY0303000", "the crosswalk's \"new york city\"");
+assert.equal(ori(at("county:Jefferson County:LA", "Jefferson Parish")), "LA0260000", "a Crime Index parish NIBRS lacks");
+assert.equal(ori(at("county:Jefferson Parish:LA", "Jefferson Parish, Louisiana")), "LA0260000");
+assert.equal(ori(at("city:Louisville:KY", "Louisville")), "KY0568000", "not the old county police's \"louisville county\"");
+assert.equal(ori(at("city:Flint:MI", "Flint")), "MI2539800", "not Flint Township's mailing city \"flint\"");
+// "Borough" is a town's, never a county's (Codex places review 01).
+assert.equal(ori(at("ambiguous:Baldwin Borough", "Baldwin Borough")), "PA0020100");
+assert.equal(ori(at("city:Freehold Borough:NJ", "Freehold Borough")), "NJ0131500");
+assert.equal(ori(at("ambiguous:Middlesex Borough", "Middlesex Borough")), "NJ0121100");
+assert.equal(at("ambiguous:Orleans Parish", "Orleans Parish").kind, "unresolved", "never Orleans County, New York");
+assert.equal(at("county:Orleans County:LA", "Orleans Parish, Louisiana").kind, "unresolved");
+// No population floor (Jeff 2026-11-03): every city and county agency is in the index, so same-name towns ask a short
+// list, never dozens; a name with one clearly main city (twice the next) is that city; a city's name is a city (P16).
+assert.ok(places.byName.get("clinton")!.length > 20 && places.byName.get("franklin")!.length > 20, "dozens of same-name agencies");
+assert.deepEqual(asked(at("ambiguous:Springfield", "Springfield")), ["Springfield, Missouri", "Springfield, Massachusetts", "Springfield, Illinois"]);
+const clinton = at("city:Clinton:IA", "Clinton");
+assert.ok(clinton.kind === "ask" && clinton.candidates.length === 3 && clinton.more, "Clinton: three towns, one per state, and the rest one step away");
+assert.deepEqual(asked(at("city:Greenville:SC", "Greenville")), ["Greenville, North Carolina", "Greenville city, South Carolina", "Greenville, Texas", "Greenville County, South Carolina"]);
+assert.equal(ori(at("city:Franklin:TN", "Franklin")), places.byName.get("franklin")!.find((x) => x.state === "TN" && x.kind === "city")!.ori, "Franklin, Tennessee is twice any other Franklin");
+assert.equal(at("city:Clinton:MI", "Clinton, Michigan").kind, "agency", "a state named settles it");
+assert.equal((at("city:Clinton:MI", "Clinton, Michigan") as { agency: { kind: string } }).agency.kind, "city", "Clinton, Michigan is the city, not Clinton County");
+{
+  const c = as(ask("Shoplifting in Clinton in 2024"), "clarify");
+  assert.equal(c.options.length, 4);
+  assert.deepEqual(c.options.at(-1), { label: "Another Clinton", entry: "which city or agency" });
+}
+
+// "LA" asks Los Angeles or Louisiana; after a place it qualifies, it stays the state (coordinator 2026-11-03).
+{
+  const la = as(ask("LA murder trend"), "clarify");
+  assert.deepEqual(la.options.map((o) => o.label), ["Los Angeles", "Louisiana"]);
+  assert.notEqual(ask("Shoplifting in Baton Rouge, LA in 2024").kind, "clarify");
+  assert.notEqual((ask("Shoplifting in La Crosse in 2024") as { about?: string }).about, "which LA");
+  assert.notEqual((ask("Shoplifting in LA CROSSE in 2024") as { about?: string }).about, "which LA", "Codex review 01.6: a name in capitals");
+}
+// A misspelled large place is read as it: one large place within two edits, same first letter (coordinator 2026-11-03).
+assert.equal(nearestPlaceName(places, "batlimore"), "Baltimore");
+assert.equal(nearestPlaceName(places, "phialdelphia"), "Philadelphia");
+assert.equal(nearestPlaceName(places, "Memphis"), null, "a place the index has is not corrected");
+assert.equal(nearestPlaceName(places, "index"), null);
+
+// A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").
+assert.ok([...places.byName.values()].flat().every((x) => x.state in STATE_NAMES), "every agency's state is a postal code");
+assert.equal(ori(at("city:Omaha:NE", "Omaha, NE")), "NB0280200");
+assert.equal(agencyLabel(places.byName.get("omaha")![0]), "Omaha, Nebraska");
+assert.ok(agencyPopulationSql("r", { state: "NE", city: true }, [2024]).includes("IN ('NE', 'NB')"), "a state's city agencies under every header code");
+assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"));
+
+// Shared decline wording (coordinator 2026-11-03, Historical step one causes 3 and 7): a place the index doesn't have
+// says so, never P01's "figures don't answer"; asks outside the data name their limit; the nation is "the United States"
+// in an offered question, never "in nationwide".
+{
+  // Every agency is in the index (no population floor, Jeff 2026-11-03), so the place is taken out of a copy of it.
+  const noEcorse = { ...places, byName: new Map([...places.byName].filter(([k]) => k !== "ecorse")) };
+  const unfound = as(shadowAnswer("Murders in Ecorse, Michigan in 2020", { ...deps, places: noEcorse }), "decline");
+  assert.equal(unfound.reason, "unresolved_place");
+  assert.match(unfound.explanation, /^I couldn't find "Ecorse, Michigan" among the city and county police agencies, states and the nation here\./);
+  assert.equal(at("city:Ecorse:MI", "Ecorse, Michigan").kind, "agency", "a town of under 10,000 people is in the index");
+  assert.doesNotMatch(unfound.explanation, /don't answer this question/);
+  const outside: [string, RegExp][] = [
+    ["Memphis crime on a map", /^Maps aren't available here/],
+    ["US population per year since 1960", /^Population figures on their own aren't available here/],
+    ["Can you give me a list of Hawaii law enforcement agencies ordered by population covered in 2024?", /^A list of agencies/],
+    ["How common is cybercrime in New Hampshire?", /^Cybercrime isn't one category/],
+    ["Thefts on college campuses in New Jersey in 2020", /^College and university police agencies/],
+    ["Can I see a data set of all crimes by type across the US from 2020 to present", /^A whole data set isn't available here/],
+  ];
+  for (const [q, re] of outside) assert.match(as(ask(q), "decline").explanation, re, q);
+  assert.equal(ask("College Station robberies in 2024").kind !== "decline" || !/College and university/.test((ask("College Station robberies in 2024") as { explanation: string }).explanation), true, "a place named College is not a campus");
+  assert.ok(ask("Memphis population and robbery rate in 2023").kind === "decline" ? !/^Population figures/.test((ask("Memphis population and robbery rate in 2023") as { explanation: string }).explanation) : true, "population beside a crime is not the population-only limit");
+  const nation = as(ask("show homicides and total violent crimes nationwide by year for 2000 to 2025"), "decline");
+  assert.doesNotMatch(nation.explanation + (nation.alternative?.question ?? ""), /\bin nationwide\b/);
+}
 
 // An answer: the plan, the compiled read, the delivered table and text (source statement last, D30).
 const a = as(ask("How many shoplifting offenses were there in Memphis in 2023?"), "answer");

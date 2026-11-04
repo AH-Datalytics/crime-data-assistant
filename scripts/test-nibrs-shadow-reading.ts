@@ -94,6 +94,23 @@ assert.equal(cmp("Will shoplifting go up in Tulsa next year?").forecast, true, "
 // P56: the last 12 months end at the release's latest month.
 assert.deepEqual([cmp("Shoplifting in Tulsa over the last 12 months").text, cmp("Shoplifting in Tulsa over the last 12 months").last12], ["Shoplifting in Tulsa from October 2025 to September 2026", true]);
 assert.equal(readQuestion("Shoplifting in Tulsa over the last 12 months", 2026).last12, false, "without a release month the wording is left to the reader");
+// Census regions (Current Trends' groups, coordinator 2026-11-03): read as the nation and flagged; never a state or a
+// part of a city.
+for (const [q, code] of [["robberies in the Northeast by month in 2026", "noe"], ["murders in the South so far this year", "sth"], ["show me robberies per month in the northeast US", "noe"],
+  ["midwest murders by year from 2018 to 2020", "mdw"], ["murders in the West in 2026", "wst"], ["murders in South Carolina in 2023", null], ["robberies on the South Side of Chicago in 2023", null],
+  ["West Memphis murders in 2023", null], ["murders in the West End in 2023", null],
+  // Codex review 01.5: real places named like a region.
+  ["Midwest City murders in 2024", null], ["Murders in North East, Maryland in 2024", null]] as [string, string | null][])
+  assert.equal(readQuestion(q, 2026).region, code, q);
+// "NY" for a place is New York (P26 asks city or state); after a place it qualifies, it stays; "NY city" is the city.
+assert.match(readQuestion("NY murders in 2023", 2026).text, /^New York murders/);
+assert.match(readQuestion("homicides in ny city in 2023", 2026).text, /in New York City in 2023/);
+assert.match(readQuestion("Rochester NY murders in 2023", 2026).text, /^Rochester NY murders/);
+assert.match(readQuestion("homicides reported by the Suffern (NY) Police Department", 2026).text, /\(NY\)/);
+// Places' nicknames, read for every source (coordinator 2026-11-02).
+assert.match(readQuestion("Philly homicides 2010 to 2020", 2026).text, /^Philadelphia homicides/);
+assert.match(readQuestion("murders in NOLA since 2015", 2026).text, /in New Orleans since/);
+assert.equal(readQuestion("Nolan County robberies in 2020", 2026).text.includes("New Orleans"), false, "a whole word only");
 
 // Every rewrite is recorded on the ledger the reader reads.
 const l = read("Shoplfting in Tulsa so far this year").ledger;
