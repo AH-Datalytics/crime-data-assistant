@@ -19,7 +19,7 @@ import type { NibrsPlan } from "../nibrs-plan/plan";
 import { compilePlan } from "../nibrs-plan/compile";
 import { rate } from "../nibrs-plan/transforms";
 import type { AnswerStatement } from "../nibrs-plan/result";
-import { deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
+import { deliver as deliverRows, deliverTable, fmt, fmtRate, measureWords, monthName, periodWords } from "./deliver";
 import { stateName, STATE_NAMES } from "./places";
 import { srsPopulation } from "./srs";
 import { headerStates } from "../nibrs-plan/state-codes";
@@ -71,7 +71,11 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const st = plan.statistics.filter((s) => s !== supportStat)[0];
   const isRate = st.kind === "rate";
   const yearG = plan.groupings.some((g) => g.dimension === "time.year");
-  if (plan.groupings.some((g) => g.dimension !== "time.year")) return decline("This isn't available yet: a state or national sum by month or by category.");
+  // One category (coordinator 2026-11-04), by year or not; a month or two categories are not built yet.
+  const catDims = plan.groupings.filter((g) => !g.dimension.startsWith("time."));
+  if (plan.groupings.some((g) => g.dimension.startsWith("time.") && g.dimension !== "time.year") || catDims.length > 1)
+    return decline("This isn't available yet: a state or national sum by month or by two categories.");
+  if (catDims.length && isRate) return decline("Rates by category aren't given for a state or the nation: there is no population for each group.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
   if (years.length > 1 && !yearG) return decline("This isn't available yet: a state or national total over several years without \"by year\" (each year has its own reporting agencies).");
   if (isRate && yearG) return decline("This isn't available yet: a state or national rate by year.");
@@ -96,7 +100,7 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // The monthly grid of every agency (compile.ts), as for several agencies.
   const m = plan.measures[0];
   const sub: NibrsPlan = { ...plan, measures: [{ ...m, filters: undefined }], filters: [...plan.filters, ...(m.filters ?? [])], transforms: [],
-    groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }], statistics: [{ kind: "count", as: "n", measure: m.as }] };
+    groupings: [{ dimension: "time.month", unknown: "visible", absent: "show" }, ...catDims], statistics: [{ kind: "count", as: "n", measure: m.as }] };
   const c = compilePlan(sub, { kind: "absolute", ...period }, { ...deps.target, agencies: oris });
   if (c.kind === "unsupported") return decline(NOT_YET, c.reason);
   for (const s of c.query.statements) if (!statements.includes(s)) statements.push(s);
@@ -106,11 +110,18 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   // of the reported months, and the conflict months.
   const agg = new Map<string, { months: number; rep: number; sum: number; conflicts: number }>();
   const monthsIn = new Map<number, number>();
-  for (const r of deps.execute(`SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
+  // By category (coordinator 2026-11-04), a month is one row per category: its status and its own total (den) are the
+  // agency-month's, read once per month, so the year's total is the sum of the months' totals, never of the categories
+  // (which can overlap). Two passes over the grid: this one for coverage, one below for both views' category sums.
+  const monthly = catDims.length
+    ? `SELECT ori, period, any_value(n_status) AS n_status, any_value(den) AS n FROM (${c.query.sql}) GROUP BY ori, period`
+    : c.query.sql;
+  const covRows = deps.execute(`SELECT ori, CAST(substr(period, 1, 4) AS INTEGER) AS y, count(*) AS months,
       count(*) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')) AS rep,
       coalesce(sum(n) FILTER (WHERE n_status IN ('VALUE', 'REPORTED_ZERO')), 0) AS repsum,
       count(*) FILTER (WHERE n_status = 'EVIDENCE_CONFLICT') AS conflicts
-    FROM (${c.query.sql}) GROUP BY ALL`)) {
+    FROM (${monthly}) GROUP BY ALL`);
+  for (const r of covRows) {
     const y = Number(r[1]);
     if (yearSet && !yearSet.includes(y)) continue;
     agg.set(`${r[0]}|${y}`, { months: Number(r[2]), rep: Number(r[3]), sum: Number(r[4]), conflicts: Number(r[5]) });
@@ -148,6 +159,9 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   const current = new Map(everySet.length ? deps.execute(currentPopulationSql(deps.target.root, everySet)).map((r) => [String(r[0]), Number(r[1])]) : []);
   const everyCurrentPopulation = { sum: everySet.reduce((a, o) => a + (current.get(o) ?? 0), 0), missing: everySet.filter((o) => !current.has(o)).length };
   const meta: StateSumMeta = { years: byYear, everyAgencies: everySet.length, crimeIndexPopulation: ciPop, everyCurrentPopulation };
+
+  const gridSql = c.query.sql;
+  if (catDims.length) return byCategory();
 
   // Jeff (2026-11-01, "WAAAAY too much disclaimer"): no "counts reported to NIBRS" line; the lead says where they come from.
   const what = measureWords(plan);
@@ -218,4 +232,45 @@ export function answerStateSum(plan: NibrsPlan, period: { from: string; to: stri
   if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
   const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome, role: "consistent_agencies", targetSource: "nibrs" };
   return { kind: "answer", plan, period, sql: c.query.sql, delivered, buttons: [button], stateSum: meta };
+
+  /**
+   * A state or national sum by one category (coordinator 2026-11-04): each category summed over the agencies counted
+   * (each year's reporting agencies), or over the Consistent Reporting Agencies for the button, reported months only;
+   * a category's share is of the year's total units (a multi-valued category's shares can add up to more than 100%).
+   * The table and words are the shared delivery's (deliver.ts: labels, order, Unknown last); the coverage line is the
+   * state sum's.
+   */
+  function byCategory(): ShadowOutcome {
+    const g = catDims[0].dimension, count = plan.statistics.find((x) => x.kind === "count")!, share = plan.statistics.find((x) => x.kind === "share");
+    // Both views' sums in one pass: every reported agency-month, and those of the Consistent Reporting Agencies.
+    const sums2 = deps.execute(`SELECT CAST(substr(period, 1, 4) AS INTEGER) AS y, g0, sum(n) AS n_all,
+        coalesce(sum(n) FILTER (WHERE ori IN (SELECT unnest([${list(everySet.length ? everySet : [""])}]))), 0) AS n_every
+      FROM (${gridSql}) WHERE n_status IN ('VALUE', 'REPORTED_ZERO') GROUP BY ALL ORDER BY 1, 2`);
+    const sumsFor = (every: boolean) => sums2.map((r) => [r[0], r[1], every ? r[3] : r[2]]);
+    const deliverView = (every: boolean, p: NibrsPlan) => {
+      const sums = sumsFor(every).filter((r) => keptYears.includes(Number(r[0])));
+      const cats = [...new Set(sums.map((r) => r[1] as string | null))];
+      const total = (y: number) => { const b = byYear.find((x) => x.year === y)!; return every ? b.every.sum : b.sum; };
+      const rows: unknown[][] = [];
+      for (const y of keptYears) for (const k of cats) {
+        const n = Number(sums.find((r) => Number(r[0]) === y && r[1] === k)?.[2] ?? 0), den = total(y);
+        rows.push([...(yearG ? [String(y)] : []), k, n, "VALUE", ...(share ? [den > 0 ? n / den : null, den > 0 ? "VALUE" : "UNAVAILABLE"] : [])]);
+      }
+      const columns = [...(yearG ? ["period"] : []), g, count.as, `${count.as}_status`, ...(share ? [share.as, `${share.as}_status`] : [])];
+      const d = deliverRows(p, period, period.to, columns, rows, statements, deps.release.id, readings);
+      // The state sum's coverage, in its words (Jeff 2026-11-01), after the headline.
+      const span = yearSet && yearSet.length > 1 ? `in ${yearSet.join(", ")}` : `from ${monthName(period.from)} through ${monthName(period.to)}`;
+      const covered = every ? `Counting only the ${fmt(meta.everyAgencies)} Consistent Reporting Agencies that reported every month ${span}.`
+        : keptYears.length === 1 ? `Summed over the ${fmt(byYear.find((x) => x.year === keptYears[0])!.agencies)} agencies that reported.` : "Summed over the agencies that reported each year.";
+      return { ...d, text: [d.text[0], covered, every ? "Includes only agencies that reported complete data." : "Includes all agencies.", ...d.text.slice(1)] };
+    };
+    const everyPlan: NibrsPlan = { ...plan, coverage: { ...plan.coverage, cohort: "same_agencies" } };
+    const everyDelivered = deliverView(true, everyPlan);
+    const everyOutcome: ShadowOutcome = { kind: "answer", plan: everyPlan, period, sql: gridSql, delivered: everyDelivered, stateSum: meta };
+    if (consistent) return everyDelivered.contractProblems.length ? decline(NOT_YET, `answer contract: ${everyDelivered.contractProblems.join("; ")}`) : everyOutcome;
+    const delivered = deliverView(false, plan);
+    if (delivered.contractProblems.length) return decline(NOT_YET, `answer contract: ${delivered.contractProblems.join("; ")}`);
+    const button: ShadowOption = { label: "Consistent Reporting Agencies", continuation: everyOutcome, role: "consistent_agencies", targetSource: "nibrs" };
+    return { kind: "answer", plan, period, sql: gridSql, delivered, buttons: [button], stateSum: meta };
+  }
 }

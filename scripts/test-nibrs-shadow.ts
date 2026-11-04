@@ -899,8 +899,11 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(g("Aggravated assault victims in Memphis in 2024, by victim race"), ["victim.race"]);
   // Codex 04.2: a victim's attribute on arrests is declined, never answered as the arrestee's.
   assert.match(as(ask("Arrests in Denver in 2023 by victim race"), "decline").explanation, /a victim's race for arrests/);
-  // A people breakdown for a state is declined with P29's reason, never answered from the historical file.
-  assert.match(as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "decline").explanation, /^Offender breakdowns for a whole state or the nation aren't available yet/);
+  // A people breakdown for a state is NIBRS's sum by category (coordinator 2026-11-04), never the historical file's.
+  {
+    const o = as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "answer");
+    assert.ok(o.plan.groupings.some((x) => /offender_sex|offender\.sex/.test(x.dimension)) && o.stateSum && o.delivered.text.at(-1) === "Source: FBI NIBRS.");
+  }
   // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).
   assert.deepEqual(as(ask("Murders by young adults in Memphis in 2024"), "clarify").options.map((o) => o.label), ["18 to 24", "18 to 29"]);
   assert.deepEqual(as(ask("How many attackers were there in aggravated assaults in Detroit in 2024?"), "clarify").options.map((o) => o.label), ["Offenders", "People arrested"]);

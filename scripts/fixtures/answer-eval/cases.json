@@ -23376,20 +23376,54 @@
    "setup": [],
    "question": "Aggravated assaults in Tennessee in 2024 by offender sex",
    "policy": [
+    "D18",
     "P29",
+    "P49",
     "P53",
-    "P01"
+    "P61"
    ],
    "expected": {
-    "action": "decline",
-    "reason": "Offender breakdowns for a whole state are not built yet; they are for one agency or several named agencies.",
-    "alternative": null
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "offender sex"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "says a unit with several categories counts once in each, so the categories can add up to more than the total",
+     "names how many agencies it sums over",
+     "names its source at the end"
+    ]
    },
    "label": {
-    "status": "reviewed",
-    "drafted_by": "claude-inc7",
-    "reviewed_by": "codex:inc7-labels-1",
-    "notes": "NEGATIVE CONTROL: P29, an offender breakdown the engine cannot compute is declined with that reason, never answered as victims; state breakdowns are a confirmed gap. Corrected after Codex review 04: no agency alternative (choosing one agency for a state needs a policy decision); the decline names one agency or several named agencies."
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "Relabelled 2026-11-04: state and national sums by one category are built (coordinator 2026-11-04), so the former negative control (P29 decline) is now an answer: victims (D18) by the sexes of their incident's offenders (P49), summed over the agencies that reported (P61). Was reviewed by codex:inc7-labels-1 as a decline."
    }
   },
   {
@@ -27263,6 +27297,426 @@
     "drafted_by": "claude-current",
     "reviewed_by": "codex:current-labels-1",
     "notes": "Current Trends in the new engine (design note 2026-11-03)."
+   }
+  },
+  {
+   "id": "LS-451",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assault victims in Tennessee by sex in 2024",
+   "policy": [
+    "P29",
+    "P53",
+    "P61",
+    "P80"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim sex"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names how many agencies it sums over",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-452",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murder victims in the United States by race in 2024",
+   "policy": [
+    "P29",
+    "P53",
+    "P61",
+    "P80"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "victim race"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names how many agencies it sums over",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-453",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robbery offenders in Tennessee by race in 2024",
+   "policy": [
+    "P29",
+    "P53",
+    "P61",
+    "P80"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "offender"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "offender race"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names how many agencies it sums over",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-454",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Robbery arrests in Tennessee by age in 2024",
+   "policy": [
+    "P29",
+    "P53",
+    "P61",
+    "P80"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "robbery",
+       "unit": "arrest"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "arrestee age"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names how many agencies it sums over",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-455",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Aggravated assault offenses in Texas by location type in 2024",
+   "policy": [
+    "P29",
+    "P53",
+    "P61",
+    "P80"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Texas",
+       "state": "TX"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "aggravated assault",
+       "unit": "offense"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "location type"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names how many agencies it sums over",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-456",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Simple assault victims in Tennessee by sex by year from 2023 to 2024",
+   "policy": [
+    "P29",
+    "P53",
+    "P61",
+    "P80"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "state",
+       "name": "Tennessee",
+       "state": "TN"
+      }
+     ],
+     "period": {
+      "from": "2023-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "simple assault",
+       "unit": "victim"
+      }
+     ],
+     "filters": [],
+     "groupings": [
+      "year",
+      "victim sex"
+     ],
+     "statistic": "count",
+     "cohort": "all_reporting"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
+   }
+  },
+  {
+   "id": "LS-457",
+   "group": "designed:category-state",
+   "split": "dev",
+   "origin": {
+    "kind": "designed",
+    "ref": null
+   },
+   "tab": "nibrs",
+   "setup": [],
+   "question": "Murder victims in the United States by race in 2024, only agencies that reported every month",
+   "policy": [
+    "P29",
+    "P53",
+    "P61",
+    "P80"
+   ],
+   "expected": {
+    "action": "answer",
+    "meaning": {
+     "source": "nibrs",
+     "places": [
+      {
+       "kind": "national",
+       "name": "United States"
+      }
+     ],
+     "period": {
+      "from": "2024-01",
+      "to": "2024-12"
+     },
+     "measures": [
+      {
+       "name": "murder",
+       "unit": "victim"
+      }
+     ],
+     "filters": [
+      "agencies that reported every month of 2024"
+     ],
+     "groupings": [
+      "victim race"
+     ],
+     "statistic": "count",
+     "cohort": "same_agencies"
+    },
+    "values": {
+     "status": "pending_build"
+    },
+    "statements": [
+     "names the Consistent Reporting Agencies it counts",
+     "names its source at the end"
+    ]
+   },
+   "label": {
+    "status": "drafted",
+    "drafted_by": "claude-statecat",
+    "reviewed_by": null,
+    "notes": "A state or national NIBRS sum by one category (coordinator 2026-11-04)."
    }
   }
  ]
