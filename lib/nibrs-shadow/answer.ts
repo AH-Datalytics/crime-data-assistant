@@ -655,7 +655,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const namedUnknown = ledger0.parts.find((p) => p.clause === 0 && p.state === "not-interpreted"
     && /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:,\s*[A-Z]{2})?$/.test(p.text.trim())
     // A month, day or season is not a place ("did violent crime increase in April").
-    && !/\bin\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Spring|Summer|Fall|Autumn|Winter)\b/.test(p.text));
+    && !/\bin\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Spring|Summer|Fall|Autumn|Winter)\b/.test(p.text)
+    // Nor is an ordinary word written with a capital ("murders in General in 2024": Codex follow-up-rewrites re-check 02):
+    // only a word that isn't an everyday English word is taken for a place name.
+    && !/\bin\s+(?:General|Total|Particular|Recent|Detail|Details|Summary|Average|Full|Public|Private|Question|Questions|Data|Short|Brief|Practice|Theory|Fact|Reality|Response|Return|Advance|Progress|Place|Places|Area|Areas|Order|Addition|Comparison|Contrast|Terms|Percent|Percentage|Number|Numbers|Count|Counts|Rate|Rates|Total|Aggregate|All|Each|Every|Any|Some|Most|Many|Other|Others|Which|What|Where|When|How|Why|Who|Year|Years|Month|Months|Week|Weeks|Today|Recent|Past|Future|History|Trend|Trends|Crime|Crimes|Murder|Murders|Graph|Chart|Table|Map)\b/.test(p.text));
   if (!clause0("place").length && namedUnknown) {
     const name = /in\s+(.+)$/.exec(namedUnknown.text.trim())![1].replace(/[?.!,]+$/, "");
     return decline("unresolved_place", `I couldn't find "${name}" among the city and county police agencies, states and the nation here.`);

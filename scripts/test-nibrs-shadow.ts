@@ -969,6 +969,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.ok(!/U\.S\. law enforcement agencies only/.test(JSON.stringify(ask(q))), q);
   assert.match(as(ask("How many murders were there in Zzyzxville in 2024?"), "decline").explanation, /couldn't find "Zzyzxville"/);
   assert.ok(!/couldn't find "April"/.test(JSON.stringify(ask("Which cities had the most violent crime in April"))), "a month is not a place");
+  assert.ok(!/couldn't find "General"/.test(JSON.stringify(ask("murders in General in 2024"))), "an ordinary word is not a place");
   // Codex reader-change review 01: a percent change over a span is never answered as counts.
   for (const q of ["What is the % change in robberies in Denver since 2019?", "percent change in robberies in Denver since 2019"]) assert.notEqual(ask(q).kind, "answer", q);
   // Reader cluster 1 and P94 (Jeff 2026-11-05): a rolling window of any length named is read and computed at that

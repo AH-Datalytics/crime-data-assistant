@@ -145,12 +145,13 @@ export function standsAlone(turn: string): boolean {
   // Only "this year", "this month", "this quarter", "this week" name the present on their own; "that year", "this last
   // comparison" point back (Codex follow-up re-check 02).
   const refersBack = /\b(?:that|it|these|those|its)\b|\bthis\b(?!\s+(?:year|month|quarter|week)\b)/i.test(t);
-  if (COMPARE_WORD.test(t) && ((places < 2 && !placeSet) || refersBack)) return false;
+  // A place outside the United States ("Paris, France") is a place named too, declined as a new question; it counts toward
+  // a comparison's two sides ("Paris, France vs London, England": Codex follow-up-rewrites re-check 02).
+  const foreignCount = own.all.filter((p) => p.concept === "outside-us").length;
+  if (COMPARE_WORD.test(t) && ((places + foreignCount < 2 && !placeSet) || refersBack)) return false;
   // The crime may be named as a unit or people ("Victim age breakdown in Texas in 2023") or as shootings.
   const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
-  // A place outside the United States ("Paris, France") is a place named too: declined as a new question.
-  const foreign = own.all.some((p) => p.concept === "outside-us");
-  return crime && (places > 0 || unknownPlace || placeSet || foreign);
+  return crime && (places > 0 || unknownPlace || placeSet || foreignCount > 0);
 }
 
 /**

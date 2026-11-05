@@ -245,5 +245,7 @@ assert.equal(rw("Denver robberies from 2010 to 2015 and from 2020 to 2024", "cha
 assert.equal(rw("Denver robberies since 2010 through June 2024", "change the years to 2020-2023").kind, "ask");
 // A place outside the U.S. is a place named: the turn stands alone (and is declined as a new question).
 assert.equal(standsAlone("robberies in Paris, France in 2025"), true);
+assert.equal(standsAlone("robberies in Paris, France vs London, England in 2025"), true);
+assert.equal(standsAlone("compare to Paris, France"), false);
 
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");
