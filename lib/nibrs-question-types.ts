@@ -259,7 +259,16 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   }
 
   // ---- N7: change between two years ----
-  if (changeParts.length && !rankParts.length) {
+  // Reader cluster 2 (2026-11-05): "How has violent crime in Alaska changed since 2018?", "...over the past 5 years":
+  // a change over a span with no two years named asks for the series over that span, answered as one (the figures by
+  // year; no comparison computed, no comment on direction).
+  // Never a percent change ("% change", "percent change": Codex reader-change review 01): that asks for one computed
+  // figure, so it keeps its own path (declined until two years are named), never answered as counts.
+  const percentAsked = ledger.parts.some((p) => p.clause === 0 && ((p.concept === "punctuation" && p.text.trim() === "%") || (p.concept === "share" && /percent/i.test(p.text))))
+    || changeParts.some((p) => /percent|%/i.test(p.text));
+  const overSpan = (periods[0]?.form === "since" || periods[0]?.form === "last") && periods.length === 1 && !of("versus").length && !percentAsked;
+  if (changeParts.length && !rankParts.length && overSpan) take(changeParts);
+  else if (changeParts.length && !rankParts.length) {
     take(changeParts);
     const p = periods[0];
     const ends = p?.form === "range" ? [p.from, p.to] : p?.form === "years" ? p.list : null;

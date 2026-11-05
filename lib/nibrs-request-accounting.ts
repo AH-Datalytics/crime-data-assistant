@@ -287,7 +287,7 @@ const RULES: Rule[] = [
   // ---- lists and grain ----
   { concept: "list", value: (m) => `list:${listKey(m[1])}`, pattern: R(String.raw`\b(?:broken\s+down\s+by|by|per|for\s+each|for\s+every|each|every|across)\s+(state|count(?:y|ies)|cit(?:y|ies)|agenc(?:y|ies)|departments?)(?:\s+and\s+(?:by\s+)?year)?\b`) },
   { concept: "grain", value: () => "month", pattern: R(String.raw`\b(?:by|per|each|every|for\s+each)\s+month\b|\bmonthly\b|\bmonth[-\s]by[-\s]month\b`) },
-  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:by|per|each|every|for\s+each)\s+year\b|\byearly\b|\bannual(?:ly)?\b|\byear[-\s](?:by|over)[-\s]year\b|\bover\s+time\b|\btrends?\b`) },
+  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:by|per|each|every|for\s+each)\s+year\b|\byearly\b|\bannual(?:ly)?\b|\byear[-\s](?:by|over)[-\s]year\b|\bover\s+time\b|\btrend(?:s|ed|ing)?(?:\s+(?:up|down|upwards?|downwards?|higher|lower))?\b`) },
   // ---- counting units (after the families so "DV arrests" keeps both parts) ----
   { concept: "unit", value: () => "victims", pattern: R(String.raw`\bvictims?\b|\bvictimi[sz]ations?\b`) },
   { concept: "unit", value: () => "offenders", pattern: R(String.raw`\boffenders?\b|\bsuspects?\b|\bperpetrators?\b`) },
