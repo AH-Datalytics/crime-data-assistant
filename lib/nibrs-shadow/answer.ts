@@ -600,8 +600,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const owned = (p: Part) => clause0("measure").some((o) => o !== p && o.value !== "unspecified" && o.span[1] <= p.span[0] && /^[\s-]*$/.test(ledger0.question.slice(o.span[1], p.span[0])));
   const joined = (p: Part) => !owned(p) && !/^\s*against\b/i.test(after(p))
     && (/(?:\band|&|,|\bplus)\s+(?:overall\s+|total\s+|general\s+)?$/i.test(before(p))
-      // After it: "and" a crime named ("crime and murder rates"), never a list of columns ("Part 1 Crimes, Total Rate").
-      || /^\s*(?:rates?\s+)?(?:and|&|plus)\s+(?:\w+\s+){0,2}?(?:murders?|homicides?|robber\w*|rapes?|assaults?|burglar\w*|thefts?|larcen\w*|arsons?|shootings?|carjack\w*)\b/i.test(after(p)));
+      // After it: "and" a crime the reader named ("crime and murder rates", "crime and drug possession", "crime rates and
+      // aggravated assault rates": Codex P32 re-check 01), never a list of columns ("Part 1 Crimes, Total Rate").
+      || clause0("measure").some((o) => o.value !== "unspecified" && o.span[0] >= p.span[1]
+        && /^\s*(?:rates?\s+)?(?:and|&|plus)\s+(?:the\s+)?$/i.test(ledger0.question.slice(p.span[1], o.span[0]))));
   const bare = clause0("measure").filter((p) => p.value === "unspecified" && joined(p));
   if (named && bare.length) {
     const keep = others.map((p) => [String(p.value), p.text.trim()]);

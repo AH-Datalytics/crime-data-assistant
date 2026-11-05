@@ -953,7 +953,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(as(ask("forcible sex offenses in Denver in 2023"), "clarify").about, "which sex offenses");
   assert.notEqual(ask("all sex offenses in Denver in 2023").kind, "clarify");
   assert.ok(!(ask("sexual assault kits in Denver in 2023").kind === "clarify"));
-  for (const q of ["crime and murder rates in Chicago in 2024", "murder and crime in Chicago in 2024"]) {
+  for (const q of ["crime and murder rates in Chicago in 2024", "murder and crime in Chicago in 2024", "crime and drug possession in Chicago in 2024", "crime rates and aggravated assault rates in Chicago in 2024"]) {
     const o = ask(q);
     assert.ok(o.kind === "clarify" ? o.about === "which kind of crime" : o.kind === "decline" && /isn't one category/.test(o.explanation), q);
   }
