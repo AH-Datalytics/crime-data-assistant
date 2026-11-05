@@ -211,7 +211,10 @@ const RULES: Rule[] = [
   // ---- rolling windows and months (before the year rules) ----
   // r2: "rolling 12-month violent crime totals" -- "totals" after the measure is the rolling sum (Codex extra-5/6).
   { concept: "rolling", value: () => "rolling12", pattern: R(String.raw`\btotals\b`), when: (m, q) => /\b(?:rolling|trailing)\s+(?:12|twelve)[-\s]?months?\b/i.test(q.slice(0, m.index)) },
-  { concept: "rolling", value: () => "rolling12", pattern: R(String.raw`\b(?:rolling|trailing)\s+(?:12|twelve)[-\s]?months?(?:\s+totals?)?\b|\b(?:12|twelve)[-\s]month\s+rolling(?:\s+totals?)?\b|\btrailing\s+(?:12|twelve)\s+months\b`) },
+  // The query log's wordings of the same 12-month total (reader cluster 1, 2026-11-05): "rolling over 12 months",
+  // "12 months rolling", "rolling 12m", "on a rolling 12 month basis", "12-month rolling count". A rolling average, and
+  // a window of another length, are not this total: they stay unread (declined), never answered as it.
+  { concept: "rolling", value: () => "rolling12", pattern: R(String.raw`\bon\s+a\s+rolling\s+(?:12|twelve)[-\s]?(?:months?|m|mos?)\s+basis\b|\b(?:rolling|trailing)\s+(?:over\s+)?(?:the\s+(?:last|past)\s+)?(?:12|twelve)[-\s]?(?:months?|m|mos?)\b(?:\s+(?:totals?|sums?|counts?|basis))?(?!\s+(?:averages?|means?))|\b(?:12|twelve)[-\s]?months?\s+rolling\b(?:\s+(?:totals?|sums?|counts?|basis))?(?!\s+(?:averages?|means?))|\btrailing\s+(?:12|twelve)\s+months\b`) },
   ...MONTH_PERIODS,
   // ---- periods (the accepted Historical forms) ----
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },
