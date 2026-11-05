@@ -235,6 +235,9 @@ assert.equal(q(rw("violent crime rates in Philadelphia from 2024 to 2025", "calc
 assert.equal(q(rw("Allentown, PA violent crime per year since 1930", "give it to me as a per capita rate")), "Allentown, PA violent crime rate per year since 1930");
 assert.equal(q(rw("Baltimore homicides by month in 2025", "Do it per year and not each month")), "Baltimore homicides by year in 2025");
 assert.equal(q(rw("murders per capita in St. Louis by year since 2000", "modify so the date range is 1960 through 2024")), "murders per capita in St. Louis by year from 1960 to 2024");
+// A state written after its county is that county's, not a second place ("same for" replaces it).
+assert.equal(q(rw("Tarrant County, Texas murders in 2024", "same for Dallas County, Texas")), "Dallas County, Texas murders in 2024");
+assert.equal(rw("Houston and Austin murders in 2024", "same for Dallas").kind, "ask");
 // A bare range after a "since" period is still asked about (replace or add).
 assert.equal(rw("murders per capita in St. Louis by year since 2000", "1990 to 2000").kind, "ask");
 

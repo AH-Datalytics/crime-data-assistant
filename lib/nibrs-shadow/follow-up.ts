@@ -152,6 +152,18 @@ export function standsAlone(turn: string): boolean {
 }
 
 /**
+ * Whether the previous question names several places. A state written right after its city or county ("Tarrant County,
+ * Texas", "Springfield, Missouri") is that place's, not a second place (follow-up cluster B: "show me the same for Dallas
+ * county, Texas" had been asked whether it replaced Tarrant County or was added).
+ */
+function severalPlaces(prev: string, places: { value: string | null; text: string }[]): boolean {
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const own = places.filter((p) => !(/^state:/.test(String(p.value)) && places.some((o) => o !== p && /^(?:city|county):/.test(String(o.value))
+    && new RegExp(`${esc(o.text.trim())}(?:\\s+(?:county|parish|city))?\\s*,?\\s*${esc(p.text.trim())}`, "i").test(prev))));
+  return own.length > 1;
+}
+
+/**
  * The query log's wordings of the follow-ups below (follow-up cluster B, 2026-11-05), said the way the forms read them:
  * a verb before "the same for" ("show me the same for Dallas county", "calculate the same for Chicago, IL"), a rate asked
  * for in words ("give it to me as a per capita rate", "give me as a rate"), a grain swapped ("do it per year and not
@@ -446,10 +458,10 @@ export const deterministicRewriter: FollowUpRewriter = {
         if (adding && /\bcombined\b/i.test(prev)) return ask(`Whether ${newPlace} joins the combined total or is shown beside it.`);
         if (adding) {
           q =`${q.slice(0, pw.at)}${list} and ${newPlace}${q.slice(pw.at + pw.text.length)}`;
-        } else if (prevParts.places.length > 1 && newYear) {
+        } else if (severalPlaces(prev, prevParts.places) && newYear) {
           // A new place and a new year after several places: the options would have to carry both; asked plainly.
           return ask(`Whether ${newPlace} in ${newYear} replaces ${pw.text} or is added to them, and for which period.`);
-        } else if (prevParts.places.length > 1) {
+        } else if (severalPlaces(prev, prevParts.places)) {
           // Each option's question says exactly what its label says: "separately" never keeps "combined" (Codex 7b-04
           // fourth pass), and a combined group can instead take the new place into its total.
           const n = COUNT[prevParts.places.length + 1] ?? prevParts.places.length + 1;
