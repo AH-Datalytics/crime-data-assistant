@@ -258,6 +258,9 @@ const RULES: Rule[] = [
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(${YEAR})\s*(?:-|–|—|to|through|thru)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `last:${numberToken(m[1])}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past|previous|prior)\s+(${NUMBER})\s+(?:(?:full|complete|calendar)\s+)?years\b`) },
   { concept: "period", value: () => "lastyear", pattern: R(String.raw`\b(?:in\s+)?last\s+year\b`) },
+  // "the current murder trend": Current Trends' recent months (Jeff 2026-11-05: "current trends" is Current Trends').
+  // Read as its own part; the answer fills the months from the release (lib/nibrs-shadow/answer.ts).
+  { concept: "recent", value: () => "recent", pattern: R(String.raw`\bcurrent(?:ly)?\b(?=\s+(?:[a-z]+\s+){0,2}trends?\b)|\bcurrent(?:ly)?\b(?=\s+trending\b)`) },
   { concept: "period", value: () => "latest", pattern: R(String.raw`\b(?:in\s+|for\s+)?(?:the\s+)?(?:latest|most\s+recent)\s+(?:year|data)(?:\s+available)?\b`) },
   { concept: "period", value: (m) => `year:${m[1]}`, pattern: R(String.raw`\b(?:in|for|during|using|of)\s+(${YEAR})(?:\s+data)?\b`) },
   { concept: "period", value: (m) => `year:${m[1]}`, pattern: R(String.raw`\b(${YEAR})\b`) },

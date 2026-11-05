@@ -953,6 +953,13 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     const o = ask(q);
     assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
   }
+  // "Current trend" (Jeff 2026-11-05): Current Trends' recent months, by month from January of last year; never declined
+  // for "current".
+  {
+    const o = ask("What are the current robbery trends in Denver?");
+    assert.ok(!(o.kind === "decline" && /didn't understand/.test(o.explanation)), JSON.stringify(o).slice(0, 200));
+    if (o.kind === "answer") assert.ok(o.plan.groupings.some((g) => g.dimension === "time.month"), "by month");
+  }
   // Codex reader-change review 01: a percent change over a span is never answered as counts.
   for (const q of ["What is the % change in robberies in Denver since 2019?", "percent change in robberies in Denver since 2019"]) assert.notEqual(ask(q).kind, "answer", q);
   // Reader cluster 1 and P94 (Jeff 2026-11-05): a rolling window of any length named is read and computed at that
