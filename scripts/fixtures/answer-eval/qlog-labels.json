@@ -17775,7 +17775,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R16>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "D5 supplies all periods but the rolling window is unspecified."
@@ -72971,7 +72971,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R10>2nd",
+    "rule": "R16>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "DC supplies the place and D5 permits all periods."

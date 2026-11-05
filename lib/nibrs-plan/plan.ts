@@ -231,7 +231,8 @@ export const Statistic = z.discriminatedUnion("kind", [
  */
 export const Transform = z.discriminatedUnion("kind", [
   /** Trailing window over time.month. A window is reported only when every month in it is known. */
-  z.strictObject({ kind: z.literal("rolling"), of: z.array(Name).min(1), months: z.number().int().min(2).max(120) }),
+  // A window of 1 to 120 months (P94: any length named; a 1-month window is each month's own count).
+  z.strictObject({ kind: z.literal("rolling"), of: z.array(Name).min(1), months: z.number().int().min(1).max(120) }),
   /** The later period against the earlier, per remaining group; both must lie inside the plan's period (R2). */
   z.strictObject({
     kind: z.literal("period_comparison"), of: z.array(Name).min(1), earlier: AbsolutePeriod, later: AbsolutePeriod,

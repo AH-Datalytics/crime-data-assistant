@@ -598,6 +598,12 @@ ROWS = [
      "Through the month before the release's month.",
      "A release month holds only the reports that arrived before the upload, so it would read as a drop.",
      "Decided 2026-11-03 (Jeff, relayed by the coordinator)", NEW),
+    ("P94", "\"Murders rolling over 6 months\", \"3-month rolling average\", \"rolling average\" (no length)",
+     "Only a rolling 12-month total was read; other lengths and averages were declined.",
+     "A rolling window of the length the question names (months or years: 3, 6, 12, 24 ...) is computed at that length: a total, or, when an average is asked, the window's total divided by its months, labeled as an average and never shown as the total. With no length named, ask which length.",
+     "Length named: that length. Average named: the average per month (with the total beside a single figure). No length: ask, buttons 3, 6 and 12 months and another length.",
+     "A window's length and whether it is a sum or an average change every number.",
+     "Decided 2026-11-05 (Jeff: \"rolling shouldn't just be 12 months\"; \"Ask which length\"; \"Answer the average\")", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
