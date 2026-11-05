@@ -9580,12 +9580,12 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-31b2a79218": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P38 requires a precise recorded gang definition.",
+"status": "reviewed",
+"by": "jeff-2026-11-04",
+"why": "P38 amended (Jeff: \"Merge; keep gang codes\"): gang-related murders answer from circumstance codes 04 and 05",
 "expected": {
-"outcome": "decline",
-"reason": "Gang crime is poorly reported to the FBI."
+"outcome": "answer",
+"source": "nibrs"
 }
 },
 "QL-nibrs-326656513a": {

@@ -941,6 +941,29 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // Codex P53 review 01: only when every filter is such a detail, and only for victims.
   assert.notEqual(ask("Female murder victims in Texas in 2024 cleared by arrest").kind, "route");
   assert.notEqual(ask("Female murder offenders in Ohio in 2022").kind, "route");
+  // P32: "sex offenses", "sex crimes", "sexual assaults" ask which (rape; all sex offenses), each button running.
+  for (const q of ["Sex crimes in Denver in 2023", "Sexual assaults in Ohio in 2024"]) {
+    const c = as(ask(q), "clarify");
+    assert.equal(c.about, "which sex offenses");
+    // Only buttons that run are offered: rape from Crime Index where it is loaded, all sex offenses from NIBRS.
+    assert.ok(c.options.some((o) => o.label === "All sex offenses") && c.options.every((o) => ["Rape", "All sex offenses"].includes(o.label)), JSON.stringify(c.options.map((o) => o.label)));
+    assert.ok(c.options.every((o) => o.continuation && o.continuation.kind !== "decline"), q);
+  }
+  // Codex P32 review 01: "forcible sex offenses" is read and asked about (not all six codes); kits are not an offense.
+  assert.equal(as(ask("forcible sex offenses in Denver in 2023"), "clarify").about, "which sex offenses");
+  assert.notEqual(ask("all sex offenses in Denver in 2023").kind, "clarify");
+  assert.ok(!(ask("sexual assault kits in Denver in 2023").kind === "clarify"));
+  for (const q of ["crime and murder rates in Chicago in 2024", "murder and crime in Chicago in 2024", "crime and drug possession in Chicago in 2024", "crime rates and aggravated assault rates in Chicago in 2024"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "clarify" ? o.about === "which kind of crime" : o.kind === "decline" && /isn't one category/.test(o.explanation), q);
+  }
+  assert.ok(!/isn't one category/.test(JSON.stringify(ask("murders and crimes against persons in Chicago in 2024"))));
+  // D09 beside another crime: the bare "crime" is never dropped; the crime named is offered on its own.
+  {
+    const o = ask("murder and crime in Chicago in 2024");
+    // (Its alternative, the crime named on its own, is offered where it runs: Crime Index is not loaded in these tests.)
+    assert.ok(o.kind === "clarify" ? o.about === "which kind of crime" : o.kind === "decline" && /isn't one category/.test(o.explanation), JSON.stringify(o).slice(0, 200));
+  }
   // A people breakdown for a state is NIBRS's sum by category (coordinator 2026-11-04), never the historical file's.
   {
     const o = as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "answer");

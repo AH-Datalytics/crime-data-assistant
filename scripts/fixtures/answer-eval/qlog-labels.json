@@ -47662,16 +47662,20 @@
    "question": "Show me gang-related murders in Chicago by year since 2020",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Gang crime is poorly reported to the FBI."
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P38 requires a precise recorded gang definition."
+    "drafted_by": "jeff-2026-11-04",
+    "reviewed_by": "jeff-2026-11-04",
+    "notes": "P38 amended (Jeff: \"Merge; keep gang codes\"): gang-related murders answer from circumstance codes 04 and 05"
    }
   },
   {

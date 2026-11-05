@@ -153,7 +153,9 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b`) },
   { concept: "measure", value: () => "dui", pattern: R(String.raw`\bdui\b|\bdwi\b|\bdrunk\s+driving\b|\bdriving\s+under\s+the\s+influence\b`) },
   { concept: "measure", value: () => "drug_possession", pattern: R(String.raw`\bdrug\s+possession\b|\bpossession\b|\bdrug(?:\/narcotic)?\s+(?:offenses?|violations?)\b|\bdrugs?\b|\bnarcotics?\b`) },
-  { concept: "measure", value: () => "sex_offense", pattern: R(String.raw`\bsex(?:ual)?\s+(?:offenses?|crimes?)\b`) },
+  // P32: "sexual assaults" is asked about like "sex offenses" (which sex offenses), never read as aggravated assault.
+  // Not "sexual assault kits" or "sex offender registrations" (Codex P32 review 01.2): those aren't offenses.
+  { concept: "measure", value: () => "sex_offense", pattern: R(String.raw`\b(?:all\s+)?(?:forcible\s+)?sex(?:ual)?\s+(?:offenses?|crimes?|assaults?)\b(?!\s+(?:kits?|evidence|exams?|nurses?|forensic|registr\w*|backlogs?))`) },
   { concept: "measure", value: () => "violent_crime", pattern: R(String.raw`\b(?:total\s+)?violent(?:\s+(?:crimes?|offenses?))?\b`) },
   { concept: "measure", value: () => "property_crime", pattern: R(String.raw`\b(?:total\s+)?property(?:\s+(?:crimes?|offenses?))\b`) },
   { concept: "measure", value: () => "all_crime", pattern: R(String.raw`\b(?:total|all|overall)\s+(?:crimes?|offenses?)\b`) },
@@ -262,7 +264,8 @@ const RULES: Rule[] = [
   { concept: "unit", value: () => "offenders", pattern: R(String.raw`\boffenders?\b|\bsuspects?\b|\bperpetrators?\b`) },
   { concept: "unit", value: () => "arrests", pattern: R(String.raw`\barrest(?:s|ees?)?\b|\barrested\b`) },
   { concept: "unit", value: () => "incidents", pattern: R(String.raw`\bincidents?\b`) },
-  { concept: "unit", value: () => "offenses", pattern: R(String.raw`\boffen[cs]es\b`) },
+  // "Sex offenses" is a crime, not the counting unit (Codex P32 review 01.4: "forcible sex offenses" was unread).
+  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\bsex(?:ual)?\s)\boffen[cs]es\b`) },
   ...MEASURES,
   { concept: "measure", value: () => "unspecified", pattern: R(String.raw`\bcrimes?\b|\boffen[cs]es?\b|\bcases\b`) },
   // ---- combine ----

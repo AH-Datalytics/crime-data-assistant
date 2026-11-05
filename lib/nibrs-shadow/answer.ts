@@ -588,6 +588,49 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: runnable };
   }
+  // D09 beside another crime ("homicide and crime rates", "murder and crime"): the bare word is asked about too, never
+  // dropped (query-log scorecard 2026-11-04). Each button keeps the crimes named and adds the kind chosen.
+  // Only a "crime" joined to them ("and", ",", "plus"): in "drug crimes" the word is part of the crime's own name.
+  const others = clause0("measure").filter((p) => p.value !== "unspecified");
+  // Either order ("homicide and crime rates", "crime and murder rates": Codex P32 review 01.1); never a named category
+  // ("crimes against persons", 01.3).
+  const before = (p: Part) => ledger0.question.slice(Math.max(0, p.span[0] - 16), p.span[0]);
+  const after = (p: Part) => ledger0.question.slice(p.span[1], p.span[1] + 24);
+  // A "crimes" right after a crime named is that crime's own word ("drug crimes and shoplifting", "gun crimes").
+  const owned = (p: Part) => clause0("measure").some((o) => o !== p && o.value !== "unspecified" && o.span[1] <= p.span[0] && /^[\s-]*$/.test(ledger0.question.slice(o.span[1], p.span[0])));
+  const joined = (p: Part) => !owned(p) && !/^\s*against\b/i.test(after(p))
+    && (/(?:\band|&|,|\bplus)\s+(?:overall\s+|total\s+|general\s+)?$/i.test(before(p))
+      // After it: "and" a crime the reader named ("crime and murder rates", "crime and drug possession", "crime rates and
+      // aggravated assault rates": Codex P32 re-check 01), never a list of columns ("Part 1 Crimes, Total Rate").
+      || clause0("measure").some((o) => o.value !== "unspecified" && o.span[0] >= p.span[1]
+        && /^\s*(?:rates?\s+)?(?:and|&|plus)\s+(?:the\s+)?$/i.test(ledger0.question.slice(p.span[1], o.span[0]))));
+  const bare = clause0("measure").filter((p) => p.value === "unspecified" && joined(p));
+  if (named && bare.length) {
+    const keep = others.map((p) => [String(p.value), p.text.trim()]);
+    const said = others.map((p) => p.text.trim().replace(/\s+rates?$/i, "")).join(" and ");
+    const kinds = [{ label: `${said} and violent crime`, add: [["violent_crime", "violent crime"]] }, { label: `${said} and property crime`, add: [["property_crime", "property crime"]] },
+      { label: `${said}, violent and property crime`, add: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
+    const options = kinds.map((k) => ({ label: k.label[0].toUpperCase() + k.label.slice(1), continuation: fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), deps, pins) }));
+    const runnable = options.filter((o) => runsNow(o.continuation));
+    if (runnable.length) return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: runnable };
+    // No combination runs here yet (several crimes in one answer): said plainly, with the crimes named on their own offered.
+    const alone = fromLedger(filledAll(ledger, "measure", keep), deps, pins);
+    return decline("unsupported_capability", `"Crime" alone isn't one category, and ${said} beside violent or property crime in one answer isn't available yet. Ask for each on its own.`,
+      { alternative: runsNow(alone) ? { label: `${said[0].toUpperCase()}${said.slice(1)} on its own`, continuation: alone } : null });
+  }
+  // P32 (Jeff 2026-10-29): "sex offenses", "sex crimes", "sexual assaults" name no one offense. Ask which, with buttons
+  // (rape; all sex offenses), rather than choose a definition. "All sex offenses" (or "forcible") names it.
+  // Not when the words leave them out ("violent crimes, excluding sexual offenses").
+  const sexPart = clause0("measure").find((p) => p.value === "sex_offense"
+    && !/\b(?:excluding|exclude|except|without|not including|other than|minus|but not)\s+(?:the\s+)?$/i.test(ledger0.question.slice(Math.max(0, p.span[0] - 24), p.span[0])));
+  // "Forcible sex offenses" (11A-11D) is not a measure yet, so it is asked about too, never answered as all six codes.
+  if (sexPart && sexPart.rule !== "shadow:button" && !(/\b(?:all|every|total)\b/i.test(sexPart.text) && !/\bforcible\b/i.test(sexPart.text))) {
+    const keep = clause0("measure").filter((p) => p !== sexPart).map((p) => [String(p.value), p.text.trim()]);
+    const options = [{ label: "Rape", add: [["rape", "rape"]] }, { label: "All sex offenses", add: [["sex_offense", "all sex offenses"]] }]
+      .map((k) => ({ label: k.label, continuation: fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), deps, pins) }));
+    const runnable = options.filter((o) => runsNow(o.continuation));
+    if (runnable.length) return { kind: "clarify", about: "which sex offenses", question: ledger0.question, options: runnable };
+  }
   if (!clause0("place").length) {
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
       { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },
