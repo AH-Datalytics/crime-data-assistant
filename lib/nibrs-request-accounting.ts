@@ -199,7 +199,7 @@ const RULES: Rule[] = [
   // ---- preserved operations ----
   { concept: "peer", value: (m) => `peer:${(/(\d+)/.exec(m[0]) ?? ["", ""])[1]}`, pattern: R(String.raw`\b(?:increase|raise|change|go)\s+(?:it\s+)?to\s+\d+\s+(?:comparable|similar(?:ly)?[-\s]?(?:sized?)?|peer)\s+(?:agencies|departments|cities)\b`) },
   { concept: "peer", value: (m) => `peer:${(/(\d+)/.exec(m[0]) ?? ["", ""])[1]}`, pattern: R(String.raw`\b(?:\d+\s+)?(?:other\s+)?(?:agencies|departments|cities)\s+of\s+(?:similar|comparable)\s+size\b|\b(?:\d+\s+)?(?:(?:similar(?:ly)?[-\s]?(?:sized?)?|comparable)\s+(?:agencies|departments|cities)|peers?)\b`) },
-  { concept: "coverage-lookup", value: () => "coverage", pattern: R(String.raw`\bwhat\s+(?:years\s+of\s+)?data\s+(?:do\s+you\s+have|is\s+available|are\s+available|exists?)\b|\bwhat\s+years(?:\s+of\s+data)?(?:\s+do\s+you\s+have)?\b|\bavailable\s+(?:data|years)\b|\bdata\s+coverage\b|\bcoverage\b`) },
+  { concept: "coverage-lookup", value: () => "coverage", pattern: R(String.raw`\bwhat\s+(?:years\s+of\s+)?data\s+(?:do\s+you\s+have|is\s+available|are\s+available|exists?)\b|\bwhat\s+years(?:\s+of\s+data)?(?:\s+do\s+you\s+have)?\b|(?<!\ball\s)\bavailable\s+(?:data|years)\b|\bdata\s+coverage\b|\bcoverage\b`) },  // "all available years" is every year (Codex reader-period review 01)
   { concept: "completeness", value: () => "completeness", pattern: R(String.raw`\b(?:completeness|complete|up\s+to\s+date|finali[sz]ed|final)\b`),
     when: (_m, q) => detectCompletenessQuestion(q) !== null },
   { concept: "cohort", value: () => "consistent-reporters", pattern: R(String.raw`\b(?:for\s+)?(?:consistent(?:ly)?|continuous(?:ly)?)\s+report(?:ers|ing(?:\s+agencies)?)\b|\bagencies\s+that\s+reported\s+every\s+year\b`) },
