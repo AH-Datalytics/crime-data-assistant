@@ -242,7 +242,7 @@ export function categoryName(dimension: string, code: unknown): string {
  * category's part of all units of its own period).
  */
 /** Time forms (increment 3): a set of years, or rolling windows (each row a window ending that month). */
-export type TimeOptions = { years?: number[]; rolling?: { months: number; missing: string[] }; quarters?: { incomplete: string[] } };
+export type TimeOptions = { years?: number[]; rolling?: { months: number; average?: boolean; missing: string[] }; quarters?: { incomplete: string[] } };
 /** P66: the incidents beside a count (answer.ts): their statistic, or null. */
 export function incidentsBeside(plan: NibrsPlan): string | null {
   return plan.statistics.find((s) => s.kind === "incidents")?.as ?? null;
@@ -261,7 +261,7 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   const [countStat, shareStat] = plan.statistics.filter((x) => x.as !== beside);
   const count = countStat.as, share = shareStat?.as;
   const what = measureWords(plan);
-  const header = `${what[0].toUpperCase()}${what.slice(1)}${opts.rolling ? `, rolling ${opts.rolling.months}-month total` : ""}`;
+  const header = `${what[0].toUpperCase()}${what.slice(1)}${opts.rolling ? `, rolling ${opts.rolling.months}-month ${opts.rolling.average ? "average per month" : "total"}` : ""}`;
   const time = plan.groupings.find((g) => g.dimension.startsWith("time."))?.dimension;
   const cats = plan.groupings.filter((g) => !g.dimension.startsWith("time.")).map((g) => g.dimension);
   const labels: Record<string, string> = { [`statistic:${count}`]: header };
@@ -380,9 +380,11 @@ export function deliver(plan: NibrsPlan, effective: { from: string; to: string }
   } else if (!cats.length && opts.rolling) {
     // Rolling windows: each a total of its months, known only when all of them are (never a shorter sum).
     const n = opts.rolling.months;
-    text.push(`${agency}: ${what}, rolling ${n}-month totals by month, ${when}.`);
+    // An average (Jeff 2026-11-05): each window's total over its ${n} months, said as an average, never as the total.
+    text.push(opts.rolling.average ? `${agency}: ${what}, rolling ${n}-month averages per month (each window's total divided by ${n}), by month, ${when}.`
+      : `${agency}: ${what}, rolling ${n}-month totals by month, ${when}.`);
     if (rows.some((r) => statusOf(r) !== "VALUE" && statusOf(r) !== "REPORTED_ZERO") && opts.rolling.missing.length)
-      text.push(`No report is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter total.`);
+      text.push(`No report is known for ${runs(opts.rolling.missing)}: every window containing one of those months is shown blank, not zero or a shorter ${opts.rolling.average ? "average" : "total"}.`);
   } else if (!cats.length && opts.quarters) {
     // P71: each quarter the sum of its three months; an incomplete quarter is marked, never shown as a whole quarter.
     text.push(`${agency}: ${what} by quarter, ${when}.`);

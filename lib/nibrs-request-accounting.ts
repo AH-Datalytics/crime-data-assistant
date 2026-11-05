@@ -18,6 +18,24 @@ import { detectCompletenessQuestion } from "./completeness-intent";
 
 const R = (s: string, flags = "gi") => new RegExp(s, flags);
 const YEAR = String.raw`(?:19|20)\d{2}`;
+// A rolling window's length, in months or years ("6-month", "12m", "two-year"); its words: a total or an average.
+const WINDOW_N = String.raw`(?:\d{1,3}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|twenty[-\s]four|thirty[-\s]six)`;
+const WINDOW_UNIT = String.raw`(?:months?|mos?|m|years?|yrs?)`;
+const WINDOW_KIND = String.raw`(?:\s+(?:totals?|sums?|counts?|basis|averages?|avg|means?))?`;
+export const ROLLING_WINDOW = String.raw`\bon\s+a\s+rolling\s+${WINDOW_N}[-\s]?${WINDOW_UNIT}\s+(?:average\s+)?basis\b`
+  + String.raw`|\b(?:rolling|trailing|moving)\s+(?:over\s+)?(?:the\s+(?:last|past)\s+)?${WINDOW_N}[-\s]?${WINDOW_UNIT}\b${WINDOW_KIND}`
+  + String.raw`|\b${WINDOW_N}[-\s]?${WINDOW_UNIT}\s+(?:rolling|moving|trailing)\b${WINDOW_KIND}`
+  + String.raw`|\b(?:rolling|moving)\s+(?:averages?|avg|means?)\s+(?:over|of|for)\s+(?:the\s+(?:last|past)\s+)?${WINDOW_N}[-\s]?${WINDOW_UNIT}\b`;
+const NUMBER_WORDS: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18, "twenty-four": 24, "twenty four": 24, "thirty-six": 36, "thirty six": 36 };
+/** "rolling12" (the 12-month total), "rolling:N" (another length in months), "rolling-avg:N"; "?" for no length named. */
+export function rollingValue(text: string): string {
+  const t = text.toLowerCase();
+  const average = /\b(?:averages?|avg|means?)\b|\bmoving\b/.test(t);
+  const m = new RegExp(String.raw`(${WINDOW_N})[-\s]?(${WINDOW_UNIT})\b`).exec(t);
+  const n = m ? (NUMBER_WORDS[m[1].replace(/\s+/, m[1].includes("-") ? "-" : " ")] ?? Number(m[1])) * (/^y/.test(m[2]) ? 12 : 1) : null;
+  if (average) return `rolling-avg:${n ?? "?"}`;
+  return n === 12 ? "rolling12" : `rolling:${n ?? "?"}`;
+}
 const NUM_WORDS = "one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty";
 const NUMBER = String.raw`(?:\d[\d,]*|${NUM_WORDS})`;
 const POP_WORD = String.raw`(?:people|residents|population|persons|inhabitants|pop\.?)`;
@@ -211,10 +229,15 @@ const RULES: Rule[] = [
   // ---- rolling windows and months (before the year rules) ----
   // r2: "rolling 12-month violent crime totals" -- "totals" after the measure is the rolling sum (Codex extra-5/6).
   { concept: "rolling", value: () => "rolling12", pattern: R(String.raw`\btotals\b`), when: (m, q) => /\b(?:rolling|trailing)\s+(?:12|twelve)[-\s]?months?\b/i.test(q.slice(0, m.index)) },
-  // The query log's wordings of the same 12-month total (reader cluster 1, 2026-11-05): "rolling over 12 months",
-  // "12 months rolling", "rolling 12m", "on a rolling 12 month basis", "12-month rolling count". A rolling average, and
-  // a window of another length, are not this total: they stay unread (declined), never answered as it.
-  { concept: "rolling", value: () => "rolling12", pattern: R(String.raw`\bon\s+a\s+rolling\s+(?:12|twelve)[-\s]?(?:months?|m|mos?)\s+basis\b|\b(?:rolling|trailing)\s+(?:over\s+)?(?:the\s+(?:last|past)\s+)?(?:12|twelve)[-\s]?(?:months?|m|mos?)\b(?:\s+(?:totals?|sums?|counts?|basis))?(?!\s+(?:averages?|means?))|\b(?:12|twelve)[-\s]?months?\s+rolling\b(?:\s+(?:totals?|sums?|counts?|basis))?(?!\s+(?:averages?|means?))|\btrailing\s+(?:12|twelve)\s+months\b`) },
+  // Rolling windows of any length the question names (Jeff 2026-11-05: "rolling shouldn't just be 12 months"), as a
+  // total or, named so, an average (Jeff: "Answer the average"): "rolling over 6 months", "12 months rolling", "rolling
+  // 12m", "12m rolling", "on a rolling 3 month basis", "3-month rolling average", "rolling 2-year". A window in days or
+  // weeks is not read. No length named ("rolling average", "rolling sum"): asked (Jeff: "Ask which length"). The value
+  // stays "rolling12" for the 12-month total (the live tab's binding reads it); "rolling:N", "rolling-avg:N" otherwise,
+  // with "?" for no length.
+  { concept: "rolling", value: (m) => rollingValue(m[0]), pattern: R(String.raw`${ROLLING_WINDOW}`) },
+  { concept: "rolling", value: (m) => rollingValue(m[0]), pattern: R(String.raw`\b(?:rolling|moving|trailing)\s+(?:averages?|avg|means?|sums?|totals?|counts?|basis)\b|\brolling\b(?!\s+(?:back|out|stone|thunder|in\b))`),
+    when: (m, q) => !new RegExp(ROLLING_WINDOW, "i").test(q) },
   ...MONTH_PERIODS,
   // ---- periods (the accepted Historical forms) ----
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },

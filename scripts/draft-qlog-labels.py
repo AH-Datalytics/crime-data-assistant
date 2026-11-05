@@ -192,6 +192,9 @@ def label_first(q, tab):
         missing.append("crime")
     elif tab != "hate_crime" and BARE_CRIME.search(q) and not SPECIFIC.search(q):
         missing.append("violent, property or both")
+    # P94 (Jeff 2026-11-05: "Ask which length"): a rolling window or moving average with no length named.
+    if R(r"\brolling\b(?!\s+(?:back|out|stone|thunder))|\bmoving\s+(?:average|avg|mean)").search(q) and not R(r"(?:\d{1,3}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|twenty[-\s]four|thirty[-\s]six)[-\s]?(?:months?|mos?|m|years?|yrs?)\b").search(q):
+        missing.append("rolling window")
     if not scope:
         missing.append("place")
     elif named and not has_state(q) and not NATIONAL.search(q):
@@ -205,8 +208,8 @@ def label_first(q, tab):
     if not PERIOD.search(q) and not SERIES.search(q):
         missing.append("period")
     if missing:
-        rule = {"crime": "R09", "violent, property or both": "R09b", "place": "R10", "period": "R13", "fatal or non-fatal shootings": "R09s", "which New York": "R11"}.get(missing[0], "R11")
-        note = {"R09": "D31", "R09b": "D09", "R09s": "D14", "R10": "P12/D31", "R13": "P06/D31", "R11": "several places have this name (P26 for New York)"}[rule]
+        rule = {"crime": "R09", "violent, property or both": "R09b", "place": "R10", "period": "R13", "fatal or non-fatal shootings": "R09s", "which New York": "R11", "rolling window": "R16"}.get(missing[0], "R11")
+        note = {"R09": "D31", "R09b": "D09", "R09s": "D14", "R10": "P12/D31", "R13": "P06/D31", "R11": "several places have this name (P26 for New York)", "R16": "P94: rolling with no length"}[rule]
         return ("clarify", " / ".join(missing), None, rule, "draft", note)
     years = [int(y) for y in YEAR.findall(q)]
     if years and max(years) > 2026:

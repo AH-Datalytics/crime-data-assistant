@@ -941,13 +941,20 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // Codex P53 review 01: only when every filter is such a detail, and only for victims.
   assert.notEqual(ask("Female murder victims in Texas in 2024 cleared by arrest").kind, "route");
   assert.notEqual(ask("Female murder offenders in Ohio in 2022").kind, "route");
-  // Reader cluster 1: the query log's wordings of a rolling 12-month total are read; an average or another window is
-  // never answered as it.
-  for (const q of ["Pittsburgh murders rolling over 12 months since 2018", "Denver robberies 12 months rolling since 2020", "Denver robberies on a rolling 12 month basis since 2020"]) {
+  // Reader cluster 1 and P94 (Jeff 2026-11-05): a rolling window of any length named is read and computed at that
+  // length; an average is the window's total over its months, labeled as an average; no length named asks which.
+  for (const q of ["Pittsburgh murders rolling over 12 months since 2018", "Denver robberies 12 months rolling since 2020", "Denver robberies on a rolling 12 month basis since 2020", "Denver robberies 12m rolling since 2020"]) {
     const o = ask(q);
     assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
   }
-  for (const q of ["Denver murders rolling over 6 months since 2020", "Denver murders rolling 12 month average since 2020"]) assert.notEqual(ask(q).kind, "answer", q);
+  {
+    const six = ask("Denver robberies rolling over 6 months since 2025");
+    if (six.kind === "answer") assert.ok(six.plan.transforms.some((t) => t.kind === "rolling" && t.months === 6) && six.delivered.text[0].includes("rolling 6-month totals"), JSON.stringify(six.delivered.text));
+    else assert.ok(!(six.kind === "decline" && /didn't understand/.test(six.explanation)), JSON.stringify(six).slice(0, 200));
+    const avg = ask("Denver robberies 3-month rolling average since 2025");
+    if (avg.kind === "answer") assert.ok(avg.delivered.text[0].includes("rolling 3-month averages") && avg.delivered.table.columns.some((c) => /average per month/.test(c.header)), JSON.stringify(avg.delivered.text));
+    assert.equal(as(ask("Denver robberies rolling average since 2025"), "clarify").about, "which rolling window");
+  }
   // P32: "sex offenses", "sex crimes", "sexual assaults" ask which (rape; all sex offenses), each button running.
   for (const q of ["Sex crimes in Denver in 2023", "Sexual assaults in Ohio in 2024"]) {
     const c = as(ask(q), "clarify");

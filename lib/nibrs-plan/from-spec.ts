@@ -211,7 +211,7 @@ export function planFromSpec(spec: NibrsSpec, ledger: RequestLedger, deps: Adapt
           statistics.push({ kind: "ratio", as: `${m.as}_average`, numerator: m.as, denominator: `${m.as}_segments` });
         } else statistics.push({ kind: "count", as: `${m.as}_count`, measure: m.as });
       }
-      if (spec.grain === "rolling") transforms.push({ kind: "rolling", of: statistics.map((s) => s.as), months: 12 });
+      if (spec.grain === "rolling") transforms.push({ kind: "rolling", of: statistics.map((s) => s.as), months: spec.window?.months ?? 12 });
       break;
     }
     case "breakdown": {

@@ -631,6 +631,17 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const runnable = options.filter((o) => runsNow(o.continuation));
     if (runnable.length) return { kind: "clarify", about: "which sex offenses", question: ledger0.question, options: runnable };
   }
+  // A rolling window with no length named ("rolling average", "rolling sum"): asked (Jeff 2026-11-05: "Ask which
+  // length"), with buttons for 3, 6 and 12 months that each run the whole question, never a length chosen here.
+  const noLength = clause0("rolling").find((p) => /:\?$/.test(String(p.value)));
+  if (noLength) {
+    const avg = String(noLength.value).startsWith("rolling-avg");
+    const options = [3, 6, 12].map((n) => ({ label: `${n} months`,
+      continuation: fromLedger(filled(ledger, "rolling", avg ? `rolling-avg:${n}` : n === 12 ? "rolling12" : `rolling:${n}`, `rolling ${n}-month ${avg ? "average" : "total"}`), deps, pins) }));
+    const runnable = options.filter((o) => runsNow(o.continuation));
+    if (runnable.length) return { kind: "clarify", about: "which rolling window", question: ledger0.question, options: [...runnable, { label: "Another length", entry: "how many months" }] };
+    return options[0].continuation;
+  }
   if (!clause0("place").length) {
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
       { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },
@@ -704,6 +715,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     if (span && form && place) {
       const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form, statistic: sp.statistic === "rate" ? "rate" : "count",
+        ...(form === "rolling" && sp.window?.months ? { window: { months: sp.window.months, average: sp.window.average } } : {}),
         ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
@@ -1342,8 +1354,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const displayed = cells.filter((x) => x.ym >= period.from && x.ym <= period.to).map((x) => x.ym);
     const windows = rolling(cells, months, displayed);
     const as = checked.statistics[0].as;
-    const delivered = deliver(checked, period, requestedTo, ["period", as, `${as}_status`], windows.map((w) => [w.ym, w.value, w.status]), statements, release.id, notes0, null,
-      { rolling: { months, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO").map((x) => x.ym) } });
+    // A rolling average (Jeff 2026-11-05: "Answer the average"): each window's total over its months, said as an average.
+    const average = ledger0.parts.some((p) => p.concept === "rolling" && String(p.value).startsWith("rolling-avg"));
+    const shown = windows.map((w) => [w.ym, average && w.value !== null ? Math.round((10 * w.value) / months) / 10 : w.value, w.status]);
+    const delivered = deliver(checked, period, requestedTo, ["period", as, `${as}_status`], shown, statements, release.id, notes0, null,
+      { rolling: { months, average, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO").map((x) => x.ym) } });
     if (delivered.contractProblems.length) return notYet(`answer contract: ${delivered.contractProblems.join("; ")}`);
     return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered: reported(delivered) };
   }

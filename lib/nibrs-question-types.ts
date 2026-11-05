@@ -86,7 +86,9 @@ export type NPeriod =
 export type Grain = "total" | "year" | "month" | "rolling";
 export type Statistic = "count" | "rate" | "clearance_rate" | "total_value" | "average_value";
 
-export type SeriesSpec = { type: "series"; measures: string[]; unit: Unit | null; statistic: Statistic; filters: string[]; places: NPlace[]; period: NPeriod; grain: Grain };
+export type SeriesSpec = { type: "series"; measures: string[]; unit: Unit | null; statistic: Statistic; filters: string[]; places: NPlace[]; period: NPeriod; grain: Grain;
+  /** A rolling series' window (Jeff 2026-11-05: any length named; an average when asked): months null when none is named. */
+  window?: { months: number | null; average: boolean } };
 export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true; byMonth?: true };
 export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true };
 export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
@@ -191,7 +193,10 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   const periods = periodParts.map(periodOf);
   if (periods.some((p) => p === null)) return declineParts(periodParts, (p) => cannot(p, "I couldn't read that as a period."));
   const changeParts = of("change");
-  const rolling = take(of("rolling")).length > 0;
+  const rollingParts = take(of("rolling"));
+  const rolling = rollingParts.length > 0;
+  const rv = rollingParts.map((p) => String(p.value)).find((v) => v !== "rolling12") ?? (rolling ? "rolling12" : null);
+  const window = rv ? { months: rv === "rolling12" ? 12 : /:(\d+)$/.test(rv) ? Number(/:(\d+)$/.exec(rv)![1]) : null, average: rv.startsWith("rolling-avg") } : undefined;
   const grainParts = take(of("grain"));
   const grains = grainParts.map((p) => p.value);
   const combine = take(of("combine")).length > 0;
@@ -321,7 +326,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   if (statistic === "rate" && grain === "total" && of("combine").length) {
     return declineParts(of("combine"), (p) => cannot(p, "a rate over several years is given per year; ask without \"total\" for one rate per year."));
   }
-  return finish({ type: "series", measures, unit, statistic, filters, places: places as NPlace[], period, grain });
+  return finish({ type: "series", measures, unit, statistic, filters, places: places as NPlace[], period, grain, ...(grain === "rolling" && window ? { window } : {}) });
 
   function breakdownDecision(): NibrsTypeDecision {
     take(breakdowns); take(clearance);
