@@ -33,8 +33,11 @@ export function rollingValue(text: string): string {
   const average = /\b(?:averages?|avg|means?)\b|\bmoving\b/.test(t);
   const m = new RegExp(String.raw`(${WINDOW_N})[-\s]?(${WINDOW_UNIT})\b`).exec(t);
   const n = m ? (NUMBER_WORDS[m[1].replace(/\s+/, m[1].includes("-") ? "-" : " ")] ?? Number(m[1])) * (/^y/.test(m[2]) ? 12 : 1) : null;
-  if (average) return `rolling-avg:${n ?? "?"}`;
-  return n === 12 ? "rolling12" : `rolling:${n ?? "?"}`;
+  // A length the engine can't compute (0 months, more than 10 years) is asked about like no length (Codex P94 review 01.3:
+  // "rolling 0 months" had fallen back to 12).
+  const ok = n !== null && n >= 1 && n <= 120 ? n : null;
+  if (average) return `rolling-avg:${ok ?? "?"}`;
+  return ok === 12 ? "rolling12" : `rolling:${ok ?? "?"}`;
 }
 const NUM_WORDS = "one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty";
 const NUMBER = String.raw`(?:\d[\d,]*|${NUM_WORDS})`;

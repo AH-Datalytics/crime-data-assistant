@@ -954,6 +954,9 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     const avg = ask("Denver robberies 3-month rolling average since 2025");
     if (avg.kind === "answer") assert.ok(avg.delivered.text[0].includes("rolling 3-month averages") && avg.delivered.table.columns.some((c) => /average per month/.test(c.header)), JSON.stringify(avg.delivered.text));
     assert.equal(as(ask("Denver robberies rolling average since 2025"), "clarify").about, "which rolling window");
+    // Codex P94 review 01: a length the engine can't compute is asked about, never 12; a 1-month window runs.
+    assert.equal(as(ask("Denver robberies rolling 0 months since 2025"), "clarify").about, "which rolling window");
+    assert.ok(!(ask("Denver robberies rolling 1-month since 2025").kind === "decline"));
   }
   // P32: "sex offenses", "sex crimes", "sexual assaults" ask which (rape; all sex offenses), each button running.
   for (const q of ["Sex crimes in Denver in 2023", "Sexual assaults in Ohio in 2024"]) {

@@ -683,6 +683,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     let form: "months" | "ytd" | "rolling" | "total" | null = null, span: [string, string] | null = null;
     // "the last 12 months" is the 12 months through Current Trends' own latest month, not NIBRS's (the reader's).
     if ((sp.grain === "rolling" && sp.period.form === "none") || flags(ledger0).last12) { form = "rolling"; span = [cur.lastMonth, cur.lastMonth]; }
+    // A rolling window ending in one month named ("rolling 3-month average in July 2026": Codex P94 review 01.1): that
+    // window, through that month. A rolling series over a longer span is NIBRS's below, never Current Trends' months.
+    else if (sp.grain === "rolling") {
+      const one = sp.period.form === "month" ? `${sp.period.year}-${String(sp.period.month).padStart(2, "0")}` : null;
+      if (one) { form = "rolling"; span = [one, one]; }
+    }
     else if (sp.grain === "total" && sp.period.form === "year" && sp.period.year === ctYear) { form = "ytd"; span = [`${ctYear}-01`, cur.lastMonth]; }
     else if ((span = monthSpan(sp, cur))) form = sp.grain === "month" || span[0] === span[1] ? "months" : "total";
     let place: CurrentPlace | null = null;
