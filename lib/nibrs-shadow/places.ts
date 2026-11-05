@@ -142,13 +142,15 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   // Request words only: "South King County" is not King County (Codex place review 01).
   if (m[1] === "county") while (!idx.byName.has(base(name)) && REQUEST_WORD.test(name)) name = name.replace(/^\S+\s+/, "");
   const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
-  // An agency's noun names no state ("Arlington Police Department").
-  const words = key(text).replace(/ (police( department)?|sheriff s( office| department)?|sheriffs? (office|department)|sheriff)$/, "").replace(/ (city|county)$/, "");
+  const words = key(text).replace(/ (city|county)$/, "");
+  // Exactly the name and "Police (Department)" names no state ("Arlington Police Department"); anything more still does
+  // ("Salem City Police Department" is Salem, Virginia; Codex place review 07).
+  const policeOnly = key(text).replace(/ police( department)?$/, "") === base(name) && / police( department)?$/.test(key(text));
   // Never a state the geo resolver chose for a misspelling: "Philadlephia" had answered Philadelphia, Mississippi
   // (coordinator 2026-11-05).
   // The words naming more than the place ("Columbus, Ohio", "kcmo", "City of Charlotte") name its state; a misspelling of
   // the name alone does not ("philadlephia", "san antnio").
-  const stateNamed = m[3] && words !== base(name) && distance(words, base(name)) > 2 ? m[3] : null;
+  const stateNamed = m[3] && words !== base(name) && distance(words, base(name)) > 2 && !policeOnly ? m[3] : null;
   // A parish is Louisiana's (Codex places review 02: "Orleans Parish" had found Orleans County, New York).
   const parish = / parish$/.test(key(name)) || /\bparish\b/.test(key(text));
   let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));

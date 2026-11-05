@@ -179,7 +179,9 @@ assert.equal(ori(at("county:Harris County:", "Harris County")), places.byName.ge
 assert.deepEqual(asked(at("city:Arlington:TX", "Arlington Police Department")), ["Arlington, Texas", "Arlington County, Virginia"]);
 assert.equal((at("city:Baltimore:MD", "Baltimore Police Department") as { agency: { kind: string } }).agency.kind, "city", "Baltimore County's police is \"Baltimore County\"");
 assert.equal(ori(at("city:Los Angeles:CA", "Los Angeles Police Department")), places.byName.get("los angeles")!.find((x) => x.kind === "city" && x.state === "CA")!.ori);
-assert.equal(ori(at("city:Arlington:TX", "Arlington Police Department, Texas")), places.byName.get("arlington")!.find((x) => x.kind === "city" && x.state === "TX")!.ori);
+assert.equal((at("city:Salem:VA", "Salem City Police Department") as { agency: { state: string } }).agency.state, "VA", "Codex place review 07");
+assert.equal((at("county:Worcester:MA", "Worcester Sheriff") as { agency: { state: string } }).agency.state, "MA", "Codex place review 07");
+assert.equal(ori(at("city:Arlington:TX", "Arlington Police Department, Texas")),places.byName.get("arlington")!.find((x) => x.kind === "city" && x.state === "TX")!.ori);
 // Words before a county at the start of a question are not its name.
 assert.equal((at("county:Just Show Worcester County:MD", "just show worcester county, md") as { agency: { name: string } }).agency.name, "Worcester County");
 {
