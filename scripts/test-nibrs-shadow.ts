@@ -947,6 +947,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     const o = ask(q);
     assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell|two named years|two years/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
   }
+  // Codex reader-change review 01: a percent change over a span is never answered as counts.
+  for (const q of ["What is the % change in robberies in Denver since 2019?", "percent change in robberies in Denver since 2019"]) assert.notEqual(ask(q).kind, "answer", q);
   // Reader cluster 1 and P94 (Jeff 2026-11-05): a rolling window of any length named is read and computed at that
   // length; an average is the window's total over its months, labeled as an average; no length named asks which.
   for (const q of ["Pittsburgh murders rolling over 12 months since 2018", "Denver robberies 12 months rolling since 2020", "Denver robberies on a rolling 12 month basis since 2020", "Denver robberies 12m rolling since 2020"]) {
