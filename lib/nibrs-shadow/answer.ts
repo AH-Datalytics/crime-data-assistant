@@ -652,13 +652,18 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // A place named but not found ("How many murders were there in Zzyzxville in 2024?": redesign test 2026-11-04) is said
   // so plainly, never asked about as if no place were named.
-  const namedUnknown = ledger0.parts.find((p) => p.clause === 0 && p.state === "not-interpreted"
-    && /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:,\s*[A-Z]{2})?$/.test(p.text.trim())
-    // A month, day or season is not a place ("did violent crime increase in April").
-    && !/\bin\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Spring|Summer|Fall|Autumn|Winter)\b/.test(p.text)
-    // Nor is an ordinary word written with a capital ("murders in General in 2024": Codex follow-up-rewrites re-check 02):
-    // only a word that isn't an everyday English word is taken for a place name.
-    && !/\bin\s+(?:General|Total|Particular|Recent|Detail|Details|Summary|Average|Full|Public|Private|Question|Questions|Data|Short|Brief|Practice|Theory|Fact|Reality|Response|Return|Advance|Progress|Place|Places|Area|Areas|Order|Addition|Comparison|Contrast|Terms|Percent|Percentage|Number|Numbers|Count|Counts|Rate|Rates|Total|Aggregate|All|Each|Every|Any|Some|Most|Many|Other|Others|Which|What|Where|When|How|Why|Who|Year|Years|Month|Months|Week|Weeks|Today|Recent|Past|Future|History|Trend|Trends|Crime|Crimes|Murder|Murders|Graph|Chart|Table|Map)\b/.test(p.text));
+  // Only a name shaped like a place (Codex follow-up-rewrites re-checks 02-03: a single capitalized everyday word, "in
+  // General", "in Federal", "in April", is not): several capitalized words ("General Santos"), a state code after it
+  // ("Zzyzx, CA"), or a place-name ending ("Zzyzxville", "-town", "-burg", "-ton", "-field", "-port"...). Anything else
+  // with no place read is asked about as before.
+  const MONTHS_DAYS = /^(?:January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Spring|Summer|Fall|Autumn|Winter)$/;
+  const placeShaped = (name: string, st: boolean) => st || (/\s/.test(name) && !name.split(/\s+/).some((w) => MONTHS_DAYS.test(w)))
+    || /(?:ville|town|burg|borough|boro|ton|field|wood|dale|port|land|ford|ham|mouth|view|heights|city|springs|creek|falls|beach|park|hills|lake|grove|haven|bury|ridge|valley|bay|polis|chester|minster|shire)$/i.test(name);
+  const namedUnknown = ledger0.parts.find((p) => {
+    if (p.clause !== 0 || p.state !== "not-interpreted") return false;
+    const m = /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(,\s*[A-Z]{2})?$/.exec(p.text.trim());
+    return !!m && placeShaped(m[1], !!m[2]);
+  });
   if (!clause0("place").length && namedUnknown) {
     const name = /in\s+(.+)$/.exec(namedUnknown.text.trim())![1].replace(/[?.!,]+$/, "");
     return decline("unresolved_place", `I couldn't find "${name}" among the city and county police agencies, states and the nation here.`);
