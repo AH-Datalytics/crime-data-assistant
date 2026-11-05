@@ -10,12 +10,12 @@ Release test6-20261031-host; run 2026-11-05. A first question is the first row o
 
 | Source | Labels scored | Correct | Unverified | Wrong answer | Bad decline | Wrong clarify | Follow-up error | Error | Reviewed labels | Draft labels | Disputed (not scored) | Not run yet |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Historical | 1014 | 252 | 234 | 0 | 300 | 87 | 141 | 0 | 854 | 160 | 4 | 0 |
-| Current Trends | 1022 | 318 | 204 | 0 | 249 | 114 | 137 | 0 | 799 | 223 | 5 | 0 |
+| Historical | 1014 | 253 | 250 | 0 | 286 | 87 | 138 | 0 | 854 | 160 | 4 | 0 |
+| Current Trends | 1022 | 319 | 206 | 0 | 244 | 116 | 137 | 0 | 799 | 223 | 5 | 0 |
 | NIBRS | 1241 | 474 | 145 | 0 | 300 | 141 | 180 | 1 | 1007 | 234 | 4 | 0 |
-| Homicide Reports | 580 | 197 | 89 | 0 | 165 | 38 | 91 | 0 | 454 | 126 | 3 | 0 |
+| Homicide Reports | 580 | 197 | 90 | 0 | 164 | 38 | 91 | 0 | 454 | 126 | 3 | 0 |
 | Hate Crime | 67 | 17 | 1 | 0 | 17 | 6 | 26 | 0 | 64 | 3 | 1 | 0 |
-| **All** | **3924** | **1258** | **673** | **0** | **1031** | **386** | **575** | **1** | **3178** | **746** | **17** | **0** |
+| **All** | **3924** | **1260** | **692** | **0** | **1011** | **388** | **572** | **1** | **3178** | **746** | **17** | **0** |
 
 Hard gate, wrong answers = 0 (undisputed labels): **met**.
 
