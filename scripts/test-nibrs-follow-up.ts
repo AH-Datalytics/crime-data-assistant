@@ -229,4 +229,13 @@ assert.equal(standsAlone("How many murders were there in Zzyzxville in 2024?"), 
 assert.equal(standsAlone("now in Nashville"), false);
 assert.equal(standsAlone("and in 2023"), false);
 
+// Follow-up cluster B (2026-11-05): the query log's wordings of these follow-ups, each a certain rewrite.
+assert.equal(q(rw("Dallas murders by year since 2020", "show me the same for Houston")), "Houston murders by year since 2020");
+assert.equal(q(rw("violent crime rates in Philadelphia from 2024 to 2025", "calculate the same for chicago, IL")), "violent crime rates in chicago, IL from 2024 to 2025");
+assert.equal(q(rw("Allentown, PA violent crime per year since 1930", "give it to me as a per capita rate")), "Allentown, PA violent crime rate per year since 1930");
+assert.equal(q(rw("Baltimore homicides by month in 2025", "Do it per year and not each month")), "Baltimore homicides by year in 2025");
+assert.equal(q(rw("murders per capita in St. Louis by year since 2000", "modify so the date range is 1960 through 2024")), "murders per capita in St. Louis by year from 1960 to 2024");
+// A bare range after a "since" period is still asked about (replace or add).
+assert.equal(rw("murders per capita in St. Louis by year since 2000", "1990 to 2000").kind, "ask");
+
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");
