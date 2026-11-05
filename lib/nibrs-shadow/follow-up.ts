@@ -136,8 +136,12 @@ export function standsAlone(turn: string): boolean {
       || /\b[a-z]+(?:\s+[a-z]+)?\s+(?:county|parish)\b/i.test(p.text)));
   // A ranking or set of places ("Top 10 auto theft rates in 2025", "the 20 most populous cities") is the turn's own scope.
   const placeSet = of("rank").length > 0 || of("entity").length > 0;
-  const places = new Set(own.places.map((p) => String(p.value))).size;
-  if (COMPARE_WORD.test(t) && places < 2 && !placeSet) return false;
+  // Unread county names count as places named (Codex follow-up review 01.2: "Bexar County versus Travis County").
+  const unreadCounties = new Set(own.all.filter((p) => p.state === "not-interpreted").flatMap((p) => [...p.text.matchAll(/\b([a-z]+(?:\s+[a-z]+)?)\s+(?:county|parish)\b/gi)].map((m) => m[1].toLowerCase())));
+  const places = new Set(own.places.map((p) => String(p.value))).size + unreadCounties.size;
+  // A comparison points back when it doesn't name both sides, or when it refers to the answer ("How does that compare to
+  // robberies in Houston and Dallas?": Codex follow-up review 01.1).
+  if (COMPARE_WORD.test(t) && ((places < 2 && !placeSet) || /\b(?:that|this|it|these|those|its)\b/i.test(t))) return false;
   // The crime may be named as a unit or people ("Victim age breakdown in Texas in 2023") or as shootings.
   const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
   return crime && (places > 0 || unknownPlace || placeSet);
