@@ -960,6 +960,13 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.ok(!(o.kind === "decline" && /didn't understand/.test(o.explanation)), JSON.stringify(o).slice(0, 200));
     if (o.kind === "answer") assert.ok(o.plan.groupings.some((g) => g.dimension === "time.month"), "by month");
   }
+  // Redesign case: a place outside the U.S. is declined plainly (never a U.S. place). (An unknown U.S.-looking place,
+  // "Zzyzxville", still asks which place, as on dev: a "couldn't find" rule is a later item.)
+  assert.match(as(ask("robberies in Paris, France in 2025"), "decline").explanation, /U\.S\. law enforcement agencies only/);
+  assert.notEqual(ask("robberies in New Mexico in 2024").kind, "decline");
+  // Codex re-check: a country name that continues a U.S. place name is never declined as foreign.
+  for (const q of ["murders in Mexico Missouri in 2024", "murders in Brazil Indiana in 2024", "murders in China Grove, Texas in 2024", "murders in New  Mexico in 2024"])
+    assert.ok(!/U\.S\. law enforcement agencies only/.test(JSON.stringify(ask(q))), q);
   // Codex reader-change review 01: a percent change over a span is never answered as counts.
   for (const q of ["What is the % change in robberies in Denver since 2019?", "percent change in robberies in Denver since 2019"]) assert.notEqual(ask(q).kind, "answer", q);
   // Reader cluster 1 and P94 (Jeff 2026-11-05): a rolling window of any length named is read and computed at that
