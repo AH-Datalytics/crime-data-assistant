@@ -653,7 +653,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A place named but not found ("How many murders were there in Zzyzxville in 2024?": redesign test 2026-11-04) is said
   // so plainly, never asked about as if no place were named.
   const namedUnknown = ledger0.parts.find((p) => p.clause === 0 && p.state === "not-interpreted"
-    && /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:,\s*[A-Z]{2})?$/.test(p.text.trim()));
+    && /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:,\s*[A-Z]{2})?$/.test(p.text.trim())
+    // A month, day or season is not a place ("did violent crime increase in April").
+    && !/\bin\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Spring|Summer|Fall|Autumn|Winter)\b/.test(p.text));
   if (!clause0("place").length && namedUnknown) {
     const name = /in\s+(.+)$/.exec(namedUnknown.text.trim())![1].replace(/[?.!,]+$/, "");
     return decline("unresolved_place", `I couldn't find "${name}" among the city and county police agencies, states and the nation here.`);

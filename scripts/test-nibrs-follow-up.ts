@@ -240,5 +240,10 @@ assert.equal(q(rw("Tarrant County, Texas murders in 2024", "same for Dallas Coun
 assert.equal(rw("Houston and Austin murders in 2024", "same for Dallas").kind, "ask");
 // A bare range after a "since" period is still asked about (replace or add).
 assert.equal(rw("murders per capita in St. Louis by year since 2000", "1990 to 2000").kind, "ask");
+// Codex follow-up-rewrites review 01: a set period replaces only one whole period phrase; otherwise asked.
+assert.equal(rw("Denver robberies from 2010 to 2015 and from 2020 to 2024", "change the years to 2021-2023").kind, "ask");
+assert.equal(rw("Denver robberies since 2010 through June 2024", "change the years to 2020-2023").kind, "ask");
+// A place outside the U.S. is a place named: the turn stands alone (and is declined as a new question).
+assert.equal(standsAlone("robberies in Paris, France in 2025"), true);
 
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");
