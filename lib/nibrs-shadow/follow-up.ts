@@ -148,7 +148,9 @@ export function standsAlone(turn: string): boolean {
   if (COMPARE_WORD.test(t) && ((places < 2 && !placeSet) || refersBack)) return false;
   // The crime may be named as a unit or people ("Victim age breakdown in Texas in 2023") or as shootings.
   const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
-  return crime && (places > 0 || unknownPlace || placeSet);
+  // A place outside the United States ("Paris, France") is a place named too: declined as a new question.
+  const foreign = own.all.some((p) => p.concept === "outside-us");
+  return crime && (places > 0 || unknownPlace || placeSet || foreign);
 }
 
 /**
@@ -363,7 +365,11 @@ export const deterministicRewriter: FollowUpRewriter = {
       // "Modify so the date range is 1960 through 2024": the words set the period, so the previous one is replaced even
       // when it is "since 2000" (follow-up cluster B).
       const setsPeriod = /\b(?:date\s+range|years?|period|time\s*frame)\s+(?:is|are|to|=)\b/i.test(raw);
-      const prevPhrase = /\b(?:since|from|starting(?:\s+in)?)\s+(?:19|20)\d{2}(?:\s*(?:-|–|to|through)\s*(?:the\s+)?(?:present|now|today|(?:19|20)\d{2}))?\b/i.exec(prev);
+      // Only one period phrase, matched whole (Codex follow-up-rewrites review 01: two periods, or "since 2010 through June
+      // 2024", would be replaced in part): otherwise asked.
+      const phrases = [...prev.matchAll(/\b(?:since|from|starting(?:\s+in)?)\s+(?:19|20)\d{2}(?:\s*(?:-|–|to|through)\s*(?:the\s+)?(?:present|now|today|(?:19|20)\d{2}))?\b/gi)];
+      const prevPhrase = phrases.length === 1 && prevParts.periods.length <= 1
+        && !/^\s*(?:-|–|to|through|thru|until|till|and)\b/i.test(prev.slice(phrases[0].index! + phrases[0][0].length)) ? phrases[0] : null;
       if (!pr && setsPeriod && prevPhrase) return ok(prev.replace(prevPhrase[0], words), "the period set by the follow-up replaces the previous one");
       if (!pr) return prevParts.periods.length || YEAR.test(prev) || /\b(?:since|this year|last year|so far|year to date|past|last \d+)\b/i.test(prev)
         ? ask(`Whether ${asPeriod} replaces the whole period or is added to it.`)

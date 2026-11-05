@@ -650,6 +650,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (runnable.length) return { kind: "clarify", about: "which rolling window", question: ledger0.question, options: [...runnable, { label: "Another length", entry: "how many months" }] };
     return options[0].continuation;
   }
+  // A place named but not found ("How many murders were there in Zzyzxville in 2024?": redesign test 2026-11-04) is said
+  // so plainly, never asked about as if no place were named.
+  const namedUnknown = ledger0.parts.find((p) => p.clause === 0 && p.state === "not-interpreted"
+    && /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:,\s*[A-Z]{2})?$/.test(p.text.trim()));
+  if (!clause0("place").length && namedUnknown) {
+    const name = /in\s+(.+)$/.exec(namedUnknown.text.trim())![1].replace(/[?.!,]+$/, "");
+    return decline("unresolved_place", `I couldn't find "${name}" among the city and county police agencies, states and the nation here.`);
+  }
   if (!clause0("place").length) {
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
       { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },

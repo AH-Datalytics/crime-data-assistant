@@ -78,7 +78,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\bfrom\s+(${MONTH})\s+(${YEAR})\s+(?:to|through|until|-)\s+(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
-const EARLY_CONCEPTS = new Set(["ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
+const EARLY_CONCEPTS = new Set(["outside-us", "ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
 
 /** Filter values: `dimension:value`. Specific weapons before the generic gun words; values are NIBRS codes. */
 const FILTERS: Rule[] = [
@@ -221,6 +221,11 @@ const RULES: Rule[] = [
   // Option 3 batch 1 (2026-10-21, carried from the reverted #36): overdose deaths and immigration/citizenship status
   // are not recorded, so they are refused by name rather than as unread words. Claimed early, before the drug and place words.
   { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
+  // A country outside the United States (redesign test 2026-11-04: "robberies in Paris, France in 2025" had been "I
+  // didn't understand 'France'"): declined plainly. Never a U.S. place: "New Mexico", or a country's name followed by a
+  // state ("Mexico, Missouri", "Brazil, Indiana"); city names shared with U.S. cities (Toronto, Vancouver) are not listed.
+  { concept: "outside-us", pattern: R(String.raw`\b(?:(?:canada|(?<!new\s)mexico|france|england|britain|united\s+kingdom|scotland|ireland|germany|italy|spain|portugal|netherlands|sweden|norway|japan|china|india|pakistan|brazil|argentina|australia|new\s+zealand|russia|ukraine|israel|nigeria|south\s+africa|haiti|philippines|el\s+salvador|honduras|guatemala|colombia|venezuela)(?!\s*,\s*[a-z])|london,?\s+(?:england|uk)|paris,?\s+france)\b`), state: "not-recorded",
+    explanation: declined("the data covers U.S. law enforcement agencies only.") },
   { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecutions?\b|\bprosecutors?\b|\bprosecuted\b|\bdefendants?\b|\bcourts?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\b|\bbeats?\b|\bcensus\s+tracts?\b`), state: "not-recorded", explanation: SUBCITY },
