@@ -117,17 +117,38 @@ function placeWords(q: string, places: { text: string }[]): { at: number; text: 
 const BACK_LEAD = /^(?:(?:ok(?:ay)?|so|then|please|but)\b[,\s]*)*(?:same|and|also|plus|instead|what about|how about|compare|vs\.?|versus|add|now|make (?:it|this|that)|show (?:it|this|that|them|the same)|do (?:the same|that|it)|for that|by)\b/i;
 // A comparison anywhere ("How does that compare to shoplifting in Nashville?") relates the turn to the previous answer:
 // answered on its own it would drop the comparison (Codex review of the new-question default, 1).
-const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|again|too|as well|also|alongside|side by side|for comparison|compar(?:e|ed|es|ing|ison)|vs\.?|versus|against|relative to|than)\b/i;
+const BACK_WORD = /\b(?:same|instead|those|these|them|that one|previous|above|again|too|as well|also|alongside|side by side|for comparison)\b/i;
+// A comparison relates the turn to the previous answer only when the turn doesn't name both sides itself: "How does that
+// compare to shoplifting in Nashville?" points back; "Murder rate comparison between Houston and Chicago for 2026" is
+// complete (query-log scorecard, follow-up cluster A, 2026-11-05).
+const COMPARE_WORD = /\b(?:compar(?:e|ed|es|ing|ison)|vs\.?|versus|against|relative to|than)\b/i;
 export function standsAlone(turn: string): boolean {
   const t = turn.trim();
   if (BACK_LEAD.test(t) || BACK_WORD.test(t)) return false;
   const own = partsOf(t);
+  const of = (c: string) => own.all.filter((p) => p.concept === c && p.state !== "not-interpreted");
   // A place the reader doesn't know ("murders in Zzyzxville in 2024") is still a place named: the question stands on its
   // own and is answered or declined as a new one, never read as a change to the last (redesign test, 2026-11-04).
   // "How many murders were there in Zzyzxville": the verb before the place is read with it (Codex contract-fixes 01.1).
+  // A county the reader leaves unread ("in bexar county tx") is one too.
   const unknownPlace = own.all.some((p) => p.state === "not-interpreted"
-    && /^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z]{2})?$/.test(p.text.trim()));
-  return own.measures.length > 0 && (own.places.length > 0 || unknownPlace);
+    && (/^(?:(?:were|was|are|is|have been|has been|happened|occurred)\s+(?:there\s+)?)?in\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z]{2})?$/.test(p.text.trim())
+      || /\b[a-z]+(?:\s+[a-z]+)?\s+(?:county|parish)\b/i.test(p.text)));
+  // A ranking or set of places ("Top 10 auto theft rates in 2025", "the 20 most populous cities") is the turn's own scope.
+  const placeSet = of("rank").length > 0 || of("entity").length > 0;
+  // Unread county names count as places named (Codex follow-up review 01.2: "Bexar County versus Travis County").
+  const unreadCounties = new Set(own.all.filter((p) => p.state === "not-interpreted").flatMap((p) => [...p.text.matchAll(/\b([a-z]+(?:\s+[a-z]+)?)\s+(?:county|parish)\b/gi)].map((m) => m[1].toLowerCase())));
+  const places = new Set(own.places.map((p) => String(p.value))).size + unreadCounties.size;
+  // A comparison points back when it doesn't name both sides, or when it refers to the answer ("How does that compare to
+  // robberies in Houston and Dallas?": Codex follow-up review 01.1).
+  // "this year", "these months" are periods, not references (Codex follow-up re-check 01).
+  // Only "this year", "this month", "this quarter", "this week" name the present on their own; "that year", "this last
+  // comparison" point back (Codex follow-up re-check 02).
+  const refersBack = /\b(?:that|it|these|those|its)\b|\bthis\b(?!\s+(?:year|month|quarter|week)\b)/i.test(t);
+  if (COMPARE_WORD.test(t) && ((places < 2 && !placeSet) || refersBack)) return false;
+  // The crime may be named as a unit or people ("Victim age breakdown in Texas in 2023") or as shootings.
+  const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
+  return crime && (places > 0 || unknownPlace || placeSet);
 }
 
 export const deterministicRewriter: FollowUpRewriter = {

@@ -118,8 +118,16 @@ for (const t of ["Murders in Chicago in 2024", "Did shoplifting go up in Detroit
   assert.ok(standsAlone(t), `new: ${t}`);
 for (const t of ["what about Denver in 2023?", "now murders instead", "male", "compare to Dallas", "Nashville", "2024", "by month", "same for Houston",
   "show it for Memphis", "and robberies in Detroit in 2023", "robberies in Detroit in 2023 too",
-  "How does that compare to shoplifting in Nashville in 2024?", "Can you compare shoplifting in Nashville in 2024?", "shoplifting in Nashville in 2024 versus Memphis", "Is shoplifting in Nashville higher than that?"])
+  "How does that compare to shoplifting in Nashville in 2024?", "Can you compare shoplifting in Nashville in 2024?", "Is shoplifting in Nashville higher than that?"])
   assert.ok(!standsAlone(t), `follow-up: ${t}`);
+// Follow-up cluster A (2026-11-05): a comparison naming both sides, a ranking or set of places, a unit with a place, or
+// an unread county is the turn's own question (answered, asked about or declined as a new one, never "couldn't tell").
+for (const t of ["shoplifting in Nashville in 2024 versus Memphis", "Murder rate comparison between Houston and Chicago for 2026", "Top 10 auto theft rates in 2025",
+  "Victim age breakdown in Texas in 2023", "number of homicides in bexar county tx in 2025", "Murder rates in Bexar County versus Travis County", "Murder rates in Houston versus Dallas this year"])
+  assert.ok(standsAlone(t), `new: ${t}`);
+// Codex follow-up review 01.1: a comparison referring to the answer ("that", "it") points back, whatever it names.
+for (const t of ["How does that compare to robberies in Houston and Dallas?", "Is it higher in Houston than in Dallas?", "Murder rates in Houston versus Dallas that year",
+  "How does this last comparison of murder rates in Houston and Dallas differ?"]) assert.ok(!standsAlone(t), `follow-up: ${t}`);
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);

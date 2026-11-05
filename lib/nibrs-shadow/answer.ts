@@ -631,6 +631,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const runnable = options.filter((o) => runsNow(o.continuation));
     if (runnable.length) return { kind: "clarify", about: "which sex offenses", question: ledger0.question, options: runnable };
   }
+  // "The current murder trend" (Jeff 2026-11-05: Current Trends'): by month from January of last year through the
+  // latest month, unless a period is named. Current Trends answers it where it has the place; NIBRS otherwise.
+  if (clause0("recent").length) {
+    const rest = withParts(ledger, ledger.parts.filter((p) => !(p.clause === 0 && p.concept === "recent")));
+    if (clause0("period").length) return fromLedger(rest, deps, pins);
+    const from = Number(deps.release.lastMonth.slice(0, 4)) - 1;
+    return fromLedger(filled(filled(rest, "period", `since:${from}`, `since ${from}`), "grain", "month", "by month"), deps, pins);
+  }
   // A rolling window with no length named ("rolling average", "rolling sum"): asked (Jeff 2026-11-05: "Ask which
   // length"), with buttons for 3, 6 and 12 months that each run the whole question, never a length chosen here.
   const noLength = clause0("rolling").find((p) => /:\?$/.test(String(p.value)));
