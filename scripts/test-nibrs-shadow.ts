@@ -161,6 +161,59 @@ assert.equal(nearestPlaceName(places, "batlimore"), "Baltimore");
 assert.equal(nearestPlaceName(places, "phialdelphia"), "Philadelphia");
 assert.equal(nearestPlaceName(places, "Memphis"), null, "a place the index has is not corrected");
 assert.equal(nearestPlaceName(places, "index"), null);
+// Wrong places in silence (coordinator 2026-11-05, Codex's baseline findings and the query-log search).
+// A misspelling never takes the state the geo resolver chose for it; words naming more than the place still do.
+assert.equal(ori(at("city:Philadelphia:MS", "Philadlephia")), ori(at("city:Philadelphia:PA", "Philadelphia, Pennsylvania")), "not Philadelphia, Mississippi");
+assert.equal((at("city:San Antonio:FL", "san antnio") as { agency: { state: string } }).agency.state, "TX");
+assert.equal((at("city:Charlotte:NC", "City of Charlotte") as { agency: { state: string } }).agency.state, "NC");
+assert.equal((at("city:Kansas City:KS", "kck") as { agency: { state: string } }).agency.state, "KS");
+// A small place a letter or two from a large one asks, the large one first.
+assert.deepEqual(asked(at("ambiguous:Pittsburg", "Pittsburg")), ["Pittsburgh, Pennsylvania", "Pittsburg, California"]);
+assert.deepEqual(asked(at("ambiguous:Berkley", "Berkley")), ["Berkeley, California", "Berkley, Michigan"]);
+assert.deepEqual(asked(at("county:Prince George County:", "prince George county")), ["Prince George's County, Maryland", "Prince George County, Virginia"]);
+// A county named without its state, in several states, none large, asks: a sheriff's population is not the county's.
+assert.deepEqual(asked(at("county:Mecklenburg County:", "mecklenburg county")), ["Mecklenburg County, Virginia", "Mecklenburg County, North Carolina"]);
+assert.equal(ori(at("county:Harris County:", "Harris County")), places.byName.get("harris")!.find((x) => x.state === "TX" && x.kind === "county")!.ori, "one large county of the name is it");
+// "<name> Police Department": the city's, unless a large county police department of the name is in another state
+// (query-log scorecard 2026-11-05: Arlington, Texas or Arlington County, Virginia); an agency's noun names no state.
+assert.deepEqual(asked(at("city:Arlington:TX", "Arlington Police Department")), ["Arlington, Texas", "Arlington County, Virginia"]);
+assert.equal((at("city:Baltimore:MD", "Baltimore Police Department") as { agency: { kind: string } }).agency.kind, "city", "Baltimore County's police is \"Baltimore County\"");
+assert.equal(ori(at("city:Los Angeles:CA", "Los Angeles Police Department")), places.byName.get("los angeles")!.find((x) => x.kind === "city" && x.state === "CA")!.ori);
+assert.equal((at("city:Salem:VA", "Salem City Police Department") as { agency: { state: string } }).agency.state, "VA", "Codex place review 07");
+assert.equal((at("county:Worcester:MA", "Worcester Sheriff") as { agency: { state: string } }).agency.state, "MA", "Codex place review 07");
+assert.equal(ori(at("city:Arlington:TX", "Arlington Police Department, Texas")),places.byName.get("arlington")!.find((x) => x.kind === "city" && x.state === "TX")!.ori);
+// Words before a county at the start of a question are not its name.
+assert.equal((at("county:Just Show Worcester County:MD", "just show worcester county, md") as { agency: { name: string } }).agency.name, "Worcester County");
+{
+  // "Tarrant County, Texas" is the county, never Tarrant, Alabama; a state code in lower case counts, "in" does not.
+  const county = (q: string) => readQuestion(q, 2026, "2026-09").ledger.parts.filter((p) => p.concept === "place").map((p) => p.value);
+  assert.deepEqual(county("show me homicides in tarrant county, texas 2020 - 2025"), ["county:Tarrant County:TX"]);
+  assert.deepEqual(county("murders in Tarrant County in 2024"), ["county:Tarrant County:"]);
+  assert.deepEqual(county("number of homicides in richland county oh in 2025"), ["county:Richland County:OH"]);
+  assert.deepEqual(county("Show me violent crime trends in Mecklenburg county in North Carolina between 2002 and 2024"), ["county:Mecklenburg County:NC"]);
+  assert.deepEqual(county("murders in Orleans Parish in 2024"), ["county:Orleans Parish:"]);
+  assert.deepEqual(county("murders in each county in Texas in 2024").filter((v) => /^county/.test(v ?? "")), []);
+  // Codex place review 01: "in" is Indiana only in capitals; "South King County" keeps its "South"; a sheriff's office
+  // belongs to the county.
+  assert.deepEqual(county("murders in Montgomery County, in 2024"), ["county:Montgomery County:"]);
+  assert.deepEqual(county("murders in Montgomery County, IN in 2024"), ["county:Montgomery County:IN"]);
+  assert.deepEqual(county("violent crime for tarrant county sheriff's office, texas in 2024"), ["county:Tarrant County:TX"]);
+  assert.deepEqual(county("murders in King County Sheriff's Office, Washington in 2024"), ["county:King County:WA"], "Codex place review 02");
+  assert.deepEqual(county("murders in King County Sheriffs Office, Washington in 2024"), ["county:King County:WA"], "Codex place review 03");
+  assert.notEqual(ask("murders of King County sheriffs in Washington in 2024").kind, "historical", "sheriffs killed are people, not the agency (Codex place review 04)");
+  assert.equal(at("county:South King County:WA", "South King County, Washington").kind, "unresolved");
+  assert.notEqual(ask("murders in Big Spring 2024").kind, "clarify", "Big Spring is a city, not a season");
+  // A season before a year is never a place ("Spring 2024" had answered Spring Township, Pennsylvania).
+  assert.deepEqual(county("murders in Spring 2024"), []);
+  assert.notEqual(ask("murders in Spring 2024").kind, "historical");
+}
+// "in total" with the period asked: each button answers, never the same question again ("murders in Total" crashed).
+{
+  const c = as(ask("murders in total nationally"), "clarify");
+  assert.equal(c.about, "which period");
+  assert.ok(c.options.every((o) => o.entry || (o.continuation && o.continuation.kind !== "clarify")), "every button runs");
+  assert.notEqual(ask("murders in Total").kind, "decline");
+}
 
 // A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").
 assert.ok([...places.byName.values()].flat().every((x) => x.state in STATE_NAMES), "every agency's state is a postal code");

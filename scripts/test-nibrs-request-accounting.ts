@@ -51,7 +51,7 @@ check(has("rape clearance rate in Fort Worth, Texas in 2025", "clearance", "rate
 check(has("what share of rapes in Fort Worth, Texas in 2025 were cleared because prosecution was declined?", "clearance-reason", "clearance:B") && !refused("what share of rapes in Fort Worth, Texas in 2025 were cleared because prosecution was declined?"), "\"prosecution was declined\" is a clearance reason, not a court word");
 check(has("murder victims killed with a handgun in Fort Worth, Texas in 2025", "filter", "weapon:12") && !has("murder victims killed with a handgun in Fort Worth, Texas in 2025", "filter", "weapon:firearm"), "a handgun is a specific weapon, not the firearm category");
 check(has("top 3 cities in Texas with over 100,000 people by murder clearance rate in 2025", "threshold", ">|100000") && has("top 3 cities in Texas with at least 100,000 people by murder clearance rate in 2025", "threshold", ">=|100000"), "\"over\" is strict, \"at least\" is not (L8)");
-check(has("Tarrant County Sheriff's Office, Texas robberies in 2025", "place", "county:Tarrant:TX"), "a county sheriff's office is one county agency place");
+check(has("Tarrant County Sheriff's Office, Texas robberies in 2025", "place", "county:Tarrant County:TX"), "a county sheriff's office is one county agency place");
 
 // ---- recognition refusals: not recorded vs not interpreted ----
 for (const [q, word, kind] of [
