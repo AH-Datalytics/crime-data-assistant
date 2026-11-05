@@ -132,13 +132,22 @@ export function candidateLabel(c: Candidate, all: Candidate[]): string {
  * question used for it. The reader fills in a state it was not given ("Columbus" -> OH), so a state counts as named
  * only when the words say more than the name.
  */
+const REQUEST_WORD = /^(?:just|only|show|me|compare|using|use|calculate|give|tell|get|find|list|display|plot|chart|graph|see|view|what|about|data|now|please|also|then|so|ok|okay)\s+\S/i;
 export function resolvePlace(idx: PlaceIndex, value: string, text: string): PlaceResolution {
   const m = /^(?:(city|county):(.+):([A-Z]{2})?|ambiguous:(.+))$/.exec(value);
   if (!m) return { kind: "unresolved", why: `the slice resolves cities and counties only (${value})` };
-  const name = (m[2] ?? m[4]).trim();
+  let name = (m[2] ?? m[4]).trim();
+  // A county read with the words before it at the start of a question ("just show worcester county", "Compare Jefferson
+  // Parish"): the county the index has, without them.
+  // Request words only: "South King County" is not King County (Codex place review 01).
+  if (m[1] === "county") while (!idx.byName.has(base(name)) && REQUEST_WORD.test(name)) name = name.replace(/^\S+\s+/, "");
   const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
   const words = key(text).replace(/ (city|county)$/, "");
-  const stateNamed = m[3] && words !== base(name) ? m[3] : null;
+  // Never a state the geo resolver chose for a misspelling: "Philadlephia" had answered Philadelphia, Mississippi
+  // (coordinator 2026-11-05).
+  // The words naming more than the place ("Columbus, Ohio", "kcmo", "City of Charlotte") name its state; a misspelling of
+  // the name alone does not ("philadlephia", "san antnio").
+  const stateNamed = m[3] && words !== base(name) && distance(words, base(name)) > 2 ? m[3] : null;
   // A parish is Louisiana's (Codex places review 02: "Orleans Parish" had found Orleans County, New York).
   const parish = / parish$/.test(key(name)) || /\bparish\b/.test(key(text));
   let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
@@ -155,6 +164,17 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   const asState = !countyNamed && !stateNamed ? STATE_BY_NAME[base(name)] : undefined;
   if (asState) large.splice(1, 0, { kind: "state", code: asState, name: stateName(asState) });
   if (large.length >= 2) return { kind: "ask", name, candidates: large };
+  // A small place one or two letters from a large one ("Pittsburg", "Berkley", "prince George county"): which, the large
+  // one first (coordinator 2026-11-05, query-log search): never the small place in silence.
+  if (!large.length && !stateNamed) {
+    const k = base(name), limit = k.length < 6 ? 1 : 2;
+    const near = [...idx.byName.entries()].filter(([n, xs]) => n !== k && n[0] === k[0] && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit)
+      .map(([, xs]) => xs.filter((a) => a.population >= ASK_POPULATION && (!countyNamed || a.kind === "county")).sort((x, y) => (x.kind === y.kind ? 0 : x.kind === "city" ? -1 : 1))[0])
+      .filter((a): a is Agency => !!a)
+      .filter((a, i, all) => all.findIndex((b) => b.ori === a.ori) === i);   // "prince george s" and "prince georges": one agency
+    const own = countyNamed ? pool[0] : pool.find((a) => a.kind === "city") ?? pool[0];
+    if (near.length === 1) return { kind: "ask", name, candidates: [{ kind: "agency", agency: near[0] }, { kind: "agency", agency: own }] };
+  }
   // Same-name towns with no large candidate ("Clinton": 29 agencies): when no city of the name is clearly the main one
   // (the largest at least twice the next), ask which, the largest few one per state, and "another place" for the rest.
   const towns = firsts.filter((a) => a.kind === "city").sort((x, y) => y.population - x.population);
@@ -162,6 +182,11 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   if (!countyNamed && !stateNamed && towns.length >= 2 && towns[0].population < 2 * towns[1].population)
     return { kind: "ask", name, candidates: [...towns.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), ...large.filter((c) => c.kind === "agency" && c.agency.kind === "county")],
       more: towns.length > ASK_TOWNS };
+  // A county named without its state, in several states, none large ("Mecklenburg County": Virginia's sheriff serves
+  // more people than North Carolina's): which. A sheriff's population is not the county's.
+  const counties = firsts.filter((a) => a.kind === "county").sort((x, y) => y.population - x.population);
+  if (countyNamed && !stateNamed && !large.length && counties.length >= 2)
+    return { kind: "ask", name, candidates: counties.slice(0, ASK_TOWNS).map((a): Candidate => ({ kind: "agency", agency: a })), more: counties.length > ASK_TOWNS };
   // No question: a city's name means its principal police agency (P16), so the most populous city agency of that name,
   // unless the words name a county (or the only large candidate is the county asked by name). "Clinton" is the city of
   // Clinton, not Clinton County, New York; with every agency in the index (Jeff 2026-11-03) small cities share names

@@ -13,6 +13,7 @@
  * the two tabs read them identically. ORDER MATTERS: the ledger refuses overlapping claims, so specific rules come first.
  */
 import { RequestLedger, recordContext, recordBetweenFiller, refusalSentences, couldNotInterpret, type Part, type Span } from "./request-accounting";
+import { STATE_NAME_TO_ABBR } from "./state-population";
 import { recordAll, recordPlaces, numberToken, thresholdValue, changeDirection, type Rule } from "./historical-request-accounting";
 import { detectCompletenessQuestion } from "./completeness-intent";
 
@@ -344,6 +345,55 @@ function recordCountySheriffs(ledger: RequestLedger): void {
   }
 }
 
+/**
+ * "<Name> County[, <State>]" and "<Name> Parish" after a place word ("in tarrant county, texas"): one county place. The
+ * shared geo resolver knows few counties and reads "Tarrant" as Tarrant, Alabama (coordinator 2026-11-05). The name is
+ * the one to three words between the place word and "County"; the shadow engine finds it in its own place index, and a
+ * county it doesn't have is declined by name there.
+ */
+const COUNTY_STATES = Object.keys(STATE_NAME_TO_ABBR as Record<string, string>).filter((n) => n.toLowerCase() !== "united states").sort((a, b) => b.length - a.length);
+const COUNTY_CODES = Object.values(STATE_NAME_TO_ABBR as Record<string, string>).filter((c) => c !== "US");
+const NOT_A_COUNTY_NAME = /^(?:the|each|every|which|what|any|all|a|an|one|per|my|our|your|their|its|this|that|same|other|another|by|and|or|of|in|for|at|from|to|with|largest|biggest|smallest|most|least|top|home|whole|entire|neighboring|surrounding|adjacent|nearby|rural|urban|suburban|local|large|small)$/i;
+function recordCounties(ledger: RequestLedger): void {
+  // Groups: the name's words, County or Parish, "Sheriff's Office", "in <State>", ", <State or code>", "Sheriff's Office".
+  // "Sheriffs" only before "Office": "murders of King County sheriffs" are people (Codex place review 04).
+  const SHERIFF = String.raw`(\s+sheriff(?:s\s+(?:office|department)|['’]s(?:\s+(?:office|department))?|\s+(?:office|department))?(?![A-Za-z]))?`;
+  const re = new RegExp(String.raw`(?:^|\b(?:in|for|of|at|from|and|vs\.?|versus|between|across|within|to)\s+)(?:the\s+)?((?:[A-Za-z][A-Za-z.'’-]*\s+){1,3}?)(County|Parish)\b${SHERIFF}(?:\s+in\s+(?:the\s+state\s+of\s+)?(${COUNTY_STATES.join("|")})\b|\s*,?\s*(${COUNTY_STATES.join("|")}|${COUNTY_CODES.join("|")})\b)?${SHERIFF}`, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(ledger.question))) {
+    // The name is the words after the last that can't be one ("in Ohio and Tarrant County": Tarrant; "in each county": none).
+    const all = m[1].trim().split(/\s+/);
+    const words = all.slice(all.reduce((k, w, i) => (NOT_A_COUNTY_NAME.test(w) ? i + 1 : k), 0));
+    if (!words.length) { re.lastIndex = m.index + m[0].length; continue; }
+    const name = words.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+    const kind = /^parish$/i.test(m[2]) ? "Parish" : "County";
+    const stWord = m[4] ?? m[5] ?? "";
+    // A two-letter code that is also a word ("in", "or", "me", "hi", "ok") only in capitals: "in Orange County in 2024"
+    // and "Montgomery County, in 2024" are not Indiana (Codex place review 01); "harris county tx" is Texas, "Mecklenburg
+    // county in North Carolina" North Carolina.
+    const code = stWord.length === 2 ? ((stWord === stWord.toUpperCase() || !/^(?:in|or|me|hi|ok)$/i.test(stWord)) ? stWord.toUpperCase() : "") : stWord ? (STATE_NAME_TO_ABBR as Record<string, string>)[COUNTY_STATES.find((n) => n.toLowerCase() === stWord.toLowerCase())!] : "";
+    const m1 = m.index + m[0].indexOf(m[1]);
+    const start = m1 + [...m[1].matchAll(/\S+/g)][all.length - words.length].index!;
+    const end = code ? m.index + m[0].length : m1 + m[1].length + m[2].length + (m[3]?.length ?? 0);
+    ledger.record({ concept: "place", value: `county:${name} ${kind}:${code}`, span: [start, end], rule: "place:county" });
+    re.lastIndex = end;
+  }
+}
+
+/**
+ * A season before a year ("Spring 2024", "summer of 2023") is never a place: "Spring" had answered Spring Township,
+ * Pennsylvania (coordinator 2026-11-05). The reader has no season periods, so the word is named as not understood.
+ */
+function recordSeasons(ledger: RequestLedger): void {
+  // Only after a time word or at the start: "Big Spring 2024" is the city (Codex place review 01).
+  const re = /(?<=^|\b(?:in|during|for|of|the|from|to|through|until|since|between|and|vs|versus|this|last|next|each|every|over)\s+|,\s*)(?:spring|summer|fall|autumn|winter)(?=\s+(?:of\s+)?(?:19|20)\d\d\b)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(ledger.question))) {
+    const span: Span = [m.index, m.index + m[0].length];
+    ledger.record({ concept: "unrecognized", span, rule: "season", state: "not-interpreted", explanation: couldNotInterpret(m[0]) });
+  }
+}
+
 /** Which-words opening a ranking or list ("which cities had the most"). Context only beside an entity. */
 function recordWhich(ledger: RequestLedger): void {
   const re = /\b(?:which|what)\b/gi;
@@ -402,6 +452,9 @@ export function accountNibrsRequest(question: string): RequestLedger {
   // peer/cohort operations (whose words contain place-like nouns).
   const early = RULES.filter((r) => EARLY_CONCEPTS.has(r.concept) || MONTH_PERIODS.includes(r));
   for (const rule of early) recordAll(ledger, rule);
+  // The county rule first: it reads any state after "Sheriff's Office" (Codex place review 02).
+  recordSeasons(ledger);
+  recordCounties(ledger);
   recordCountySheriffs(ledger);
   recordPlaces(ledger);
   recordAll(ledger, { concept: "possessive", state: "context", pattern: /['’]s\b/g, when: (pm) => ledger.parts.some((p) => p.concept === "place" && p.span[1] >= pm.index - 1 && p.span[1] <= pm.index) });

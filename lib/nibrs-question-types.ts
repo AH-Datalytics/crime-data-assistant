@@ -325,7 +325,9 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   let grain: Grain = rolling ? "rolling" : grains.includes("month") ? "month" : grains.includes("year") ? "year" : combine ? "total" : "total";
   const period = periods[0] ?? { form: "none" as const };
   if (!rolling && !grains.length && (period.form === "range" || period.form === "years" || period.form === "since" || period.form === "last")) grain = combine ? "total" : "year";
-  if (combine && !(period.form === "range" || period.form === "years" || period.form === "since" || period.form === "last")) grain = "total";
+  // A grain asked for or chosen by a button stays ("murders in total", then "Every year available": by year), else the
+  // period question asked again for ever (coordinator 2026-11-05: "murders in Total" crashed).
+  if (combine && !grains.length && !(period.form === "range" || period.form === "years" || period.form === "since" || period.form === "last")) grain = "total";
   if (!rolling && monthPeriodParts.length) grain = "month";
   // r2 §3: rates are for complete years; a rate over several years is given per year.
   if ((statistic === "rate" || statistic === "clearance_rate") && grain === "month") {
