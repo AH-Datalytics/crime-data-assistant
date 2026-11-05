@@ -126,7 +126,8 @@ for (const t of ["shoplifting in Nashville in 2024 versus Memphis", "Murder rate
   "Victim age breakdown in Texas in 2023", "number of homicides in bexar county tx in 2025", "Murder rates in Bexar County versus Travis County", "Murder rates in Houston versus Dallas this year"])
   assert.ok(standsAlone(t), `new: ${t}`);
 // Codex follow-up review 01.1: a comparison referring to the answer ("that", "it") points back, whatever it names.
-for (const t of ["How does that compare to robberies in Houston and Dallas?", "Is it higher in Houston than in Dallas?"]) assert.ok(!standsAlone(t), `follow-up: ${t}`);
+for (const t of ["How does that compare to robberies in Houston and Dallas?", "Is it higher in Houston than in Dallas?", "Murder rates in Houston versus Dallas that year",
+  "How does this last comparison of murder rates in Houston and Dallas differ?"]) assert.ok(!standsAlone(t), `follow-up: ${t}`);
 // Every placed rewrite is certain; there is no "probably".
 for (const f of ["what about Nashville?", "rate instead", "by month", "show it as a line chart"]) {
   const r = rw(P, f);

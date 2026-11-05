@@ -142,7 +142,9 @@ export function standsAlone(turn: string): boolean {
   // A comparison points back when it doesn't name both sides, or when it refers to the answer ("How does that compare to
   // robberies in Houston and Dallas?": Codex follow-up review 01.1).
   // "this year", "these months" are periods, not references (Codex follow-up re-check 01).
-  const refersBack = /\b(?:that|this|it|these|those|its)\b(?!\s+(?:year|month|quarter|week|decade|summer|winter|spring|fall|past|last|period|ytd)s?\b)/i.test(t);
+  // Only "this year", "this month", "this quarter", "this week" name the present on their own; "that year", "this last
+  // comparison" point back (Codex follow-up re-check 02).
+  const refersBack = /\b(?:that|it|these|those|its)\b|\bthis\b(?!\s+(?:year|month|quarter|week)\b)/i.test(t);
   if (COMPARE_WORD.test(t) && ((places < 2 && !placeSet) || refersBack)) return false;
   // The crime may be named as a unit or people ("Victim age breakdown in Texas in 2023") or as shootings.
   const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
