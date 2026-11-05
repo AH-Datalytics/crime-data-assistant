@@ -174,6 +174,12 @@ assert.deepEqual(asked(at("county:Prince George County:", "prince George county"
 // A county named without its state, in several states, none large, asks: a sheriff's population is not the county's.
 assert.deepEqual(asked(at("county:Mecklenburg County:", "mecklenburg county")), ["Mecklenburg County, Virginia", "Mecklenburg County, North Carolina"]);
 assert.equal(ori(at("county:Harris County:", "Harris County")), places.byName.get("harris")!.find((x) => x.state === "TX" && x.kind === "county")!.ori, "one large county of the name is it");
+// "<name> Police Department": the city's, unless a large county police department of the name is in another state
+// (query-log scorecard 2026-11-05: Arlington, Texas or Arlington County, Virginia); an agency's noun names no state.
+assert.deepEqual(asked(at("city:Arlington:TX", "Arlington Police Department")), ["Arlington, Texas", "Arlington County, Virginia"]);
+assert.equal((at("city:Baltimore:MD", "Baltimore Police Department") as { agency: { kind: string } }).agency.kind, "city", "Baltimore County's police is \"Baltimore County\"");
+assert.equal(ori(at("city:Los Angeles:CA", "Los Angeles Police Department")), places.byName.get("los angeles")!.find((x) => x.kind === "city" && x.state === "CA")!.ori);
+assert.equal(ori(at("city:Arlington:TX", "Arlington Police Department, Texas")), places.byName.get("arlington")!.find((x) => x.kind === "city" && x.state === "TX")!.ori);
 // Words before a county at the start of a question are not its name.
 assert.equal((at("county:Just Show Worcester County:MD", "just show worcester county, md") as { agency: { name: string } }).agency.name, "Worcester County");
 {

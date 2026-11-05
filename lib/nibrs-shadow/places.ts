@@ -142,7 +142,8 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   // Request words only: "South King County" is not King County (Codex place review 01).
   if (m[1] === "county") while (!idx.byName.has(base(name)) && REQUEST_WORD.test(name)) name = name.replace(/^\S+\s+/, "");
   const countyNamed = m[1] === "county" || / (county|parish)$/.test(key(name));
-  const words = key(text).replace(/ (city|county)$/, "");
+  // An agency's noun names no state ("Arlington Police Department").
+  const words = key(text).replace(/ (police( department)?|sheriff s( office| department)?|sheriffs? (office|department)|sheriff)$/, "").replace(/ (city|county)$/, "");
   // Never a state the geo resolver chose for a misspelling: "Philadlephia" had answered Philadelphia, Mississippi
   // (coordinator 2026-11-05).
   // The words naming more than the place ("Columbus, Ohio", "kcmo", "City of Charlotte") name its state; a misspelling of
@@ -152,8 +153,18 @@ export function resolvePlace(idx: PlaceIndex, value: string, text: string): Plac
   const parish = / parish$/.test(key(name)) || /\bparish\b/.test(key(text));
   let pool = (idx.byName.get(base(name)) ?? []).filter((a) => (!countyNamed || a.kind === "county") && (!stateNamed || a.state === stateNamed) && (!parish || a.state === "LA"));
   // "Baltimore city", "Los Angeles Police Department": the city's agency; "Los Angeles County Sheriff": the county's.
-  if (/ city$|\bpolice\b/.test(key(text))) pool = pool.filter((a) => a.kind === "city");
-  else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");
+  if (/ city$|\bpolice\b/.test(key(text))) {
+    const cities = pool.filter((a) => a.kind === "city");
+    // A large county police department of the name in another state is another "<name> police" ("Arlington Police
+    // Department": Arlington, Texas or Arlington County, Virginia's): which (query-log scorecard, 2026-11-05). In the
+    // city's own state the county's is "<name> County" ("Baltimore Police Department" is the city's).
+    const countyPolice = /\bpolice\b/.test(key(text)) && !countyNamed && !stateNamed
+      ? pool.filter((a) => a.kind === "county" && a.population >= ASK_POPULATION && /\bpolice\b/i.test(idx.names.get(a.ori) ?? "") && !cities.some((c) => c.state === a.state))
+      : [];
+    const bigCity = cities.find((a) => a.population >= ASK_POPULATION);
+    if (bigCity && countyPolice.length) return { kind: "ask", name, candidates: [bigCity, ...countyPolice].map((a): Candidate => ({ kind: "agency", agency: a })) };
+    pool = cities;
+  } else if (/\bsheriff/.test(key(text))) pool = pool.filter((a) => a.kind === "county");
   // `named`: the words name a real place (with its state, or as a county), not a word the reader took for one ("index").
   if (!pool.length) return { kind: "unresolved", why: `no city or county agency named ${name}${stateNamed ? ` in ${stateName(stateNamed)}` : ""} in this build`, named: !!stateNamed || countyNamed };
   // The most populous agency of each kind in each state; the large ones are the real candidates.
