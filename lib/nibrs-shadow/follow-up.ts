@@ -151,6 +151,24 @@ export function standsAlone(turn: string): boolean {
   return crime && (places > 0 || unknownPlace || placeSet);
 }
 
+/**
+ * The query log's wordings of the follow-ups below (follow-up cluster B, 2026-11-05), said the way the forms read them:
+ * a verb before "the same for" ("show me the same for Dallas county", "calculate the same for Chicago, IL"), a rate asked
+ * for in words ("give it to me as a per capita rate", "give me as a rate"), a grain swapped ("do it per year and not
+ * each month"), a period set ("modify so the date range is 1960 through 2024"). Anything else is left as it is.
+ */
+export function canonicalFollowUp(f: string): string {
+  let t = f.trim();
+  t = t.replace(/^(?:(?:show|give|get|calculate|compute|run|do|display|pull|let me see|can i see|i want|i'd like)\s+(?:me\s+)?)?(?:the\s+)?same\s+(?:for|in|with)\s+/i, "same for ");
+  if (/^(?:(?:give|show|put|have|display|make)\s+(?:it\s+|this\s+|that\s+)?(?:to\s+)?(?:me\s+)?(?:it\s+)?(?:as|in(?:to)?)\s+)?(?:a\s+)?per[\s-]capita(?:\s+rates?)?$/i.test(t)
+    || /^(?:give|show|put|have|display)\s+(?:it\s+)?(?:to\s+)?(?:me\s+)?(?:it\s+)?(?:as|in)\s+(?:a\s+)?rates?(?:\s+per\s+100,?000(?:\s+(?:people|residents))?)?$/i.test(t)) return "as a rate";
+  const g = /^(?:do|show|make|give|put|break)\s+(?:it|this|that|them)\s+(?:down\s+)?(?:per|by)\s+(year|month)s?(?:\s*(?:,|and)?\s*(?:not|instead of|rather than)\s+(?:each|every|per|by)\s+(?:month|year)s?)?$/i.exec(t);
+  if (g) return `by ${g[1].toLowerCase()}`;
+  // Setting the date range replaces the period ("same for <period>"), never adds to it.
+  t = t.replace(/^(?:modify|change|update|adjust|set)\s+(?:it\s+)?(?:so\s+)?(?:that\s+)?(?:the\s+)?(?:date\s+range|years?|period|time\s*frame)\s+(?:is|are|to|=)\s+/i, "same for ");
+  return t;
+}
+
 export const deterministicRewriter: FollowUpRewriter = {
   rewrite(previous: string, followUp: string, thisYear = new Date().getFullYear()): Rewrite {
     const prev = previous.trim();
@@ -161,6 +179,7 @@ export const deterministicRewriter: FollowUpRewriter = {
     const additive = /^(?:and|also|plus|as well as)\b[,\s]*/i.exec(unled);
     let f = unled.slice(additive ? additive[0].length : 0).replace(/\s*\binstead\b/i, "").replace(/[?.!\s]+$/, "").trim();
     if (additive) f = `add ${f}`;
+    f = canonicalFollowUp(f);
     const fl = f.toLowerCase();
     const prevParts = partsOf(prev);
 
@@ -329,6 +348,11 @@ export const deterministicRewriter: FollowUpRewriter = {
       const words = range ? `from ${range[1]} to ${range[2]}` : `in ${ucFirst(month![1].toLowerCase())} ${month![2]}`;
       // A previous question with no period at all takes this one (real turns: "which city had the steepest decline in
       // total violent crime?", then "from 2015 to 2024"), as a bare year does; one with another period is asked about.
+      // "Modify so the date range is 1960 through 2024": the words set the period, so the previous one is replaced even
+      // when it is "since 2000" (follow-up cluster B).
+      const setsPeriod = /\b(?:date\s+range|years?|period|time\s*frame)\s+(?:is|are|to|=)\b/i.test(raw);
+      const prevPhrase = /\b(?:since|from|starting(?:\s+in)?)\s+(?:19|20)\d{2}(?:\s*(?:-|–|to|through)\s*(?:the\s+)?(?:present|now|today|(?:19|20)\d{2}))?\b/i.exec(prev);
+      if (!pr && setsPeriod && prevPhrase) return ok(prev.replace(prevPhrase[0], words), "the period set by the follow-up replaces the previous one");
       if (!pr) return prevParts.periods.length || YEAR.test(prev) || /\b(?:since|this year|last year|so far|year to date|past|last \d+)\b/i.test(prev)
         ? ask(`Whether ${asPeriod} replaces the whole period or is added to it.`)
         : ok(`${prev.replace(/[?.!\s]+$/, "")} ${words}`, "the previous question takes the period");
