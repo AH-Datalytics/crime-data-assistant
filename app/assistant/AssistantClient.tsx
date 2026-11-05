@@ -299,7 +299,6 @@ export default function AssistantClient() {
           <a href="https://crimeindex.org/historical">Historical Data Library</a>
           <a href={`${BASE}/assistant`} className="on">Crime Data Assistant</a>
         </nav>
-        <span className="Preview">Local preview</span>
       </div></header>
 
       {start ? <StartPage form={form} onAsk={(q) => { setInput(""); ask(q); }} onFill={(q) => { setInput(q); window.scrollTo({ top: 0, behavior: "smooth" }); box.current?.focus(); }} /> : (<>
