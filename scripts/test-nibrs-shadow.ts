@@ -964,6 +964,9 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // not found, never asked about as if no place were named (a month is not a place).
   assert.match(as(ask("robberies in Paris, France in 2025"), "decline").explanation, /U\.S\. law enforcement agencies only/);
   assert.notEqual(ask("robberies in New Mexico in 2024").kind, "decline");
+  // Codex re-check: a country name that continues a U.S. place name is never declined as foreign.
+  for (const q of ["murders in Mexico Missouri in 2024", "murders in Brazil Indiana in 2024", "murders in China Grove, Texas in 2024", "murders in New  Mexico in 2024"])
+    assert.ok(!/U\.S\. law enforcement agencies only/.test(JSON.stringify(ask(q))), q);
   assert.match(as(ask("How many murders were there in Zzyzxville in 2024?"), "decline").explanation, /couldn't find "Zzyzxville"/);
   assert.ok(!/couldn't find "April"/.test(JSON.stringify(ask("Which cities had the most violent crime in April"))), "a month is not a place");
   // Codex reader-change review 01: a percent change over a span is never answered as counts.
