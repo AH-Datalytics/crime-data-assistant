@@ -79,7 +79,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\bfrom\s+(${MONTH})\s+(${YEAR})\s+(?:to|through|until|-)\s+(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
-const EARLY_CONCEPTS = new Set(["ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
+const EARLY_CONCEPTS = new Set(["outside-us", "ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
 
 /** Filter values: `dimension:value`. Specific weapons before the generic gun words; values are NIBRS codes. */
 const FILTERS: Rule[] = [
@@ -222,6 +222,15 @@ const RULES: Rule[] = [
   // Option 3 batch 1 (2026-10-21, carried from the reverted #36): overdose deaths and immigration/citizenship status
   // are not recorded, so they are refused by name rather than as unread words. Claimed early, before the drug and place words.
   { concept: "overdose-deaths", pattern: R(String.raw`\b(?:(?:drug|opioid|opiate|fentanyl|heroin)\s+)?overdos(?:e|es|ed|ing)(?:\s+(?:deaths?|fatalities|victims?))?\b`), state: "not-recorded", explanation: OVERDOSE },
+  // A country outside the United States (redesign test 2026-11-04: "robberies in Paris, France in 2025" had been "I
+  // didn't understand 'France'"): declined plainly. Never a U.S. place (Codex follow-up-rewrites re-check 01): not after
+  // "New" ("New Mexico", any spacing), and not when the next word continues a place name ("Mexico Missouri", "Brazil,
+  // Indiana", "China Grove, Texas"); only a country standing alone, followed by the end, punctuation or a plain word
+  // ("in 2024", "since", "and"). City names shared with U.S. cities (Toronto, Vancouver) are not listed.
+  { concept: "outside-us", pattern: R(String.raw`\b(?:canada|mexico|france|england|britain|united\s+kingdom|scotland|ireland|germany|italy|spain|portugal|netherlands|sweden|norway|japan|china|india|pakistan|brazil|argentina|australia|new\s+zealand|russia|ukraine|israel|nigeria|south\s+africa|haiti|philippines|el\s+salvador|honduras|guatemala|colombia|venezuela|london,?\s+(?:england|uk)|paris,?\s+france)\b`), state: "not-recorded",
+    when: (m, q) => !/\bnew\s*$/i.test(q.slice(0, m.index))
+      && !/^\s*,?\s*(?!(?:in|during|from|since|for|by|and|or|vs\.?|versus|compared|between|over|per|to|through|of|with|at|on|the|last|this|over|before|after|between|year|years|month|months)\b)[a-z]/i.test(q.slice(m.index + m[0].length)),
+    explanation: declined("the data covers U.S. law enforcement agencies only.") },
   { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecutions?\b|\bprosecutors?\b|\bprosecuted\b|\bdefendants?\b|\bcourts?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\b|\bbeats?\b|\bcensus\s+tracts?\b`), state: "not-recorded", explanation: SUBCITY },

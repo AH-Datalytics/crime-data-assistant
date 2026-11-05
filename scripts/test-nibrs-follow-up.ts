@@ -229,4 +229,23 @@ assert.equal(standsAlone("How many murders were there in Zzyzxville in 2024?"), 
 assert.equal(standsAlone("now in Nashville"), false);
 assert.equal(standsAlone("and in 2023"), false);
 
+// Follow-up cluster B (2026-11-05): the query log's wordings of these follow-ups, each a certain rewrite.
+assert.equal(q(rw("Dallas murders by year since 2020", "show me the same for Houston")), "Houston murders by year since 2020");
+assert.equal(q(rw("violent crime rates in Philadelphia from 2024 to 2025", "calculate the same for chicago, IL")), "violent crime rates in chicago, IL from 2024 to 2025");
+assert.equal(q(rw("Allentown, PA violent crime per year since 1930", "give it to me as a per capita rate")), "Allentown, PA violent crime rate per year since 1930");
+assert.equal(q(rw("Baltimore homicides by month in 2025", "Do it per year and not each month")), "Baltimore homicides by year in 2025");
+assert.equal(q(rw("murders per capita in St. Louis by year since 2000", "modify so the date range is 1960 through 2024")), "murders per capita in St. Louis by year from 1960 to 2024");
+// A state written after its county is that county's, not a second place ("same for" replaces it).
+assert.equal(q(rw("Tarrant County, Texas murders in 2024", "same for Dallas County, Texas")), "Dallas County, Texas murders in 2024");
+assert.equal(rw("Houston and Austin murders in 2024", "same for Dallas").kind, "ask");
+// A bare range after a "since" period is still asked about (replace or add).
+assert.equal(rw("murders per capita in St. Louis by year since 2000", "1990 to 2000").kind, "ask");
+// Codex follow-up-rewrites review 01: a set period replaces only one whole period phrase; otherwise asked.
+assert.equal(rw("Denver robberies from 2010 to 2015 and from 2020 to 2024", "change the years to 2021-2023").kind, "ask");
+assert.equal(rw("Denver robberies since 2010 through June 2024", "change the years to 2020-2023").kind, "ask");
+// A place outside the U.S. is a place named: the turn stands alone (and is declined as a new question).
+assert.equal(standsAlone("robberies in Paris, France in 2025"), true);
+assert.equal(standsAlone("robberies in Paris, France vs London, England in 2025"), true);
+assert.equal(standsAlone("compare to Paris, France"), false);
+
 console.log("nibrs follow-up: rewrites are standalone and certain, the rest is asked; the rewriter is replaceable");
