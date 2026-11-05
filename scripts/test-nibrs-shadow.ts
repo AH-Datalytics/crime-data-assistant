@@ -947,6 +947,12 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     const o = ask(q);
     assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell|two named years|two years/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
   }
+  // Reader cluster 3: a year to the latest data ("2015 to present", "to the most recent month") is "since" that year;
+  // "as far back as you can", "full history", "historical", "all available years" are every year (D5).
+  for (const q of ["Denver robberies 2018 to present", "Denver robberies from 2018 to the most recent data", "Denver robberies as far back as you can", "the full history of robberies in Denver", "historical robbery counts in Denver"]) {
+    const o = ask(q);
+    assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
+  }
   // Codex reader-change review 01: a percent change over a span is never answered as counts.
   for (const q of ["What is the % change in robberies in Denver since 2019?", "percent change in robberies in Denver since 2019"]) assert.notEqual(ask(q).kind, "answer", q);
   // Reader cluster 1 and P94 (Jeff 2026-11-05): a rolling window of any length named is read and computed at that

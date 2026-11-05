@@ -246,7 +246,15 @@ const RULES: Rule[] = [
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `years:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(?:for|in)\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `between:${m[1]}:${m[2]}`, pattern: R(String.raw`\bbetween\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
+  // Reader cluster 3 (2026-11-05): a year to the latest the source has, in the query log's words ("2018 to present",
+  // "from 2014 to today", "to the most recent data", "through the most recent month", "to most current"): since that year.
+  { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+)?(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(?:the\s+)?(?:present(?:\s+day)?|now|today|date|current(?:\s+(?:year|data))?|most\s+(?:recent|current)(?:\s+(?:data|year|month|available(?:\s+data)?))?|latest(?:\s+(?:data|year|month))?)\b`) },
   { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+(${YEAR})(?:\s*(?:-|–|to|through|until)\s*(?:the\s+)?(?:present|now|today|current(?:\s+year)?)|\s+on(?:wards?)?)?\b`) },
+  // "a 5-year history": the last 5 years.
+  { concept: "period", value: (m) => `last:${m[1]}`, pattern: R(String.raw`\b(?:an?\s+)?(\d{1,2})[-\s]year\s+history\b`) },
+  // Every year the source has (D5, Jeff 2026-11-04: "show every year we have"): "as far back as you can", "for as many
+  // years as possible", "all available years", "the full history of", "historical(ly)", "from the beginning of the data".
+  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:from\s+)?as\s+far\s+back\s+as\s+(?:you\s+can|possible|available|(?:there\s+is|we\s+have)\s+data|(?:the\s+)?data\s+(?:goes|exists|allows)|it\s+goes)\b|\bfor\s+as\s+many\s+years\s+as\s+(?:possible|available|you\s+(?:can|have))\b|\b(?:for\s+)?all\s+(?:available\s+)?years\b|\bevery\s+year\s+available\b|\b(?:from\s+)?(?:the\s+)?beginning\s+of\s+(?:the\s+)?(?:data|records)(?:\s+(?:until|to|through)\s+(?:the\s+)?present)?\b|\b(?:the\s+)?full\s+history(?:\s+of)?\b|\bhistorical(?:ly)?\b|\bsince\s+(?:records|data)\s+(?:began|start(?:ed)?)\b`) },
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(${YEAR})\s*(?:-|–|—|to|through|thru)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `last:${numberToken(m[1])}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past|previous|prior)\s+(${NUMBER})\s+(?:(?:full|complete|calendar)\s+)?years\b`) },
   { concept: "period", value: () => "lastyear", pattern: R(String.raw`\b(?:in\s+)?last\s+year\b`) },
