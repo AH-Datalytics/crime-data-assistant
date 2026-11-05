@@ -153,12 +153,10 @@ export default function AssistantClient() {
     return () => removeEventListener("keydown", onKey);
   }, []);
 
-  // This chat's id, for the model rewriter's cap on calls per session.
-  const session = useRef(Math.random().toString(36).slice(2));
   async function fetchReply(question: string, path: string[], previous?: string | null): Promise<Reply> {
     try {
       const res = await fetch(`${BASE}/api/assistant-query`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, path, session: session.current, ...(previous ? { previous } : {}) }) });
+        body: JSON.stringify({ question, path, ...(previous ? { previous } : {}) }) });
       const j = await res.json();
       return "error" in j ? { kind: "error", error: j.error } : (j as Reply);
     } catch (e) {

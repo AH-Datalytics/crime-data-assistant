@@ -10,8 +10,7 @@
  * carry `path` against `asked`, with no `previous`. A decline's `detail` (for logs) is never sent: toPreview omits it.
  *
  * Where the deterministic rewriter can't tell, the model rewriter is asked live (P73, ./live-rewriter.ts): its rewrite
- * comes back as a proposal; at the spend caps the page is asked for the full question. `session` (the page's id for the
- * chat) counts calls per session.
+ * comes back as a proposal; at the spend caps the page is asked for the full question. The model calls are counted per client (its IP).
  */
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -21,7 +20,8 @@ import { duckdbExecutor } from "@/lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "@/lib/nibrs-shadow/historical";
 import { loadNibrsRelease } from "@/lib/nibrs-shadow/release";
 import { currentBuildAt } from "@/lib/nibrs-shadow/current";
-import { MAX_QUESTION, follow, parseRequest, previewEnabled, toPreview } from "@/lib/nibrs-shadow/preview";
+import { MAX_QUESTION, follow, parseRequest, toPreview } from "@/lib/nibrs-shadow/preview";
+import { assistantEnabled } from "@/lib/assistant-gate";
 import { liveModelRewrite } from "./live-rewriter";
 
 export const dynamic = "force-dynamic";
@@ -47,25 +47,26 @@ function shadowDeps(): ShadowDeps {
 }
 
 export async function GET() {
-  return previewEnabled() ? NextResponse.json({ ok: true }) : notFound();
+  return assistantEnabled() ? NextResponse.json({ ok: true }) : notFound();
 }
 
 export async function POST(req: Request) {
-  if (!previewEnabled()) return notFound();
+  if (!assistantEnabled()) return notFound();
   const body = await req.json().catch(() => null);
   const parsed = parseRequest(body);
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const raw = (body as { previous?: unknown }).previous;
   const previous = typeof raw === "string" && raw.trim() && raw.length <= MAX_QUESTION ? raw.trim() : null;
   const { question, path: clicked } = parsed;
-  const extra = body as { session?: unknown };
-  const session = typeof extra.session === "string" ? extra.session.slice(0, 64) : "none";
+  // The model-call cap is per client, not per the page's own session id (a caller can send any id): the last
+  // X-Forwarded-For entry is the address nginx appended.
+  const client = (req.headers.get("x-forwarded-for") ?? "").split(",").pop()?.trim().slice(0, 64) || "local";
   const started = Date.now();
   try {
     let asked = question, rewrite: string | null = null;
     if (previous && clicked.length === 0) {
       // The engine's live hybrid (#95): deterministic first, the model only where it asks, through the guards.
-      const r = await liveModelRewrite(previous, question, session);
+      const r = await liveModelRewrite(previous, question, client);
       // The model's question back with its checked choices: each a proposal, none run until clicked.
       if (r.kind === "choices") return NextResponse.json({ kind: "proposal", asked: question, why: r.why, options: r.options, ms: Date.now() - started });
       if (r.kind === "ask") return NextResponse.json({ kind: "rewrite-ask", why: r.why, options: r.options, ms: Date.now() - started });
@@ -81,6 +82,9 @@ export async function POST(req: Request) {
     // The answer contract (#98): the page builds the title, lead, notes, chart choices and offers from `presentation`.
     return NextResponse.json({ ...toPreview(at, clicked, d.places, asked), asked, rewrite, ms: Date.now() - started });
   } catch (e) {
-    return NextResponse.json({ error: `The preview engine failed: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
+    // The detail (it can carry filesystem paths) goes to the server log; a production build shows a plain sentence.
+    console.error("[assistant-query]", e);
+    const detail = process.env.NODE_ENV === "production" ? "Something went wrong answering that. Please try again." : `The preview engine failed: ${e instanceof Error ? e.message : String(e)}`;
+    return NextResponse.json({ error: detail }, { status: 500 });
   }
 }

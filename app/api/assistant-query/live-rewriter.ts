@@ -6,7 +6,7 @@
  *
  * Spend is capped twice: a daily cap (ASSISTANT_MODEL_DAILY_USD, default $2), kept in a small file in the system's temp
  * folder, with each call's worst case reserved before it is sent (as scripts/fetch-model-rewrites.ts does); and a cap
- * of calls per chat session, in memory. At either cap the caller falls back to asking for the full question.
+ * of calls per client (the IP nginx saw) per day, in memory, bounded. At either cap the caller falls back to asking for the full question.
  * The model's own choices when it asks are kept (the engine's cached rewriter drops them, since there each would run
  * as a continuation): here each is checked by the same guards and shown as a proposal, and runs only when clicked.
  * The key is GEMINI_API_KEY from the server's environment: never sent to the page, printed or logged.
@@ -21,7 +21,8 @@ import { deterministicRewriter, type Rewrite } from "@/lib/nibrs-shadow/follow-u
 /** USD per million tokens (thinking billed as output), as scripts/fetch-model-rewrites.ts. */
 const PRICE = { input: 0.75, output: 3.75 };
 const DAILY_USD = Number(process.env.ASSISTANT_MODEL_DAILY_USD ?? "2");
-const PER_SESSION = 20;
+const PER_CLIENT = 40; // model calls per client (its IP) per UTC day
+const MAX_CLIENTS = 5000, MAX_ANSWERS = 500; // the maps below drop their oldest entries past these
 const LEDGER = path.join(os.tmpdir(), "crime-data-assistant-model-spend.json");
 
 type Ledger = { day: string; spent: number };
@@ -35,8 +36,13 @@ function ledger(): Ledger {
 }
 const add = (usd: number) => { const l = ledger(); l.spent = Math.max(0, l.spent + usd); fs.writeFileSync(LEDGER, JSON.stringify(l)); };
 
-const calls = new Map<string, number>();
+const calls = new Map<string, { day: string; n: number }>();
 const answered = new Map<string, Rewrite | Choices>();
+/** Set a key, dropping the oldest entries past `max` (a Map iterates in insertion order), so a caller cannot grow memory. */
+function put<V>(m: Map<string, V>, k: string, v: V, max: number) {
+  m.delete(k); m.set(k, v);
+  while (m.size > max) m.delete(m.keys().next().value as string);
+}
 
 /** The model's question back with its own choices, each checked by the guards: shown as proposals, none run until clicked. */
 export type Choices = { kind: "choices"; why: string; options: { label: string; question: string }[] };
@@ -106,10 +112,10 @@ function yearChoices(previous: string, followUp: string): Choices | null {
  * model call, with the spending caps: called with the engine's larger output cap (for answers cut off at the smaller
  * one), and once more when the answer is cut off or is not usable (the model's answers vary). Where both ask, the
  * model's own checked choices, else "same for"/"add" a single year, are offered as proposals; at the daily or the
- * session cap, the question back asks for the full question. The session cap counts each call sent, retries included.
+ * session cap, the question back asks for the full question. The client cap counts each call sent, retries included.
  * A fallback made when the model could not be reached (no key, a failed call) is not kept, so a later try asks again.
  */
-export async function liveModelRewrite(previous: string, followUp: string, session: string): Promise<Rewrite | Choices> {
+export async function liveModelRewrite(previous: string, followUp: string, client: string): Promise<Rewrite | Choices> {
   const k = JSON.stringify([previous.trim(), followUp.trim()]);
   const known = answered.get(k);
   if (known) return known;
@@ -121,9 +127,10 @@ export async function liveModelRewrite(previous: string, followUp: string, sessi
     let last: ModelAnswer | null = null;
     try {
       for (let attempt = 0; attempt < 2; attempt++) {
-        const used = calls.get(session) ?? 0;
-        if (used >= PER_SESSION) { capped = true; return last; }
-        calls.set(session, used + 1);
+        const day = today(), c = calls.get(client); // one reading of the date, so midnight cannot fall between the two uses
+        const used = c && c.day === day ? c.n : 0;
+        if (used >= PER_CLIENT) { capped = true; return last; }
+        put(calls, client, { day, n: used + 1 }, MAX_CLIENTS);
         // The engine's larger cap from the start: at the smaller one, low thinking often uses the whole budget.
         const a = await call(key, prompt, GENERATION.retryTruncatedMaxOutputTokens);
         if (!a) { failed = true; return last; }
@@ -143,9 +150,9 @@ export async function liveModelRewrite(previous: string, followUp: string, sessi
     }
     return last;
   });
-  if (r.kind !== "ask") { answered.set(k, r); return r; }
+  if (r.kind !== "ask") { put(answered, k, r, MAX_ANSWERS); return r; }
   if (capped) return { ...r, why: "Please ask the full question, with the crime, the place and the years." };
   const out = choices ?? yearChoices(previous, followUp) ?? r;
-  if (out !== r && !failed) answered.set(k, out);
+  if (out !== r && !failed) put(answered, k, out, MAX_ANSWERS);
   return out;
 }

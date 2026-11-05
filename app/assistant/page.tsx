@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { previewEnabled } from "@/lib/nibrs-shadow/preview";
+import { assistantEnabled } from "@/lib/assistant-gate";
 import AssistantClient from "./AssistantClient";
 import "./assistant.css";
 
@@ -10,6 +10,6 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Crime Data Assistant (preview)", robots: { index: false, follow: false } };
 
 export default function AssistantPage() {
-  if (!previewEnabled()) notFound();
+  if (!assistantEnabled()) notFound();
   return <AssistantClient />;
 }
