@@ -96,6 +96,10 @@ function mergedCells(v: MergedFile): ExpectedCell[] | null {
 
 export function sliceValues(files: { name: string; json: string }[]): ExpectedValues {
   const out: ExpectedValues = new Map();
+  // One-case files (V185 on): a case's all-agencies values, and its Consistent Reporting Agencies values. A case with
+  // both asks for all agencies, so the consistent values are its button's ("<case>|button", V197-V201); a case with
+  // only the consistent file asks for that view itself (LS-457, V191).
+  const allOf = new Map<string, ExpectedCell[]>(), consistentOf = new Map<string, ExpectedCell[]>();
   // The merged-Unknown files last, so they win over the earlier files they restate.
   const merged = (f: { json: string }) => /"unknown_rule"/.test(f.json);
   for (const f of [...files.filter((x) => !merged(x)), ...files.filter(merged)]) {
@@ -107,6 +111,10 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
     // a case names its cell in values.source and bindValueSources hands it over.
     const cur = currentCells(v as unknown as CurrentFile);
     if (cur) { for (const [k, c] of cur) out.set(k, c); continue; }
+    // One case per file (V185 on: "nibrsai_case"): a state or national sum by one category, or a circumstance breakdown
+    // or filter (V192-V195, code 06 held back and not in the file's rows).
+    const one = singleCaseCells(v as unknown as SingleCaseFile, f.name);
+    if (one) { (one.consistent ? consistentOf : allOf).set(one.lsCase, one.cells); continue; }
     // A file that lists no cases (SHR's V177-V184) is read only through a case's binding: never a crash.
     if (typeof v.nibrsai_cases !== "string") continue;
     // Batch 8: the historical file's values, and NIBRS state and national sums (P61).
@@ -198,9 +206,52 @@ export function sliceValues(files: { name: string; json: string }[]): ExpectedVa
       out.set(P28_VALUE_KEYS[k] ?? k, cells);
     }
   }
+  for (const [c, cells] of allOf) out.set(c, cells);
+  for (const [c, cells] of consistentOf) out.set(allOf.has(c) ? `${c}|button` : c, cells);
+  for (const [c, keys] of Object.entries(SAME_VALUES)) { const cells = consistentOf.get(c) ?? allOf.get(c); if (cells) for (const k of keys) if (!out.has(k)) out.set(k, cells); }
   return out;
 }
 const pick = (c: { status: string; value: number | null }) => ({ value: c.value, status: c.status });
+/**
+ * Files of one case each (nibrs-model V185 on). A sum by one category (V185-V191): each year's categories, keyed as the
+ * answer shows them ("<year>|<name>" when several years), each with its share of the year's total. A circumstance
+ * breakdown (V192-V193): each circumstance with its share of the victims (a victim can have two, so the shares are over
+ * the victims, not the rows); code 06 is held back in the file as in the answer. A circumstance filter (V194-V195): one
+ * count. A file whose question is no longer its case's is left out (SUPERSEDED_VALUES), so its case stays unverified.
+ */
+type SingleCaseFile = { nibrsai_case?: string; unit?: string; grouping?: string; years?: number[]; view?: string; place?: string;
+  by_year?: { year: number; by_category: Record<string, number>; total: number }[];
+  victims?: number; by_circumstance?: Record<string, number>; filter?: string[]; count?: number };
+const SUPERSEDED_VALUES: Record<string, string> = {
+  // Request 13 asked for aggravated assault (13A) by location type; LS-455 was changed to burglary in #108's review.
+  "V189": "LS-455",
+};
+/** A case's values that are also another answer's: LS-452's button is LS-457's question (the nation's Consistent Reporting Agencies). */
+const SAME_VALUES: Record<string, string[]> = { "LS-457": ["LS-452|button"] };
+const UNIT_ENTITY: Record<string, string> = { victims: "victim", offenders: "offender", arrests: "arrestee", offenses: "offense" };
+const share1 = (n: number, total: number) => (total > 0 ? Math.round((1000 * n) / total) / 10 : null);
+function singleCaseCells(v: SingleCaseFile, file: string): { lsCase: string; cells: ExpectedCell[]; consistent: boolean } | null {
+  if (typeof v.nibrsai_case !== "string" || !/^LS-\d{3}$/.test(v.nibrsai_case)) return null;
+  const name = /V\d+(?=\.json$)/.exec(file)?.[0];
+  if (name && SUPERSEDED_VALUES[name] === v.nibrsai_case) return null;
+  // The Consistent Reporting Agencies view: named in "view", or (circumstance files) in the place ("TN-consistent").
+  const consistent = /consistent/i.test(v.view ?? "") || /-consistent$/i.test(v.place ?? "");
+  if (v.by_circumstance && typeof v.victims === "number") {
+    const dim = "victim_circumstance.circumstance";
+    return { consistent, lsCase: v.nibrsai_case, cells: Object.entries(v.by_circumstance).map(([code, n]) =>
+      ({ key: categoryName(dim, code), value: n, status: "VALUE", share: share1(n, v.victims!) })) };
+  }
+  if (v.filter && typeof v.count === "number") return { consistent, lsCase: v.nibrsai_case, cells: [{ key: "", value: v.count, status: "VALUE" }] };
+  if (v.by_year?.length && v.grouping && v.unit && UNIT_ENTITY[v.unit]) {
+    const dim = `${UNIT_ENTITY[v.unit]}.${v.grouping}`;
+    const many = v.by_year.length > 1;
+    // Age groups are named by their labels in the file and the answer alike; other codes by the answer's names.
+    const label = (code: string) => (v.grouping === "age" ? code : categoryName(dim, code));
+    return { consistent, lsCase: v.nibrsai_case, cells: v.by_year.flatMap((y) => Object.entries(y.by_category).map(([code, n]) =>
+      ({ key: `${many ? `${y.year}|` : ""}${label(code)}`, value: n, status: "VALUE", share: share1(n, y.total) }))) };
+  }
+  return null;
+}
 /** Batch 9: units and their incidents (P66), per status or type, or for one selection. */
 type UnitsIncidents = { units: number; incidents: number };
 type ClearanceValues = { by_status?: Record<string, UnitsIncidents>; by_type?: Record<string, UnitsIncidents> } & Record<string, unknown>;
@@ -504,6 +555,8 @@ function peopleStatement(s: string, o: Extract<ShadowOutcome, { kind: "answer" }
   if (/^reads "by juveniles" as offenders under 18/.test(s) || /^counts victims of incidents with at least one offender under 18, each once/.test(s))
     return conds((scope, entity, w) => scope === "incident" && entity === "offender" && w.dimension === "offender.age" && under18(w));
   if (/^says (?:offenders|victims|arrestees) of unknown age(?: or sex)? are not counted/.test(s)) return says("unknown_not_counted");
+  // Element 31 (coordinator 2026-11-04): a filtered count says agencies often record the circumstance as unknown.
+  if (/^says agencies often record the circumstance as unknown/.test(s)) return says("circumstance_unknown");
   if (/^reads "against juveniles" as victims under 18/.test(s) || /^counts victims under 18/.test(s)) return conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.age" && under18(w));
   if (/^counts female victims whose aggravated assault involved a firearm/.test(s))
     return unit === "victim" && conds((sc, _e, w) => sc === "unit" && w.dimension === "victim.sex" && (w.values ?? []).join() === "F") && conds((sc, e) => sc === "victim" && e === "offense_weapon");
@@ -539,6 +592,9 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
     // Department"): either is accepted for an agency the plan names.
     if (ag) ok = all.includes(ag[1]) || o.plan.geography.places.some((p) => p.kind === "agency" && (() => { const f = fbiNameFor(ag[1], p.ori); return !!f && all.includes(f); })());
     else if (s === "names its source at the end") ok = /^Source: /.test(text[text.length - 1]) && text.filter((t) => /^Source: /.test(t)).length === 1;
+    // A state or national sum by category (coordinator 2026-11-04): the agencies it sums over, or the fixed set it counts.
+    else if (s === "names how many agencies it sums over") ok = /Summed over the [\d,]+ agencies that reported\./.test(all) && !!o.stateSum;
+    else if (s === "names the Consistent Reporting Agencies it counts") ok = /Counting only the [\d,]+ Consistent Reporting Agencies that reported every month/.test(all) && !!o.stateSum;
     else if (s === "lists the unknown category after the known ones in each period") {
       // P86 (coordinator 2026-11-02): within each period, the not-known categories after the known ones, Unknown once.
       const cols = o.delivered.table.columns;

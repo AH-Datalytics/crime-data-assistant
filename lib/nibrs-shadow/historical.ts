@@ -147,8 +147,19 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   const read = { table: "agency_crime", column: col, release: build.release };
   const header = `${ucFirst(m.words)}${hq.statistic === "rate" ? " per 100,000" : ""}`;
   const shown = (v: number) => (hq.statistic === "rate" ? fmtRate(v) : fmt(v));
-  const blanks = (ys: number[]) => hq.agencies.flatMap((a) => ys.filter((y) => value(a.ori, y) === null).map((y) => `${several ? `${a.label} ` : ""}${y}`));
-  const blankLine = (ys: number[]) => { const b = blanks(ys); return b.length ? [`Not available in this data: ${b.join(", ")}.`] : []; };
+  // The years shown blank, by place and in spans, in the words of a series' start note (redesign test, coordinator
+  // 2026-11-04: "Memphis, Tennessee 1930, Memphis, Tennessee 1931" read as a list of places): "Crime Index has no robbery
+  // figures for Memphis, Tennessee from 1930 to 1931, shown blank."
+  const what = hq.statistic === "rate" ? `${m.name} rate` : `${m.name} figure`;
+  const spansOf = (ys: number[]) => ys.reduce<[number, number][]>((out, y) => { const l = out[out.length - 1]; if (l && y === l[1] + 1) l[1] = y; else out.push([y, y]); return out; }, []);
+  const yearsWords2 = (sp: [number, number][]) => {
+    const w = sp.map(([a, b]) => (a === b ? String(a) : `${a} to ${b}`));
+    return sp.length === 1 && sp[0][0] !== sp[0][1] ? `from ${w[0]}` : `in ${w.length > 1 ? `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}` : w[0]}`;
+  };
+  const blankLine = (ys: number[]) => hq.agencies.flatMap((a) => {
+    const miss = ys.filter((y) => value(a.ori, y) === null);
+    return miss.length ? [`Crime Index has no ${what}${miss.length > 1 ? "s" : ""} for ${a.label} ${yearsWords2(spansOf(miss))}, shown blank.`] : [];
+  });
 
   // A change (P54): two years' counts, the change and the percent change (P55: none from a zero base).
   if (hq.comparison && hq.statistic === "count") {

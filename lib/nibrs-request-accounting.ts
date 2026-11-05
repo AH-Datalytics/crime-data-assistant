@@ -18,6 +18,27 @@ import { detectCompletenessQuestion } from "./completeness-intent";
 
 const R = (s: string, flags = "gi") => new RegExp(s, flags);
 const YEAR = String.raw`(?:19|20)\d{2}`;
+// A rolling window's length, in months or years ("6-month", "12m", "two-year"); its words: a total or an average.
+const WINDOW_N = String.raw`(?:\d{1,3}|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|twenty[-\s]four|thirty[-\s]six)`;
+const WINDOW_UNIT = String.raw`(?:months?|mos?|m|years?|yrs?)`;
+const WINDOW_KIND = String.raw`(?:\s+(?:totals?|sums?|counts?|basis|averages?|avg|means?))?`;
+export const ROLLING_WINDOW = String.raw`\bon\s+a\s+rolling\s+${WINDOW_N}[-\s]?${WINDOW_UNIT}\s+(?:average\s+)?basis\b`
+  + String.raw`|\b(?:rolling|trailing|moving)\s+(?:over\s+)?(?:the\s+(?:last|past)\s+)?${WINDOW_N}[-\s]?${WINDOW_UNIT}\b${WINDOW_KIND}`
+  + String.raw`|\b${WINDOW_N}[-\s]?${WINDOW_UNIT}\s+(?:rolling|moving|trailing)\b${WINDOW_KIND}`
+  + String.raw`|\b(?:rolling|moving)\s+(?:averages?|avg|means?)\s+(?:over|of|for)\s+(?:the\s+(?:last|past)\s+)?${WINDOW_N}[-\s]?${WINDOW_UNIT}\b`;
+const NUMBER_WORDS: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, eighteen: 18, "twenty-four": 24, "twenty four": 24, "thirty-six": 36, "thirty six": 36 };
+/** "rolling12" (the 12-month total), "rolling:N" (another length in months), "rolling-avg:N"; "?" for no length named. */
+export function rollingValue(text: string): string {
+  const t = text.toLowerCase();
+  const average = /\b(?:averages?|avg|means?)\b|\bmoving\b/.test(t);
+  const m = new RegExp(String.raw`(${WINDOW_N})[-\s]?(${WINDOW_UNIT})\b`).exec(t);
+  const n = m ? (NUMBER_WORDS[m[1].replace(/\s+/, m[1].includes("-") ? "-" : " ")] ?? Number(m[1])) * (/^y/.test(m[2]) ? 12 : 1) : null;
+  // A length the engine can't compute (0 months, more than 10 years) is asked about like no length (Codex P94 review 01.3:
+  // "rolling 0 months" had fallen back to 12).
+  const ok = n !== null && n >= 1 && n <= 120 ? n : null;
+  if (average) return `rolling-avg:${ok ?? "?"}`;
+  return ok === 12 ? "rolling12" : `rolling:${ok ?? "?"}`;
+}
 const NUM_WORDS = "one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty";
 const NUMBER = String.raw`(?:\d[\d,]*|${NUM_WORDS})`;
 const POP_WORD = String.raw`(?:people|residents|population|persons|inhabitants|pop\.?)`;
@@ -153,7 +174,9 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "hate_crime", pattern: R(String.raw`\bhate\s+crimes?\b|\bbias[-\s]motivated(?:\s+crimes?)?\b`) },
   { concept: "measure", value: () => "dui", pattern: R(String.raw`\bdui\b|\bdwi\b|\bdrunk\s+driving\b|\bdriving\s+under\s+the\s+influence\b`) },
   { concept: "measure", value: () => "drug_possession", pattern: R(String.raw`\bdrug\s+possession\b|\bpossession\b|\bdrug(?:\/narcotic)?\s+(?:offenses?|violations?)\b|\bdrugs?\b|\bnarcotics?\b`) },
-  { concept: "measure", value: () => "sex_offense", pattern: R(String.raw`\bsex(?:ual)?\s+(?:offenses?|crimes?)\b`) },
+  // P32: "sexual assaults" is asked about like "sex offenses" (which sex offenses), never read as aggravated assault.
+  // Not "sexual assault kits" or "sex offender registrations" (Codex P32 review 01.2): those aren't offenses.
+  { concept: "measure", value: () => "sex_offense", pattern: R(String.raw`\b(?:all\s+)?(?:forcible\s+)?sex(?:ual)?\s+(?:offenses?|crimes?|assaults?)\b(?!\s+(?:kits?|evidence|exams?|nurses?|forensic|registr\w*|backlogs?))`) },
   { concept: "measure", value: () => "violent_crime", pattern: R(String.raw`\b(?:total\s+)?violent(?:\s+(?:crimes?|offenses?))?\b`) },
   { concept: "measure", value: () => "property_crime", pattern: R(String.raw`\b(?:total\s+)?property(?:\s+(?:crimes?|offenses?))\b`) },
   { concept: "measure", value: () => "all_crime", pattern: R(String.raw`\b(?:total|all|overall)\s+(?:crimes?|offenses?)\b`) },
@@ -176,7 +199,7 @@ const RULES: Rule[] = [
   // ---- preserved operations ----
   { concept: "peer", value: (m) => `peer:${(/(\d+)/.exec(m[0]) ?? ["", ""])[1]}`, pattern: R(String.raw`\b(?:increase|raise|change|go)\s+(?:it\s+)?to\s+\d+\s+(?:comparable|similar(?:ly)?[-\s]?(?:sized?)?|peer)\s+(?:agencies|departments|cities)\b`) },
   { concept: "peer", value: (m) => `peer:${(/(\d+)/.exec(m[0]) ?? ["", ""])[1]}`, pattern: R(String.raw`\b(?:\d+\s+)?(?:other\s+)?(?:agencies|departments|cities)\s+of\s+(?:similar|comparable)\s+size\b|\b(?:\d+\s+)?(?:(?:similar(?:ly)?[-\s]?(?:sized?)?|comparable)\s+(?:agencies|departments|cities)|peers?)\b`) },
-  { concept: "coverage-lookup", value: () => "coverage", pattern: R(String.raw`\bwhat\s+(?:years\s+of\s+)?data\s+(?:do\s+you\s+have|is\s+available|are\s+available|exists?)\b|\bwhat\s+years(?:\s+of\s+data)?(?:\s+do\s+you\s+have)?\b|\bavailable\s+(?:data|years)\b|\bdata\s+coverage\b|\bcoverage\b`) },
+  { concept: "coverage-lookup", value: () => "coverage", pattern: R(String.raw`\bwhat\s+(?:years\s+of\s+)?data\s+(?:do\s+you\s+have|is\s+available|are\s+available|exists?)\b|\bwhat\s+years(?:\s+of\s+data)?(?:\s+do\s+you\s+have)?\b|(?<!\ball\s)\bavailable\s+(?:data|years)\b|\bdata\s+coverage\b|\bcoverage\b`) },  // "all available years" is every year (Codex reader-period review 01)
   { concept: "completeness", value: () => "completeness", pattern: R(String.raw`\b(?:completeness|complete|up\s+to\s+date|finali[sz]ed|final)\b`),
     when: (_m, q) => detectCompletenessQuestion(q) !== null },
   { concept: "cohort", value: () => "consistent-reporters", pattern: R(String.raw`\b(?:for\s+)?(?:consistent(?:ly)?|continuous(?:ly)?)\s+report(?:ers|ing(?:\s+agencies)?)\b|\bagencies\s+that\s+reported\s+every\s+year\b`) },
@@ -209,16 +232,35 @@ const RULES: Rule[] = [
   // ---- rolling windows and months (before the year rules) ----
   // r2: "rolling 12-month violent crime totals" -- "totals" after the measure is the rolling sum (Codex extra-5/6).
   { concept: "rolling", value: () => "rolling12", pattern: R(String.raw`\btotals\b`), when: (m, q) => /\b(?:rolling|trailing)\s+(?:12|twelve)[-\s]?months?\b/i.test(q.slice(0, m.index)) },
-  { concept: "rolling", value: () => "rolling12", pattern: R(String.raw`\b(?:rolling|trailing)\s+(?:12|twelve)[-\s]?months?(?:\s+totals?)?\b|\b(?:12|twelve)[-\s]month\s+rolling(?:\s+totals?)?\b|\btrailing\s+(?:12|twelve)\s+months\b`) },
+  // Rolling windows of any length the question names (Jeff 2026-11-05: "rolling shouldn't just be 12 months"), as a
+  // total or, named so, an average (Jeff: "Answer the average"): "rolling over 6 months", "12 months rolling", "rolling
+  // 12m", "12m rolling", "on a rolling 3 month basis", "3-month rolling average", "rolling 2-year". A window in days or
+  // weeks is not read. No length named ("rolling average", "rolling sum"): asked (Jeff: "Ask which length"). The value
+  // stays "rolling12" for the 12-month total (the live tab's binding reads it); "rolling:N", "rolling-avg:N" otherwise,
+  // with "?" for no length.
+  { concept: "rolling", value: (m) => rollingValue(m[0]), pattern: R(String.raw`${ROLLING_WINDOW}`) },
+  { concept: "rolling", value: (m) => rollingValue(m[0]), pattern: R(String.raw`\b(?:rolling|moving|trailing)\s+(?:averages?|avg|means?|sums?|totals?|counts?|basis)\b|\brolling\b(?!\s+(?:back|out|stone|thunder|in\b))`),
+    when: (m, q) => !new RegExp(ROLLING_WINDOW, "i").test(q) },
   ...MONTH_PERIODS,
   // ---- periods (the accepted Historical forms) ----
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\bfrom[.,:]?\s+(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `years:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(?:for|in)\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `between:${m[1]}:${m[2]}`, pattern: R(String.raw`\bbetween\s+(${YEAR})\s+and\s+(${YEAR})\b`) },
+  // Reader cluster 3 (2026-11-05): a year to the latest the source has, in the query log's words ("2018 to present",
+  // "from 2014 to today", "to the most recent data", "through the most recent month", "to most current"): since that year.
+  { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+)?(${YEAR})\s*(?:-|–|—|to|through|thru|until|till)\s*(?:the\s+)?(?:present(?:\s+day)?|now|today|date|current(?:\s+(?:year|data))?|most\s+(?:recent|current)(?:\s+(?:data|year|month|available(?:\s+data)?))?|latest(?:\s+(?:data|year|month))?)\b`) },
   { concept: "period", value: (m) => `since:${m[1]}`, pattern: R(String.raw`\b(?:since|starting(?:\s+in)?|beginning(?:\s+in)?|from)\s+(${YEAR})(?:\s*(?:-|–|to|through|until)\s*(?:the\s+)?(?:present|now|today|current(?:\s+year)?)|\s+on(?:wards?)?)?\b`) },
+  // "a 5-year history": the last 5 years.
+  { concept: "period", value: (m) => `last:${m[1]}`, pattern: R(String.raw`\b(?:an?\s+)?(\d{1,2})[-\s]year\s+history\b`) },
+  // Every year the source has (D5, Jeff 2026-11-04: "show every year we have"): "as far back as you can", "for as many
+  // years as possible", "all available years", "the full history of", "historical(ly)", "from the beginning of the data".
+  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:from\s+)?as\s+far\s+back\s+as\s+(?:you\s+can|possible|available|(?:there\s+is|we\s+have)\s+data|(?:the\s+)?data\s+(?:goes|exists|allows)|it\s+goes)\b|\bfor\s+as\s+many\s+years\s+as\s+(?:possible|available|you\s+(?:can|have))\b|\b(?:for\s+)?all\s+(?:available\s+)?years\b|\bevery\s+year\s+available\b|\b(?:from\s+)?(?:the\s+)?beginning\s+of\s+(?:the\s+)?(?:data|records)(?:\s+(?:until|to|through)\s+(?:the\s+)?present)?\b|\b(?:the\s+)?full\s+history(?:\s+of)?\b|\bhistorical(?:ly)?\b|\bsince\s+(?:records|data)\s+(?:began|start(?:ed)?)\b`) },
   { concept: "period", value: (m) => `range:${m[1]}:${m[2]}`, pattern: R(String.raw`\b(${YEAR})\s*(?:-|–|—|to|through|thru)\s*(${YEAR})\b`) },
   { concept: "period", value: (m) => `last:${numberToken(m[1])}`, pattern: R(String.raw`\b(?:over\s+|in\s+|for\s+|during\s+)?(?:the\s+)?(?:last|past|previous|prior)\s+(${NUMBER})\s+(?:(?:full|complete|calendar)\s+)?years\b`) },
   { concept: "period", value: () => "lastyear", pattern: R(String.raw`\b(?:in\s+)?last\s+year\b`) },
+  // "the current murder trend": Current Trends' recent months (Jeff 2026-11-05: "current trends" is Current Trends').
+  // Read as its own part; the answer fills the months from the release (lib/nibrs-shadow/answer.ts).
+  { concept: "recent", value: () => "recent", pattern: R(String.raw`\bcurrent(?:ly)?\b(?=\s+(?:[a-z]+\s+){0,2}trends?\b)|\bcurrent(?:ly)?\b(?=\s+trending\b)`) },
   { concept: "period", value: () => "latest", pattern: R(String.raw`\b(?:in\s+|for\s+)?(?:the\s+)?(?:latest|most\s+recent)\s+(?:year|data)(?:\s+available)?\b`) },
   { concept: "period", value: (m) => `year:${m[1]}`, pattern: R(String.raw`\b(?:in|for|during|using|of)\s+(${YEAR})(?:\s+data)?\b`) },
   { concept: "period", value: (m) => `year:${m[1]}`, pattern: R(String.raw`\b(${YEAR})\b`) },
@@ -256,13 +298,14 @@ const RULES: Rule[] = [
   // ---- lists and grain ----
   { concept: "list", value: (m) => `list:${listKey(m[1])}`, pattern: R(String.raw`\b(?:broken\s+down\s+by|by|per|for\s+each|for\s+every|each|every|across)\s+(state|count(?:y|ies)|cit(?:y|ies)|agenc(?:y|ies)|departments?)(?:\s+and\s+(?:by\s+)?year)?\b`) },
   { concept: "grain", value: () => "month", pattern: R(String.raw`\b(?:by|per|each|every|for\s+each)\s+month\b|\bmonthly\b|\bmonth[-\s]by[-\s]month\b`) },
-  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:by|per|each|every|for\s+each)\s+year\b|\byearly\b|\bannual(?:ly)?\b|\byear[-\s](?:by|over)[-\s]year\b|\bover\s+time\b|\btrends?\b`) },
+  { concept: "grain", value: () => "year", pattern: R(String.raw`\b(?:by|per|each|every|for\s+each)\s+year\b|\byearly\b|\bannual(?:ly)?\b|\byear[-\s](?:by|over)[-\s]year\b|\bover\s+time\b|\btrend(?:s|ed|ing)?(?:\s+(?:up|down|upwards?|downwards?|higher|lower))?\b`) },
   // ---- counting units (after the families so "DV arrests" keeps both parts) ----
   { concept: "unit", value: () => "victims", pattern: R(String.raw`\bvictims?\b|\bvictimi[sz]ations?\b`) },
   { concept: "unit", value: () => "offenders", pattern: R(String.raw`\boffenders?\b|\bsuspects?\b|\bperpetrators?\b`) },
   { concept: "unit", value: () => "arrests", pattern: R(String.raw`\barrest(?:s|ees?)?\b|\barrested\b`) },
   { concept: "unit", value: () => "incidents", pattern: R(String.raw`\bincidents?\b`) },
-  { concept: "unit", value: () => "offenses", pattern: R(String.raw`\boffen[cs]es\b`) },
+  // "Sex offenses" is a crime, not the counting unit (Codex P32 review 01.4: "forcible sex offenses" was unread).
+  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\bsex(?:ual)?\s)\boffen[cs]es\b`) },
   ...MEASURES,
   { concept: "measure", value: () => "unspecified", pattern: R(String.raw`\bcrimes?\b|\boffen[cs]es?\b|\bcases\b`) },
   // ---- combine ----

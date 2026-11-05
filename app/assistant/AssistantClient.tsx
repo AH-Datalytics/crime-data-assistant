@@ -77,6 +77,9 @@ const answerOf = (r: Reply | null): Presentation | null => (r && r.kind === "ans
 const inlineOffers = (r: Reply | null): Offer[] => { const p = answerOf(r); return p ? leadOf(p).offers : []; };
 const rest = (r: Reply, bs: PreviewButton[]) => bs.filter((b) => !inlineOffers(r).some((o) => o.label === b.label));
 
+// The prefix the app is mounted under (next.config.ts basePath); Next does not add it to fetch() or <a>.
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export default function AssistantClient() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
@@ -154,7 +157,7 @@ export default function AssistantClient() {
   const session = useRef(Math.random().toString(36).slice(2));
   async function fetchReply(question: string, path: string[], previous?: string | null): Promise<Reply> {
     try {
-      const res = await fetch("/api/assistant-query", { method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${BASE}/api/assistant-query`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, path, session: session.current, ...(previous ? { previous } : {}) }) });
       const j = await res.json();
       return "error" in j ? { kind: "error", error: j.error } : (j as Reply);
@@ -296,7 +299,7 @@ export default function AssistantClient() {
         <nav className="Nav">
           <a href="https://crimeindex.org/current">Current Trends</a>
           <a href="https://crimeindex.org/historical">Historical Data Library</a>
-          <a href="/assistant" className="on">Crime Data Assistant</a>
+          <a href={`${BASE}/assistant`} className="on">Crime Data Assistant</a>
         </nav>
         <span className="Preview">Local preview</span>
       </div></header>

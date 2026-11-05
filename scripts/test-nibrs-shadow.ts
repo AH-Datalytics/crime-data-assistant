@@ -4,6 +4,7 @@
  * that returns rows shaped like the compiled query's, so this checks the pipeline and the delivered answer, never the
  * numbers (scripts/nibrs-compile-gate.ts and the runner do that against a canonical build). No database, no model.
  */
+import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
@@ -11,7 +12,7 @@ import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
 import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
-import { periodWords } from "../lib/nibrs-shadow/deliver";
+import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { matchNibrsType } from "../lib/nibrs-question-types";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
@@ -899,8 +900,113 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.deepEqual(g("Aggravated assault victims in Memphis in 2024, by victim race"), ["victim.race"]);
   // Codex 04.2: a victim's attribute on arrests is declined, never answered as the arrestee's.
   assert.match(as(ask("Arrests in Denver in 2023 by victim race"), "decline").explanation, /a victim's race for arrests/);
-  // A people breakdown for a state is declined with P29's reason, never answered from the historical file.
-  assert.match(as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "decline").explanation, /^Offender breakdowns for a whole state or the nation aren't available yet/);
+  // Element 31 (coordinator 2026-11-04): a breakdown of victims; a filter on murder or aggravated assault victims, named
+  // and with the unknown-circumstance note; other crimes declined; a state's murder by circumstance is Homicide Reports'.
+  {
+    const by = as(ask("Murder victims in Memphis by circumstance in 2024"), "answer");
+    assert.ok(by.plan.groupings.some((x) => x.dimension === "victim_circumstance.circumstance" && x.multiValue === "each_value"));
+    // Code 06 is held back until the domestic violence note (Jeff 2026-11-04): no row, no name, its count in a plain note
+    // with no DV wording; and no filter can name it.
+    {
+      const stats = by.plan.statistics.map((x) => x.as);
+      const cols = ["victim_circumstance.circumstance", ...stats.flatMap((x) => [x, `${x}_status`])];
+      const row = (c: string, n: number) => [c, ...stats.flatMap((x, i) => [i === 0 ? n : n / 251, "VALUE"])];
+      const d = deliver(by.plan, { from: "2024-01", to: "2024-12" }, "2024-12", cols, [row("01", 54), row("06", 3), row("10", 170)], [], "r", [], null);
+      assert.deepEqual(d.table.rows.map((r) => r[0]), ["Argument", "Unknown circumstances"]);
+      assert.ok(d.text.includes("One circumstance category is left out of this table for now: 3 murder victims were recorded under it."), JSON.stringify(d.text));
+      assert.ok(!/lover|domestic|intimate|partner/i.test(JSON.stringify(d)), "no DV wording, no FBI name for 06");
+      assert.ok(!("06" in CIRCUMSTANCE));
+    }
+    const f = as(ask("Gang-related murders in Memphis in 2024"), "answer");
+    assert.ok(f.plan.filters.some((x) => x.kind === "exists" && x.entity === "victim_circumstance"));
+    assert.ok(f.delivered.text[0].includes("where the circumstance was gangland (organized crime involvement) or juvenile gang"));
+    assert.ok(f.delivered.answerStatements.includes("circumstance_unknown"));
+    assert.match(as(ask("Gang-related robberies in Memphis in 2024"), "decline").explanation, /recorded for murder and aggravated assault victims/);
+    assert.equal(as(ask("Gang-related murders in Tennessee in 2024"), "route").source, "shr");
+    // Codex circumstance review 01.1: an offered question keeps the circumstance, or none is offered.
+    const fb = ask("Gang-related aggravated assaults in Memphis by sex and race in 2024");
+    if (fb.kind === "decline" && fb.alternative) assert.match(fb.alternative.question ?? "", /gang-related/i);
+  }
+  // P53 (Codex state-categories review 01.2): murder by a Homicide Report detail for a state or the nation, NIBRS not
+  // named, is Homicide Reports'; named, NIBRS sums it.
+  assert.equal(as(ask("Murder victims in Tennessee by race in 2024"), "route").source, "shr");
+  assert.equal(ask("Murder victims in Tennessee by race in 2024, according to NIBRS").kind, "answer");
+  assert.notEqual(ask("Murders in Tennessee in 2024 by clearance type").kind, "route", "a clearance is not a Homicide Report detail");
+  // A detail selected, not only broken down (query-log scorecard 2026-11-04): a state's female victims, the nation's
+  // handgun murders; a city stays NIBRS's, and so does a state with NIBRS named.
+  assert.equal(as(ask("How many murders of females were there in Minnesota in 2023"), "route").source, "shr");
+  assert.equal(as(ask("Handgun murders in the United States in 2024"), "route").source, "shr");
+  assert.equal(ask("Female murder victims in Memphis in 2023").kind, "answer");
+  assert.equal(ask("Murders of females in Minnesota in 2023 according to NIBRS").kind, "answer");
+  // Codex P53 review 01: only when every filter is such a detail, and only for victims.
+  assert.notEqual(ask("Female murder victims in Texas in 2024 cleared by arrest").kind, "route");
+  assert.notEqual(ask("Female murder offenders in Ohio in 2022").kind, "route");
+  // Reader cluster 2: a change over a span ("changed since 2020", "over the past 5 years") is the series over it;
+  // "trended"/"trending" read as "trend"; two named years stay a comparison.
+  for (const q of ["How has robbery changed in Denver since 2020?", "How have robberies in Denver trended since 2020?", "Is the Denver robbery rate trending up over the past 5 years?"]) {
+    const o = ask(q);
+    assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell|two named years|two years/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
+  }
+  // Reader cluster 3: a year to the latest data ("2015 to present", "to the most recent month") is "since" that year;
+  // "as far back as you can", "full history", "historical", "all available years" are every year (D5).
+  for (const q of ["Denver robberies 2018 to present", "Denver robberies from 2018 to the most recent data", "Denver robberies as far back as you can", "the full history of robberies in Denver", "historical robbery counts in Denver"]) {
+    const o = ask(q);
+    assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
+  }
+  // "Current trend" (Jeff 2026-11-05): Current Trends' recent months, by month from January of last year; never declined
+  // for "current".
+  {
+    const o = ask("What are the current robbery trends in Denver?");
+    assert.ok(!(o.kind === "decline" && /didn't understand/.test(o.explanation)), JSON.stringify(o).slice(0, 200));
+    if (o.kind === "answer") assert.ok(o.plan.groupings.some((g) => g.dimension === "time.month"), "by month");
+  }
+  // Codex reader-change review 01: a percent change over a span is never answered as counts.
+  for (const q of ["What is the % change in robberies in Denver since 2019?", "percent change in robberies in Denver since 2019"]) assert.notEqual(ask(q).kind, "answer", q);
+  // Reader cluster 1 and P94 (Jeff 2026-11-05): a rolling window of any length named is read and computed at that
+  // length; an average is the window's total over its months, labeled as an average; no length named asks which.
+  for (const q of ["Pittsburgh murders rolling over 12 months since 2018", "Denver robberies 12 months rolling since 2020", "Denver robberies on a rolling 12 month basis since 2020", "Denver robberies 12m rolling since 2020"]) {
+    const o = ask(q);
+    assert.ok(!(o.kind === "decline" && /didn't understand|couldn't tell/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 160)}`);
+  }
+  {
+    const six = ask("Denver robberies rolling over 6 months since 2025");
+    if (six.kind === "answer") assert.ok(six.plan.transforms.some((t) => t.kind === "rolling" && t.months === 6) && six.delivered.text[0].includes("rolling 6-month totals"), JSON.stringify(six.delivered.text));
+    else assert.ok(!(six.kind === "decline" && /didn't understand/.test(six.explanation)), JSON.stringify(six).slice(0, 200));
+    const avg = ask("Denver robberies 3-month rolling average since 2025");
+    if (avg.kind === "answer") assert.ok(avg.delivered.text[0].includes("rolling 3-month averages") && avg.delivered.table.columns.some((c) => /average per month/.test(c.header)), JSON.stringify(avg.delivered.text));
+    assert.equal(as(ask("Denver robberies rolling average since 2025"), "clarify").about, "which rolling window");
+    // Codex P94 review 01: a length the engine can't compute is asked about, never 12; a 1-month window runs.
+    assert.equal(as(ask("Denver robberies rolling 0 months since 2025"), "clarify").about, "which rolling window");
+    assert.ok(!(ask("Denver robberies rolling 1-month since 2025").kind === "decline"));
+  }
+  // P32: "sex offenses", "sex crimes", "sexual assaults" ask which (rape; all sex offenses), each button running.
+  for (const q of ["Sex crimes in Denver in 2023", "Sexual assaults in Ohio in 2024"]) {
+    const c = as(ask(q), "clarify");
+    assert.equal(c.about, "which sex offenses");
+    // Only buttons that run are offered: rape from Crime Index where it is loaded, all sex offenses from NIBRS.
+    assert.ok(c.options.some((o) => o.label === "All sex offenses") && c.options.every((o) => ["Rape", "All sex offenses"].includes(o.label)), JSON.stringify(c.options.map((o) => o.label)));
+    assert.ok(c.options.every((o) => o.continuation && o.continuation.kind !== "decline"), q);
+  }
+  // Codex P32 review 01: "forcible sex offenses" is read and asked about (not all six codes); kits are not an offense.
+  assert.equal(as(ask("forcible sex offenses in Denver in 2023"), "clarify").about, "which sex offenses");
+  assert.notEqual(ask("all sex offenses in Denver in 2023").kind, "clarify");
+  assert.ok(!(ask("sexual assault kits in Denver in 2023").kind === "clarify"));
+  for (const q of ["crime and murder rates in Chicago in 2024", "murder and crime in Chicago in 2024", "crime and drug possession in Chicago in 2024", "crime rates and aggravated assault rates in Chicago in 2024"]) {
+    const o = ask(q);
+    assert.ok(o.kind === "clarify" ? o.about === "which kind of crime" : o.kind === "decline" && /isn't one category/.test(o.explanation), q);
+  }
+  assert.ok(!/isn't one category/.test(JSON.stringify(ask("murders and crimes against persons in Chicago in 2024"))));
+  // D09 beside another crime: the bare "crime" is never dropped; the crime named is offered on its own.
+  {
+    const o = ask("murder and crime in Chicago in 2024");
+    // (Its alternative, the crime named on its own, is offered where it runs: Crime Index is not loaded in these tests.)
+    assert.ok(o.kind === "clarify" ? o.about === "which kind of crime" : o.kind === "decline" && /isn't one category/.test(o.explanation), JSON.stringify(o).slice(0, 200));
+  }
+  // A people breakdown for a state is NIBRS's sum by category (coordinator 2026-11-04), never the historical file's.
+  {
+    const o = as(ask("Aggravated assaults in Tennessee in 2024 by offender sex"), "answer");
+    assert.ok(o.plan.groupings.some((x) => /offender_sex|offender\.sex/.test(x.dimension)) && o.stateSum && o.delivered.text.at(-1) === "Source: FBI NIBRS.");
+  }
   // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).
   assert.deepEqual(as(ask("Murders by young adults in Memphis in 2024"), "clarify").options.map((o) => o.label), ["18 to 24", "18 to 29"]);
   assert.deepEqual(as(ask("How many attackers were there in aggravated assaults in Detroit in 2024?"), "clarify").options.map((o) => o.label), ["Offenders", "People arrested"]);

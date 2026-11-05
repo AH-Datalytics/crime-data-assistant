@@ -8,6 +8,7 @@
  *               the label cannot express (a share's numerator and denominator roles, transform parameters).
  * An unverified field never earns correctness credit and never proves a wrong answer (Codex runner review r1).
  */
+import { CIRCUMSTANCE } from "../nibrs-plan/draft-layer";
 import { MEASURE_CODES } from "../nibrs-question-types";
 import { AGE_BINS } from "../nibrs-plan/from-spec";
 import type { NibrsPlan } from "../nibrs-plan/plan";
@@ -68,6 +69,8 @@ function planFilterKey(dimension: string, values: (string | number)[], op: strin
   // Increment 6: a clearance status selection (P66).
   if (dimension === "offense.clearance_status") return v.join("+") === "cleared" ? "clearance:cleared" : v.join("+") === "none" ? "clearance:uncleared" : null;
   if (dimension === "victim_offender.relationship") return v.join("+") === "ST" ? "relationship:stranger" : null;
+  // Element 31: the circumstance codes selected.
+  if (dimension === "victim_circumstance.circumstance") return `circumstance:${[...v].sort().join("+")}`;
   if (dimension === "property.loss_type") return v.join("+") === "7" ? "loss:stolen" : v.join("+") === "6" ? "loss:seized" : null;
   // Increment 7: a linked offender (P65) is told apart from any offender of the incident (P49).
   // An age range is "under 18" (1-17, P30) or "<from>-<to>" ("young adults" chosen as 18 to 24).
@@ -101,6 +104,12 @@ function labelFilterKey(f: string): string | null {
   if (family === "weapon") return /firearm|gun/.test(value) ? "weapon:firearm" : /knife/.test(value) ? "weapon:knife" : null;
   if (family === "clearance") return /prosecution declined/.test(value) ? "clearance:prosecution declined" : /exceptional/.test(value) ? "clearance:exceptional" : /arrest/.test(value) ? "clearance:arrest" : null;
   if (family === "relationship") return /stranger/.test(value) ? "relationship:stranger" : null;
+  // Element 31: a label names the circumstances by the FBI's names ("gangland (organized crime involvement) or juvenile
+  // gang"), each one of its codes.
+  if (family === "circumstance") {
+    const codes = value.split(/\s+or\s+/).map((w) => Object.keys(CIRCUMSTANCE).find((c) => norm(CIRCUMSTANCE[c]) === w.trim()));
+    return codes.length && codes.every(Boolean) ? `circumstance:${(codes as string[]).sort().join("+")}` : null;
+  }
   // Increment 3: a comparison of the same months of each year; rolling windows counted only when complete.
   if (family === "the same months of each year") return "same-months";
   if (/requires all twelve source months/.test(norm(f))) return "rolling:complete windows";
@@ -133,6 +142,7 @@ const GROUPINGS: Record<string, string> = {
   "offense.location_type": "location type", "location type": "location type", "offense.clearance_type": "clearance type", "clearance type": "clearance type",
   "offense.clearance_status": "clearance status", "clearance status": "clearance status",
   "offense_weapon.weapon": "weapon", weapon: "weapon", "victim_offender.relationship": "relationship", relationship: "relationship", "offense.offense": "offense type", "offense type": "offense type",
+  "victim_circumstance.circumstance": "circumstance", circumstance: "circumstance",
   // Increment 3: a monthly series of rolling 12-month windows.
   "rolling 12-month": "rolling 12-month", "month (rolling 12-month total ending that month)": "rolling 12-month",
 };

@@ -151,6 +151,8 @@ function clearanceCond(read: Read, a: string, dimension: string, values: string[
 const GROUPABLE: Record<Entity, Record<string, Groupable>> = {
   victim: { "victim.race": own(unknownAs("v.race")), "victim.sex": own(unknownAs("v.sex")), "victim.ethnicity": own(unknownAs("v.ethnicity")), "victim.age": age("v"),
     "victim_offender.relationship": { col: "r.offender_relationship", multi: true, join: (read) => `LEFT JOIN ${read("victim_offender")} r ON ${sameVictim("r", "v")}` },
+    // Element 31 (coordinator 2026-11-04): up to two per victim, each counted once under each (categories_overlap).
+    "victim_circumstance.circumstance": { col: "vc.circumstance", multi: true, join: (read) => `LEFT JOIN ${read("victim_circumstance")} vc ON ${sameVictim("vc", "v")}` },
     ...offenderGroupings("v"), ...Object.fromEntries(OFFENDER_ATTRS.map((x) => [`victim_offender.offender_${x}`, pairAttr(x)])), ...clearance("v") },
   offense: { "offense.location_type": own("o.location_type"),
     "offense_weapon.weapon": { col: "w.weapon", multi: true, join: (read) => `LEFT JOIN ${read("offense_weapon")} w ON ${sameOffense("w", "o")}` },
@@ -307,6 +309,9 @@ export function agencyPopulationSql(root: string, who: { oris: string[] } | { st
     WHERE ${where} AND u.data_year IN (${years.map(Number).join(", ")}) ORDER BY ori, u.data_year`;
 }
 
+/** The grid's placeholder category when the place and period have no units (state-sum.ts skips it). */
+export const NO_CATEGORY = "__none__";
+
 export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileTarget): CompileResult {
   const no = (reason: string): CompileResult => ({ kind: "unsupported", reason });
   // A set of years ("in 2019 and 2024"): each year's months only, the last clipped to `through`, grouped by year.
@@ -324,8 +329,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   if (!grid) {
     if (plan.geography.places.length !== 1) return no("v0 compiles one place");
     if (place.kind !== "agency") return no(`v0 compiles one agency; ${place.kind} totals need status evidence across their agencies (D6) and come later`);
-  } else if (plan.groupings.length !== 1 || plan.groupings[0].dimension !== "time.month" || plan.statistics.length !== 1)
-    return no("v0 compiles several agencies as a monthly grid of one count");
+  } else if (plan.groupings[0]?.dimension !== "time.month" || plan.groupings.slice(1).some((g) => g.dimension.startsWith("time.")) || plan.groupings.length > 2 || plan.statistics.length !== 1)
+    // A monthly grid of one count, by at most one category (coordinator 2026-11-04: a state or national sum by category).
+    return no("v0 compiles several agencies as a monthly grid of one count, by at most one category");
   const oriIs = (col: string) => (grid ? `${col} IN (${list(grid)})` : `${col} = ${q((place as { ori: string }).ori)}`);
   if (plan.groupings.some((g) => g.absent !== "show")) return no("v0 shows every category");
 
@@ -424,6 +430,9 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("offense")} o2 WHERE ${sameIncident("o2", "a")} AND o2.offense_code IN (${list(values)}))`);
       else if (on === "victim_offender victim_offender.relationship victim victim")
         unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_offender")} r2 WHERE ${sameVictim("r2", "v")} AND r2.offender_relationship IN (${list(values)}))`);
+      else if (on === "victim_circumstance victim_circumstance.circumstance victim victim")
+        // A victim with at least one of the circumstances (element 31), counted once.
+        unitConds.push((read) => `EXISTS (SELECT 1 FROM ${read("victim_circumstance")} c2 WHERE ${sameVictim("c2", "v")} AND c2.circumstance IN (${list(values)}))`);
       else return no(`v0 cannot apply an existence over ${f.entity} at ${f.scope} scope to ${entity} counts`);
       continue;
     }
@@ -457,6 +466,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   const units = unitsSql(m.id, m.unit, read, groupCols, joins.map((j) => j(read)).join(" "), incidentFilter, { rest: restFilter, own: ownFilter });
   if ("error" in units) return no(units.error);
   if (attrDims.some((g) => g.multiValue)) statements.push("categories_overlap");
+  // Element 31 filtered: the unknown circumstances the filtered count can't show (a breakdown shows them as a row).
+  if ([...plan.filters, ...(m.filters ?? [])].some((f) => f.kind === "exists" && f.entity === "victim_circumstance")) statements.push("circumstance_unknown");
   if (units.entity === "arrestee") statements.push("arrests_counted_once");
   const people = peopleFacts(plan);
   if (people.throughIncident) statements.push("arrests_through_incident");
@@ -495,12 +506,16 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
   ];
   if (g.length) {
     // Every category that occurs in the place and period, in every month.
-    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped)`);
-    parts.push(`counted AS (SELECT u.ym${g.map((x) => `, u.${x}`).join("")}, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ALL)`);
-    parts.push(`cells AS (SELECT mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni,
+    // In grid mode, a placeholder category when none occurs (Codex state-categories review 01.1): the cross join below
+    // would otherwise drop every agency-month and its status; the state sum reads coverage from it and skips it in sums.
+    parts.push(`cats AS (SELECT DISTINCT ${g.join(", ")} FROM scoped${grid ? ` UNION ALL SELECT ${g.map(() => `'${NO_CATEGORY}'`).join(", ")} WHERE NOT EXISTS (SELECT 1 FROM scoped)` : ""})`);
+    // In grid mode (a state's or the nation's agencies, state-sum.ts) each agency's categories are its own: the agency is
+    // carried through and joined on (coordinator 2026-11-04: a state or national sum by category).
+    parts.push(`counted AS (SELECT ${grid ? "u.ori, " : ""}u.ym${g.map((x) => `, u.${x}`).join("")}, COUNT(DISTINCT ${key}) AS n, COUNT(DISTINCT ${ikey}) AS ni FROM scoped u GROUP BY ALL)`);
+    parts.push(`cells AS (SELECT ${grid ? "mc.ori, " : ""}mc.ym${g.map((x) => `, c.${x}`).join("")}, mc.den, mc.month_cell, coalesce(k.n, 0) AS n, coalesce(k.ni, 0) AS ni,
       mc.month_cell AS cell
       FROM month_cells mc CROSS JOIN cats c
-      LEFT JOIN counted k ON k.ym = mc.ym${g.map((x) => ` AND k.${x} IS NOT DISTINCT FROM c.${x}`).join("")})`);
+      LEFT JOIN counted k ON k.ym = mc.ym${grid ? " AND k.ori = mc.ori" : ""}${g.map((x) => ` AND k.${x} IS NOT DISTINCT FROM c.${x}`).join("")})`);
   } else {
     parts.push(`cells AS (SELECT ${O}ym, den, month_cell, den AS n, deni AS ni, month_cell AS cell FROM month_cells)`);
   }
@@ -514,7 +529,7 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       CASE WHEN cell = 'VALUE' AND den > 0 THEN n::DOUBLE / den END AS ${shareName},
       CASE WHEN ${known("cell")} AND den = 0 THEN 'UNAVAILABLE' ELSE cell END AS ${ident(`${share.as}_status`)}` : "";
     body = `SELECT ${O}substr(ym, 1, 4) || '-' || substr(ym, 5, 2) AS period${gSel},
-      CASE WHEN ${known("cell")} THEN n END AS ${countName}, cell AS ${ident(`${count.as}_status`)}${inc ? `,
+      CASE WHEN ${known("cell")} THEN n END AS ${countName}, cell AS ${ident(`${count.as}_status`)}${grid && g.length ? ", den" : ""}${inc ? `,
       CASE WHEN ${known("cell")} THEN ni END AS ${ident(inc.as)}, cell AS ${ident(`${inc.as}_status`)}` : ""}${shareCols}
       FROM cells ORDER BY ${O}ym${gSel}`;
   } else {
@@ -532,7 +547,8 @@ export function compilePlan(plan: NibrsPlan, period: ResolvedPeriod, t: CompileT
       CASE WHEN bool_and(${known("cell")}) THEN sum(ni) END AS ${ident(inc.as)}, ${rolled("cell")} AS ${ident(`${inc.as}_status`)}` : ""}${shareCols}
       FROM cells${grain === "year" || grain === "quarter" || g.length ? ` GROUP BY ${[...(grain === "year" || grain === "quarter" ? ["1"] : []), ...g].join(", ")} ORDER BY ${[...(grain === "year" || grain === "quarter" ? ["1"] : []), ...g].join(", ")}` : ""}`;
   }
-  const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(inc ? [inc.as, `${inc.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
+  // `den` (grid mode by category only): the agency-month's own total of the measure, for a state sum's year total and shares.
+  const columns = [...(grid ? ["ori"] : []), ...(grain === "total" ? [] : ["period"]), ...attrDims.map((x) => x.dimension), count.as, `${count.as}_status`, ...(grid && g.length && grain === "month" ? ["den"] : []), ...(inc ? [inc.as, `${inc.as}_status`] : []), ...(share ? [share.as, `${share.as}_status`] : [])];
   const sql = `WITH ${parts.join(",\n")}\n${body}`;
   return { kind: "query", query: { sql, columns, scanYears: years, refuseOn: ["EVIDENCE_CONFLICT"], statements } };
 }

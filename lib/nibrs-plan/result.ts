@@ -85,7 +85,9 @@ export type CellEvidence = {
  * - pair_condition: a plan with a condition on the offenders a victim's relationship segments link to it (P65; Codex
  *   04.3: a condition excludes victims with no relationship, where a grouping shows them);
  * - offender_records: a plan that counts offenders (P44: offender records, the segment convention);
- * - unknown_not_counted: a plan with a condition on a person's sex, race, ethnicity or age (increment 7).
+ * - unknown_not_counted: a plan with a condition on a person's sex, race, ethnicity or age (increment 7);
+ * - circumstance_unknown: a plan filtered by a victim's circumstance (element 31, coordinator 2026-11-04): agencies often
+ *   record it as unknown (Chicago: every 2024 murder), which a filtered count can't show and a breakdown does.
  */
 export const ANSWER_STATEMENTS = {
   property_not_attributed: "NIBRS lists property for the whole incident, not for each offense in it, so the property can't be tied to a single offense.",
@@ -101,6 +103,7 @@ export const ANSWER_STATEMENTS = {
   pair_condition: "The condition on the offender is checked only for the offenders the report links to each victim; a victim whose relationship to the offender wasn't reported can't meet it and is not counted.",
   offender_records: "Offenders are counted as listed in each incident report, not as distinct people; an incident with no information about its offender counts one unknown offender.",
   unknown_not_counted: "A person whose detail is unknown or not reported doesn't meet a condition on that detail, so that person is not counted.",
+  circumstance_unknown: "Many agencies record a victim's circumstance as unknown, so a count for one circumstance can be lower than the number of such crimes.",
 } as const;
 export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
 /**
@@ -109,12 +112,12 @@ export type AnswerStatement = keyof typeof ANSWER_STATEMENTS;
  * the plan calls for is still carried in the answer's `answerStatements` (the contract and the scorer check them there,
  * and the page can show them on request); only these are written into the text.
  */
-export const SHOWN: ReadonlySet<AnswerStatement> = new Set<AnswerStatement>(["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file"]);
+export const SHOWN: ReadonlySet<AnswerStatement> = new Set<AnswerStatement>(["property_not_attributed", "property_counted_by_offense", "categories_overlap", "clearance_as_of_file", "circumstance_unknown"]);
 /** The text lines of the statements shown (SHOWN), in order. */
 export const shownStatements = (statements: readonly AnswerStatement[]) => statements.filter((s) => SHOWN.has(s)).map((s) => ANSWER_STATEMENTS[s]);
 /** Each statement belongs to one source (G8): it is authorized, and required, only for that source's plans. */
 export const STATEMENT_SOURCE: Record<AnswerStatement, Source> = { property_not_attributed: "nibrs", reported_nibrs_counts: "nibrs", property_counted_by_offense: "nibrs", categories_overlap: "nibrs", arrests_counted_once: "nibrs", clearance_as_of_file: "nibrs", clearance_arrest_first: "nibrs", arrests_through_incident: "nibrs",
-  arrests_include_group_b: "nibrs", pair_linked: "nibrs", pair_condition: "nibrs", offender_records: "nibrs", unknown_not_counted: "nibrs" };
+  arrests_include_group_b: "nibrs", pair_linked: "nibrs", pair_condition: "nibrs", offender_records: "nibrs", unknown_not_counted: "nibrs", circumstance_unknown: "nibrs" };
 const PERSON = /^(?:victim|offender|arrestee)\.(?:sex|race|ethnicity|age)$|^victim_offender\.offender_(?:sex|race|ethnicity|age)$/;
 /** Increment 7: the plan's people conditions, groupings and units, for the statements above. */
 export function peopleFacts(plan: NibrsPlan): { pair: boolean; pairCondition: boolean; personFilter: boolean; allArrests: boolean; throughIncident: boolean; offenders: boolean } {

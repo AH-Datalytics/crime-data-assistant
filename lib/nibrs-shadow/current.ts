@@ -117,10 +117,11 @@ export function cumulative(values: (number | null)[], ms: Month[]): { value: num
 }
 /** The year to date through `to`: January of its year through `to`. */
 export const ytdMonths = (to: Month) => months(`${to.slice(0, 4)}-01`, to);
-/** The rolling 12 months through `to`. */
-export function rollingMonths(to: Month): Month[] {
+/** The rolling `n` months through `to` (12 unless another length is named: Jeff 2026-11-05). */
+export function rollingMonths(to: Month, n = 12): Month[] {
   const y = Number(to.slice(0, 4)), m = Number(to.slice(5));
-  const start = m === 12 ? `${y}-01` : `${y - 1}-${String(m + 1).padStart(2, "0")}`;
+  const back = y * 12 + (m - 1) - (n - 1);
+  const start = `${Math.floor(back / 12)}-${String((back % 12) + 1).padStart(2, "0")}`;
   return months(start, to);
 }
 /** The same month a year earlier. */
@@ -148,6 +149,8 @@ export type CurrentQuestion = {
   /** "rate" (decision B): only for a total of two or more months, every month known, and a population above zero. */
   statistic?: "count" | "rate";
   agencyLine?: string;
+  /** The rolling window: its length in months, and an average (the window's total over its months) when asked. */
+  window?: { months: number; average: boolean };
 };
 export type CurrentAnswer = {
   kind: "current"; question: CurrentQuestion; period: { from: Month; to: Month }; meaning: Meaning;
@@ -195,7 +198,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const col = CURRENT_MEASURE[cq.measure];
   if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
   const group = cq.place.kind === "group";
-  const span = cq.form === "months" || cq.form === "total" ? months(cq.from, cq.to) : cq.form === "ytd" ? ytdMonths(cq.to) : rollingMonths(cq.to);
+  const span = cq.form === "months" || cq.form === "total" ? months(cq.from, cq.to) : cq.form === "ytd" ? ytdMonths(cq.to) : rollingMonths(cq.to, cq.window?.months ?? 12);
   const rate = cq.statistic === "rate";
   // Decision B (P58, P59): a rate is a total's, of two or more months; never one month's, never month by month.
   if (rate && (cq.form === "months" || span.length < 2))
@@ -221,7 +224,11 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   }
   const vals = covered.map((m) => values.get(m) ?? null);
   // Agencies with no figure in a group's month are left out of its total and named (Codex design check 01.2).
-  const leftOut = coverage.filter((c) => c.blank > 0).map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
+  // The same count every month is said once (redesign test, coordinator 2026-11-04: "January 2025 (5 of 547), February
+  // 2025 (5 of 547) ..."); otherwise each month with its own.
+  const gaps = coverage.filter((c) => c.blank > 0);
+  const same = gaps.length > 1 && gaps.length === coverage.length && gaps.every((c) => c.blank === gaps[0].blank && c.agencies === gaps[0].agencies);
+  const leftOut = same ? [`${fmt(gaps[0].blank)} of ${fmt(gaps[0].agencies)} in every month`] : gaps.map((c) => `${monthWords(c.month)} (${fmt(c.blank)} of ${fmt(c.agencies)})`);
   // P90's sentence, in the shared wording: the agencies counted and the people they cover, as of the latest month shown.
   const lastCov = coverage[coverage.length - 1];
   const cohortLine = lastCov ? [`This counts only the ${fmt(lastCov.agencies)} Consistent Reporting ${lastCov.agencies === 1 ? "Agency" : "Agencies"}, covering roughly ${aboutPeople(lastCov.population)} people, that reported every month from ${monthWords(b.firstMonth)} through ${monthWords(b.lastMonth)}.`] : [];
@@ -238,9 +245,19 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   if (cq.form !== "months") {
     const c = cumulative(vals, covered);
     const sw = spanWords(period.from, period.to);
-    const what = cq.form === "ytd" ? `in the year to date, ${sw}` : cq.form === "rolling" ? `in the 12 months from ${sw}` : `from ${sw}`;
-    const whatTotal = cq.form === "ytd" ? `the year to date (${sw})` : cq.form === "rolling" ? `the 12 months from ${sw}` : sw;
+    const wn = cq.window?.months ?? 12;
+    const what = cq.form === "ytd" ? `in the year to date, ${sw}` : cq.form === "rolling" ? `in the ${wn} months from ${sw}` : `from ${sw}`;
+    const whatTotal = cq.form === "ytd" ? `the year to date (${sw})` : cq.form === "rolling" ? `the ${wn} months from ${sw}` : sw;
     if (c.value === null) return { kind: "current-decline", explanation: `Crime Index has no ${one} figure for ${where} in ${c.missing.map(monthWords).join(", ")}, so there is no total for ${whatTotal}.` };
+    // A rolling average (Jeff 2026-11-05: "Answer the average"): the window's total over its months, said as a monthly
+    // average, with the total beside it; never shown as the total. Of counts only.
+    if (cq.form === "rolling" && cq.window?.average) {
+      if (rate) return { kind: "current-decline", explanation: `A rolling average is of counts; ask for the ${one} rate over the ${wn} months instead.` };
+      const avg = Math.round((10 * c.value) / wn) / 10;
+      return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
+        delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)}, average per month over ${wn} months` }], rows: [[avg]] },
+          text: [`${where}: ${avg.toFixed(1)} ${words} a month on average ${what} (${fmt(c.value)} in all).`, ...head, ...cohortLine, ...leftOutLine, source] } };
+    }
     if (rate) {
       // The population: the agency's in the span's last month; a group's, its counted agencies' summed population then.
       // An agency: its count over its current population. A group: only its agencies with every month known (Codex 01.1).

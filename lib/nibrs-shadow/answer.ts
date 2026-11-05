@@ -158,10 +158,14 @@ function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps,
     return new Set(parts.map((p) => `${p.concept}:${String(p.value ?? p.text).toLowerCase()}`));
   };
   const asks = named(asked);
+  // A condition read out of the words (a circumstance, a region) is kept too (Codex circumstance review 01.1: the offered
+  // question had dropped "gang-related" and counted 12,890 victims for 14).
+  const kept = (q: string) => { const r = readQuestion(q, year); return JSON.stringify([r.circumstance, r.region]); };
   const offerable = (q: string | undefined) => {
     if (!q) return true;
     const got = named(q);
     if (![...asks].every((x) => got.has(x))) return false;
+    if (kept(q) !== kept(asked)) return false;
     const r = shadowAnswer(q, { ...deps, checkingOffer: true });
     return r.kind === "answer" || r.kind === "historical" || r.kind === "srs" || r.kind === "current";
   };
@@ -584,6 +588,68 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: runnable };
   }
+  // D09 beside another crime ("homicide and crime rates", "murder and crime"): the bare word is asked about too, never
+  // dropped (query-log scorecard 2026-11-04). Each button keeps the crimes named and adds the kind chosen.
+  // Only a "crime" joined to them ("and", ",", "plus"): in "drug crimes" the word is part of the crime's own name.
+  const others = clause0("measure").filter((p) => p.value !== "unspecified");
+  // Either order ("homicide and crime rates", "crime and murder rates": Codex P32 review 01.1); never a named category
+  // ("crimes against persons", 01.3).
+  const before = (p: Part) => ledger0.question.slice(Math.max(0, p.span[0] - 16), p.span[0]);
+  const after = (p: Part) => ledger0.question.slice(p.span[1], p.span[1] + 24);
+  // A "crimes" right after a crime named is that crime's own word ("drug crimes and shoplifting", "gun crimes").
+  const owned = (p: Part) => clause0("measure").some((o) => o !== p && o.value !== "unspecified" && o.span[1] <= p.span[0] && /^[\s-]*$/.test(ledger0.question.slice(o.span[1], p.span[0])));
+  const joined = (p: Part) => !owned(p) && !/^\s*against\b/i.test(after(p))
+    && (/(?:\band|&|,|\bplus)\s+(?:overall\s+|total\s+|general\s+)?$/i.test(before(p))
+      // After it: "and" a crime the reader named ("crime and murder rates", "crime and drug possession", "crime rates and
+      // aggravated assault rates": Codex P32 re-check 01), never a list of columns ("Part 1 Crimes, Total Rate").
+      || clause0("measure").some((o) => o.value !== "unspecified" && o.span[0] >= p.span[1]
+        && /^\s*(?:rates?\s+)?(?:and|&|plus)\s+(?:the\s+)?$/i.test(ledger0.question.slice(p.span[1], o.span[0]))));
+  const bare = clause0("measure").filter((p) => p.value === "unspecified" && joined(p));
+  if (named && bare.length) {
+    const keep = others.map((p) => [String(p.value), p.text.trim()]);
+    const said = others.map((p) => p.text.trim().replace(/\s+rates?$/i, "")).join(" and ");
+    const kinds = [{ label: `${said} and violent crime`, add: [["violent_crime", "violent crime"]] }, { label: `${said} and property crime`, add: [["property_crime", "property crime"]] },
+      { label: `${said}, violent and property crime`, add: [["violent_crime", "violent crime"], ["property_crime", "property crime"]] }];
+    const options = kinds.map((k) => ({ label: k.label[0].toUpperCase() + k.label.slice(1), continuation: fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), deps, pins) }));
+    const runnable = options.filter((o) => runsNow(o.continuation));
+    if (runnable.length) return { kind: "clarify", about: "which kind of crime", question: ledger0.question, options: runnable };
+    // No combination runs here yet (several crimes in one answer): said plainly, with the crimes named on their own offered.
+    const alone = fromLedger(filledAll(ledger, "measure", keep), deps, pins);
+    return decline("unsupported_capability", `"Crime" alone isn't one category, and ${said} beside violent or property crime in one answer isn't available yet. Ask for each on its own.`,
+      { alternative: runsNow(alone) ? { label: `${said[0].toUpperCase()}${said.slice(1)} on its own`, continuation: alone } : null });
+  }
+  // P32 (Jeff 2026-10-29): "sex offenses", "sex crimes", "sexual assaults" name no one offense. Ask which, with buttons
+  // (rape; all sex offenses), rather than choose a definition. "All sex offenses" (or "forcible") names it.
+  // Not when the words leave them out ("violent crimes, excluding sexual offenses").
+  const sexPart = clause0("measure").find((p) => p.value === "sex_offense"
+    && !/\b(?:excluding|exclude|except|without|not including|other than|minus|but not)\s+(?:the\s+)?$/i.test(ledger0.question.slice(Math.max(0, p.span[0] - 24), p.span[0])));
+  // "Forcible sex offenses" (11A-11D) is not a measure yet, so it is asked about too, never answered as all six codes.
+  if (sexPart && sexPart.rule !== "shadow:button" && !(/\b(?:all|every|total)\b/i.test(sexPart.text) && !/\bforcible\b/i.test(sexPart.text))) {
+    const keep = clause0("measure").filter((p) => p !== sexPart).map((p) => [String(p.value), p.text.trim()]);
+    const options = [{ label: "Rape", add: [["rape", "rape"]] }, { label: "All sex offenses", add: [["sex_offense", "all sex offenses"]] }]
+      .map((k) => ({ label: k.label, continuation: fromLedger(filledAll(ledger, "measure", [...keep, ...k.add]), deps, pins) }));
+    const runnable = options.filter((o) => runsNow(o.continuation));
+    if (runnable.length) return { kind: "clarify", about: "which sex offenses", question: ledger0.question, options: runnable };
+  }
+  // "The current murder trend" (Jeff 2026-11-05: Current Trends'): by month from January of last year through the
+  // latest month, unless a period is named. Current Trends answers it where it has the place; NIBRS otherwise.
+  if (clause0("recent").length) {
+    const rest = withParts(ledger, ledger.parts.filter((p) => !(p.clause === 0 && p.concept === "recent")));
+    if (clause0("period").length) return fromLedger(rest, deps, pins);
+    const from = Number(deps.release.lastMonth.slice(0, 4)) - 1;
+    return fromLedger(filled(filled(rest, "period", `since:${from}`, `since ${from}`), "grain", "month", "by month"), deps, pins);
+  }
+  // A rolling window with no length named ("rolling average", "rolling sum"): asked (Jeff 2026-11-05: "Ask which
+  // length"), with buttons for 3, 6 and 12 months that each run the whole question, never a length chosen here.
+  const noLength = clause0("rolling").find((p) => /:\?$/.test(String(p.value)));
+  if (noLength) {
+    const avg = String(noLength.value).startsWith("rolling-avg");
+    const options = [3, 6, 12].map((n) => ({ label: `${n} months`,
+      continuation: fromLedger(filled(ledger, "rolling", avg ? `rolling-avg:${n}` : n === 12 ? "rolling12" : `rolling:${n}`, `rolling ${n}-month ${avg ? "average" : "total"}`), deps, pins) }));
+    const runnable = options.filter((o) => runsNow(o.continuation));
+    if (runnable.length) return { kind: "clarify", about: "which rolling window", question: ledger0.question, options: [...runnable, { label: "Another length", entry: "how many months" }] };
+    return options[0].continuation;
+  }
   if (!clause0("place").length) {
     return { kind: "clarify", about: "which place", question: ledger0.question, options: [
       { label: "The United States", continuation: fromLedger(filled(ledger, "place", "national", "the United States"), deps, pins) },
@@ -614,7 +680,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Current Trends (design note 2026-11-03, section 4): a Part I offense by month for a Current Trends agency, a state,
   // a region or the nation, unless another source is named (P01) or a detail is asked (NIBRS's or SHR's). Counts only
   // for now. An agency Current Trends doesn't have goes on to NIBRS (P01's fallback).
-  if (deps.current && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance
+  if (deps.current && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
     && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite && (d.spec.statistic === "count" || d.spec.statistic === "rate") && d.spec.measures.length === 1
     && d.spec.measures[0] in CURRENT_MEASURE && historicalUnitFits(d.spec.measures[0], d.spec.unit) && !d.spec.filters.length && d.spec.places.length === 1
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
@@ -625,6 +691,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     let form: "months" | "ytd" | "rolling" | "total" | null = null, span: [string, string] | null = null;
     // "the last 12 months" is the 12 months through Current Trends' own latest month, not NIBRS's (the reader's).
     if ((sp.grain === "rolling" && sp.period.form === "none") || flags(ledger0).last12) { form = "rolling"; span = [cur.lastMonth, cur.lastMonth]; }
+    // A rolling window ending in one month named ("rolling 3-month average in July 2026": Codex P94 review 01.1): that
+    // window, through that month. A rolling series over a longer span is NIBRS's below, never Current Trends' months.
+    else if (sp.grain === "rolling") {
+      const one = sp.period.form === "month" ? `${sp.period.year}-${String(sp.period.month).padStart(2, "0")}` : null;
+      if (one) { form = "rolling"; span = [one, one]; }
+    }
     else if (sp.grain === "total" && sp.period.form === "year" && sp.period.year === ctYear) { form = "ytd"; span = [`${ctYear}-01`, cur.lastMonth]; }
     else if ((span = monthSpan(sp, cur))) form = sp.grain === "month" || span[0] === span[1] ? "months" : "total";
     let place: CurrentPlace | null = null;
@@ -657,6 +729,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     if (span && form && place) {
       const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form, statistic: sp.statistic === "rate" ? "rate" : "count",
+        ...(form === "rolling" && sp.window?.months ? { window: { months: sp.window.months, average: sp.window.average } } : {}),
         ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for ") } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
@@ -665,7 +738,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // A Census region is a Current Trends group only: anything else asked of one is said plainly, never answered for the nation.
   if (flags(ledger0).region)
     return decline("unsupported_capability", `Census regions (${Object.values(REGIONS).map((r) => r.name.replace(/^the /, "")).join(", ")}) are answered from Current Trends only: a Part I crime by month, the year to date or the past 12 months, from January 2025.`);
-  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).people) {
+  if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people) {
     const sp = d.spec;
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
@@ -704,7 +777,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // build's: its count, its published rate (P75) or its published clearance percentage (P57), by year or a change;
   // unless NIBRS is asked for in words (P01). Only the plain figure: a restriction the file cannot apply (a property
   // condition, a cohort, people, a breakdown or filter) keeps the question with NIBRS's limits, never dropped.
-  if (deps.historical && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property
+  if (deps.historical && d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance
     && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite) {
     const sp = d.spec;
     const agencies = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : undefined));
@@ -753,7 +826,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // The reader's own change form ("how did burglaries in Memphis change from 2010 to 2020") for one agency: the same
   // Historical answer as "<crime> in <agency>, <earlier> against <later>" (P54, P55).
   if (deps.historical && d.spec.type === "change" && d.spec.statistic === "count" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
-    && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite && d.spec.place.kind === "agency"
+    && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite && d.spec.place.kind === "agency"
     && isHistoricalMeasure(d.spec.measure) && historicalUnitFits(d.spec.measure, d.spec.unit)
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
     const sp = d.spec, pl = sp.place as Extract<typeof sp.place, { kind: "agency" }>;
@@ -774,7 +847,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // clearances' (FBI SRS, Return A), not computed from NIBRS. Without the Crime Index build, the route is named.
   // Only the plain rate: a restriction the historical figures cannot apply (a property condition, a cohort, a
   // breakdown or filter) is never dropped by the route (Codex increment-6 review 02.1).
-  const plainRate = !flags(ledger0).people && !flags(ledger0).property && !flags(ledger0).clearance && !flags(ledger0).arrestsThrough && !flags(ledger0).consistent && !flags(ledger0).composite
+  const plainRate = !flags(ledger0).people && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).arrestsThrough && !flags(ledger0).consistent && !flags(ledger0).composite
     && !ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
   if (d.spec.type === "series" && d.spec.statistic === "clearance_rate" && !flags(ledger0).nibrsAsked && d.spec.places.length === 1 && d.spec.places[0].kind === "agency"
     && d.spec.measures.length === 1 && isSrsMeasure(d.spec.measures[0]) && !d.spec.filters.length && plainRate) {
@@ -794,7 +867,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // the slice's own limits.
   // The reader's own change form ("did X increase from 2022 to 2023") is a plain count compared, under the same rule.
   const plainUnit = (u: string | null) => u === null || ["offenses", "victims", "incidents"].includes(u);
-  const noDetail = !flags(ledger0).people && !flags(ledger0).property && !flags(ledger0).clearance && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+  const noDetail = !flags(ledger0).people && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
   const asked = flags(ledger0).composite || !noDetail ? []
     : d.spec.type === "series" && !d.spec.filters.length && plainUnit(d.spec.unit) ? d.spec.measures
     : d.spec.type === "change" && d.spec.statistic === "count" && plainUnit(d.spec.unit) ? [d.spec.measure] : [];
@@ -819,6 +892,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const plan = a.plan;
   // Increment 6: "where a firearm was stolen": the incident has one property segment with that description and loss
   // type (one segment, so a stolen television and a recovered firearm never match; incident-level, N2).
+  // Element 31 (coordinator 2026-11-04): a circumstance named is a filter on the counted victims of a murder or an
+  // aggravated assault, the only crimes it is recorded for here.
+  const circ = flags(ledger0).circumstance;
+  if (circ) {
+    if (plan.measures.length !== 1 || plan.measures[0].unit !== "victim" || !/\.(?:murder|homicide|aggravated_assault)$/.test(plan.measures[0].id))
+      return decline("unsupported_capability", "Circumstances (such as gang-related or an argument) are recorded for murder and aggravated assault victims; ask for those.");
+    plan.filters.push({ kind: "exists", scope: "victim", entity: "victim_circumstance", where: [{ kind: "attribute", dimension: "victim_circumstance.circumstance", op: "in", values: circ }] });
+  }
   const prop = flags(ledger0).property;
   if (prop) {
     const d = PROPERTY_CODES[prop.what], loss = LOSS_CODES[prop.loss];
@@ -1048,10 +1129,27 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const catG = plan.groupings.filter((g) => !g.dimension.startsWith("time.") && !g.dimension.startsWith("geo."));
   // Several agencies, rates and rankings take the places path (increment 4).
   const stateMode = plan.geography.places[0].kind === "state" || plan.geography.places[0].kind === "national";
-  // P29: an offender or arrestee breakdown that is not built is declined with that reason, never answered as victims.
-  if (stateMode && ppl?.by)
-    return decline("unsupported_capability", `${ppl.by.who === "arrestee" ? "Arrestee" : "Offender"} breakdowns for a whole state or the nation aren't available yet; they are for one agency or several named agencies.`);
-  if (stateMode && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
+  // Offender and arrestee breakdowns for a state or the nation are summed like victims' (coordinator 2026-11-04; P29's
+  // words, by/against, still decide whose attribute is grouped).
+  // A state or national sum by one category (coordinator 2026-11-04): its count and each category's share, never a rate
+  // (D03: no population by group).
+  // P53: murder broken down by a Homicide Report detail (victim or offender age, sex, race, relationship, weapon,
+  // circumstance) for a state or the nation is Homicide Reports', unless NIBRS is named (Codex state-categories review 01.2).
+  // Only a Homicide Report detail: a person's attributes, the relationship, the weapon, the circumstance; never a
+  // clearance or a location (query-log rerun 2026-11-04: "Virginia murder clearances by type" had been routed).
+  const shrDetailDim = (d: string) => /^(?:victim|offender|victim_offender|offense_weapon|victim_circumstance)\./.test(d);
+  // A detail selected counts as one broken down (query-log scorecard 2026-11-04: "murders of females in MN in 2023" and
+  // "murders with handguns versus rifles nationally" had been NIBRS sums).
+  // Only when every filter is such a detail (Codex P53 review 01.1: a clearance or location beside it keeps its own
+  // path), and only for victims, the unit Homicide Reports count (01.2: murder offenders stay NIBRS's).
+  const filterDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
+  const detailSelected = filterDims.length > 0 && filterDims.every((ds) => ds.length > 0 && ds.every(shrDetailDim))
+    && plan.measures.every((m) => /^victims\.(?:murder|homicide)/.test(m.id));
+  if (stateMode && (catG.some((g) => shrDetailDim(g.dimension)) || detailSelected || flags(ledger0).circumstance) && plan.measures.some((m) => /^victims\.(?:murder|homicide)|\.murder$/.test(m.id)) && !flags(ledger0).nibrsAsked)
+    return { kind: "route", source: "shr", explanation: "Murder by the victims' or offenders' details (broken down or selected) for a state or the nation comes from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR. Homicide Reports aren't available here yet. NIBRS has its own counts when asked for by name." };
+  const stateBreakdown = stateMode && catG.length === 1 && plan.measures.length === 1 && !plan.transforms.length
+    && plan.statistics.every((x) => x.kind === "count" || x.kind === "share") && plan.statistics.some((x) => x.kind === "count");
+  if (stateMode && !stateBreakdown && (plan.measures.length > 1 || catG.length || plan.transforms.length || plan.statistics.length > 1 || !(plan.statistics[0].kind === "count" || plan.statistics[0].kind === "rate")))
     return decline("unsupported_capability", "This isn't available yet: a state or national sum of several crimes, a breakdown, a change or a ranking.");
   const placesMode = !stateMode && (plan.geography.places.length > 1 || plan.geography.places[0].kind === "agency_set" || plan.statistics.some((x) => x.kind === "rate"));
   if (placesMode && (plan.measures.length > 1 || catG.length || plan.transforms.some((t) => t.kind !== "rank")))
@@ -1270,8 +1368,11 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const displayed = cells.filter((x) => x.ym >= period.from && x.ym <= period.to).map((x) => x.ym);
     const windows = rolling(cells, months, displayed);
     const as = checked.statistics[0].as;
-    const delivered = deliver(checked, period, requestedTo, ["period", as, `${as}_status`], windows.map((w) => [w.ym, w.value, w.status]), statements, release.id, notes0, null,
-      { rolling: { months, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO").map((x) => x.ym) } });
+    // A rolling average (Jeff 2026-11-05: "Answer the average"): each window's total over its months, said as an average.
+    const average = ledger0.parts.some((p) => p.concept === "rolling" && String(p.value).startsWith("rolling-avg"));
+    const shown = windows.map((w) => [w.ym, average && w.value !== null ? Math.round((10 * w.value) / months) / 10 : w.value, w.status]);
+    const delivered = deliver(checked, period, requestedTo, ["period", as, `${as}_status`], shown, statements, release.id, notes0, null,
+      { rolling: { months, average, missing: cells.filter((x) => x.status !== "VALUE" && x.status !== "REPORTED_ZERO").map((x) => x.ym) } });
     if (delivered.contractProblems.length) return notYet(`answer contract: ${delivered.contractProblems.join("; ")}`);
     return { kind: "answer", plan: checked, period, sql: c.query.sql, delivered: reported(delivered) };
   }
