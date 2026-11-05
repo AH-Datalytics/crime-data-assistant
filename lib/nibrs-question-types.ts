@@ -259,7 +259,12 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   }
 
   // ---- N7: change between two years ----
-  if (changeParts.length && !rankParts.length) {
+  // Reader cluster 2 (2026-11-05): "How has violent crime in Alaska changed since 2018?", "...over the past 5 years":
+  // a change over a span with no two years named asks for the series over that span, answered as one (the figures by
+  // year; no comparison computed, no comment on direction).
+  const overSpan = (periods[0]?.form === "since" || periods[0]?.form === "last") && periods.length === 1 && !of("versus").length;
+  if (changeParts.length && !rankParts.length && overSpan) take(changeParts);
+  else if (changeParts.length && !rankParts.length) {
     take(changeParts);
     const p = periods[0];
     const ends = p?.form === "range" ? [p.from, p.to] : p?.form === "years" ? p.list : null;
