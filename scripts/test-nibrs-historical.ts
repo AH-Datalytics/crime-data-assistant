@@ -85,7 +85,7 @@ assert.match(no({ from: 2021, to: 2023, comparison: { earlier: 2021, later: 2023
 
 // Clearance: the published percentage with its counts; from 1960 only; one agency and one year.
 const clr = ok({ statistic: "clearance_rate" });
-assert.equal(clr.delivered.text[0], "Memphis, Tennessee: 15.1% of murders were cleared in 2023 (53 of 351).");
+assert.equal(clr.delivered.text[0], "Memphis, Tennessee: 15.1% of murders were cleared in 2023. That is 53 of 351 murders.");
 assert.equal(clr.read.column, "murder_cleared_rate");
 assert.match(no({ statistic: "clearance_rate", from: 1950, to: 1950 }), /clearance figures in the data cover 1960 through 2025/);
 assert.match(no({ statistic: "clearance_rate", from: 2022, to: 2022 }), /no murder clearance rate for Memphis, Tennessee in 2022/);
