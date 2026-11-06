@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Place } from "../nibrs-plan/plan";
 import { postalState } from "../nibrs-plan/state-codes";
+import { isCommonEnglishWord } from "../english-common-words";
 
 /** `aliases`: the crosswalk's place names for the agency; `sources`: "nibrs", "crime_index" (which builds have it). */
 export type Agency = { ori: string; kind: "city" | "county"; name: string; state: string; population: number; year: number; aliases?: string[]; sources?: string[] };
@@ -90,11 +91,16 @@ function distance(a: string, b: string): number {
  * A misspelled large place ("batlimore", "phialdelphia", "el paos"): the one city or county name of 100,000+ people
  * within two edits (one for a name under six letters), same first letter; null when none or several are that close.
  */
-export function nearestPlaceName(idx: PlaceIndex, name: string): string | null {
+export function nearestPlaceName(idx: PlaceIndex, name: string, strict = false): string | null {
   const k = base(name);
   if (k.length < 4 || idx.byName.has(k)) return null;
-  const limit = k.length < 6 ? 1 : 2;
-  const near = [...idx.byName.entries()].filter(([n, xs]) => n[0] === k[0] && xs[0].population >= ASK_POPULATION && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit);
+  // `strict`, for a word the reader didn't read as a place (coordinator 2026-11-05, "Philadlephia murders 2024"): six or
+  // more letters, not a common English word, one edit from a city of 100,000+. The query log's unread words had "line"
+  // (Lane), "columns" (Columbus), "median" (Meridian) and "dollar" (Dallas) within the looser limit.
+  if (strict && (k.length < 6 || isCommonEnglishWord(k))) return null;
+  const limit = strict ? 1 : k.length < 6 ? 1 : 2;
+  const near = [...idx.byName.entries()].filter(([n, xs]) => n[0] === k[0] && xs[0].population >= ASK_POPULATION && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit
+    && (!strict || xs.some((x) => x.kind === "city" && x.population >= ASK_POPULATION)));
   // The place's name (the city's, when there is one): "Baltimore", which then asks the city or the county (P28).
   return near.length === 1 ? (near[0][1].find((x) => x.kind === "city") ?? near[0][1][0]).name : null;
 }
