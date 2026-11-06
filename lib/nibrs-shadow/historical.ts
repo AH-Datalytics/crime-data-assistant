@@ -78,6 +78,8 @@ export type HistoricalQuestion = {
   notes?: string[];
   /** The agencies by their FBI names ("Figures for the Denver Police Department."): named, not "reported by" (design note, section 3). */
   agencyLine?: string;
+  /** A line after the agency's (a county answered from its sheriff's office): shown as a note, never as restated. */
+  agencyNote?: string;
 };
 export type HistoricalAnswer = {
   kind: "historical"; meaning: Meaning; period: { from: string; to: string };
@@ -95,7 +97,7 @@ const yearsWords = (a: number, b: number) => (a === b ? String(a) : `${a} throug
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 const ucFirst = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
 /** The answer's lines: the title, the agencies named, then the rest. */
-const lines = (hq: HistoricalQuestion, title: string, ...rest: string[]) => [title, ...(hq.agencyLine ? [hq.agencyLine] : []), ...rest];
+const lines = (hq: HistoricalQuestion, title: string, ...rest: string[]) => [title, ...(hq.agencyLine ? [hq.agencyLine] : []), ...(hq.agencyNote ? [hq.agencyNote] : []), ...rest];
 const placeOf = (a: HistoricalAgency): Meaning["places"][number] => ({ kind: "agency", name: a.name, ...(a.state ? { state: a.state } : {}) });
 
 export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
