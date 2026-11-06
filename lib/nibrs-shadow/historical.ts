@@ -158,6 +158,12 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const w = sp.map(([a, b]) => (a === b ? String(a) : `${a} to ${b}`));
     return sp.length === 1 && sp[0][0] !== sp[0][1] ? `from ${w[0]}` : `in ${w.length > 1 ? `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}` : w[0]}`;
   };
+  // P75 "and the answer says so" (coordinator 2026-11-06): the years whose rate Crime Index leaves blank and the page
+  // computes from the published count and population.
+  const computedLine = (ys: number[]) => hq.statistic !== "rate" ? [] : hq.agencies.flatMap((a) => {
+    const done = ys.filter((y) => { const c = cell.get(`${a.ori}|${y}`); return !!c && historicalRate(c.capita, c.total, c.population).computed; });
+    return done.length ? [`Crime Index publishes no ${m.name} rate for ${a.label} ${yearsWords2(spansOf(done))}; ${done.length > 1 ? "those years' rates are" : "that year's rate is"} the count per 100,000 of the published population.`] : [];
+  });
   const blankLine = (ys: number[]) => hq.agencies.flatMap((a) => {
     const miss = ys.filter((y) => value(a.ori, y) === null);
     return miss.length ? [`Crime Index has no ${what}${miss.length > 1 ? "s" : ""} for ${a.label} ${yearsWords2(spansOf(miss))}, shown blank.`] : [];
@@ -193,7 +199,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const y = covered[0];
     const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "x" }, header }];
     const rows = hq.agencies.map((a) => [a.label, value(a.ori, y)]);
-    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} in ${y}.`, ...notes, ...blankLine([y]), SRS_SOURCE);
+    const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} in ${y}.`, ...notes, ...computedLine([y]), ...blankLine([y]), SRS_SOURCE);
     return {
       kind: "historical", question: hq, period,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: ["agency"], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
@@ -215,7 +221,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
       ...hq.agencies.map((a, i) => ({ binding: { kind: "statistic" as const, as: several ? `x.${i}` : "x" }, header: several ? `${a.label}: ${header.toLowerCase()}` : header }))];
     const rows = kept.map((y) => [String(y), ...hq.agencies.map((a) => value(a.ori, y))]);
     const text = lines(hq, `${where}: ${m.words}${hq.statistic === "rate" ? " per 100,000" : ""} by year, ${yearsWords(kept[0], kept[kept.length - 1])}.`,
-      ...startNote, ...notes, ...blankLine(kept), SRS_SOURCE);
+      ...startNote, ...notes, ...computedLine(kept), ...blankLine(kept), SRS_SOURCE);
     return {
       kind: "historical", question: hq, period,
       meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: ["year", ...(several ? ["agency"] : [])], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
@@ -225,7 +231,7 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   }
   const y = covered[0], v = value(hq.agencies[0].ori, y);
   if (v === null) return { kind: "historical-decline", explanation: `Crime Index has no ${hq.statistic === "rate" ? `${m.name} rate` : m.words} for ${where} in ${y}: not available in this data.` };
-  const text = lines(hq, hq.statistic === "rate" ? `${where}: ${shown(v)} ${m.words} per 100,000 in ${y}.` : `${where}: ${fmt(v)} ${m.words} in ${y}.`, ...notes, SRS_SOURCE);
+  const text = lines(hq, hq.statistic === "rate" ? `${where}: ${shown(v)} ${m.words} per 100,000 in ${y}.` : `${where}: ${fmt(v)} ${m.words} in ${y}.`, ...notes, ...computedLine([y]), SRS_SOURCE);
   return {
     kind: "historical", question: hq, period,
     meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: [], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
