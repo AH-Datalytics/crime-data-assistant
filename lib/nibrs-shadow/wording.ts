@@ -60,6 +60,7 @@ export const REASONS: Record<string, (x: string) => string> = {
   "one counting unit per question; ask for victims, offenders, arrests or offenses separately.": () => "I can count victims, offenders, arrests or offenses, one at a time; this question asks for more than one.",
   "I couldn't resolve that place to one NIBRS agency, a state or the nation.": (x) => `I couldn't find ${q(x)} as a police agency, a state or the nation.`,
   "I couldn't read that as a period.": (x) => `I couldn't tell which period ${q(x)} means.`,
+  "law enforcement officers as victims aren't counted separately in the data here.": (x) => `Law enforcement officers as victims aren't counted separately in the data here, so there are no figures for ${q(x)}. The FBI publishes officers killed and assaulted in its Law Enforcement Officers Killed and Assaulted (LEOKA) data.`,
   "the data covers U.S. law enforcement agencies only.": (x) => `The data covers U.S. law enforcement agencies only, so there are no figures for ${q(x)}.`,
   "I give one breakdown per answer; ask for one breakdown at a time.": (x) => `I can break the numbers down one way at a time; ${q(x)} would be a second breakdown.`,
   "rates are given per 100,000 people.": () => "Rates are given per 100,000.",
@@ -75,7 +76,8 @@ export const REASONS: Record<string, (x: string) => string> = {
   "I compare one measure for one place between two named years (for example \"from 2023 to 2025\").": () => "I can compare one crime in one place between two years, for example \"from 2023 to 2025\".",
   "a share covers one period as a whole; ask for each year on its own.": () => "A share covers one period as a whole; ask for each year on its own.",
   "one period per answer.": (x) => `I can answer for one period at a time; ${q(x)} would be a second one. Ask for each period on its own.`,
-  "rates are given for complete years, not for single months.": () => "Rates are given for whole years, not single months.",
+  // Coordinator 2026-11-05: accurate (a rate for two or more months together is given, P59), with the two buttons.
+  "rates are given for complete years, not for single months.": () => "A rate is given for two or more months together (the year to date, a year or a range of months), not for one month or month by month.",
   "a rate over several years is given per year; ask without \"total\" for one rate per year.": () => "A rate over several years is given for each year; ask without \"total\" to see one rate per year.",
   "breakdowns come from yearly tables; monthly or rolling breakdowns aren't available.": () => "Breakdowns are available by year, not by month or as rolling totals.",
   "breakdowns come from yearly tables; a breakdown for part of a year isn't available.": () => "Breakdowns are available for whole years, not for part of a year.",

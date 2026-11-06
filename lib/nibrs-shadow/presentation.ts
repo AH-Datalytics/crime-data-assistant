@@ -279,6 +279,6 @@ export function presentationOf(o: ShadowOutcome, places: PlaceIndex, at: Reached
   if (o.kind === "current") return currentPresentation(o, places);
   const source = sourceOf(o);
   if (o.kind === "clarify") return { source, buttons: o.options.map((x) => offerOf(x, source, true, at)) };
-  if (o.kind === "decline") return { source, buttons: o.alternative ? [offerOf(o.alternative, source, false, at)] : [] };
+  if (o.kind === "decline") return { source, buttons: [...(o.alternative ? [o.alternative] : []), ...(o.more ?? [])].map((x) => offerOf(x, source, false, at)) };
   return { source, buttons: [] };
 }
