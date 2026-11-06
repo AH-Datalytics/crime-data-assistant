@@ -347,6 +347,14 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.equal(JSON.stringify(ask("gangland assaults in Houston in 2024")), JSON.stringify(ask("gangland aggravated assaults in Houston in 2024")));
   // Codex ties/P75 review 02: a misspelling the reader corrects keeps the user's other words too.
   assert.equal(JSON.stringify(ask("gangland assualts in Houston in 2024")), JSON.stringify(ask("gangland assaults in Houston in 2024")));
+  // Scorecard 2026-11-06: an "assault" already qualified earlier in the question is left alone; the rewrite is made
+  // once, never again on its own result (these ran without end); a decline is of the user's words.
+  for (const q of ["What is the count of felony assaults and simply assaults in New York City between 2018 and 2025",
+    "Can you return the murder-to-robbery, robbery-to-aggravated assault, and murder-to-assault ratios for St. Louis, MO; Chicago, IL; Los Angeles, CA; Memphis, TN; and New Orleans, LA for the years 2010 to 2025?"]) {
+    const o = ask(q) as { kind: string; alternative?: { question?: string } | null };
+    assert.equal(o.kind, "decline", q);
+    assert.doesNotMatch(o.alternative?.question ?? "", /\b(?:of|in) (?:and|or)\b|aggravated aggravated/, q);
+  }
   const opts = (q: string) => JSON.stringify((ask(q) as { options?: unknown }).options);
   assert.equal(opts("uncleared assualts in Houston in 2024"), opts("uncleared assaults in Houston in 2024"));
   assert.match(opts("uncleared assualts in Houston in 2024"), /not cleared/);
