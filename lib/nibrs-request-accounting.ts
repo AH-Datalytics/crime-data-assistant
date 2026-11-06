@@ -207,7 +207,7 @@ const MEASURES: Rule[] = [
   // offenses" are the three together; "intimidation" is its own.
   { concept: "measure", value: () => "assault_offenses", pattern: R(String.raw`\ball\s+assaults?\b|\bassault\s+offen[cs]es\b`) },
   { concept: "measure", value: () => "intimidation", pattern: R(String.raw`\bintimidations?\b`) },
-  { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))`) },
+  { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))(?![\s-]+(?:rifles?|weapons?|guns?|pistols?|style|offen[cs]es)\b)`) },
   { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`\bshoplifting\b`) },
   { concept: "measure", value: () => "burglary", pattern: R(String.raw`\bburglar(?:y|ies)\b|\bbreak[-\s]?ins?\b`) },
   { concept: "measure", value: () => "theft", pattern: R(String.raw`\blarcen(?:y|ies)\b|\bthefts?\b`) },
@@ -355,7 +355,7 @@ const RULES: Rule[] = [
   { concept: "unit", value: () => "incidents", pattern: R(String.raw`\bincidents?\b`) },
   // "Sex offenses" is a crime, not the counting unit (Codex P32 review 01.4: "forcible sex offenses" was unread); so are
   // "drug offenses" ("drug offenses in Ohio" had left "drug" unread: bad-decline audit, 2026-11-06).
-  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\b(?:sex(?:ual)?|drug|narcotics?)\s)\boffen[cs]es\b`) },
+  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\b(?:sex(?:ual)?|drug|narcotics?|assault)\s)\boffen[cs]es\b`) },
   ...MEASURES,
   { concept: "measure", value: () => "unspecified", pattern: R(String.raw`\bcrimes?\b|\boffen[cs]es?\b|\bcases\b`) },
   // ---- combine ----

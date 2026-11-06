@@ -319,6 +319,16 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 
 /** "LA" for a place (not after a place it qualifies, "Shreveport, LA"): Los Angeles or Louisiana, asked. */
 const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][A-Za-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
+/**
+ * The question with one of its words replaced, in the user's own words: the reader's text has circumstance and other
+ * words taken out ("gangland"), so its offsets would drop them (Codex ties/P75 review 01.1). The word is found in the
+ * original by its text; only when it isn't there is the reader's text used.
+ */
+function inOriginal(question: string, read: string, part: Part, to: string): string {
+  const word = part.text.trim();
+  const m = new RegExp(String.raw`(?<![A-Za-z])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`, "i").exec(question);
+  return m ? question.slice(0, m.index) + to + question.slice(m.index + m[0].length) : read.slice(0, part.span[0]) + to + read.slice(part.span[1]);
+}
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   // "LA" (coordinator 2026-11-03): the city or the state, asked; each choice is the question with the place named.
   if (LA.test(question)) {
@@ -345,7 +355,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
     && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
     && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept));
   if (shooting && bareShooting && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
-    const as = (to: string) => question.slice(0, shooting.span[0]) + to + question.slice(shooting.span[1]);
+    const as = (to: string) => inOriginal(question, ledger.question, shooting, to);
     const options = [["Fatal (murders with a firearm)", "murders with a firearm"], ["Non-fatal (aggravated assaults with a firearm)", "aggravated assaults with a firearm"]]
       .map(([label, to]) => ({ label, continuation: shadowAnswer(as(to), deps) })).filter((o) => runsNow(o.continuation));
     if (options.length) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options };
@@ -355,7 +365,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   // Where NIBRS answers, which kind is asked, offering only the kinds that run.
   const assault = ledger.parts.find((p) => p.clause === 0 && p.concept === "measure" && p.value === "assault");
   if (assault) {
-    const as = (to: string) => question.slice(0, assault.span[0]) + to + question.slice(assault.span[1]);
+    const as = (to: string) => inOriginal(question, ledger.question, assault, to);
     const plural = /s$/i.test(assault.text.trim());
     const aggravated = shadowAnswer(as(plural ? "aggravated assaults" : "aggravated assault"), deps);
     if (aggravated.kind === "historical" || aggravated.kind === "srs" || aggravated.kind === "current") return aggravated;

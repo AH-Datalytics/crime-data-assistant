@@ -312,6 +312,12 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === v), q);
   assert.deepEqual(MEASURE_CODES.assault_offenses, ["13A", "13B", "13C"]);
   assert.deepEqual(MEASURE_CODES.intimidation, ["13C"]);
+  // Codex ties/P75 review 01: "assault offenses" is all three, never "offenses" read as the unit; a weapon is not a crime;
+  // the user's own words survive the rewrite ("gangland" keeps its circumstance).
+  assert.ok(readQuestion("assault offenses in Houston in 2024", 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "assault_offenses"));
+  for (const q of ["assault rifle in Houston in 2024", "assault weapons in Houston in 2024"])
+    assert.ok(!readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "assault"), q);
+  assert.equal(JSON.stringify(ask("gangland assaults in Houston in 2024")), JSON.stringify(ask("gangland aggravated assaults in Houston in 2024")));
 }
 // Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
 // killed by police are not officers as victims.
