@@ -293,6 +293,10 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.equal(r.meaning.places.length, 2);
   }
   assert.equal(answerSrsSeveral({ measure: "murder", from: 2020, to: 2021, byYear: false, statistic: "count", comparison: { earlier: 2020, later: 2021 } }, [{ kind: "state", code: "OH" }, { kind: "national" }]).kind, "srs-decline", "a change is one place at a time");
+  // Codex root-causes review 01: combined places and a count beside a rate keep the decline; "police shootings" and
+  // "shooting incidents" are never rewritten as firearm murders or assaults.
+  for (const q of ["murders in Ohio and Texas combined in 2024", "Ohio murder count vs Texas murder rate in 2024"]) assert.notEqual(ask(q).kind, "srs", q);
+  for (const q of ["police shootings in Chicago in 2024", "shooting incidents in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, "fatal or non-fatal shootings", q);
 }
 // Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
 // killed by police are not officers as victims.

@@ -217,11 +217,13 @@ function nibrsPresentation(o: Extract<ShadowOutcome, { kind: "answer" }>, places
 function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIndex): Presentation {
   const q = o.question;
   const agencies = o.kind === "historical" ? o.question.agencies : [];
-  const srsPlace = o.kind === "srs" ? o.question.place : { kind: "national" as const };
+  // Several states or the nation side by side (answerSrsSeveral) are all named (Codex root-causes review 01.5).
+  const srsPlaces = o.kind === "srs" ? o.question.places ?? [o.question.place] : [{ kind: "national" as const }];
+  const srsName = (p: (typeof srsPlaces)[number]) => (p.kind === "national" ? "United States" : STATE_NAMES[p.code] ?? p.code);
   const m = (o.kind === "historical" ? HISTORICAL_MEASURE : SRS_MEASURE)[q.measure];
   const clearance = q.statistic === "clearance_rate";
   const placeTitle = o.kind === "historical" ? agencies.map((a) => shortLabel(a.label))
-    : [srsPlace.kind === "national" ? "United States" : STATE_NAMES[srsPlace.code] ?? srsPlace.code];
+    : srsPlaces.map(srsName);
   const what = clearance ? `${m.words} cleared` : m.words;
   const cmp = q.comparison;
   const yearly = q.byYear;
@@ -230,7 +232,8 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
     groupings: yearly ? ["year"] : [], period: cmp ? `${cmp.earlier} & ${cmp.later}` : titlePeriod(o.period, yearly), partialLastYear: null, rollingMonths: null, ranking: null,
   };
   const who = o.kind === "historical" ? reporter(places, agencies.map((a) => a.ori))
-    : srsPlace.kind === "national" ? "law enforcement agencies across the United States" : `${STATE_NAMES[srsPlace.code] ?? srsPlace.code} law enforcement agencies`;
+    : srsPlaces.length > 1 ? `law enforcement agencies in ${srsPlaces.map((p) => (p.kind === "national" ? "the United States" : srsName(p))).join(" and ")}`
+      : srsPlaces[0].kind === "national" ? "law enforcement agencies across the United States" : `${srsName(srsPlaces[0])} law enforcement agencies`;
   const when = cmp ? `in ${cmp.earlier} and ${cmp.later}, with the change between them` : whenWords(o.period, yearly ? "year" : null);
   const countedAs = q.statistic === "rate" ? "as rates per 100,000 people" : clearance ? "as the percentage cleared" : null;
   const table = o.delivered.table;
@@ -247,6 +250,7 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
     // Several agencies by year: one column each, labeled as the title names them.
     series: Object.fromEntries(table.columns.flatMap((c) => {
       const i = c.binding.kind === "statistic" ? /\.(\d+)$/.exec(c.binding.as) : null;
+      if (i && o.kind === "srs" && srsPlaces.length > 1 && srsPlaces[Number(i[1])]) return [[c.header, srsName(srsPlaces[Number(i[1])])]];
       return i && agencies[Number(i[1])] ? [[c.header, shortLabel(agencies[Number(i[1])].label)]] : [];
     })),
   };
