@@ -496,6 +496,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // (P20, D01); its leftover words are not reasons. So is any other part the data does not record (a ZIP code): asking
   // which place, period or crime is meant in a question that cannot be answered would be an unnecessary question (D28).
   const unrecorded = ledger0.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
+  // Officers killed and assaulted: Jeff's sentence alone, before any other limit (Codex officer review 05: a ZIP code's
+  // limit had been appended to it).
+  const leoka = ledger0.parts.find((p) => p.concept === "officer-victims");
+  if (leoka) return decline(readerReason(leoka.explanation!), plainReaderExplanation(leoka.explanation!), { detail: leoka.explanation! });
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
   const term = flags(ledger0).undefinedTerm;

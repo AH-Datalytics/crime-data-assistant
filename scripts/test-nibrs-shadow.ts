@@ -221,7 +221,8 @@ for (const q of ["murders of sheriffs in King County, Washington in 2024", "murd
   "how many officers were shot in 2024", "officers shot in Chicago in 2024", "police deaths in 2024", "Homicides of police in the line of duty",
   "murders with sheriffs as victims in King County, Washington in 2024", "murders in King County, Washington in 2024 with sheriff victims",
   "police officers shot dead in Chicago in 2024", "officers shot and killed in Chicago in 2024",
-  "murders with sheriffs killed with firearms in King County, Washington in 2024", "officers killed by gunfire in 2024"]) {
+  "murders with sheriffs killed with firearms in King County, Washington in 2024", "officers killed by gunfire in 2024",
+  "assaults on police officers in Chicago by zip code in 2024"]) {
   const d = as(ask(q), "decline");
   assert.equal(d.explanation, "We don't have LEOKA data (officers killed and assaulted) in yet.", q);
   assert.equal(d.alternative, null, q);
