@@ -70,6 +70,10 @@ const DRUG_ACTIVITY = notRecorded("drug distribution or sales as its own measure
 const STATEMENTS = notRecorded("what people said in interviews, or how they got a weapon");
 const OVERDOSE = notRecorded("overdose deaths; drug offenses are not an overdose-death count");
 const IMMIGRATION = notRecorded("immigration or citizenship status");
+// Places grouped by politics ("states won by Trump", "blue states", "Democrat-run cities"): named plainly, never "I didn't
+// understand" (bad-decline audit, 2026-11-06).
+const ELECTION = declined("the data has no election results or party control, so places can't be grouped by them.");
+const ELECTION_GROUP = String.raw`(?:(?:states?|cities|counties)\s+(?:that\s+)?(?:were\s+)?(?:won|carried)\s+by\s+(?:[\w.'-]+\s+){0,2}?[\w.'-]+(?=\s+(?:vs\.?|versus|and|or|compared|in|since|from)\b|\s*[?.!,]|\s*$)|(?:red|blue|swing|purple)\s+(?:states?|cities|counties)\b|(?:republican|democrat(?:ic)?|gop)[-\s](?:(?:led|run|controlled|governed)\s+)?(?:states?|cities|counties)\b|voted\s+for\s+\w+)`;
 // Officers as victims (coordinator 2026-11-05: "murders of sheriffs in King County, Washington" had answered the county's
 // total murders): no source here counts them, so they are declined by name, never answered with the total.
 const OFFICER_VICTIMS = declined("we don't have LEOKA data in yet.");
@@ -90,7 +94,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\bfrom\s+(${MONTH})\s+(${YEAR})\s+(?:to|through|until|-)\s+(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
-const EARLY_CONCEPTS = new Set(["officer-victims", "outside-us", "ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
+const EARLY_CONCEPTS = new Set(["officer-victims", "election", "outside-us", "ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
 
 /** Filter values: `dimension:value`. Specific weapons before the generic gun words; values are NIBRS codes. */
 const FILTERS: Rule[] = [
@@ -255,9 +259,14 @@ const RULES: Rule[] = [
     String.raw`\b(?:officers?|police|cops?|deput(?:y|ies)|troopers?)\s+(?:(?:were|was|being|got)\s+)?shot\b(?:\s+(?:dead|and\s+killed))?${OFFICER_OBJECT}`,
     String.raw`\bkilled\s+in\s+(?:the\s+)?(?:line\s+of\s+duty|action)\b|\bleoka\b`,
   ].join("|")), state: "not-recorded", explanation: OFFICER_VICTIMS },
+  // One phrase for "red states vs blue states" (each side alone would name the limit twice).
+  { concept: "election", pattern: R(String.raw`\b${ELECTION_GROUP}(?:\s+(?:vs\.?|versus|and|or|compared\s+(?:to|with))\s+${ELECTION_GROUP})?`), state: "not-recorded", explanation: ELECTION },
   { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecutions?\b|\bprosecutors?\b|\bprosecuted\b|\bdefendants?\b|\bcourts?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
-  { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\b|\bbeats?\b|\bcensus\s+tracts?\b`), state: "not-recorded", explanation: SUBCITY },
+  // Never the District of Columbia ("murders in the District of Columbia", "for the District": bad-decline audit,
+  // 2026-11-06, had declined DC as a district).
+  { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b(?!\s+of\s+columbia)|\bprecincts?\b|\bwards?\b|\bbeats?\b|\bcensus\s+tracts?\b`), state: "not-recorded", explanation: SUBCITY,
+    when: (m, q) => !(m[0] === "District" && /\bthe\s+$/i.test(q.slice(0, m.index))) },
   { concept: "daily", pattern: R(String.raw`\bby\s+(?:the\s+)?day\b|\bper\s+day\b|\beach\s+day\b|\bdaily\b|\bday[-\s]by[-\s]day\b`), state: "not-recorded", explanation: DAILY },
   { concept: "two-way-rank", pattern: R(String.raw`\b(?:(?:what|which)\s+)?(?:crime|offen[cs]e)(?:\s+type)?\s+and\s+(?:where|which\s+(?:state|city|agency))\b`), state: "not-interpreted",
     explanation: declined("that asks for two rankings at once (which offense and which place); ask for one ranking at a time.") },
@@ -338,8 +347,9 @@ const RULES: Rule[] = [
   { concept: "unit", value: () => "offenders", pattern: R(String.raw`\boffenders?\b|\bsuspects?\b|\bperpetrators?\b`) },
   { concept: "unit", value: () => "arrests", pattern: R(String.raw`\barrest(?:s|ees?)?\b|\barrested\b`) },
   { concept: "unit", value: () => "incidents", pattern: R(String.raw`\bincidents?\b`) },
-  // "Sex offenses" is a crime, not the counting unit (Codex P32 review 01.4: "forcible sex offenses" was unread).
-  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\bsex(?:ual)?\s)\boffen[cs]es\b`) },
+  // "Sex offenses" is a crime, not the counting unit (Codex P32 review 01.4: "forcible sex offenses" was unread); so are
+  // "drug offenses" ("drug offenses in Ohio" had left "drug" unread: bad-decline audit, 2026-11-06).
+  { concept: "unit", value: () => "offenses", pattern: R(String.raw`(?<!\b(?:sex(?:ual)?|drug|narcotics?)\s)\boffen[cs]es\b`) },
   ...MEASURES,
   { concept: "measure", value: () => "unspecified", pattern: R(String.raw`\bcrimes?\b|\boffen[cs]es?\b|\bcases\b`) },
   // ---- combine ----
