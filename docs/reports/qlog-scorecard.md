@@ -10,15 +10,15 @@ Release test6-20261031-host; run 2026-11-06. A first question is the first row o
 
 | Source | Labels scored | Correct | Unverified | Wrong answer | Bad decline | Wrong clarify | Follow-up error | Error | Reviewed labels | Draft labels | Disputed (not scored) | Not run yet |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Historical | 1014 | 279 | 263 | 0 | 253 | 93 | 126 | 0 | 854 | 160 | 4 | 0 |
-| Current Trends | 1022 | 367 | 210 | 0 | 213 | 122 | 110 | 0 | 800 | 222 | 5 | 0 |
-| NIBRS | 1241 | 514 | 149 | 0 | 268 | 146 | 164 | 0 | 1007 | 234 | 4 | 0 |
-| Homicide Reports | 580 | 219 | 111 | 0 | 144 | 40 | 66 | 0 | 454 | 126 | 3 | 0 |
-| Hate Crime | 67 | 17 | 1 | 0 | 17 | 6 | 26 | 0 | 64 | 3 | 1 | 0 |
-| **All** | **3924** | **1396** | **734** | **0** | **895** | **407** | **492** | **0** | **3179** | **745** | **17** | **0** |
+| Historical | 1014 | 535 | 7 | 0 | 253 | 93 | 126 | 0 | 854 | 160 | 4 | 0 |
+| Current Trends | 1022 | 572 | 4 | 0 | 214 | 122 | 110 | 0 | 800 | 222 | 5 | 0 |
+| NIBRS | 1241 | 657 | 6 | 0 | 268 | 146 | 164 | 0 | 1007 | 234 | 4 | 0 |
+| Homicide Reports | 580 | 315 | 15 | 0 | 144 | 40 | 66 | 0 | 454 | 126 | 3 | 0 |
+| Hate Crime | 67 | 18 | 0 | 0 | 17 | 6 | 26 | 0 | 64 | 3 | 1 | 0 |
+| **All** | **3924** | **2097** | **32** | **0** | **896** | **407** | **492** | **0** | **3179** | **745** | **17** | **0** |
 
 Hard gate, wrong answers = 0 (undisputed labels): **met**.
 
 **Disputed: 17 labels wait on Jeff and are set aside** (not in any bucket or the gate): second labeler unclear 17. The questions are in docs/reports/qlog-label-rules.md.
 
-Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked (or routed to a source this engine does not run yet); *wrong answer* an answer where a clarify or decline is expected, an answer from the wrong source, or numbers that differ; *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* any miss on a follow-up turn; *error* the engine failed.
+Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked against independent values (or routed to a source this engine does not run yet); a right-source answer whose every number matched independent values (qlog-verified.json) is *correct*; *wrong answer* an answer where a clarify or decline is expected, or an answer from the wrong source (numbers found to differ from independent values are reported as each verification batch finds them; a verified answer whose numbers change goes back to *unverified*); *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* any miss on a follow-up turn; *error* the engine failed.

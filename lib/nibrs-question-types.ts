@@ -333,8 +333,9 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   if (combine && !grains.length && !(period.form === "range" || period.form === "years" || period.form === "since" || period.form === "last")) grain = "total";
   if (!rolling && monthPeriodParts.length) grain = "month";
   // r2 §3: rates are for complete years; a rate over several years is given per year.
-  if ((statistic === "rate" || statistic === "clearance_rate") && grain === "month") {
-    const named = statistic === "rate" ? statParts : clearance.filter((p) => p.value === "rate");
+  // P96 (Jeff 2026-11-06): a crime rate by month is answered (each month's count per 100,000); a clearance rate by month is not.
+  if (statistic === "clearance_rate" && grain === "month") {
+    const named = clearance.filter((p) => p.value === "rate");
     return declineParts(named.length ? named : [...monthPeriodParts, ...grainParts], (p) => cannot(p, "rates are given for complete years, not for single months."));
   }
   if (statistic === "rate" && grain === "total" && of("combine").length) {
