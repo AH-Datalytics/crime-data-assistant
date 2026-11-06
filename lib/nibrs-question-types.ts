@@ -173,7 +173,8 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
 
   // ---- measures (families inferred from their filters) ----
   const filters = take(of("filter").concat(of("clearance-reason"))).map((p) => p.value!).filter(Boolean);
-  let measures = take(of("measure")).map((p) => p.value!).filter((v) => v !== "unspecified");
+  // A crime named once per place ("Ohio murder rate vs Louisiana murder rate") is one crime (bad-decline audit root cause 3).
+  let measures = [...new Set(take(of("measure")).map((p) => p.value!).filter((v) => v !== "unspecified"))];
   if (measures.length === 0) {
     if (filters.some((f) => f.startsWith("dv:"))) measures = ["domestic_violence"];
     else if (filters.some((f) => f.startsWith("drug:"))) measures = ["drug_possession"];

@@ -49,7 +49,7 @@ import { clearanceDims, type AnswerStatement } from "../nibrs-plan/result";
 import { CATEGORY, deliver, deliverComparison, filterWords, LOSS_CODES, monthName, periodWords, PROPERTY_CODES, type Combined, type Delivered } from "./deliver";
 import { agencyLabel, agencyName, candidateLabel, nearestPlaceName, reportedBy, resolvePlace, stateName, type Candidate, type PlaceIndex, type PlaceResolution } from "./places";
 import { answerPlaces } from "./places-answer";
-import { answerSrs, isSrsMeasure, type SrsAnswer } from "./srs";
+import { answerSrs, answerSrsSeveral, isSrsMeasure, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
@@ -326,7 +326,30 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
     return { kind: "clarify", about: "which LA", question, options: [
       { label: "Los Angeles", continuation: shadowAnswer(as("Los Angeles"), deps) }, { label: "Louisiana", continuation: shadowAnswer(as("Louisiana"), deps) }] };
   }
+  // The District of Columbia is Washington, D.C.: its police (the Metropolitan Police Department) cover the whole
+  // District, and the state file has no row for it ("murders in the District of Columbia in 2024" said there were none:
+  // bad-decline audit, 2026-11-06). "the District" in capitals is the same place.
+  const asDC = question.replace(/\b(?:the\s+)?district\s+of\s+columbia\b/gi, "Washington, D.C.").replace(/\bthe\s+District\b(?!\s+of\b)/g, "Washington, D.C.");
+  if (asDC !== question) return shadowAnswer(asDC, deps);
   const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
+  // D14 (decided 2026-09-06): "Shootings in Chicago" asks fatal or non-fatal, each choice the question with the nearest
+  // measure that exists: murders with a firearm, aggravated assaults with a firearm. Never when the words already say
+  // which ("fatal", "killed", "homicide"); a choice that would only be declined is not offered (bad-decline audit root
+  // cause 2, 2026-11-06).
+  const shooting = ledger.parts.find((p) => p.clause === 0 && p.concept === "shooting");
+  // Only bare "shooting(s)" beside nothing but a place, a period, a grain or a statistic: "shooting incidents" would
+  // become victims, "police shootings" and "shootings of sheriffs" would lose who was shot (Codex root-causes reviews
+  // 01.1-2, 02.1).
+  const ALONE = new Set(["shooting", "place", "period", "grain", "statistic"]);
+  const bareShooting = !!shooting && /^shootings?$/i.test(shooting.text.trim())
+    && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
+    && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept));
+  if (shooting && bareShooting && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
+    const as = (to: string) => question.slice(0, shooting.span[0]) + to + question.slice(shooting.span[1]);
+    const options = [["Fatal (murders with a firearm)", "murders with a firearm"], ["Non-fatal (aggravated assaults with a firearm)", "aggravated assaults with a firearm"]]
+      .map(([label, to]) => ({ label, continuation: shadowAnswer(as(to), deps) })).filter((o) => runsNow(o.continuation));
+    if (options.length) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options };
+  }
   // A misspelled large place (coordinator 2026-11-03: "batlimore", "phialdelphia"): the question with the place's name,
   // when exactly one large place is that close and the words aren't a place the index has.
   for (const p of ledger.parts) {
@@ -614,7 +637,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   }
   // D31: ask for a missing crime, place or period, one at a time, before any default is applied.
   const named = clause0("measure").some((p) => p.value !== "unspecified");
-  if (!named && clause0("measure").length) {
+  // A place and no crime at all ("minneapolis", "philadelphia murders" misread aside: bad-decline audit root cause 1,
+  // 2026-11-06) asks which crime too, when every other word was read; never a staffing question or an ask outside the
+  // data, which have their own declines below.
+  const noCrime = !clause0("measure").length && clause0("place").length > 0
+    && !ledger0.parts.some((p) => p.clause === 0 && (p.state === "not-interpreted" || p.state === "not-recorded"))
+    && !STAFFING.test(ledger0.question) && !OUTSIDE.some(([re]) => re.test(ledger0.question));
+  if (!named && (clause0("measure").length || noCrime)) {
     // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
     const kinds = [{ label: "Violent crime", measures: [["violent_crime", "violent crime"]] }, { label: "Property crime", measures: [["property_crime", "property crime"]] },
@@ -798,14 +827,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (d.spec.type === "series" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people) {
     const sp = d.spec;
     const geo = sp.places.length === 1 && (sp.places[0].kind === "state" || sp.places[0].kind === "national") ? sp.places[0] : null;
+    // Several states, or states and the nation, side by side (bad-decline audit root cause 3, 2026-11-06).
+    // Never when the places are to be combined, or one is asked as a count and another as a rate (Codex root-causes
+    // review 01.3-4): those keep the decline.
+    const mixedStatistic = clause0("statistic").length > 0 && /\b(?:counts?|numbers?|totals?|how\s+many)\b/i.test(ledger0.question);
+    const geos = sp.places.length >= 2 && sp.places.every((p) => p.kind === "state" || p.kind === "national") && !clause0("combine").length && !flags(ledger0).combined && !mixedStatistic ? sp.places : null;
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
       || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
     // A Crime Index question with no period asks which (D31), never P01's decline (query-log step one, 2026-11-02).
-    if (geo && sp.period.form === "none" && sp.grain === "total" && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !details) return askCrimeIndexPeriod();
+    if ((geo || geos) && sp.period.form === "none" && sp.grain === "total" && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !details) return askCrimeIndexPeriod();
     const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), 1960);
     // The file's own unit only (offenses; victims for murder, rape, assault): incidents are another quantity (Codex
     // increment-5 review 2.3) and stay with P01's decline.
-    if (geo && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
+    if ((geo || geos) && yrs && sp.measures.length === 1 && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
       && (sp.statistic === "count" || sp.statistic === "rate" || sp.statistic === "clearance_rate") && !flags(ledger0).composite
       && !(partYear(sp, flags(ledger0).comparison) && !ANNUAL_ONLY.has(sp.measures[0]))) {
       // The file has whole years only: a month, part of a year or a part-year comparison is declined, never answered
@@ -822,10 +856,12 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       // A span reaching this year: its completed years from the file, this year named as Current Trends' (P14: never
       // spliced in; review 2.6).
       const reachesNow = yrs[1] === thisYear && sp.statistic !== "clearance_rate";
-      const r = answerSrs({ measure: sp.measures[0], place: geo.kind === "state" ? { kind: "state", code: geo.code } : { kind: "national" }, from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1],
+      const srsPlace = (p: (typeof sp.places)[number]): SrsPlace => (p.kind === "state" ? { kind: "state", code: p.code } : { kind: "national" });
+      const srsQ = { measure: sp.measures[0], from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1],
         byYear: sp.grain === "year" || openSpan(sp), statistic: sp.statistic,
         comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
-        notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [] });
+        notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [] };
+      const r = geos ? answerSrsSeveral(srsQ, geos.map(srsPlace)) : answerSrs({ ...srsQ, place: srsPlace(geo!) });
       if (r.kind === "srs") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
     }

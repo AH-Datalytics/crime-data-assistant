@@ -47,6 +47,8 @@ export const isSrsMeasure = (m: string) => m in SRS_MEASURE;
 export type SrsPlace = { kind: "state"; code: string } | { kind: "national" };
 export type SrsQuestion = {
   measure: string; place: SrsPlace; from: number; to: number; byYear: boolean;
+  /** Several states or the nation side by side (answerSrsSeveral); `place` is then the first. */
+  places?: SrsPlace[];
   statistic: "count" | "rate" | "clearance_rate"; comparison: { earlier: number; later: number } | null;
   /** Lines after the title (a span reaching this year names it as Current Trends'). */
   notes?: string[];
@@ -142,6 +144,39 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
     meaning: { ...meaningBase, period, groupings: [], statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
     delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header }], rows: [[v]] }, text },
     read,
+  };
+}
+
+/**
+ * Several states, or states and the nation, side by side by year, one column each, never combined ("california vs.
+ * texas violent crime rate per year", "Louisiana vs US murder rate": bad-decline audit root cause 3, 2026-11-06), as
+ * several agencies are (historical.ts). A count or a rate only; a change or a clearance rate is asked one place at a time.
+ */
+export function answerSrsSeveral(q: Omit<SrsQuestion, "place">, places: SrsPlace[]): SrsAnswer | SrsDecline {
+  const m = SRS_MEASURE[q.measure];
+  if (q.comparison || q.statistic === "clearance_rate")
+    return { kind: "srs-decline", explanation: `This isn't available yet: ${q.comparison ? "a change" : "a clearance rate"} for more than one state or the nation. Ask for one place.` };
+  const wanted = range(q.from, q.to);
+  const covered = wanted.filter((y) => y >= SRS_YEARS.first && y <= SRS_YEARS.last);
+  const outside = wanted.filter((y) => !covered.includes(y));
+  const span = `State and national figures in the data cover ${SRS_YEARS.first} through ${SRS_YEARS.last}`;
+  if (!covered.length) return { kind: "srs-decline", explanation: `${span}, so ${yearsWords(q.from, q.to)} ${q.from === q.to ? "is" : "are"} outside them.` };
+  const col = `${m.col}_${q.statistic === "rate" ? "capita" : "total"}`;
+  const value = (p: SrsPlace, y: number) => { const r = rowFor(crime(), p, y); return r && r[col] !== "" ? Number(r[col]) : null; };
+  const where = places.map(placeName).join(" and ");
+  const header = `${m.words}${q.statistic === "rate" ? " per 100,000" : ""}`;
+  const period = { from: `${covered[0]}-01`, to: `${covered[covered.length - 1]}-12` };
+  const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
+    ...places.map((p, i) => ({ binding: { kind: "statistic" as const, as: `x.${i}` }, header: `${placeName(p)}: ${header}` }))];
+  const rows = covered.map((y) => [String(y), ...places.map((p) => value(p, y))]);
+  const missingLine = [...(outside.length ? [`${span}; ${yearsWords(outside[0], outside[outside.length - 1])} ${outside.length > 1 ? "are" : "is"} outside them.`] : []), ...(q.notes ?? [])];
+  const text = [covered.length > 1 ? `${where}: ${header} by year, ${periodWords(period.from, period.to)}.` : `${where}: ${header} in ${covered[0]}.`, ...missingLine, SRS_SOURCE];
+  return {
+    kind: "srs", question: { ...q, place: places[0], places }, period,
+    meaning: { source: "historical", places: places.map(placeOf), measures: [{ name: m.name, unit: m.unit }], filters: [], period, groupings: ["year"],
+      statistic: q.statistic === "rate" ? "rate" : "count", ...(q.statistic === "rate" ? { denominator: "the state's residents, per 100,000" } : {}) },
+    delivered: { table: { columns, rows }, text },
+    read: { file: "historical_crime_states_nation_1960-2025.csv", column: col, uids: places.flatMap((p) => covered.flatMap((y) => { const r = rowFor(crime(), p, y); return r ? [r.uid] : []; })) },
   };
 }
 

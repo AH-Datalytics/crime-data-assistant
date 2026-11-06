@@ -61,6 +61,7 @@ export const REASONS: Record<string, (x: string) => string> = {
   "I couldn't resolve that place to one NIBRS agency, a state or the nation.": (x) => `I couldn't find ${q(x)} as a police agency, a state or the nation.`,
   "I couldn't read that as a period.": (x) => `I couldn't tell which period ${q(x)} means.`,
   // Jeff 2026-11-05: "a better answer to that is that we don't have LEOKA data in yet"; plain, no extra notes.
+  "the data has no election results or party control, so places can't be grouped by them.": (x) => `The data has no election results or party control, so places can't be grouped by ${q(x)}.`,
   "we don't have LEOKA data in yet.": () => "We don't have LEOKA data (officers killed and assaulted) in yet.",
   "the data covers U.S. law enforcement agencies only.": (x) => `The data covers U.S. law enforcement agencies only, so there are no figures for ${q(x)}.`,
   "I give one breakdown per answer; ask for one breakdown at a time.": (x) => `I can break the numbers down one way at a time; ${q(x)} would be a second breakdown.`,

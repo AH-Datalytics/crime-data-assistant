@@ -2248,7 +2248,12 @@
 },
 "QL-ct-7c12a414fb": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "codex-audit-2026-11-06",
+"expected": {
+"outcome": "decline",
+"reason": "national totals before 2025 wait on the cohort rule (Current Trends design note, decision A)"
+},
+"why": "The approved Current Trends design declines national totals before 2025 pending a cohort rule."
 },
 "QL-ct-7e0e5f6469": {
 "status": "draft",
@@ -3563,13 +3568,15 @@
 }
 },
 "QL-ct-d32b9ccc2d": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Victim detail without a Part I offense requires NIBRS.",
+"status": "reviewed",
+"by": "codex-audit-2026-11-06",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
-}
+"outcome": "clarify",
+"about_any": [
+"crime"
+]
+},
+"why": "Victims does not name a crime; ask which crime before choosing a source."
 },
 "QL-ct-d36ad957cc": {
 "status": "reviewed",
@@ -3694,7 +3701,14 @@
 },
 "QL-ct-db8f257887": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "codex-audit-2026-11-06",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"victims or offenders"
+]
+},
+"why": "Youth violence: ask whether youth are victims or offenders."
 },
 "QL-ct-dbaa255c59": {
 "status": "reviewed",
@@ -3749,7 +3763,12 @@
 },
 "QL-ct-de4bf4b27f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "codex-audit-2026-11-06",
+"expected": {
+"outcome": "decline",
+"reason": "monthly rates: a rate is given for two or more months together (Current Trends design note, decision B)"
+},
+"why": "Monthly rates are a decided scope choice; decline with the rate for the whole period and the counts by month."
 },
 "QL-ct-deb9e6f63b": {
 "status": "draft",
