@@ -219,7 +219,17 @@ assert.equal((at("county:Just Show Worcester County:MD", "just show worcester co
 assert.equal(nearestPlaceName(places, "Philadlephia", true), "Philadelphia");
 assert.equal(nearestPlaceName(places, "Clevland", true), "Cleveland");
 for (const w of ["line", "like", "columns", "median", "dollar", "killed", "region", "control", "summer", "places", "bolder", "garlands"]) assert.equal(nearestPlaceName(places, w, true), null, w);
-assert.equal(JSON.stringify(ask("Philadlephia murders 2024")), JSON.stringify(ask("Philadelphia murders 2024")));
+{
+  // Offered first, never substituted in silence ("fontina thefts" is not Fontana: Codex spelling review 03).
+  const c = as(ask("Philadlephia murders 2024"), "clarify");
+  const right = ask("Philadelphia murders 2024");
+  // Offered when the place's own question runs here (the stub build may not answer it; the real build does).
+  if (right.kind !== "decline" && right.kind !== "route") {
+    assert.equal(c.options[0].label, "Philadelphia");
+    assert.equal(JSON.stringify(c.options[0].continuation), JSON.stringify(right));
+  } else assert.ok(!c.options.some((o) => o.label === "Philadelphia"), "never a button that can't run");
+  assert.notEqual(ask("fontina thefts 2024").kind, "historical");
+}
 assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024")), /Boulder/, "not a second place (Codex spelling review 01)");
 // A county asked by name and answered from its sheriff's office says so; a sheriff named in the question needs no note.
 {

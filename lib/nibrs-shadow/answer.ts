@@ -337,19 +337,25 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
     if (near && question.includes(word)) return shadowAnswer(question.replace(word, near), deps);
   }
   // An unread word the geo resolver didn't try ("Philadlephia murders 2024": a place first, no "in" before it;
-  // coordinator 2026-11-05): the whole unread phrase, then each word in it, as a misspelled large place. Only when the
-  // question names no place of its own: "bolder robberies in Philadelphia" is not Boulder too (Codex spelling review 01).
+  // coordinator 2026-11-05): the whole unread phrase, then each word in it, as a misspelled large place. Never in
+  // silence: an ordinary word can be one letter from a city ("fontina", "Concorde": Codex spelling review 03), so the
+  // place is offered first when the question asks which place, and nothing changes otherwise. Only when the question
+  // names no place of its own: "bolder robberies in Philadelphia" is not Boulder too (Codex spelling review 01).
   const ownPlace = ledger.parts.some((p) => p.clause === 0 && p.concept === "place" && p.state === "recognized");
+  let offer: ShadowOption | null = null;
   for (const p of ownPlace ? [] : ledger.parts) {
-    if (p.clause !== 0 || p.concept !== "unrecognized" || p.state !== "not-interpreted") continue;
+    if (offer || p.clause !== 0 || p.concept !== "unrecognized" || p.state !== "not-interpreted") continue;
     const phrase = p.text.trim().replace(/[?.!,]+$/, "");
     for (const word of [phrase, ...phrase.split(/\s+/)].filter((w, i, all) => w.length >= 4 && all.indexOf(w) === i)) {
       const near = nearestPlaceName(deps.places, word, true);
       const at = new RegExp(String.raw`(?<![A-Za-z])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`);
-      if (near && at.test(question)) return shadowAnswer(question.replace(at, near), deps);
+      if (!near || !at.test(question)) continue;
+      const continuation = shadowAnswer(question.replace(at, near), deps);
+      if (runsNow(continuation)) { offer = { label: near, continuation }; break; }
     }
   }
-  return withNextStep(everyBreakdown(question, fromLedger(ledger, deps)), ledger, deps, question);
+  const base = withNextStep(everyBreakdown(question, fromLedger(ledger, deps)), ledger, deps, question);
+  return offer && base.kind === "clarify" && base.about === "which place" ? { ...base, options: [offer, ...base.options] } : base;
 }
 
 /** The groupings an answer has, as dimensions (Historical's and the historical file's: by year or not). */
