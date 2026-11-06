@@ -10737,24 +10737,16 @@
    "question": "National burglary trend by month in 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "national totals before 2025 wait on the cohort rule (Current Trends design note, decision A)"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "codex-audit-2026-11-06",
+    "reviewed_by": "codex-audit-2026-11-06",
+    "notes": "The approved Current Trends design declines national totals before 2025 pending a cohort rule."
    }
   },
   {
@@ -17071,20 +17063,19 @@
    "question": "YTD victims in Philadlephia",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "crime"
+    ],
+    "about": "crime"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Victim detail without a Part I offense requires NIBRS."
+    "drafted_by": "codex-audit-2026-11-06",
+    "reviewed_by": "codex-audit-2026-11-06",
+    "notes": "Victims does not name a crime; ask which crime before choosing a source."
    }
   },
   {
@@ -17645,17 +17636,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "victims or offenders"
+    ],
+    "about": "victims or offenders"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "codex-audit-2026-11-06",
+    "reviewed_by": "codex-audit-2026-11-06",
+    "notes": "Youth violence: ask whether youth are victims or offenders."
    }
   },
   {
@@ -17946,24 +17937,16 @@
    "question": "Dallas vs Chicago murder rate per month since 2018",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "monthly rates: a rate is given for two or more months together (Current Trends design note, decision B)"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "codex-audit-2026-11-06",
+    "reviewed_by": "codex-audit-2026-11-06",
+    "notes": "Monthly rates are a decided scope choice; decline with the rate for the whole period and the counts by month."
    }
   },
   {

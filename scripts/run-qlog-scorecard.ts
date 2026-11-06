@@ -81,6 +81,8 @@ function aboutClass(s: string): string {
   const t = s.toLowerCase();
   if (/^which (?:place|places|period|year|years|crime|crimes)\b/.test(t)) return aboutClass(t.slice(6));
   if (/rolling window|window length|how many months/.test(t)) return "rolling window";
+  // D31's "which kind of crime" asks the crime (it was scored as a "which <place>" question: root-causes PR, 2026-11-06).
+  if (/^which kind of crime\b/.test(t)) return "crime";
   if (/^which /.test(t)) return "which";
   if (/violent|property/.test(t)) return "violent, property or both";
   if (/place|where|location|agency|city|state/.test(t)) return "place";

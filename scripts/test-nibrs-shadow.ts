@@ -16,6 +16,7 @@ import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
 import { presentationOf } from "../lib/nibrs-shadow/presentation";
+import { answerSrsSeveral } from "../lib/nibrs-shadow/srs";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
 import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow";
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
@@ -253,6 +254,50 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
 // Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
 assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
+// Bad-decline audit root causes (coordinator 2026-11-06).
+{
+  // 1. A place and no crime asks which crime (D31), never "I couldn't tell what this asks"; staffing keeps its decline.
+  for (const q of ["minneapolis", "texas", "Show me South Carolina data"]) {
+    const o = ask(q);
+    if (o.kind === "clarify") assert.equal(o.about, "which kind of crime", q);
+    else assert.doesNotMatch((o as { explanation?: string }).explanation ?? "", /couldn't tell what this question asks/, q);
+  }
+  assert.notEqual((ask("how many cops does Houston have?") as { about?: string }).about, "which kind of crime");
+  // 2. Bare shootings ask fatal or non-fatal (D14) when a choice runs; fatal and mass shootings keep their declines.
+  const s = ask("Shootings in Chicago in 2024");
+  if (s.kind === "clarify") {
+    assert.equal(s.about, "fatal or non-fatal shootings");
+    assert.ok(s.options.every((o) => /^(?:Fatal|Non-fatal) \(/.test(o.label)));
+  } else assert.equal(s.kind, "decline");
+  assert.notEqual((ask("fatal shootings in Chicago in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
+  assert.notEqual((ask("mass shootings in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
+  // 3. A crime named once per place is one crime.
+  const sp = (q: string) => (matchNibrsType(readQuestion(q, 2026, "2026-09").ledger, { allowExplanation: false } as never) as { spec?: { measures: string[] } }).spec;
+  assert.deepEqual(sp("Ohio murder rate vs Louisiana murder rate per year")?.measures, ["murder"]);
+  // Drug offenses are the crime, not "drug" unread before the counting unit.
+  assert.ok(readQuestion("drug offenses in Ohio in 2024", 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "drug_possession"));
+  // The District of Columbia is Washington, D.C., never a district inside a city; a police district still is.
+  assert.equal(JSON.stringify(ask("murders in the District of Columbia in 2024")), JSON.stringify(ask("murders in Washington, D.C. in 2024")));
+  assert.match((ask("robberies by police district in Chicago") as { explanation?: string }).explanation ?? "", /below the level of an agency/);
+  // Places grouped by politics are named plainly, once.
+  const e = as(ask("murder rates in red states vs blue states in 2024"), "decline");
+  assert.equal((e.explanation.match(/no election results/g) ?? []).length, 1);
+}
+{
+  // Several states, or a state beside the nation, side by side from the historical file (answerSrsSeveral).
+  const r = answerSrsSeveral({ measure: "murder", from: 2020, to: 2021, byYear: true, statistic: "rate", comparison: null }, [{ kind: "state", code: "OH" }, { kind: "national" }]);
+  assert.equal(r.kind, "srs");
+  if (r.kind === "srs") {
+    assert.deepEqual(r.delivered.table.columns.map((c) => c.header), ["Year", "Ohio: murders per 100,000", "United States: murders per 100,000"]);
+    assert.equal(r.delivered.table.rows.length, 2);
+    assert.equal(r.meaning.places.length, 2);
+  }
+  assert.equal(answerSrsSeveral({ measure: "murder", from: 2020, to: 2021, byYear: false, statistic: "count", comparison: { earlier: 2020, later: 2021 } }, [{ kind: "state", code: "OH" }, { kind: "national" }]).kind, "srs-decline", "a change is one place at a time");
+  // Codex root-causes review 01: combined places and a count beside a rate keep the decline; "police shootings" and
+  // "shooting incidents" are never rewritten as firearm murders or assaults.
+  for (const q of ["murders in Ohio and Texas combined in 2024", "Ohio murder count vs Texas murder rate in 2024", "How many murders in Ohio vs Texas murder rate in 2024", "Ohio murder counts vs Texas murder rates in 2024"]) assert.notEqual(ask(q).kind, "srs", q);
+  for (const q of ["police shootings in Chicago in 2024", "shooting incidents in Chicago in 2024", "shootings of sheriffs in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, "fatal or non-fatal shootings", q);
+}
 // Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
 // killed by police are not officers as victims.
 for (const q of ["murders of sheriffs in King County, Washington in 2024", "murders of King County sheriffs in Washington in 2024",
