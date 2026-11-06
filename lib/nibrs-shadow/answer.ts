@@ -337,8 +337,10 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
     if (near && question.includes(word)) return shadowAnswer(question.replace(word, near), deps);
   }
   // An unread word the geo resolver didn't try ("Philadlephia murders 2024": a place first, no "in" before it;
-  // coordinator 2026-11-05): the whole unread phrase, then each word in it, as a misspelled large place.
-  for (const p of ledger.parts) {
+  // coordinator 2026-11-05): the whole unread phrase, then each word in it, as a misspelled large place. Only when the
+  // question names no place of its own: "bolder robberies in Philadelphia" is not Boulder too (Codex spelling review 01).
+  const ownPlace = ledger.parts.some((p) => p.clause === 0 && p.concept === "place" && p.state === "recognized");
+  for (const p of ownPlace ? [] : ledger.parts) {
     if (p.clause !== 0 || p.concept !== "unrecognized" || p.state !== "not-interpreted") continue;
     const phrase = p.text.trim().replace(/[?.!,]+$/, "");
     for (const word of [phrase, ...phrase.split(/\s+/)].filter((w, i, all) => w.length >= 4 && all.indexOf(w) === i)) {
@@ -1338,7 +1340,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (p.kind !== "agency") return d;
     // After the title: the first line naming the place (a definition may come before it).
     const at = d.text.findIndex((t) => t.startsWith(p.label)) + 1 || 1;
-    return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]), ...d.text.slice(at)] };
+    return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]) + sheriffNote(deps, [p.ori], ledger0.question), ...d.text.slice(at)] };
   };
   // P71 (Jeff 2026-10-31: "Add up months"): each quarter the sum of its three months; a quarter in which the agency did
   // not report all three months (or that runs past the data) is marked incomplete, never shown as a whole quarter.

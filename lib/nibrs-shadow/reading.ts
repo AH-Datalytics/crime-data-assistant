@@ -119,7 +119,8 @@ const PHRASES: [RegExp, string][] = [
   [/\bauto\s*thefts?\b/gi, "auto theft"],
   [/\bagg\.?\s+ass(?:au|ua)lt(s?)\b|\baggravated\s+assualt(s?)\b/gi, (_m: string, a: string, b: string) => `aggravated assault${a || b || ""}`] as unknown as [RegExp, string],
   // Changed-letter misspellings in the whole query log (coordinator 2026-11-05), which the slip rule never corrects.
-  [/\baggrevat(?:ed|es)\b|\baggravates\b/gi, (m: string) => (m[0] === "A" ? "Aggravated" : "aggravated")] as unknown as [RegExp, string],
+  // Not "aggravates", a verb ("What aggravates assault ...": Codex spelling review 01).
+  [/\baggrevat(?:ed|es)\b/gi, (m: string) => (m[0] === "A" ? "Aggravated" : "aggravated")] as unknown as [RegExp, string],
   [/\bv(?:lolent|ilont|iolant|ilolent)\b/gi, (m: string) => (m[0] === "V" ? "Violent" : "violent")] as unknown as [RegExp, string],
   [/\bckearance\b/gi, (m: string) => (m[0] === "C" ? "Clearance" : "clearance")] as unknown as [RegExp, string],
   [/\bmoter(\s+vehicle)/gi, (m: string, v: string) => `${m[0] === "M" ? "Motor" : "motor"}${v}`] as unknown as [RegExp, string],
@@ -186,7 +187,9 @@ export function nearestWord(word: string): string | null {
   // Five letters or more when the word isn't English ("cirme", "muders"); an English word one slip from a crime word
   // stays as written ("sates", "violet").
   if (w.length < 5 || VOCAB.includes(w) || (w.length < 7 && (isCommonEnglishWord(w) || REAL_WORDS.has(w)))) return null;
-  const at = VOCAB.filter((v) => oneSlip(w, v));
+  // Under seven letters, only a dropped or swapped letter ("muders", "cirme"): an added one makes other words
+  // ("grapes" is not "rapes": Codex spelling review 01).
+  const at = VOCAB.filter((v) => oneSlip(w, v) && (w.length >= 7 || w.length <= v.length));
   return at.length === 1 ? at[0] : null;
 }
 

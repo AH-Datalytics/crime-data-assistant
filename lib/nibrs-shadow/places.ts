@@ -94,10 +94,11 @@ function distance(a: string, b: string): number {
 export function nearestPlaceName(idx: PlaceIndex, name: string, strict = false): string | null {
   const k = base(name);
   if (k.length < 4 || idx.byName.has(k)) return null;
-  // `strict`, for a word the reader didn't read as a place (coordinator 2026-11-05, "Philadlephia murders 2024"): six or
-  // more letters, not a common English word, one edit from a city of 100,000+. The query log's unread words had "line"
-  // (Lane), "columns" (Columbus), "median" (Meridian) and "dollar" (Dallas) within the looser limit.
-  if (strict && (k.length < 6 || isCommonEnglishWord(k))) return null;
+  // `strict`, for a word the reader didn't read as a place (coordinator 2026-11-05, "Philadlephia murders 2024"): seven
+  // or more letters, not a common English word, one edit from a city of 100,000+. The query log's unread words had
+  // "line" (Lane), "columns" (Columbus), "median" (Meridian) and "dollar" (Dallas) within the looser limit; "bolder"
+  // (Boulder) is six (Codex spelling review 01).
+  if (strict && (k.length < 7 || isCommonEnglishWord(k))) return null;
   const limit = strict ? 1 : k.length < 6 ? 1 : 2;
   const near = [...idx.byName.entries()].filter(([n, xs]) => n[0] === k[0] && xs[0].population >= ASK_POPULATION && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit
     && (!strict || xs.some((x) => x.kind === "city" && x.population >= ASK_POPULATION)));
