@@ -25,6 +25,7 @@ assert.ok(/violent crime rate/.test(read("can I see the vlolent crime rate per 1
 assert.ok(/clearance rate/.test(read("What is the ckearance rate for homicides in Philadelphia for 2023?").text));
 assert.ok(/\bmurders 1960/.test(read("Dc muders 1960").text) && /\brobbery in/.test(read("robery in Memphis in 2024").text), "dropped-letter typos the log has, by name");
 assert.ok(/aggravates/.test(read("What aggravates assault in Philadelphia in 2024?").text), "a verb, not a misspelling (Codex spelling review 01)");
+assert.ok(/aggrevates/.test(read("What aggrevates assault in Philadelphia in 2024?").text), "the verb misspelled (Codex spelling review 04)");
 const sp = read("burglries in Pittsburgh in 2023");
 assert.deepEqual(sp.readings, [{ kind: "spelling", from: "burglries", to: "burglaries" }]);
 assert.equal(read("Robberies in Pittsburgh in 2023").readings.length, 0, "nothing to correct, nothing recorded");

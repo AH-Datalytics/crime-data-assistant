@@ -122,7 +122,8 @@ const PHRASES: [RegExp, string][] = [
   // short words with a dropped letter. Not "aggravates", a verb ("What aggravates assault ...": Codex spelling review 01).
   [/\bmuder(s?)\b/gi, (m: string, s: string) => `${m[0] === "M" ? "Murder" : "murder"}${s}`] as unknown as [RegExp, string],
   [/\brobery\b/gi, (m: string) => (m[0] === "R" ? "Robbery" : "robbery")] as unknown as [RegExp, string],
-  [/\baggrevat(?:ed|es)\b/gi, (m: string) => (m[0] === "A" ? "Aggravated" : "aggravated")] as unknown as [RegExp, string],
+  // "aggrevated" only: "aggrevates" is the verb, misspelled (Codex spelling review 04).
+  [/\baggrevated\b/gi, (m: string) => (m[0] === "A" ? "Aggravated" : "aggravated")] as unknown as [RegExp, string],
   [/\bv(?:lolent|ilont|iolant|ilolent)\b/gi, (m: string) => (m[0] === "V" ? "Violent" : "violent")] as unknown as [RegExp, string],
   [/\bckearance\b/gi, (m: string) => (m[0] === "C" ? "Clearance" : "clearance")] as unknown as [RegExp, string],
   [/\bmoter(\s+vehicle)/gi, (m: string, v: string) => `${m[0] === "M" ? "Motor" : "motor"}${v}`] as unknown as [RegExp, string],
