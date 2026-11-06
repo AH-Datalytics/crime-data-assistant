@@ -16,7 +16,9 @@
  *   unverified      an answer from the right source whose values have no independent check yet; a route to the right
  *                   source that this engine does not run (SHR, Hate Crime).
  *   wrong answer    an answer where the label expects a clarify or a decline (a part assumed, or data that does not
- *                   exist), or an answer from the wrong source; or values that differ. The hard gate: 0.
+ *                   exist), or an answer from the wrong source. The hard gate: 0. Numbers that differ from
+ *                   independent values are reported as each verification batch finds them; an answer whose numbers
+ *                   change after verification goes back to unverified (its digest no longer matches).
  *   bad decline     a decline where the label expects an answer or a clarify.
  *   wrong clarify   a clarify where the label expects an answer or a decline, or one about another part.
  *   follow-up error any miss on a follow-up turn (its bucket, not the four above).
@@ -202,7 +204,7 @@ if (process.argv.includes("--report")) {
     table, "",
     `Hard gate, wrong answers = 0 (undisputed labels): **${gate}**.`, "",
     `**Disputed: ${all.disputed} labels wait on Jeff and are set aside** (not in any bucket or the gate): ${[...disputedGroups].map(([k, n]) => `${k} ${n}`).join(", ")}. The questions are in docs/reports/qlog-label-rules.md.`, "",
-    "Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked against independent values (or routed to a source this engine does not run yet); a right-source answer whose every number matched independent values (qlog-verified.json) is *correct*; *wrong answer* an answer where a clarify or decline is expected, an answer from the wrong source, or numbers that differ; *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* any miss on a follow-up turn; *error* the engine failed.", "",
+    "Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked against independent values (or routed to a source this engine does not run yet); a right-source answer whose every number matched independent values (qlog-verified.json) is *correct*; *wrong answer* an answer where a clarify or decline is expected, or an answer from the wrong source (numbers found to differ from independent values are reported as each verification batch finds them; a verified answer whose numbers change goes back to *unverified*); *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* any miss on a follow-up turn; *error* the engine failed.", "",
   ].join("\n");
   fs.writeFileSync(path.join(__dirname, "..", "docs", "reports", "qlog-scorecard.md"), out);
 }
