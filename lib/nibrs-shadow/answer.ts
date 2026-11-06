@@ -517,7 +517,7 @@ function sheriffNote(deps: ShadowDeps, oris: string[], question: string): string
   // Alone: "These are the sheriff's office's own figures"; beside other agencies, the sheriff's office is named.
   const whose = oris.length === 1 ? "These are the sheriff's office's own figures"
     : sheriffs.length === 1 ? `The ${deps.places.names.get(sheriffs[0])}'s figures are its own` : "Each sheriff's office's figures are its own";
-  return ` ${whose}, not the whole county's: cities in the county with their own police report separately.`;
+  return `${whose}, not the whole county's: cities in the county with their own police report separately.`;
 }
 
 /** `pins`: places already chosen by a button, by the place part's start (P22: a choice made is not asked again). */
@@ -778,7 +778,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const first = place.kind === "group" ? cur.firstMonth : cur.finalFirstMonth;
       if (e[0] >= first && l[1] <= cur.lastMonth) {
         const r = answerCurrentChange({ measure: sp.measures[0], place, from: l[0], to: l[1], form: "total",
-          ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for ") + sheriffNote(deps, [place.ori], ledger0.question) } : {}) }, e, l, cur, deps.execute);
+          ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [place.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [place.ori], ledger0.question) } : {}) } : {}) }, e, l, cur, deps.execute);
         if (r.kind === "current") return r;
         return decline("unsupported_capability", r.explanation);
       }
@@ -787,7 +787,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (span && form && place) {
       const r = answerCurrent({ measure: sp.measures[0], place, from: span[0], to: span[1], form, statistic: sp.statistic === "rate" ? "rate" : "count",
         ...(form === "rolling" && sp.window?.months ? { window: { months: sp.window.months, average: sp.window.average } } : {}),
-        ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for ") + sheriffNote(deps, [place.ori], ledger0.question) } : {}) }, cur, deps.execute);
+        ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [place.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [place.ori], ledger0.question) } : {}) } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
@@ -875,7 +875,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp), statistic: sp.statistic,
         comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
-        agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for ") + sheriffNote(deps, list.map((a) => a.ori), ledger0.question) }, deps.historical, deps.execute);
+        agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, list.map((a) => a.ori), ledger0.question) ? { agencyNote: sheriffNote(deps, list.map((a) => a.ori), ledger0.question) } : {}) }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
@@ -895,7 +895,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         return { kind: "route", source: "rtci", explanation: `This year's ${sp.measure.replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.` };
       const r = answerHistorical({ measure: sp.measure, agencies: [{ ori: a.ori, label: a.label, name: pl.name, state: pl.state }], from: sp.earlier, to: sp.later, byYear: false,
         statistic: "count", comparison: { earlier: sp.earlier, later: sp.later },
-        agencyLine: reportedBy([agencyName(deps.places, a.ori)]).replace(/^Reported by /, "Figures for ") + sheriffNote(deps, [a.ori], ledger0.question) }, deps.historical, deps.execute);
+        agencyLine: reportedBy([agencyName(deps.places, a.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [a.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [a.ori], ledger0.question) } : {}) }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
@@ -1339,14 +1339,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // P84 (Jeff 2026-11-01): how the phrase was read.
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
-  if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
+  // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
+  const placesNote = sheriffNote(deps, checked.geography.places.flatMap((p) => (p.kind === "agency" ? [p.ori] : [])), ledger0.question);
+  if (placesMode) return answerPlaces(checked, period, deps, statements, [...notes0, ...(placesNote ? [placesNote] : [])], (why, detail) => decline("unsupported_capability", why, { detail }));
   // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).
   const reported = (d: Delivered): Delivered => {
     const p = checked.geography.places[0];
     if (p.kind !== "agency") return d;
     // After the title: the first line naming the place (a definition may come before it).
     const at = d.text.findIndex((t) => t.startsWith(p.label)) + 1 || 1;
-    return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]) + sheriffNote(deps, [p.ori], ledger0.question), ...d.text.slice(at)] };
+    return { ...d, text: [...d.text.slice(0, at), reportedBy([agencyName(deps.places, p.ori)]), ...(sheriffNote(deps, [p.ori], ledger0.question) ? [sheriffNote(deps, [p.ori], ledger0.question)] : []), ...d.text.slice(at)] };
   };
   // P71 (Jeff 2026-10-31: "Add up months"): each quarter the sum of its three months; a quarter in which the agency did
   // not report all three months (or that runs past the data) is marked incomplete, never shown as a whole quarter.

@@ -14,7 +14,8 @@ import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
 import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
-import { matchNibrsType } from "../lib/nibrs-question-types";
+import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
+import { presentationOf } from "../lib/nibrs-shadow/presentation";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
 import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow";
 import { compareMeaning, fbiNameFor, planToMeaning } from "../lib/answer-eval/compare";
@@ -239,7 +240,19 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
   if (/Tarrant County Sheriff/.test(bare)) assert.ok(bare.includes(note), bare.slice(0, 300));
   assert.ok(!text("murders in Tarrant County Sheriff's Office in 2024").includes(note));
   assert.ok(!text("murders in Baltimore County in 2024").includes(note), "a county police department covers its county");
+  // Its own line, so the page shows it as a note: glued to the agency line it was filtered out as restated (redesign
+  // public check, 2026-11-06). Every source that answered it here.
+  for (const q of ["Tarrant County, Texas murders 2024", "shoplifting in King County Washington in 2024", "murders in Harris County by month in 2025", "shoplifting in King County Washington and Seattle Washington in 2024"]) {
+    const o = ask(q) as { delivered?: { text: string[] } };
+    if (!o.delivered || !JSON.stringify(o).includes("Sheriff")) continue;
+    assert.ok(o.delivered.text.some((t) => t.includes(note)), q);
+    const p = presentationOf(o as ShadowOutcome, places) as { notes?: { lines: string[] } };
+    assert.ok(p.notes?.lines.some((t) => t.includes(note)), `${q}: the note is in notes.lines`);
+  }
 }
+// Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
+assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
+assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
 // Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
 // killed by police are not officers as victims.
 for (const q of ["murders of sheriffs in King County, Washington in 2024", "murders of King County sheriffs in Washington in 2024",

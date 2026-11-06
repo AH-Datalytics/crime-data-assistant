@@ -604,6 +604,12 @@ ROWS = [
      "Length named: that length. Average named: the average per month (with the total beside a single figure). No length: ask, buttons 3, 6 and 12 months and another length.",
      "A window's length and whether it is a sum or an average change every number.",
      "Decided 2026-11-05 (Jeff: \"rolling shouldn't just be 12 months\"; \"Ask which length\"; \"Answer the average\")", NEW),
+    ("P95", "\"Homicide victims in Detroit by age\", \"firearm homicides in NYC in 2024\" (homicide in NIBRS)",
+     "Homicide counted murder and nonnegligent manslaughter (09A) only, the same as murder.",
+     "In NIBRS, homicide counts murder and nonnegligent manslaughter (09A) and negligent manslaughter (09B); murder stays 09A. Homicide Reports, which record negligent manslaughter as its own type, follow the same rule when a homicide question reaches them. Crime Index and Current Trends hold murder only, so homicide there is murder and is labeled as murders.",
+     "NIBRS homicide: 09A + 09B. Murder: 09A.",
+     "Negligent manslaughter is a homicide; leaving it out undercounted homicide (Detroit 2021-2025: 1,254 homicide victims with 09B against 1,231 without).",
+     "Decided 2026-11-06 (Jeff: \"Include 09B\")", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
