@@ -43,6 +43,7 @@
 import type { RequestLedger } from "../request-accounting";
 import { accountNibrsRequest } from "../nibrs-request-accounting";
 import { MEASURE_LABEL, STATE_NAME_BY_CODE } from "../nibrs-question-types";
+import { isCommonEnglishWord } from "../english-common-words";
 
 export type Reading = { kind: "spelling" | "phrase" | "period"; from: string; to: string };
 export type Composite = "firearm" | "knife";
@@ -117,6 +118,11 @@ const PHRASES: [RegExp, string][] = [
   [/\bhomo?cides?\b/gi, (m: string) => (m.toLowerCase().endsWith("s") ? "homicides" : "homicide")] as unknown as [RegExp, string],
   [/\bauto\s*thefts?\b/gi, "auto theft"],
   [/\bagg\.?\s+ass(?:au|ua)lt(s?)\b|\baggravated\s+assualt(s?)\b/gi, (_m: string, a: string, b: string) => `aggravated assault${a || b || ""}`] as unknown as [RegExp, string],
+  // Changed-letter misspellings in the whole query log (coordinator 2026-11-05), which the slip rule never corrects.
+  [/\baggrevat(?:ed|es)\b|\baggravates\b/gi, (m: string) => (m[0] === "A" ? "Aggravated" : "aggravated")] as unknown as [RegExp, string],
+  [/\bv(?:lolent|ilont|iolant|ilolent)\b/gi, (m: string) => (m[0] === "V" ? "Violent" : "violent")] as unknown as [RegExp, string],
+  [/\bckearance\b/gi, (m: string) => (m[0] === "C" ? "Clearance" : "clearance")] as unknown as [RegExp, string],
+  [/\bmoter(\s+vehicle)/gi, (m: string, v: string) => `${m[0] === "M" ? "Motor" : "motor"}${v}`] as unknown as [RegExp, string],
   // Places' nicknames, read once for every source (coordinator 2026-11-02); the crosswalk's place names ("New York City")
   // are aliases in the shared place index (lib/nibrs-shadow/places.ts), not here.
   [/\bphilly\b/gi, "Philadelphia"],
@@ -156,6 +162,8 @@ const VOCAB = [...new Set([
   ...Object.values(MEASURE_LABEL).flatMap((l) => l.toLowerCase().split(/\s+/)),
   "shoplifting", "carjacking", "carjackings", "assault", "assaults", "robbery", "robberies", "burglary", "burglaries", "theft", "thefts",
   "murders", "homicides", "rapes", "arsons", "larceny", "narcotics", "possession", "offenses", "victims", "arrests", "incidents",
+  // The words the query log's typos aimed at (coordinator 2026-11-05, misspelling cluster): "cirme", "muders", "citites".
+  "crime", "crimes", "murder", "violent", "cities", "county", "offender", "offenders", "clearance", "weapons", "percentages",
   ...Object.values(STATE_NAME_BY_CODE).flatMap((n) => n.toLowerCase().split(/\s+/)),
 ])].filter((w) => w.length >= 5);
 
@@ -170,10 +178,14 @@ function oneSlip(a: string, b: string): boolean {
   const diff = [...a].map((c, i) => (c === b[i] ? -1 : i)).filter((i) => i >= 0);
   return diff.length === 2 && diff[1] === diff[0] + 1 && a[diff[0]] === b[diff[1]] && a[diff[1]] === b[diff[0]];
 }
+/** English words one slip from a crime word that the common-word list lacks. */
+const REAL_WORDS = new Set(["violet", "sates", "cites", "crimp", "crimps", "counts", "country", "assets"]);
 /** The one vocabulary word a misspelled word is a single slip from, or null (none, two, or a short word). */
 export function nearestWord(word: string): string | null {
   const w = word.toLowerCase();
-  if (w.length < 7 || VOCAB.includes(w)) return null;
+  // Five letters or more when the word isn't English ("cirme", "muders"); an English word one slip from a crime word
+  // stays as written ("sates", "violet").
+  if (w.length < 5 || VOCAB.includes(w) || (w.length < 7 && (isCommonEnglishWord(w) || REAL_WORDS.has(w)))) return null;
   const at = VOCAB.filter((v) => oneSlip(w, v));
   return at.length === 1 ? at[0] : null;
 }

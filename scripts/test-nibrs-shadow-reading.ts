@@ -15,7 +15,14 @@ assert.equal(nearestWord("Shoplfting"), "shoplifting");
 assert.equal(nearestWord("robbeyr"), "robbery", "a swapped pair");
 assert.equal(nearestWord("Tennesee"), "tennessee");
 assert.equal(nearestWord("viriginia"), "virginia", "an added letter");
-for (const w of ["sample", "violet", "robery", "arsen", "shooting", "shopping", "Shplftg", "parking", "shoplofting"]) assert.equal(nearestWord(w), null, w);
+for (const w of ["sample", "violet", "arsen", "shooting", "shopping", "Shplftg", "parking", "shoplofting", "sates", "cites", "rather", "showing", "status", "months", "single", "proper", "present", "murdered"]) assert.equal(nearestWord(w), null, w);
+// Five- and six-letter typos that aren't English (coordinator 2026-11-05, the query log's misspelling cluster).
+for (const [w, to] of [["robery", "robbery"], ["cirme", "crime"], ["cirmes", "crimes"], ["muders", "murders"], ["muder", "murder"], ["citites", "cities"], ["couunty", "county"], ["offfender", "offender"]])
+  assert.equal(nearestWord(w), to, w);
+// Changed-letter misspellings seen in the log are read by name.
+assert.ok(/aggravated assault rates/.test(read("what are the top 10 cities aggrevated assault rates").text));
+assert.ok(/violent crime rate/.test(read("can I see the vlolent crime rate per 100,000 in salem oregon since 1950").text));
+assert.ok(/clearance rate/.test(read("What is the ckearance rate for homicides in Philadelphia for 2023?").text));
 const sp = read("burglries in Pittsburgh in 2023");
 assert.deepEqual(sp.readings, [{ kind: "spelling", from: "burglries", to: "burglaries" }]);
 assert.equal(read("Robberies in Pittsburgh in 2023").readings.length, 0, "nothing to correct, nothing recorded");
