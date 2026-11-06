@@ -350,6 +350,21 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
       .map(([label, to]) => ({ label, continuation: shadowAnswer(as(to), deps) })).filter((o) => runsNow(o.continuation));
     if (options.length) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options };
   }
+  // A bare "assault" (coordinator 2026-11-06, "San Francisco assaults per month"): Crime Index and Current Trends hold
+  // aggravated assault only, so their answer is given, named as aggravated assaults; asking would offer one choice.
+  // Where NIBRS answers, which kind is asked, offering only the kinds that run.
+  const assault = ledger.parts.find((p) => p.clause === 0 && p.concept === "measure" && p.value === "assault");
+  if (assault) {
+    const as = (to: string) => question.slice(0, assault.span[0]) + to + question.slice(assault.span[1]);
+    const plural = /s$/i.test(assault.text.trim());
+    const aggravated = shadowAnswer(as(plural ? "aggravated assaults" : "aggravated assault"), deps);
+    if (aggravated.kind === "historical" || aggravated.kind === "srs" || aggravated.kind === "current") return aggravated;
+    const options = [["Aggravated assault", "aggravated assaults"], ["Simple assault", "simple assaults"], ["Intimidation", "intimidation"],
+      ["All assaults (aggravated, simple and intimidation)", "all assaults"]]
+      .map(([label, to]) => ({ label, continuation: to === "aggravated assaults" && plural ? aggravated : shadowAnswer(as(to), deps) })).filter((o) => runsNow(o.continuation));
+    if (options.length > 1) return { kind: "clarify", about: "which assaults", question, options };
+    return options[0]?.continuation ?? aggravated;
+  }
   // A misspelled large place (coordinator 2026-11-03: "batlimore", "phialdelphia"): the question with the place's name,
   // when exactly one large place is that close and the words aren't a place the index has.
   for (const p of ledger.parts) {

@@ -298,6 +298,21 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   for (const q of ["murders in Ohio and Texas combined in 2024", "Ohio murder count vs Texas murder rate in 2024", "How many murders in Ohio vs Texas murder rate in 2024", "Ohio murder counts vs Texas murder rates in 2024"]) assert.notEqual(ask(q).kind, "srs", q);
   for (const q of ["police shootings in Chicago in 2024", "shooting incidents in Chicago in 2024", "shootings of sheriffs in Chicago in 2024"]) assert.notEqual((ask(q) as { about?: string }).about, "fatal or non-fatal shootings", q);
 }
+// A bare "assault" (coordinator 2026-11-06): read, never "I couldn't tell what this asks"; Crime Index and Current Trends
+// answer aggravated assault, named; NIBRS asks which kind, offering only kinds that run.
+{
+  const parts = readQuestion("San Francisco assaults per month", 2026, "2026-09").ledger.parts;
+  assert.ok(parts.some((p) => p.concept === "measure" && p.value === "assault"), "\"assaults\" is read");
+  const o = ask("San Francisco assaults per month") as { kind: string; about?: string; explanation?: string; delivered?: { text: string[] }; options?: { label: string }[] };
+  assert.doesNotMatch(o.explanation ?? "", /couldn't tell what this question asks/);
+  if (o.kind === "current" || o.kind === "historical" || o.kind === "srs") assert.match(o.delivered!.text[0], /aggravated assaults/);
+  else if (o.kind === "clarify") assert.ok(o.options!.every((x) => /^(?:Aggravated assault|Simple assault|Intimidation|All assaults)/.test(x.label)));
+  for (const [q, v] of [["intimidation in Houston in 2024", "intimidation"], ["all assaults in Houston in 2024", "assault_offenses"], ["simple assaults in Houston in 2024", "simple_assault"],
+    ["aggravated assaults in Houston in 2024", "aggravated_assault"]] as const)
+    assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === v), q);
+  assert.deepEqual(MEASURE_CODES.assault_offenses, ["13A", "13B", "13C"]);
+  assert.deepEqual(MEASURE_CODES.intimidation, ["13C"]);
+}
 // Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
 // killed by police are not officers as victims.
 for (const q of ["murders of sheriffs in King County, Washington in 2024", "murders of King County sheriffs in Washington in 2024",

@@ -202,6 +202,12 @@ const MEASURES: Rule[] = [
   { concept: "measure", value: () => "robbery", pattern: R(String.raw`\brobber(?:y|ies)\b`) },
   { concept: "measure", value: () => "aggravated_assault", pattern: R(String.raw`\baggravated\s+assaults?\b`) },
   { concept: "measure", value: () => "simple_assault", pattern: R(String.raw`\bsimple\s+assaults?\b`) },
+  // A bare "assault" names no kind (coordinator 2026-11-06): NIBRS asks which (aggravated, simple, intimidation or all);
+  // Crime Index and Current Trends hold aggravated assault only and answer it, named. "All assaults" and "assault
+  // offenses" are the three together; "intimidation" is its own.
+  { concept: "measure", value: () => "assault_offenses", pattern: R(String.raw`\ball\s+assaults?\b|\bassault\s+offen[cs]es\b`) },
+  { concept: "measure", value: () => "intimidation", pattern: R(String.raw`\bintimidations?\b`) },
+  { concept: "measure", value: () => "assault", pattern: R(String.raw`(?<!\b(?:aggravated|simple|sexual|sex|agg\.?|felony)\s)\bassaults?\b(?!\s+(?:on|against|of)\s+(?:police|officers?|law))`) },
   { concept: "measure", value: () => "shoplifting", pattern: R(String.raw`\bshoplifting\b`) },
   { concept: "measure", value: () => "burglary", pattern: R(String.raw`\bburglar(?:y|ies)\b|\bbreak[-\s]?ins?\b`) },
   { concept: "measure", value: () => "theft", pattern: R(String.raw`\blarcen(?:y|ies)\b|\bthefts?\b`) },
