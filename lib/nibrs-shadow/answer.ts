@@ -1339,7 +1339,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // P84 (Jeff 2026-11-01): how the phrase was read.
     ...(/\b(?:car|vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/i.test(ledger0.question) ? ["Car break-ins are counted as theft from motor vehicles."] : [])];
   if (stateMode) return answerStateSum(checked, period, yearSet, deps, statements, notes0, !!flags(ledger0).consistent, (why, detail) => decline("unsupported_capability", why, { detail }));
-  if (placesMode) return answerPlaces(checked, period, deps, statements, notes0, (why, detail) => decline("unsupported_capability", why, { detail }));
+  // Several agencies: the sheriff's-office note too, when one of them is a county asked by name (Codex homicide review 01).
+  const placesNote = sheriffNote(deps, checked.geography.places.flatMap((p) => (p.kind === "agency" ? [p.ori] : [])), ledger0.question);
+  if (placesMode) return answerPlaces(checked, period, deps, statements, [...notes0, ...(placesNote ? [placesNote] : [])], (why, detail) => decline("unsupported_capability", why, { detail }));
   // The place is the title; the next line names who reported the figures by the FBI's name (Jeff 2026-10-30).
   const reported = (d: Delivered): Delivered => {
     const p = checked.geography.places[0];

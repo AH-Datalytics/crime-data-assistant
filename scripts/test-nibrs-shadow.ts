@@ -242,10 +242,10 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
   assert.ok(!text("murders in Baltimore County in 2024").includes(note), "a county police department covers its county");
   // Its own line, so the page shows it as a note: glued to the agency line it was filtered out as restated (redesign
   // public check, 2026-11-06). Every source that answered it here.
-  for (const q of ["Tarrant County, Texas murders 2024", "shoplifting in King County Washington in 2024", "murders in Harris County by month in 2025"]) {
+  for (const q of ["Tarrant County, Texas murders 2024", "shoplifting in King County Washington in 2024", "murders in Harris County by month in 2025", "shoplifting in King County Washington and Seattle Washington in 2024"]) {
     const o = ask(q) as { delivered?: { text: string[] } };
     if (!o.delivered || !JSON.stringify(o).includes("Sheriff")) continue;
-    assert.ok(o.delivered.text.some((t) => t.startsWith("These are the sheriff's office's own figures")), q);
+    assert.ok(o.delivered.text.some((t) => t.includes(note)), q);
     const p = presentationOf(o as ShadowOutcome, places) as { notes?: { lines: string[] } };
     assert.ok(p.notes?.lines.some((t) => t.includes(note)), `${q}: the note is in notes.lines`);
   }
