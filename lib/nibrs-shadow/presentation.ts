@@ -78,7 +78,36 @@ function notesFrom(source: SourceId, statements: readonly AnswerStatement[], tex
   if (allowed.has("car_break_ins") && text.includes(NOTE_TEXT.car_break_ins)) keys.push("car_break_ins");
   const caveat = CAVEAT_ORDER.find((k) => keys.includes(k)) ?? null;
   const skip = new Set([...known, ...Object.values(ANSWER_STATEMENTS), NOTE_TEXT.car_break_ins, PROFILES[source]!.name.sourceLine]);
-  return { caveat, notes: { keys: keys.filter((k) => k !== caveat), lines: text.filter((t) => !skip.has(t)) } };
+  return { caveat, notes: { keys: keys.filter((k) => k !== caveat), lines: unsaid(text, skip) } };
+}
+/**
+ * A text line's sentences, split where a sentence ends ("St. Louis", "U.S.", "D.C." and initials are not ends).
+ * Exported for the conformance test.
+ */
+export function sentencesOf(line: string): string[] {
+  const out: string[] = [];
+  let from = 0;
+  for (const m of line.matchAll(/[.!?](?=\s+["(]?[A-Z0-9])/g)) {
+    const before = line.slice(from, m.index! + 1);
+    if (/(?:^|[\s(])(?:St|Ste|Mt|Ft|No|Dept|Co|Twp|Jr|Sr|vs|[A-Z])\.$|\b(?:[A-Z]\.){2,}$/.test(before)) continue;
+    out.push(before.trim());
+    from = m.index! + 1;
+  }
+  const rest = line.slice(from).trim();
+  if (rest) out.push(rest);
+  return out;
+}
+/**
+ * The lines the page shows as notes: a line goes only when every sentence in it is said already (the lead, the header,
+ * the source line, a note key); otherwise its sentences not said already stay (coordinator 2026-11-06, the Memphis
+ * monthly rate: "Figures for…" and "not annualized" went with the headline's line).
+ */
+export function unsaid(text: string[], said: Set<string>): string[] {
+  return text.flatMap((t) => {
+    if (said.has(t)) return [];
+    const kept = sentencesOf(t).filter((s) => !said.has(s));
+    return kept.length ? [kept.join(" ")] : [];
+  });
 }
 
 /**
@@ -115,7 +144,9 @@ function restated(d: { table: ResultTable; text: string[]; headline?: string }, 
   const at = valueAs === undefined ? 0 : d.table.columns.findIndex((c) => c.binding.kind === "statistic" && c.binding.as === valueAs);
   const valueCols = valueAs === undefined ? d.table.columns.map((_, i) => i).filter((i) => d.table.columns[i].binding.kind === "statistic") : [at];
   const anyNumber = d.table.rows.some((r) => valueCols.some((i) => i >= 0 && typeof r[i] === "number"));
-  return new Set([...(anyNumber ? [d.headline ?? d.text[0] ?? ""] : []), ...extra]);
+  // The lead says the headline's first sentence, not what follows it in the same line.
+  const head = d.headline ?? d.text[0] ?? "";
+  return new Set([...(anyNumber ? [sentencesOf(head)[0] ?? ""] : []), ...extra]);
 }
 
 /** NIBRS: the plan names everything the title and lead say. */
@@ -269,7 +300,9 @@ function currentPresentation(o: CurrentAnswer, places: PlaceIndex): Presentation
   const single = table.rows.length === 1 && table.columns.length === 1 && typeof table.rows[0][0] === "number";
   const when = whenWords(o.period, monthly ? "month" : null);
   const v = single ? (table.rows[0][0] as number) : null;
-  const lead: Lead = single ? { kind: "single", who, quantity: rate ? `${m.words} at a rate of ${one(v!)} per 100,000 people` : `${fmt(v!)} ${m.words}`, when, countedAs: null }
+  // A rolling average is said as one (Jeff 2026-11-05), never as the window's total.
+  const average = q.form === "rolling" && q.window?.average;
+  const lead: Lead = single ? { kind: "single", who, quantity: rate ? `${m.words} at a rate of ${one(v!)} per 100,000 people` : average ? `${one(v!)} ${m.words} a month on average` : `${fmt(v!)} ${m.words}`, when, countedAs: null }
     : { kind: "described", what: m.words, who, when, countedAs: rate ? "as rates per 100,000 people" : null, brokenDownBy: null };
   const known = restated(o.delivered, q.agencyLine ? [q.agencyLine] : []);
   return { source: "rtci", titleParts, lead, offers: [], ...notesFrom("rtci", [], o.delivered.text, known), coverage: { requested: false },

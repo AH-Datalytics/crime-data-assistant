@@ -145,7 +145,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   if (monthRate) {
     const a = agencies[0], cells = byOri.get(a.ori) ?? [];
     const rows = cells.map((x) => ({ key: x.ym, ...rate({ value: x.value, status: x.status } as Cell, pops.get(`${a.ori}|${Number(x.ym.slice(0, 4))}`)) }));
-    lines.push(`${a.label}: ${what} per 100,000 people for each month, ${when}: each month's own count, not annualized.`, reporter);
+    lines.push(`${a.label}: ${what} per 100,000 people for each month, ${when}.`, "Each month's own count, not scaled to a full year.", reporter);
     lines.push(`Each month's rate uses the FBI's population for its year: ${years.map((y) => `${y} ${pops.get(`${a.ori}|${y}`) ? fmt(pops.get(`${a.ori}|${y}`)!) : "(none)"}`).join("; ")}.`);
     const noRate = rows.filter((r) => r.value === null).map((r) => r.key);
     if (noRate.length) lines.push(`No rate for ${runs(noRate)}: no report is known or the FBI gives no population, shown blank.`);

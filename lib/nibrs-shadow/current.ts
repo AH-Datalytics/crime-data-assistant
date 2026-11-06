@@ -270,7 +270,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
       const avg = Math.round((10 * c.value) / wn) / 10;
       return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
         delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)}, average per month over ${wn} months` }], rows: [[avg]] },
-          text: [`${where}: ${avg.toFixed(1)} ${words} a month on average ${what} (${fmt(c.value)} in all).`, ...head, ...cohortLine, ...leftOutLine, source] } };
+          text: [`${where}: ${avg.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${words} a month on average ${what}.`, `That is ${fmt(c.value)} in all.`, ...head, ...cohortLine, ...leftOutLine, source] } };
     }
     if (rate) {
       // The population: the agency's in the span's last month; a group's, its counted agencies' summed population then.
@@ -282,7 +282,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
       const rateLine = cq.place.kind === "group" ? [`The rate counts the ${fmt(base.agencies)} Consistent Reporting ${base.agencies === 1 ? "Agency" : "Agencies"} with a ${one} figure for every month, ${fmt(base.count)} ${words} among roughly ${aboutPeople(base.population!)} people.`] : [];
       return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
         delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)} per 100,000` }], rows: [[r]] },
-          text: [`${where}: ${r.toFixed(1)} ${words} per 100,000 people ${what} (not annualized).`, ...head, ...(cq.place.kind === "agency" ? [`That is ${fmt(base.count)} ${words}.`] : rateLine), ...cohortLine, source] } };
+          text: [`${where}: ${r.toFixed(1)} ${words} per 100,000 people ${what}.`, "Not scaled to a full year.", ...head, ...(cq.place.kind === "agency" ? [`That is ${fmt(base.count)} ${words}.`] : rateLine), ...cohortLine, source] } };
     }
     return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }], rows: [[c.value]] },
@@ -303,8 +303,8 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
       delivered: { table: { columns: rateCols, rows: covered.map((m, i) => [m, rates[i]]) },
         text: [covered.length === 1 && rates[0] !== null
-          ? `${where}: ${rates[0]!.toFixed(1)} ${words} per 100,000 people in ${monthWords(covered[0])}: that month's own count, not annualized.`
-          : `${where}: ${words} per 100,000 people for each month, ${spanWords(period.from, period.to)}: each month's own count, not annualized.`, ...head, ...cohortLine, ...outside,
+          ? `${where}: ${rates[0]!.toFixed(1)} ${words} per 100,000 people in ${monthWords(covered[0])}.`
+          : `${where}: ${words} per 100,000 people for each month, ${spanWords(period.from, period.to)}.`, `${covered.length === 1 ? "That month's" : "Each month's"} own count, not scaled to a full year.`, ...head, ...cohortLine, ...outside,
           ...(noRate.length ? [`No rate for ${noRate.join(", ")}: ${group ? "an agency counted had no figure or there was no population" : "no figure or no population"}, shown blank.`] : []), source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);

@@ -125,12 +125,13 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     const r = execute(`SELECT ${m.col}_cleared_rate, ${m.col}_cleared_total, ${m.col}_all_total FROM read_parquet(${q(`${build.root}/agency_clearances.parquet`)}) WHERE ori IN (${oris}) AND year = ${y}`)[0];
     const [rate, cleared, all] = r ? r.map(num) : [null, null, null];
     if (rate === null) return { kind: "historical-decline", explanation: `Crime Index has no ${m.name} clearance rate for ${where} in ${y}: not available in this data.` };
-    const counts = cleared !== null && all !== null ? ` (${fmt(cleared)} of ${fmt(all)})` : "";
+    // The counts in a sentence of their own: the lead gives the percentage, the page shows these as a note.
+    const counts = cleared !== null && all !== null ? ` That is ${fmt(cleared)} of ${fmt(all)} ${m.words}.` : "";
     return {
       kind: "historical", question: hq, period: { from: `${y}-01`, to: `${y}-12` },
       meaning: { ...meaningBase, period: { from: `${y}-01`, to: `${y}-12` }, measures: [{ name: `${m.name} cleared`, unit: "offense" }], groupings: [], statistic: "rate", denominator: `${m.words}, per 100` },
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "clearance_rate" }, header: `${ucFirst(m.words)} cleared (%)` }], rows: [[rate]] },
-        text: lines(hq, `${where}: ${rate}% of ${m.words} were cleared in ${y}${counts}.`, SRS_SOURCE) },
+        text: lines(hq, `${where}: ${rate}% of ${m.words} were cleared in ${y}.${counts}`, SRS_SOURCE) },
       read: { table: "agency_clearances", column: col, release: build.release },
     };
   }

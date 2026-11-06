@@ -15,7 +15,9 @@ import { coveredText } from "../lib/nibrs-shadow/state-sum";
 import { deliver, periodWords } from "../lib/nibrs-shadow/deliver";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { matchNibrsType, MEASURE_CODES } from "../lib/nibrs-question-types";
-import { presentationOf } from "../lib/nibrs-shadow/presentation";
+import { presentationOf, sentencesOf, unsaid } from "../lib/nibrs-shadow/presentation";
+import { ANSWER_STATEMENTS } from "../lib/nibrs-plan/result";
+import { NOTE_TEXT } from "../lib/answer-contract/contract";
 import { answerSrsSeveral } from "../lib/nibrs-shadow/srs";
 import { missingGroupings, namedGroupings } from "../lib/nibrs-shadow/named-groupings";
 import { scoreShadow, sliceValues, valueDiffs } from "../lib/answer-eval/shadow";
@@ -251,6 +253,31 @@ assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024
     assert.ok(p.notes?.lines.some((t) => t.includes(note)), `${q}: the note is in notes.lines`);
   }
 }
+// Notes conformance (coordinator 2026-11-06, the Memphis monthly rate): every sentence of an answer's text is either
+// said by the lead or header (the headline's first sentence, the reporter or "Figures for" line, the source line, a
+// note key's own text) or shown in notes.lines. Never a line dropped because part of it was restated.
+{
+  const keyed = new Set<string>([...Object.values(ANSWER_STATEMENTS), ...Object.values(NOTE_TEXT)]);
+  for (const q of ["robberies rate in Memphis in 2025 by month", "Murder rate in Memphis in June 2025", "Carjacking rate in Houston by month from 2023 to 2024",
+    "Shoplifting rate in Wichita this year", "murder rate in Memphis this year", "Which Texas cities had the most aggravated assaults in 2024?", "Tarrant County, Texas murders 2024",
+    "murder rate in Ohio and Texas in 2023", "gangland assaults in Houston in 2024", "Houston murders by year 2015 to 2024", "murders in the United States in 2023",
+    "robberies in Memphis by month in 2025", "rape rate in Memphis from 1990 to 1995", "Houston murder clearance rate in 2025", "violent crimes in the United States, rolling 12-month average"]) {
+    const o = ask(q) as ShadowOutcome & { delivered?: { text: string[] } };
+    if (!o.delivered) continue;
+    const p = presentationOf(o, places) as { notes?: { lines: string[] } };
+    const shown = (p.notes?.lines ?? []).join(" ");
+    o.delivered.text.forEach((t, i) => sentencesOf(t).forEach((s, j) => {
+      if (i === 0 && j === 0) return;
+      if (/^(?:Reported by|Figures for|Source:) /.test(s) || keyed.has(s) || keyed.has(t)) return;
+      assert.ok(shown.includes(s), `${q}: "${s}" is in the text but not in notes.lines`);
+    }));
+  }
+  assert.deepEqual(sentencesOf("St. Louis, Missouri: 12 murders in 2024. Reported by the St. Louis Metropolitan Police Department."), ["St. Louis, Missouri: 12 murders in 2024.", "Reported by the St. Louis Metropolitan Police Department."]);
+  // A rolling average is said as one in the lead, never as the window's total (redesign public check, 2026-11-06).
+  const avg = ask("violent crimes in the United States, rolling 12-month average") as ShadowOutcome;
+  if (avg.kind === "current") assert.match(JSON.stringify((presentationOf(avg, places) as { lead: unknown }).lead), /a month on average/);
+  assert.deepEqual(unsaid(["A. B: 1 murder. Not scaled to a full year.", "Figures for X."], new Set(["A. B: 1 murder.", "Figures for X."])), ["Not scaled to a full year."]);
+}
 // Jeff 2026-11-06 ("Include 09B"): homicide in NIBRS is 09A and 09B; murder stays 09A.
 assert.deepEqual(MEASURE_CODES.homicide, ["09A", "09B"]);
 assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
@@ -347,7 +374,7 @@ for (const q of ["murders in King County Sheriff's Office, Washington in 2024", 
   assert.doesNotMatch(o.explanation ?? "", /not for one month or month by month|whole years, not single months/);
   if (o.delivered) {
     assert.match(o.delivered.table.columns[1].header, / per 100,000 for the month$/);
-    assert.match(o.delivered.text[0], /not annualized/);
+    assert.ok(o.delivered.text.some((t) => /not scaled to a full year/.test(t)));
     assert.doesNotMatch(o.delivered.text.join(" "), /\bresidents?\b/i, "never \"residents\" in what a user reads");
   }
   const d = as(ask("murder clearance rate by month in Chicago in 2024"), "decline");
