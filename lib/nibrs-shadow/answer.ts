@@ -337,11 +337,13 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   // which ("fatal", "killed", "homicide"); a choice that would only be declined is not offered (bad-decline audit root
   // cause 2, 2026-11-06).
   const shooting = ledger.parts.find((p) => p.clause === 0 && p.concept === "shooting");
-  // Only bare "shooting(s)" with every other word read: "shooting incidents" would become victims, "police shootings"
-  // would lose the police (Codex root-causes review 01.1-2).
+  // Only bare "shooting(s)" beside nothing but a place, a period, a grain or a statistic: "shooting incidents" would
+  // become victims, "police shootings" and "shootings of sheriffs" would lose who was shot (Codex root-causes reviews
+  // 01.1-2, 02.1).
+  const ALONE = new Set(["shooting", "place", "period", "grain", "statistic"]);
   const bareShooting = !!shooting && /^shootings?$/i.test(shooting.text.trim())
-    && !/\b(?:police|officers?|cops?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
-    && !ledger.parts.some((p) => p.clause === 0 && p !== shooting && (p.state === "not-interpreted" || p.state === "not-recorded"));
+    && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
+    && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept));
   if (shooting && bareShooting && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
     const as = (to: string) => question.slice(0, shooting.span[0]) + to + question.slice(shooting.span[1]);
     const options = [["Fatal (murders with a firearm)", "murders with a firearm"], ["Non-fatal (aggravated assaults with a firearm)", "aggravated assaults with a firearm"]]
@@ -828,7 +830,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     // Several states, or states and the nation, side by side (bad-decline audit root cause 3, 2026-11-06).
     // Never when the places are to be combined, or one is asked as a count and another as a rate (Codex root-causes
     // review 01.3-4): those keep the decline.
-    const mixedStatistic = clause0("statistic").length > 0 && /\b(?:count|number|total)\b/i.test(ledger0.question);
+    const mixedStatistic = clause0("statistic").length > 0 && /\b(?:counts?|numbers?|totals?|how\s+many)\b/i.test(ledger0.question);
     const geos = sp.places.length >= 2 && sp.places.every((p) => p.kind === "state" || p.kind === "national") && !clause0("combine").length && !flags(ledger0).combined && !mixedStatistic ? sp.places : null;
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share"].includes(p.concept))
       || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
