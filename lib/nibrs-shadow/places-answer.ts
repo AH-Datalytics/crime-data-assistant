@@ -43,7 +43,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   const yearSet = plan.period.kind === "years" ? [...plan.period.years].sort((a, b) => a - b) : null;
   if (yearSet && !yearG) return decline("This isn't available yet: separate years for several agencies or a ranking; ask for each year, or by year.");
   const years = yearSet ?? Array.from({ length: Number(period.to.slice(0, 4)) - Number(period.from.slice(0, 4)) + 1 }, (_, i) => Number(period.from.slice(0, 4)) + i);
-  if (isRate && years.length > 1 && !yearG) return decline("This isn't available yet: a rate over several years without \"by year\" (each year has its own population).");
+  if (isRate && years.length > 1 && !yearG && !monthRate) return decline("This isn't available yet: a rate over several years without \"by year\" (each year has its own population).");
   const rankT = plan.transforms.find((t) => t.kind === "rank");
   if (popStat && rankT) return decline("This isn't available yet: a population column beside a ranking.");
   const set = plan.geography.places[0].kind === "agency_set" ? plan.geography.places[0] : null;

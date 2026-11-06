@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { agencyMonths, answerCurrent, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { agencyMonths, agencyMonthPopulations, answerCurrent, answerCurrentChange, change, groupRateBase, cumulative, currentBuildAt, currentRate, groupMonths, months, REGIONS, rollingMonths, ytdMonths, yearEarlier, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
 
 // Months and periods.
@@ -27,6 +27,13 @@ assert.equal(change(0, 5), null);
 assert.equal(currentRate(524, 100000, 8), 524);
 assert.equal(currentRate(88, 100000, 1), 88, "P96 (Jeff 2026-11-06): one month has a rate too");
 assert.equal(currentRate(88, 100000, 0), null);
+// P96: a month's rate uses its own population: current_crime's row from Current Trends' first month, the same year's
+// published population before it; never another month's or year's (Codex monthly-rates review 01.1).
+{
+  const fake = (sql: string): unknown[][] => (sql.includes("current_crime") ? [["2025-05", 2_000_000]] : [[2024, 1_900_000]]);
+  const pops = agencyMonthPopulations({ root: "/ci", release: "r", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" }, "X", ["2023-06", "2024-03", "2025-05", "2025-06"], fake);
+  assert.deepEqual([...pops.values()], [null, 1_900_000, 2_000_000, null]);
+}
 assert.equal(currentRate(null, 100000, 8), null);
 assert.equal(currentRate(5, 0, 8), null);
 assert.deepEqual(REGIONS.noe.states.length + REGIONS.mdw.states.length + REGIONS.sth.states.length + REGIONS.wst.states.length, 51, "the 50 states and DC");

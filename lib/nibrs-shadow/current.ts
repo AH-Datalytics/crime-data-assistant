@@ -100,23 +100,17 @@ export function agencyPopulation(b: CurrentBuild, ori: string, month: Month, exe
   return r ? Number(r[0]) : null;
 }
 /**
- * Each month's population for an agency's monthly rate (Jeff 2026-11-06, P96): the month's own row in current_crime;
- * before Current Trends' rows begin, the agency's population for that year as Crime Index publishes it (agency_crime);
- * a year after the latest published one carries the latest forward (P59). Null when there is none above zero.
+ * Each month's population for an agency's monthly rate (Jeff 2026-11-06, P96): from Current Trends' first month, the
+ * month's own row in current_crime only; before it, the agency's population for that same year as Crime Index publishes
+ * it (agency_crime). Never another month's or year's: a month without its own population has no rate (Codex
+ * monthly-rates review 01.1).
  */
 export function agencyMonthPopulations(b: CurrentBuild, ori: string, monthsWanted: Month[], execute: (sql: string) => unknown[][]): Map<Month, number | null> {
   const cur = new Map(execute(`SELECT printf('%04d-%02d', year, month), population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
     .map((r) => [String(r[0]), Number(r[1])] as [string, number]));
-  const yearly = execute(`SELECT year, population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND population > 0 ORDER BY year`)
-    .map((r) => [Number(r[0]), Number(r[1])] as [number, number]);
-  return new Map(monthsWanted.map((m) => {
-    if (cur.has(m)) return [m, cur.get(m)!];
-    const y = Number(m.slice(0, 4));
-    const upTo = yearly.filter(([yy]) => yy <= y);
-    if (upTo.length) return [m, upTo[upTo.length - 1][1]];
-    const earlierCur = [...cur.keys()].filter((k) => k <= m).sort();
-    return [m, earlierCur.length ? cur.get(earlierCur[earlierCur.length - 1])! : null];
-  }));
+  const yearly = new Map(execute(`SELECT year, population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
+    .map((r) => [Number(r[0]), Number(r[1])] as [number, number]));
+  return new Map(monthsWanted.map((m) => [m, m >= b.firstMonth ? cur.get(m) ?? null : yearly.get(Number(m.slice(0, 4))) ?? null]));
 }
 /**
  * A group's rate (decision B; Codex review 01.1): over its sample agencies with every month of the span known for the
