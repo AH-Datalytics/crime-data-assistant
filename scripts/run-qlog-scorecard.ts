@@ -11,12 +11,14 @@
  *
  * Buckets (one per label):
  *   correct         the outcome the label expects: a clarify about the part it names, a decline, or (for an answer) the
- *                   right source with values checked against independent values. Answers are not checked yet, so a
- *                   right-source answer is "unverified", never "correct".
+ *                   right source with every shown number matched against independent values
+ *                   (scripts/fixtures/answer-eval/qlog-verified.json, at the same table digest).
  *   unverified      an answer from the right source whose values have no independent check yet; a route to the right
  *                   source that this engine does not run (SHR, Hate Crime).
  *   wrong answer    an answer where the label expects a clarify or a decline (a part assumed, or data that does not
- *                   exist), or an answer from the wrong source; or values that differ. The hard gate: 0.
+ *                   exist), or an answer from the wrong source. The hard gate: 0. Numbers that differ from
+ *                   independent values are reported as each verification batch finds them; an answer whose numbers
+ *                   change after verification goes back to unverified (its digest no longer matches).
  *   bad decline     a decline where the label expects an answer or a clarify.
  *   wrong clarify   a clarify where the label expects an answer or a decline, or one about another part.
  *   follow-up error any miss on a follow-up turn (its bucket, not the four above).
@@ -25,6 +27,7 @@
  * labels is a draft scorecard.
  */
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
@@ -60,14 +63,23 @@ const deps: ShadowDeps = {
 type Label = { id: string; tab: string; kind: "first" | "follow-up"; times: number; question: string; previous: string | null;
   expected: { outcome: "answer" | "clarify" | "decline" | "exclude"; source: string | null; about?: string; about_any?: string[]; source_any?: string[]; reason?: string };
   label: { status: string; rule: string; notes?: string } };
-type Got = { kind: string; source: string | null; about?: string; reason?: string; ms: number };
+type Got = { kind: string; source: string | null; about?: string; reason?: string; ms: number; digest?: string };
+
+/**
+ * An answer's shown numbers, as one digest: its table's rows (keys and values). An answer verified against independent
+ * values (scripts/fixtures/answer-eval/qlog-verified.json) counts as correct only while its digest is the one verified,
+ * so a later change to the numbers puts it back to unverified.
+ */
+export function tableDigest(rows: unknown): string {
+  return createHash("sha256").update(JSON.stringify(rows ?? null)).digest("hex").slice(0, 16);
+}
 
 /** What the engine did, in the label's terms. */
 function got(o: { kind: string } & Record<string, unknown>, ms: number): Got {
   switch (o.kind) {
-    case "answer": return { kind: "answer", source: "nibrs", ms };
-    case "srs": case "historical": return { kind: "answer", source: "historical", ms };
-    case "current": return { kind: "answer", source: "rtci", ms };
+    case "answer": return { kind: "answer", source: "nibrs", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
+    case "srs": case "historical": return { kind: "answer", source: "historical", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
+    case "current": return { kind: "answer", source: "rtci", ms, digest: tableDigest((o.delivered as { table?: { rows: unknown } })?.table?.rows) };
     case "route": return { kind: "route", source: String(o.source), ms };
     case "clarify": return { kind: "clarify", source: null, about: String(o.about ?? ""), ms };
     case "proposal": return { kind: "proposal", source: null, ms };
@@ -91,6 +103,10 @@ function aboutClass(s: string): string {
   return t;
 }
 
+/** Answers whose every shown number matched independent values (blind SQL, Model's canonical values), by digest. */
+const VERIFIED_FILE = path.join(__dirname, "fixtures", "answer-eval", "qlog-verified.json");
+const VERIFIED: Record<string, { digest: string }> = fs.existsSync(VERIFIED_FILE) ? JSON.parse(fs.readFileSync(VERIFIED_FILE, "utf8")).verified : {};
+
 type Bucket = "correct" | "unverified" | "wrong answer" | "bad decline" | "wrong clarify" | "follow-up error" | "error" | "excluded";
 function bucket(l: Label, g: Got | null): Bucket {
   if (l.expected.outcome === "exclude") return "excluded";
@@ -101,7 +117,8 @@ function bucket(l: Label, g: Got | null): Bucket {
   const kind = g.kind === "proposal" ? "clarify" : g.kind;
   if (e.outcome === "answer") {
     const okSource = (x: string | null) => x === e.source || (!!x && (e.source_any ?? []).includes(x));
-    if (kind === "answer") return okSource(g.source) ? "unverified" : miss("wrong answer");
+    // Verified (every shown number matched independent values, at this digest): correct.
+    if (kind === "answer") return !okSource(g.source) ? miss("wrong answer") : g.digest && VERIFIED[l.id]?.digest === g.digest ? "correct" : "unverified";
     if (kind === "route") return okSource(g.source) ? "unverified" : miss("bad decline");
     return miss(kind === "decline" ? "bad decline" : "wrong clarify");
   }
@@ -187,7 +204,7 @@ if (process.argv.includes("--report")) {
     table, "",
     `Hard gate, wrong answers = 0 (undisputed labels): **${gate}**.`, "",
     `**Disputed: ${all.disputed} labels wait on Jeff and are set aside** (not in any bucket or the gate): ${[...disputedGroups].map(([k, n]) => `${k} ${n}`).join(", ")}. The questions are in docs/reports/qlog-label-rules.md.`, "",
-    "Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked (or routed to a source this engine does not run yet); *wrong answer* an answer where a clarify or decline is expected, an answer from the wrong source, or numbers that differ; *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* any miss on a follow-up turn; *error* the engine failed.", "",
+    "Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked against independent values (or routed to a source this engine does not run yet); a right-source answer whose every number matched independent values (qlog-verified.json) is *correct*; *wrong answer* an answer where a clarify or decline is expected, or an answer from the wrong source (numbers found to differ from independent values are reported as each verification batch finds them; a verified answer whose numbers change goes back to *unverified*); *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* any miss on a follow-up turn; *error* the engine failed.", "",
   ].join("\n");
   fs.writeFileSync(path.join(__dirname, "..", "docs", "reports", "qlog-scorecard.md"), out);
 }
