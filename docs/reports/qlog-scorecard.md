@@ -10,12 +10,12 @@ Release test6-20261031-host; run 2026-11-06. A first question is the first row o
 
 | Source | Labels scored | Correct | Unverified | Wrong answer | Bad decline | Wrong clarify | Follow-up error | Error | Reviewed labels | Draft labels | Disputed (not scored) | Not run yet |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Historical | 1014 | 279 | 263 | 0 | 253 | 93 | 126 | 0 | 854 | 160 | 4 | 0 |
-| Current Trends | 1022 | 367 | 210 | 0 | 213 | 122 | 110 | 0 | 800 | 222 | 5 | 0 |
-| NIBRS | 1241 | 514 | 149 | 0 | 268 | 146 | 164 | 0 | 1007 | 234 | 4 | 0 |
-| Homicide Reports | 580 | 219 | 111 | 0 | 144 | 40 | 66 | 0 | 454 | 126 | 3 | 0 |
-| Hate Crime | 67 | 17 | 1 | 0 | 17 | 6 | 26 | 0 | 64 | 3 | 1 | 0 |
-| **All** | **3924** | **1396** | **734** | **0** | **895** | **407** | **492** | **0** | **3179** | **745** | **17** | **0** |
+| Historical | 1014 | 535 | 7 | 0 | 253 | 93 | 126 | 0 | 854 | 160 | 4 | 0 |
+| Current Trends | 1022 | 573 | 4 | 0 | 213 | 122 | 110 | 0 | 800 | 222 | 5 | 0 |
+| NIBRS | 1241 | 657 | 6 | 0 | 268 | 146 | 164 | 0 | 1007 | 234 | 4 | 0 |
+| Homicide Reports | 580 | 315 | 15 | 0 | 144 | 40 | 66 | 0 | 454 | 126 | 3 | 0 |
+| Hate Crime | 67 | 18 | 0 | 0 | 17 | 6 | 26 | 0 | 64 | 3 | 1 | 0 |
+| **All** | **3924** | **2098** | **32** | **0** | **895** | **407** | **492** | **0** | **3179** | **745** | **17** | **0** |
 
 Hard gate, wrong answers = 0 (undisputed labels): **met**.
 
