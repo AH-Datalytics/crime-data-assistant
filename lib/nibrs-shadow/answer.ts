@@ -322,12 +322,17 @@ const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][A-Za-z
 /**
  * The question with one of its words replaced, in the user's own words: the reader's text has circumstance and other
  * words taken out ("gangland"), so its offsets would drop them (Codex ties/P75 review 01.1). The word is found in the
- * original by its text; only when it isn't there is the reader's text used.
+ * original by its text, or by the misspelling the reader corrected ("assualts"); when neither is there, null, and the
+ * question isn't rewritten (Codex ties/P75 review 02): the reader's text can't be used, it has words taken out.
  */
-function inOriginal(question: string, read: string, part: Part, to: string): string {
+function inOriginal(question: string, ledger: RequestLedger, part: Part, to: string): string | null {
   const word = part.text.trim();
-  const m = new RegExp(String.raw`(?<![A-Za-z])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`, "i").exec(question);
-  return m ? question.slice(0, m.index) + to + question.slice(m.index + m[0].length) : read.slice(0, part.span[0]) + to + read.slice(part.span[1]);
+  const misspelt = (flags(ledger).readings ?? []).filter((r) => r.kind === "spelling" && r.to.toLowerCase() === word.toLowerCase()).map((r) => r.from);
+  for (const w of [word, ...misspelt]) {
+    const m = new RegExp(String.raw`(?<![A-Za-z])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`, "i").exec(question);
+    if (m) return question.slice(0, m.index) + to + question.slice(m.index + m[0].length);
+  }
+  return null;
 }
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   // "LA" (coordinator 2026-11-03): the city or the state, asked; each choice is the question with the place named.
@@ -354,8 +359,8 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   const bareShooting = !!shooting && /^shootings?$/i.test(shooting.text.trim())
     && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
     && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept));
-  if (shooting && bareShooting && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
-    const as = (to: string) => inOriginal(question, ledger.question, shooting, to);
+  if (shooting && bareShooting && inOriginal(question, ledger, shooting, "") !== null && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
+    const as = (to: string) => inOriginal(question, ledger, shooting, to)!;
     const options = [["Fatal (murders with a firearm)", "murders with a firearm"], ["Non-fatal (aggravated assaults with a firearm)", "aggravated assaults with a firearm"]]
       .map(([label, to]) => ({ label, continuation: shadowAnswer(as(to), deps) })).filter((o) => runsNow(o.continuation));
     if (options.length) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options };
@@ -365,7 +370,10 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   // Where NIBRS answers, which kind is asked, offering only the kinds that run.
   const assault = ledger.parts.find((p) => p.clause === 0 && p.concept === "measure" && p.value === "assault");
   if (assault) {
-    const as = (to: string) => inOriginal(question, ledger.question, assault, to);
+    // Never a rewrite that could lose the user's words: said plainly instead (Codex ties/P75 review 02).
+    if (inOriginal(question, ledger, assault, "") === null)
+      return decline("reader", "I couldn't tell which assaults this asks about. Name the kind, for example \"aggravated assaults in Houston in 2024\".");
+    const as = (to: string) => inOriginal(question, ledger, assault, to)!;
     const plural = /s$/i.test(assault.text.trim());
     const aggravated = shadowAnswer(as(plural ? "aggravated assaults" : "aggravated assault"), deps);
     if (aggravated.kind === "historical" || aggravated.kind === "srs" || aggravated.kind === "current") return aggravated;

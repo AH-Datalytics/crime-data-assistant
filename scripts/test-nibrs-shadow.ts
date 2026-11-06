@@ -318,6 +318,11 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   for (const q of ["assault rifle in Houston in 2024", "assault weapons in Houston in 2024"])
     assert.ok(!readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === "assault"), q);
   assert.equal(JSON.stringify(ask("gangland assaults in Houston in 2024")), JSON.stringify(ask("gangland aggravated assaults in Houston in 2024")));
+  // Codex ties/P75 review 02: a misspelling the reader corrects keeps the user's other words too.
+  assert.equal(JSON.stringify(ask("gangland assualts in Houston in 2024")), JSON.stringify(ask("gangland assaults in Houston in 2024")));
+  const opts = (q: string) => JSON.stringify((ask(q) as { options?: unknown }).options);
+  assert.equal(opts("uncleared assualts in Houston in 2024"), opts("uncleared assaults in Houston in 2024"));
+  assert.match(opts("uncleared assualts in Houston in 2024"), /not cleared/);
 }
 // Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
 // killed by police are not officers as victims.
