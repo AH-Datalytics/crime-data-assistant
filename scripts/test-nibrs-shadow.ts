@@ -330,6 +330,10 @@ for (const q of ["murders in King County Sheriff's Office, Washington in 2024", 
   const ty = (q: string) => matchNibrsType(readQuestion(q, 2026, "2026-09").ledger, { allowExplanation: false } as never).kind;
   assert.notEqual(ty("carjacking rate in Houston by month in 2024"), "decline");
   assert.equal(ty("murder clearance rate by month in Chicago in 2024"), "decline");
+  // A population column asked beside monthly rates: NIBRS gives it (P72); Current Trends says it isn't built, never drops it.
+  const ctCol = ask("Murder rate in Chicago by month in 2025, with a column showing the population used to calculate the rate") as { kind: string; explanation?: string };
+  if (ctCol.kind === "decline") assert.match(ctCol.explanation ?? "", /population column/);
+  else assert.notEqual(ctCol.kind, "current");
 }
 
 // A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").

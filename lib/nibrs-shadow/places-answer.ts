@@ -142,7 +142,9 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     lines.push(`Each month's rate uses the FBI's population for its year: ${years.map((y) => `${y} ${pops.get(`${a.ori}|${y}`) ? fmt(pops.get(`${a.ori}|${y}`)!) : "(none)"}`).join("; ")}.`);
     const noRate = rows.filter((r) => r.value === null).map((r) => r.key);
     if (noRate.length) lines.push(`No rate for ${runs(noRate)}: no report is known or the FBI gives no population, shown blank.`);
-    const delivered = deliverTable(plan, { dimension: "time.month", header: "Month" }, { as: st.as, header: `${Header} per 100,000 for the month` }, rows, lines, statements, deps.release.id, readings);
+    // P72: the population each month's rate used, when asked (Codex monthly-rates review 02).
+    const delivered = deliverTable(plan, { dimension: "time.month", header: "Month" }, { as: st.as, header: `${Header} per 100,000 for the month` }, rows, lines, statements, deps.release.id, readings,
+      support(cells.map((x) => popCell(pops.get(`${a.ori}|${Number(x.ym.slice(0, 4))}`)))));
     return done(plan, period, c.query.sql, delivered, decline);
   }
   // One agency's values by year. Several agencies by year (combined or not) come later (Codex 02 re-check A).
