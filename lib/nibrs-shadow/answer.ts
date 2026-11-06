@@ -148,6 +148,8 @@ const OUTSIDE: [RegExp, boolean, string][] = [
 function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps, asked: string): ShadowOutcome {
   // A decline outside the data with no button of its own still gets the nearest question (coordinator 2026-11-02).
   if (o.kind !== "decline" || (o.notBuilt && o.alternative) || deps.checkingOffer) return o;
+  // Officers killed and assaulted: Jeff's plain decline, no extra notes (2026-11-05).
+  if (o.explanation.startsWith("We don't have LEOKA data")) return { ...o, alternative: null };
   const year = Number(deps.release.lastMonth.slice(0, 4));
   // Jeff (2026-11-01): an offered question must actually answer, and keep every place and crime the user named
   // ("chicago vs memphis carjackings per year since 2022" was offered "chicago memphis carjackings ..."). It is run

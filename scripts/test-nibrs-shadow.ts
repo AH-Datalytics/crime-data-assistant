@@ -223,11 +223,12 @@ for (const q of ["murders of sheriffs in King County, Washington in 2024", "murd
   "police officers shot dead in Chicago in 2024", "officers shot and killed in Chicago in 2024",
   "murders with sheriffs killed with firearms in King County, Washington in 2024", "officers killed by gunfire in 2024"]) {
   const d = as(ask(q), "decline");
-  assert.match(d.explanation, /^Law enforcement officers as victims aren't counted separately in the data here/, q);
+  assert.equal(d.explanation, "We don't have LEOKA data (officers killed and assaulted) in yet.", q);
+  assert.equal(d.alternative, null, q);
   assert.equal(jargon(d.explanation).length, 0, q);
 }
 for (const q of ["murders in King County Sheriff's Office, Washington in 2024", "murders for Baltimore Police Department in 2024", "assaults on women by police in 2024", "officers shot 10 people in Chicago in 2024", "officers killed 10 people in Chicago in 2024", "officers shot and killed a suspect in Chicago in 2024", "officers killed five suspects in Chicago in 2024"])
-  assert.doesNotMatch((ask(q) as { explanation?: string }).explanation ?? "", /officers as victims/, q);
+  assert.doesNotMatch((ask(q) as { explanation?: string }).explanation ?? "", /LEOKA/, q);
 // A rate month by month: said accurately, with the rate for the whole period (or by year) and the counts by month.
 {
   const d = as(ask("robberies rate in Memphis in 2025 by month"), "decline");

@@ -72,7 +72,7 @@ const OVERDOSE = notRecorded("overdose deaths; drug offenses are not an overdose
 const IMMIGRATION = notRecorded("immigration or citizenship status");
 // Officers as victims (coordinator 2026-11-05: "murders of sheriffs in King County, Washington" had answered the county's
 // total murders): no source here counts them, so they are declined by name, never answered with the total.
-const OFFICER_VICTIMS = declined("law enforcement officers as victims aren't counted separately in the data here.");
+const OFFICER_VICTIMS = declined("we don't have LEOKA data in yet.");
 /** Officers as people, never an agency ("police department", "Sheriff's Office"). */
 const OFFICERS = String.raw`(?:police(?!\s+(?:departments?|dept\b|agenc|districts?|reports?|stations?))(?:\s+officers?)?|law\s+enforcement(?:\s+officers?)?|peace\s+officers?|officers?|cops?|sheriffs?(?!['’]|\s+(?:offices?|departments?|dept\b))|deput(?:y|ies)|troopers?)`;
 /** No one the officers acted on after the verb: "officers shot 10 people", "officers killed a suspect" are not victims. */

@@ -60,7 +60,8 @@ export const REASONS: Record<string, (x: string) => string> = {
   "one counting unit per question; ask for victims, offenders, arrests or offenses separately.": () => "I can count victims, offenders, arrests or offenses, one at a time; this question asks for more than one.",
   "I couldn't resolve that place to one NIBRS agency, a state or the nation.": (x) => `I couldn't find ${q(x)} as a police agency, a state or the nation.`,
   "I couldn't read that as a period.": (x) => `I couldn't tell which period ${q(x)} means.`,
-  "law enforcement officers as victims aren't counted separately in the data here.": (x) => `Law enforcement officers as victims aren't counted separately in the data here, so there are no figures for ${q(x)}. The FBI publishes officers killed and assaulted in its Law Enforcement Officers Killed and Assaulted (LEOKA) data.`,
+  // Jeff 2026-11-05: "a better answer to that is that we don't have LEOKA data in yet"; plain, no extra notes.
+  "we don't have LEOKA data in yet.": () => "We don't have LEOKA data (officers killed and assaulted) in yet.",
   "the data covers U.S. law enforcement agencies only.": (x) => `The data covers U.S. law enforcement agencies only, so there are no figures for ${q(x)}.`,
   "I give one breakdown per answer; ask for one breakdown at a time.": (x) => `I can break the numbers down one way at a time; ${q(x)} would be a second breakdown.`,
   "rates are given per 100,000 people.": () => "Rates are given per 100,000.",
