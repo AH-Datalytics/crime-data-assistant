@@ -92,7 +92,7 @@ export function toPreview(o: ShadowOutcome, path: string[] = [], places?: PlaceI
 }
 function previewOf(o: ShadowOutcome, path: string[]): PreviewResponse {
   if (o.kind === "clarify") return { kind: "clarify", about: o.about, buttons: o.options.map((x) => button(x, path)) };
-  if (o.kind === "decline") return { kind: "decline", reason: o.reason, text: o.explanation, buttons: o.alternative ? [button(o.alternative, path)] : [], notBuilt: !!o.notBuilt };
+  if (o.kind === "decline") return { kind: "decline", reason: o.reason, text: o.explanation, buttons: [...(o.alternative ? [o.alternative] : []), ...(o.more ?? [])].map((x) => button(x, path)), notBuilt: !!o.notBuilt };
   // Another source's question: the route is named (this preview runs only the NIBRS shadow and the historical file).
   if (o.kind === "route") return { kind: "decline", reason: `route:${o.source}`, text: o.explanation, buttons: [], notBuilt: false };
   const { table, text } = o.delivered;

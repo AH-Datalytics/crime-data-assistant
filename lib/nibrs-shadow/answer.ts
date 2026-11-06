@@ -148,6 +148,8 @@ const OUTSIDE: [RegExp, boolean, string][] = [
 function withNextStep(o: ShadowOutcome, ledger: RequestLedger, deps: ShadowDeps, asked: string): ShadowOutcome {
   // A decline outside the data with no button of its own still gets the nearest question (coordinator 2026-11-02).
   if (o.kind !== "decline" || (o.notBuilt && o.alternative) || deps.checkingOffer) return o;
+  // Officers killed and assaulted: Jeff's plain decline, no extra notes (2026-11-05).
+  if (o.explanation.startsWith("We don't have LEOKA data")) return { ...o, alternative: null };
   const year = Number(deps.release.lastMonth.slice(0, 4));
   // Jeff (2026-11-01): an offered question must actually answer, and keep every place and crime the user named
   // ("chicago vs memphis carjackings per year since 2022" was offered "chicago memphis carjackings ..."). It is run
@@ -253,7 +255,9 @@ export type ShadowOutcome =
   | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
   | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
   /** `detail`: an internal diagnostic (a compiler or validation reason) for logs; never shown (P74). */
-  | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean; detail?: string };
+  | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean; detail?: string;
+    /** Further buttons after `alternative` (a monthly rate: the rate for the whole period, then the counts by month). */
+    more?: ShadowOption[] };
 
 /** NIBRS Group A offenses whose crime-against category is property (robbery, and so carjacking, included). */
 const CRIMES_AGAINST_PROPERTY = new Set(["120", "200", "210", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240", "250",
@@ -492,6 +496,10 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // (P20, D01); its leftover words are not reasons. So is any other part the data does not record (a ZIP code): asking
   // which place, period or crime is meant in a question that cannot be answered would be an unnecessary question (D28).
   const unrecorded = ledger0.parts.filter((p) => p.clause === 0 && p.state === "not-recorded");
+  // Officers killed and assaulted: Jeff's sentence alone, before any other limit (Codex officer review 05: a ZIP code's
+  // limit had been appended to it).
+  const leoka = ledger0.parts.find((p) => p.concept === "officer-victims");
+  if (leoka) return decline(readerReason(leoka.explanation!), plainReaderExplanation(leoka.explanation!), { detail: leoka.explanation! });
   if (flags(ledger0).forecast) return decline("forecast", FORECAST_SENTENCE, { alternative: trendAlternative(ledger0, deps) });
   if (flags(ledger0).court || unrecorded.some((p) => p.concept === "court")) return decline("court_outcome", COURT_SENTENCE, { alternative: arrestsAlternative(ledger0, deps) });
   const term = flags(ledger0).undefinedTerm;
@@ -669,6 +677,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const outside = OUTSIDE.find(([re, needsNoMeasure]) => re.test(ledger0.question) && (!needsNoMeasure || noMeasure));
   if (outside) return decline("unsupported_capability", outside[2]);
   if (d.kind === "none") return decline("reader", "I couldn't tell what this question asks for. Try naming a crime, a place and a year, for example \"robberies in Denver in 2024\".");
+  // A rate month by month (coordinator 2026-11-05): the rate for the months together and the counts by month, each
+  // offered when it runs. Whether to give monthly rates at all is Jeff's (the Current Trends design note's scope choice).
+  if (d.kind === "decline" && /not for single months/.test(d.explanation)) {
+    const own = (c: string, v?: string) => (p: Part) => p.clause === 0 && p.concept === c && (v === undefined || p.value === v);
+    // Only when a part is taken out: a month or a rate from other words ("in May 2025", "clearance rate") would ask again.
+    const without = (drop: (p: Part) => boolean): ShadowOutcome | null =>
+      ledger.parts.some(drop) ? fromLedger(withParts(ledger, ledger.parts.filter((p) => !drop(p))), deps, pins) : null;
+    const together = without(own("grain", "month")) ?? decline("reader", "");
+    const counts = without(own("statistic")) ?? decline("reader", "");
+    const offers: ShadowOption[] = [
+      ...(runsNow(together) && together.kind !== "clarify" ? [{ label: answerDimensions(together)?.includes("time.year") ? "The rate by year" : "The rate for the whole period", continuation: together }] : []),
+      ...(runsNow(counts) && counts.kind !== "clarify" ? [{ label: ledger.parts.some(own("grain", "month")) ? "The counts by month" : "The count instead", continuation: counts }] : []),
+    ];
+    const o = decline(readerReason(d.explanation), plainReaderExplanation(d.explanation), { alternative: offers[0] ?? null, detail: d.explanation });
+    return offers.length > 1 ? { ...o, more: offers.slice(1) } as ShadowOutcome : o;
+  }
   // P74: the reader's refusal in plain words, with the question without the words it couldn't use when that reads.
   if (d.kind === "decline") return decline(readerReason(d.explanation), plainReaderExplanation(d.explanation),
     { alternative: askInstead(ledger.question, d.parts, Number(deps.release.lastMonth.slice(0, 4))), detail: d.explanation });

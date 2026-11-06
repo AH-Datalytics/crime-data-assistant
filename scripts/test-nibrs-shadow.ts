@@ -214,6 +214,29 @@ assert.equal((at("county:Just Show Worcester County:MD", "just show worcester co
   assert.ok(c.options.every((o) => o.entry || (o.continuation && o.continuation.kind !== "clarify")), "every button runs");
   assert.notEqual(ask("murders in Total").kind, "decline");
 }
+// Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
+// killed by police are not officers as victims.
+for (const q of ["murders of sheriffs in King County, Washington in 2024", "murders of King County sheriffs in Washington in 2024",
+  "how many officers were killed in action", "assaults on police officers in Chicago in 2024", "police officers killed in Texas in 2023",
+  "how many officers were shot in 2024", "officers shot in Chicago in 2024", "police deaths in 2024", "Homicides of police in the line of duty",
+  "murders with sheriffs as victims in King County, Washington in 2024", "murders in King County, Washington in 2024 with sheriff victims",
+  "police officers shot dead in Chicago in 2024", "officers shot and killed in Chicago in 2024",
+  "murders with sheriffs killed with firearms in King County, Washington in 2024", "officers killed by gunfire in 2024",
+  "assaults on police officers in Chicago by zip code in 2024"]) {
+  const d = as(ask(q), "decline");
+  assert.equal(d.explanation, "We don't have LEOKA data (officers killed and assaulted) in yet.", q);
+  assert.equal(d.alternative, null, q);
+  assert.equal(jargon(d.explanation).length, 0, q);
+}
+for (const q of ["murders in King County Sheriff's Office, Washington in 2024", "murders for Baltimore Police Department in 2024", "assaults on women by police in 2024", "officers shot 10 people in Chicago in 2024", "officers killed 10 people in Chicago in 2024", "officers shot and killed a suspect in Chicago in 2024", "officers killed five suspects in Chicago in 2024"])
+  assert.doesNotMatch((ask(q) as { explanation?: string }).explanation ?? "", /LEOKA/, q);
+// A rate month by month: said accurately, with the rate for the whole period (or by year) and the counts by month.
+{
+  const d = as(ask("robberies rate in Memphis in 2025 by month"), "decline");
+  assert.equal(d.explanation.split(" For example")[0], "A rate is given for two or more months together (the year to date, a year or a range of months), not for one month or month by month.");
+  const labels = [d.alternative, ...(d.more ?? [])].filter(Boolean).map((o) => o!.label);
+  assert.ok(labels.every((l) => ["The rate for the whole period", "The rate by year", "The counts by month", "The count instead"].includes(l)), labels.join());
+}
 
 // A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").
 assert.ok([...places.byName.values()].flat().every((x) => x.state in STATE_NAMES), "every agency's state is a postal code");
