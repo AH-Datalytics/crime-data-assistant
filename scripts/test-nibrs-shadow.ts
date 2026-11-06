@@ -218,12 +218,14 @@ assert.equal((at("county:Just Show Worcester County:MD", "just show worcester co
 // killed by police are not officers as victims.
 for (const q of ["murders of sheriffs in King County, Washington in 2024", "murders of King County sheriffs in Washington in 2024",
   "how many officers were killed in action", "assaults on police officers in Chicago in 2024", "police officers killed in Texas in 2023",
-  "how many officers were shot in 2024", "officers shot in Chicago in 2024", "police deaths in 2024", "Homicides of police in the line of duty"]) {
+  "how many officers were shot in 2024", "officers shot in Chicago in 2024", "police deaths in 2024", "Homicides of police in the line of duty",
+  "murders with sheriffs as victims in King County, Washington in 2024", "murders in King County, Washington in 2024 with sheriff victims",
+  "police officers shot dead in Chicago in 2024", "officers shot and killed in Chicago in 2024"]) {
   const d = as(ask(q), "decline");
   assert.match(d.explanation, /^Law enforcement officers as victims aren't counted separately in the data here/, q);
   assert.equal(jargon(d.explanation).length, 0, q);
 }
-for (const q of ["murders in King County Sheriff's Office, Washington in 2024", "murders for Baltimore Police Department in 2024", "assaults on women by police in 2024", "officers shot 10 people in Chicago in 2024"])
+for (const q of ["murders in King County Sheriff's Office, Washington in 2024", "murders for Baltimore Police Department in 2024", "assaults on women by police in 2024", "officers shot 10 people in Chicago in 2024", "officers killed 10 people in Chicago in 2024"])
   assert.doesNotMatch((ask(q) as { explanation?: string }).explanation ?? "", /officers as victims/, q);
 // A rate month by month: said accurately, with the rate for the whole period (or by year) and the counts by month.
 {

@@ -75,6 +75,8 @@ const IMMIGRATION = notRecorded("immigration or citizenship status");
 const OFFICER_VICTIMS = declined("law enforcement officers as victims aren't counted separately in the data here.");
 /** Officers as people, never an agency ("police department", "Sheriff's Office"). */
 const OFFICERS = String.raw`(?:police(?!\s+(?:departments?|dept\b|agenc|districts?|reports?|stations?))(?:\s+officers?)?|law\s+enforcement(?:\s+officers?)?|peace\s+officers?|officers?|cops?|sheriffs?(?!['’]|\s+(?:offices?|departments?|dept\b))|deput(?:y|ies)|troopers?)`;
+/** No one the officers acted on after the verb: "officers shot 10 people", "officers killed a suspect" are not victims. */
+const OFFICER_OBJECT = String.raw`(?!\s+(?:\d|a\b|an\b|the\b|at\b|people|persons?|men\b|women|someone|anyone|him\b|her\b|them\b|suspects?|civilians?|residents?|children|kids|teens?|black|white|unarmed|\w+\s+people))`;
 /** Up to two place words before the officers ("Chicago police", "King County sheriffs"), never "women by". */
 const OFFICER_PLACE = String.raw`(?:(?:(?!(?:by|with|and|or|in|from|for|at|the)\b)[A-Za-z.'’-]+\s+){1,2}(?:county\s+)?)?`;
 const FENTANYL = notRecorded("fentanyl as its own drug type (it falls under broader narcotic categories)");
@@ -242,9 +244,12 @@ const RULES: Rule[] = [
   // "killed in the line of duty". Not "killed by police" (people killed by officers) nor an agency's name.
   { concept: "officer-victims", pattern: R([
     String.raw`\b(?:murders?|homicides?|killings?|deaths?|fatalities|(?:aggravated\s+)?assaults?|shootings?|attacks?|ambush(?:es)?)\s+(?:of|on|against)\s+(?:the\s+)?${OFFICER_PLACE}${OFFICERS}\b`,
-    String.raw`\b(?:police|officer|cop|deputy|trooper)\s+(?:deaths|fatalities|victims?)\b`,
-    String.raw`\b${OFFICERS}\s+(?:who\s+)?(?:were\s+|was\s+|being\s+|got\s+)?(?:killed|murdered|assaulted|injured|ambushed|attacked)\b(?!\s+(?:by|with)\b)`,
-    String.raw`\b(?:officers?|police|cops?|deput(?:y|ies)|troopers?)\s+(?:(?:were|was|being|got)\s+)?shot\b(?!\s+(?:and\s+killed\s+)?(?:\d|a\b|an\b|the\b|at\b|people|persons?|men\b|women|someone|him\b|her\b|them\b|suspects?|civilians?|dead|and\b))`,
+    String.raw`\b(?:police|officer|cop|deputy|trooper|sheriff)s?\s+(?:deaths|fatalities|victims?)\b`,
+    // "with sheriffs as victims", "victims who were officers" (Codex officer review 01).
+    String.raw`\b${OFFICERS}\s+as\s+(?:the\s+)?victims?\b|\bvictims?\s+(?:who\s+)?(?:were|are|was|is)\s+(?:a\s+|an\s+)?${OFFICERS}\b`,
+    // Officers who were killed, not officers who killed someone ("officers killed 10 people").
+    String.raw`\b${OFFICERS}\s+(?:who\s+)?(?:were\s+|was\s+|being\s+|got\s+)?(?:killed|murdered|assaulted|injured|ambushed|attacked)\b(?!\s+(?:by|with)\b)${OFFICER_OBJECT}`,
+    String.raw`\b(?:officers?|police|cops?|deput(?:y|ies)|troopers?)\s+(?:(?:were|was|being|got)\s+)?shot\b(?:\s+(?:dead|and\s+killed))?${OFFICER_OBJECT}`,
     String.raw`\bkilled\s+in\s+(?:the\s+)?(?:line\s+of\s+duty|action)\b|\bleoka\b`,
   ].join("|")), state: "not-recorded", explanation: OFFICER_VICTIMS },
   { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
