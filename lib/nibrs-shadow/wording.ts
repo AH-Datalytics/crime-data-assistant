@@ -78,8 +78,8 @@ export const REASONS: Record<string, (x: string) => string> = {
   "I compare one measure for one place between two named years (for example \"from 2023 to 2025\").": () => "I can compare one crime in one place between two years, for example \"from 2023 to 2025\".",
   "a share covers one period as a whole; ask for each year on its own.": () => "A share covers one period as a whole; ask for each year on its own.",
   "one period per answer.": (x) => `I can answer for one period at a time; ${q(x)} would be a second one. Ask for each period on its own.`,
-  // Coordinator 2026-11-05: accurate (a rate for two or more months together is given, P59), with the two buttons.
-  "rates are given for complete years, not for single months.": () => "A rate is given for two or more months together (the year to date, a year or a range of months), not for one month or month by month.",
+  // P96 (Jeff 2026-11-06): crime rates are given month by month; only a clearance rate is not (it reaches this reason).
+  "rates are given for complete years, not for single months.": () => "Clearance rates are given for a whole year, not month by month.",
   "a rate over several years is given per year; ask without \"total\" for one rate per year.": () => "A rate over several years is given for each year; ask without \"total\" to see one rate per year.",
   "breakdowns come from yearly tables; monthly or rolling breakdowns aren't available.": () => "Breakdowns are available by year, not by month or as rolling totals.",
   "breakdowns come from yearly tables; a breakdown for part of a year isn't available.": () => "Breakdowns are available for whole years, not for part of a year.",

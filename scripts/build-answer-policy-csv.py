@@ -610,6 +610,12 @@ ROWS = [
      "NIBRS homicide: 09A + 09B. Murder: 09A.",
      "Negligent manslaughter is a homicide; leaving it out undercounted homicide (Detroit 2021-2025: 1,254 homicide victims with 09B against 1,231 without).",
      "Decided 2026-11-06 (Jeff: \"Include 09B\")", NEW),
+    ("P96", "\"Robbery rate in Memphis by month in 2025\", \"murder rate in Chicago in June 2025\" (a rate for one month, or month by month)",
+     "Declined: a Current Trends rate was given only for a total of two or more months (design note, decision B), and NIBRS rates only by year.",
+     "A monthly rate is that month's count per 100,000 of the population, not annualized, labeled as a rate for the month. The population is the month's own in Current Trends; before Current Trends' months begin, and in NIBRS, the agency's population for that month's year as the FBI or Crime Index publishes it. A clearance rate is still given for a whole year, not month by month.",
+     "Each month's count per 100,000; not annualized; labeled \"per 100,000 for the month\".",
+     "Monthly rates were asked for and the data has the counts and the populations; a month's rate must never read as a yearly one.",
+     "Decided 2026-11-06 (Jeff: \"Now\" on monthly or rolling rates; the single-month rule dropped)", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
