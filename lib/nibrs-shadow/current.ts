@@ -100,6 +100,25 @@ export function agencyPopulation(b: CurrentBuild, ori: string, month: Month, exe
   return r ? Number(r[0]) : null;
 }
 /**
+ * Each month's population for an agency's monthly rate (Jeff 2026-11-06, P96): the month's own row in current_crime;
+ * before Current Trends' rows begin, the agency's population for that year as Crime Index publishes it (agency_crime);
+ * a year after the latest published one carries the latest forward (P59). Null when there is none above zero.
+ */
+export function agencyMonthPopulations(b: CurrentBuild, ori: string, monthsWanted: Month[], execute: (sql: string) => unknown[][]): Map<Month, number | null> {
+  const cur = new Map(execute(`SELECT printf('%04d-%02d', year, month), population FROM read_parquet('${b.root}/current_crime.parquet') WHERE ori = ${q(ori)} AND population > 0`)
+    .map((r) => [String(r[0]), Number(r[1])] as [string, number]));
+  const yearly = execute(`SELECT year, population FROM read_parquet('${b.root}/agency_crime.parquet') WHERE ori = ${q(ori)} AND population > 0 ORDER BY year`)
+    .map((r) => [Number(r[0]), Number(r[1])] as [number, number]);
+  return new Map(monthsWanted.map((m) => {
+    if (cur.has(m)) return [m, cur.get(m)!];
+    const y = Number(m.slice(0, 4));
+    const upTo = yearly.filter(([yy]) => yy <= y);
+    if (upTo.length) return [m, upTo[upTo.length - 1][1]];
+    const earlierCur = [...cur.keys()].filter((k) => k <= m).sort();
+    return [m, earlierCur.length ? cur.get(earlierCur[earlierCur.length - 1])! : null];
+  }));
+}
+/**
  * A group's rate (decision B; Codex review 01.1): over its sample agencies with every month of the span known for the
  * offense, their count over their summed population (each agency's in the span's last month).
  */
@@ -133,7 +152,7 @@ export function change(earlier: number | null, later: number | null): number | n
 }
 /** Decision B (P58, P59): count per 100,000, one decimal; null for one month, an unknown count or no population. */
 export function currentRate(count: number | null, population: number | null, monthsCovered: number): number | null {
-  if (count === null || population === null || population <= 0 || monthsCovered < 2) return null;
+  if (count === null || population === null || population <= 0 || monthsCovered < 1) return null;
   return Math.round((count * 1e6) / population) / 10;
 }
 
@@ -202,9 +221,8 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   const group = cq.place.kind === "group";
   const span = cq.form === "months" || cq.form === "total" ? months(cq.from, cq.to) : cq.form === "ytd" ? ytdMonths(cq.to) : rollingMonths(cq.to, cq.window?.months ?? 12);
   const rate = cq.statistic === "rate";
-  // Decision B (P58, P59): a rate is a total's, of two or more months; never one month's, never month by month.
-  if (rate && (cq.form === "months" || span.length < 2))
-    return { kind: "current-decline", explanation: "Current Trends rates are given for a total of two or more months (the year to date, the past 12 months, or a range of months), never for one month or month by month." };
+  // P96 (Jeff 2026-11-06, the single-month rule dropped): a rate for one month, or month by month, is that month's count
+  // per 100,000 of the population, not annualized; a total of several months stays the total's (decision B, P59).
   // The months the data holds: an agency's from the Final panel's first, a group's from current_crime's (decision A).
   const first = group ? b.firstMonth : b.finalFirstMonth;
   const covered = span.filter((m) => m >= first && m <= b.lastMonth);
@@ -248,7 +266,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     const c = cumulative(vals, covered);
     const sw = spanWords(period.from, period.to);
     const wn = cq.window?.months ?? 12;
-    const what = cq.form === "ytd" ? `in the year to date, ${sw}` : cq.form === "rolling" ? `in the ${wn} months from ${sw}` : `from ${sw}`;
+    const what = cq.form === "ytd" ? `in the year to date, ${sw}` : cq.form === "rolling" ? `in the ${wn} months from ${sw}` : covered.length === 1 ? `in ${sw}` : `from ${sw}`;
     const whatTotal = cq.form === "ytd" ? `the year to date (${sw})` : cq.form === "rolling" ? `the ${wn} months from ${sw}` : sw;
     if (c.value === null) return { kind: "current-decline", explanation: `Crime Index has no ${one} figure for ${where} in ${c.missing.map(monthWords).join(", ")}, so there is no total for ${whatTotal}.` };
     // A rolling average (Jeff 2026-11-05: "Answer the average"): the window's total over its months, said as a monthly
@@ -275,6 +293,25 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
     return { kind: "current", question: cq, period, meaning: meaning([]), coverage, read,
       delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }], rows: [[c.value]] },
         text: [`${where}: ${fmt(c.value)} ${words} ${what}.`, ...head, ...cohortLine, ...leftOutLine, source] } };
+  }
+  // P96: month by month, each month's count per 100,000 of that month's population, not annualized. A group's month has a
+  // rate only when every agency counted has a figure (its population covers them all).
+  if (rate) {
+    const pops = cq.place.kind === "agency" ? agencyMonthPopulations(b, cq.place.ori, covered, execute) : null;
+    const rates = covered.map((m, i) => {
+      if (cq.place.kind === "agency") return currentRate(vals[i], pops!.get(m) ?? null, 1);
+      const c = coverage.find((x) => x.month === m);
+      return c && c.blank === 0 ? currentRate(vals[i], c.population, 1) : null;
+    });
+    const noRate = covered.filter((_, i) => rates[i] === null).map(monthWords);
+    const rateCols: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true },
+      { binding: { kind: "statistic", as: "x" }, header: `${ucFirst(words)} per 100,000 for the month` }];
+    return { kind: "current", question: cq, period, meaning: meaning(["month"]), coverage, read,
+      delivered: { table: { columns: rateCols, rows: covered.map((m, i) => [m, rates[i]]) },
+        text: [covered.length === 1 && rates[0] !== null
+          ? `${where}: ${rates[0]!.toFixed(1)} ${words} per 100,000 people in ${monthWords(covered[0])}: that month's own count, not annualized.`
+          : `${where}: ${words} per 100,000 people for each month, ${spanWords(period.from, period.to)}: each month's own count, not annualized.`, ...head, ...cohortLine, ...outside,
+          ...(noRate.length ? [`No rate for ${noRate.join(", ")}: ${group ? "an agency counted had no figure or there was no population" : "no figure or no population"}, shown blank.`] : []), source] } };
   }
   const blanks = covered.filter((_, i) => vals[i] === null).map(monthWords);
   const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.month" }, header: "Month", ordered: true }, { binding: { kind: "statistic", as: "x" }, header: ucFirst(words) }];

@@ -25,7 +25,8 @@ assert.equal(change(null, 524), null);
 assert.equal(change(0, 5), null);
 // Decision B (P58, P59): never one month, never an unknown count or a missing or zero population.
 assert.equal(currentRate(524, 100000, 8), 524);
-assert.equal(currentRate(88, 100000, 1), null);
+assert.equal(currentRate(88, 100000, 1), 88, "P96 (Jeff 2026-11-06): one month has a rate too");
+assert.equal(currentRate(88, 100000, 0), null);
 assert.equal(currentRate(null, 100000, 8), null);
 assert.equal(currentRate(5, 0, 8), null);
 assert.deepEqual(REGIONS.noe.states.length + REGIONS.mdw.states.length + REGIONS.sth.states.length + REGIONS.wst.states.length, 51, "the 50 states and DC");

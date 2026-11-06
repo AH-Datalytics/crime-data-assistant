@@ -3763,12 +3763,16 @@
 },
 "QL-ct-de4bf4b27f": {
 "status": "reviewed",
-"by": "codex-audit-2026-11-06",
+"by": "jeff-2026-11-06-P96",
 "expected": {
-"outcome": "decline",
-"reason": "monthly rates: a rate is given for two or more months together (Current Trends design note, decision B)"
+"outcome": "answer",
+"source": "rtci",
+"source_any": [
+"rtci",
+"nibrs"
+]
 },
-"why": "Monthly rates are a decided scope choice; decline with the rate for the whole period and the counts by month."
+"why": "P96 (Jeff 2026-11-06): monthly rates are answered; the single-month rule is dropped."
 },
 "QL-ct-deb9e6f63b": {
 "status": "draft",

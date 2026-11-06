@@ -314,12 +314,22 @@ for (const q of ["murders of sheriffs in King County, Washington in 2024", "murd
 }
 for (const q of ["murders in King County Sheriff's Office, Washington in 2024", "murders for Baltimore Police Department in 2024", "assaults on women by police in 2024", "officers shot 10 people in Chicago in 2024", "officers killed 10 people in Chicago in 2024", "officers shot and killed a suspect in Chicago in 2024", "officers killed five suspects in Chicago in 2024"])
   assert.doesNotMatch((ask(q) as { explanation?: string }).explanation ?? "", /LEOKA/, q);
-// A rate month by month: said accurately, with the rate for the whole period (or by year) and the counts by month.
+// P96 (Jeff 2026-11-06): a crime rate month by month is answered, each month's count per 100,000, not annualized; a
+// clearance rate by month is still declined, with the whole period's and the counts by month as buttons.
 {
-  const d = as(ask("robberies rate in Memphis in 2025 by month"), "decline");
-  assert.equal(d.explanation.split(" For example")[0], "A rate is given for two or more months together (the year to date, a year or a range of months), not for one month or month by month.");
-  const labels = [d.alternative, ...(d.more ?? [])].filter(Boolean).map((o) => o!.label);
-  assert.ok(labels.every((l) => ["The rate for the whole period", "The rate by year", "The counts by month", "The count instead"].includes(l)), labels.join());
+  const o = ask("robberies rate in Memphis in 2025 by month") as { kind: string; explanation?: string; delivered?: { table: { columns: { header: string }[] }; text: string[] } };
+  assert.doesNotMatch(o.explanation ?? "", /not for one month or month by month|whole years, not single months/);
+  if (o.delivered) {
+    assert.match(o.delivered.table.columns[1].header, / per 100,000 for the month$/);
+    assert.match(o.delivered.text[0], /not annualized/);
+    assert.doesNotMatch(o.delivered.text.join(" "), /\bresidents?\b/i, "never \"residents\" in what a user reads");
+  }
+  const d = as(ask("murder clearance rate by month in Chicago in 2024"), "decline");
+  assert.equal(d.explanation.split(" For example")[0], "Clearance rates are given for a whole year, not month by month.");
+  // The question type no longer declines a crime rate by month (P96); a clearance rate by month it still does.
+  const ty = (q: string) => matchNibrsType(readQuestion(q, 2026, "2026-09").ledger, { allowExplanation: false } as never).kind;
+  assert.notEqual(ty("carjacking rate in Houston by month in 2024"), "decline");
+  assert.equal(ty("murder clearance rate by month in Chicago in 2024"), "decline");
 }
 
 // A place's state is its postal code, never an ORI prefix (coordinator 2026-11-03: Nebraska's agencies are "NB...").

@@ -17937,16 +17937,24 @@
    "question": "Dallas vs Chicago murder rate per month since 2018",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "monthly rates: a rate is given for two or more months together (Current Trends design note, decision B)"
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-audit-2026-11-06",
-    "reviewed_by": "codex-audit-2026-11-06",
-    "notes": "Monthly rates are a decided scope choice; decline with the rate for the whole period and the counts by month."
+    "drafted_by": "jeff-2026-11-06-P96",
+    "reviewed_by": "jeff-2026-11-06-P96",
+    "notes": "P96 (Jeff 2026-11-06): monthly rates are answered; the single-month rule is dropped."
    }
   },
   {
