@@ -149,6 +149,8 @@ export type CurrentQuestion = {
   /** "rate" (decision B): only for a total of two or more months, every month known, and a population above zero. */
   statistic?: "count" | "rate";
   agencyLine?: string;
+  /** A line after the agency's (a county answered from its sheriff's office): shown as a note, never as restated. */
+  agencyNote?: string;
   /** The rolling window: its length in months, and an average (the window's total over its months) when asked. */
   window?: { months: number; average: boolean };
 };
@@ -211,7 +213,7 @@ export function answerCurrent(cq: CurrentQuestion, b: CurrentBuild, execute: (sq
   if (!covered.length || (cq.form !== "months" && covered.length !== span.length))
     return { kind: "current-decline", explanation: `${holds}, so ${spanWords(span[0], span[span.length - 1])} ${span.length > 1 ? "are" : "is"} outside them.` };
   const where = cq.place.label, words = WORDS[col], one = SINGULAR[col], source = "Source: Crime Index.";
-  const head = cq.agencyLine ? [cq.agencyLine] : [];
+  const head = [...(cq.agencyLine ? [cq.agencyLine] : []), ...(cq.agencyNote ? [cq.agencyNote] : [])];
   const left = span.filter((m) => !covered.includes(m));
   const outside = left.length ? [`${holds}; ${spanWords(left[0], left[left.length - 1])} ${left.length > 1 ? "are" : "is"} outside them.`] : [];
   let values: Map<Month, number | null>;
