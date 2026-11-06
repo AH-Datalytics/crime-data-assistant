@@ -182,6 +182,8 @@ function oneSlip(a: string, b: string): boolean {
   const diff = [...a].map((c, i) => (c === b[i] ? -1 : i)).filter((i) => i >= 0);
   return diff.length === 2 && diff[1] === diff[0] + 1 && a[diff[0]] === b[diff[1]] && a[diff[1]] === b[diff[0]];
 }
+/** The words of the state names, which a short misspelling is never read as. */
+const STATE_WORDS = new Set(Object.values(STATE_NAME_BY_CODE).flatMap((n) => n.toLowerCase().split(/\s+/)));
 /** English words one slip from a crime word that the common-word list lacks. */
 const REAL_WORDS = new Set(["violet", "sates", "cites", "crimp", "crimps", "counts", "country", "assets"]);
 /** The one vocabulary word a misspelled word is a single slip from, or null (none, two, or a short word). */
@@ -192,8 +194,9 @@ export function nearestWord(word: string): string | null {
   if (w.length < 5 || VOCAB.includes(w) || (w.length < 7 && (isCommonEnglishWord(w) || REAL_WORDS.has(w)))) return null;
   // Under seven letters, only a swapped pair ("cirme", "cirmes"): an added or dropped letter makes other words
   // ("grapes" is not "rapes", "cries" is not "crimes": Codex spelling reviews 01-02). The dropped-letter typos the log
-  // has ("muders", "robery") are read by name above.
-  const at = VOCAB.filter((v) => oneSlip(w, v) && (w.length >= 7 || w.length === v.length));
+  // has ("muders", "robery") are read by name above. And only onto a crime word, never a state ("amine" is not Maine:
+  // Codex spelling review 05).
+  const at = VOCAB.filter((v) => oneSlip(w, v) && (w.length >= 7 || (w.length === v.length && !STATE_WORDS.has(v))));
   return at.length === 1 ? at[0] : null;
 }
 

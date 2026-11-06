@@ -15,7 +15,7 @@ assert.equal(nearestWord("Shoplfting"), "shoplifting");
 assert.equal(nearestWord("robbeyr"), "robbery", "a swapped pair");
 assert.equal(nearestWord("Tennesee"), "tennessee");
 assert.equal(nearestWord("viriginia"), "virginia", "an added letter");
-for (const w of ["sample", "violet", "arsen", "shooting", "shopping", "Shplftg", "parking", "shoplofting", "sates", "cites", "rather", "showing", "status", "months", "single", "proper", "present", "murdered", "grapes", "cries"]) assert.equal(nearestWord(w), null, w);
+for (const w of ["sample", "violet", "arsen", "shooting", "shopping", "Shplftg", "parking", "shoplofting", "sates", "cites", "rather", "showing", "status", "months", "single", "proper", "present", "murdered", "grapes", "cries", "amine"]) assert.equal(nearestWord(w), null, w);
 // Five- and six-letter typos that aren't English (coordinator 2026-11-05, the query log's misspelling cluster).
 for (const [w, to] of [["cirme", "crime"], ["cirmes", "crimes"], ["citites", "cities"], ["couunty", "county"], ["offfender", "offender"]])
   assert.equal(nearestWord(w), to, w);
