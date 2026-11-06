@@ -214,6 +214,32 @@ assert.equal((at("county:Just Show Worcester County:MD", "just show worcester co
   assert.ok(c.options.every((o) => o.entry || (o.continuation && o.continuation.kind !== "clarify")), "every button runs");
   assert.notEqual(ask("murders in Total").kind, "decline");
 }
+// A misspelled large place the reader left unread ("Philadlephia murders 2024": no "in" before it) is read as the place;
+// unread ordinary words near a place name are not (the query log's "line", "columns", "median", "dollar").
+assert.equal(nearestPlaceName(places, "Philadlephia", true), "Philadelphia");
+assert.equal(nearestPlaceName(places, "Clevland", true), "Cleveland");
+for (const w of ["line", "like", "columns", "median", "dollar", "killed", "region", "control", "summer", "places", "bolder", "garlands"]) assert.equal(nearestPlaceName(places, w, true), null, w);
+{
+  // Offered first, never substituted in silence ("fontina thefts" is not Fontana: Codex spelling review 03).
+  const c = as(ask("Philadlephia murders 2024"), "clarify");
+  const right = ask("Philadelphia murders 2024");
+  // Offered when the place's own question runs here (the stub build may not answer it; the real build does).
+  if (right.kind !== "decline" && right.kind !== "route") {
+    assert.equal(c.options[0].label, "Philadelphia");
+    assert.equal(JSON.stringify(c.options[0].continuation), JSON.stringify(right));
+  } else assert.ok(!c.options.some((o) => o.label === "Philadelphia"), "never a button that can't run");
+  assert.notEqual(ask("fontina thefts 2024").kind, "historical");
+}
+assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024")), /Boulder/, "not a second place (Codex spelling review 01)");
+// A county asked by name and answered from its sheriff's office says so; a sheriff named in the question needs no note.
+{
+  const text = (q: string) => JSON.stringify(ask(q));
+  const note = "not the whole county's: cities in the county with their own police report separately.";
+  const bare = text("Tarrant County, Texas murders 2024");
+  if (/Tarrant County Sheriff/.test(bare)) assert.ok(bare.includes(note), bare.slice(0, 300));
+  assert.ok(!text("murders in Tarrant County Sheriff's Office in 2024").includes(note));
+  assert.ok(!text("murders in Baltimore County in 2024").includes(note), "a county police department covers its county");
+}
 // Officers as victims are declined by name, never answered with the total (coordinator 2026-11-05); agencies and people
 // killed by police are not officers as victims.
 for (const q of ["murders of sheriffs in King County, Washington in 2024", "murders of King County sheriffs in Washington in 2024",
