@@ -70,6 +70,17 @@ const DRUG_ACTIVITY = notRecorded("drug distribution or sales as its own measure
 const STATEMENTS = notRecorded("what people said in interviews, or how they got a weapon");
 const OVERDOSE = notRecorded("overdose deaths; drug offenses are not an overdose-death count");
 const IMMIGRATION = notRecorded("immigration or citizenship status");
+// Officers as victims (coordinator 2026-11-05: "murders of sheriffs in King County, Washington" had answered the county's
+// total murders): no source here counts them, so they are declined by name, never answered with the total.
+const OFFICER_VICTIMS = declined("we don't have LEOKA data in yet.");
+/** Officers as people, never an agency ("police department", "Sheriff's Office"). */
+const OFFICERS = String.raw`(?:police(?!\s+(?:departments?|dept\b|agenc|districts?|reports?|stations?))(?:\s+officers?)?|law\s+enforcement(?:\s+officers?)?|peace\s+officers?|officers?|cops?|sheriffs?(?!['’]|\s+(?:offices?|departments?|dept\b))|deput(?:y|ies)|troopers?)`;
+/** No one the officers acted on after the verb: "officers shot 10 people", "officers killed a suspect" are not victims. */
+// Checked after the verb and after "dead" / "and killed" alike, so the optional words can't be skipped to get past it
+// ("officers shot and killed a suspect", "officers killed five suspects": Codex officer review 02).
+const OFFICER_OBJECT = String.raw`(?!(?:\s+(?:dead|and\s+killed))?\s+(?:\d|a\b|an\b|the\b|at\b|one\b|two\b|three\b|four\b|five\b|six\b|seven\b|eight\b|nine\b|ten\b|dozens?\b|several\b|many\b|multiple\b|hundreds?\b|people|persons?|men\b|women|someone|anyone|him\b|her\b|them\b|suspects?|civilians?|residents?|children|kids|teens?|black|white|unarmed|\w+\s+(?:people|persons|suspects|civilians|men|women|children|residents)\b))`;
+/** Up to two place words before the officers ("Chicago police", "King County sheriffs"), never "women by". */
+const OFFICER_PLACE = String.raw`(?:(?:(?!(?:by|with|and|or|in|from|for|at|the)\b)[A-Za-z.'’-]+\s+){1,2}(?:county\s+)?)?`;
 const FENTANYL = notRecorded("fentanyl as its own drug type (it falls under broader narcotic categories)");
 
 /* ------------------------------------------------------------------ rules --------------------------------------- */
@@ -79,7 +90,7 @@ const MONTH_PERIODS: Rule[] = [
   { concept: "period", value: (m) => `monthrange:${m[2]}-${monthNo(m[1])}:${m[4]}-${monthNo(m[3])}`, pattern: R(String.raw`\bfrom\s+(${MONTH})\s+(${YEAR})\s+(?:to|through|until|-)\s+(${MONTH})\s+(${YEAR})\b`) },
   { concept: "period", value: (m) => `month:${m[2]}-${monthNo(m[1])}`, pattern: R(String.raw`\b(?:(?:in|for|during|of)\s+)?(${MONTH})\s+(${YEAR})\b`) },
 ];
-const EARLY_CONCEPTS = new Set(["outside-us", "ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
+const EARLY_CONCEPTS = new Set(["officer-victims", "outside-us", "ori", "phase-unsupported", "rolling", "daily", "two-way-rank", "clearance-reason", "court", "sub-city", "peer", "cohort", "overdose-deaths", "immigration-status", "shooting", "demographic-rate", "statements", "meta-codes", "drug-activity"]); // meta-codes: before "list" and the measures
 
 /** Filter values: `dimension:value`. Specific weapons before the generic gun words; values are NIBRS codes. */
 const FILTERS: Rule[] = [
@@ -231,6 +242,19 @@ const RULES: Rule[] = [
     when: (m, q) => !/\bnew\s*$/i.test(q.slice(0, m.index))
       && !/^\s*,?\s*(?!(?:in|during|from|since|for|by|and|or|vs\.?|versus|compared|between|over|per|to|through|of|with|at|on|the|last|this|over|before|after|between|year|years|month|months)\b)[a-z]/i.test(q.slice(m.index + m[0].length)),
     explanation: declined("the data covers U.S. law enforcement agencies only.") },
+  // Officers as victims: "murders of police", "assaults on King County sheriffs", "officers killed", "police deaths",
+  // "killed in the line of duty". Not "killed by police" (people killed by officers) nor an agency's name.
+  { concept: "officer-victims", pattern: R([
+    String.raw`\b(?:murders?|homicides?|killings?|deaths?|fatalities|(?:aggravated\s+)?assaults?|shootings?|attacks?|ambush(?:es)?)\s+(?:of|on|against)\s+(?:the\s+)?${OFFICER_PLACE}${OFFICERS}\b`,
+    String.raw`\b(?:police|officer|cop|deputy|trooper|sheriff)s?\s+(?:deaths|fatalities|victims?)\b`,
+    // "with sheriffs as victims", "victims who were officers" (Codex officer review 01).
+    String.raw`\b${OFFICERS}\s+as\s+(?:the\s+)?victims?\b|\bvictims?\s+(?:who\s+)?(?:were|are|was|is)\s+(?:a\s+|an\s+)?${OFFICERS}\b`,
+    // Officers who were killed, not officers who killed someone ("officers killed 10 people"). With officers as the
+    // subject, "killed by" and "killed with" are still the officers' deaths ("sheriffs killed with firearms").
+    String.raw`\b${OFFICERS}\s+(?:who\s+)?(?:were\s+|was\s+|being\s+|got\s+)?(?:killed|murdered|assaulted|injured|ambushed|attacked)\b${OFFICER_OBJECT}`,
+    String.raw`\b(?:officers?|police|cops?|deput(?:y|ies)|troopers?)\s+(?:(?:were|was|being|got)\s+)?shot\b(?:\s+(?:dead|and\s+killed))?${OFFICER_OBJECT}`,
+    String.raw`\bkilled\s+in\s+(?:the\s+)?(?:line\s+of\s+duty|action)\b|\bleoka\b`,
+  ].join("|")), state: "not-recorded", explanation: OFFICER_VICTIMS },
   { concept: "immigration-status", pattern: R(String.raw`\b(?:(?:legal|illegal|undocumented|documented|unauthorized|recent|new)\s+)*(?:(?:u\.?s\.?|american|naturali[sz]ed|native[-\s]born)\s+citizens?|(?<=\b(?:by|among)\s+(?:the\s+)?)citizens\b|citizen\s+status|immigrants?|migrants?|immigration(?:[-\s]status)?|citizenship(?:[-\s]status)?|residency\s+status|non[-\s]?citizens?|noncitizens?|illegal\s+aliens?|undocumented(?:\s+(?:people|persons|individuals|residents))?|refugees?|asylum[-\s]seekers?|foreign[-\s](?:born|nationals?)|deportees?|visa\s+holders?|green[-\s]card\s+holders?)\b`), state: "not-recorded", explanation: IMMIGRATION },
   { concept: "court", pattern: R(String.raw`\bconvict(?:ions?|ed|s)?\b|\bsentenc(?:es?|ed|ing)\b|\bprosecutions?\b|\bprosecutors?\b|\bprosecuted\b|\bdefendants?\b|\bcourts?\b|\bprobation\b|\bparole\b`), state: "not-recorded", explanation: COURT },
   { concept: "sub-city", pattern: R(String.raw`\bzip\s*codes?\b|\bzip\b|\bneighbou?rhoods?\b|\bdistricts?\b|\bprecincts?\b|\bwards?\b|\bbeats?\b|\bcensus\s+tracts?\b`), state: "not-recorded", explanation: SUBCITY },
