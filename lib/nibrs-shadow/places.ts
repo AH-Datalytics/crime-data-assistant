@@ -101,7 +101,9 @@ export function nearestPlaceName(idx: PlaceIndex, name: string, strict = false):
   if (strict && (k.length < 7 || isCommonEnglishWord(k))) return null;
   const limit = strict ? 1 : k.length < 6 ? 1 : 2;
   const near = [...idx.byName.entries()].filter(([n, xs]) => n[0] === k[0] && xs[0].population >= ASK_POPULATION && Math.abs(n.length - k.length) <= limit && distance(n, k) <= limit
-    && (!strict || xs.some((x) => x.kind === "city" && x.population >= ASK_POPULATION)));
+    && (!strict || (xs.some((x) => x.kind === "city" && x.population >= ASK_POPULATION)
+      // A plural is a word, not a place: "garlands" is not Garland (Codex spelling review 02).
+      && !(k.endsWith("s") && !n.endsWith("s")))));
   // The place's name (the city's, when there is one): "Baltimore", which then asks the city or the county (P28).
   return near.length === 1 ? (near[0][1].find((x) => x.kind === "city") ?? near[0][1][0]).name : null;
 }

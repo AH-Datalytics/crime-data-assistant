@@ -218,7 +218,7 @@ assert.equal((at("county:Just Show Worcester County:MD", "just show worcester co
 // unread ordinary words near a place name are not (the query log's "line", "columns", "median", "dollar").
 assert.equal(nearestPlaceName(places, "Philadlephia", true), "Philadelphia");
 assert.equal(nearestPlaceName(places, "Clevland", true), "Cleveland");
-for (const w of ["line", "like", "columns", "median", "dollar", "killed", "region", "control", "summer", "places", "bolder"]) assert.equal(nearestPlaceName(places, w, true), null, w);
+for (const w of ["line", "like", "columns", "median", "dollar", "killed", "region", "control", "summer", "places", "bolder", "garlands"]) assert.equal(nearestPlaceName(places, w, true), null, w);
 assert.equal(JSON.stringify(ask("Philadlephia murders 2024")), JSON.stringify(ask("Philadelphia murders 2024")));
 assert.doesNotMatch(JSON.stringify(ask("bolder robberies in Philadelphia in 2024")), /Boulder/, "not a second place (Codex spelling review 01)");
 // A county asked by name and answered from its sheriff's office says so; a sheriff named in the question needs no note.
