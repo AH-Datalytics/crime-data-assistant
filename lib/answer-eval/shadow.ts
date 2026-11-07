@@ -771,7 +771,7 @@ function statementDiffs(e: Extract<NonNullable<Case["expected"]>, { action: "ans
       const full = o.period.from.slice(5) === "01" && o.period.to.slice(5) === "12" ? `all 12 months of ${when}` : `every month of ${when}`;
       ok = text.includes(`Ranked: agencies that reported ${full}; ties are ordered by agency name.`)
         && o.delivered.evidence.every((x) => x.status === "VALUE" || x.status === "REPORTED_ZERO")
-        && text.filter((t) => t.startsWith("Not ranked because they didn't report")).every((t) => /\(\d+ months?\)/.test(t))
+        && text.filter((t) => t.startsWith("Not ranked because they didn't report")).every((t) => /\((?:population [\d,]+, )?\d+ months?\)/.test(t))
         && !("alternative" in o && (o as { alternative?: unknown }).alternative);
     } else if (s === "orders ties alphabetically by agency name") {
       const rows = o.delivered.table.rows;
@@ -934,14 +934,14 @@ export function valueDiffs(prefix: string, o: Extract<ShadowOutcome, { kind: "an
   // than five as their count and five of them, each named agency with its own months; none left out, no such line.
   if (expected.some((x) => x.position !== undefined)) {
     const lines = o.delivered.text.filter((t) => t.startsWith("Not ranked because they didn't report"));
-    // Each "<name> (<n> months)" after the line's colon; the first of more than five follows "the largest " (Codex 02
-    // re-check C).
-    const named = lines.flatMap((t) => [...t.slice(t.indexOf(": ") + 2).matchAll(/(?:^|, )(?:the largest )?([^,]+?) \((\d+) months?\)/g)].map((m) => ({ key: m[1].replace(RETURN_A, ""), months: Number(m[2]) })));
+    // Each "<name> (<n> months)" after the line's last colon; more than five are named as "The five with the largest
+    // populations: <name> (population <n>, <n> months), ..." (Codex 02 re-check C; coordinator 2026-11-07).
+    const named = lines.flatMap((t) => [...t.slice(t.lastIndexOf(": ") + 2).matchAll(/(?:^|, )([^,]+?) \((?:population [\d,]+, )?(\d+) months?\)/g)].map((m) => ({ key: m[1].replace(RETURN_A, ""), months: Number(m[2]) })));
     const months = new Map(leftOut.map((x) => [x.key, x.value]));
     const bad = (why: string, actual: string) => diffs.push({ field: `${prefix}left out`, expected: why, actual, kind: "material" });
     if (!leftOut.length) { if (lines.length) bad("no agency left out", lines.join(" / ")); }
     else if (lines.length !== 1) bad(`one line naming the ${leftOut.length} agencies left out`, lines.join(" / ") || "none");
-    else if (leftOut.length > 5 && !lines[0].includes(`: ${leftOut.length} agencies, the largest `)) bad(`${leftOut.length} agencies and the five largest`, lines[0]);
+    else if (leftOut.length > 5 && !lines[0].includes(`: ${leftOut.length} agencies. The five with the largest populations: `)) bad(`${leftOut.length} agencies and the five with the largest populations`, lines[0]);
     else if (named.length !== Math.min(5, leftOut.length) || new Set(named.map((n) => n.key)).size !== named.length || named.some((n) => months.get(n.key) !== n.months))
       bad(`${Math.min(5, leftOut.length)} of them, each with its months reported`, lines[0]);
   }

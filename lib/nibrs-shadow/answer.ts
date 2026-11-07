@@ -52,7 +52,7 @@ import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { answerBeside, answerHistorical, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
@@ -941,6 +941,46 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const r = geos ? answerSrsSeveral(srsQ, geos.map(srsPlace)) : answerSrs({ ...srsQ, place: srsPlace(geo!) });
       if (r.kind === "srs") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
+    }
+  }
+  // Item 3 (coordinator 2026-11-07): an agency beside its state or the nation ("Memphis and Tennessee murder rate in
+  // 2023", "Iowa City vs national aggravated assault rate since 2018"): each place's own Crime Index figures side by
+  // side, under the rules of both answers it joins (the agencies' above, the states' and nation's below). Never when the
+  // places are to be combined or one is asked as a count and another as a rate.
+  if (deps.historical && d.spec.type === "series" && d.spec.places.length >= 2 && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property
+    && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite) {
+    const sp = d.spec;
+    const each = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : p.kind === "state" || p.kind === "national" ? p : undefined));
+    const mixed = each.some((x) => x?.kind === "agency") && each.some((x) => x?.kind === "state" || x?.kind === "national")
+      && each.every((x) => x?.kind === "agency" || x?.kind === "state" || x?.kind === "national");
+    const mixedStatistic = clause0("statistic").length > 0 && /\b(?:counts?|numbers?|totals?|how\s+many)\b/i.test(ledger0.question);
+    const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share", "clearance"].includes(p.concept));
+    if (mixed && !clause0("combine").length && !flags(ledger0).combined && !mixedStatistic && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0])
+      && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && historicalUnitFits(sp.measures[0], sp.unit) && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
+      && (sp.statistic === "count" || sp.statistic === "rate")) {
+      if (sp.period.form === "none" && sp.grain === "total") return askCrimeIndexPeriod();
+      const cmp = flags(ledger0).comparison;
+      const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
+      if (yrs) {
+        if (partYear(sp, cmp)) return decline("unsupported_capability", "Crime Index figures for an agency beside a state or the nation are whole years only.", { alternative: byYearInstead(ledger, deps, pins) });
+        const thisYear = Number(release.lastMonth.slice(0, 4));
+        if (yrs[0] > thisYear) return decline("outside_release_coverage", `${yrs[0]} is not in the data; the latest year is ${thisYear}.`);
+        if (yrs[1] > thisYear) return decline("outside_release_coverage", `${yrs[1]} is not in the data; the latest year is ${thisYear}.`);
+        if (yrs[0] === thisYear)
+          return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.` };
+        const reachesNow = yrs[1] === thisYear;
+        const places: BesidePlace[] = each.map((x, i) => (x!.kind === "agency"
+          ? { agency: { ori: x!.ori, label: x!.label, name: (sp.places[i] as { name: string }).name, state: (sp.places[i] as { state: string }).state } }
+          : { geo: x!.kind === "state" ? { kind: "state" as const, code: (x as { code: string }).code } : { kind: "national" as const } }));
+        const oris = places.flatMap((p) => ("agency" in p ? [p.agency.ori] : []));
+        const note = sheriffNote(deps, oris, ledger0.question);
+        const r = answerBeside({ measure: sp.measures[0], agencies: [], from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp),
+          statistic: sp.statistic, comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
+          notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
+          agencyLine: reportedBy(oris.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for "), ...(note ? { agencyNote: note } : {}) }, places, deps.historical, deps.execute);
+        if (r.kind === "historical") return r;
+        return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
     }
   }
   // Historical (P75-P79): a Part I offense for one or several named agencies in completed years is the Crime Index
