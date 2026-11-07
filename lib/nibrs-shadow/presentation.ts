@@ -11,6 +11,7 @@ import { CAVEAT_ORDER, chartOptionsOf, NOTE_TEXT, PROFILES, type ChoicePresentat
 import type { ShadowOption, ShadowOutcome } from "./answer";
 import { CATEGORY, fmt, measureWords, monthName, periodWords } from "./deliver";
 import { HISTORICAL_MEASURE, type HistoricalAnswer } from "./historical";
+import { STAFF_MEASURE, type StaffKind } from "./staffing";
 import type { CurrentAnswer } from "./current";
 import { agencyName, reportedBy, STATE_NAMES, type PlaceIndex } from "./places";
 import { CONSISTENT_WORDS, NIBRS_WORDS } from "./reading";
@@ -252,7 +253,8 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   const srsPlaces = o.kind === "srs" ? o.question.places ?? [o.question.place] : [{ kind: "national" as const }];
   const srsName = (p: (typeof srsPlaces)[number]) => (p.kind === "national" ? "United States" : STATE_NAMES[p.code] ?? p.code);
   // Population on its own (population.ts) has no crime: its words are the measure's.
-  const m = q.measure === "population" ? { words: "population", name: "population" } : (o.kind === "historical" ? HISTORICAL_MEASURE : SRS_MEASURE)[q.measure];
+  // Police staffing (staffing.ts, item 1) has no crime: its words are the staff counted's.
+  const m = q.measure === "population" ? { words: "population", name: "population" } : q.measure.startsWith("staffing:") ? STAFF_MEASURE[q.measure.slice(9) as StaffKind] : (o.kind === "historical" ? HISTORICAL_MEASURE : SRS_MEASURE)[q.measure];
   const clearance = q.statistic === "clearance_rate";
   // Agencies beside states or the nation (answerBeside, population.ts): every place, in the order asked.
   const beside = o.kind === "historical" ? o.question.beside ?? [] : [];
