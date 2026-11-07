@@ -215,7 +215,7 @@ for (const [want, questions] of Object.entries(FIXTURES)) {
       && title.slice(joinAmp(p.titleParts.places).length + 1).split(/\s+/).every((w, i) => i === 0 ? /^[A-Z0-9&–(]/.test(w) : SMALL.has(w) || /^[A-Z0-9&–(]/.test(w)), `1 ${tag}: title "${title}"`);
     // 2
     const lead = leadOf(p).sentences[0];
-    const one = p.lead.kind === "single" || (p.lead.kind === "population" && p.lead.value !== null);
+    const one = p.lead.kind === "single" || p.lead.kind === "agencies" || (p.lead.kind === "population" && p.lead.value !== null);
     check(one ? /\d/.test(lead) && !/^These are/.test(lead) : /^These are /.test(lead) && !/\d/.test(lead.replace(/\b(?:19|20)\d{2}\b|\b\d+-month\b|100,000/g, "")), `2 ${tag}: lead "${lead}"`);
     check(!/\bShowing\b/.test(lead), `2 ${tag}: "Showing" opener`);
     // 3

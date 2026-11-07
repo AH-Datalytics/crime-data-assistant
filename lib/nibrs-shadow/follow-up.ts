@@ -151,7 +151,10 @@ export function standsAlone(turn: string): boolean {
   if (COMPARE_WORD.test(t) && ((places + foreignCount < 2 && !placeSet) || refersBack)) return false;
   // The crime may be named as a unit or people ("Victim age breakdown in Texas in 2023") or as shootings.
   const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
-  return crime && (places > 0 || unknownPlace || placeSet || foreignCount > 0);
+  // Population on its own, or a state's agencies, with its own place, is a question of its own too (item 11; Codex
+  // population review 01.2).
+  const ownSubject = !own.measures.length && (/\bpopulations?\b/i.test(t) || of("entity").some((p) => p.value === "agency"));
+  return (crime || ownSubject) && (places > 0 || unknownPlace || placeSet || foreignCount > 0);
 }
 
 /**

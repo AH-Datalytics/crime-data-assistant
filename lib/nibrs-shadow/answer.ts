@@ -35,7 +35,7 @@ import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
 import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod } from "../nibrs-question-types";
-import { answerPopulation, type PopulationPlace } from "./population";
+import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
 const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
@@ -140,7 +140,8 @@ const OUTSIDE: [RegExp, boolean, string][] = [
   [/\bcampus(?:es)?\b/i, false, "College and university police agencies aren't among the places here yet."],
   [/\bcyber\s*-?\s*crimes?\b/i, false, "Cybercrime isn't one category in this data: hacking/computer invasion and several kinds of fraud are separate crimes in NIBRS."],
   [/\b(?:list|lists)\s+of\b[^?]*\bagencies\b|\bagency\s+coverage\b|\bwhich\s+agencies\s+report/i, true, "A list of agencies, or of the years an agency reported, isn't available here yet."],
-  [/\bpopulations?\b/i, true, "Population figures on their own aren't available here. A rate per 100,000 uses the place's population."],
+  // Item 11: population on its own is answered for agencies, states and the nation, by year; anything more is said.
+  [/\bpopulations?\b/i, true, "Population is answered on its own for an agency, a state or the nation, a year or by year, as Crime Index publishes it; this question asks for more than that."],
   [/\bdata\s*-?\s*sets?\b|\braw\s+data\b|\bdownload\b/i, false, "A whole data set isn't available here; ask for one crime in one place at a time."],
 ];
 
@@ -717,7 +718,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // data, which have their own declines below.
   const noCrime = !clause0("measure").length && clause0("place").length > 0
     && !ledger0.parts.some((p) => p.clause === 0 && (p.state === "not-interpreted" || p.state === "not-recorded"))
-    && !STAFFING.test(ledger0.question) && !OUTSIDE.some(([re]) => re.test(ledger0.question));
+    && !STAFFING.test(ledger0.question) && !OUTSIDE.some(([re]) => re.test(ledger0.question))
+    // A state's agencies asked for ("which agencies are in Tennessee in 2023") are listed (item 11b), not a crime asked.
+    && !(clause0("entity").some((p) => p.value === "agency") && clause0("place").length === 1 && /^state:/.test(String(clause0("place")[0].value)));
   if (!named && (clause0("measure").length || noCrime)) {
     // Each button runs now (coordinator 2026-11-02: never a button that can't run). A choice that would only be declined
     // is not offered; when none would answer, the first choice's decline is given, with its nearest question.
@@ -805,6 +808,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   if (flags(ledger0).shrDetail && geoOnly(clause0("place")) && !flags(ledger0).nibrsAsked)
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
   // Item 11 (bad-decline audit 2026-11-06): population on its own, for agencies, states or the nation.
+  const list = agencyListQuestion(ledger, ledger0, deps);
+  if (list) return list === "ask period" ? askCrimeIndexPeriod() : list;
   const pop = populationQuestion(ledger, ledger0, deps, resolved);
   if (pop) return pop === "ask period" ? askCrimeIndexPeriod() : pop;
   const d = matchNibrsType(ledger, SHADOW_MATCH);
@@ -1680,8 +1685,9 @@ const POPULATION_WORD = /\bpopulations?\b/i;
 const POPULATION_ONLY = /^(?:\s|[,.?!:'’]|\b(?:populations?|current(?:ly)?|latest|most\s+recent|now|today|total|estimated?|estimates?|resident|served|covered|policed|the|of|for|in|and|what|is|was|were|are|show|me|give|list|tell|by|per|year|years|each|every|annual|yearly|over|time|vs\.?|versus|compared?|with|to)\b)*$/i;
 function populationQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: ShadowDeps, resolved: Map<string, Place>): ShadowOutcome | "ask period" | null {
   if (!deps.historical || !POPULATION_WORD.test(ledger0.question)) return null;
-  // Places to be combined are never shown side by side as if answered.
-  if (flags(ledger0).combined || /(?:combined|together|altogether)/i.test(ledger0.question)) return null;
+  // Places to be combined are never shown side by side as if answered; any other qualifier the reader kept aside (a
+  // region read as the nation, a change, NIBRS asked by name) is never dropped (Codex population review 01.1).
+  if (qualified(ledger0) || /\b(?:combined|together|altogether)\b/i.test(ledger0.question)) return null;
   const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
   if (!own.every((p) => ["place", "period", "grain", "unrecognized"].includes(p.concept))) return null;
   if (!own.filter((p) => p.concept === "unrecognized").every((p) => POPULATION_ONLY.test(p.text))) return null;
@@ -1722,4 +1728,43 @@ function populationQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps:
     oris.length ? { agencyLine: reportedBy(oris.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for ") } : {});
   if (r.kind === "historical") return r;
   return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+}
+
+/**
+ * Item 11b (coordinator 2026-11-07): a state's agencies listed with their populations ("Can you give me a list of
+ * Hawaii law enforcement agencies ordered by population covered in 2024?"). Only "agencies" with one state and a
+ * year, and list or population words: a county's agencies, NIBRS reporting, types or anything else go on as before.
+ */
+const LIST_ONLY = /^(?:\s|[,.?!:'’]|\b(?:law\s+enforcement|police|all|the|of|a|list|lists|listing|show|me|give|can|could|you|please|which|what|are|is|were|in|for|with|their|its|and|by|ordered|sorted|ranked|ranking|order|population|populations|covered|served|policed|largest|biggest|first|current(?:ly)?|latest|now|today)\b)*$/i;
+function agencyListQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: ShadowDeps): ShadowOutcome | "ask period" | null {
+  if (!deps.historical || qualified(ledger0)) return null;
+  const own = ledger.parts.filter((p) => p.clause === 0 && p.state !== "context");
+  if (!own.some((p) => p.concept === "entity" && p.value === "agency")) return null;
+  if (!own.every((p) => ["entity", "place", "period", "unrecognized"].includes(p.concept))) return null;
+  if (!own.filter((p) => p.concept === "unrecognized").every((p) => LIST_ONLY.test(p.text))) return null;
+  const placeParts = own.filter((p) => p.concept === "place"), periods = own.filter((p) => p.concept === "period");
+  const np = placeParts.length === 1 ? placeOf(placeParts[0]) : null;
+  if (np?.kind !== "state" || periods.length > 1 || own.filter((p) => p.concept === "entity").length !== 1) return null;
+  const build = deps.historical;
+  const period = periods.length ? periodOf(periods[0]) : null;
+  let year: number;
+  if (!period) {
+    if (!/\b(?:current(?:ly)?|latest|now|today)\b/i.test(ledger0.question)) return "ask period";
+    year = build.lastYear;
+  } else if (period.form === "year") year = period.year;
+  else if (period.form === "lastyear") year = Number(deps.release.lastMonth.slice(0, 4)) - 1;
+  else if (period.form === "latest") year = build.lastYear;
+  else return decline("unsupported_capability", "A list of agencies is for one year; ask for a year.");
+  const byOri = new Map([...deps.places.byName.values()].flat().map((a) => [a.ori, a]));
+  const r = answerAgencyList(np.code, year, build, deps.execute, (ori) => { const a = byOri.get(ori); return a ? agencyLabel(a) : null; });
+  if (r.kind === "historical") return r;
+  return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+}
+
+/** Whether the reader kept any qualifier aside as a flag: population and agency lists take none. */
+const QUALIFIERS: (keyof Flags)[] = ["forecast", "court", "offenders", "composite", "undefinedTerm", "comparison", "last12", "combined", "largeCities", "region",
+  "circumstance", "nibrsAsked", "consistent", "shrDetail", "property", "arrestsThrough", "clearance", "people", "quarter", "column"];
+function qualified(ledger0: RequestLedger): boolean {
+  const f = flags(ledger0);
+  return QUALIFIERS.some((k) => { const v = f[k]; return !!v && !(Array.isArray(v) && !v.length); });
 }

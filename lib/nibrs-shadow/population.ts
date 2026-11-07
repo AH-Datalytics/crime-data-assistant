@@ -90,3 +90,34 @@ export function answerPopulation(places: PopulationPlace[], from: number, to: nu
 function nameOf(p: PopulationPlace): string {
   return "agency" in p ? p.agency.label : p.geo.kind === "national" ? "United States" : stateName(p.geo.code);
 }
+
+/**
+ * A state's agencies with their populations for a year (item 11b; coordinator 2026-11-07): every agency Crime Index
+ * publishes for the state that year, largest first; an agency with no population is listed last, blank, never
+ * dropped. `label`: the agency's name as the answers show it (the place index's), else the build's own.
+ */
+export function answerAgencyList(state: string, year: number, build: HistoricalBuild, execute: (sql: string) => unknown[][],
+  label: (ori: string) => string | null): HistoricalAnswer | HistoricalDecline {
+  const where = stateName(state);
+  if (year < build.firstYear || year > build.lastYear)
+    return { kind: "historical-decline", explanation: `Agency figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${year} is outside them.` };
+  const got = execute(`SELECT ori, name, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE state = ${q(state)} AND year = ${year}`);
+  if (!got.length) return { kind: "historical-decline", explanation: `Crime Index publishes no agencies for ${where} in ${year}.` };
+  const rows = got.map((r) => ({ ori: String(r[0]), label: label(String(r[0])) ?? `${String(r[1])}, ${where}`, population: r[2] === null || r[2] === undefined ? null : Number(r[2]) }))
+    .sort((a, b) => (a.population === null ? 1 : 0) - (b.population === null ? 1 : 0) || (b.population ?? 0) - (a.population ?? 0) || a.label.localeCompare(b.label));
+  const blank = rows.filter((r) => r.population === null).length;
+  const top = rows.filter((r) => r.population !== null).slice(0, 3).map((r) => ({ label: r.label, population: r.population! }));
+  const period = { from: `${year}-01`, to: `${year}-12` };
+  const text = [`${where}: the ${fmt(rows.length)} agencies Crime Index publishes for ${year}, largest population first.`,
+    ...(blank ? [`${fmt(blank)} ${blank === 1 ? "agency has" : "agencies have"} no population for ${year}, listed last, blank.`] : []),
+    "An agency's population is the population it covers, as Crime Index publishes it.", SRS_SOURCE];
+  return {
+    kind: "historical", period,
+    question: { measure: "population", agencies: [], from: year, to: year, byYear: false, statistic: "count", comparison: null,
+      beside: [{ kind: "state", code: state }], shown: [where], list: { state, count: rows.length, top } },
+    meaning: { source: "historical", places: [{ kind: "state", name: where, state }], filters: [], measures: [{ name: "population", unit: "person" }], period, groupings: ["agency"], statistic: "count" },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "x" }, header: "Population" }],
+      rows: rows.map((r) => [r.label, r.population]) }, text },
+    read: { table: "agency_crime", column: "population", release: build.release },
+  };
+}

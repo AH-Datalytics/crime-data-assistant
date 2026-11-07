@@ -88,6 +88,8 @@ export type HistoricalQuestion = {
    */
   beside?: SrsPlace[];
   shown?: string[];
+  /** A state's agencies listed by population (population.ts, item 11b): the state, how many, the largest few. */
+  list?: { state: string; count: number; top: { label: string; population: number }[] };
 };
 export type HistoricalAnswer = {
   kind: "historical"; meaning: Meaning; period: { from: string; to: string };

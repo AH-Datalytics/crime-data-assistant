@@ -280,7 +280,9 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
     const a = agencies.find((x) => x.label === n);
     return a ? reporter(places, [a.ori]) : n === "United States" ? "the United States" : n;
   });
-  const lead: Lead = q.measure === "population"
+  const lead: Lead = o.kind === "historical" && o.question.list
+    ? { kind: "agencies", where: srsName({ kind: "state", code: o.question.list.state }), count: o.question.list.count, top: o.question.list.top, when }
+    : q.measure === "population"
     ? { kind: "population", who: popWho.length > 2 ? `${popWho.slice(0, -1).join(", ")} and ${popWho[popWho.length - 1]}` : popWho.join(" and "), value: single ? v : null, when }
     : single
     ? { kind: "single", who, quantity: q.statistic === "count" ? `${fmt(v!)} ${what}` : clearance ? `${one(v!)}% of ${m.words} as cleared` : `${m.words} at a rate of ${one(v!)} per 100,000 people`, when, countedAs: null }
