@@ -953,12 +953,20 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const each = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : p.kind === "state" || p.kind === "national" ? p : undefined));
     const mixed = each.some((x) => x?.kind === "agency") && each.some((x) => x?.kind === "state" || x?.kind === "national")
       && each.every((x) => x?.kind === "agency" || x?.kind === "state" || x?.kind === "national");
-    // A statistic said of some places only (Codex beside review 01.1: "Murder victims in Memphis and murder rate in
-    // Tennessee" was two rates): a statistic beside the crime named twice, or one named between the places, is never
-    // applied to all. ("Murders in Memphis and murders in Tennessee" names no statistic: counts for both.)
-    const placeAt = clause0("place").map((p) => p.span[0]).sort((x, y) => x - y);
-    const scoped = (clause0("measure").length > 1 && clause0("statistic").length > 0)
-      || clause0("statistic").some((p) => placeAt.length > 1 && p.span[0] > placeAt[0] && p.span[0] < placeAt[placeAt.length - 1]);
+    // One statistic for every place, or none (Codex beside reviews 01.1, 02.1-2: "Murder victims in Memphis and murder
+    // rate in Tennessee" and "Murders in Memphis and Tennessee's rate" were two rates). A statistic is every place's
+    // only when it is said as one phrase with the crime named once ("murder rate", "murders per capita", "rate of
+    // murders"), or once for each place or each naming of the crime, all alike ("Memphis murder rate vs Tennessee
+    // murder rate"). Anything else is said of some places only, and is declined. No statistic: counts for all.
+    const stats = clause0("statistic"), named = clause0("measure");
+    const between = (a: { span: [number, number] }, b: { span: [number, number] }) =>
+      ledger0.question.slice(Math.min(a.span[1], b.span[1]), Math.max(a.span[0], b.span[0]));
+    const onePhrase = (st: (typeof stats)[number], me: (typeof named)[number]) =>
+      /^[\s-]*(?:(?:of|the|for)\s+)*(?:(?:victims?|offen[cs]es?|incidents?)[\s-]*)?$/i.test(between(st, me));
+    const alike = stats.every((x) => x.value === stats[0].value);
+    const scoped = stats.length > 0 && !(alike && (named.length === 1
+      ? (stats.length === 1 ? onePhrase(stats[0], named[0]) : stats.length === sp.places.length)
+      : stats.length === named.length && named.every((me) => stats.some((st) => onePhrase(st, me)))));
     const mixedStatistic = scoped || (clause0("statistic").length > 0 && /\b(?:counts?|numbers?|totals?|how\s+many)\b/i.test(ledger0.question));
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share", "clearance"].includes(p.concept));
     if (mixed && scoped)
@@ -980,16 +988,20 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         const places0: BesidePlace[] = each.map((x, i) => (x!.kind === "agency"
           ? { agency: { ori: x!.ori, label: x!.label, name: (sp.places[i] as { name: string }).name, state: (sp.places[i] as { state: string }).state } }
           : { geo: x!.kind === "state" ? { kind: "state" as const, code: (x as { code: string }).code } : { kind: "national" as const } }));
-        // In the order the question names them (Codex beside review 01.2: the nation is read last wherever it is):
-        // each kind's places keep their own order and take that kind's positions in the question, in turn.
-        const kindOf = (v: string) => (v === "national" ? "national" : v.startsWith("state:") ? "state" : "agency");
-        const kindOfPlace = (b: BesidePlace) => ("agency" in b ? "agency" : b.geo.kind);
-        const parts = clause0("place").map((p) => ({ kind: kindOf(String(p.value)), at: p.span[0] }));
-        const fits = ["agency", "state", "national"].every((k) => parts.filter((p) => p.kind === k).length === places0.filter((b) => kindOfPlace(b) === k).length);
-        const places = !fits ? places0 : places0.map((b) => {
-          const k = kindOfPlace(b), nth = places0.filter((x) => kindOfPlace(x) === k).indexOf(b);
-          return { b, at: parts.filter((p) => p.kind === k).sort((x, y) => x.at - y.at)[nth].at };
-        }).sort((x, y) => x.at - y.at).map((x) => x.b);
+        // In the order the question names them (Codex beside reviews 01.2, 02.3: the nation is read last wherever it
+        // is; a place a choice settled, "Washington" the state, was read as another kind). Each place takes the first
+        // unused place in the question with its name (the nation: the national part); if any has none, the order read.
+        const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        const parts = clause0("place").map((p) => ({ national: p.value === "national", text: norm(String(p.text ?? "")), at: p.span[0] })).sort((x, y) => x.at - y.at);
+        const used = new Set<number>();
+        const at = places0.map((b, i) => {
+          const names = "agency" in b ? [norm((sp.places[i] as { name: string }).name)] : b.geo.kind === "state" ? [norm(stateName(b.geo.code)), norm(b.geo.code)] : [];
+          const k = parts.findIndex((p, j) => !used.has(j) && ("geo" in b && b.geo.kind === "national" ? p.national
+            : !p.national && names.some((n) => !!n && (p.text === n || p.text.startsWith(`${n} `) || n.startsWith(`${p.text} `)))));
+          if (k >= 0) used.add(k);
+          return k >= 0 ? parts[k].at : -1;
+        });
+        const places = at.some((x) => x < 0) ? places0 : places0.map((b, i) => ({ b, at: at[i] })).sort((x, y) => x.at - y.at).map((x) => x.b);
         const oris = places.flatMap((p) => ("agency" in p ? [p.agency.ori] : []));
         const note = sheriffNote(deps, oris, ledger0.question);
         const r = answerBeside({ measure: sp.measures[0], agencies: [], from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp),
