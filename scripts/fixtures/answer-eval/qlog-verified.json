@@ -4921,6 +4921,34 @@
    "batch": "nibrs-ties-2026-11-07",
    "numbers": 11,
    "date": "2026-11-07"
+  },
+  "QL-ct-a73742de37": {
+   "digest": "5fab216e478e4c5a",
+   "by": "claude-source-csv",
+   "batch": "pr129-2026-11-07",
+   "numbers": 18,
+   "date": "2026-11-07"
+  },
+  "QL-hist-2b374694a8": {
+   "digest": "b24edf7dccd25d37",
+   "by": "claude-source-csv",
+   "batch": "pr129-2026-11-07",
+   "numbers": 22,
+   "date": "2026-11-07"
+  },
+  "QL-ct-d9a52a6904": {
+   "digest": "c709529682762a72",
+   "by": "claude-source-csv",
+   "batch": "pr129-2026-11-07",
+   "numbers": 16,
+   "date": "2026-11-07"
+  },
+  "QL-nibrs-4782f21904": {
+   "digest": "61cb0e4755d1bd38",
+   "by": "claude-source-csv",
+   "batch": "pr129-2026-11-07",
+   "numbers": 10,
+   "date": "2026-11-07"
   }
  }
 }
