@@ -275,7 +275,9 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   const v = single ? (table.rows[0][0] as number) : null;
   const lead: Lead = single
     ? { kind: "single", who, quantity: q.statistic === "count" ? `${fmt(v!)} ${what}` : clearance ? `${one(v!)}% of ${m.words} as cleared` : `${m.words} at a rate of ${one(v!)} per 100,000 people`, when, countedAs: null }
-    : { kind: "described", what, who, when, countedAs, brokenDownBy: null };
+    // Clearance rates over years or agencies (item 7) are said as rates: "These are murder clearance rates the Chicago
+    // Police Department reported ...", never "murders cleared the ... reported".
+    : { kind: "described", what: clearance ? `${m.name} clearance rates` : what, who, when, countedAs: clearance ? null : countedAs, brokenDownBy: null };
   const lineFor = o.kind === "historical" ? o.question.agencyLine ?? null : null;
   const known = restated(o.delivered, lineFor ? [lineFor] : []);
   return {

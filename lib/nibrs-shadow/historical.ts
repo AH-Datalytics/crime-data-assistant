@@ -127,8 +127,53 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
 
   if (clearance) {
     // The published clearance percentage, with its counts where the file has them; never averaged or recomputed.
-    // One agency and one year asked (Codex review 01.3: a span is never answered for the part it covers alone).
-    if (several || wanted.length !== 1 || hq.byYear) return { kind: "historical-decline", explanation: "This isn't available yet: clearance rates for more than one agency or more than one year. Ask for one agency and one year." };
+    // Several agencies or several years (item 7, coordinator 2026-11-07: "murder clearance rate in Chicago since 2010",
+    // "Compare murder clearance rates in Houston and Dallas since 2000"): each agency's published percentage for each
+    // year, side by side, never combined; a year with none is blank and named; years outside the build are named.
+    if (several || wanted.length !== 1 || hq.byYear) {
+      const col = `${m.col}_cleared_rate`;
+      const got = execute(`SELECT ori, year, ${col} FROM read_parquet(${q(`${build.root}/agency_clearances.parquet`)}) `
+        + `WHERE ori IN (${oris}) AND year BETWEEN ${covered[0]} AND ${covered[covered.length - 1]} ORDER BY ori, year`);
+      const at = new Map(got.map((r) => [`${r[0]}|${r[1]}`, num(r[2])]));
+      const rateOf = (ori: string, y: number) => at.get(`${ori}|${y}`) ?? null;
+      const header = `${ucFirst(m.words)} cleared (%)`;
+      const meaningOf = (period: { from: string; to: string }, groupings: string[]) => ({ ...meaningBase, period, measures: [{ name: `${m.name} cleared`, unit: "offense" }], groupings, statistic: "rate" as const, denominator: `${m.words}, per 100` });
+      const spansOf = (ys: number[]) => ys.reduce<[number, number][]>((out, y) => { const l = out[out.length - 1]; if (l && y === l[1] + 1) l[1] = y; else out.push([y, y]); return out; }, []);
+      const yearsSaid = (sp: [number, number][]) => {
+        const w = sp.map(([a, b]) => (a === b ? String(a) : `${a} to ${b}`));
+        return sp.length === 1 && sp[0][0] !== sp[0][1] ? `from ${w[0]}` : `in ${w.length > 1 ? `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}` : w[0]}`;
+      };
+      const blanks = (ys: number[]) => hq.agencies.flatMap((a) => {
+        const miss = ys.filter((y) => rateOf(a.ori, y) === null);
+        return miss.length ? [`Crime Index has no ${m.name} clearance rate for ${a.label} ${yearsSaid(spansOf(miss))}, shown blank.`] : [];
+      });
+      const notes = [...outsideLine, ...(hq.notes ?? [])];
+      // Several agencies in one year: a row each.
+      if (several && !hq.byYear && covered.length === 1) {
+        const y = covered[0], period = { from: `${y}-01`, to: `${y}-12` };
+        return {
+          kind: "historical", question: hq, period, meaning: meaningOf(period, ["agency"]),
+          delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "clearance_rate" }, header }],
+            rows: hq.agencies.map((a) => [a.label, rateOf(a.ori, y)]) },
+            text: lines(hq, `${where}: the percentage of ${m.words} cleared in ${y}.`, ...notes, ...blanks([y]), SRS_SOURCE) },
+          read: { table: "agency_clearances", column: col, release: build.release },
+        };
+      }
+      // By year: the series starts at its first year with a figure for any agency, as a crime series does.
+      const firstFigure = covered.findIndex((y) => hq.agencies.some((a) => rateOf(a.ori, y) !== null));
+      if (firstFigure < 0) return { kind: "historical-decline", explanation: `Crime Index has no ${m.name} clearance rate for ${where} ${yearsSaid(spansOf(covered))}: not available in this data.` };
+      const kept = covered.slice(firstFigure);
+      const startNote = firstFigure > 0 ? [`Crime Index has no ${m.name} clearance rate for ${where} ${yearsSaid(spansOf(covered.slice(0, firstFigure)))}, so the chart and table start in ${kept[0]}.`] : [];
+      const period = { from: `${kept[0]}-01`, to: `${kept[kept.length - 1]}-12` };
+      const columns: ResultTable["columns"] = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
+        ...hq.agencies.map((a, i) => ({ binding: { kind: "statistic" as const, as: several ? `clearance_rate.${i}` : "clearance_rate" }, header: several ? `${a.label}: ${m.words} cleared (%)` : header }))];
+      return {
+        kind: "historical", question: hq, period, meaning: meaningOf(period, ["year", ...(several ? ["agency"] : [])]),
+        delivered: { table: { columns, rows: kept.map((y) => [String(y), ...hq.agencies.map((a) => rateOf(a.ori, y))]) },
+          text: lines(hq, `${where}: the percentage of ${m.words} cleared by year, ${yearsWords(kept[0], kept[kept.length - 1])}.`, ...startNote, ...notes, ...blanks(kept), SRS_SOURCE) },
+        read: { table: "agency_clearances", column: col, release: build.release },
+      };
+    }
     const y = covered[0], col = `${m.col}_cleared_rate`;
     const r = execute(`SELECT ${m.col}_cleared_rate, ${m.col}_cleared_total, ${m.col}_all_total FROM read_parquet(${q(`${build.root}/agency_clearances.parquet`)}) WHERE ori IN (${oris}) AND year = ${y}`)[0];
     const [rate, cleared, all] = r ? r.map(num) : [null, null, null];
