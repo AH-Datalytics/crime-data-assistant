@@ -953,8 +953,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const each = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : p.kind === "state" || p.kind === "national" ? p : undefined));
     const mixed = each.some((x) => x?.kind === "agency") && each.some((x) => x?.kind === "state" || x?.kind === "national")
       && each.every((x) => x?.kind === "agency" || x?.kind === "state" || x?.kind === "national");
-    const mixedStatistic = clause0("statistic").length > 0 && /\b(?:counts?|numbers?|totals?|how\s+many)\b/i.test(ledger0.question);
+    // A statistic said of some places only (Codex beside review 01.1: "Murder victims in Memphis and murder rate in
+    // Tennessee" was two rates): a statistic beside the crime named twice, or one named between the places, is never
+    // applied to all. ("Murders in Memphis and murders in Tennessee" names no statistic: counts for both.)
+    const placeAt = clause0("place").map((p) => p.span[0]).sort((x, y) => x - y);
+    const scoped = (clause0("measure").length > 1 && clause0("statistic").length > 0)
+      || clause0("statistic").some((p) => placeAt.length > 1 && p.span[0] > placeAt[0] && p.span[0] < placeAt[placeAt.length - 1]);
+    const mixedStatistic = scoped || (clause0("statistic").length > 0 && /\b(?:counts?|numbers?|totals?|how\s+many)\b/i.test(ledger0.question));
     const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share", "clearance"].includes(p.concept));
+    if (mixed && scoped)
+      return decline("unsupported_capability", "Ask for the same figure for every place: a count for each, or a rate for each.");
     if (mixed && !clause0("combine").length && !flags(ledger0).combined && !mixedStatistic && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0])
       && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && historicalUnitFits(sp.measures[0], sp.unit) && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
       && (sp.statistic === "count" || sp.statistic === "rate")) {
@@ -969,9 +977,19 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         if (yrs[0] === thisYear)
           return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.` };
         const reachesNow = yrs[1] === thisYear;
-        const places: BesidePlace[] = each.map((x, i) => (x!.kind === "agency"
+        const places0: BesidePlace[] = each.map((x, i) => (x!.kind === "agency"
           ? { agency: { ori: x!.ori, label: x!.label, name: (sp.places[i] as { name: string }).name, state: (sp.places[i] as { state: string }).state } }
           : { geo: x!.kind === "state" ? { kind: "state" as const, code: (x as { code: string }).code } : { kind: "national" as const } }));
+        // In the order the question names them (Codex beside review 01.2: the nation is read last wherever it is):
+        // each kind's places keep their own order and take that kind's positions in the question, in turn.
+        const kindOf = (v: string) => (v === "national" ? "national" : v.startsWith("state:") ? "state" : "agency");
+        const kindOfPlace = (b: BesidePlace) => ("agency" in b ? "agency" : b.geo.kind);
+        const parts = clause0("place").map((p) => ({ kind: kindOf(String(p.value)), at: p.span[0] }));
+        const fits = ["agency", "state", "national"].every((k) => parts.filter((p) => p.kind === k).length === places0.filter((b) => kindOfPlace(b) === k).length);
+        const places = !fits ? places0 : places0.map((b) => {
+          const k = kindOfPlace(b), nth = places0.filter((x) => kindOfPlace(x) === k).indexOf(b);
+          return { b, at: parts.filter((p) => p.kind === k).sort((x, y) => x.at - y.at)[nth].at };
+        }).sort((x, y) => x.at - y.at).map((x) => x.b);
         const oris = places.flatMap((p) => ("agency" in p ? [p.agency.ori] : []));
         const note = sheriffNote(deps, oris, ledger0.question);
         const r = answerBeside({ measure: sp.measures[0], agencies: [], from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp),

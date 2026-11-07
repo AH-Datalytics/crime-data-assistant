@@ -303,7 +303,9 @@ export function answerBeside(hq: HistoricalQuestion, places: BesidePlace[], buil
   // Every other line of both answers but their titles and sources, once each, in order: the agencies named, the years
   // outside either source, blanks and computed rates.
   const rest = [...a.delivered.text.slice(1).filter(own), ...blanks, ...g.delivered.text.slice(1)].filter((t, i, all) => t !== SRS_SOURCE && all.indexOf(t) === i);
-  const rateNote = rate ? ["Each rate is per 100,000 of that place's own population, as Crime Index publishes it."] : [];
+  // The rates' common denominator; where Crime Index publishes no rate, its own line says the rate is computed
+  // (Codex beside review 01.3: never "as published" over a computed rate).
+  const rateNote = rate ? ["Each rate is per 100,000 of that place's own population."] : [];
   const period = { from: `${years[0]}-01`, to: `${years[years.length - 1]}-12` };
   const oneYear = !hq.byYear && years.length === 1;
   const columns: ResultTable["columns"] = oneYear
