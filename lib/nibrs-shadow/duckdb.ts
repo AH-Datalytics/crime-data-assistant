@@ -16,8 +16,11 @@ import os from "node:os";
 import path from "node:path";
 import { MessageChannel, receiveMessageOnPort, Worker } from "node:worker_threads";
 
-/** The Python side of the persistent executor: one JSON request per line in, one JSON response per line out. */
-const SERVER = `import duckdb, json, sys
+/**
+ * The Python side of the persistent executor: one JSON request per line in, one JSON response per line out. Exported for
+ * the scorecard's cache fingerprint (the rows depend on it).
+ */
+export const SERVER = `import duckdb, json, sys
 con = duckdb.connect()
 con.execute("SET temp_directory = ?", [sys.argv[1]])
 con.execute("SET enable_progress_bar = false")
@@ -37,6 +40,11 @@ const { spawn } = require("node:child_process");
 const { python, server, tmp, flag, port } = workerData;
 const child = spawn(python, ["-I", "-c", server, tmp], { stdio: ["pipe", "pipe", "pipe"] });
 const signal = new Int32Array(flag);
+// The process id, so the caller can end the process itself when it closes the executor (a running query isn't stopped
+// by ending the worker).
+// -1 when it couldn't start. The caller may be waiting for it (closing an executor whose process is still starting).
+Atomics.store(signal, 1, child.pid ?? -1);
+Atomics.notify(signal, 1);
 // A large result arrives in many chunks: they are kept as a list and joined once its line ends (scanning only the new
 // chunk), never re-scanned as one growing string.
 let parts = [], stderr = "";
@@ -100,7 +108,7 @@ print(json.dumps(con.execute(open(sys.argv[1], encoding="utf-8").read()).fetchal
 
 /** One Python process for the executor's lifetime; each call waits for its own response. */
 function persistent(python: string, tmp: string, timeoutMs: number): (sql: string) => unknown[][] {
-  const flag = new SharedArrayBuffer(4);
+  const flag = new SharedArrayBuffer(8);
   const signal = new Int32Array(flag);
   const { port1, port2 } = new MessageChannel();
   const worker = new Worker(WORKER, { eval: true, workerData: { python, server: SERVER, tmp, flag, port: port2 }, transferList: [port2] });
@@ -108,6 +116,23 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
   worker.unref();
   port1.unref();
   let dead: string | null = null;
+  // Ends the Python process and everything it started (a venv's python.exe starts the real one) before returning, so a
+  // query past the limit stops using the machine and a replacement never runs beside it (Codex PR-mode review 02.2).
+  // A process still starting is waited for (up to a minute), so it can't come up after the close (Codex PR-mode review
+  // 03). If it can't be ended, the program stops: a replacement must never run beside it.
+  const end = () => {
+    if (Atomics.load(signal, 1) === 0) Atomics.wait(signal, 1, 0, 60_000);
+    const pid = Atomics.load(signal, 1);
+    if (pid === 0) throw new Error("duckdb executor: the process never started and can't be closed");
+    if (pid > 0) {
+      if (process.platform === "win32") {
+        // 128: no such process (it has exited already).
+        const r = spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+        if (r.status !== 0 && r.status !== 128) throw new Error(`duckdb executor: taskkill failed (${r.error ?? r.status})`);
+      } else try { process.kill(pid, "SIGKILL"); } catch { /* already gone */ }
+    }
+    void worker.terminate();
+  };
   return Object.assign((sql: string) => {
     if (dead) throw new Error(dead);
     Atomics.store(signal, 0, 0);
@@ -115,7 +140,7 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
     // Never wait forever (Codex speed review 01): past the limit the executor is closed and the call fails.
     if (Atomics.wait(signal, 0, 0, timeoutMs) === "timed-out") {
       dead = `duckdb failed: no answer within ${timeoutMs / 1000} s`;
-      void worker.terminate();
+      end();
       throw new Error(dead);
     }
     const msg = receiveMessageOnPort(port1);
@@ -126,7 +151,7 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
       throw new Error(`duckdb failed: ${out.error}`);
     }
     return out.rows!;
-  }, { close: () => { dead ??= "duckdb executor closed"; void worker.terminate(); } });
+  }, { close: () => { dead ??= "duckdb executor closed"; end(); } });
 }
 
 /** The built monthly totals at `root` (scripts/build-nibrs-month-totals.ts): a measure's file, or null where not built. */

@@ -17,8 +17,11 @@
  *     (the build is pinned and read-only, so the rows are the same); only a question whose SQL changed goes to DuckDB.
  *     No question is left out, so no selection can miss one. Plus --spot without the cache: a fixed 200 questions,
  *     stratified by source, run against DuckDB itself, which must match the cached run (a check on the cache).
- *   - --workers N runs N shards at once, each with its own DuckDB process; a query past the time limit is retried once
- *     on a fresh process with three times the limit, so load alone doesn't make an error.
+ *   - Runs are one process at a time. The full run is on dev after merges, overnight or when the laptop is idle, never
+ *     while another build is running (Jeff, 2026-11-07). A query past the time limit is retried once on a fresh process
+ *     with three times the limit, so load alone doesn't make an error.
+ *   - --workers N (off, unused): N shards at once. It was 23 min vs 60 for the full run, but one shard hung (2026-11-07)
+ *     and the cause wasn't found; a per-shard watchdog is where to start if it comes back.
  *   - --compare <outcomes.jsonl> lists every question whose outcome differs from that run's (dev's), for the PR.
  *
  * Buckets (one per label):
@@ -44,7 +47,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { shadowAnswer, shadowFollowUp, type ShadowDeps } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
-import { duckdbExecutor } from "../lib/nibrs-shadow/duckdb";
+import { duckdbExecutor, SERVER as DUCKDB_SERVER } from "../lib/nibrs-shadow/duckdb";
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
 import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
@@ -60,19 +63,32 @@ const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), roo
 const python = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!;
 const LIMIT_MS = Number(arg("--timeout-ms", "120000"));
 const crimeIndex = arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct")!;
+// Off by default and not used (see the header): one process at a time.
 const WORKERS = Math.max(1, Number(arg("--workers", "1")));
 const SHARD = arg("--shard") ? arg("--shard")!.split("/").map(Number) as [number, number] : null;
 const SPOT = process.argv.includes("--spot");
 // The spot set checks the cache against DuckDB itself, so it never reads or writes the cache.
 const CACHE_DIR = SPOT ? undefined : arg("--sql-cache");
+// The DuckDB and Python versions (for the cache's fingerprint), read before any executor starts: on Windows a process
+// started on another thread at the same moment can inherit this one's output pipe and keep spawnSync waiting for good
+// (the hang of 2026-11-07, a run idle before its first question).
+const versions = (() => {
+  const v = spawnSync(python, ["-I", "-c", "import duckdb, sys; print(duckdb.__version__, sys.version)"], { encoding: "utf8", timeout: 60_000 });
+  if (v.status !== 0) throw new Error(`the DuckDB version could not be read: ${v.error ?? v.stderr}`);
+  return v.stdout;
+})();
 let exec = duckdbExecutor(python, { timeoutMs: LIMIT_MS });
 /** A new executor in place of the current one, whose process is closed (Codex PR-mode review 01.5: none left idle). */
 const replace = (ms: number) => { exec.close(); exec = duckdbExecutor(python, { timeoutMs: ms }); };
+// An executor that timed out or whose process exited is replaced when the next query needs one, never sooner: one new
+// process per failure, started only after the old one has ended (Codex PR-mode review 03).
+let nextMs: number | null = null;
 // Only a query past the time limit is tried again; a process that crashed is replaced, and the question is an error.
 const TIMEOUT = /no answer within/;
 const live = (sql: string) => {
+  if (nextMs !== null) { replace(nextMs); nextMs = null; }
   try { return exec(sql); } catch (e) {
-    if (/no answer within|process exited/.test(String(e))) replace(LIMIT_MS);
+    if (/no answer within|process exited/.test(String(e))) nextMs = LIMIT_MS;
     throw e;
   }
 };
@@ -92,10 +108,9 @@ function buildFingerprint(): string {
     }
   };
   walk("canonical", root, root); walk("crimeindex", crimeIndex, crimeIndex);
-  h.update(fs.readFileSync(path.join(__dirname, "..", "lib", "nibrs-shadow", "duckdb.ts")));
-  const v = spawnSync(python, ["-I", "-c", "import duckdb, sys; print(duckdb.__version__, sys.version)"], { encoding: "utf8" });
-  if (v.status !== 0) throw new Error(`the DuckDB version could not be read: ${v.stderr}`);
-  h.update(v.stdout);
+  // The Python each query runs in (the rows depend on it; not the Node side that carries them).
+  h.update(DUCKDB_SERVER);
+  h.update(versions);
   return h.digest("hex");
 }
 /**
@@ -118,8 +133,8 @@ function runFingerprint(): string {
   h.update(fs.readFileSync(__filename));
   return h.digest("hex");
 }
-// Rows read from the cache are shared by every question that asks the same SQL: frozen, so code that changed them in
-// place would throw (an error on the scorecard) instead of changing a later question's answer.
+// Rows in the cache are frozen, and every question gets its own copy: the engine sees rows exactly as DuckDB's (it may
+// sort or change them in place), and no question can change what a later one reads (Codex PR-mode review 02.1).
 const frozen = (rows: unknown[][]): unknown[][] => { for (const r of rows) Object.freeze(r); return Object.freeze(rows) as unknown[][]; };
 const sqlKey = (sql: string) => createHash("sha256").update(sql).digest("hex");
 const cache = new Map<string, unknown[][]>();
@@ -141,10 +156,10 @@ let hits = 0, misses = 0;
 const execute = (sql: string): unknown[][] => {
   if (!cacheOut) return live(sql);
   const k = sqlKey(sql), hit = cache.get(k);
-  if (hit) { hits++; return hit; }
+  if (hit) { hits++; return structuredClone(hit) as unknown[][]; }
   misses++;
   const rows = live(sql);
-  cache.set(k, frozen(rows));
+  cache.set(k, frozen(structuredClone(rows) as unknown[][]));
   fs.appendFileSync(cacheOut, JSON.stringify({ k, rows }) + "\n");
   return rows;
 };
@@ -309,11 +324,13 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
     // beside three other shards); then the usual limit again.
     try { o = once(); } catch (e) {
       if (!TIMEOUT.test(String(e))) throw e;
-      replace(LIMIT_MS * 3);
-      try { o = once(); } finally { replace(LIMIT_MS); }
+      nextMs = LIMIT_MS * 3;
+      try { o = once(); } finally { nextMs = LIMIT_MS; }
     }
     g = got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t);
   } catch (e) {
+    // A process that can't be ended stops the run (incomplete, so not judged): the next one must never run beside it.
+    if (/duckdb executor:/.test(String(e))) throw e;
     g = { kind: "error", source: null, reason: String(e).slice(0, 120), ms: Date.now() - t };
   }
   fs.appendFileSync(PROGRESS, JSON.stringify({ id: l.id, got: g }) + "\n");
