@@ -951,7 +951,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite) {
     const sp = d.spec;
     const each = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : p.kind === "state" || p.kind === "national" ? p : undefined));
-    const mixed = each.some((x) => x?.kind === "agency") && each.some((x) => x?.kind === "state" || x?.kind === "national")
+    // A state written right after its own agency ("Fairfax County Police Department in Virginia", "Arlington, Texas")
+    // is that agency's state, not a second place (PR #129's scorecard: QL-nibrs-6900e4157e had answered Virginia too).
+    // The parts as resolved: an agency's value ends with its state's code ("county:Fairfax County:VA").
+    const placeParts = ledger.parts.filter((p) => p.clause === 0 && p.concept === "place" && p.state !== "context");
+    const codeOf = new Map(sp.places.flatMap((p) => (p.kind === "state" ? [[p.name, p.code] as const] : [])));
+    const ownState = placeParts.some((st) => /^state:/.test(String(st.value)) && placeParts.some((ag) => /^(?:city|county):/.test(String(ag.value)) && ag.span[1] <= st.span[0]
+      && String(ag.value).endsWith(`:${codeOf.get(String(st.value).slice(6))}`)
+      && /^[\s,]*(?:(?:police\s+department|police\s+dept\.?|pd|sheriff'?s?\s+(?:office|department)|police)\s*)?(?:\bin\b|\bof\b)?[\s,]*$/i.test(ledger0.question.slice(ag.span[1], st.span[0]))));
+    const mixed = !ownState && each.some((x) => x?.kind === "agency") && each.some((x) => x?.kind === "state" || x?.kind === "national")
       && each.every((x) => x?.kind === "agency" || x?.kind === "state" || x?.kind === "national");
     // One statistic for every place, or none (Codex beside reviews 01.1, 02.1-2: "Murder victims in Memphis and murder
     // rate in Tennessee" and "Murders in Memphis and Tennessee's rate" were two rates). A statistic is every place's

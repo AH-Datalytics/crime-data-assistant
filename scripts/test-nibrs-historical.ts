@@ -182,6 +182,11 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = withBuild(q);
     assert.ok(o.kind === "historical" && JSON.stringify(o.delivered.table.rows) === JSON.stringify([["Memphis, Tennessee", 57], ["Tennessee", 10]]), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
+  // PR #129 scorecard (QL-nibrs-6900e4157e): a state written right after its own agency is that agency's state.
+  for (const q of ["Murder rate for Fairfax County Police Department in Virginia from 2021 to 2025", "Murders in Memphis Police Department in Tennessee in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(!(o.kind === "historical" && o.question.beside?.length), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
   const twice = withBuild("Murders in Memphis and murders in Tennessee in 2023");
   assert.ok(twice.kind === "historical" && twice.delivered.table.rows[0][1] === 351, JSON.stringify(twice).slice(0, 300));
   // Codex beside review 01.2: the order asked, the nation first too.
