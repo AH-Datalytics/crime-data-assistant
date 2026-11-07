@@ -4914,6 +4914,13 @@
    "batch": "crimeindex-2026-11-06",
    "numbers": 1,
    "date": "2026-11-06"
+  },
+  "QL-nibrs-934b5b59e7": {
+   "digest": "37a47a34cc2c75ed",
+   "by": "model-canonical",
+   "batch": "nibrs-ties-2026-11-07",
+   "numbers": 11,
+   "date": "2026-11-07"
   }
  }
 }
