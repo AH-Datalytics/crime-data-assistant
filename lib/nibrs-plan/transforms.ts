@@ -100,11 +100,18 @@ export function rate(count: Cell, population: number | null | undefined, per = 1
  * ascending for "bottom"), ties by name alphabetically; cut at `limit`. The others are left out, never ranked or listed
  * among the ranked.
  */
-export function rankAgencies<T extends { name: string; value: number | null; known: boolean; ori?: string }>(xs: T[], direction: "top" | "bottom", limit: number | null): { ranked: T[]; leftOut: T[] } {
+export function rankAgencies<T extends { name: string; value: number | null; known: boolean; ori?: string }>(xs: T[], direction: "top" | "bottom", limit: number | null): { ranked: T[]; leftOut: T[]; tie: { position: number; names: string[]; shown: number } | null } {
   const ok = xs.filter((x) => x.known && x.value !== null);
   const sign = direction === "top" ? -1 : 1;
   // P17: ties by name, case-insensitive, then ORI (as nibrs-model orders them).
   const lower = (x: T) => x.name.toLowerCase();
   ok.sort((a, b) => sign * (a.value! - b.value!) || (lower(a) < lower(b) ? -1 : lower(a) > lower(b) ? 1 : 0) || (a.ori ?? "").localeCompare(b.ori ?? ""));
-  return { ranked: limit === null ? ok : ok.slice(0, limit), leftOut: xs.filter((x) => !(x.known && x.value !== null)) };
+  // Every place tied at the cut is shown, never one dropped by its name (coordinator 2026-11-06): the cut runs on through
+  // the last place with the cut value; `tie` names them and the position they share, for the answer to say so.
+  let cut = limit === null ? ok.length : Math.min(limit, ok.length);
+  while (limit !== null && cut > 0 && cut < ok.length && ok[cut].value === ok[cut - 1].value) cut++;
+  const cutValue = limit !== null && cut > limit ? ok[limit - 1].value : null;
+  const tied = cutValue === null ? [] : ok.filter((x) => x.value === cutValue);
+  const tie = tied.length ? { position: ok.findIndex((x) => x.value === cutValue) + 1, names: tied.map((x) => x.name), shown: cut } : null;
+  return { ranked: ok.slice(0, cut), leftOut: xs.filter((x) => !(x.known && x.value !== null)), tie };
 }

@@ -28,6 +28,8 @@ export const MEASURE_CODES: Record<string, string[]> = {
   sex_offense: ["11A", "11B", "11C", "11D", "36A", "36B"], burglary: ["220"], theft_from_motor_vehicle: ["23F"], motor_vehicle_theft: ["240"],
   shoplifting: ["23C"], theft: ["23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H"], arson: ["200"], drug_possession: ["35A"], dui: ["90D"],
   violent_crime: ["09A", "11A", "11B", "11C", "120", "13A"], property_crime: ["200", "220", "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240"],
+  // NIBRS's assault offenses (coordinator 2026-11-06, a bare "assault" asked about): intimidation, and all three.
+  intimidation: ["13C"], assault_offenses: ["13A", "13B", "13C"],
 };
 /** Crimes against persons count victims (the FBI NIBRS convention; CLAUDE.md "Person crimes must use victim summary tables"). */
 export const PERSON_CODES = new Set(["09A", "09B", "09C", "11A", "11B", "11C", "11D", "13A", "13B", "13C", "100", "36A", "36B", "64A", "64B"]);
@@ -39,7 +41,7 @@ export const MEASURE_LABEL: Record<string, string> = {
   sex_offense: "sex offense", burglary: "burglary", theft_from_motor_vehicle: "theft from motor vehicle", motor_vehicle_theft: "motor vehicle theft",
   shoplifting: "shoplifting", theft: "theft", arson: "arson", drug_possession: "drug possession", dui: "DUI", violent_crime: "violent crime",
   property_crime: "property crime", domestic_violence: "domestic violence", hate_crime: "hate crime", carjacking: "carjacking",
-  motor_vehicle_property: "motor vehicle property", property_value: "property",
+  motor_vehicle_property: "motor vehicle property", property_value: "property", intimidation: "intimidation", assault_offenses: "assault offense",
 };
 
 /** Filter value labels, for the delivered `filter` column ("sex: female; age: under 18"). */

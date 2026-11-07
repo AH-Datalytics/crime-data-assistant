@@ -59,7 +59,9 @@ assert.deepEqual(rate({ value: 3404 + 4375, status: "VALUE" }, 413_066 + 702_767
 // Rankings (P17, P60): only known values ranked; ties alphabetical; cut at the limit; the rest left out, never ranked.
 const xs = [{ name: "Cee", value: 5, known: true }, { name: "Bee", value: 5, known: true }, { name: "Aye", value: 9, known: true }, { name: "Dee", value: null, known: false }, { name: "Eee", value: 1, known: true }];
 assert.deepEqual(rankAgencies(xs, "top", 3).ranked.map((x) => x.name), ["Aye", "Bee", "Cee"]);
-assert.deepEqual(rankAgencies(xs, "top", 2).ranked.map((x) => x.name), ["Aye", "Bee"], "the cut inside a tie keeps the alphabetical first");
+assert.deepEqual(rankAgencies(xs, "top", 2).ranked.map((x) => x.name), ["Aye", "Bee", "Cee"], "a tie at the cut shows every place tied (coordinator 2026-11-06)");
+assert.deepEqual(rankAgencies(xs, "top", 2).tie, { position: 2, names: ["Bee", "Cee"], shown: 3 });
+assert.equal(rankAgencies(xs, "top", 3).tie, null, "a cut that falls between different values has no tie");
 assert.deepEqual(rankAgencies(xs, "bottom", null).ranked.map((x) => x.name), ["Eee", "Bee", "Cee", "Aye"]);
 assert.deepEqual(rankAgencies(xs, "top", 10).leftOut.map((x) => x.name), ["Dee"]);
 
