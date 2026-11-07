@@ -1800,14 +1800,23 @@ function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: S
   if (!own.filter((p) => p.concept === "unrecognized").every((p) => STAFF_ONLY.test(p.text))) return null;
   const q = ledger0.question;
   const officers = /\b(?:officers?|sworn|cops?)\b/i.test(q), civilians = /\bcivilians?\b/i.test(q);
-  // Both named ("officers and civilian employees"): which one is asked, not guessed.
-  if (officers && civilians) return decline("unsupported_capability", "Ask for sworn officers, civilian employees or all employees (officers and civilians together).");
+  // All employees named apart from civilian employees ("police employees", "personnel"); "staffing" alone names none.
+  const everyone = /(?<!\bcivilian\s)\b(?:employees?|personnel|headcount)\b/i.test(q);
+  // "Per" only as a rate per people or "per year": a ratio between staff ("employees per officer") is never answered
+  // as a count (Codex staffing review 01.2).
+  const perOk = [...q.matchAll(/\bper\b/gi)].every((m) => /^per\s+(?:capita|population|residents?|persons?|people|inhabitants|year|years|annum|\d[\d,]*(?:\s*k)?|thousand|million|ten\s+thousand|one\s+million)\b/i.test(q.slice(m.index)));
+  if (!perOk) return decline("unsupported_capability", "Staffing is answered as counts or per 100,000 people; a ratio between kinds of staff isn't available.");
+  // More than one kind named ("officers and civilian employees", "officers and police employees"): which one is asked,
+  // never one of them answered for both (01.1).
+  if ([officers, civilians, everyone].filter(Boolean).length > 1) return decline("unsupported_capability", "Ask for one: sworn officers, civilian employees or all employees (officers and civilians together).");
   const kind: StaffKind = civilians ? "civilians" : officers ? "officers" : "employees";
   const stats = own.filter((p) => p.concept === "statistic");
   const rateLike = (v: string | null) => v === "rate" || v === "per100k" || v === "percapita" || /^scale:/.test(String(v));
-  if (stats.some((p) => rateLike(p.value)) && stats.some((p) => p.value === "count")) return decline("unsupported_capability", "Ask for the same figure throughout: a count, or a rate per 100,000 people.");
-  if (stats.some((p) => !rateLike(p.value) && p.value !== "count")) return null;
   const rate = stats.some((p) => rateLike(p.value)) || /\bper\s+(?:capita|population|resident|person|people)\b/i.test(q);
+  // A count asked beside a rate, also where the reader took the count's words as an opener ("What is the count of
+  // ... and the rate per capita": 01.3): the same figure is asked for. ("How many officers per capita" is the rate.)
+  if (rate && (stats.some((p) => p.value === "count") || /\b(?:counts?|numbers?|totals?)\b/i.test(q))) return decline("unsupported_capability", "Ask for the same figure throughout: a count, or a rate per 100,000 people.");
+  if (stats.some((p) => !rateLike(p.value) && p.value !== "count")) return null;
   const otherScale = stats.some((p) => /^scale:/.test(String(p.value)) && !/^scale:100,?000$/.test(String(p.value)));
   const grains = own.filter((p) => p.concept === "grain"), periods = own.filter((p) => p.concept === "period");
   if (grains.some((p) => p.value !== "year") || periods.length > 1) return null;
