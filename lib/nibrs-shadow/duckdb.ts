@@ -65,20 +65,22 @@ parentPort.on("message", (m) => {
 /** `timeoutMs`: the longest one query may take on the persistent path (default 300 s). */
 export type DuckdbOptions = { persistent?: boolean; cacheSize?: number; timeoutMs?: number };
 
-export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): (sql: string) => unknown[][] {
+/** An executor; `close()` ends its Python process (the worker's end closes the process's input, and it exits). */
+export type DuckdbExecutor = ((sql: string) => unknown[][]) & { close(): void };
+export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): DuckdbExecutor {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-shadow-")).replace(/\\/g, "/");
   const run = opts.persistent === false ? spawnPerQuery(python, tmp) : persistent(python, tmp, opts.timeoutMs ?? 300_000);
   // The build is pinned and read-only: the same SQL gives the same rows. Least recently used out first.
   const cache = new Map<string, unknown[][]>();
   const size = opts.cacheSize ?? 256;
-  return (sql: string) => {
+  return Object.assign((sql: string) => {
     const hit = cache.get(sql);
     if (hit) { cache.delete(sql); cache.set(sql, hit); return hit; }
     const rows = run(sql);
     cache.set(sql, rows);
     if (cache.size > size) cache.delete(cache.keys().next().value!);
     return rows;
-  };
+  }, { close: () => (run as { close?: () => void }).close?.() });
 }
 
 /** One Python process per query (the reference path). */
@@ -106,7 +108,7 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
   worker.unref();
   port1.unref();
   let dead: string | null = null;
-  return (sql: string) => {
+  return Object.assign((sql: string) => {
     if (dead) throw new Error(dead);
     Atomics.store(signal, 0, 0);
     worker.postMessage(sql);
@@ -124,7 +126,7 @@ function persistent(python: string, tmp: string, timeoutMs: number): (sql: strin
       throw new Error(`duckdb failed: ${out.error}`);
     }
     return out.rows!;
-  };
+  }, { close: () => { dead ??= "duckdb executor closed"; void worker.terminate(); } });
 }
 
 /** The built monthly totals at `root` (scripts/build-nibrs-month-totals.ts): a measure's file, or null where not built. */

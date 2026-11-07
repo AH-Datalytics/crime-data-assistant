@@ -66,28 +66,56 @@ const SPOT = process.argv.includes("--spot");
 // The spot set checks the cache against DuckDB itself, so it never reads or writes the cache.
 const CACHE_DIR = SPOT ? undefined : arg("--sql-cache");
 let exec = duckdbExecutor(python, { timeoutMs: LIMIT_MS });
-const TIMEOUT = /no answer within|process exited/;
+/** A new executor in place of the current one, whose process is closed (Codex PR-mode review 01.5: none left idle). */
+const replace = (ms: number) => { exec.close(); exec = duckdbExecutor(python, { timeoutMs: ms }); };
+// Only a query past the time limit is tried again; a process that crashed is replaced, and the question is an error.
+const TIMEOUT = /no answer within/;
 const live = (sql: string) => {
   try { return exec(sql); } catch (e) {
-    if (TIMEOUT.test(String(e))) exec = duckdbExecutor(python, { timeoutMs: LIMIT_MS });
+    if (/no answer within|process exited/.test(String(e))) replace(LIMIT_MS);
     throw e;
   }
 };
 
 /**
- * The build the cache belongs to: both roots, the release, and every data file's path, size and time. A cache made on
- * another build is refused, never read (its rows could differ).
+ * What the cache's rows depend on: both data roots (every file's path from its root, size and time), the release, and
+ * how SQL is run (the executor's code, the Python and its DuckDB version). A cache made under any other is refused,
+ * never read: its rows could differ (Codex PR-mode review 01.1, 01.4).
  */
 function buildFingerprint(): string {
-  const h = createHash("sha256").update(JSON.stringify([root, crimeIndex, release.id]));
+  const h = createHash("sha256").update(JSON.stringify([root, crimeIndex, release.id, python]));
+  const walk = (tag: string, base: string, dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(tag, base, p);
+      else { const st = fs.statSync(p); h.update(`${tag}:${path.relative(base, p).replace(/\\/g, "/")}|${st.size}|${st.mtimeMs}\n`); }
+    }
+  };
+  walk("canonical", root, root); walk("crimeindex", crimeIndex, crimeIndex);
+  h.update(fs.readFileSync(path.join(__dirname, "..", "lib", "nibrs-shadow", "duckdb.ts")));
+  const v = spawnSync(python, ["-I", "-c", "import duckdb, sys; print(duckdb.__version__, sys.version)"], { encoding: "utf8" });
+  if (v.status !== 0) throw new Error(`the DuckDB version could not be read: ${v.stderr}`);
+  h.update(v.stdout);
+  return h.digest("hex");
+}
+/**
+ * What a run's outcomes depend on besides the data: the engine's code and fixtures, this runner, the labels, and the
+ * mode (cached or spot). A progress file or shard from another is refused, never resumed (Codex PR-mode review 01.3).
+ */
+function runFingerprint(): string {
+  const labelsHash = createHash("sha256").update(fs.readFileSync(LABELS)).digest("hex");
+  const h = createHash("sha256").update(JSON.stringify({ spot: SPOT, labels: labelsHash, root, crimeIndex, release: release.id, limitMs: LIMIT_MS }));
+  const repo = path.join(__dirname, "..");
   const walk = (dir: string) => {
+    if (!fs.existsSync(dir)) return;
     for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
       const p = path.join(dir, e.name);
       if (e.isDirectory()) walk(p);
-      else if (/\.(parquet|json|csv)$/i.test(e.name)) { const s = fs.statSync(p); h.update(`${path.relative(dir, p)}|${s.size}|${s.mtimeMs}\n`); }
+      else h.update(`${path.relative(repo, p).replace(/\\/g, "/")}\n`).update(fs.readFileSync(p));
     }
   };
-  walk(root); walk(crimeIndex);
+  walk(path.join(repo, "lib")); walk(path.join(repo, "scripts", "fixtures"));
+  h.update(fs.readFileSync(__filename));
   return h.digest("hex");
 }
 // Rows read from the cache are shared by every question that asks the same SQL: frozen, so code that changed them in
@@ -222,6 +250,13 @@ const readProgress = (file: string, into: Map<string, Got | null>) => {
   }
 };
 const shardFile = (i: number) => `${PROGRESS}.w${i}`;
+if (!SHARD) {
+  const meta = `${PROGRESS}.meta.json`, fp = runFingerprint();
+  const leftover = fs.existsSync(PROGRESS) || Array.from({ length: 64 }, (_, i) => shardFile(i)).some((f) => fs.existsSync(f));
+  if (leftover && (!fs.existsSync(meta) || JSON.parse(fs.readFileSync(meta, "utf8")).fingerprint !== fp))
+    throw new Error(`${PROGRESS} (or its shards) came from other code, labels or mode; use a new --progress`);
+  fs.writeFileSync(meta, JSON.stringify({ fingerprint: fp, spot: SPOT, labels: LABELS, cache: CACHE_DIR ?? null }));
+}
 const done = new Map<string, Got | null>();
 readProgress(PROGRESS, done);
 // A stopped parallel run's shards count as done; they are folded into --progress below.
@@ -230,6 +265,7 @@ if (!SHARD) for (let i = 0; i < 64; i++) readProgress(shardFile(i), done);
 if (SHARD && arg("--done-from")) readProgress(arg("--done-from")!, done);
 const limit = Number(arg("--limit", "0")) || Infinity;
 
+let shardFailed = false;
 if (WORKERS > 1 && !SHARD) {
   // N shards at once, each this script on every Nth label with its own DuckDB process, progress file and cache file.
   const own = new Set(["--workers", "--progress", "--report", "--compare"]);
@@ -245,7 +281,7 @@ let left = cmds.length, bad = 0;
 for (const [cmd, ...a] of cmds) spawn(cmd, a, { stdio: "inherit" }).on("exit", (c) => { if (c) bad++; if (--left === 0) process.exit(bad ? 1 : 0); });`;
   const r = spawnSync(process.execPath, ["-e", launcher, JSON.stringify(cmds)], { stdio: "inherit" });
   for (let i = 0; i < WORKERS; i++) readProgress(shardFile(i), done);
-  if (r.status !== 0) console.log("a shard stopped early; run again to finish (done questions are kept)");
+  if (r.status !== 0) { shardFailed = true; console.log("a shard stopped early; run again to finish (done questions are kept)"); }
 }
 // Fold the shards into --progress, once, so the run is one file again.
 if (!SHARD) {
@@ -273,8 +309,8 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
     // beside three other shards); then the usual limit again.
     try { o = once(); } catch (e) {
       if (!TIMEOUT.test(String(e))) throw e;
-      exec = duckdbExecutor(python, { timeoutMs: LIMIT_MS * 3 });
-      try { o = once(); } finally { exec = duckdbExecutor(python, { timeoutMs: LIMIT_MS }); }
+      replace(LIMIT_MS * 3);
+      try { o = once(); } finally { replace(LIMIT_MS); }
     }
     g = got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t);
   } catch (e) {
@@ -311,7 +347,9 @@ const table = [
   `| **All** | **${all.n}** | ${BUCKETS.map((b) => `**${all.c[b]}**`).join(" | ")} | **${all.reviewed}** | **${all.drafts}** | **${all.disputed}** | **${all.notRun}** |`,
 ].join("\n");
 console.log(table);
-const gate = all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
+const incomplete = all.notRun > 0 || shardFailed;
+const gate = incomplete ? `NOT JUDGED: the run is incomplete (${all.notRun} questions not run${shardFailed ? ", a shard failed" : ""})`
+  : all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
 console.log(`hard gate (wrong answers = 0): ${gate}`);
 if (cacheOut) console.log(`queries from the cache ${hits}, from DuckDB ${misses} (this process; shards print their own)`);
 
@@ -321,7 +359,7 @@ const COMPARE = arg("--compare");
 if (COMPARE) {
   const before = new Map<string, Got | null>(); readProgress(COMPARE, before);
   const same = (a: Got | null, b: Got | null) => JSON.stringify({ ...a, ms: 0 }) === JSON.stringify({ ...b, ms: 0 });
-  const both = scored.filter((l) => before.has(l.id) && l.label.status !== "disputed");
+  const both = scored.filter((l) => before.has(l.id));
   const moved = new Map<string, number>();
   const diffs: string[] = [];
   for (const l of both) {
@@ -344,7 +382,8 @@ for (const [r, c] of [...byRule].sort()) console.log(r, JSON.stringify(c));
 
 const disputedGroups = new Map<string, number>();
 for (const l of labels) if (l.label.status === "disputed") { const k = (l.label as { notes?: string }).notes?.split(":")[0] ?? "?"; disputedGroups.set(k, (disputedGroups.get(k) ?? 0) + 1); }
-if (process.argv.includes("--report")) {
+if (process.argv.includes("--report") && incomplete) console.log("--report skipped: the run is incomplete");
+if (process.argv.includes("--report") && !incomplete) {
   const draftAll = all.n - all.drafts - all.reviewed === 0;
   const out = [
     `# Query-log scorecard${draftAll ? " (DRAFT: no label is confirmed yet)" : ""}`, "",
@@ -359,4 +398,6 @@ if (process.argv.includes("--report")) {
   ].join("\n");
   fs.writeFileSync(path.join(__dirname, "..", "docs", "reports", "qlog-scorecard.md"), out);
 }
-process.exit(0);
+exec.close();
+// A run that is incomplete, or whose gate isn't met, exits non-zero.
+process.exit(incomplete ? 2 : all.c["wrong answer"] === 0 ? 0 : 1);
