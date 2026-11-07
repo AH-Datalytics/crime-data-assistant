@@ -107,6 +107,11 @@ assert.ok(clrPair.delivered.text.includes("Crime Index has no murder clearance r
 const clrOneYear = ok({ statistic: "clearance_rate", agencies: [memphis, dallas], from: 2023, to: 2023 });
 assert.deepEqual(clrOneYear.delivered.table.rows, [["Memphis, Tennessee", 15.1], ["Dallas, Texas", 40.2]]);
 assert.equal(clrOneYear.meaning.statistic, "rate");
+// Codex clearance review 01: a change in a clearance rate is declined, never the rates by year; years outside the
+// data before and after are named apart.
+assert.match(no({ statistic: "clearance_rate", from: 2022, to: 2023, comparison: { earlier: 2022, later: 2023 } }), /a change in a clearance rate/);
+const wide = ok({ statistic: "clearance_rate", from: 1959, to: 2026, byYear: true });
+assert.ok(wide.delivered.text.some((t) => /; 1959 and 2026 are outside them\.$/.test(t)), JSON.stringify(wide.delivered.text));
 
 // Several agencies: side by side, never combined; one year a row each, a span a column each; blanks named per agency.
 const pair = ok({ agencies: [memphis, dallas] });

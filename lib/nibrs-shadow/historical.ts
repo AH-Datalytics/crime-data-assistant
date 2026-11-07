@@ -119,13 +119,20 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
   const outside = wanted.filter((y) => !covered.includes(y));
   const span = `Historical ${clearance ? "clearance " : ""}figures in the data cover ${first} through ${build.lastYear}`;
   if (!covered.length) return { kind: "historical-decline", explanation: `${span}, so ${yearsWords(hq.from, hq.to)} ${hq.from === hq.to ? "is" : "are"} outside them.` };
-  const outsideLine = outside.length ? [`${span}; ${yearsWords(outside[0], outside[outside.length - 1])} ${outside.length > 1 ? "are" : "is"} outside them.`] : [];
+  // The years before and after the data named apart ("1959 and 2026 are outside them", never "1959 through 2026":
+  // Codex clearance review 01.2).
+  const before = outside.filter((y) => y < first), after = outside.filter((y) => y > build.lastYear);
+  const outsideWords = [before, after].filter((ys) => ys.length).map((ys) => yearsWords(ys[0], ys[ys.length - 1])).join(" and ");
+  const outsideLine = outside.length ? [`${span}; ${outsideWords} ${outside.length > 1 ? "are" : "is"} outside them.`] : [];
   const several = hq.agencies.length > 1;
   const where = several ? hq.agencies.map((a) => a.label).join(" and ") : hq.agencies[0].label;
   const meaningBase = { source: "historical" as const, places: hq.agencies.map(placeOf), filters: [] as string[] };
   const oris = hq.agencies.map((a) => q(a.ori)).join(", ");
 
   if (clearance) {
+    // A change in a clearance rate is not computed here: said, never answered as the rates by year (Codex clearance
+    // review 01.1).
+    if (hq.comparison) return { kind: "historical-decline", explanation: "This isn't available yet: a change in a clearance rate. Ask for the clearance rate by year." };
     // The published clearance percentage, with its counts where the file has them; never averaged or recomputed.
     // Several agencies or several years (item 7, coordinator 2026-11-07: "murder clearance rate in Chicago since 2010",
     // "Compare murder clearance rates in Houston and Dallas since 2000"): each agency's published percentage for each

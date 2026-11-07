@@ -1007,6 +1007,9 @@ assert.deepEqual(srs("Murder clearance rate in the US in 2023").delivered.table.
 // Item 7: the national clearance rate by year, as published.
 assert.deepEqual(srs("Murder clearance rate in the US from 2021 to 2023").delivered.table.rows, [["2021", 49.4], ["2022", 52.3], ["2023", 57.8]]);
 assert.equal(srs("National murder clearance rate by year").delivered.table.rows[0][0], "1960", "an open span starts in 1960");
+assert.ok(srs("Murder clearance rate in the US from 1959 to 2026").delivered.text.some((t) => /; 1959 and 2026 are outside them\.$/.test(t)), "the years outside named apart");
+for (const q of ["Percent change in murder clearance rate in the US from 2020 to 2023", "Did the national murder clearance rate rise from 2020 to 2023?"])
+  assert.notEqual(ask(q).kind, "srs", `${q}: a change in a clearance rate is never the rates by year`);
 const span = srs("Robberies in Texas by year from 1955 to 1965");
 assert.deepEqual(span.delivered.table.rows.map((x) => x[0]), ["1960", "1961", "1962", "1963", "1964", "1965"]);
 assert.ok(span.delivered.text.includes("State figures in the data cover 1960 through 2025; 1955 through 1959 are outside them."));
