@@ -110,7 +110,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
       const v = valueOf(cells, a.ori, year);
       return { ...a, value: v.value, known: v.status === "VALUE" || v.status === "REPORTED_ZERO", monthsKnown: knownMonths(cells), months: cells.length };
     });
-    const { ranked, leftOut } = rankAgencies(entries, rankT.direction, rankT.limit);
+    const { ranked, leftOut, tie } = rankAgencies(entries, rankT.direction, rankT.limit);
     const code = set.within.kind === "state" ? set.within.code : "";
     const where = stateName(code);
     const floor = set.where.find((w) => w.field === "agency.population");
@@ -118,6 +118,13 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     partLine();
     const full = partYear ? `every month of ${when}` : `all 12 months of ${when}`;
     lines.push(`Ranked: agencies that reported ${full}; ties are ordered by agency name.`);
+    // A tie at the cut shows every place tied, said plainly (coordinator 2026-11-06: "Arlington and Amarillo tie for
+    // 10th, so 11 places are shown").
+    if (tie) {
+      const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+      const names = tie.names.length > 2 ? `${tie.names.slice(0, -1).join(", ")} and ${tie.names[tie.names.length - 1]}` : tie.names.join(" and ");
+      lines.push(`${names} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`);
+    }
     const out = leftOut.filter((a) => a.monthsKnown < a.months);
     if (out.length) {
       const name = (a: (typeof out)[number]) => `${a.label} (${a.monthsKnown} month${a.monthsKnown === 1 ? "" : "s"})`;
@@ -138,7 +145,7 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
   if (monthRate) {
     const a = agencies[0], cells = byOri.get(a.ori) ?? [];
     const rows = cells.map((x) => ({ key: x.ym, ...rate({ value: x.value, status: x.status } as Cell, pops.get(`${a.ori}|${Number(x.ym.slice(0, 4))}`)) }));
-    lines.push(`${a.label}: ${what} per 100,000 people for each month, ${when}: each month's own count, not annualized.`, reporter);
+    lines.push(`${a.label}: ${what} per 100,000 people for each month, ${when}.`, "Each month's own count, not scaled to a full year.", reporter);
     lines.push(`Each month's rate uses the FBI's population for its year: ${years.map((y) => `${y} ${pops.get(`${a.ori}|${y}`) ? fmt(pops.get(`${a.ori}|${y}`)!) : "(none)"}`).join("; ")}.`);
     const noRate = rows.filter((r) => r.value === null).map((r) => r.key);
     if (noRate.length) lines.push(`No rate for ${runs(noRate)}: no report is known or the FBI gives no population, shown blank.`);

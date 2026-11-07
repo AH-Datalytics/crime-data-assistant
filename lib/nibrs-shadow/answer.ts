@@ -68,6 +68,12 @@ export type ShadowDeps = {
   current?: CurrentBuild;
   /** Set while checking that an offered question answers (offerable): its own declines get no next step of their own. */
   checkingOffer?: boolean;
+  /** Set on a question the bare-assault or shootings rewrite made: it is not rewritten again. */
+  rewritten?: boolean;
+  /** Set while a bare-assault question goes on as asked: the bare-assault rule steps aside. */
+  assaultAsked?: boolean;
+  /** How many buttons in a row were rebuilt from the user's words: past three, a button's own buttons are left as built. */
+  rebuilt?: number;
 };
 
 export type ShadowOption = {
@@ -100,7 +106,8 @@ function askInstead(question: string, parts: Part[], year: number): ShadowOption
   for (const [a, b] of spans) t = `${t.slice(0, a)} ${/\b(in|for|of|from|during)\s*$/i.exec(question.slice(a, b))?.[1] ?? ""} ${t.slice(b)}`;
   t = t.replace(/\s+([,?.!])/g, "$1").replace(/,\s*,/g, ",").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
   // A joining word left dangling by the removal goes too ("in 2024 and in 2025" without "in 2025").
-  t = t.replace(/\s+(?:and|or)(?=\s*[?.!]?$)/i, "").replace(/\s+(?:and|or)\s+(?:and|or)\s+/gi, " and ").trim();
+  t = t.replace(/\s+(?:and|or)(?=\s*[?.!]?$)/i, "").replace(/\s+(?:and|or)\s+(?:and|or)\s+/gi, " and ")
+    .replace(/\b(of|in|for|from|during)\s+(?:and|or)\s+/gi, "$1 ").trim();
   if (!t || t.toLowerCase() === question.trim().toLowerCase()) return null;
   const r = readQuestion(t, year);
   if (r.ledger.parts.some((p) => p.concept === "unrecognized" || p.state === "not-recorded") || matchNibrsType(r.ledger, SHADOW_MATCH).kind !== "spec") return null;
@@ -319,6 +326,27 @@ function readerReason(explanation: string): LimitationReason | "reader" {
 
 /** "LA" for a place (not after a place it qualifies, "Shreveport, LA"): Los Angeles or Louisiana, asked. */
 const LA = /(?<![A-Z][a-z]+,?\s)(?<![(,]\s?)(?:\bL\.A\.|\bLA\b(?!\s+[A-Z][A-Za-z])|(?<=^|\s)la(?=\s+(?:murders?|homicides?|crimes?|robber\w*|violent|property|have|has|had|and|vs|versus|or|in|since|by|per|from|right|now)\b|\s*[?.!]?\s*$))/;
+/**
+ * The question with one of its words replaced, in the user's own words: the reader's text has circumstance and other
+ * words taken out ("gangland"), so its offsets would drop them (Codex ties/P75 review 01.1). The word is found in the
+ * original by its text, or by the misspelling the reader corrected ("assualts"); when neither is there, null, and the
+ * question isn't rewritten (Codex ties/P75 review 02): the reader's text can't be used, it has words taken out.
+ */
+function inOriginal(question: string, ledger: RequestLedger, part: Part, to: string, qualified?: RegExp): string | null {
+  const word = part.text.trim();
+  const misspelt = (flags(ledger).readings ?? []).filter((r) => r.kind === "spelling" && r.to.toLowerCase() === word.toLowerCase()).map((r) => r.from);
+  for (const w of [word, ...misspelt]) {
+    // The occurrence the reader read bare: one already qualified ("felony assaults", "aggravated assault") is another
+    // crime, and rewriting it would leave the bare one to be rewritten again (scorecard 2026-11-06: no end).
+    for (const m of question.matchAll(new RegExp(String.raw`(?<![A-Za-z])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z])`, "gi"))) {
+      if (qualified?.test(question.slice(0, m.index))) continue;
+      return question.slice(0, m.index) + to + question.slice(m.index! + m[0].length);
+    }
+  }
+  return null;
+}
+/** An "assault" with a kind before it: the reader's bare-assault rule leaves these to their own measures. */
+const ASSAULT_QUALIFIED = /\b(?:aggravated|simple|sexual|sex|agg\.?|felony)[\s-]+$/i;
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
   // "LA" (coordinator 2026-11-03): the city or the state, asked; each choice is the question with the place named.
   if (LA.test(question)) {
@@ -344,11 +372,57 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   const bareShooting = !!shooting && /^shootings?$/i.test(shooting.text.trim())
     && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
     && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept));
-  if (shooting && bareShooting && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
-    const as = (to: string) => question.slice(0, shooting.span[0]) + to + question.slice(shooting.span[1]);
+  if (shooting && bareShooting && !deps.rewritten && inOriginal(question, ledger, shooting, "") !== null && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
+    const as = (to: string) => inOriginal(question, ledger, shooting, to)!;
     const options = [["Fatal (murders with a firearm)", "murders with a firearm"], ["Non-fatal (aggravated assaults with a firearm)", "aggravated assaults with a firearm"]]
-      .map(([label, to]) => ({ label, continuation: shadowAnswer(as(to), deps) })).filter((o) => runsNow(o.continuation));
+      .map(([label, to]) => ({ label, continuation: shadowAnswer(as(to), { ...deps, rewritten: true }) })).filter((o) => runsNow(o.continuation));
     if (options.length) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options };
+  }
+  // A bare "assault" (coordinator 2026-11-06, "San Francisco assaults per month"): Crime Index and Current Trends hold
+  // aggravated assault only, so their answer is given, named as aggravated assaults; asking would offer one choice.
+  // Where NIBRS answers, which kind is asked, offering only the kinds that run.
+  const assault = ledger.parts.find((p) => p.clause === 0 && p.concept === "measure" && p.value === "assault");
+  if (assault && !deps.assaultAsked) {
+    // Never a rewrite that could lose the user's words: said plainly instead (Codex ties/P75 review 02).
+    // Once only: a rewritten question that still reads a bare assault is declined, never rewritten again.
+    if (deps.rewritten || inOriginal(question, ledger, assault, "", ASSAULT_QUALIFIED) === null)
+      return decline("reader", "I couldn't tell which assaults this asks about. Name the kind, for example \"aggravated assaults in Houston in 2024\".");
+    const as = (to: string) => inOriginal(question, ledger, assault, to, ASSAULT_QUALIFIED)!;
+    const plural = /s$/i.test(assault.text.trim());
+    const again = { ...deps, rewritten: true };
+    const aggravated = shadowAnswer(as(plural ? "aggravated assaults" : "aggravated assault"), again);
+    if (aggravated.kind === "historical" || aggravated.kind === "srs" || aggravated.kind === "current") return aggravated;
+    // Something else is missing first (which place, which period, which New York): the question goes on as asked, so
+    // that is asked first; the kind of assault is asked once the rest is known (scorecard 2026-11-06).
+    if (aggravated.kind !== "clarify") {
+      const options = [["Aggravated assault", "aggravated assaults"], ["Simple assault", "simple assaults"], ["Intimidation", "intimidation"],
+        ["All assaults (aggravated, simple and intimidation)", "all assaults"]]
+        .map(([label, to]) => ({ label, continuation: to === "aggravated assaults" && plural ? aggravated : shadowAnswer(as(to), again) })).filter((o) => runsNow(o.continuation));
+      if (options.length > 1) return { kind: "clarify", about: "which assaults", question, options };
+      if (options.length === 1) return options[0].continuation;
+    }
+    // Nothing runs, or something else is missing first: the question goes on as asked, so a decline and its buttons are
+    // of the user's words, never the rewritten question's (scorecard 2026-11-06: "the count of and aggravated
+    // assaults"). A button that names a period or the nation is the user's question with it, so the kind of assault is
+    // still settled by the rule above once the rest is known.
+    const asked = shadowAnswer(question, { ...deps, assaultAsked: true });
+    // Declined as asked, but asked something else once the kind is named ("which New York"): that question, whose
+    // answers name aggravated assaults plainly, rather than a decline.
+    if (asked.kind === "decline" && aggravated.kind === "clarify" && aggravated.options.some((o) => o.continuation && runsNow(o.continuation)))
+      return { ...aggravated, question };
+    // Up to three choices in a row ("assaults" -> the United States -> a year: Codex ties review 03), never more.
+    if (asked.kind !== "clarify" || (deps.rebuilt ?? 0) >= 3) return asked;
+    const base = question.replace(/[?.!\s]+$/, "");
+    const suffix = (label: string) => {
+      const y = /^The latest complete year \((\d{4})\)$/.exec(label);
+      return y ? ` in ${y[1]}` : label === "This year so far" ? " this year" : label === "Every year available" ? " by year"
+        : label === "The last 10 complete years" ? " over the last 10 years" : label === "The United States" ? " in the United States" : null;
+    };
+    return { ...asked, options: asked.options.map((o) => {
+      const s = o.continuation ? suffix(o.label) : null;
+      const c = s ? shadowAnswer(base + s, { ...deps, rebuilt: (deps.rebuilt ?? 0) + 1 }) : null;
+      return c && runsNow(c) ? { ...o, continuation: c } : o;
+    }) };
   }
   // A misspelled large place (coordinator 2026-11-03: "batlimore", "phialdelphia"): the question with the place's name,
   // when exactly one large place is that close and the words aren't a place the index has.
