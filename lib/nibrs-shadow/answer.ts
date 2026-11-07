@@ -72,8 +72,8 @@ export type ShadowDeps = {
   rewritten?: boolean;
   /** Set while a bare-assault question goes on as asked: the bare-assault rule steps aside. */
   assaultAsked?: boolean;
-  /** Set on a button's question rebuilt from the user's words: its own buttons are not rebuilt again. */
-  rebuilt?: boolean;
+  /** How many buttons in a row were rebuilt from the user's words: past three, a button's own buttons are left as built. */
+  rebuilt?: number;
 };
 
 export type ShadowOption = {
@@ -410,7 +410,8 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
     // answers name aggravated assaults plainly, rather than a decline.
     if (asked.kind === "decline" && aggravated.kind === "clarify" && aggravated.options.some((o) => o.continuation && runsNow(o.continuation)))
       return { ...aggravated, question };
-    if (asked.kind !== "clarify" || deps.rebuilt) return asked;
+    // Up to three choices in a row ("assaults" -> the United States -> a year: Codex ties review 03), never more.
+    if (asked.kind !== "clarify" || (deps.rebuilt ?? 0) >= 3) return asked;
     const base = question.replace(/[?.!\s]+$/, "");
     const suffix = (label: string) => {
       const y = /^The latest complete year \((\d{4})\)$/.exec(label);
@@ -419,7 +420,7 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
     };
     return { ...asked, options: asked.options.map((o) => {
       const s = o.continuation ? suffix(o.label) : null;
-      const c = s ? shadowAnswer(base + s, { ...deps, rebuilt: true }) : null;
+      const c = s ? shadowAnswer(base + s, { ...deps, rebuilt: (deps.rebuilt ?? 0) + 1 }) : null;
       return c && runsNow(c) ? { ...o, continuation: c } : o;
     }) };
   }

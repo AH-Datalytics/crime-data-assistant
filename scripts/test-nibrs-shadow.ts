@@ -366,6 +366,10 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   assert.equal(latest.kind, "srs");
   assert.match(latest.delivered!.text[0], /aggravated assaults/);
   assert.equal((ask("What's the assault trend in New York over the past 5 years?") as { about?: string }).about, "which New York");
+  // Two choices in a row (Codex ties review 03): "assaults" -> The United States -> a year answers.
+  type C = { kind: string; options?: { label: string; continuation?: C }[] };
+  const us = (ask("assaults") as C).options?.find((o) => o.label === "The United States")?.continuation;
+  if (us?.kind === "clarify") assert.ok(us.options!.some((o) => o.continuation && ["srs", "current", "answer"].includes(o.continuation.kind)), "a year answers after the nation");
   const opts =(q: string) => JSON.stringify((ask(q) as { options?: unknown }).options);
   assert.equal(opts("uncleared assualts in Houston in 2024"), opts("uncleared assaults in Houston in 2024"));
   assert.match(opts("uncleared assualts in Houston in 2024"), /not cleared/);
