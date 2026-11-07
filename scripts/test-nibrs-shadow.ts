@@ -333,7 +333,9 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   const o = ask("San Francisco assaults per month") as { kind: string; about?: string; explanation?: string; delivered?: { text: string[] }; options?: { label: string }[] };
   assert.doesNotMatch(o.explanation ?? "", /couldn't tell what this question asks/);
   if (o.kind === "current" || o.kind === "historical" || o.kind === "srs") assert.match(o.delivered!.text[0], /aggravated assaults/);
-  else if (o.kind === "clarify") assert.ok(o.options!.every((x) => /^(?:Aggravated assault|Simple assault|Intimidation|All assaults)/.test(x.label)));
+  // Asked which kind, or first what else is missing (here the period, where Current Trends isn't loaded).
+  else if (o.kind === "clarify" && o.about === "which assaults") assert.ok(o.options!.every((x) => /^(?:Aggravated assault|Simple assault|Intimidation|All assaults)/.test(x.label)));
+  else if (o.kind === "clarify") assert.match(o.about ?? "", /period|years/);
   for (const [q, v] of [["intimidation in Houston in 2024", "intimidation"], ["all assaults in Houston in 2024", "assault_offenses"], ["simple assaults in Houston in 2024", "simple_assault"],
     ["aggravated assaults in Houston in 2024", "aggravated_assault"]] as const)
     assert.ok(readQuestion(q, 2026, "2026-09").ledger.parts.some((p) => p.concept === "measure" && p.value === v), q);
@@ -355,7 +357,16 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.equal(o.kind, "decline", q);
     assert.doesNotMatch(o.alternative?.question ?? "", /\b(?:of|in) (?:and|or)\b|aggravated aggravated/, q);
   }
-  const opts = (q: string) => JSON.stringify((ask(q) as { options?: unknown }).options);
+  // Something else missing comes first (labels: which place, which period, which New York); a period button is the
+  // user's question with the period, so Crime Index answers aggravated assaults.
+  assert.equal((ask("breakdown of weapons used in assaults 2024") as { about?: string }).about, "which place");
+  const nc = ask("Assault in North Carolina") as { kind: string; about?: string; options?: { label: string; continuation?: { kind: string; delivered?: { text: string[] } } }[] };
+  assert.equal(nc.about, "which period");
+  const latest = nc.options!.find((o) => /^The latest complete year/.test(o.label))!.continuation!;
+  assert.equal(latest.kind, "srs");
+  assert.match(latest.delivered!.text[0], /aggravated assaults/);
+  assert.equal((ask("What's the assault trend in New York over the past 5 years?") as { about?: string }).about, "which New York");
+  const opts =(q: string) => JSON.stringify((ask(q) as { options?: unknown }).options);
   assert.equal(opts("uncleared assualts in Houston in 2024"), opts("uncleared assaults in Houston in 2024"));
   assert.match(opts("uncleared assualts in Houston in 2024"), /not cleared/);
 }
