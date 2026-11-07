@@ -90,6 +90,9 @@ function buildFingerprint(): string {
   walk(root); walk(crimeIndex);
   return h.digest("hex");
 }
+// Rows read from the cache are shared by every question that asks the same SQL: frozen, so code that changed them in
+// place would throw (an error on the scorecard) instead of changing a later question's answer.
+const frozen = (rows: unknown[][]): unknown[][] => { for (const r of rows) Object.freeze(r); return Object.freeze(rows) as unknown[][]; };
 const sqlKey = (sql: string) => createHash("sha256").update(sql).digest("hex");
 const cache = new Map<string, unknown[][]>();
 let cacheOut: string | null = null;
@@ -102,7 +105,7 @@ if (CACHE_DIR) {
   for (const f of fs.readdirSync(CACHE_DIR).filter((f) => /^sql\..*\.jsonl$/.test(f)))
     for (const line of fs.readFileSync(path.join(CACHE_DIR, f), "utf8").split("\n")) {
       if (!line.trim()) continue;
-      try { const r = JSON.parse(line); cache.set(r.k, r.rows); } catch { /* a line cut short by a stopped run */ }
+      try { const r = JSON.parse(line); cache.set(r.k, frozen(r.rows)); } catch { /* a line cut short by a stopped run */ }
     }
   cacheOut = path.join(CACHE_DIR, `sql.${SHARD ? `w${SHARD[0]}` : "main"}.jsonl`);
 }
@@ -113,7 +116,7 @@ const execute = (sql: string): unknown[][] => {
   if (hit) { hits++; return hit; }
   misses++;
   const rows = live(sql);
-  cache.set(k, rows);
+  cache.set(k, frozen(rows));
   fs.appendFileSync(cacheOut, JSON.stringify({ k, rows }) + "\n");
   return rows;
 };
