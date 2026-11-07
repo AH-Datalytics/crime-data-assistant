@@ -809,7 +809,15 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     return { kind: "route", source: "shr", explanation: "Murders by victim-offender relationship come from Homicide Reports (FBI SHR), which count the homicides agencies reported to the SHR, not a complete national estimate. Homicide Reports aren't available here yet." };
   // Item 11 (bad-decline audit 2026-11-06): population on its own, for agencies, states or the nation.
   const list = agencyListQuestion(ledger, ledger0, deps);
-  if (list) return list === "ask period" ? askCrimeIndexPeriod() : list;
+  // A list is for one year: the year is asked with buttons that run (Codex population review 02.3: "Every year
+  // available" was offered and declined).
+  if (list === "ask period") {
+    const y = deps.historical!.lastYear;
+    return { kind: "clarify", about: "which year", question: ledger0.question, options: [
+      { label: `The latest year (${y})`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, `in ${y}`), deps, pins) },
+      { label: "Another year", entry: "which year" }] };
+  }
+  if (list) return list;
   const pop = populationQuestion(ledger, ledger0, deps, resolved);
   if (pop) return pop === "ask period" ? askCrimeIndexPeriod() : pop;
   const d = matchNibrsType(ledger, SHADOW_MATCH);
@@ -1756,7 +1764,8 @@ function agencyListQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps:
   else if (period.form === "latest") year = build.lastYear;
   else return decline("unsupported_capability", "A list of agencies is for one year; ask for a year.");
   const byOri = new Map([...deps.places.byName.values()].flat().map((a) => [a.ori, a]));
-  const r = answerAgencyList(np.code, year, build, deps.execute, (ori) => { const a = byOri.get(ori); return a ? agencyLabel(a) : null; });
+  // An index entry with no name gives way to the build's own name (Codex population review 02.2: ", Illinois").
+  const r = answerAgencyList(np.code, year, build, deps.execute, (ori) => { const a = byOri.get(ori); return a?.name?.trim() ? agencyLabel(a) : null; });
   if (r.kind === "historical") return r;
   return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
 }

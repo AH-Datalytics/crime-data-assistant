@@ -101,7 +101,10 @@ export function answerAgencyList(state: string, year: number, build: HistoricalB
   const where = stateName(state);
   if (year < build.firstYear || year > build.lastYear)
     return { kind: "historical-decline", explanation: `Agency figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${year} is outside them.` };
-  const got = execute(`SELECT ori, name, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE state = ${q(state)} AND year = ${year}`);
+  // The build's state is the ORI's first two letters, which are the postal code except Nebraska's "NB" (Codex
+  // population review 02.1: Nebraska's list was empty).
+  const code = state === "NE" ? "NB" : state;
+  const got = execute(`SELECT ori, name, population FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) WHERE state = ${q(code)} AND year = ${year}`);
   if (!got.length) return { kind: "historical-decline", explanation: `Crime Index publishes no agencies for ${where} in ${year}.` };
   const rows = got.map((r) => ({ ori: String(r[0]), label: label(String(r[0])) ?? `${String(r[1])}, ${where}`, population: r[2] === null || r[2] === undefined ? null : Number(r[2]) }))
     .sort((a, b) => (a.population === null ? 1 : 0) - (b.population === null ? 1 : 0) || (b.population ?? 0) - (a.population ?? 0) || a.label.localeCompare(b.label));

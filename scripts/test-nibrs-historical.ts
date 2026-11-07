@@ -17,8 +17,11 @@ const CRIME: Record<string, Record<number, [number | null, number | null, number
   TX0200000: { 1960: [10, null, 41843] },
   // A Tennessee agency with no 2023 population (item 11b: listed last, blank).
   TN9999900: { 2023: [5, null, null] },
+  // Nebraska's ORIs start "NB" (Codex population review 02.1); IL0740400 has no name in the place index (02.2).
+  NB9999900: { 2023: [1, null, 900] },
+  IL0740400: { 2023: [0, null, 950] },
 };
-const NAMES: Record<string, string> = { TNMPD0000: "Memphis", TN9999900: "Example Town", TXDPD0000: "Dallas" };
+const NAMES: Record<string, string> = { TNMPD0000: "Memphis", TN9999900: "Example Town", TXDPD0000: "Dallas", NB9999900: "Example Village", IL0740400: "Mansfield" };
 const sqls: string[] = [];
 function stub(sql: string): unknown[][] {
   sqls.push(sql);
@@ -293,7 +296,11 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.deepEqual(tn.question.list, { state: "TN", count: 2, top: [{ label: "Memphis, Tennessee", population: 616061 }] });
   assert.ok(tn.delivered.text.includes("1 agency has no population for 2023, listed last, blank."), JSON.stringify(tn.delivered.text));
   assert.equal(pop("which agencies are in Tennessee in 2023").delivered.table.rows.length, 2);
-  assert.equal(shadowAnswer("List of Tennessee agencies", base).kind, "clarify", "no year: asked");
+  // No year: asked with buttons that run (02.3).
+  const noYear = shadowAnswer("List of Tennessee agencies", base);
+  assert.ok(noYear.kind === "clarify" && noYear.about === "which year" && noYear.options[0].label === "The latest year (2025)" && /agencies for Tennessee in 2025/.test(JSON.stringify(noYear.options[0].continuation)) && !noYear.options.some((o) => /Every year/.test(o.label)), JSON.stringify(noYear).slice(0, 300));
+  assert.deepEqual(pop("List of Nebraska agencies in 2023").delivered.table.rows, [["Example Village, Nebraska", 900]]);
+  assert.deepEqual(pop("List of Illinois agencies in 2023").delivered.table.rows, [["Mansfield, Illinois", 950]]);
   for (const q of ["which agencies are in Cook County, Illinois in 2023", "agencies in Tennessee that report to NIBRS in 2023", "List all agencies in Texas with type County in 2023", "murders by agency in Tennessee in 2023"]) {
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.list), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
