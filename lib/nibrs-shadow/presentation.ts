@@ -251,9 +251,10 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   // Several states or the nation side by side (answerSrsSeveral) are all named (Codex root-causes review 01.5).
   const srsPlaces = o.kind === "srs" ? o.question.places ?? [o.question.place] : [{ kind: "national" as const }];
   const srsName = (p: (typeof srsPlaces)[number]) => (p.kind === "national" ? "United States" : STATE_NAMES[p.code] ?? p.code);
-  const m = (o.kind === "historical" ? HISTORICAL_MEASURE : SRS_MEASURE)[q.measure];
+  // Population on its own (population.ts) has no crime: its words are the measure's.
+  const m = q.measure === "population" ? { words: "population", name: "population" } : (o.kind === "historical" ? HISTORICAL_MEASURE : SRS_MEASURE)[q.measure];
   const clearance = q.statistic === "clearance_rate";
-  // An agency beside its state or the nation (answerBeside): every place, in the order asked.
+  // Agencies beside states or the nation (answerBeside, population.ts): every place, in the order asked.
   const beside = o.kind === "historical" ? o.question.beside ?? [] : [];
   const shown = o.kind === "historical" && o.question.shown ? o.question.shown.map(shortLabel) : null;
   const placeTitle = shown ?? (o.kind === "historical" ? agencies.map((a) => shortLabel(a.label)) : srsPlaces.map(srsName));
@@ -264,8 +265,8 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
     places: placeTitle, measure: clearance ? `${m.name} clearance rate` : m.words, ratePer: q.statistic === "rate" ? 100000 : null,
     groupings: yearly ? ["year"] : [], period: cmp ? `${cmp.earlier} & ${cmp.later}` : titlePeriod(o.period, yearly), partialLastYear: null, rollingMonths: null, ranking: null,
   };
-  const besideWho = beside.length ? ` and law enforcement agencies in ${beside.map((p) => (p.kind === "national" ? "the United States" : srsName(p))).join(" and ")}` : "";
-  const who = o.kind === "historical" ? `${reporter(places, agencies.map((a) => a.ori))}${besideWho}`
+  const besideWho = beside.length ? `${agencies.length ? " and " : ""}law enforcement agencies in ${beside.map((p) => (p.kind === "national" ? "the United States" : srsName(p))).join(" and ")}` : "";
+  const who = o.kind === "historical" ? `${agencies.length ? reporter(places, agencies.map((a) => a.ori)) : ""}${besideWho}`
     : srsPlaces.length > 1 ? `law enforcement agencies in ${srsPlaces.map((p) => (p.kind === "national" ? "the United States" : srsName(p))).join(" and ")}`
       : srsPlaces[0].kind === "national" ? "law enforcement agencies across the United States" : `${srsName(srsPlaces[0])} law enforcement agencies`;
   const when = cmp ? `in ${cmp.earlier} and ${cmp.later}, with the change between them` : whenWords(o.period, yearly ? "year" : null);
@@ -273,7 +274,15 @@ function historicalPresentation(o: HistoricalAnswer | SrsAnswer, places: PlaceIn
   const table = o.delivered.table;
   const single = table.rows.length === 1 && table.columns.length === 1 && typeof table.rows[0][0] === "number";
   const v = single ? (table.rows[0][0] as number) : null;
-  const lead: Lead = single
+  // Population on its own: whose population, by name (the places' own words: "the Memphis Police Department",
+  // "Tennessee", "the United States").
+  const popWho = (o.kind === "historical" ? o.question.shown ?? [] : []).map((n) => {
+    const a = agencies.find((x) => x.label === n);
+    return a ? reporter(places, [a.ori]) : n === "United States" ? "the United States" : n;
+  });
+  const lead: Lead = q.measure === "population"
+    ? { kind: "population", who: popWho.length > 2 ? `${popWho.slice(0, -1).join(", ")} and ${popWho[popWho.length - 1]}` : popWho.join(" and "), value: single ? v : null, when }
+    : single
     ? { kind: "single", who, quantity: q.statistic === "count" ? `${fmt(v!)} ${what}` : clearance ? `${one(v!)}% of ${m.words} as cleared` : `${m.words} at a rate of ${one(v!)} per 100,000 people`, when, countedAs: null }
     // Clearance rates over years or agencies (item 7) are said as rates: "These are murder clearance rates the Chicago
     // Police Department reported ...", never "murders cleared the ... reported".

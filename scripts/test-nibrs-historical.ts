@@ -31,7 +31,7 @@ function stub(sql: string): unknown[][] {
     const yr = Number(y);
     if (between && (yr < Number(between[1]) || yr > Number(between[2]))) continue;
     if (years && yr !== Number(years[1]) && yr !== Number(years[2])) continue;
-    out.push(years ? [yr, t] : [o, yr, t, c, p]);
+    out.push(years ? [yr, t] : /SELECT ori, year, population /.test(sql) ? [o, yr, p] : [o, yr, t, c, p]);
   }
   return out;
 }
@@ -249,6 +249,31 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = withBuild(q);
     assert.ok(o.kind !== "historical" && !(o.kind === "decline" && /whole years|Crime Index's Historical/.test(o.explanation)), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
+}
+
+// Item 11: population on its own, as Crime Index publishes it (the agency's from the build, Tennessee's and the
+// nation's from the historical file); the period asked when none; a crime or a column beside it goes on as before.
+{
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
+  const pop = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 300)}`); return o as Extract<ShadowOutcome, { kind: "historical" }>; };
+  const one = pop("Population of Memphis in 2023");
+  assert.deepEqual(one.delivered.table.rows, [[616061]]);
+  assert.deepEqual(one.delivered.text, ["Memphis, Tennessee: population 616,061 in 2023.", "Figures for the Memphis Police Department.",
+    "An agency's population is the population it covers, as Crime Index publishes it.", SRS_SOURCE]);
+  assert.ok(sqls[sqls.length - 1].includes("SELECT ori, year, population FROM read_parquet('/ci/agency_crime.parquet')"), sqls[sqls.length - 1]);
+  assert.deepEqual(pop("population of Memphis and Tennessee in 2023").delivered.table.rows, [["Memphis, Tennessee", 616061], ["Tennessee", 7148304]]);
+  assert.deepEqual(pop("US population per year from 2022 to 2023").delivered.table.rows, [["2022", 333287550], ["2023", 334914880]]);
+  assert.deepEqual(pop("What is the current population of the United States?").delivered.table.rows, [[pop("US population in 2025").delivered.table.rows[0][0]]], "current: the latest year");
+  // A blank year is blank and named (2021 has a population in the stub; Dallas has 2023 only).
+  const dal = pop("Population of Dallas by year from 2022 to 2023");
+  assert.ok(JSON.stringify(dal.delivered.table.rows) === JSON.stringify([["2023", 1302868]]) && dal.delivered.text.some((t) => /no population for Dallas, Texas in 2022, so the table starts in 2023/.test(t)), JSON.stringify(dal.delivered));
+  const none = shadowAnswer("Population of Memphis", base);
+  assert.ok(none.kind === "clarify" && none.about === "which period", JSON.stringify(none).slice(0, 200));
+  const later = shadowAnswer("Texas population in 2026", base);
+  assert.ok(later.kind === "decline" && later.reason === "outside_release_coverage", JSON.stringify(later).slice(0, 200));
+  for (const q of ["murders and population in Memphis in 2023", "murder rate in Memphis in 2023", "population of Memphis and Tennessee combined in 2023"])
+    assert.ok(!(shadowAnswer(q, base).kind === "historical" && (shadowAnswer(q, base) as { question: { measure: string } }).question.measure === "population"), q);
 }
 
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

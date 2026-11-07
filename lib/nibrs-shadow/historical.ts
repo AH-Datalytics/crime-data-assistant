@@ -83,8 +83,8 @@ export type HistoricalQuestion = {
   /** A line after the agency's (a county answered from its sheriff's office): shown as a note, never as restated. */
   agencyNote?: string;
   /**
-   * States or the nation shown beside the agencies (answerBeside), and every place's name in the order asked (each
-   * statistic column's, `x.<i>`), for the title and the chart's series.
+   * States or the nation shown beside the agencies (answerBeside, population.ts), and every place's name in the order
+   * asked (each statistic column's, `x.<i>`), for the title and the chart's series.
    */
   beside?: SrsPlace[];
   shown?: string[];
