@@ -171,13 +171,14 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     assert.notEqual(withBuild(q).kind, "historical", q);
   // Codex beside review 01.1: a statistic said of some places only is never applied to all (351 victims, not 57).
   for (const q of ["Murder victims in Memphis and murder rate in Tennessee in 2023", "Murder rate in Tennessee and murder victims in Memphis in 2023", "Murders in Memphis and the rate in Tennessee in 2023",
-    "Murders in Memphis and Tennessee's rate in 2023", "Memphis murders and Tennessee's murder rate in 2023"]) {
+    "Murders in Memphis and Tennessee's rate in 2023", "Memphis murders and Tennessee's murder rate in 2023", "Murders in Memphis and Tennessee's rate, the rate in 2023"]) {
     const o = withBuild(q);
     assert.ok(o.kind === "decline" && /same figure for every place/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
   // Codex beside review 02.2: one statistic for every place, however it is said, still answers.
   for (const q of ["Memphis murder rate vs Tennessee murder rate in 2023", "Memphis murder rate compared with Tennessee in 2023", "Murders per 100,000 in Memphis and Tennessee in 2023",
-    "Rate of murders in Memphis and Tennessee in 2023", "Murder victim rate in Memphis and Tennessee in 2023", "the murder rate in Memphis compared to the Tennessee rate in 2023"]) {
+    "Rate of murders in Memphis and Tennessee in 2023", "Murder victim rate in Memphis and Tennessee in 2023", "the murder rate in Memphis compared to the Tennessee rate in 2023",
+    "Memphis murder rate vs Tennessee murders per 100,000 in 2023", "Memphis and Tennessee murder rate per 100,000 in 2023", "per capita murders in Memphis and Tennessee in 2023"]) {
     const o = withBuild(q);
     assert.ok(o.kind === "historical" && JSON.stringify(o.delivered.table.rows) === JSON.stringify([["Memphis, Tennessee", 57], ["Tennessee", 10]]), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
   }
