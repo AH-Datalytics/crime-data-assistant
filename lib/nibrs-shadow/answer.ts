@@ -1036,7 +1036,8 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       || (sp.statistic !== "clearance_rate" && ledger.parts.some((p) => p.clause === 0 && p.concept === "clearance"));
     if (agencies.length && agencies.every((a) => a?.kind === "agency") && sp.period.form === "none" && sp.grain === "total" && sp.measures.length === 1
       && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details) return askCrimeIndexPeriod();
-    const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
+    // An open span starts at the first year the figure asked for exists (clearances from 1960: item 7).
+    const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), sp.statistic === "clearance_rate" ? deps.historical.clearanceFirstYear : deps.historical.firstYear);
     const historicalShape = agencies.length && agencies.every((a) => a?.kind === "agency") && yrs && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && !sp.filters.length && !details
       && (sp.statistic === "count" || sp.statistic === "rate");
     // The crime counted in the other of its two units ("robbery victims"): said plainly, with NIBRS's count of that unit

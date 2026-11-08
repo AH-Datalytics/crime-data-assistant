@@ -85,7 +85,31 @@ export function answerSrs(q: SrsQuestion): SrsAnswer | SrsDecline {
   // P57: the national clearance rate, from the historical clearances (the file states it as a percent).
   if (q.statistic === "clearance_rate") {
     if (q.place.kind !== "national") return { kind: "srs-decline", explanation: "There is no state clearance rate in the data: the FBI publishes clearance for agencies and the nation, not states, and a figure from the reporting agencies is not a state rate." };
-    if (covered.length !== 1 || q.byYear) return { kind: "srs-decline", explanation: "This isn't available yet: national clearance rates for more than one year." };
+    // A change in a clearance rate is not computed here (Codex clearance review 01.1).
+    if (q.comparison) return { kind: "srs-decline", explanation: "This isn't available yet: a change in a clearance rate. Ask for the clearance rate by year." };
+    // By year (item 7: "National murder clearance rate since 1960"): the file's published percentage for each year; a
+    // year with none is blank and named; years outside the file are named.
+    if (covered.length !== 1 || q.byYear || wanted.length !== 1) {
+      const col = `${m.col}_cleared_rate`;
+      const rows = covered.map((y) => ({ y, row: rowFor(clearances(), q.place, y) }));
+      const rate = (r: Row | undefined) => (r && r[col] !== "" ? Number(r[col]) : null);
+      const miss = rows.filter((r) => rate(r.row) === null).map((r) => r.y);
+      const period = { from: `${covered[0]}-01`, to: `${covered[covered.length - 1]}-12` };
+      const spans = miss.reduce<[number, number][]>((out, y) => { const l = out[out.length - 1]; if (l && y === l[1] + 1) l[1] = y; else out.push([y, y]); return out; }, []);
+      const missWords = spans.map(([a, b]) => (a === b ? String(a) : `${a} to ${b}`));
+      const missLine = miss.length ? [`The data has no national ${m.name} clearance rate for ${missWords.length > 1 ? `${missWords.slice(0, -1).join(", ")} and ${missWords[missWords.length - 1]}` : missWords[0]}, shown blank.`] : [];
+      // The years before and after the file named apart (Codex clearance review 01.2).
+      const outsideWords = [outside.filter((y) => y < SRS_YEARS.first), outside.filter((y) => y > SRS_YEARS.last)].filter((ys) => ys.length).map((ys) => yearsWords(ys[0], ys[ys.length - 1])).join(" and ");
+      const outsideLine = outside.length ? [`${span}; ${outsideWords} ${outside.length > 1 ? "are" : "is"} outside them.`] : [];
+      return {
+        kind: "srs", question: q, period,
+        meaning: { source: "historical", places: [placeOf(q.place)], period, measures: [{ name: `${m.name} cleared`, unit: "offense" }], filters: [], groupings: ["year"], statistic: "rate", denominator: `${m.words}, per 100` },
+        delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true }, { binding: { kind: "statistic", as: "clearance_rate" }, header: `${m.words[0].toUpperCase()}${m.words.slice(1)} cleared (%)` }],
+          rows: rows.map((r) => [String(r.y), rate(r.row)]) },
+          text: [`${where}: the percentage of ${m.words} cleared by year, ${periodWords(period.from, period.to)}.`, ...outsideLine, ...(q.notes ?? []), ...missLine, SRS_SOURCE] },
+        read: { file: "historical_clearances_states_nation_1960-2025.csv", column: col, uids: rows.flatMap((r) => (r.row ? [r.row.uid] : [])) },
+      };
+    }
     const y = covered[0], col = `${m.col}_cleared_rate`, row = rowFor(clearances(), q.place, y);
     const v = row?.[col] ? Number(row[col]) : null;
     if (v === null) return { kind: "srs-decline", explanation: `The data has no national ${m.name} clearance rate for ${y}.` };
