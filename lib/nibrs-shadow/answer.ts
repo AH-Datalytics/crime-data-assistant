@@ -1804,7 +1804,7 @@ function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: S
   const everyone = /(?<!\bcivilian\s)\b(?:employees?|personnel|headcount)\b/i.test(q);
   // "Per" only as a rate per people or "per year": a ratio between staff ("employees per officer") is never answered
   // as a count (Codex staffing review 01.2).
-  const perOk = [...q.matchAll(/\bper\b/gi)].every((m) => /^per\s+(?:capita|population|residents?|persons?|people|inhabitants|year|years|annum|\d[\d,]*(?:\s*k)?|thousand|million|ten\s+thousand|one\s+million)\b/i.test(q.slice(m.index)));
+  const perOk = [...q.matchAll(/\bper\b/gi)].every((m) => /^per[\s-]+(?:capita|population|residents?|persons?|people|inhabitants|year|years|annum|\d[\d,]*(?:\s*k)?|thousand|million|ten\s+thousand|one\s+million)\b/i.test(q.slice(m.index)));
   if (!perOk) return decline("unsupported_capability", "Staffing is answered as counts or per 100,000 people; a ratio between kinds of staff isn't available.");
   // More than one kind named ("officers and civilian employees", "officers and police employees"): which one is asked,
   // never one of them answered for both (01.1).

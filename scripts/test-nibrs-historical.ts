@@ -357,6 +357,7 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   }
   assert.equal(shadowAnswer("police officers in Memphis", base).kind, "clarify", "no period: asked");
   assert.deepEqual(hist("How many officers per capita does Memphis have in 2023?").delivered.table.rows, [[308.4]], "how many ... per capita is the rate");
+  assert.deepEqual(hist("police staffing per-capita in Memphis in 2023").delivered.table.rows, [[407.4]], "per-capita, hyphenated, is the rate (Codex staffing review 02)");
   assert.deepEqual(hist("police staffing per year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 2550], ["2023", 2510]], "per year is the grain");
   for (const q of ["officers killed in Memphis in 2023", "assaults on police officers in Memphis in 2023", "murders in Memphis per officer in 2023"]) {
     const o = shadowAnswer(q, base);
