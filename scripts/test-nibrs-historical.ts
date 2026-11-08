@@ -345,7 +345,11 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const per10k = hist("officers per 10,000 residents in Memphis by year from 2022 to 2023");
   assert.deepEqual(per10k.delivered.table.rows, [["2022", 31.2], ["2023", 30.84]]);
   assert.ok(per10k.delivered.text.includes("Rates per 10,000 are Crime Index's published rates per 100,000, divided by 10."), JSON.stringify(per10k.delivered.text));
-  assert.deepEqual(hist("civilian employees per 1,000 in Memphis in 2023").delivered.table.rows, [[0.99]], "a computed rate converts too: 99.0 per 100,000");
+  const civ1000 = hist("civilian employees per 1,000 in Memphis in 2023");
+  assert.deepEqual(civ1000.delivered.table.rows, [[0.99]], "a computed rate converts too: 99.0 per 100,000");
+  // Codex staffing review 04: with a computed rate, neither line calls it published or per 100,000.
+  assert.ok(civ1000.delivered.text.includes("Rates per 1,000 are rates per 100,000, divided by 100.") && civ1000.delivered.text.some((t) => /that year's rate is the count per 1,000 of the published population/.test(t))
+    && !civ1000.delivered.text.some((t) => /Crime Index's published rates/.test(t)), JSON.stringify(civ1000.delivered.text));
   assert.deepEqual(hist("officers per 100,000 people in Memphis in 2023").delivered.table.rows, [[308.4]], "per 100,000: as published, no note");
   assert.ok(!hist("officers per 100,000 people in Memphis in 2023").delivered.text.some((t) => /divided by/.test(t)));
   const civ = hist("civilian employees per capita in Memphis in 2023");

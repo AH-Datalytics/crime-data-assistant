@@ -70,9 +70,12 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
   // P75's rule, said: the years whose rate Crime Index leaves blank and the answer computes from its count and population.
   const computed = !rate ? [] : agencies.flatMap((a) => {
     const done = years.filter((y) => { const c = cell.get(`${a.ori}|${y}`); return !!c && historicalRate(c.capita, c.total, c.population).computed; });
-    return done.length ? [`Crime Index publishes no ${m.name} rate for ${a.label} ${spanWords(spans(done))}; ${done.length > 1 ? "those years' rates are" : "that year's rate is"} the count per 100,000 of the published population.`] : [];
+    return done.length ? [`Crime Index publishes no ${m.name} rate for ${a.label} ${spanWords(spans(done))}; ${done.length > 1 ? "those years' rates are" : "that year's rate is"} the count ${perWords} of the published population.`] : [];
   });
-  const notes = [...(extra.agencyLine ? [extra.agencyLine] : []), ...baseNote, ...startNote, ...outsideLine, ...(extra.notes ?? []), ...computed, ...blanks];
+  // With a computed rate among them, the base line doesn't call every rate published (Codex staffing review 04).
+  const baseLine = !baseNote.length ? [] : computed.length
+    ? [`Rates ${perWords} are rates per 100,000, ${per < 100_000 ? `divided by ${fmt(100_000 / per)}` : `multiplied by ${fmt(per / 100_000)}`}.`] : baseNote;
+  const notes = [...(extra.agencyLine ? [extra.agencyLine] : []), ...baseLine, ...startNote, ...outsideLine, ...(extra.notes ?? []), ...computed, ...blanks];
   const period = { from: `${years[0]}-01`, to: `${years[years.length - 1]}-12` };
   let columns: ResultTable["columns"], rows: (string | number | null)[][], title: string;
   if (!byYear && years.length === 1 && wanted.length === 1) {
