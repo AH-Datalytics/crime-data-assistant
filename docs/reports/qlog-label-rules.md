@@ -142,14 +142,14 @@ The three corrections are applied as review entries (codex-check-4).
   - A state written with the name keeps only that state's agencies, and the question is asked when two remain. "El Paso, Texas" is still asked (the city and the county are both in Texas); "Richmond, VA" and "Columbus, OH" are not. The state counts when it is right after the name ("Mobile, AL", "richmond va", "Charlotte in North Carolina") or is a state's name right before it ("California Berkeley"). A code before the name doesn't count, since in a list ("Houston, TX Los Angeles, CA") it belongs to the place before. A code that is also a word ("IN", "OR", "AL") counts only in capitals, so "Los Angeles, in 2024" names no state. A state written with one mention holds for every mention of that name. A state's own name ("Washington", "New York") is read as the state, as before.
   - Words that say which agency settle it. They are read at each mention, so "Baltimore County and Baltimore" still asks about the second. They are read in the question as asked too:
     - "city of St. Louis", "St. Louis city", "county of …";
-    - a list under "cities" or "counties" ("the cities of New York, … Los Angeles", "counties of Charleston, Dorchester and Berkeley"), up to a word that leaves the list ("Texas counties with Los Angeles" still asks);
+    - a list under "cities" or "counties" ("the cities of New York, … Los Angeles", "counties of Charleston, Dorchester and Berkeley"), up to a word that leaves the list ("Texas counties with Los Angeles" and "cities in Texas to Los Angeles" still ask; "to" before a year doesn't leave it);
     - "Los Angeles Police Department", "St Louis County", "sheriff";
     - an agency's initials anywhere in the question ("LAPD", "(LAPD)").
 
     Such questions keep their labels. Where the engine asks anyway, that's an engine misread to fix, not a label to change. "District of Columbia" is not Columbia.
   - A one-word name is a place only where a place stands, on both sides:
-    - before it: "in", "for", "vs", a comma, another place in a list, or the start of the question;
-    - after it: a crime, a period, a comma, "'s", a state code, the next place in a list, or the end ("in Mobile", "Mobile, AL", "Mobile murders").
+    - before it: "in", "for", "vs", a comma, another place in a list, "to" in a comparison ("Compare Chicago to Baltimore"), or the start of the question;
+    - after it: a crime, a period word or year ("last year", "for 2024"), a comma, "'s", a state code, the next place in a list, or the end ("in Mobile", "Mobile, AL", "Mobile murders").
 
     So "thefts of mobile phones", "Charlotte Hornets" and "reported to Charlotte" aren't places. A name of two or more words ("Los Angeles") is read as the place unless an institution follows it ("San Diego State").
   - The same-name question is added to the label's missing parts, since any missing part is a right one to ask (D31): an answer label becomes that clarify, and a clarify about another part also accepts it.
