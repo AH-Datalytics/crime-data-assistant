@@ -44,8 +44,9 @@ const planStatistic = (plan?: Record<string, unknown>) => {
 
 const SOURCE: Record<string, string> = { answer: "nibrs", srs: "crimeindex_state_national", current: "current_trends" };
 
-/** A cell's identity: its column and where it sits. */
-export const cellKey = (column: string, at: Record<string, unknown>) => `${column}|${JSON.stringify(Object.keys(at).sort().map((k) => [k, at[k]]))}`;
+/** A cell's identity: its column and where it sits, as structured JSON (never a joined string that two cells could share). */
+export const cellKey = (column: string, at: Record<string, unknown>) => JSON.stringify([column, Object.keys(at).sort().map((k) => [k, at[k]])]);
+const requestCellKey = (id: string, column: string, at: Record<string, unknown>) => JSON.stringify([id, column, Object.keys(at).sort().map((k) => [k, at[k]])]);
 
 /**
  * The tolerance of a match: the engine's value and the checker's, both from the same stored figures, differ only by
@@ -53,7 +54,9 @@ export const cellKey = (column: string, at: Record<string, unknown>) => `${colum
  * A fixed bound, never derived from the engine's own decimals: 57 and 57.4 are different values.
  */
 export function sameValue(engine: unknown, mine: unknown): boolean {
-  if (engine === null || engine === undefined || mine === null || mine === undefined) return (engine ?? null) === (mine ?? null);
+  // A value that isn't there (undefined) never matches anything, a checked blank (null) included (Codex tool review 02.2).
+  if (engine === undefined || mine === undefined) return false;
+  if (engine === null || mine === null) return engine === mine;
   if (typeof engine !== "number" || typeof mine !== "number" || !Number.isFinite(engine) || !Number.isFinite(mine)) return false;
   return Math.abs(engine - mine) <= 1e-6 + 1e-9 * Math.abs(engine);
 }
@@ -69,6 +72,9 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
   // apart by a checker: the answer is not verifiable, not guessed.
   const keys = numbers.map((n) => cellKey(n.column, n.at));
   const ambiguous = new Set(keys).size !== keys.length || new Set(groups.map(([g]) => g.header)).size !== groups.length;
+  // A value that isn't a finite number or a blank (NaN, infinity, text) would be written as null, and a checked blank
+  // would then match it (Codex tool review 02.4): such an answer is not verifiable.
+  const odd = numbers.some((n) => n.value !== null && !(typeof n.value === "number" && Number.isFinite(n.value)));
   const q = (o.question ?? {}) as { measure?: string; statistic?: string; agencies?: { ori: string; state?: string; label: string }[]; beside?: { kind: string; code?: string }[];
     place?: { kind: string; ori?: string; label?: string; code?: string }; places?: { kind: string; code?: string }[] };
   const geo = (p: { kind: string; code?: string }) => (p.kind === "national" ? { kind: "national", label: "United States" } : { kind: "state", state: p.code });
@@ -84,7 +90,8 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     combine: (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
     filters: o.plan ? withoutSql(o.plan.filters) ?? null : null, groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
     nibrs_plan: o.plan ? withoutSql(o.plan) : null, engine_read: withoutSql(o.read ?? null), numbers, digest: tableDigest(table.rows),
-    verifiable: numbers.length > 0 && !ambiguous, note: ambiguous ? "two cells share one column and place: not verifiable" : numbers.length ? "" : "no numbers shown",
+    verifiable: numbers.length > 0 && !ambiguous && !odd,
+    note: ambiguous ? "two cells share one column and place: not verifiable" : odd ? "a value that is not a finite number or a blank: not verifiable" : numbers.length ? "" : "no numbers shown",
   };
 }
 
@@ -110,7 +117,7 @@ export type Expected = { id: string; column: string; at: Record<string, unknown>
  * a cell the request doesn't show). `problems` lists checker output for requests that don't exist.
  */
 export function compareExpected(requests: VerifyRequest[], expected: Expected[]): { results: VerifyResult[]; problems: string[] } {
-  const key = (id: string, column: string, at: Record<string, unknown>) => `${id}|${cellKey(column, at)}`;
+  const key = requestCellKey;
   const byCell = new Map<string, Expected[]>();
   for (const e of expected) byCell.set(key(e.id, e.column, e.at), [...(byCell.get(key(e.id, e.column, e.at)) ?? []), e]);
   const known = new Map(requests.map((q) => [q.id, q]));
@@ -121,8 +128,8 @@ export function compareExpected(requests: VerifyRequest[], expected: Expected[])
       const k = key(q.id, n.column, n.at);
       wanted.add(k);
       const got = byCell.get(k) ?? [];
-      const ev = n.value === undefined ? null : n.value;
-      if (!got.length) results.push({ request: q.id, column: n.column, at: n.at, engine: ev, result: "no value" });
+      const ev = n.value;
+      if (!got.length || (got.length === 1 && !Object.prototype.hasOwnProperty.call(got[0], "value"))) results.push({ request: q.id, column: n.column, at: n.at, engine: ev, result: "no value" });
       else if (got.length > 1) results.push({ request: q.id, column: n.column, at: n.at, engine: ev, result: "duplicate value", mine: got.map((g) => g.value) });
       else results.push({ request: q.id, column: n.column, at: n.at, engine: ev, result: sameValue(ev, got[0].value) ? "matched" : "mismatch", mine: got[0].value });
     }
@@ -158,7 +165,11 @@ export function verifiedEntries(requests: VerifyRequest[], results: VerifyResult
     const missing = [...cells.keys()].filter((k) => !seen.has(k)).length;
     const extra = [...seen.keys()].filter((k) => !cells.has(k)).length;
     const duplicate = [...seen.values()].filter((v) => v.length > 1).length;
-    const wrong = [...cells].filter(([k, n]) => { const r = seen.get(k)?.[0]; return r && seen.get(k)!.length === 1 && !(sameValue(n.value, r.engine) && sameValue(n.value, r.mine) && r.result === "matched"); }).length;
+    // The result must be for this answer's value exactly (Codex tool review 02.1: an old result for 57 never verifies
+    // 57.0000005), carry its own checked value explicitly, and that value must match.
+    const own = (r: VerifyResult, k: "engine" | "mine") => Object.prototype.hasOwnProperty.call(r, k);
+    const wrong = [...cells].filter(([k, n]) => { const r = seen.get(k)?.[0]; return r && seen.get(k)!.length === 1
+      && !(own(r, "engine") && own(r, "mine") && r.engine === n.value && sameValue(n.value, r.mine) && r.result === "matched"); }).length;
     const why = missing ? `${missing} numbers with no result` : extra ? `${extra} results for numbers the answer doesn't show` : duplicate ? "duplicate results" : wrong ? `${wrong} not matched` : "";
     if (why) unmatched.push({ id: q.id, why });
     else entries[q.id] = { digest: q.digest, ...meta, numbers: q.numbers.filter((n) => n.value !== null && n.value !== undefined).length };
