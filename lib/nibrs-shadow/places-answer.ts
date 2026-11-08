@@ -128,9 +128,12 @@ export function answerPlaces(plan: NibrsPlan, period: { from: string; to: string
     const out = leftOut.filter((a) => a.monthsKnown < a.months);
     if (out.length) {
       const name = (a: (typeof out)[number]) => `${a.label} (${a.monthsKnown} month${a.monthsKnown === 1 ? "" : "s"})`;
+      // The five named are the ones with the largest populations, and each says its population: "the largest" alone read
+      // as large places (coordinator 2026-11-07: San Elizario, 10,178, led Texas's list of small left-out towns).
       const largest = [...out].sort((a, b) => (b.population ?? 0) - (a.population ?? 0) || a.label.localeCompare(b.label)).slice(0, 5);
+      const sized = (a: (typeof out)[number]) => `${a.label} (${a.population ? `population ${fmt(a.population)}, ` : ""}${a.monthsKnown} month${a.monthsKnown === 1 ? "" : "s"})`;
       lines.push(out.length <= 5 ? `Not ranked because they didn't report ${full}: ${out.map(name).join(", ")}.`
-        : `Not ranked because they didn't report ${full}: ${out.length} agencies, the largest ${largest.map(name).join(", ")}.`);
+        : `Not ranked because they didn't report ${full}: ${out.length} agencies. The five with the largest populations: ${largest.map(sized).join(", ")}.`);
     }
     const noPop = leftOut.filter((a) => a.monthsKnown === a.months);
     if (isRate && noPop.length) lines.push(`Not ranked because the FBI gives no population: ${noPop.map((a) => a.label).join(", ")}.`);

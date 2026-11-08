@@ -19,7 +19,9 @@ import path from "node:path";
 import type { Meaning } from "../answer-eval/case";
 import type { ResultTable } from "../nibrs-plan/result";
 import { pct1 } from "../nibrs-plan/transforms";
-import { fmt, fmtRate, SRS_SOURCE } from "./deliver";
+import { fmt, fmtRate, periodWords, SRS_SOURCE } from "./deliver";
+import { stateName } from "./places";
+import { answerSrsSeveral, type SrsPlace } from "./srs";
 
 /** Where the Crime Index build is, and the years it holds. */
 export type HistoricalBuild = { root: string; release: string; firstYear: number; lastYear: number; clearanceFirstYear: number };
@@ -80,6 +82,12 @@ export type HistoricalQuestion = {
   agencyLine?: string;
   /** A line after the agency's (a county answered from its sheriff's office): shown as a note, never as restated. */
   agencyNote?: string;
+  /**
+   * States or the nation shown beside the agencies (answerBeside), and every place's name in the order asked (each
+   * statistic column's, `x.<i>`), for the title and the chart's series.
+   */
+  beside?: SrsPlace[];
+  shown?: string[];
 };
 export type HistoricalAnswer = {
   kind: "historical"; meaning: Meaning; period: { from: string; to: string };
@@ -238,5 +246,82 @@ export function answerHistorical(hq: HistoricalQuestion, build: HistoricalBuild,
     meaning: { ...meaningBase, measures: [{ name: m.name, unit: m.unit }], period, groupings: [], statistic: hq.statistic === "rate" ? "rate" : "count", ...rateMeaning },
     delivered: { table: { columns: [{ binding: { kind: "statistic", as: "x" }, header }], rows: [[v]] }, text },
     read,
+  };
+}
+
+/** One place of a mixed question, in the order asked: an agency (the Crime Index build) or a state or the nation (the historical file). */
+export type BesidePlace = { agency: HistoricalAgency } | { geo: SrsPlace };
+const besideName = (p: SrsPlace) => (p.kind === "national" ? "United States" : stateName(p.code));
+
+/**
+ * An agency beside its state or the nation (item 3, coordinator 2026-11-07: "a place beside its state or the nation"):
+ * each place's own published figures side by side, one column each by year, or one row each for one year; never
+ * combined, never one place's figures computed from another's. The agencies' are the build's (answerHistorical), the
+ * states' and nation's the historical file's (answerSrsSeveral), both Crime Index. A count or a rate only, as for
+ * several states; each rate is per 100,000 of that place's own population as Crime Index publishes it.
+ */
+export function answerBeside(hq: HistoricalQuestion, places: BesidePlace[], build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
+  const m = HISTORICAL_MEASURE[hq.measure];
+  if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
+  if (hq.comparison || hq.statistic === "clearance_rate")
+    return { kind: "historical-decline", explanation: `This isn't available yet: ${hq.comparison ? "a change" : "a clearance rate"} for an agency beside a state or the nation. Ask for one place.` };
+  const agencies = places.flatMap((p) => ("agency" in p ? [p.agency] : []));
+  const geos = places.flatMap((p) => ("geo" in p ? [p.geo] : []));
+  // Each side by year, then joined: the series starts at the first year any place has a figure.
+  const a = answerHistorical({ ...hq, agencies, byYear: true }, build, execute);
+  if (a.kind !== "historical") return a;
+  const g = answerSrsSeveral({ measure: hq.measure, from: hq.from, to: hq.to, byYear: true, statistic: hq.statistic, comparison: null }, geos);
+  if (g.kind !== "srs") return { kind: "historical-decline", explanation: g.explanation };
+  const agencyYears = a.delivered.table.rows.map((r) => String(r[0]));
+  const years = [...new Set([...agencyYears, ...g.delivered.table.rows.map((r) => String(r[0]))])].sort();
+  const agencyAt = new Map(a.delivered.table.rows.map((r) => [String(r[0]), r.slice(1) as (number | null)[]]));
+  const geoAt = new Map(g.delivered.table.rows.map((r) => [String(r[0]), r.slice(1) as (number | null)[]]));
+  const value = (p: BesidePlace, y: string): number | null =>
+    ("agency" in p ? agencyAt.get(y)?.[agencies.indexOf(p.agency)] : geoAt.get(y)?.[geos.indexOf(p.geo)]) ?? null;
+  const names = places.map((p) => ("agency" in p ? p.agency.label : besideName(p.geo)));
+  // In a sentence the nation is "the United States"; a column header and the chart say "United States".
+  const said = places.map((p, i) => ("geo" in p && p.geo.kind === "national" ? "the United States" : names[i]));
+  const joined = said.length > 2 ? `${said.slice(0, -1).join(", ")} and ${said[said.length - 1]}` : said.join(" and ");
+  const where = `${joined[0].toUpperCase()}${joined.slice(1)}`;
+  const rate = hq.statistic === "rate";
+  const words = `${m.words}${rate ? " per 100,000" : ""}`;
+  const header = `${ucFirst(m.words)}${rate ? " per 100,000" : ""}`;
+  // Years before an agency's first figure that a state or the nation has: the agency's own start and blank lines
+  // (which describe its years only) give way to blank lines over the years shown.
+  const earlier = years[0] !== agencyYears[0];
+  const own = (t: string) => !earlier || !/^Crime Index has no .*(?:, shown blank\.|so the chart and table start in \d{4}\.)$/.test(t);
+  const spans = (ys: number[]) => ys.reduce<[number, number][]>((out, y) => { const l = out[out.length - 1]; if (l && y === l[1] + 1) l[1] = y; else out.push([y, y]); return out; }, []);
+  const spanWords = (sp: [number, number][]) => {
+    const w = sp.map(([x, y]) => (x === y ? String(x) : `${x} to ${y}`));
+    return sp.length === 1 && sp[0][0] !== sp[0][1] ? `from ${w[0]}` : `in ${w.length > 1 ? `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}` : w[0]}`;
+  };
+  const what = hq.statistic === "rate" ? `${m.name} rate` : `${m.name} figure`;
+  const blanks = !earlier ? [] : agencies.flatMap((ag) => {
+    const miss = years.filter((y) => value({ agency: ag }, y) === null).map(Number);
+    return miss.length ? [`Crime Index has no ${what}${miss.length > 1 ? "s" : ""} for ${ag.label} ${spanWords(spans(miss))}, shown blank.`] : [];
+  });
+  // Every other line of both answers but their titles and sources, once each, in order: the agencies named, the years
+  // outside either source, blanks and computed rates.
+  const rest = [...a.delivered.text.slice(1).filter(own), ...blanks, ...g.delivered.text.slice(1)].filter((t, i, all) => t !== SRS_SOURCE && all.indexOf(t) === i);
+  // The rates' common denominator; where Crime Index publishes no rate, its own line says the rate is computed
+  // (Codex beside review 01.3: never "as published" over a computed rate).
+  const rateNote = rate ? ["Each rate is per 100,000 of that place's own population."] : [];
+  const period = { from: `${years[0]}-01`, to: `${years[years.length - 1]}-12` };
+  const oneYear = !hq.byYear && years.length === 1;
+  const columns: ResultTable["columns"] = oneYear
+    ? [{ binding: { kind: "grouping", dimension: "geo.place" }, header: "Place" }, { binding: { kind: "statistic", as: "x" }, header }]
+    : [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
+      ...places.map((_, i) => ({ binding: { kind: "statistic" as const, as: `x.${i}` }, header: `${names[i]}: ${header.toLowerCase()}` }))];
+  const rows = oneYear ? places.map((p, i) => [names[i], value(p, years[0])]) : years.map((y) => [y, ...places.map((p) => value(p, y))]);
+  const title = oneYear ? `${where}: ${words} in ${years[0]}.` : `${where}: ${words} by year, ${periodWords(period.from, period.to)}.`;
+  const placeMeaning = (p: BesidePlace): Meaning["places"][number] => ("agency" in p ? placeOf(p.agency)
+    : p.geo.kind === "national" ? { kind: "national", name: "United States" } : { kind: "state", name: stateName(p.geo.code), state: p.geo.code });
+  return {
+    kind: "historical", question: { ...hq, agencies, beside: geos, shown: names }, period,
+    meaning: { source: "historical", places: places.map(placeMeaning), filters: [], measures: [{ name: m.name, unit: m.unit }], period,
+      groupings: oneYear ? ["place"] : ["year", "place"], statistic: rate ? "rate" : "count",
+      ...(rate ? { denominator: "each place's population as published by Crime Index, per 100,000" } : {}) },
+    delivered: { table: { columns, rows }, text: [title, ...rest, ...rateNote, SRS_SOURCE] },
+    read: { ...a.read, table: "agency_crime + historical_crime_states_nation_1960-2025.csv" },
   };
 }
