@@ -5789,10 +5789,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -8282,10 +8282,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -13948,7 +13948,7 @@
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -26514,10 +26514,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
