@@ -62,6 +62,10 @@ const { released: _r, ...release } = loadNibrsRelease(arg("--release-file"), roo
 // an error on the scorecard either way.
 const python = arg("--python", "C:/Users/jeffm/nibrs-model/.venv/Scripts/python.exe")!;
 const LIMIT_MS = Number(arg("--timeout-ms", "120000"));
+// DuckDB's memory and threads (the runner laptop, 16 GB, was killed twice for low memory on uncached spot runs under
+// DuckDB's default, 80% of RAM): 4GB and 4 threads unless a flag or SCORECARD_DUCKDB_MEMORY / SCORECARD_DUCKDB_THREADS
+// says otherwise. They never change a query's rows, so the cache and run identities don't include them.
+const DUCKDB_LIMITS = { memoryLimit: arg("--duckdb-memory", process.env.SCORECARD_DUCKDB_MEMORY ?? "4GB")!, threads: Number(arg("--duckdb-threads", process.env.SCORECARD_DUCKDB_THREADS ?? "4")) };
 const crimeIndex = arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeindex-20261101-ct")!;
 // Off by default and not used (see the header): one process at a time.
 const WORKERS = Math.max(1, Number(arg("--workers", "1")));
@@ -77,9 +81,9 @@ const versions = (() => {
   if (v.status !== 0) throw new Error(`the DuckDB version could not be read: ${v.error ?? v.stderr}`);
   return v.stdout;
 })();
-let exec = duckdbExecutor(python, { timeoutMs: LIMIT_MS });
+let exec = duckdbExecutor(python, { timeoutMs: LIMIT_MS, ...DUCKDB_LIMITS });
 /** A new executor in place of the current one, whose process is closed (Codex PR-mode review 01.5: none left idle). */
-const replace = (ms: number) => { exec.close(); exec = duckdbExecutor(python, { timeoutMs: ms }); };
+const replace = (ms: number) => { exec.close(); exec = duckdbExecutor(python, { timeoutMs: ms, ...DUCKDB_LIMITS }); };
 // An executor that timed out or whose process exited is replaced when the next query needs one, never sooner: one new
 // process per failure, started only after the old one has ended (Codex PR-mode review 03).
 let nextMs: number | null = null;
