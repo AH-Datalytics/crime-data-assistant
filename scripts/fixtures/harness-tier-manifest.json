@@ -2493,6 +2493,15 @@
       "note": "NIBRS shadow slice: question to answer, clarification or decline under the decided policy, with a stubbed DuckDB step and the checked-in place index; the runner scores it locally against a canonical build"
     },
     {
+      "id": "test-verify-requests",
+      "tier": "F",
+      "script": "scripts/test-verify-requests.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Blind verification requests for new scorecard answers: every number named with its place in the table, the scorecard's table digest, no engine SQL; an answer becomes a verified entry only when every number matched."
+    },
+    {
       "id": "test-nibrs-duckdb-executor",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-executor.ts",
