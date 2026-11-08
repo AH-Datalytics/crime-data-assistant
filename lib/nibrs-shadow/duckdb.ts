@@ -70,14 +70,32 @@ parentPort.on("message", (m) => {
 });
 `;
 
-/** `timeoutMs`: the longest one query may take on the persistent path (default 300 s). */
-export type DuckdbOptions = { persistent?: boolean; cacheSize?: number; timeoutMs?: number };
+/**
+ * `timeoutMs`: the longest one query may take on the persistent path (default 300 s). `memoryLimit` ("4GB") and
+ * `threads`: DuckDB's own limits, set once when the process starts (persistent path only); unset, DuckDB's defaults
+ * (80% of the machine's memory, every core) apply, as the app's routes use it. Spilling goes to the executor's temp
+ * directory. They never change a query's rows.
+ */
+export type DuckdbOptions = { persistent?: boolean; cacheSize?: number; timeoutMs?: number; memoryLimit?: string; threads?: number };
 
 /** An executor; `close()` ends its Python process (the worker's end closes the process's input, and it exits). */
 export type DuckdbExecutor = ((sql: string) => unknown[][]) & { close(): void };
 export function duckdbExecutor(python: string, opts: DuckdbOptions = {}): DuckdbExecutor {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nibrs-shadow-")).replace(/\\/g, "/");
   const run = opts.persistent === false ? spawnPerQuery(python, tmp) : persistent(python, tmp, opts.timeoutMs ?? 300_000);
+  // The limits are set on the process before any query (the runner laptop, 16 GB, was killed twice for low memory by
+  // DuckDB's default limit). Checked here, never passed into SQL as written.
+  if (opts.memoryLimit !== undefined || opts.threads !== undefined) {
+    if (opts.persistent === false) throw new Error("duckdb executor: memoryLimit and threads apply to the persistent executor only");
+    if (opts.memoryLimit !== undefined) {
+      if (!/^\d+(?:\.\d+)?\s*(?:KB|MB|GB|TB|KiB|MiB|GiB|TiB)$/i.test(opts.memoryLimit)) throw new Error(`duckdb executor: memoryLimit "${opts.memoryLimit}" is not a size such as 4GB`);
+      run(`SET memory_limit = '${opts.memoryLimit.replace(/\s+/g, "")}'`);
+    }
+    if (opts.threads !== undefined) {
+      if (!Number.isInteger(opts.threads) || opts.threads < 1) throw new Error(`duckdb executor: threads ${opts.threads} is not a positive whole number`);
+      run(`SET threads = ${opts.threads}`);
+    }
+  }
   // The build is pinned and read-only: the same SQL gives the same rows. Least recently used out first.
   const cache = new Map<string, unknown[][]>();
   const size = opts.cacheSize ?? 256;
