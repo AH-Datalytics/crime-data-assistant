@@ -1817,7 +1817,6 @@ function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: S
   // ... and the rate per capita": 01.3): the same figure is asked for. ("How many officers per capita" is the rate.)
   if (rate && (stats.some((p) => p.value === "count") || /\b(?:counts?|numbers?|totals?)\b/i.test(q))) return decline("unsupported_capability", "Ask for the same figure throughout: a count, or a rate per 100,000 people.");
   if (stats.some((p) => !rateLike(p.value) && p.value !== "count")) return null;
-  const otherScale = stats.some((p) => /^scale:/.test(String(p.value)) && !/^scale:100,?000$/.test(String(p.value)));
   const grains = own.filter((p) => p.concept === "grain"), periods = own.filter((p) => p.concept === "period");
   if (grains.some((p) => p.value !== "year") || periods.length > 1) return null;
   const places = own.filter((p) => p.concept === "place");
@@ -1846,11 +1845,21 @@ function staffingQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps: S
   else if (period.form === "lastyear") [from, to] = [thisYear - 1, thisYear - 1];
   else if (period.form === "latest") [from, to] = [build.lastYear, build.lastYear];
   else return decline("unsupported_capability", "Staffing figures are by year; ask for a year or a span of years.");
-  const scaleNote = otherScale ? [`Crime Index publishes staffing per 100,000 people, so these are per 100,000, not ${String(stats.find((p) => /^scale:/.test(String(p.value)))!.text).trim().replace(/\s+(?:population|people|residents|persons|inhabitants)$/i, "")}.`] : [];
+  // P97 (Jeff 2026-11-07: "Convert to per 1,000"): a rate asked at another base is given at that base.
+  const scale = stats.find((p) => /^scale:/.test(String(p.value)));
+  const per = !scale ? 100_000 : baseOf(String(scale.value).slice(6));
+  if (per === null) return decline("unsupported_capability", "Staffing rates are given per a whole number of people, such as per 1,000 or per 100,000.");
   const r = answerStaffing(kind, rate ? "rate" : "count", agencies, from, to, grains.length > 0 || to > from, build, deps.execute,
-    { agencyLine: reportedBy(agencies.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), notes: scaleNote });
+    { agencyLine: reportedBy(agencies.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), per });
   if (r.kind === "historical") return r;
   return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+}
+/** The base a "per N" names ("1,000", "10k", "ten thousand", "million"): a power of ten from 1 to 1,000,000, else null. */
+function baseOf(v: string): number | null {
+  const t = v.toLowerCase().replace(/,/g, "").trim();
+  const n = /^\d+$/.test(t) ? Number(t) : /^\d+\s*k$/.test(t) ? Number(t.replace(/\s*k$/, "")) * 1000
+    : t === "thousand" ? 1000 : /^ten\s+thousand$/.test(t) ? 10_000 : /^(?:one\s+)?million$/.test(t) ? 1_000_000 : NaN;
+  return [1, 10, 100, 1000, 10_000, 100_000, 1_000_000].includes(n) ? n : null;
 }
 /** Any qualifier the reader kept aside (combined, a change, a region, NIBRS asked by name): staffing takes none. */
 function qualifiedStaffing(ledger0: RequestLedger): boolean {

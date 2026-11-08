@@ -27,10 +27,20 @@ const spanWords = (sp: [number, number][]) => {
   return sp.length === 1 && sp[0][0] !== sp[0][1] ? `from ${w[0]}` : `in ${w.length > 1 ? `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}` : w[0]}`;
 };
 
+/**
+ * `per`: the base a rate is asked at (P97, Jeff 2026-11-07: "Convert to per 1,000"): Crime Index's published rate per
+ * 100,000 converted to it (divided by 100 for per 1,000), its decimals kept, labeled with that base and said once.
+ */
 export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", agencies: HistoricalAgency[], from: number, to: number, byYear: boolean,
-  build: HistoricalBuild, execute: (sql: string) => unknown[][], extra: { agencyLine?: string; notes?: string[] } = {}): HistoricalAnswer | HistoricalDecline {
+  build: HistoricalBuild, execute: (sql: string) => unknown[][], extra: { agencyLine?: string; notes?: string[]; per?: number } = {}): HistoricalAnswer | HistoricalDecline {
   const m = STAFF_MEASURE[kind];
   const rate = statistic === "rate";
+  const per = extra.per ?? 100_000;
+  // One decimal per 100,000; each tenfold smaller base one more (308.4 per 100,000 is 3.084 per 1,000), never fewer than one.
+  const decimals = Math.max(1, 1 + Math.round(Math.log10(100_000 / per)));
+  const atBase = (v: number | null) => (v === null || per === 100_000 ? v : Number((v * per / 100_000).toFixed(decimals)));
+  const perWords = `per ${fmt(per)}`;
+  const shownRate = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   const wanted = range(from, to), covered = wanted.filter((y) => y >= build.firstYear && y <= build.lastYear), outside = wanted.filter((y) => !covered.includes(y));
   const span = `Staffing figures in the data cover ${build.firstYear} through ${build.lastYear}`;
   if (!covered.length) return { kind: "historical-decline", explanation: `${span}, so ${yearsWords(from, to)} ${from === to ? "is" : "are"} outside them.` };
@@ -42,12 +52,13 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
   const value = (ori: string, y: number): number | null => {
     const c = cell.get(`${ori}|${y}`);
     if (!c) return null;
-    return rate ? historicalRate(c.capita, c.total, c.population).rate : c.total;
+    return rate ? atBase(historicalRate(c.capita, c.total, c.population).rate) : c.total;
   };
   const several = agencies.length > 1;
   const where = agencies.map((a) => a.label).join(" and ");
-  const what = `${m.words}${rate ? " per 100,000 people" : ""}`;
-  const header = `${m.words[0].toUpperCase()}${m.words.slice(1)}${rate ? " per 100,000" : ""}`;
+  const what = `${m.words}${rate ? ` ${perWords} people` : ""}`;
+  const header = `${m.words[0].toUpperCase()}${m.words.slice(1)}${rate ? ` ${perWords}` : ""}`;
+  const baseNote = rate && per !== 100_000 ? [`Rates ${perWords} are Crime Index's published rates per 100,000, ${per < 100_000 ? `divided by ${fmt(100_000 / per)}` : `multiplied by ${fmt(per / 100_000)}`}.`] : [];
   const firstFigure = covered.findIndex((y) => agencies.some((a) => value(a.ori, y) !== null));
   if (firstFigure < 0) return { kind: "historical-decline", explanation: `Crime Index has no ${m.name} ${rate ? "rate" : "count"} for ${where} ${spanWords(spans(covered))}: not available in this data.` };
   const years = covered.slice(firstFigure);
@@ -61,7 +72,7 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
     const done = years.filter((y) => { const c = cell.get(`${a.ori}|${y}`); return !!c && historicalRate(c.capita, c.total, c.population).computed; });
     return done.length ? [`Crime Index publishes no ${m.name} rate for ${a.label} ${spanWords(spans(done))}; ${done.length > 1 ? "those years' rates are" : "that year's rate is"} the count per 100,000 of the published population.`] : [];
   });
-  const notes = [...(extra.agencyLine ? [extra.agencyLine] : []), ...startNote, ...outsideLine, ...(extra.notes ?? []), ...computed, ...blanks];
+  const notes = [...(extra.agencyLine ? [extra.agencyLine] : []), ...baseNote, ...startNote, ...outsideLine, ...(extra.notes ?? []), ...computed, ...blanks];
   const period = { from: `${years[0]}-01`, to: `${years[years.length - 1]}-12` };
   let columns: ResultTable["columns"], rows: (string | number | null)[][], title: string;
   if (!byYear && years.length === 1 && wanted.length === 1) {
@@ -74,7 +85,7 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
       const v = value(agencies[0].ori, y);
       columns = [{ binding: { kind: "statistic", as: "x" }, header }];
       rows = [[v]];
-      title = `${where}: ${rate ? fmtRate(v!) : fmt(v!)} ${what} in ${y}.`;
+      title = `${where}: ${rate ? shownRate(v!) : fmt(v!)} ${what} in ${y}.`;
     }
   } else {
     columns = [{ binding: { kind: "grouping", dimension: "time.year" }, header: "Year", ordered: true },
@@ -87,7 +98,7 @@ export function answerStaffing(kind: StaffKind, statistic: "count" | "rate", age
     question: { measure: `staffing:${kind}`, agencies, from, to, byYear, statistic, comparison: null, ...(extra.agencyLine ? { agencyLine: extra.agencyLine } : {}) },
     meaning: { source: "historical", places: agencies.map((a) => ({ kind: "agency" as const, name: a.name, ...(a.state ? { state: a.state } : {}) })), filters: [],
       measures: [{ name: m.name, unit: "person" }], period, groupings: [...(columns[0].header === "Year" ? ["year"] : []), ...(several ? ["agency"] : [])],
-      statistic: rate ? "rate" : "count", ...(rate ? { denominator: "the agency's population as published by Crime Index, per 100,000" } : {}) },
+      statistic: rate ? "rate" : "count", ...(rate ? { denominator: `the agency's population as published by Crime Index, ${perWords}` } : {}) },
     delivered: { table: { columns, rows }, text: [title, ...notes, SRS_SOURCE] },
     read: { table: "agency_staffing", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };

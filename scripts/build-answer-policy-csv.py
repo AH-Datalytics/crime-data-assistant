@@ -616,6 +616,12 @@ ROWS = [
      "Each month's count per 100,000; not annualized; labeled \"per 100,000 for the month\".",
      "Monthly rates were asked for and the data has the counts and the populations; a month's rate must never read as a yearly one.",
      "Decided 2026-11-06 (Jeff: \"Now\" on monthly or rolling rates; the single-month rule dropped)", NEW),
+    ("P97", "\"Officers per 1,000 population in Salem, Oregon since 1960\" (a staffing rate at a base other than 100,000)",
+     "Answered per 100,000, Crime Index's published base, with a line saying it was not per 1,000 (PR #132's first draft).",
+     "A rate asked at another base (per 1,000, per 10,000) is given at that base: Crime Index's published rate per 100,000 converted (divided by 100 for per 1,000), its decimals kept. The column is labeled with the asked base, and one line says the figures are derived from Crime Index's published rate per 100,000.",
+     "The asked base; per 100,000 when none is named.",
+     "People ask officers per 1,000; the published figure answers it exactly once the base is converted, and the line keeps the source plain.",
+     "Decided 2026-11-07 (Jeff: \"Convert to per 1,000\")", NEW),
     # ---------------- already decided, carried forward ----------------
     ("D01", "\"How many cases were cleared because prosecution was declined?\" and \"How many were convicted?\"", "Answers police clearances; declines court outcomes.", "Keep.", "Not applicable.", "Police clearance is in the data; court outcomes are not.", F.format(1), gc(1)),
     ("D02", "\"Crime in my neighborhood\", a ZIP code or a police beat", "Declined on every tab.", "Say plainly that the data stops at the agency level, and stop.", "Not applicable.", "No source has data below the agency.", F.format(2), gc(2)),
