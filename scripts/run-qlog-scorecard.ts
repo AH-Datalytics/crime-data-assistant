@@ -51,6 +51,7 @@ import { duckdbExecutor, SERVER as DUCKDB_SERVER } from "../lib/nibrs-shadow/duc
 import { historicalBuildAt } from "../lib/nibrs-shadow/historical";
 import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
+import { tableDigest } from "../lib/answer-eval/table-digest";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const LABELS = arg("--labels")!, PROGRESS = arg("--progress")!;
@@ -174,14 +175,8 @@ type Label = { id: string; tab: string; kind: "first" | "follow-up"; times: numb
   label: { status: string; rule: string; notes?: string } };
 type Got = { kind: string; source: string | null; about?: string; reason?: string; ms: number; digest?: string };
 
-/**
- * An answer's shown numbers, as one digest: its table's rows (keys and values). An answer verified against independent
- * values (scripts/fixtures/answer-eval/qlog-verified.json) counts as correct only while its digest is the one verified,
- * so a later change to the numbers puts it back to unverified.
- */
-export function tableDigest(rows: unknown): string {
-  return createHash("sha256").update(JSON.stringify(rows ?? null)).digest("hex").slice(0, 16);
-}
+// The table digest is shared with the verification tools (lib/answer-eval/table-digest.ts).
+export { tableDigest };
 
 /** What the engine did, in the label's terms. */
 function got(o: { kind: string } & Record<string, unknown>, ms: number): Got {
