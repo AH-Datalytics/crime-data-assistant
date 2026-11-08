@@ -4812,10 +4812,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires distinguishing Baltimore city and county."
    }
   },
   {
@@ -5554,7 +5554,6 @@
     "about": "crime",
     "about_any": [
      "crime",
-     "which Baltimore",
      "period"
     ]
    },
@@ -5790,10 +5789,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires distinguishing Baltimore city and county."
    }
   },
   {
@@ -8283,10 +8282,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires distinguishing Baltimore city and county."
    }
   },
   {
@@ -9559,10 +9558,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires distinguishing city and county."
    }
   },
   {
@@ -13298,7 +13297,6 @@
     "about": "crime",
     "about_any": [
      "crime",
-     "which Charlotte",
      "period"
     ]
    },
@@ -13950,7 +13948,7 @@
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires distinguishing Baltimore city and county."
    }
   },
   {
@@ -26516,10 +26514,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires city versus county."
    }
   },
   {
@@ -26560,18 +26558,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "which Charlotte",
+    "about": "period",
     "about_any": [
-     "which Charlotte",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R11",
+    "rule": "R13",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "P06/D31"
    }
   },
   {
@@ -34320,10 +34317,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "The offense category and two place names remain ambiguous."
+    "notes": "The offense category and two place names remain ambiguous.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -51818,7 +51815,8 @@
     "source": null,
     "about_any": [
      "which Columbus",
-     "which Los Angeles"
+     "which Los Angeles",
+     "which Charlotte"
     ],
     "about": "which Columbus"
    },
@@ -59280,10 +59278,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Richmond has multiple qualifying cities.; with the 2026-11-07 rules' parts"
+    "notes": "Richmond has multiple qualifying cities."
    }
   },
   {
@@ -69832,10 +69830,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires city versus county."
    }
   },
   {
@@ -106994,10 +106992,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+    "notes": "P28 requires city versus county."
    }
   },
   {

@@ -136,17 +136,22 @@ A clarify is correct when the engine asks about any missing part. A route to ano
 - reviewed labels: 3 of 82 wrong; corrected drafts: 0 of 18.
 The three corrections are applied as review entries (codex-check-4).
 
-**v18 (2026-11-07): two rules in the drafter, applied to every label.** Both are in `scripts/draft-qlog-labels.py`, and every label was regenerated from them. No label was picked or changed by hand, and none to match the engine. Today's drafter reproduces v17 exactly, so v18's 113 changes are these two rules' effect alone.
+**v18 (2026-11-07): two rules in the drafter, applied to every label.** Both are in `scripts/draft-qlog-labels.py`, and every label was regenerated from them. No label was picked or changed by hand, and none to match the engine. Today's drafter reproduces v17 exactly, so v18's 110 changes are these two rules' effect alone.
 - **Same-named agencies (R11, Jeff).** Jeff: "Los Angeles should ask whether they mean the county sheriff or police department", and "2, yes": same-name places follow the Los Angeles rule.
   - A name that two city or county agencies share, each serving 100,000+ people, is asked about: "which <place>". That includes a city and its county in one state (Los Angeles, St. Louis, El Paso, Mobile, Fresno, San Diego, Charlotte, Baltimore). It applies whether the question names one place or several.
-  - A state written with the name keeps only that state's agencies, and the question is asked when two remain. "El Paso, Texas" is still asked (the city and the county are both in Texas); "Richmond, VA" and "Columbus, OH" are not. The state counts when it is right after the name ("Mobile, AL", "richmond va", "Charlotte in North Carolina") or is a state's name right before it ("California Berkeley"). A code before the name doesn't count, since in a list ("Houston, TX Los Angeles, CA") it belongs to the place before. A state written with one mention holds for every mention of that name. A state's own name ("Washington", "New York") is read as the state, as before.
-  - Words that say which agency settle it, read in the question as asked:
+  - A state written with the name keeps only that state's agencies, and the question is asked when two remain. "El Paso, Texas" is still asked (the city and the county are both in Texas); "Richmond, VA" and "Columbus, OH" are not. The state counts when it is right after the name ("Mobile, AL", "richmond va", "Charlotte in North Carolina") or is a state's name right before it ("California Berkeley"). A code before the name doesn't count, since in a list ("Houston, TX Los Angeles, CA") it belongs to the place before. A code that is also a word ("IN", "OR", "AL") counts only in capitals, so "Los Angeles, in 2024" names no state. A state written with one mention holds for every mention of that name. A state's own name ("Washington", "New York") is read as the state, as before.
+  - Words that say which agency settle it. They are read at each mention, so "Baltimore County and Baltimore" still asks about the second. They are read in the question as asked too:
     - "city of St. Louis", "St. Louis city", "county of …";
-    - a list under "cities" or "counties" ("the cities of New York, … Los Angeles", "counties of Charleston, Dorchester and Berkeley");
-    - "Los Angeles Police Department", "LAPD", "(LAPD)", "St Louis County", "sheriff".
+    - a list under "cities" or "counties" ("the cities of New York, … Los Angeles", "counties of Charleston, Dorchester and Berkeley"), up to a word that leaves the list ("Texas counties with Los Angeles" still asks);
+    - "Los Angeles Police Department", "St Louis County", "sheriff";
+    - an agency's initials anywhere in the question ("LAPD", "(LAPD)").
 
     Such questions keep their labels. Where the engine asks anyway, that's an engine misread to fix, not a label to change. "District of Columbia" is not Columbia.
-  - A one-word name must stand where a place does: after "in", "for", "of", "vs", a comma and the like, or before a crime, a period, a comma or "'s" ("in Mobile", "Mobile, AL", "Charlotte's", "Mobile murders"). An ordinary word ("mobile phone thefts", "Charlotte Hornets") isn't a place. A name of two or more words ("Los Angeles") is always read as the place.
+  - A one-word name is a place only where a place stands, on both sides:
+    - before it: "in", "for", "vs", a comma, another place in a list, or the start of the question;
+    - after it: a crime, a period, a comma, "'s", a state code, the next place in a list, or the end ("in Mobile", "Mobile, AL", "Mobile murders").
+
+    So "thefts of mobile phones", "Charlotte Hornets" and "reported to Charlotte" aren't places. A name of two or more words ("Los Angeles") is read as the place unless an institution follows it ("San Diego State").
   - The same-name question is added to the label's missing parts, since any missing part is a right one to ask (D31): an answer label becomes that clarify, and a clarify about another part also accepts it.
 - **Earlier review corrections meet the new rules.** A correction from the second labeler keeps its wording, and the parts these two rules drafted for the same question are added to it. A corrected answer becomes the clarify the rules ask ("Los Angeles murder rate 12 months rolling" now asks which Los Angeles), and a corrected clarify also accepts the new part. A corrected decline or exclusion stays as it was. Only parts the rules drafted for that question are added, so a definition question ("What is a clearance rate") isn't made to ask for a crime.
 - **A clearance rate names no crime (R09, D31).** "Clearance rates in Chicago" and "National clearance rates 1960 to 2024" name a statistic, not a crime, so the crime is missing and asked. A crime named beside it ("murder clearance rate") or a NIBRS offense code ("23F") names one. With no crime and no place either ("clearance", "clearance rates over time"), the whole question is asked (R08).
@@ -162,6 +167,6 @@ The three corrections are applied as review entries (codex-check-4).
 | Dev labels, scorer change only | 2,181 | 37 | 0 | 888 | 328 | 490 |
 | v18 labels and scorer change | 2,236 | 37 | 0 | 888 | 277 | 485 |
 
-None of the 113 changed labels is a question the engine answers today, so the change cannot make a wrong answer.
+None of the 110 changed labels is a question the engine answers today, so the change cannot make a wrong answer.
 
 **Still to do.** No label is confirmed: a reviewed label is two labelers agreeing, not a human check. A miss on the scorecard is a strong candidate, not yet a finding.

@@ -101,18 +101,18 @@ for a in agencies:
 
 STATE_OF_NAME = dict(zip(STATE_NAMES, STATE_ABBR))
 
-# A state written right after a place ("El Paso, Texas", "Columbus, OH", "Mobile, al", "richmond va", "Charlotte in
-# North Carolina"), or a state's name right before it ("California Berkeley"; not a code, which in a list "Houston, TX
-# Los Angeles, CA" belongs to the place before), is that place's state. A two-letter code with no comma before it
-# must be capitals when it is also a word ("IN", "OR"; WORDLIKE, as for ABBR_AFTER).
+# A state written right after a place ("El Paso, Texas", "Columbus, OH", "richmond va", "Charlotte in North
+# Carolina"), or a state's name right before it ("California Berkeley"; not a code, which in a list "Houston, TX
+# Los Angeles, CA" belongs to the place before), is that place's state. A two-letter code that is also a word ("IN",
+# "OR"; WORDLIKE, as for ABBR_AFTER) counts only in capitals, comma or not: "Los Angeles, in 2024" names no state.
 _STATE_RES = []
 
 def _state_res():
     if not _STATE_RES:
-        names, codes = "|".join(STATE_NAMES), "|".join(STATE_ABBR)
-        plain = "(?-i:" + codes + ")|" + "|".join(a for a in STATE_ABBR if a not in WORDLIKE)
+        names = "|".join(STATE_NAMES)
+        codes = "(?-i:" + "|".join(STATE_ABBR) + ")|" + "|".join(a for a in STATE_ABBR if a not in WORDLIKE)
         _STATE_RES.append(re.compile(r"^(?:\s*,\s*(?:(?P<n1>" + names + r")|(?P<c1>" + codes + r"))|\s+(?:in\s+)?(?P<n2>" + names
-                                     + r")|\s+(?P<c2>" + plain + r"))\b", re.I))
+                                     + r")|\s+(?P<c2>" + codes + r"))\b", re.I))
         _STATE_RES.append(re.compile(r"\b(?P<n>" + names + r")[,\s]+$", re.I))
     return _STATE_RES
 
@@ -127,21 +127,59 @@ def state_near(before, after):
         return STATE_OF_NAME[m.group("n").lower()]
     return None
 
-# Words around a one-word name that make it a place: before it ("in Mobile", "Mobile, AL" in a list, "did Charlotte",
-# "show me Fresno") or after it ("Mobile murders", "Charlotte's", "Fresno, CA", "Mobile in 2024"). So "mobile phone
-# thefts" and "Charlotte Hornets" are not read as places. A name of two or more words ("Los Angeles") is always a place.
+# A one-word name is a place only where a place stands, on both sides: before it ("in Mobile", "did Charlotte", a list's
+# comma or place, or the question's start) and after it ("Mobile murders", "Charlotte's", "Fresno, CA", "Mobile in
+# 2024", the end, a list's next place). So "thefts of mobile phones", "Charlotte Hornets" and "reported to Charlotte"
+# are not places. A name of two or more words ("Los Angeles") is a place unless an institution follows ("San Diego
+# State"), since it can't be an ordinary word.
 PLACE_AFTER = R(r"^\s*(?:$|[,?.:;)]|'s\b|\b(?:and|or|vs\.?|versus|murders?|homicides?|crimes?|violent|property|robber\w*|burglar\w*|aggravated|assaults?|thefts?|auto|car|motor|rapes?|shoot\w*|carjack\w*|police|officers?|staffing|clearance|in|since|from|per|by|over|during|monthly|yearly|annual\w*|data|trends?|stats|statistics|numbers?|rates?|have|had|has|is|was|compare\w*)\b)")
-PLACE_BEFORE = R(r"(?:\b(?:in|for|of|at|from|between|and|or|vs\.?|versus|compared?|compare|than|with|to|on|across|around|near|did|does|do|is|was|has|have|me|show|give|plot|chart|list|about)\s+(?:the\s+)?|[,:;(]\s*|&\s*)$")
+PLACE_BEFORE = R(r"(?:\b(?:in|for|of|at|from|between|and|or|vs\.?|versus|compared?|compare|than|with|on|across|around|near|did|does|do|is|was|has|have|me|show|give|plot|chart|list|about)\s+(?:the\s+)?|[,:;(]\s*|&\s*)$")
+INSTITUTION_AFTER = R(r"^\s+(?:state\b(?!\s*(?:,|police|patrol))|university|college|unified|school|airport|zoo|harbor|port\b|international)")
+# Words at one mention that say which agency it is: "St. Louis city", "Los Angeles Police", "St Louis County",
+# "sheriff"; "city of St. Louis", "county of ..."; a list under "cities" or "counties" ("the cities of New York, ...
+# Los Angeles", "these cities in 2025: Chicago, IL ... Los Angeles, CA"), up to a word that leaves the list ("Texas
+# counties with Los Angeles").
+SETTLED_AFTER = R(r"^\s+(?:city|police|pd|sheriff\w*|county|parish)\b")
+SETTLED_BEFORE = R(r"\b(?:city|county)\s+of\s+(?:the\s+)?$")
+LIST_HEAD = R(r"\b(?:cities|counties)\b([^?!;]*)$")   # a period may be "St."
+# A state code of any case right after the name puts it where a place stands ("mobile al in 2025"), though a code that
+# is also a word doesn't name the state (state_near).
+STATE_CODE_AFTER = R(r"^\s+(?:" + "|".join(STATE_ABBR) + r")(?:$|[\s,?.])")
+LEAVES_LIST = R(r"\b(?:with|than|vs\.?|versus|compared?|against|besides|outside|except)\b")
+
+def _place_left(before):
+    return bool(PLACE_BEFORE.search(before)) or not before.strip() or bool(re.search(r"(?:" + PLACE_RE.pattern[5:-3] + r")\s+$", before[-40:], re.I))
+
+def _mention_asks(name, n, big, text):
+    """True: a bare mention of the name is asked about; False: every mention is settled or isn't a place; None: the
+    text has no mention (the misspelling fixer may have changed it)."""
+    # "District of Columbia" is Washington, D.C.
+    ms = [m for m in re.finditer(r"\b" + n + r"\b", text, re.I) if not re.search(r"\bdistrict\s+of\s+$", text[:m.start()], re.I)]
+    if not ms:
+        return None
+    # A state written with any mention of the name holds for all of them ("Rochester, NY's rate ... Rochester's").
+    st = next((x for x in (state_near(text[:m.start()], text[m.end():]) for m in ms) if x), None)
+    if st and sum(b[1] == st for b in big) < 2:
+        return False
+    for m in ms:
+        before, after = text[:m.start()], text[m.end():]
+        head = LIST_HEAD.search(before)
+        if SETTLED_AFTER.match(after) or SETTLED_BEFORE.search(before) or (head and not LEAVES_LIST.search(head.group(1))):
+            continue
+        if INSTITUTION_AFTER.match(after):
+            continue
+        if " " in name or (_place_left(before) and (PLACE_AFTER.match(after) or PLACE_RE.match(after.lstrip()) or STATE_CODE_AFTER.match(after))):
+            return True
+    return False
 
 def same_name_ask(name, q, raw=""):
     """Jeff 2026-11-07 ("Los Angeles should ask whether they mean the county sheriff or police department"; "2, yes":
     same-name places follow the Los Angeles rule): a name two city or county agencies share, each serving 100,000+
-    people, is asked about. Words that say which settle it ("city of St. Louis", "the cities ... Los Angeles", "counties of ... Berkeley", "St.
-    Louis city", "Los Angeles Police", "LAPD", "St Louis County", "sheriff"); a state written with the name keeps only
-    that state's agencies, asked when two remain (a city and its county are in one state: "El Paso, Texas"). The words
-    are read in the question as asked too (`raw`): the misspelling fixer can rewrite "St Louis County". A one-word name
-    must stand where a place does ("in Mobile", "Mobile, AL", "Mobile murders"), not as an ordinary word ("mobile
-    phone", "Charlotte Hornets")."""
+    people, is asked about when a mention of it doesn't say which. What says which is read at each mention (SETTLED_*,
+    LIST_HEAD), plus an agency's initials anywhere ("LAPD", "LASD"); a state written with the name keeps only that
+    state's agencies, asked when two remain (a city and its county are in one state: "El Paso, Texas"). The question is
+    read as asked too (`raw`), since the misspelling fixer can rewrite "St Louis County"; it is asked only when neither
+    reading settles it."""
     # A state's name ("Washington", "New York") is read as the state, as before this rule.
     if re.search(r"\s(?:county|parish)$", name) or name in STATE_OF_NAME:
         return False
@@ -151,21 +189,11 @@ def same_name_ask(name, q, raw=""):
     # "St. Louis", "St Louis" and "Saint Louis" are one name.
     n = re.sub(r"^st\\?\.?\\ ", r"(?:st\\.?|saint)\\s+", re.escape(name)).replace(r"\.", r"\.?")
     initials = "".join(w[0] for w in re.sub(r"[^a-z ]", "", name).split())
-    said = (r"\b(?:city|county)\s+of\s+" + n + r"\b|\b(?:cities|counties)\b[^?!]*\b" + n + r"\b|\b" + n + r"\s+(?:city|police|pd|sheriff|county|parish)\b"
-            + r"|\b" + initials + r"(?:pd|sd|so)\b")
-    if re.search(said, q, re.I) or re.search(said, raw, re.I):
+    if re.search(r"\b" + initials + r"(?:pd|sd|so)\b", q + " " + raw, re.I):
         return False
-    # "District of Columbia" is Washington, D.C.
-    ms = [m for m in re.finditer(r"\b" + n + r"\b", q, re.I) if not re.search(r"\bdistrict\s+of\s+$", q[:m.start()], re.I)]
-    # A state written with any mention of the name holds for all of them ("Rochester, NY's rate ... Rochester's").
-    st = next((s for s in (state_near(q[:m.start()], q[m.end():]) for m in ms) if s), None)
-    if st and sum(b[1] == st for b in big) < 2:
+    if not _mention_asks(name, n, big, q):
         return False
-    for m in ms:
-        before, after = q[:m.start()], q[m.end():]
-        if " " in name or PLACE_BEFORE.search(before) or PLACE_AFTER.match(after):
-            return True
-    return False
+    return not raw or raw == q or _mention_asks(name, n, big, raw) is not False
 
 def clearance_only(q):
     """D31: a clearance rate is a statistic, not a crime ("clearance rates in Chicago"): true when the only crime word is
