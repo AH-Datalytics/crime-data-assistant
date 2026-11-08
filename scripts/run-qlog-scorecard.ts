@@ -35,10 +35,11 @@
  *   wrong answer    an answer where the label expects a clarify or a decline (a part assumed, or data that does not
  *                   exist), or an answer from the wrong source. The hard gate: 0. Numbers that differ from
  *                   independent values are reported as each verification batch finds them; an answer whose numbers
- *                   change after verification goes back to unverified (its digest no longer matches).
+ *                   change after verification goes back to unverified (its digest no longer matches). A follow-up
+ *                   turn's wrong answer is a wrong answer too, verified by digest the same way.
  *   bad decline     a decline where the label expects an answer or a clarify.
  *   wrong clarify   a clarify where the label expects an answer or a decline, or one about another part.
- *   follow-up error any miss on a follow-up turn (its bucket, not the four above).
+ *   follow-up error a follow-up turn's bad decline or wrong clarify (its bucket, not those two).
  *   error           the engine threw.
  * Excluded labels (not a question) are not scored. Every report says how many labels are drafts: a scorecard of draft
  * labels is a draft scorecard.
@@ -231,7 +232,9 @@ type Bucket = "correct" | "unverified" | "wrong answer" | "bad decline" | "wrong
 function bucket(l: Label, g: Got | null): Bucket {
   if (l.expected.outcome === "exclude") return "excluded";
   if (!g || g.kind === "error") return "error";
-  const miss = (b: Bucket): Bucket => (l.kind === "follow-up" ? "follow-up error" : b);
+  // A follow-up's wrong answer is a wrong answer, in the gate like any other (coordinator 2026-11-08, scoring gap 1);
+  // its other misses (a bad decline, a wrong clarify) stay follow-up errors.
+  const miss = (b: Bucket): Bucket => (l.kind === "follow-up" && b !== "wrong answer" ? "follow-up error" : b);
   const e = l.expected;
   // A proposal ("Did you mean ...?") runs nothing: a clarify in effect.
   const kind = g.kind === "proposal" ? "clarify" : g.kind;
@@ -383,6 +386,11 @@ const incomplete = all.notRun > 0 || shardFailed;
 const gate = incomplete ? `NOT JUDGED: the run is incomplete (${all.notRun} questions not run${shardFailed ? ", a shard failed" : ""})`
   : all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
 console.log(`hard gate (wrong answers = 0): ${gate}`);
+// Follow-up answers on their own (undisputed labels): how many there are, and how many of each kind.
+const fuAnswers = scored.filter((l) => l.kind === "follow-up" && l.label.status !== "disputed" && done.get(l.id)?.kind === "answer");
+const fuCount = (b: Bucket) => fuAnswers.filter((l) => bucket(l, done.get(l.id) ?? null) === b).length;
+const fuLine = `follow-up answers: ${fuAnswers.length} (correct ${fuCount("correct")}, unverified ${fuCount("unverified")}, wrong ${fuCount("wrong answer")})`;
+console.log(fuLine);
 if (cacheOut) console.log(`queries from the cache ${hits}, from DuckDB ${misses} (this process; shards print their own)`);
 
 // --compare: every question whose outcome differs from another run's (dev's), with its bucket before and after; the
@@ -424,9 +432,9 @@ if (process.argv.includes("--report") && !incomplete) {
     `**Label status: ${all.n - all.drafts - all.reviewed} confirmed, ${all.reviewed} reviewed (two labelers agree: the rules and an independent second labeler), ${all.drafts} draft (a second-labeler correction, or a rule label not yet reviewed).** No label is confirmed, so this is still a draft scorecard: a miss here is a candidate, not a finding.`, "",
     "**Unverified is not correct.** An answer from the right source counts as correct only once its numbers match independent values (nibrs-model's files, or SQL against the source build); until then it is unverified.", "",
     table, "",
-    `Hard gate, wrong answers = 0 (undisputed labels): **${gate}**.`, "",
+    `Hard gate, wrong answers = 0 (undisputed labels): **${gate}**. Follow-up turns count: ${fuLine}.`, "",
     `**Disputed: ${all.disputed} labels wait on Jeff and are set aside** (not in any bucket or the gate): ${[...disputedGroups].map(([k, n]) => `${k} ${n}`).join(", ")}. The questions are in docs/reports/qlog-label-rules.md.`, "",
-    "Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked against independent values (or routed to a source this engine does not run yet); a right-source answer whose every number matched independent values (qlog-verified.json) is *correct*; *wrong answer* an answer where a clarify or decline is expected, or an answer from the wrong source (numbers found to differ from independent values are reported as each verification batch finds them; a verified answer whose numbers change goes back to *unverified*); *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* any miss on a follow-up turn; *error* the engine failed.", "",
+    "Buckets: *correct* the outcome the label expects; *unverified* the right source, numbers not yet checked against independent values (or routed to a source this engine does not run yet); a right-source answer whose every number matched independent values (qlog-verified.json) is *correct*; *wrong answer* an answer where a clarify or decline is expected, or an answer from the wrong source (numbers found to differ from independent values are reported as each verification batch finds them; a verified answer whose numbers change goes back to *unverified*; a follow-up turn's wrong answer is a wrong answer too); *bad decline* a decline where an answer or a clarify is expected; *wrong clarify* a clarify where an answer or decline is expected, or about another part; *follow-up error* a follow-up turn's bad decline or wrong clarify; *error* the engine failed.", "",
   ].join("\n");
   fs.writeFileSync(path.join(__dirname, "..", "docs", "reports", "qlog-scorecard.md"), out);
 }
