@@ -99,25 +99,89 @@ for a in agencies:
         if len(b) >= 4:
             same_base[b][(a["kind"], a["state"])] = max(same_base[b][(a["kind"], a["state"])], a.get("population") or 0)
 
+STATE_OF_NAME = dict(zip(STATE_NAMES, STATE_ABBR))
+
+# A state written right after a place ("El Paso, Texas", "Columbus, OH", "Mobile, al", "richmond va", "Charlotte in
+# North Carolina"), or a state's name right before it ("California Berkeley"; not a code, which in a list "Houston, TX
+# Los Angeles, CA" belongs to the place before), is that place's state. A two-letter code with no comma before it
+# must be capitals when it is also a word ("IN", "OR"; WORDLIKE, as for ABBR_AFTER).
+_STATE_RES = []
+
+def _state_res():
+    if not _STATE_RES:
+        names, codes = "|".join(STATE_NAMES), "|".join(STATE_ABBR)
+        plain = "(?-i:" + codes + ")|" + "|".join(a for a in STATE_ABBR if a not in WORDLIKE)
+        _STATE_RES.append(re.compile(r"^(?:\s*,\s*(?:(?P<n1>" + names + r")|(?P<c1>" + codes + r"))|\s+(?:in\s+)?(?P<n2>" + names
+                                     + r")|\s+(?P<c2>" + plain + r"))\b", re.I))
+        _STATE_RES.append(re.compile(r"\b(?P<n>" + names + r")[,\s]+$", re.I))
+    return _STATE_RES
+
+def state_near(before, after):
+    after_re, before_re = _state_res()
+    m = after_re.match(after)
+    if m:
+        n = m.group("n1") or m.group("n2")
+        return STATE_OF_NAME[n.lower()] if n else (m.group("c1") or m.group("c2")).upper()
+    m = before_re.search(before)
+    if m:
+        return STATE_OF_NAME[m.group("n").lower()]
+    return None
+
+# Words around a one-word name that make it a place: before it ("in Mobile", "Mobile, AL" in a list, "did Charlotte",
+# "show me Fresno") or after it ("Mobile murders", "Charlotte's", "Fresno, CA", "Mobile in 2024"). So "mobile phone
+# thefts" and "Charlotte Hornets" are not read as places. A name of two or more words ("Los Angeles") is always a place.
+PLACE_AFTER = R(r"^\s*(?:$|[,?.:;)]|'s\b|\b(?:and|or|vs\.?|versus|murders?|homicides?|crimes?|violent|property|robber\w*|burglar\w*|aggravated|assaults?|thefts?|auto|car|motor|rapes?|shoot\w*|carjack\w*|police|officers?|staffing|clearance|in|since|from|per|by|over|during|monthly|yearly|annual\w*|data|trends?|stats|statistics|numbers?|rates?|have|had|has|is|was|compare\w*)\b)")
+PLACE_BEFORE = R(r"(?:\b(?:in|for|of|at|from|between|and|or|vs\.?|versus|compared?|compare|than|with|to|on|across|around|near|did|does|do|is|was|has|have|me|show|give|plot|chart|list|about)\s+(?:the\s+)?|[,:;(]\s*|&\s*)$")
+
 def same_name_ask(name, q, raw=""):
     """Jeff 2026-11-07 ("Los Angeles should ask whether they mean the county sheriff or police department"; "2, yes":
     same-name places follow the Los Angeles rule): a name two city or county agencies share, each serving 100,000+
-    people, is asked about. Words that say which ("city of St. Louis", "St. Louis city", "Los Angeles Police", "LAPD")
-    settle it; a state named settles it only when it leaves one of them (a city and its county are in one state). The
-    words are read in the question as asked too (`raw`): the misspelling fixer can rewrite "St Louis County"."""
-    if re.search(r"\s(?:county|parish)$", name):
+    people, is asked about. Words that say which settle it ("city of St. Louis", "the cities ... Los Angeles", "counties of ... Berkeley", "St.
+    Louis city", "Los Angeles Police", "LAPD", "St Louis County", "sheriff"); a state written with the name keeps only
+    that state's agencies, asked when two remain (a city and its county are in one state: "El Paso, Texas"). The words
+    are read in the question as asked too (`raw`): the misspelling fixer can rewrite "St Louis County". A one-word name
+    must stand where a place does ("in Mobile", "Mobile, AL", "Mobile murders"), not as an ordinary word ("mobile
+    phone", "Charlotte Hornets")."""
+    # A state's name ("Washington", "New York") is read as the state, as before this rule.
+    if re.search(r"\s(?:county|parish)$", name) or name in STATE_OF_NAME:
         return False
     big = [(k, st) for (k, st), pop in same_base.get(name, {}).items() if pop >= 100_000]
     if len(big) < 2:
         return False
     # "St. Louis", "St Louis" and "Saint Louis" are one name.
     n = re.sub(r"^st\\?\.?\\ ", r"(?:st\\.?|saint)\\s+", re.escape(name)).replace(r"\.", r"\.?")
-    said = r"\bcity\s+of\s+" + n + r"\b|\b" + n + r"\s+(?:city|police|pd|sheriff|county|parish)\b"
+    initials = "".join(w[0] for w in re.sub(r"[^a-z ]", "", name).split())
+    said = (r"\b(?:city|county)\s+of\s+" + n + r"\b|\b(?:cities|counties)\b[^?!]*\b" + n + r"\b|\b" + n + r"\s+(?:city|police|pd|sheriff|county|parish)\b"
+            + r"|\b" + initials + r"(?:pd|sd|so)\b")
     if re.search(said, q, re.I) or re.search(said, raw, re.I):
         return False
-    if has_state(q) and len({st for _, st in big}) > 1:
+    # "District of Columbia" is Washington, D.C.
+    ms = [m for m in re.finditer(r"\b" + n + r"\b", q, re.I) if not re.search(r"\bdistrict\s+of\s+$", q[:m.start()], re.I)]
+    # A state written with any mention of the name holds for all of them ("Rochester, NY's rate ... Rochester's").
+    st = next((s for s in (state_near(q[:m.start()], q[m.end():]) for m in ms) if s), None)
+    if st and sum(b[1] == st for b in big) < 2:
         return False
-    return True
+    for m in ms:
+        before, after = q[:m.start()], q[m.end():]
+        if " " in name or PLACE_BEFORE.search(before) or PLACE_AFTER.match(after):
+            return True
+    return False
+
+def clearance_only(q):
+    """D31: a clearance rate is a statistic, not a crime ("clearance rates in Chicago"): true when the only crime word is
+    a clearance and no NIBRS offense code ("23F") names one."""
+    return bool(CRIME.search(q)) and bool(R(r"\bclear").search(q)) and not CRIME.search(R(r"\bclear\w*(?:\s+(?:rates?|percent(?:age)?s?))?").sub(" ", q)) \
+        and not re.search(r"\b\d{2}[a-z]\b", q, re.I)
+
+def new_rule_parts(q):
+    """The missing parts the 2026-11-07 rules add for a question: the crime (a clearance rate alone) and "which <place>"
+    (Jeff's same-name rule). Used when labeling and to reconcile an earlier review correction with them."""
+    q0, q1 = q, spelled(q)
+    out = ["crime"] if clearance_only(q1) else []
+    for p in dict.fromkeys(places(q1)):
+        if same_name_ask(p, q1, q0):
+            out.append(f"which {p.title()}")
+    return out
 
 def ambiguous(name):
     """Several states have it and none is plainly the one meant, by the app's reviewed rule (places.ts resolvePlace):
@@ -209,8 +273,7 @@ def label_first(q, tab):
     # the question does name.
     q0, q = q, spelled(q)
     crime = bool(CRIME.search(q))
-    # A NIBRS offense code ("23F", "13A") names a crime.
-    if crime and R(r"\bclear").search(q) and not CRIME.search(R(r"\bclear\w*(?:\s+(?:rates?|percent(?:age)?s?))?").sub(" ", q)) and not re.search(r"\b\d{2}[a-z]\b", q, re.I):
+    if clearance_only(q):
         crime = False   # a clearance rate names no crime (D31)
     named = places(q)
     scope = bool(named) or has_state(q) or bool(NATIONAL.search(q)) or bool(REGION.search(q))
@@ -372,8 +435,19 @@ if os.path.exists(REVIEW):
                 if k in v["expected"]: e[k] = v["expected"][k]
             if e["outcome"] == "clarify" and "about_any" in e: e["about"] = e["about_any"][0]
             if e["outcome"] == "answer": e.update(answer="the figures asked for", meaning=None, values={"status": "pending"})
+            # The 2026-11-07 rules reach a corrected label too (Codex label review 03.3): their parts are added to
+            # the correction's (an answer becomes the clarify they ask; a decline or exclusion stays as corrected).
+            # Only the parts the rules drafted for this question (r["expected"] is still the rules' label here).
+            drafted = r["expected"].get("about_any") or ([r["expected"]["about"]] if r["expected"].get("about") else [])
+            adds = [a for a in new_rule_parts(r["question"]) if a in drafted] if (r["kind"] == "first" or lab["rule"].startswith("F1+")) else []
+            if adds and e["outcome"] == "answer":
+                e = {"outcome": "clarify", "source": None, "about_any": adds, "about": adds[0]}
+            elif adds and e["outcome"] == "clarify":
+                have = e.get("about_any") or ([e["about"]] if e.get("about") else [])
+                e["about_any"] = have + [a for a in adds if a not in have]
+                e["about"] = e["about_any"][0]
             r["expected"] = e
-            lab.update(drafted_by=v["by"], rule=lab["rule"] + ">2nd", notes=v.get("why", ""))
+            lab.update(drafted_by=v["by"], rule=lab["rule"] + ">2nd", notes=v.get("why", "") + ("; with the 2026-11-07 rules' parts" if adds and e["outcome"] == "clarify" else ""))
         # A correction is a draft; an agreed label, or one an owner decision settles, is reviewed.
         if v["status"] == "reviewed":
             lab.update(status="reviewed", reviewed_by=v["by"])

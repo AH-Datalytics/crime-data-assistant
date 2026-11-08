@@ -1384,7 +1384,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -1543,7 +1543,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -1784,7 +1784,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Columbus has multiple qualifying cities under P28."
+    "notes": "Columbus has multiple qualifying cities under P28.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -2282,7 +2282,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -3256,7 +3256,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -4361,7 +4361,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Several unqualified place names meet P28 ambiguity rules."
@@ -4815,7 +4815,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -5793,7 +5793,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -5939,7 +5939,8 @@
     "about_any": [
      "violent, property or both",
      "which Kansas City",
-     "period"
+     "period",
+     "which St. Louis"
     ],
     "about": "violent, property or both"
    },
@@ -5948,7 +5949,7 @@
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Kansas City needs disambiguation under P28."
+    "notes": "Kansas City needs disambiguation under P28.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -6364,7 +6365,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -7156,7 +7157,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "The earliest available date supplies the period but Baltimore is ambiguous."
+    "notes": "The earliest available date supplies the period but Baltimore is ambiguous.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -7488,7 +7489,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires resolving both ambiguous place names."
+    "notes": "P28 requires resolving both ambiguous place names.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -7629,17 +7630,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which El Paso",
     "about_any": [
+     "which El Paso",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -7814,20 +7816,19 @@
    "question": "Los Angeles murder rate 12 months rolling",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "draft",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "A rolling series uses all available periods under D5."
+    "notes": "A rolling series uses all available periods under D5.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -8056,7 +8057,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -8285,7 +8286,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -8754,7 +8755,8 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both"
+     "violent, property or both",
+     "which El Paso"
     ]
    },
    "label": {
@@ -8829,17 +8831,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which El Paso",
     "about_any": [
+     "which El Paso",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -9067,7 +9070,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Baltimore city and county are ambiguous under P28."
+    "notes": "Baltimore city and county are ambiguous under P28.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -9559,7 +9562,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county."
+    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -10016,7 +10019,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The period is reversed and several city names are ambiguous."
@@ -10279,7 +10282,8 @@
     "source": null,
     "about_any": [
      "which Kansas City",
-     "period"
+     "period",
+     "which St. Louis"
     ],
     "about": "which Kansas City"
    },
@@ -10288,7 +10292,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Kansas City requires disambiguation under P28."
+    "notes": "Kansas City requires disambiguation under P28.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -10313,7 +10317,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county."
+    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -11891,17 +11895,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which El Paso",
     "about_any": [
+     "which El Paso",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -12105,7 +12110,7 @@
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Kansas City locations."
+    "notes": "P28 requires distinguishing Kansas City locations.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -12255,7 +12260,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county."
+    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -12674,7 +12679,8 @@
     "source": null,
     "about_any": [
      "which Baltimore",
-     "period"
+     "period",
+     "which Los Angeles"
     ],
     "about": "which Baltimore"
    },
@@ -12683,7 +12689,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county."
+    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -13249,7 +13255,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Baltimore city and county require disambiguation."
+    "notes": "Baltimore city and county require disambiguation.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -13474,9 +13480,7 @@
     "source": null,
     "about": "fatal or non-fatal shootings",
     "about_any": [
-     "fatal or non-fatal shootings",
-     "which Los Angeles",
-     "which Baltimore"
+     "fatal or non-fatal shootings"
     ]
    },
    "label": {
@@ -13946,7 +13950,7 @@
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -14808,7 +14812,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "D5 permits the quarterly series but Baltimore remains ambiguous."
@@ -14862,7 +14866,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -15131,7 +15135,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -16063,7 +16067,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Jacksonville has multiple qualifying places under P28."
+    "notes": "Jacksonville has multiple qualifying places under P28.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -16298,7 +16302,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -16487,7 +16491,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "D5 permits the moving series but Baltimore remains ambiguous."
+    "notes": "D5 permits the moving series but Baltimore remains ambiguous.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -16804,7 +16808,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -16929,7 +16933,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -17009,7 +17013,7 @@
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Maryland does not distinguish Baltimore city from county."
+    "notes": "Maryland does not distinguish Baltimore city from county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -17227,7 +17231,8 @@
     "source": null,
     "about_any": [
      "which Baltimore",
-     "period"
+     "period",
+     "which St. Louis"
     ],
     "about": "which Baltimore"
    },
@@ -17236,7 +17241,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -17390,7 +17395,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -18201,7 +18206,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Fayetteville has multiple qualifying cities under P28."
+    "notes": "Fayetteville has multiple qualifying cities under P28.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -18252,7 +18257,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -18799,7 +18804,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Maryland does not distinguish city and county."
+    "notes": "Maryland does not distinguish city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -19640,7 +19645,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Baltimore"
+     "which Baltimore",
+     "which San Diego"
     ],
     "about": "which Baltimore"
    },
@@ -19649,7 +19655,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -19793,8 +19799,7 @@
     "source": null,
     "about": "crime",
     "about_any": [
-     "crime",
-     "which Los Angeles"
+     "crime"
     ]
    },
    "label": {
@@ -19850,7 +19855,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -20025,20 +20030,19 @@
    "question": "DWI trends in el paos",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which El Paso"
+    ],
+    "about": "which El Paso"
    },
    "label": {
     "status": "draft",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "DWI is a specified offense and El Paso is recognizable."
+    "notes": "DWI is a specified offense and El Paso is recognizable.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -20164,7 +20168,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -22552,7 +22556,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -23187,7 +23191,8 @@
     "source": null,
     "about_any": [
      "which New York",
-     "period"
+     "period",
+     "which Los Angeles"
     ],
     "about": "which New York"
    },
@@ -23196,7 +23201,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "New York does not explicitly specify the city."
+    "notes": "New York does not explicitly specify the city.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -23799,7 +23804,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -24094,7 +24099,8 @@
     "source": null,
     "about_any": [
      "which New York",
-     "period"
+     "period",
+     "which Los Angeles"
     ],
     "about": "which New York"
    },
@@ -24103,7 +24109,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "New York requires city versus state clarification."
+    "notes": "New York requires city versus state clarification.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -25180,19 +25186,24 @@
    "question": "Compare Murder, Robbery, Aggravated Assault, and Burglary in the cities of St. Louis city, Chicago, New York City, Memphis, New Orleans, Los Angeles, California, and Memphis between 2010 and 2025",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R11",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "a ranking or set of places (Crime Index or NIBRS)"
    }
   },
   {
@@ -25757,7 +25768,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -25924,20 +25935,19 @@
    "question": "dwi arrest trends in El Paso, Texas from 2021 to 2026",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which El Paso",
+    "about_any": [
+     "which El Paso"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -26509,7 +26519,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -26638,7 +26648,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -26763,7 +26773,7 @@
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Maryland does not distinguish city and county."
+    "notes": "Maryland does not distinguish city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -27067,7 +27077,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -27924,7 +27934,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "start year"
+     "start year",
+     "which San Diego"
     ],
     "about": "start year"
    },
@@ -27933,7 +27944,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "20210 is malformed and cannot be silently replaced."
+    "notes": "20210 is malformed and cannot be silently replaced.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -31321,7 +31332,7 @@
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Population is available in Historical but Baltimore is ambiguous."
+    "notes": "Population is available in Historical but Baltimore is ambiguous.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -31873,7 +31884,6 @@
     "about": "crime",
     "about_any": [
      "crime",
-     "which Charlotte",
      "period"
     ]
    },
@@ -32945,7 +32955,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which New York"
+     "which New York",
+     "which Los Angeles"
     ],
     "about": "which New York"
    },
@@ -32954,7 +32965,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P26 requires city versus state."
+    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -33078,7 +33089,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities under P28."
@@ -34155,7 +34166,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -34309,7 +34320,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The offense category and two place names remain ambiguous."
@@ -36669,7 +36680,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -37610,6 +37621,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which El Paso",
      "period"
     ]
    },
@@ -38297,7 +38309,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "period"
+     "period",
+     "crime"
     ],
     "about": "period"
    },
@@ -38306,7 +38319,7 @@
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Harris County must not be changed to Harrison County."
+    "notes": "Harris County must not be changed to Harrison County.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -38461,7 +38474,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -40601,7 +40614,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which New York"
+     "which New York",
+     "which Los Angeles"
     ],
     "about": "which New York"
    },
@@ -40610,7 +40624,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P26 requires city versus state."
+    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -40653,7 +40667,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which New York"
+     "which New York",
+     "which Los Angeles"
     ],
     "about": "which New York"
    },
@@ -40662,7 +40677,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P26 requires city versus state."
+    "notes": "P26 requires city versus state.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -42168,7 +42183,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -42408,20 +42423,19 @@
    "question": "Home burglaries in Charlotte by year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Charlotte"
+    ],
+    "about": "which Charlotte"
    },
    "label": {
     "status": "draft",
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Residential burglary requires location detail."
+    "notes": "Residential burglary requires location detail.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -42646,7 +42660,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -44571,20 +44585,19 @@
    "question": "DWI in El Paso, Texas per month over time Texas",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which El Paso"
+    ],
+    "about": "which El Paso"
    },
    "label": {
     "status": "draft",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "DWI specifies a Group B offense answered by arrests."
+    "notes": "DWI specifies a Group B offense answered by arrests.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -44776,6 +44789,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which El Paso",
      "period"
     ]
    },
@@ -47198,20 +47212,19 @@
    "question": "DWI in El Paso, Texas over time",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which El Paso"
+    ],
+    "about": "which El Paso"
    },
    "label": {
     "status": "draft",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "DWI specifies a Group B offense answered through arrests."
+    "notes": "DWI specifies a Group B offense answered through arrests.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -48893,10 +48906,7 @@
     "source": null,
     "about": "crime",
     "about_any": [
-     "crime",
-     "which Los Angeles",
-     "which Baltimore",
-     "which St. Louis"
+     "crime"
     ]
    },
    "label": {
@@ -50516,7 +50526,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R13>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "D5 permits the rolling series but Baltimore remains ambiguous."
@@ -50596,7 +50606,7 @@
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Shoplfting clearly means shoplifting; Baltimore remains ambiguous."
+    "notes": "Shoplfting clearly means shoplifting; Baltimore remains ambiguous.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -51807,7 +51817,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Columbus"
+     "which Columbus",
+     "which Los Angeles"
     ],
     "about": "which Columbus"
    },
@@ -51816,7 +51827,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Columbus has multiple qualifying cities."
+    "notes": "Columbus has multiple qualifying cities.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -51963,7 +51974,8 @@
     "source": null,
     "about_any": [
      "fatal or non-fatal shootings",
-     "which Baltimore"
+     "which Baltimore",
+     "which Los Angeles"
     ],
     "about": "fatal or non-fatal shootings"
    },
@@ -51972,7 +51984,7 @@
     "rule": "R09s>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Baltimore also needs city versus county disambiguation."
+    "notes": "Baltimore also needs city versus county disambiguation.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -52573,17 +52585,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which El Paso",
     "about_any": [
+     "which El Paso",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -56565,7 +56578,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county before routing weapon detail."
+    "notes": "P28 requires city versus county before routing weapon detail.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -57521,7 +57534,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities."
@@ -59267,10 +59280,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Richmond has multiple qualifying cities."
+    "notes": "Richmond has multiple qualifying cities.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -63531,7 +63544,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "period"
+     "period",
+     "which San Diego"
     ],
     "about": "period"
    },
@@ -63540,7 +63554,7 @@
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Shoplifting is recognizable despite the misspelling."
+    "notes": "Shoplifting is recognizable despite the misspelling.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -64474,7 +64488,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "By year supplies a series under D5."
+    "notes": "By year supplies a series under D5.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -65708,7 +65722,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -67537,7 +67551,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -67820,20 +67834,19 @@
    "question": "DWI trends in el paos",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which El Paso"
+    ],
+    "about": "which El Paso"
    },
    "label": {
     "status": "draft",
     "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "DWI and El Paso are recognizable despite spelling."
+    "notes": "DWI and El Paso are recognizable despite spelling.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -69822,7 +69835,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -72090,7 +72103,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "start year"
+     "start year",
+     "which San Diego"
     ],
     "about": "start year"
    },
@@ -72099,7 +72113,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "20210 is malformed."
+    "notes": "20210 is malformed.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -74728,19 +74742,20 @@
    "question": "can you plot homicides involving a gun benchmarked to 2021 levels (i.e., % change year over year) for the cities Philadelphia, New York, Boston, Los Angeles, and Chicago?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R11",
+    "rule": "R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
    }
   },
   {
@@ -74938,7 +74953,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R11>2nd",
+    "rule": "R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities."
@@ -75941,7 +75956,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -76018,7 +76033,7 @@
     "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -77242,7 +77257,7 @@
     "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -78157,20 +78172,19 @@
    "question": "Murders in El Paso, Texas tecas over time",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which El Paso",
+    "about_any": [
+     "which El Paso"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -80724,7 +80738,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Baltimore"
+     "which Baltimore",
+     "which San Diego"
     ],
     "about": "which Baltimore"
    },
@@ -80733,7 +80748,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -80781,7 +80796,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F4>2nd",
+    "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Adding Baltimore introduces city versus county ambiguity."
@@ -82258,7 +82273,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Several unqualified place names remain ambiguous."
@@ -82856,7 +82871,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS, not annual Historical totals."
@@ -84040,7 +84055,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F4>2nd",
+    "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Correcting the years leaves place ambiguity unresolved."
@@ -85133,7 +85148,8 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "which Baltimore"
+     "which Baltimore",
+     "which San Diego"
     ],
     "about": "which Baltimore"
    },
@@ -85142,7 +85158,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Baltimore city versus county remains unresolved."
+    "notes": "Baltimore city versus county remains unresolved.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -86884,19 +86900,24 @@
    "question": "can you plot murders benchmarked to 2021 levels (i.e., % change year over year) for the cities Philadelphia, New York, Boston, Los Angeles, and Chicago?",
    "previous": "Can you modify so that they all appear as percentage changes from 2018 levels?",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R11",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "a ranking or set of places (Crime Index or NIBRS)"
    }
   },
   {
@@ -87713,21 +87734,20 @@
    "question": "murders cleared by clearance type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "which Baltimore",
-     "which Jacksonville"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R11",
+    "rule": "F1+R14",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
    }
   },
   {
@@ -89949,20 +89969,19 @@
    "question": "dwi arrest trends in El Paso, Texas from 2021 to 2026",
    "previous": "dwi arrest trends in El Paso, Texas from 2021 to 2026",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which El Paso",
+    "about_any": [
+     "which El Paso"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
+    "rule": "F1+R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -90576,7 +90595,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "The standalone question cannot inherit a period and Baltimore remains ambiguous."
+    "notes": "The standalone question cannot inherit a period and Baltimore remains ambiguous.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -90821,7 +90840,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -93068,7 +93087,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -96846,7 +96865,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F4>2nd",
+    "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -97681,7 +97700,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F4>2nd",
+    "rule": "F3>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -98742,7 +98761,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -99688,7 +99707,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -100752,7 +100771,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -104956,20 +104975,19 @@
    "question": "dwi arrest trends in El Paso, Texas from 2021 to 2026",
    "previous": "DWI trends in el paos",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which El Paso",
+    "about_any": [
+     "which El Paso"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
+    "rule": "F1+R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -105097,7 +105115,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R11>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -106979,7 +106997,7 @@
     "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {

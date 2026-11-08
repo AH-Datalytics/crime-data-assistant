@@ -136,11 +136,19 @@ A clarify is correct when the engine asks about any missing part. A route to ano
 - reviewed labels: 3 of 82 wrong; corrected drafts: 0 of 18.
 The three corrections are applied as review entries (codex-check-4).
 
-**v18 (2026-11-07): two rules in the drafter, applied to every label.** Both are in `scripts/draft-qlog-labels.py`, and every label was regenerated from them. No label was picked or changed by hand, and none to match the engine. Today's drafter reproduces v17 exactly, so v18's 85 changes are these two rules' effect alone.
+**v18 (2026-11-07): two rules in the drafter, applied to every label.** Both are in `scripts/draft-qlog-labels.py`, and every label was regenerated from them. No label was picked or changed by hand, and none to match the engine. Today's drafter reproduces v17 exactly, so v18's 113 changes are these two rules' effect alone.
 - **Same-named agencies (R11, Jeff).** Jeff: "Los Angeles should ask whether they mean the county sheriff or police department", and "2, yes": same-name places follow the Los Angeles rule.
-  - A name that two city or county agencies share, each serving 100,000+ people, is asked about: "which <place>". That includes a city and its county in one state (Los Angeles, St. Louis, El Paso, Mobile, Fresno, San Diego, Charlotte, Baltimore). It applies whether the question names one place or several, and whether or not it names a state, unless the state leaves only one of them.
-  - Words that say which agency settle it, read in the question as asked: "city of St. Louis", "St. Louis city", "Los Angeles Police Department", "LAPD", "St Louis County", "sheriff". Such questions keep their labels. Where the engine asks anyway, that's an engine misread to fix, not a label to change.
+  - A name that two city or county agencies share, each serving 100,000+ people, is asked about: "which <place>". That includes a city and its county in one state (Los Angeles, St. Louis, El Paso, Mobile, Fresno, San Diego, Charlotte, Baltimore). It applies whether the question names one place or several.
+  - A state written with the name keeps only that state's agencies, and the question is asked when two remain. "El Paso, Texas" is still asked (the city and the county are both in Texas); "Richmond, VA" and "Columbus, OH" are not. The state counts when it is right after the name ("Mobile, AL", "richmond va", "Charlotte in North Carolina") or is a state's name right before it ("California Berkeley"). A code before the name doesn't count, since in a list ("Houston, TX Los Angeles, CA") it belongs to the place before. A state written with one mention holds for every mention of that name. A state's own name ("Washington", "New York") is read as the state, as before.
+  - Words that say which agency settle it, read in the question as asked:
+    - "city of St. Louis", "St. Louis city", "county of …";
+    - a list under "cities" or "counties" ("the cities of New York, … Los Angeles", "counties of Charleston, Dorchester and Berkeley");
+    - "Los Angeles Police Department", "LAPD", "(LAPD)", "St Louis County", "sheriff".
+
+    Such questions keep their labels. Where the engine asks anyway, that's an engine misread to fix, not a label to change. "District of Columbia" is not Columbia.
+  - A one-word name must stand where a place does: after "in", "for", "of", "vs", a comma and the like, or before a crime, a period, a comma or "'s" ("in Mobile", "Mobile, AL", "Charlotte's", "Mobile murders"). An ordinary word ("mobile phone thefts", "Charlotte Hornets") isn't a place. A name of two or more words ("Los Angeles") is always read as the place.
   - The same-name question is added to the label's missing parts, since any missing part is a right one to ask (D31): an answer label becomes that clarify, and a clarify about another part also accepts it.
+- **Earlier review corrections meet the new rules.** A correction from the second labeler keeps its wording, and the parts these two rules drafted for the same question are added to it. A corrected answer becomes the clarify the rules ask ("Los Angeles murder rate 12 months rolling" now asks which Los Angeles), and a corrected clarify also accepts the new part. A corrected decline or exclusion stays as it was. Only parts the rules drafted for that question are added, so a definition question ("What is a clearance rate") isn't made to ask for a crime.
 - **A clearance rate names no crime (R09, D31).** "Clearance rates in Chicago" and "National clearance rates 1960 to 2024" name a statistic, not a crime, so the crime is missing and asked. A crime named beside it ("murder clearance rate") or a NIBRS offense code ("23F") names one. With no crime and no place either ("clearance", "clearance rates over time"), the whole question is asked (R08).
 - **Knock-on effect:** a follow-up to a question whose label became a clarify follows the follow-up rules (a reply to a clarify is left out, D4).
 
@@ -152,8 +160,8 @@ The three corrections are applied as review entries (codex-check-4).
 |---|---|---|---|---|---|---|
 | Dev labels, dev scorer | 2,102 | 37 | 0 | 888 | 407 | 490 |
 | Dev labels, scorer change only | 2,181 | 37 | 0 | 888 | 328 | 490 |
-| v18 labels and scorer change | 2,225 | 37 | 0 | 888 | 288 | 485 |
+| v18 labels and scorer change | 2,236 | 37 | 0 | 888 | 277 | 485 |
 
-None of the 85 changed labels is a question the engine answers today, so the change cannot make a wrong answer.
+None of the 113 changed labels is a question the engine answers today, so the change cannot make a wrong answer.
 
 **Still to do.** No label is confirmed: a reviewed label is two labelers agreeing, not a human check. A miss on the scorecard is a strong candidate, not yet a finding.
