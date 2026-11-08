@@ -83,6 +83,23 @@ assert.deepEqual(verifiedEntries([twin], [], meta).unmatched, [{ id: "QL-hist-x"
 const twinRows = requestOf(label, { ...historical, delivered: { table: { columns, rows: [["2024", 61.2, 1], ["2024", 61.2, 1]] }, text: [] } })!;
 assert.equal(twinRows.verifiable, false, "a repeated row: not verifiable");
 
+// Codex tool review 02: provenance is exact; a missing value is never a blank; keys can't collide; odd values aren't
+// verifiable.
+const near = { ...q, numbers: q.numbers.map((n) => (n.value === 58.4 ? { ...n, value: 58.4000005 } : n)), digest: "eeeeeeeeeeeeeeee" };
+assert.deepEqual(verifiedEntries([near], all, meta).unmatched, [{ id: "QL-hist-x", why: "1 not matched" }], "an old result for 58.4 never verifies 58.4000005");
+const noMine = all.map((r, i) => { if (i !== 1) return r; const { mine: _m, ...rest } = r; return rest; });
+assert.deepEqual(verifiedEntries([q], noMine, meta).unmatched, [{ id: "QL-hist-x", why: "1 not matched" }], "a blank cell with no checked value is not verified");
+const noValue = compareExpected([q], [exp(0, 61.2), { id: q.id, column: q.numbers[1].column, at: q.numbers[1].at } as never, exp(2, 58.4), exp(3, 70.1)]).results;
+assert.equal(noValue[1].result, "no value", "a checker record without a value is not a blank");
+assert.ok(!sameValue(null, undefined) && !sameValue(undefined, undefined) && sameValue(null, null));
+const pipe = { ...q, id: "a", numbers: [{ column: "b|c", binding: {}, at: {}, value: 1 }], verifiable: true };
+const forged = compareExpected([pipe], [{ id: "a|b", column: "c", at: {}, value: 1 }]);
+assert.deepEqual([forged.results.map((r) => r.result), forged.problems], [["no value"], ["checker output for an unknown request a|b"]], "ids and columns can't run together");
+for (const bad of [NaN, Infinity, "61.2"]) {
+  const r = requestOf(label, { ...historical, delivered: { table: { columns, rows: [["2024", bad, 1]] }, text: [] } })!;
+  assert.equal(r.verifiable, false, String(bad));
+}
+
 // Adding to the verified file: same digest left alone, a different digest a conflict unless named.
 const ex = { "QL-a": { digest: "aaaa" }, "QL-b": { digest: "bbbb" } };
 const m = mergeVerified(ex, { "QL-a": { digest: "aaaa" }, "QL-b": { digest: "cccc" }, "QL-c": { digest: "dddd" } });
