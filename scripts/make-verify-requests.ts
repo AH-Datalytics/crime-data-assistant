@@ -62,8 +62,12 @@ for (const id of ids) {
   const o = (l.kind === "follow-up" && l.previous ? shadowFollowUp(l.previous, l.question, deps) : shadowAnswer(l.question, deps)) as Parameters<typeof requestOf>[1];
   const q = requestOf(l, o);
   if (!q) { skipped.push(`${id}: the rerun is a ${o.kind}, not an answer`); continue; }
-  const scored = run.get(id)?.digest;
-  if (scored && scored !== q.digest) { skipped.push(`${id}: the rerun's table (${q.digest}) differs from the run's (${scored})`); continue; }
+  // The request must be exactly the answer the run scored: an answered entry with a digest, equal to the rerun's. (Also for
+  // --ids: a label the run didn't answer, or has no digest for, is never turned into a request.)
+  const scored = run.get(id);
+  if (scored?.kind !== "answer" || !scored.digest) { skipped.push(`${id}: the run has no scored answer (with a digest) for it`); continue; }
+  if (scored.digest !== q.digest) { skipped.push(`${id}: the rerun's table (${q.digest}) differs from the run's (${scored.digest})`); continue; }
+  if (!q.verifiable) { skipped.push(`${id}: ${q.note}`); continue; }
   lines.push(JSON.stringify(q));
   blind.push(JSON.stringify(blindOf(q)));
 }
@@ -72,4 +76,4 @@ fs.writeFileSync(OUT.replace(/\.jsonl$/, "") + ".blind.jsonl", blind.join("\n") 
 console.log(`${ids.length} picked, ${lines.length} requests written to ${OUT}`);
 for (const s of skipped) console.log(`skipped ${s}`);
 execute.close();
-process.exit(skipped.some((s) => /differs/.test(s)) ? 1 : 0);
+process.exit(skipped.some((s) => /differs|no scored answer/.test(s)) ? 1 : 0);

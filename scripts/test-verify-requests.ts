@@ -4,7 +4,7 @@
  * request becomes a verified entry only when every number matched. Offline: built outcomes, no database.
  */
 import assert from "node:assert/strict";
-import { blindOf, compareExpected, requestOf, verifiedEntries, type VerifyRequest } from "../lib/answer-eval/verify-request";
+import { blindOf, compareExpected, mergeVerified, requestOf, sameValue, verifiedEntries, type VerifyRequest } from "../lib/answer-eval/verify-request";
 import { tableDigest } from "../lib/answer-eval/table-digest";
 
 const label = { id: "QL-hist-x", tab: "historical", kind: "first", times: 3, question: "Murder clearance rate in Houston and Dallas since 2024", previous: null };
@@ -40,7 +40,7 @@ assert.deepEqual([rolling.measure, rolling.statistic], ["murder", "count+rolling
 // No table: no request.
 assert.equal(requestOf(label, { kind: "clarify" }), null);
 
-// Results: verified only when every number matched, one result each.
+// Results: verified only when every number matched, one result each, bound to the request's own cells and values.
 const result = (r: VerifyRequest, i: number, verdict = "matched") => ({ request: r.id, column: r.numbers[i].column, at: r.numbers[i].at, engine: r.numbers[i].value, result: verdict, mine: r.numbers[i].value });
 const all = q.numbers.map((_, i) => result(q, i));
 const meta = { by: "runner-codex-blind", batch: "test", date: "2026-11-07" };
@@ -49,16 +49,45 @@ assert.deepEqual(verifiedEntries([q], all.slice(1), meta).unmatched, [{ id: "QL-
 assert.deepEqual(verifiedEntries([q], [...all.slice(1), result(q, 0, "mismatch")], meta).unmatched, [{ id: "QL-hist-x", why: "1 not matched" }]);
 assert.deepEqual(verifiedEntries([q], [...all, { ...all[0], at: { Year: "1999" } }], meta).unmatched, [{ id: "QL-hist-x", why: "1 results for numbers the answer doesn't show" }]);
 assert.deepEqual(verifiedEntries([q], [...all, all[0]], meta).unmatched, [{ id: "QL-hist-x", why: "duplicate results" }]);
+// Codex tool review 02: results for another request's values never verify this one, whatever they say ("matched").
+const replacement = { ...q, numbers: q.numbers.map((n) => (n.value === 58.4 ? { ...n, value: 999 } : n)), digest: "ffffffffffffffff" };
+assert.deepEqual(verifiedEntries([replacement], all, meta).unmatched, [{ id: "QL-hist-x", why: "1 not matched" }], "old results (engine 58.4) against a changed answer (999)");
+assert.deepEqual(verifiedEntries([q], all.map((r, i) => (i === 2 ? { ...r, mine: 58.9 } : r)), meta).unmatched, [{ id: "QL-hist-x", why: "1 not matched" }], "the word matched is not trusted over the values");
 
 // What the checker sees: cells without values, no digest, plan or reading.
 const blind = JSON.stringify(blindOf(q));
 assert.ok(!/61\.2|58\.4|70\.1|digest|engine_read|nibrs_plan/.test(blind), blind);
 assert.equal((blindOf(q).cells as unknown[]).length, 4);
-// The compare: equal at the engine value's own decimals; both blank; a different value; no value.
+
+// The tolerance is a fixed bound, never the engine value's decimals (Codex tool review 01): 57 and 57.4 differ.
+assert.ok(sameValue(57, 57) && sameValue(3.084, 308.4 / 100) && sameValue(61.2, 61.2000000001) && sameValue(null, null));
+assert.ok(!sameValue(57, 57.4) && !sameValue(-57, -57.4) && !sameValue(61.2, 61.24) && !sameValue(0, 0.01) && !sameValue(1e21, 1e21 + 1e13) && !sameValue(null, 0) && !sameValue(0, null) && !sameValue(NaN, NaN));
+
+// The compare: equal at the tolerance; both blank; a different value; no value; a blank is never a number.
 const exp = (i: number, value: number | null) => ({ id: q.id, column: q.numbers[i].column, at: q.numbers[i].at, value });
-const cmp = compareExpected([q], [exp(0, 61.2000001), exp(1, null), exp(2, 58.5), exp(3, 70.1)]);
+const cmp = compareExpected([q], [exp(0, 61.2000001), exp(1, null), exp(2, 58.5), exp(3, 70.1)]).results;
 assert.deepEqual(cmp.map((r) => r.result), ["matched", "matched", "mismatch", "matched"]);
-assert.deepEqual(compareExpected([q], [exp(0, 61.2)]).map((r) => r.result), ["matched", "no value", "no value", "no value"]);
-assert.equal(compareExpected([q], [exp(0, 61.2), exp(1, 5), exp(2, 58.4), exp(3, 70.1)])[1].result, "mismatch", "a blank is never matched by a number");
+assert.deepEqual(compareExpected([q], [exp(0, 61.2)]).results.map((r) => r.result), ["matched", "no value", "no value", "no value"]);
+assert.equal(compareExpected([q], [exp(0, 61.2), exp(1, 5), exp(2, 58.4), exp(3, 70.1)]).results[1].result, "mismatch", "a blank is never matched by a number");
+// Codex tool review 03-04: a duplicate checker value is trusted for neither, an extra cell is a result, an unknown
+// request is a problem; and two cells at one column and place make the answer not verifiable.
+const dup = compareExpected([q], [exp(0, 61.2), exp(0, 99), exp(1, null), exp(2, 58.4), exp(3, 70.1)]);
+assert.deepEqual(dup.results.map((r) => r.result), ["duplicate value", "matched", "matched", "matched"]);
+const extra = compareExpected([q], [exp(0, 61.2), exp(1, null), exp(2, 58.4), exp(3, 70.1), { id: q.id, column: "Extra", at: { Year: "2024" }, value: 1 }, { id: "QL-nope", column: "x", at: {}, value: 1 }]);
+assert.deepEqual(extra.results.map((r) => r.result), ["matched", "matched", "matched", "matched", "extra cell"]);
+assert.deepEqual(extra.problems, ["checker output for an unknown request QL-nope"]);
+assert.equal(verifiedEntries([q], extra.results, meta).unmatched[0].why, "1 results for numbers the answer doesn't show");
+const twin = requestOf(label, { ...historical, delivered: { table: { columns: [...columns, columns[1]], rows: [["2024", 61.2, null, 61.2]] }, text: [] } })!;
+assert.equal(twin.verifiable, false, "a repeated column header at one place: not verifiable");
+assert.deepEqual(verifiedEntries([twin], [], meta).unmatched, [{ id: "QL-hist-x", why: "two cells share one column and place: not verifiable" }]);
+const twinRows = requestOf(label, { ...historical, delivered: { table: { columns, rows: [["2024", 61.2, 1], ["2024", 61.2, 1]] }, text: [] } })!;
+assert.equal(twinRows.verifiable, false, "a repeated row: not verifiable");
+
+// Adding to the verified file: same digest left alone, a different digest a conflict unless named.
+const ex = { "QL-a": { digest: "aaaa" }, "QL-b": { digest: "bbbb" } };
+const m = mergeVerified(ex, { "QL-a": { digest: "aaaa" }, "QL-b": { digest: "cccc" }, "QL-c": { digest: "dddd" } });
+assert.deepEqual([m.added, m.unchanged, m.conflicts, m.replaced], [["QL-c"], ["QL-a"], ["QL-b"], []]);
+assert.equal(m.merged["QL-b"].digest, "bbbb", "a conflict is not replaced");
+assert.deepEqual(mergeVerified(ex, { "QL-b": { digest: "cccc" } }, ["QL-b"]).replaced, ["QL-b"]);
 
 console.log("verify requests: every number named with its place in the table, the scorecard's digest, no SQL; verified only when all match");

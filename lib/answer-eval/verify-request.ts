@@ -4,6 +4,10 @@
  * with where it sits in the table) and never the engine's SQL, so the queries that check it are written from the
  * build's schema and manifest alone. A request whose numbers all match becomes a qlog-verified.json entry at the
  * answer's table digest. Format: the 2026-11-06 request files.
+ *
+ * This certifies answers as correct, so it fails closed: a number is matched only by an independent value that is equal
+ * at a tight tolerance, a result is trusted only for the request and value it names, and any ambiguity (two cells at one
+ * place, a duplicate or extra checker value, an existing verification at another digest) leaves an answer unverified.
  */
 import { tableDigest } from "./table-digest";
 
@@ -40,6 +44,20 @@ const planStatistic = (plan?: Record<string, unknown>) => {
 
 const SOURCE: Record<string, string> = { answer: "nibrs", srs: "crimeindex_state_national", current: "current_trends" };
 
+/** A cell's identity: its column and where it sits. */
+export const cellKey = (column: string, at: Record<string, unknown>) => `${column}|${JSON.stringify(Object.keys(at).sort().map((k) => [k, at[k]]))}`;
+
+/**
+ * The tolerance of a match: the engine's value and the checker's, both from the same stored figures, differ only by
+ * floating-point noise and by the checker computing a converted or computed rate another way (3.084 from 308.4 / 100).
+ * A fixed bound, never derived from the engine's own decimals: 57 and 57.4 are different values.
+ */
+export function sameValue(engine: unknown, mine: unknown): boolean {
+  if (engine === null || engine === undefined || mine === null || mine === undefined) return (engine ?? null) === (mine ?? null);
+  if (typeof engine !== "number" || typeof mine !== "number" || !Number.isFinite(engine) || !Number.isFinite(mine)) return false;
+  return Math.abs(engine - mine) <= 1e-6 + 1e-9 * Math.abs(engine);
+}
+
 /** The request for one answered label, or null for an outcome that shows no table (a clarify, a decline, a route). */
 export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null {
   const table = o.delivered?.table;
@@ -47,6 +65,10 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
   const groups = table.columns.map((c, i) => [c, i] as const).filter(([c]) => c.binding.kind === "grouping");
   const numbers = table.rows.flatMap((row) => table.columns.flatMap((c, i): VerifyNumber[] => (c.binding.kind !== "statistic" ? []
     : [{ column: c.header, binding: c.binding, at: Object.fromEntries(groups.map(([g, gi]) => [g.header, row[gi]])), value: row[i] }])));
+  // Two cells at one column and place (a repeated header, a repeated row, two groupings with one header) can't be told
+  // apart by a checker: the answer is not verifiable, not guessed.
+  const keys = numbers.map((n) => cellKey(n.column, n.at));
+  const ambiguous = new Set(keys).size !== keys.length || new Set(groups.map(([g]) => g.header)).size !== groups.length;
   const q = (o.question ?? {}) as { measure?: string; statistic?: string; agencies?: { ori: string; state?: string; label: string }[]; beside?: { kind: string; code?: string }[];
     place?: { kind: string; ori?: string; label?: string; code?: string }; places?: { kind: string; code?: string }[] };
   const geo = (p: { kind: string; code?: string }) => (p.kind === "national" ? { kind: "national", label: "United States" } : { kind: "state", state: p.code });
@@ -62,38 +84,12 @@ export function requestOf(label: VerifyLabel, o: Outcome): VerifyRequest | null 
     combine: (o.plan?.geography as { combine?: string } | undefined)?.combine ?? null, period: o.period ?? null,
     filters: o.plan ? withoutSql(o.plan.filters) ?? null : null, groupings: o.plan ? withoutSql(o.plan.groupings) ?? null : o.meaning?.groupings ?? null,
     nibrs_plan: o.plan ? withoutSql(o.plan) : null, engine_read: withoutSql(o.read ?? null), numbers, digest: tableDigest(table.rows),
-    verifiable: numbers.length > 0, note: numbers.length ? "" : "no numbers shown",
+    verifiable: numbers.length > 0 && !ambiguous, note: ambiguous ? "two cells share one column and place: not verifiable" : numbers.length ? "" : "no numbers shown",
   };
 }
 
 /** One checked number (the 2026-11-06 results format). */
 export type VerifyResult = { request: string; column: string; at: Record<string, unknown>; engine: unknown; result: string; mine?: unknown };
-
-/**
- * The qlog-verified.json entries for the requests every number of which matched: each number in the request has one
- * result, and every result is "matched". Anything missing, extra or not matched leaves the request unverified (named
- * in `unmatched`, with why).
- */
-export function verifiedEntries(requests: VerifyRequest[], results: VerifyResult[], meta: { by: string; batch: string; date: string }):
-  { entries: Record<string, { digest: string; by: string; batch: string; numbers: number; date: string }>; unmatched: { id: string; why: string }[] } {
-  const key = (column: string, at: Record<string, unknown>) => `${column}|${JSON.stringify(Object.keys(at).sort().map((k) => [k, at[k]]))}`;
-  const byRequest = new Map<string, VerifyResult[]>();
-  for (const r of results) byRequest.set(r.request, [...(byRequest.get(r.request) ?? []), r]);
-  const entries: Record<string, { digest: string; by: string; batch: string; numbers: number; date: string }> = {};
-  const unmatched: { id: string; why: string }[] = [];
-  for (const q of requests.filter((x) => x.verifiable)) {
-    const got = byRequest.get(q.id) ?? [];
-    const wanted = new Set(q.numbers.map((n) => key(n.column, n.at)));
-    const seen = new Map(got.map((r) => [key(r.column, r.at), r]));
-    const missing = [...wanted].filter((k) => !seen.has(k));
-    const extra = [...seen.keys()].filter((k) => !wanted.has(k));
-    const failed = got.filter((r) => r.result !== "matched");
-    if (missing.length || extra.length || failed.length || got.length !== q.numbers.length)
-      unmatched.push({ id: q.id, why: missing.length ? `${missing.length} numbers with no result` : extra.length ? `${extra.length} results for numbers the answer doesn't show` : failed.length ? `${failed.length} not matched` : "duplicate results" });
-    else entries[q.id] = { digest: q.digest, ...meta, numbers: q.numbers.filter((n) => n.value !== null && n.value !== undefined).length };
-  }
-  return { entries, unmatched };
-}
 
 /**
  * What the blind checker sees (the 2026-11-06 prompt): the question, the figure family, measure, statistic, grain,
@@ -108,19 +104,84 @@ export function blindOf(q: VerifyRequest): Record<string, unknown> {
 export type Expected = { id: string; column: string; at: Record<string, unknown>; value: number | null; how?: string };
 
 /**
- * The checker's values against the engine's, one result per number: "matched" when both are missing, or both are
- * numbers equal at the engine value's own decimals (57 and 57.0, 3.084 and 3.0840000001); "mismatch" otherwise; "no value"
- * when the checker wrote none for a cell.
+ * The checker's values against the engine's, one result per number and one per anything unexpected. A result is
+ * "matched" (the two are equal at the tolerance of `sameValue`, or both missing), "mismatch", "no value" (the checker
+ * wrote none), "duplicate value" (it wrote the cell more than once: none of them is trusted) or "extra cell" (it wrote
+ * a cell the request doesn't show). `problems` lists checker output for requests that don't exist.
  */
-export function compareExpected(requests: VerifyRequest[], expected: Expected[]): VerifyResult[] {
-  const key = (id: string, column: string, at: Record<string, unknown>) => `${id}|${column}|${JSON.stringify(Object.keys(at).sort().map((k) => [k, at[k]]))}`;
-  const mine = new Map(expected.map((e) => [key(e.id, e.column, e.at), e]));
-  const decimals = (v: number) => (String(v).split(".")[1] ?? "").length;
-  return requests.filter((q) => q.verifiable).flatMap((q) => q.numbers.map((n): VerifyResult => {
-    const e = mine.get(key(q.id, n.column, n.at));
-    if (!e) return { request: q.id, column: n.column, at: n.at, engine: n.value, result: "no value" };
-    const ev = n.value === undefined ? null : (n.value as number | null);
-    const ok = ev === null || e.value === null ? ev === e.value : Number(e.value.toFixed(decimals(ev))) === ev;
-    return { request: q.id, column: n.column, at: n.at, engine: ev, result: ok ? "matched" : "mismatch", mine: e.value };
-  }));
+export function compareExpected(requests: VerifyRequest[], expected: Expected[]): { results: VerifyResult[]; problems: string[] } {
+  const key = (id: string, column: string, at: Record<string, unknown>) => `${id}|${cellKey(column, at)}`;
+  const byCell = new Map<string, Expected[]>();
+  for (const e of expected) byCell.set(key(e.id, e.column, e.at), [...(byCell.get(key(e.id, e.column, e.at)) ?? []), e]);
+  const known = new Map(requests.map((q) => [q.id, q]));
+  const results: VerifyResult[] = [];
+  const wanted = new Set<string>();
+  for (const q of requests.filter((x) => x.verifiable)) {
+    for (const n of q.numbers) {
+      const k = key(q.id, n.column, n.at);
+      wanted.add(k);
+      const got = byCell.get(k) ?? [];
+      const ev = n.value === undefined ? null : n.value;
+      if (!got.length) results.push({ request: q.id, column: n.column, at: n.at, engine: ev, result: "no value" });
+      else if (got.length > 1) results.push({ request: q.id, column: n.column, at: n.at, engine: ev, result: "duplicate value", mine: got.map((g) => g.value) });
+      else results.push({ request: q.id, column: n.column, at: n.at, engine: ev, result: sameValue(ev, got[0].value) ? "matched" : "mismatch", mine: got[0].value });
+    }
+  }
+  const problems: string[] = [];
+  for (const [k, got] of byCell) {
+    if (wanted.has(k)) continue;
+    const id = got[0].id;
+    if (!known.has(id)) { const p = `checker output for an unknown request ${id}`; if (!problems.includes(p)) problems.push(p); continue; }
+    results.push({ request: id, column: got[0].column, at: got[0].at, engine: null, result: "extra cell", mine: got[0].value });
+  }
+  return { results, problems };
+}
+
+/**
+ * The qlog-verified.json entries for the requests every number of which matched. Each result is checked against the
+ * request being applied, never trusted for its label: it must name a cell the request shows, carry the engine value
+ * that request shows, and its own value must equal it at `sameValue` (the "matched" word alone is not enough). One
+ * result per number; anything missing, extra, duplicate or different leaves the request unverified (in `unmatched`).
+ */
+export function verifiedEntries(requests: VerifyRequest[], results: VerifyResult[], meta: { by: string; batch: string; date: string }):
+  { entries: Record<string, { digest: string; by: string; batch: string; numbers: number; date: string }>; unmatched: { id: string; why: string }[] } {
+  const byRequest = new Map<string, VerifyResult[]>();
+  for (const r of results) byRequest.set(r.request, [...(byRequest.get(r.request) ?? []), r]);
+  const entries: Record<string, { digest: string; by: string; batch: string; numbers: number; date: string }> = {};
+  const unmatched: { id: string; why: string }[] = [];
+  for (const q of requests) {
+    if (!q.verifiable) { unmatched.push({ id: q.id, why: q.note || "not verifiable" }); continue; }
+    const got = byRequest.get(q.id) ?? [];
+    const cells = new Map(q.numbers.map((n) => [cellKey(n.column, n.at), n]));
+    const seen = new Map<string, VerifyResult[]>();
+    for (const r of got) seen.set(cellKey(r.column, r.at), [...(seen.get(cellKey(r.column, r.at)) ?? []), r]);
+    const missing = [...cells.keys()].filter((k) => !seen.has(k)).length;
+    const extra = [...seen.keys()].filter((k) => !cells.has(k)).length;
+    const duplicate = [...seen.values()].filter((v) => v.length > 1).length;
+    const wrong = [...cells].filter(([k, n]) => { const r = seen.get(k)?.[0]; return r && seen.get(k)!.length === 1 && !(sameValue(n.value, r.engine) && sameValue(n.value, r.mine) && r.result === "matched"); }).length;
+    const why = missing ? `${missing} numbers with no result` : extra ? `${extra} results for numbers the answer doesn't show` : duplicate ? "duplicate results" : wrong ? `${wrong} not matched` : "";
+    if (why) unmatched.push({ id: q.id, why });
+    else entries[q.id] = { digest: q.digest, ...meta, numbers: q.numbers.filter((n) => n.value !== null && n.value !== undefined).length };
+  }
+  return { entries, unmatched };
+}
+
+export type VerifiedEntry = { digest: string; by?: string; batch?: string; numbers?: number; date?: string };
+
+/**
+ * Adding entries to the verified file: an id already verified at the same digest is left as it is; one verified at
+ * another digest is a conflict and is not replaced unless named in `replace` (an owner's decision, said on the command).
+ */
+export function mergeVerified(existing: Record<string, VerifiedEntry>, entries: Record<string, VerifiedEntry>, replace: string[] = []):
+  { merged: Record<string, VerifiedEntry>; added: string[]; unchanged: string[]; conflicts: string[]; replaced: string[] } {
+  const merged = { ...existing };
+  const added: string[] = [], unchanged: string[] = [], conflicts: string[] = [], replaced: string[] = [];
+  for (const [id, e] of Object.entries(entries)) {
+    const had = existing[id];
+    if (!had) { merged[id] = e; added.push(id); }
+    else if (had.digest === e.digest) unchanged.push(id);
+    else if (replace.includes(id)) { merged[id] = e; replaced.push(id); }
+    else conflicts.push(id);
+  }
+  return { merged, added, unchanged, conflicts, replaced };
 }
