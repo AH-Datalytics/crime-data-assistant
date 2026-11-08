@@ -43,7 +43,9 @@ On the runner, in the Codex folder: `python check.py expected.jsonl`, then, in t
 npx tsx scripts/compare-verify-expected.ts --requests <dir>/requests.jsonl --expected <dir>/expected.jsonl --out <dir>/results.jsonl
 ```
 
-A number is *matched* when both are missing, or both are numbers equal at the engine value's own decimals (57 and 57.0; 3.084 and 3.0840000001). Anything else is a *mismatch* (the engine and the checker disagree) or *no value* (the checker wrote none).
+A number is *matched* when both are missing, or both are numbers within a fixed tolerance of 0.000001 plus one part in a billion (57 and 57.0; 3.084 and 308.4 / 100). The tolerance never depends on how many decimals a value has: 57 and 57.4 are different. Anything else is a *mismatch* (the engine and the checker disagree), *no value* (the checker wrote none), *duplicate value* (it wrote the cell more than once; neither is trusted) or *extra cell* (it wrote a cell the request doesn't show). Checker output for a request that doesn't exist is listed as a problem. The script exits 1 if there is anything other than matched.
+
+An answer whose table has two cells at one column and place (a repeated header or row) is **not verifiable**: the request is marked so, never sent to the checker, and the answer stays unverified.
 
 **A mismatch is a finding, not noise.** Look at it before anything else: read the build for that cell by hand. Either the engine is wrong (fix it, in its own PR before this one merges), or the checker chose a different column or rule (say which, fix the checker's script or prompt, rerun). Never relabel a mismatch as matched.
 
@@ -53,7 +55,7 @@ A number is *matched* when both are missing, or both are numbers equal at the en
 npx tsx scripts/apply-verify-results.ts --requests <dir>/requests.jsonl --results <dir>/results.jsonl --by runner-codex-blind --batch <pr>-<date>
 ```
 
-A request whose every number matched (one result each, all matched) is added to `qlog-verified.json` at its table digest; any other is listed and left out. Commit the file as a follow-up commit on the PR, with the run's counts in the message. The scorecard then counts those answers as correct, and a later change to their numbers puts them back to unverified.
+A request whose every number matched is added to `qlog-verified.json` at its table digest; any other is listed and left out. The apply step re-checks each result against the request it is applied to (the cell, the engine value that request shows, and the checker's value), so results from an earlier run can never verify a changed answer, whatever they say. An id already verified at the same digest is left as it is. One already verified at *another* digest is a conflict and is not replaced (the script exits 1); replacing it is the owner's decision, said on the command with `--replace <id>` and in the commit message. Commit the file as a follow-up commit on the PR, with the run's counts in the message. The scorecard then counts those answers as correct, and a later change to their numbers puts them back to unverified.
 
 ## Not covered
 
