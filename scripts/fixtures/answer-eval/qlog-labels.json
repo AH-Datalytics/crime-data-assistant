@@ -91002,20 +91002,15 @@
    "question": "Atlanta clearance rate",
    "previous": "Washington DC clearance rate",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime",
-     "period"
-    ]
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R09",
+    "rule": "F4",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {

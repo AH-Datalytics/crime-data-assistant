@@ -379,7 +379,8 @@ def complete(q):
 
 
 def stands_alone(q):
-    return bool(CRIME.search(q)) and (bool(places(q)) or has_state(q) or bool(NATIONAL.search(q)) or bool(REGION.search(q)) or bool(PLACE_SET.search(q))) and not FOLLOW_LEAD.search(q.strip())
+    # A clearance rate alone names no crime (D31), so it doesn't make a follow-up a question of its own.
+    return bool(CRIME.search(q)) and not clearance_only(q) and (bool(places(q)) or has_state(q) or bool(NATIONAL.search(q)) or bool(REGION.search(q)) or bool(PLACE_SET.search(q))) and not FOLLOW_LEAD.search(q.strip())
 
 
 def label_follow(prev_label, q, tab):

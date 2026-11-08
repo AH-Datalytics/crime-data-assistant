@@ -154,7 +154,7 @@ The three corrections are applied as review entries (codex-check-4).
   - The same-name question is added to the label's missing parts, since any missing part is a right one to ask (D31): an answer label becomes that clarify, and a clarify about another part also accepts it.
 - **Earlier review corrections meet the new rules.** A correction from the second labeler keeps its wording, and the parts these two rules drafted for the same question are added to it. A corrected answer becomes the clarify the rules ask ("Los Angeles murder rate 12 months rolling" now asks which Los Angeles), and a corrected clarify also accepts the new part. A corrected decline or exclusion stays as it was. Only parts the rules drafted for that question are added, so a definition question ("What is a clearance rate") isn't made to ask for a crime.
 - **A clearance rate names no crime (R09, D31).** "Clearance rates in Chicago" and "National clearance rates 1960 to 2024" name a statistic, not a crime, so the crime is missing and asked. A crime named beside it ("murder clearance rate") or a NIBRS offense code ("23F") names one. With no crime and no place either ("clearance", "clearance rates over time"), the whole question is asked (R08).
-- **Knock-on effect:** a follow-up to a question whose label became a clarify follows the follow-up rules (a reply to a clarify is left out, D4).
+- **Knock-on effect:** a follow-up to a question whose label became a clarify follows the follow-up rules (a reply to a clarify is left out, D4). A clearance rate alone doesn't make a follow-up a question of its own ("Atlanta clearance rate" after "Washington DC clearance rate" is a reply to a clarify, so it is left out).
 
 **Scoring change (2026-11-07), separate from the labels.** D31's "which kind of crime" (buttons Violent crime, Property crime, Both) counts as the "violent, property or both" question (D09) as well as a crime question. It is one question under two names; the wrong-clarify audit found 79 such clarifies filed as wrong. This changes what is measured, not what users see.
 
@@ -164,7 +164,7 @@ The three corrections are applied as review entries (codex-check-4).
 |---|---|---|---|---|---|---|
 | Dev labels, dev scorer | 2,102 | 37 | 0 | 888 | 407 | 490 |
 | Dev labels, scorer change only | 2,181 | 37 | 0 | 888 | 328 | 490 |
-| v18 labels and scorer change | 2,236 | 37 | 0 | 888 | 277 | 485 |
+| v18 labels and scorer change | 2,236 | 37 | 0 | 888 | 277 | 484 |
 
 None of the 114 changed labels is a question the engine answers today, so the change cannot make a wrong answer.
 
