@@ -34,6 +34,17 @@ function stub(sql: string): unknown[][] {
   // Item 11b: a state's agencies for a year.
   const list = /SELECT ori, name, population FROM .* WHERE state = '([A-Z]{2})' AND year = (\d{4})/.exec(sql);
   if (list) return Object.entries(CRIME).flatMap(([o, ys]) => (o.startsWith(list[1]) && ys[Number(list[2])] ? [[o, NAMES[o] ?? o, ys[Number(list[2])][2]]] : []));
+  // Item 1: staffing, [ori, year, total, capita, population] for the kind asked (officer / civilian / all).
+  const staff = /SELECT ori, year, (officer|civilian|all)_total, \w+_capita, population FROM read_parquet\('\/ci\/agency_staffing\.parquet'\) WHERE ori IN \(.*\) AND year BETWEEN (\d{4}) AND (\d{4})/.exec(sql);
+  if (staff) {
+    const STAFF: Record<string, Record<number, Record<string, [number | null, number | null]>>> = {
+      TNMPD0000: { 2022: { officer: [1950, 312.0], civilian: [600, 96.0], all: [2550, 408.0] }, 2023: { officer: [1900, 308.4], civilian: [610, null], all: [2510, 407.4] } },
+      TXDPD0000: { 2023: { officer: [3100, 237.9], civilian: [700, 53.7], all: [3800, 291.7] } },
+    };
+    const POP: Record<string, Record<number, number>> = { TNMPD0000: { 2022: 624944, 2023: 616061 }, TXDPD0000: { 2023: 1302868 } };
+    return oris.flatMap((o) => Object.entries(STAFF[o] ?? {}).filter(([y]) => Number(y) >= Number(staff[2]) && Number(y) <= Number(staff[3]))
+      .map(([y, k]) => [o, Number(y), k[staff[1]][0], k[staff[1]][1], POP[o][Number(y)]]));
+  }
   if (/agency_clearances/.test(sql)) return /TNMPD0000/.test(sql) && /year = 2023/.test(sql) ? [[15.1, 53, 351]] : [];
   const between = /year BETWEEN (\d{4}) AND (\d{4})/.exec(sql), years = /year IN \((\d{4}), (\d{4})\)/.exec(sql);
   const out: unknown[][] = [];
@@ -313,6 +324,58 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   }
   for (const q of ["murders and population in Memphis in 2023", "murder rate in Memphis in 2023", "population of Memphis and Tennessee combined in 2023"])
     assert.ok(!(shadowAnswer(q, base).kind === "historical" && (shadowAnswer(q, base) as { question: { measure: string } }).question.measure === "population"), q);
+}
+
+// Item 1: police staffing for agencies, as published by Crime Index; per 100,000 only (another scale said, never
+// converted); a rate Crime Index leaves blank is the count per 100,000 of its population, said; states and the nation
+// have none; officers and civilians together are asked which.
+{
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: stub, historical: build };
+  const hist = (q: string) => { const o = shadowAnswer(q, base); assert.equal(o.kind, "historical", `${q}: ${JSON.stringify(o).slice(0, 300)}`); return o as Extract<ShadowOutcome, { kind: "historical" }>; };
+  const officers = hist("Show me the number of police officers in Memphis in 2023");
+  assert.deepEqual(officers.delivered.table.rows, [[1900]]);
+  assert.deepEqual(officers.delivered.text, ["Memphis, Tennessee: 1,900 sworn officers in 2023.", "Figures for the Memphis Police Department.", SRS_SOURCE]);
+  const per1000 = hist("officers per 1,000 population in Memphis in 2023");
+  // P97 (Jeff 2026-11-07: "Convert to per 1,000"): the published per-100,000 rate at the asked base, labeled, said once.
+  assert.deepEqual(per1000.delivered.table.rows, [[3.084]]);
+  assert.deepEqual(per1000.delivered.table.columns.map((c) => c.header), ["Sworn officers per 1,000"]);
+  assert.deepEqual(per1000.delivered.text, ["Memphis, Tennessee: 3.084 sworn officers per 1,000 people in 2023.", "Figures for the Memphis Police Department.",
+    "Rates per 1,000 are Crime Index's published rates per 100,000, divided by 100.", SRS_SOURCE]);
+  const per10k = hist("officers per 10,000 residents in Memphis by year from 2022 to 2023");
+  assert.deepEqual(per10k.delivered.table.rows, [["2022", 31.2], ["2023", 30.84]]);
+  assert.ok(per10k.delivered.text.includes("Rates per 10,000 are Crime Index's published rates per 100,000, divided by 10."), JSON.stringify(per10k.delivered.text));
+  const civ1000 = hist("civilian employees per 1,000 in Memphis in 2023");
+  assert.deepEqual(civ1000.delivered.table.rows, [[0.99]], "a computed rate converts too: 99.0 per 100,000");
+  // Codex staffing review 04: with a computed rate, neither line calls it published or per 100,000.
+  assert.ok(civ1000.delivered.text.includes("Rates per 1,000 are rates per 100,000, divided by 100.") && civ1000.delivered.text.some((t) => /that year's rate is the count per 1,000 of the published population/.test(t))
+    && !civ1000.delivered.text.some((t) => /Crime Index's published rates/.test(t)), JSON.stringify(civ1000.delivered.text));
+  assert.deepEqual(hist("officers per 100,000 people in Memphis in 2023").delivered.table.rows, [[308.4]], "per 100,000: as published, no note");
+  assert.ok(!hist("officers per 100,000 people in Memphis in 2023").delivered.text.some((t) => /divided by/.test(t)));
+  const civ = hist("civilian employees per capita in Memphis in 2023");
+  assert.deepEqual(civ.delivered.table.rows, [[99]], "no published rate: 610 per 100,000 of 616,061");
+  assert.ok(civ.delivered.text.some((t) => /publishes no civilian employee rate for Memphis, Tennessee in 2023; that year's rate is the count per 100,000/.test(t)), JSON.stringify(civ.delivered.text));
+  assert.deepEqual(hist("civilian employees in Memphis and Dallas in 2023").delivered.table.rows, [["Memphis, Tennessee", 610], ["Dallas, Texas", 700]]);
+  const series = hist("police staffing in Memphis by year from 2022 to 2023");
+  assert.deepEqual(series.delivered.table.rows, [["2022", 2550], ["2023", 2510]]);
+  assert.equal(series.question.measure, "staffing:employees");
+  for (const [q, re] of [["police officers in Tennessee in 2023", /agencies only, not for states or the nation/], ["officers and civilian employees in Memphis in 2023", /Ask for one: sworn officers, civilian employees or all employees/],
+    ["number of officers per capita in Memphis in 2023", /same figure throughout/],
+    // Codex staffing review 01: never one kind answered for two, a staff ratio as a count, or a rate for a count too.
+    ["Police officers and police employees in Memphis in 2023", /Ask for one: sworn officers/], ["civilian employees and police employees in Memphis in 2023", /Ask for one/],
+    ["Police employees per officer in Memphis in 2023", /a ratio between kinds of staff/],
+    ["What is the count of police officers and the rate per capita in Memphis in 2023?", /same figure throughout/]] as const) {
+    const o = shadowAnswer(q, base);
+    assert.ok(o.kind === "decline" && re.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  assert.equal(shadowAnswer("police officers in Memphis", base).kind, "clarify", "no period: asked");
+  assert.deepEqual(hist("How many officers per capita does Memphis have in 2023?").delivered.table.rows, [[308.4]], "how many ... per capita is the rate");
+  assert.deepEqual(hist("police staffing per-capita in Memphis in 2023").delivered.table.rows, [[407.4]], "per-capita, hyphenated, is the rate (Codex staffing review 02)");
+  assert.deepEqual(hist("police staffing per year in Memphis from 2022 to 2023").delivered.table.rows, [["2022", 2550], ["2023", 2510]], "per year is the grain");
+  for (const q of ["officers killed in Memphis in 2023", "assaults on police officers in Memphis in 2023", "murders in Memphis per officer in 2023"]) {
+    const o = shadowAnswer(q, base);
+    assert.ok(!(o.kind === "historical" && o.question.measure.startsWith("staffing:")), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+  }
 }
 
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");
