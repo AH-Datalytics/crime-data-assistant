@@ -114,6 +114,12 @@ const ori = (r: ReturnType<typeof at>) => (r.kind === "agency" ? r.agency.ori : 
 const asked = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates)) : r.kind);
 assert.equal(ori(at("city:Memphis:TN", "Memphis")), "TNMPD0000");
 assert.deepEqual(asked(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+// Jeff 2026-11-07: "Los Angeles should ask whether they mean the county sheriff or police department": the buttons name
+// the two agencies; a county police department beside its city keeps the place's name.
+const named = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates, places)) : r.kind);
+assert.deepEqual(named(at("city:Los Angeles:", "Los Angeles")), ["Los Angeles Police Department", "Los Angeles County Sheriff's Department"]);
+assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+assert.equal(agencyName(places, "CA0190000"), "Los Angeles County Sheriff's Department");
 assert.deepEqual(asked(at("ambiguous:St Louis", "St Louis")), ["St. Louis city, Missouri", "St. Louis County, Missouri"], "St. Louis County, Minnesota is under 100,000");
 assert.deepEqual(asked(at("ambiguous:Washington", "Washington")), ["Washington, D.C.", "Washington state", "Washington County, Oregon", "Washington County, Maryland"]);
 assert.deepEqual(asked(at("ambiguous:Kansas City", "Kansas City")), ["Kansas City, Missouri", "Kansas City, Kansas"]);

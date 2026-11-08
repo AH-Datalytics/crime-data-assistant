@@ -138,5 +138,6 @@ The three corrections are applied as review entries (codex-check-4).
 
 **Changes after the review** (each a review entry in `qlog-label-review.json`, so the drafter keeps it):
 - v18 (2026-11-07): QL-hist-81df62c2e3, "National clearance rates 1960 to 2024", is a clarify about the crime, not an answer. No crime is named, and D31/D09 ask which (PR #131's scorecard; agreed by the coordinator).
+- v18 (2026-11-07): a bare "Los Angeles" asks which agency. Jeff: "Los Angeles should ask whether they mean the county sheriff or police department". The 31 labels for a bare "Los Angeles" (not "Los Angeles city", "City of Los Angeles", "LAPD", "Los Angeles County" or "sheriff") that expected an answer now expect the clarify "which Los Angeles", follow-ups too. Left out: "What agencies have the name Los Angeles in the historical_agency table?", which isn't about a place's figures.
 
 **Still to do.** No label is confirmed: a reviewed label is two labelers agreeing, not a human check. A miss on the scorecard is a strong candidate, not yet a finding.

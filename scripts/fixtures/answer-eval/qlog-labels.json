@@ -41,20 +41,19 @@
    "question": "Motor vehicle theft trend in Los Angeles",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -819,24 +818,19 @@
    "question": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -1910,24 +1904,19 @@
    "question": "los angeles homicide rate in 2025 vs. other large cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -4890,20 +4879,19 @@
    "question": "Compare property crime in New York City and Los Angeles annually since 2020",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -7768,20 +7756,19 @@
    "question": "murder in Los Angeles since 2020",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -7794,24 +7781,19 @@
    "question": "Los Angeles murders per month in 2021",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -7824,20 +7806,19 @@
    "question": "Los Angeles murder rate 12 months rolling",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
-    "status": "draft",
-    "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "A rolling series uses all available periods under D5."
+    "status": "reviewed",
+    "rule": "R13>2nd>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -9785,24 +9766,19 @@
    "question": "Motor vehicle theft in Los Angeles on a rolling 12 month basis",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -10991,20 +10967,19 @@
    "question": "show homicide rates for los angeles and ny city since 2017",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -24564,20 +24539,19 @@
    "question": "show the los angeles homicide rate from 1930",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -25070,20 +25044,19 @@
    "question": "Show me the number of officers per capita in New York City, Los Angeles, and Chicago over time",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -25197,24 +25170,19 @@
    "question": "Compare Murder, Robbery, Aggravated Assault, and Burglary in the cities of St. Louis city, Chicago, New York City, Memphis, New Orleans, Los Angeles, California, and Memphis between 2010 and 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -28167,20 +28135,19 @@
    "question": "Compare murder trends in Los Angeles and New York City since 1985",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -36728,20 +36695,19 @@
    "question": "Los Angeles auto theft per year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -37678,20 +37644,19 @@
    "question": "Compare murder trends in New York City and Los Angeles since 1985",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -38911,20 +38876,19 @@
    "question": "Can I see the violent crime rate in New York City vs. Los Angeles, California since 1930?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -39562,20 +39526,19 @@
    "question": "show the ratio of homicides to robberies in los angeles from 1930",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -48906,20 +48869,19 @@
    "question": "Give me the number of clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": ""
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -66253,20 +66215,19 @@
    "question": "Compare robbery clearance rates between Chicago and Los Angeles by year",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -69019,24 +68980,19 @@
    "question": "Murders through July in 2021 in Baltimore city, Los Angeles, California, NYC, Oakland, and DC",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -69656,24 +69612,19 @@
    "question": "los angeles homicide rate in 2025 vs. other large cities",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -74761,20 +74712,19 @@
    "question": "can you plot homicides involving a gun benchmarked to 2021 levels (i.e., % change year over year) for the cities Philadelphia, New York, Boston, Los Angeles, and Chicago?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -82878,20 +82828,19 @@
    "question": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "las vegas murder clearances by type of clearance in 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
-    "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Clearance type detail requires NIBRS, not annual Historical totals."
+    "status": "reviewed",
+    "rule": "F1+R14>2nd>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -86921,24 +86870,19 @@
    "question": "can you plot murders benchmarked to 2021 levels (i.e., % change year over year) for the cities Philadelphia, New York, Boston, Los Angeles, and Chicago?",
    "previous": "Can you modify so that they all appear as percentage changes from 2018 levels?",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "source_any": [
-     "historical",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a ranking or set of places (Crime Index or NIBRS)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -87755,20 +87699,19 @@
    "question": "murders cleared by clearance type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -91273,20 +91216,19 @@
    "question": "Can you return the murder-to-robbery, robbery-to-aggravated assault, and murder-to-assault ratios for St. Louis, MO; Chicago, IL; Los Angeles, CA; Memphis, TN; and New Orleans, LA for the years 2010 to 2025?",
    "previous": "St. Louis City",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -95284,20 +95226,19 @@
    "question": "Can I see the violent crime rate in New York City vs. Los Angeles, California since 1930?",
    "previous": "recidivism",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -98775,20 +98716,19 @@
    "question": "Give me the number of murder clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
    "previous": "Give me the number of clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
-    "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Clearance type detail requires NIBRS."
+    "status": "reviewed",
+    "rule": "F1+R14>2nd>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -99721,20 +99661,19 @@
    "question": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "las vegas murder clearances by type of clearance in 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
-    "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Clearance type detail requires NIBRS."
+    "status": "reviewed",
+    "rule": "F1+R14>2nd>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -100784,20 +100723,19 @@
    "question": "give me number of murders and murder clearances by type for 2025 for these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "no, cities in California, not California City",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
-    "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Clearance type detail requires NIBRS."
+    "status": "reviewed",
+    "rule": "F1+R14>2nd>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {
@@ -105129,20 +105067,19 @@
    "question": "murder clearances by type in 2025 in these cities Chicago, IL,  New York City, NY,  Houston, TX,  Philadelphia, PA,  Los Angeles, CA,  Memphis, TN,  Detroit, MI,  Milwaukee, WI,  St Louis, MO,  Dallas, TX,  Indianapolis, IN,  Baltimore, MD,  Kansas City, MO,  Phoenix, AZ,  Washington, DC,  San Antonio, TX,  Cleveland, OH,  Atlanta, GA,  Charlotte, NC,  Las Vegas, NV,  Columbus, OH,  Birmingham, AL,  Jacksonville, FL,  Fort Worth, TX,  Albuquerque, NM,  Oklahoma City, OK,  Cincinnati, OH,  Minneapolis, MN,  Nashville, TN,  Richmond, VA,  Austin, TX,  Portland, OR,",
    "previous": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Los Angeles"
+    ],
+    "about": "which Los Angeles"
    },
    "label": {
-    "status": "draft",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Clearance type detail requires NIBRS."
+    "status": "reviewed",
+    "rule": "F1+R14>2nd>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
    }
   },
   {

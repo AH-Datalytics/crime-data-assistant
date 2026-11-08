@@ -7,7 +7,15 @@
 },
 "QL-ct-00f5989c5c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-027acf9113": {
 "status": "reviewed",
@@ -137,7 +145,15 @@
 },
 "QL-ct-0c9baffc48": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-0cb8a87be2": {
 "status": "draft",
@@ -409,7 +425,15 @@
 },
 "QL-ct-16a4d1ffb0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-1737e5fc83": {
 "status": "draft",
@@ -1019,7 +1043,15 @@
 },
 "QL-ct-3c287d1582": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-3c51bd85a9": {
 "status": "reviewed",
@@ -1629,19 +1661,38 @@
 },
 "QL-ct-60696cede7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-6089121ade": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-60d1cf6298": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "A rolling series uses all available periods under D5.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
 "expected": {
-"outcome": "answer",
-"source": "rtci"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
 }
 },
 "QL-ct-60df4f9085": {
@@ -2054,7 +2105,15 @@
 },
 "QL-ct-71f51e306f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-726d62f8c9": {
 "status": "reviewed",
@@ -2303,7 +2362,15 @@
 },
 "QL-ct-8281018a03": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-82e96877f2": {
 "status": "reviewed",
@@ -5065,7 +5132,15 @@
 },
 "QL-hist-1e9a5ef9ec": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-1ec08534a7": {
 "status": "reviewed",
@@ -5176,7 +5251,15 @@
 },
 "QL-hist-27757a865c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-27933240c3": {
 "status": "reviewed",
@@ -5196,7 +5279,15 @@
 },
 "QL-hist-297271dee2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-2983c47611": {
 "status": "reviewed",
@@ -5783,7 +5874,15 @@
 },
 "QL-hist-4eb651d666": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-4ee5352868": {
 "status": "reviewed",
@@ -7491,7 +7590,15 @@
 },
 "QL-hist-bb72f79302": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-bd26bf5644": {
 "status": "reviewed",
@@ -7654,7 +7761,15 @@
 },
 "QL-hist-c6ce7a41e6": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-c6f07a0296": {
 "status": "reviewed",
@@ -7914,7 +8029,15 @@
 },
 "QL-hist-d54e893dbf": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-d5f5268a08": {
 "status": "reviewed",
@@ -8031,7 +8154,15 @@
 },
 "QL-hist-dfaeb1eaee": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-dfc6eff4e0": {
 "status": "reviewed",
@@ -9850,7 +9981,15 @@
 },
 "QL-nibrs-40ae929d8d": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-nibrs-40b454dfa1": {
 "status": "reviewed",
@@ -13375,7 +13514,15 @@
 },
 "QL-nibrs-e716ef1e5e": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-nibrs-e719cc6eab": {
 "status": "reviewed",
@@ -13912,7 +14059,15 @@
 },
 "QL-shr-0c9baffc48": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-shr-0d0efa5a1f": {
 "status": "reviewed",
@@ -14041,7 +14196,15 @@
 },
 "QL-shr-16a4d1ffb0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-shr-16a86c9566": {
 "status": "reviewed",
@@ -15126,7 +15289,15 @@
 },
 "QL-shr-89d81f9aab": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-shr-8af203c52b": {
 "status": "draft",
@@ -16631,12 +16802,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-4ffe7fbb8c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Clearance type detail requires NIBRS, not annual Historical totals.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
 }
 },
 "QL-ct-526a697b7c": {
@@ -17299,7 +17473,15 @@
 },
 "QL-ct-e77310fa50": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-e8eae0ee40": {
 "status": "reviewed",
@@ -17431,7 +17613,15 @@
 },
 "QL-ct-fbb8c8bbfa": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-ct-fe44569abb": {
 "status": "reviewed",
@@ -17954,7 +18144,15 @@
 },
 "QL-hist-5fafa6c5d7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-611715c550": {
 "status": "reviewed",
@@ -18580,7 +18778,15 @@
 },
 "QL-hist-dbf93d54e8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
+}
 },
 "QL-hist-dd140cbc2c": {
 "status": "reviewed",
@@ -19004,12 +19210,15 @@
 }
 },
 "QL-nibrs-40ae920b49": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Clearance type detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
 }
 },
 "QL-nibrs-421d0d94ef": {
@@ -19150,12 +19359,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-4ffe7fbb8c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Clearance type detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
 }
 },
 "QL-nibrs-502337a474": {
@@ -19332,12 +19544,15 @@
 }
 },
 "QL-nibrs-75ad310a0c": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Clearance type detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
 }
 },
 "QL-nibrs-78159f7038": {
@@ -19790,12 +20005,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-fbb8cab372": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Clearance type detail requires NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\"",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Los Angeles"
+]
 }
 },
 "QL-nibrs-ff0aec8786": {
