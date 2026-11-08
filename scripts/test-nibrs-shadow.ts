@@ -1290,6 +1290,9 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.equal(as(ask("Murders in Memphis in 2024 by gender"), "clarify").about, "victim or offender sex");
     assert.equal(ask("Murders in Memphis in 2024 by victim race").kind, "answer");
     assert.equal(ask("Murders in Memphis in 2024 by offender race").kind, "answer");
+    // "Committed by <people>" names the offenders: not asked about (runner job G, QL-shr-34ce1c60e0).
+    assert.notEqual((ask("Murders committed by men in Memphis in 2024 by race") as { about?: string }).about, "victim or offender race");
+    assert.notEqual((ask("murder comited by blacks and whites in Memphis in 2024 also seperated by sex") as { about?: string }).about, "victim or offender sex");
     // Each button keeps what else the question set (Codex review 02: "unsolved" had been dropped).
     const u = as(ask("Unsolved murders in Memphis in 2024 by race"), "clarify");
     const [uv, uo] = u.options.map((x) => as(x.continuation!, "answer"));

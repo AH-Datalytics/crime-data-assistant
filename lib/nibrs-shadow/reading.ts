@@ -425,7 +425,9 @@ function readPeople(text0: string): { text: string; people: People | null } {
     cut(/,?\s*\bby\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i, (m) => { p.by = { who: "arrestee", attr: ATTR(m[1]), paired: false }; });
   // A bare "by race (sex, ethnicity, age)" naming no person ("murders in D.C. in 2025 by race"): victims' or offenders'
   // is asked, never assumed (coordinator 2026-11-08, scoring gap 1; the labels' "victim or offender race").
-  if (!p.by && !p.ask && !vm && !/\b(?:victims?|offenders?|arrest(?:s|ed|ee|ees)?|suspects?|perpetrators?)\b/i.test(text)
+  // "Committed by ..." (as typed: "comited by blacks asians hispanics ...") names the offenders (runner job G,
+  // QL-shr-34ce1c60e0).
+  if (!p.by && !p.ask && !vm && !/\b(?:victims?|offenders?|arrest(?:s|ed|ee|ees)?|suspects?|perpetrators?)\b|\b(?:comm?itt?ed|perpetrated)\s+by\b/i.test(text)
     && /\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)\b/i.test(text)) p.ask = "victims or offenders";
   // Only when offenders are what is counted ("offenders in aggravated assaults ..."); for victims the reader's own
   // "by strangers" applies.
