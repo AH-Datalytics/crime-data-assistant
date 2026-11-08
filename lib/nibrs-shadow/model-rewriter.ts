@@ -42,7 +42,11 @@ function signature(q: string) {
   const parts = l.parts.filter((p) => p.clause === 0);
   const by = new Map<string, Set<string>>();
   for (const p of parts) if (p.state === "recognized") (by.get(p.concept) ?? by.set(p.concept, new Set()).get(p.concept)!).add(String(p.value));
-  const flags = JSON.stringify({ people: l.people ?? null, quarter: !!l.quarter, column: l.column ?? null });
+  // A bare "by race" asks victims or offenders on its own; in a follow-up ("by ethnicity instead") the person is the
+  // previous question's, so that ask is not a flag of its own here.
+  const pp = l.people as { by: unknown; where: unknown[]; ask: string | null; unsupported?: string } | null | undefined;
+  const people = pp?.ask === "victims or offenders" ? (!pp.by && !pp.where.length && !pp.unsupported ? null : { ...pp, ask: null }) : pp ?? null;
+  const flags = JSON.stringify({ people, quarter: !!l.quarter, column: l.column ?? null });
   return { by, flags, unread: parts.some((p) => p.concept === "unrecognized"), combined: /\bcombined\b/i.test(q) };
 }
 /** The years a period value covers ("year:2024", "years:2023:2024", "range:2021:2024"). */

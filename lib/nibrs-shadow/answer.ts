@@ -658,6 +658,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       continuation: fromLedger(Object.assign(withParts(ledger0, ledger0.parts), { people: { ...ppl0, ask: null, where: [...ppl0.where, { who: "offender", attr: "age", range: [lo, hi], paired: false }] } }), deps, pins) });
     return { kind: "clarify", about: "which ages \"young adults\" means", question: ledger0.question, options: [ages(18, 24), ages(18, 29)] };
   }
+  if (ppl0?.ask === "victims or offenders") {
+    // A button each, the question asked again with the person named. When neither can be answered, the victims'
+    // refusal is given, not a question (D28).
+    const attr = /\bby\s+(?:the\s+)?(race|sex|gender|ethnicity|age)\b/i.exec(ledger0.question)?.[1].toLowerCase() ?? "race";
+    const as = (who: string) => shadowAnswer(ledger0.question.replace(/\bby\s+(?:the\s+)?(race|sex|gender|ethnicity|age)\b/i, `by ${who} $1`), deps);
+    const victims = as("victim"), offenders = as("offender");
+    if (victims.kind === "decline" && offenders.kind === "decline") return victims;
+    return { kind: "clarify", about: `victim or offender ${attr === "gender" ? "sex" : attr}`, question: ledger0.question, options: [
+      { label: "Victims", continuation: victims }, { label: "Offenders", continuation: offenders }] };
+  }
   if (ppl0?.ask === "attackers") {
     const rest = ledger0.question.replace(/^\s*how\s+many\s+attackers\s+(?:were\s+there\s+)?(?:in|for)\s+/i, "").replace(/\?\s*$/, "");
     if (rest === ledger0.question.replace(/\?\s*$/, "")) return decline("reader", "\"Attackers\" can mean offenders or people arrested; ask for offenders or arrests.");

@@ -208,6 +208,8 @@ function aboutClass(s: string): string {
   if (/^which kind of crime\b/.test(t)) return "crime";
   if (/^which /.test(t)) return "which";
   if (/violent|property/.test(t)) return "violent, property or both";
+  // "victim or offender race", "victims or offenders", "victim or offender age": one question, whose people are counted.
+  if (/\bvictims?\s+or\s+offenders?\b/.test(t)) return "victims or offenders";
   if (/place|where|location|agency|city|state/.test(t)) return "place";
   if (/period|year|when|month|time/.test(t)) return "period";
   if (/crime|offen[cs]e|measure/.test(t)) return "crime";

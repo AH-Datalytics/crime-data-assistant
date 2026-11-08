@@ -1280,6 +1280,17 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).
   assert.deepEqual(as(ask("Murders by young adults in Memphis in 2024"), "clarify").options.map((o) => o.label), ["18 to 24", "18 to 29"]);
   assert.deepEqual(as(ask("How many attackers were there in aggravated assaults in Detroit in 2024?"), "clarify").options.map((o) => o.label), ["Offenders", "People arrested"]);
+  // A bare "by race" names no person: victims' or offenders' is asked (QL-hist-0c09c89043, D.C. murders by race); each
+  // button answers with the person named. Named people and arrests are answered as before.
+  {
+    const o = as(ask("Murders in Memphis in 2024 by race"), "clarify");
+    assert.equal(o.about, "victim or offender race");
+    assert.deepEqual(o.options.map((x) => x.label), ["Victims", "Offenders"]);
+    assert.deepEqual(o.options.map((x) => x.continuation?.kind), ["answer", "answer"]);
+    assert.equal(as(ask("Murders in Memphis in 2024 by gender"), "clarify").about, "victim or offender sex");
+    assert.equal(ask("Murders in Memphis in 2024 by victim race").kind, "answer");
+    assert.equal(ask("Murders in Memphis in 2024 by offender race").kind, "answer");
+  }
 }
 
 // Increment 7b. P71: each quarter is the sum of its three months; a quarter with a month not known (March 2024 in the
