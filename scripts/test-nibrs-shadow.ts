@@ -985,10 +985,11 @@ assert.equal(ask("Shoplifting in Tulsa Police Department and Tulsa combined in 2
 assert.match(as(ask("Shoplifting and carjackings combined in Tulsa Police Department and Tulsa in 2023"), "decline").explanation, /combined/);
 // Re-check C: more than five left out: the count and five distinct names, each with its months.
 const six = ["A", "B", "C", "D", "E", "F"].map((x, i) => ({ ori: `TX000000${i}`, agency_name: `${x} Police Department`, months_reported: Array(i + 1).fill("2024") }));
-const sixLine = (names: string[]) => `Not ranked because they didn't report all 12 months of 2024: 6 agencies, the largest ${names.join(", ")}.`;
+const sixLine = (names: string[]) => `Not ranked because they didn't report all 12 months of 2024: 6 agencies. The five with the largest populations: ${names.join(", ")}.`;
 const withLine = (line: string, left: typeof six) => scoreShadow(txLabel, { ...tx, delivered: { ...tx.delivered, text: tx.delivered.text.map((t) => (t.startsWith("Not ranked") ? line : t)) } }, r, ctx,
   rankFile([["Houston Police Department", "TXHPD0000", 108], ["Dallas Police Department", "TXDPD0000", 84], [null, "TX9999900", 60]], left)).result!.values;
-assert.equal(withLine(sixLine(six.slice(0, 5).map((a, i) => `${a.agency_name} (${i + 1} month${i ? "s" : ""})`)), six), "match", "the first name follows \"the largest\"");
+assert.equal(withLine(sixLine(six.slice(0, 5).map((a, i) => `${a.agency_name} (population ${i + 1},${i}00, ${i + 1} month${i ? "s" : ""})`)), six), "match", "each named with its population and months");
+assert.equal(withLine(`Not ranked because they didn't report all 12 months of 2024: 6 agencies, the largest ${six.slice(0, 5).map((a, i) => `${a.agency_name} (${i + 1} month${i ? "s" : ""})`).join(", ")}.`, six), "mismatch", "the old \"the largest\" wording");
 const twoOut = six.slice(0, 2);
 assert.equal(withLine(`Not ranked because they didn't report all 12 months of 2024: A Police Department (1 month), A Police Department (1 month).`, twoOut), "mismatch", "names are distinct");
 // 8. A blank rate says why: no population is not months unknown.

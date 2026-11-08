@@ -52,7 +52,7 @@ import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { answerHistorical, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { answerBeside, answerHistorical, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
@@ -941,6 +941,87 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       const r = geos ? answerSrsSeveral(srsQ, geos.map(srsPlace)) : answerSrs({ ...srsQ, place: srsPlace(geo!) });
       if (r.kind === "srs") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : /no state clearance rate/.test(r.explanation) ? "not_recorded_in_nibrs" : "unsupported_capability", r.explanation);
+    }
+  }
+  // Item 3 (coordinator 2026-11-07): an agency beside its state or the nation ("Memphis and Tennessee murder rate in
+  // 2023", "Iowa City vs national aggravated assault rate since 2018"): each place's own Crime Index figures side by
+  // side, under the rules of both answers it joins (the agencies' above, the states' and nation's below). Never when the
+  // places are to be combined or one is asked as a count and another as a rate.
+  if (deps.historical && d.spec.type === "series" && d.spec.places.length >= 2 && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property
+    && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).arrestsThrough && !flags(ledger0).composite) {
+    const sp = d.spec;
+    const each = sp.places.map((p) => (p.kind === "agency" ? resolved.get(`${p.agencyKind}:${p.name}:${p.state}`) : p.kind === "state" || p.kind === "national" ? p : undefined));
+    // A state written right after its own agency ("Fairfax County Police Department in Virginia", "Arlington, Texas")
+    // is that agency's state, not a second place (PR #129's scorecard: QL-nibrs-6900e4157e had answered Virginia too).
+    // The parts as resolved: an agency's value ends with its state's code ("county:Fairfax County:VA").
+    const placeParts = ledger.parts.filter((p) => p.clause === 0 && p.concept === "place" && p.state !== "context");
+    const codeOf = new Map(sp.places.flatMap((p) => (p.kind === "state" ? [[p.name, p.code] as const] : [])));
+    const ownState = placeParts.some((st) => /^state:/.test(String(st.value)) && placeParts.some((ag) => /^(?:city|county):/.test(String(ag.value)) && ag.span[1] <= st.span[0]
+      && String(ag.value).endsWith(`:${codeOf.get(String(st.value).slice(6))}`)
+      && /^[\s,]*(?:(?:police\s+department|police\s+dept\.?|pd|sheriff'?s?\s+(?:office|department)|police)\s*)?(?:\bin\b|\bof\b)?[\s,]*$/i.test(ledger0.question.slice(ag.span[1], st.span[0]))));
+    const mixed = !ownState && each.some((x) => x?.kind === "agency") && each.some((x) => x?.kind === "state" || x?.kind === "national")
+      && each.every((x) => x?.kind === "agency" || x?.kind === "state" || x?.kind === "national");
+    // One statistic for every place, or none (Codex beside reviews 01.1, 02.1-2: "Murder victims in Memphis and murder
+    // rate in Tennessee" and "Murders in Memphis and Tennessee's rate" were two rates). A statistic is every place's
+    // only when every statistic named is the same one ("rate", "per 100,000" and "per capita" are one) and the crime,
+    // each time it is named, is said in one phrase with one of them ("murder rate", "murders per capita", "rate of
+    // murders"; "Memphis murder rate vs Tennessee murder rate"). Anything else is said of some places only, and is
+    // declined (Codex beside review 03.1-2). No statistic: counts for all.
+    const stats = clause0("statistic"), named = clause0("measure");
+    const between = (a: { span: [number, number] }, b: { span: [number, number] }) =>
+      ledger0.question.slice(Math.min(a.span[1], b.span[1]), Math.max(a.span[0], b.span[0]));
+    const onePhrase = (st: (typeof stats)[number], me: (typeof named)[number]) =>
+      /^[\s-]*(?:(?:of|the|for)\s+)*(?:(?:victims?|offen[cs]es?|incidents?)[\s-]*)?$/i.test(between(st, me));
+    const kind = (v: string | null) => (v === "rate" || v === "per100k" || v === "percapita" ? "rate" : String(v));
+    const alike = stats.every((x) => kind(x.value) === kind(stats[0].value));
+    const scoped = stats.length > 0 && !(alike && named.length > 0 && named.every((me) => stats.some((st) => onePhrase(st, me))));
+    const mixedStatistic = scoped || (clause0("statistic").length > 0 && /\b(?:counts?|numbers?|totals?|how\s+many)\b/i.test(ledger0.question));
+    const details = ledger.parts.some((p) => p.clause === 0 && ["clearance-reason", "breakdown", "filter", "share", "clearance"].includes(p.concept));
+    if (mixed && scoped)
+      return decline("unsupported_capability", "Ask for the same figure for every place: a count for each, or a rate for each.");
+    if (mixed && !clause0("combine").length && !flags(ledger0).combined && !mixedStatistic && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0])
+      && isSrsMeasure(sp.measures[0]) && !sp.filters.length && !details && historicalUnitFits(sp.measures[0], sp.unit) && (sp.unit === null || ["offenses", "victims"].includes(sp.unit))
+      && (sp.statistic === "count" || sp.statistic === "rate")) {
+      if (sp.period.form === "none" && sp.grain === "total") return askCrimeIndexPeriod();
+      const cmp = flags(ledger0).comparison;
+      const yrs = yearSpan(sp, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
+      if (yrs) {
+        if (partYear(sp, cmp)) return decline("unsupported_capability", "Crime Index figures for an agency beside a state or the nation are whole years only.", { alternative: byYearInstead(ledger, deps, pins) });
+        const thisYear = Number(release.lastMonth.slice(0, 4));
+        if (yrs[0] > thisYear) return decline("outside_release_coverage", `${yrs[0]} is not in the data; the latest year is ${thisYear}.`);
+        if (yrs[1] > thisYear) return decline("outside_release_coverage", `${yrs[1]} is not in the data; the latest year is ${thisYear}.`);
+        if (yrs[0] === thisYear)
+          return { kind: "route", source: "rtci", explanation: `This year's ${sp.measures[0].replace(/_/g, " ")} figures come from Current Trends (Crime Index), through the latest reported month, for the agencies it covers. Current Trends isn't available here yet.` };
+        const reachesNow = yrs[1] === thisYear;
+        const places0: BesidePlace[] = each.map((x, i) => (x!.kind === "agency"
+          ? { agency: { ori: x!.ori, label: x!.label, name: (sp.places[i] as { name: string }).name, state: (sp.places[i] as { state: string }).state } }
+          : { geo: x!.kind === "state" ? { kind: "state" as const, code: (x as { code: string }).code } : { kind: "national" as const } }));
+        // In the order the question names them (Codex beside reviews 01.2, 02.3: the nation is read last wherever it
+        // is; a place a choice settled, "Washington" the state, was read as another kind). Each place takes the first
+        // unused place in the question with its name (the nation: the national part), every exact name first, then a
+        // name that starts the other ("Washington County, Oregon" never takes "Washington": Codex beside review 03.3);
+        // if any has none, the order read.
+        const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+        const parts = clause0("place").map((p) => ({ national: p.value === "national", text: norm(String(p.text ?? "")), at: p.span[0] })).sort((x, y) => x.at - y.at);
+        const used = new Set<number>();
+        const at = places0.map(() => -1);
+        for (const exact of [true, false]) places0.forEach((b, i) => {
+          if (at[i] >= 0) return;
+          const names = "agency" in b ? [norm((sp.places[i] as { name: string }).name)] : b.geo.kind === "state" ? [norm(stateName(b.geo.code)), norm(b.geo.code)] : [];
+          const k = parts.findIndex((p, j) => !used.has(j) && ("geo" in b && b.geo.kind === "national" ? p.national
+            : !p.national && names.some((n) => !!n && (p.text === n || (!exact && (p.text.startsWith(`${n} `) || n.startsWith(`${p.text} `)))))));
+          if (k >= 0) { used.add(k); at[i] = parts[k].at; }
+        });
+        const places = at.some((x) => x < 0) ? places0 : places0.map((b, i) => ({ b, at: at[i] })).sort((x, y) => x.at - y.at).map((x) => x.b);
+        const oris = places.flatMap((p) => ("agency" in p ? [p.agency.ori] : []));
+        const note = sheriffNote(deps, oris, ledger0.question);
+        const r = answerBeside({ measure: sp.measures[0], agencies: [], from: yrs[0], to: reachesNow ? thisYear - 1 : yrs[1], byYear: sp.grain === "year" || openSpan(sp),
+          statistic: sp.statistic, comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
+          notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
+          agencyLine: reportedBy(oris.map((o) => agencyName(deps.places, o))).replace(/^Reported by /, "Figures for "), ...(note ? { agencyNote: note } : {}) }, places, deps.historical, deps.execute);
+        if (r.kind === "historical") return r;
+        return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
     }
   }
   // Historical (P75-P79): a Part I offense for one or several named agencies in completed years is the Crime Index

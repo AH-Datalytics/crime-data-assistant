@@ -39,4 +39,15 @@ assert.deepEqual(slow("SELECT 7"), [[7]]);
 assert.throws(() => slow("SELECT count(*) FROM range(5000000000) a, range(10) b"), /no answer within 1.5 s/);
 assert.throws(() => slow("SELECT 8"), /no answer within 1.5 s/, "a timed-out executor stays closed");
 
+// DuckDB's limits (the runner laptop's low-memory kills, 2026-11-07): set on the process before any query; unset, the
+// defaults stand; bad values are refused before they reach SQL; never on the per-query path.
+const capped = duckdbExecutor(python, { memoryLimit: "4GB", threads: 2 });
+assert.deepEqual(capped("SELECT current_setting('memory_limit'), current_setting('threads')"), [["3.7 GiB", 2]]);
+assert.deepEqual(capped(q), run(q), "the same rows");
+assert.notDeepEqual(run("SELECT current_setting('memory_limit')"), [["3.7 GiB"]], "no limit set: DuckDB's default");
+assert.throws(() => duckdbExecutor(python, { memoryLimit: "4GB'; DROP TABLE x; --" }), /is not a size such as 4GB/);
+assert.throws(() => duckdbExecutor(python, { threads: 0 }), /not a positive whole number/);
+assert.throws(() => duckdbExecutor(python, { persistent: false, threads: 2 }), /persistent executor only/);
+capped.close();
+
 console.log("nibrs duckdb executor: one persistent process, synchronous answers, cached by SQL, same rows as the reference");

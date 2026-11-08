@@ -3,7 +3,7 @@
  * Offline: a stub executor stands in for DuckDB over the build (scripts/build-crimeindex.py), and its SQL is checked.
  */
 import assert from "node:assert/strict";
-import { answerHistorical, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
+import { answerBeside, answerHistorical, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
 import { shadowAnswer, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
@@ -105,6 +105,39 @@ const named = ok({ agencyLine: "Figures for the Memphis Police Department." });
 assert.equal(named.delivered.text[1], "Figures for the Memphis Police Department.");
 assert.ok(!named.delivered.text.some((t) => /reported by/i.test(t)));
 
+// Item 3 (coordinator 2026-11-07): an agency beside its state or the nation, each place's own Crime Index figures side
+// by side in the order asked (the agency's from the build, Tennessee's and the nation's from the historical file).
+{
+  const beside = (q: Partial<HistoricalQuestion>, places: Parameters<typeof answerBeside>[1]) =>
+    answerBeside({ measure: "murder", agencies: [], from: 2023, to: 2023, byYear: false, statistic: "count", comparison: null, ...q }, places, build, stub);
+  const tn = { geo: { kind: "state" as const, code: "TN" } }, us = { geo: { kind: "national" as const } };
+  const year = beside({ statistic: "rate", agencyLine: "Figures for the Memphis Police Department." }, [{ agency: memphis }, tn]);
+  assert.equal(year.kind, "historical", JSON.stringify(year));
+  if (year.kind === "historical") {
+    assert.deepEqual(year.delivered.table.rows, [["Memphis, Tennessee", 57], ["Tennessee", 10]]);
+    assert.deepEqual(year.delivered.text, ["Memphis, Tennessee and Tennessee: murders per 100,000 in 2023.", "Figures for the Memphis Police Department.",
+      "Each rate is per 100,000 of that place's own population.", SRS_SOURCE]);
+    assert.deepEqual(year.meaning.places, [{ kind: "agency", name: "Memphis", state: "TN" }, { kind: "state", name: "Tennessee", state: "TN" }]);
+    assert.deepEqual([year.question.shown, year.question.beside], [["Memphis, Tennessee", "Tennessee"], [{ kind: "state", code: "TN" }]]);
+  }
+  // By year, in the order asked: the nation first is said "The United States", its column "United States".
+  const years = beside({ from: 2022, to: 2023, byYear: true }, [us, { agency: memphis }]);
+  assert.ok(years.kind === "historical", JSON.stringify(years));
+  if (years.kind === "historical") {
+    assert.deepEqual(years.delivered.table.rows, [["2022", 21923, 252], ["2023", 19935, 351]]);
+    assert.deepEqual(years.delivered.table.columns.map((c) => c.header), ["Year", "United States: murders", "Memphis, Tennessee: murders"]);
+    assert.equal(years.delivered.text[0], "The United States and Memphis, Tennessee: murders by year, 2022 to 2023.");
+  }
+  // A year with no agency figure that the state has starts the series, the agency blank (not "starts in 2022").
+  const blank = beside({ from: 2021, to: 2022, byYear: true }, [{ agency: memphis }, tn]);
+  assert.ok(blank.kind === "historical" && JSON.stringify(blank.delivered.table.rows) === JSON.stringify([["2021", null, 709], ["2022", 252, 647]]) && blank.delivered.text.includes("Crime Index has no murder figure for Memphis, Tennessee in 2021, shown blank.") && !blank.delivered.text.some((t) => /start in/.test(t)), JSON.stringify(blank));
+  // A change or a clearance rate is one place at a time, as for several states.
+  for (const q of [{ comparison: { earlier: 2022, later: 2023 } }, { statistic: "clearance_rate" as const }]) {
+    const r = beside(q, [{ agency: memphis }, us]);
+    assert.ok(r.kind === "historical-decline" && /beside a state or the nation\. Ask for one place\./.test(r.explanation), JSON.stringify(r));
+  }
+}
+
 // Codex 01.1: the unit each offense is counted in; another unit is not this file's figure.
 assert.equal(historicalUnitFits("robbery", "victims"), false);
 assert.equal(historicalUnitFits("robbery", "offenses"), true);
@@ -128,6 +161,41 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const combined = withBuild("Murders in Memphis and Dallas combined in 2023");
   assert.ok(combined.kind === "decline" && /can't be combined across agencies/.test(combined.explanation) && combined.alternative?.question === "Murders in Memphis and Dallas in 2023", JSON.stringify(combined).slice(0, 300));
   assert.notEqual(withBuild("Robberies in Memphis in 2023 according to NIBRS").kind, "historical");
+  // Item 3: an agency beside its state or the nation answers; combined, a count beside a rate, a clearance rate and
+  // a month keep their declines; no period asks which.
+  for (const q of ["Murder rate in Memphis and Tennessee in 2023", "Memphis vs national murders in 2023", "Murders in Memphis compared to Tennessee and the US in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind === "historical" && o.question.beside?.length, `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  for (const q of ["Murders in Memphis and Tennessee combined in 2023", "Murder count in Memphis and the murder rate in Tennessee in 2023", "Murder clearance rate in Memphis and the US in 2023", "Murders in Memphis and Tennessee in March 2023"])
+    assert.notEqual(withBuild(q).kind, "historical", q);
+  // Codex beside review 01.1: a statistic said of some places only is never applied to all (351 victims, not 57).
+  for (const q of ["Murder victims in Memphis and murder rate in Tennessee in 2023", "Murder rate in Tennessee and murder victims in Memphis in 2023", "Murders in Memphis and the rate in Tennessee in 2023",
+    "Murders in Memphis and Tennessee's rate in 2023", "Memphis murders and Tennessee's murder rate in 2023", "Murders in Memphis and Tennessee's rate, the rate in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind === "decline" && /same figure for every place/.test(o.explanation), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  // Codex beside review 02.2: one statistic for every place, however it is said, still answers.
+  for (const q of ["Memphis murder rate vs Tennessee murder rate in 2023", "Memphis murder rate compared with Tennessee in 2023", "Murders per 100,000 in Memphis and Tennessee in 2023",
+    "Rate of murders in Memphis and Tennessee in 2023", "Murder victim rate in Memphis and Tennessee in 2023", "the murder rate in Memphis compared to the Tennessee rate in 2023",
+    "Memphis murder rate vs Tennessee murders per 100,000 in 2023", "Memphis and Tennessee murder rate per 100,000 in 2023", "per capita murders in Memphis and Tennessee in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(o.kind === "historical" && JSON.stringify(o.delivered.table.rows) === JSON.stringify([["Memphis, Tennessee", 57], ["Tennessee", 10]]), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  // PR #129 scorecard (QL-nibrs-6900e4157e): a state written right after its own agency is that agency's state.
+  for (const q of ["Murder rate for Fairfax County Police Department in Virginia from 2021 to 2025", "Murders in Memphis Police Department in Tennessee in 2023"]) {
+    const o = withBuild(q);
+    assert.ok(!(o.kind === "historical" && o.question.beside?.length), `${q}: ${JSON.stringify(o).slice(0, 300)}`);
+  }
+  const twice = withBuild("Murders in Memphis and murders in Tennessee in 2023");
+  assert.ok(twice.kind === "historical" && twice.delivered.table.rows[0][1] === 351, JSON.stringify(twice).slice(0, 300));
+  // Codex beside review 01.2: the order asked, the nation first too.
+  for (const [q, order] of [["US vs Memphis murder rate in 2023", ["United States", "Memphis, Tennessee"]], ["Tennessee, Memphis and the US murders in 2023", ["Tennessee", "Memphis, Tennessee", "United States"]],
+    ["Memphis vs the US murders since 2022", ["Memphis, Tennessee", "United States"]]] as const) {
+    const o = withBuild(q);
+    assert.ok(o.kind === "historical" && JSON.stringify(o.question.shown) === JSON.stringify(order), `${q}: ${JSON.stringify(o).slice(0, 400)}`);
+  }
+  assert.equal(withBuild("Murders in Memphis and Tennessee").kind, "clarify");
   assert.notEqual(withBuild("Robberies in Memphis in 2023 by weapon").kind, "historical");
   // Arrests and offenders are NIBRS's own counts: never Historical's, never its unit decline (scored-run regression).
   for (const q of ["Robbery arrests in Memphis in 2023", "Aggravated assault offenders in Detroit in 2023"]) {
