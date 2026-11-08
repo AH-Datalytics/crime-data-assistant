@@ -20,6 +20,10 @@ const sqls: string[] = [];
 function stub(sql: string): unknown[][] {
   sqls.push(sql);
   const oris = [...sql.matchAll(/'([A-Z]{2}[A-Z0-9]{7})'/g)].map((m) => m[1]);
+  // Item 7: clearance rates over years and agencies (Memphis 2021 blank, 2022 and 2023 published; Dallas 2023 only).
+  const CLR: Record<string, Record<number, number>> = { TNMPD0000: { 2022: 12.3, 2023: 15.1 }, TXDPD0000: { 2023: 40.2 } };
+  const clrSpan = /SELECT ori, year, \w+_cleared_rate FROM .*year BETWEEN (\d{4}) AND (\d{4})/.exec(sql);
+  if (clrSpan) return oris.flatMap((o) => Object.entries(CLR[o] ?? {}).filter(([y]) => Number(y) >= Number(clrSpan[1]) && Number(y) <= Number(clrSpan[2])).map(([y, v]) => [o, Number(y), v]));
   if (/agency_clearances/.test(sql)) return /TNMPD0000/.test(sql) && /year = 2023/.test(sql) ? [[15.1, 53, 351]] : [];
   const between = /year BETWEEN (\d{4}) AND (\d{4})/.exec(sql), years = /year IN \((\d{4}), (\d{4})\)/.exec(sql);
   const out: unknown[][] = [];
@@ -89,7 +93,25 @@ assert.equal(clr.delivered.text[0], "Memphis, Tennessee: 15.1% of murders were c
 assert.equal(clr.read.column, "murder_cleared_rate");
 assert.match(no({ statistic: "clearance_rate", from: 1950, to: 1950 }), /clearance figures in the data cover 1960 through 2025/);
 assert.match(no({ statistic: "clearance_rate", from: 2022, to: 2022 }), /no murder clearance rate for Memphis, Tennessee in 2022/);
-assert.match(no({ statistic: "clearance_rate", from: 1959, to: 1960 }), /one agency and one year/);
+assert.match(no({ statistic: "clearance_rate", from: 1959, to: 1960 }), /no murder clearance rate for Memphis, Tennessee in 1960: not available/);
+// Item 7: clearance rates by year and across agencies, each as published, side by side, never combined; a year with
+// none blank and named; the leading years with none for any agency left out and named.
+const clrYears = ok({ statistic: "clearance_rate", from: 2021, to: 2023, byYear: true });
+assert.deepEqual(clrYears.delivered.table.rows, [["2022", 12.3], ["2023", 15.1]]);
+assert.deepEqual(clrYears.delivered.text, ["Memphis, Tennessee: the percentage of murders cleared by year, 2022 through 2023.",
+  "Crime Index has no murder clearance rate for Memphis, Tennessee in 2021, so the chart and table start in 2022.", SRS_SOURCE]);
+const clrPair = ok({ statistic: "clearance_rate", agencies: [memphis, dallas], from: 2022, to: 2023, byYear: true });
+assert.deepEqual(clrPair.delivered.table.rows, [["2022", 12.3, null], ["2023", 15.1, 40.2]]);
+assert.deepEqual(clrPair.delivered.table.columns.map((c) => c.header), ["Year", "Memphis, Tennessee: murders cleared (%)", "Dallas, Texas: murders cleared (%)"]);
+assert.ok(clrPair.delivered.text.includes("Crime Index has no murder clearance rate for Dallas, Texas in 2022, shown blank."), JSON.stringify(clrPair.delivered.text));
+const clrOneYear = ok({ statistic: "clearance_rate", agencies: [memphis, dallas], from: 2023, to: 2023 });
+assert.deepEqual(clrOneYear.delivered.table.rows, [["Memphis, Tennessee", 15.1], ["Dallas, Texas", 40.2]]);
+assert.equal(clrOneYear.meaning.statistic, "rate");
+// Codex clearance review 01: a change in a clearance rate is declined, never the rates by year; years outside the
+// data before and after are named apart.
+assert.match(no({ statistic: "clearance_rate", from: 2022, to: 2023, comparison: { earlier: 2022, later: 2023 } }), /a change in a clearance rate/);
+const wide = ok({ statistic: "clearance_rate", from: 1959, to: 2026, byYear: true });
+assert.ok(wide.delivered.text.some((t) => /; 1959 and 2026 are outside them\.$/.test(t)), JSON.stringify(wide.delivered.text));
 
 // Several agencies: side by side, never combined; one year a row each, a span a column each; blanks named per agency.
 const pair = ok({ agencies: [memphis, dallas] });
