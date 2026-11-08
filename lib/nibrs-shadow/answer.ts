@@ -685,7 +685,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const ledger = withParts(ledger0, parts);
   if (ask) {
     const a: { part: Part; name: string; candidates: Candidate[]; more?: boolean } = ask;
-    const options: ShadowOption[] = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
+    const options: ShadowOption[] = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates, deps.places), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
     // A question no choice could answer is declined, not asked about (D28): when no button leads to an answer or a
     // further question, the most likely reading's refusal is given.
     if (options.every((o) => o.continuation!.kind === "decline")) return options[0].continuation!;

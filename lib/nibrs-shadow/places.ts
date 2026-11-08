@@ -49,6 +49,13 @@ export const PLACE_NAMES: Record<string, string> = {
  * Agencies that serve a place AND its county under a joint name: found by the place's name too, but named as they are
  * (renaming one would put another agency's name on its counts). Same evidence rule as PLACE_NAMES.
  */
+/**
+ * An agency's own name where the FBI's differs from what the agency is called (Jeff 2026-11-07: "the county sheriff or
+ * police department", the buttons naming "Los Angeles County Sheriff's Department"; the FBI's is "... Sheriff's Office").
+ */
+export const AGENCY_NAMES: Record<string, string> = {
+  CA0190000: "Los Angeles County Sheriff's Department",
+};
 export const PLACE_ALIASES: Record<string, string> = {
   NC0600100: "Charlotte",   // Historical: "Charlotte-Mecklenburg Police Department" (else "Charlotte, North Carolina" finds no agency)
 };
@@ -63,7 +70,7 @@ export type PlaceIndex = { byName: Map<string, Agency[]>; names: Map<string, str
 const NAMES_FILE = path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agency-names.json");
 export function loadPlaceIndex(file = path.join(process.cwd(), "scripts/fixtures/nibrs-shadow/agencies.json")): PlaceIndex {
   const namesFile = JSON.parse(fs.readFileSync(NAMES_FILE, "utf8")) as { names: Record<string, string>; return_a?: string[] };
-  const names = new Map<string, string>(Object.entries(namesFile.names));
+  const names = new Map<string, string>([...Object.entries(namesFile.names), ...Object.entries(AGENCY_NAMES)]);
   const returnA = new Set(namesFile.return_a ?? []);
   const agencies: Agency[] = JSON.parse(fs.readFileSync(file, "utf8")).agencies.map((a: Agency) => ({ ...a, state: postalState(a.state), ...(PLACE_NAMES[a.ori] ? { name: PLACE_NAMES[a.ori] } : {}) }));
   const byName = new Map<string, Agency[]>();
@@ -128,10 +135,18 @@ export function reportedBy(names: string[]): string {
 export const agencyLabel = (a: Agency) => `${PLACE_ALIASES[a.ori] ?? a.name}, ${a.state === "DC" ? "D.C." : stateName(a.state)}`;
 const asPlace = (a: Agency): PlaceResolution => ({ kind: "agency", place: { kind: "agency", ori: a.ori, label: agencyLabel(a) }, agency: a });
 /** A button's label for a candidate: "Kansas City, Missouri"; "Baltimore city, Maryland" beside "Baltimore County, Maryland"; "Washington state". */
-export function candidateLabel(c: Candidate, all: Candidate[]): string {
+export function candidateLabel(c: Candidate, all: Candidate[], idx?: PlaceIndex): string {
   if (c.kind === "state") return `${c.name} state`;
   const a = c.agency;
   const countyToo = a.kind === "city" && all.some((x) => x.kind === "agency" && x.agency.kind === "county" && x.agency.state === a.state);
+  // A city's police beside its county's sheriff in one state (Jeff 2026-11-07, Los Angeles: "the county sheriff or
+  // police department"): each button names the agency ("Los Angeles Police Department", "Los Angeles County Sheriff's
+  // Department"), where both names are known (not Return A short names). A county police department beside the city's
+  // ("Baltimore County, Maryland") keeps the place's name.
+  const nameOf = (x: Agency) => (idx && !idx.returnA.has(x.ori) ? idx.names.get(x.ori) : undefined);
+  const city = all.find((x) => x.kind === "agency" && x.agency.kind === "city" && x.agency.state === a.state);
+  const county = all.find((x) => x.kind === "agency" && x.agency.kind === "county" && x.agency.state === a.state);
+  if (city?.kind === "agency" && county?.kind === "agency" && /\bsheriff/i.test(nameOf(county.agency) ?? "") && nameOf(city.agency) && nameOf(a)) return nameOf(a)!;
   if (a.kind === "city" && stateName(a.state) === a.name) return `${a.name} City`;   // "New York City" beside "New York state" (P26)
   return `${a.name}${countyToo ? " city" : ""}, ${a.state === "DC" ? "D.C." : stateName(a.state)}`;
 }

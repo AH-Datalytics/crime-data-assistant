@@ -213,6 +213,16 @@ function aboutClass(s: string): string {
   return t;
 }
 
+/**
+ * The classes an asked question counts as. D31's "which kind of crime" (buttons Violent crime, Property crime, Both) is
+ * the label rules' "violent, property or both" question (D09) as well as a crime question: one question, two names
+ * (wrong-clarify audit, 2026-11-07: 79 were filed under "crime" against labels wanting "violent, property or both").
+ */
+function askedClasses(about: string): string[] {
+  const c = aboutClass(about);
+  return /^which kind of crime\b/i.test(about) ? [c, "violent, property or both"] : [c];
+}
+
 /** Answers whose every shown number matched independent values (blind SQL, Model's canonical values), by digest. */
 const VERIFIED_FILE = path.join(__dirname, "fixtures", "answer-eval", "qlog-verified.json");
 const VERIFIED: Record<string, { digest: string }> = fs.existsSync(VERIFIED_FILE) ? JSON.parse(fs.readFileSync(VERIFIED_FILE, "utf8")).verified : {};
@@ -236,7 +246,7 @@ function bucket(l: Label, g: Got | null): Bucket {
     if (kind === "clarify") {
       // Any missing part is a right one to ask about (D31 asks one at a time; the labels list them all).
       const wants = (e.about_any ?? [e.about ?? ""]).map((w) => (/^which /.test(w) ? "which" : aboutClass(w)));
-      return wants.includes("the whole question") || wants.includes(aboutClass(g.about ?? "")) ? "correct" : miss("wrong clarify");
+      return wants.includes("the whole question") || askedClasses(g.about ?? "").some((c) => wants.includes(c)) ? "correct" : miss("wrong clarify");
     }
     // Asking for the whole question again is what a decline of the words does ("try asking another way").
     if (kind === "decline" && (e.about === "the whole question") && g.reason === "reader") return "correct";
