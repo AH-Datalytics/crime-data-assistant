@@ -7815,7 +7815,7 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd>2nd",
+    "rule": "R13>2nd",
     "drafted_by": "jeff-2026-11-07",
     "reviewed_by": "jeff-2026-11-07",
     "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
@@ -82837,7 +82837,7 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-07",
     "reviewed_by": "jeff-2026-11-07",
     "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
@@ -98725,7 +98725,7 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-07",
     "reviewed_by": "jeff-2026-11-07",
     "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
@@ -99670,7 +99670,7 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-07",
     "reviewed_by": "jeff-2026-11-07",
     "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
@@ -100732,7 +100732,7 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-07",
     "reviewed_by": "jeff-2026-11-07",
     "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
@@ -105076,7 +105076,7 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd>2nd",
+    "rule": "F1+R14>2nd",
     "drafted_by": "jeff-2026-11-07",
     "reviewed_by": "jeff-2026-11-07",
     "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
