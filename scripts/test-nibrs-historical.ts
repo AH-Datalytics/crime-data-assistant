@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { answerBeside, answerHistorical, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
 import { shadowAnswer, shadowFollowUp, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { standsAlone } from "../lib/nibrs-shadow/follow-up";
 import { loadPlaceIndex } from "../lib/nibrs-shadow/places";
 
 const build: HistoricalBuild = { root: "/ci", release: "crimeindex-20261101", firstYear: 1930, lastYear: 2025, clearanceFirstYear: 1960 };
@@ -287,6 +288,11 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = shadowAnswer(q, base);
     assert.ok(!(o.kind === "historical" && o.question.measure === "population"), `${q}: ${JSON.stringify(o).slice(0, 200)}`);
   }
+  // PR #130's scorecard: only population on its own or "agencies" stand alone; one Police Department, "... and
+  // population" or a turn pointing back stays a follow-up.
+  for (const [q, alone] of [["just anne arundel county police department", false], ["Durham, North Carolina and population", false],
+    ["Annual from 2000-2020, sum of agencies within NY state that meet that reporting criteria", false], ["give me Kansas City, MO's population per year", true],
+    ["List of Tennessee law enforcement agencies ordered by population in 2023", true]] as const) assert.equal(standsAlone(q), alone, q);
   // 01.2: a population question with its own place, after a crime question, is a question of its own.
   const after = shadowFollowUp("Murders in Memphis in 2023", "Population of Tennessee in 2023", base);
   assert.ok(after.kind === "historical" && JSON.stringify(after.delivered.table.rows) === "[[7148304]]", JSON.stringify(after).slice(0, 300));

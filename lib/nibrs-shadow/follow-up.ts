@@ -153,7 +153,11 @@ export function standsAlone(turn: string): boolean {
   const crime = own.measures.length > 0 || of("unit").length > 0 || of("shooting").length > 0;
   // Population on its own, or a state's agencies, with its own place, is a question of its own too (item 11; Codex
   // population review 01.2).
-  const ownSubject = !own.measures.length && (/\bpopulations?\b/i.test(t) || of("entity").some((p) => p.value === "agency"));
+  // Only population asked on its own (not "... and population", which adds to the last answer), or "agencies" (a
+  // state's list; not one "Police Department", which names an agency), and nothing pointing back ("that reporting
+  // criteria"): PR #130's scorecard (QL-hist-e8c99584f9, QL-nibrs-6d7c1e8aa9, QL-hist-d14e69e779).
+  const ownSubject = !own.measures.length && !refersBack
+    && ((/\bpopulations?\b/i.test(t) && !/\band\s+(?:its\s+|the\s+)?populations?\b/i.test(t)) || of("entity").some((p) => p.value === "agency" && /\bagencies\b/i.test(p.text)));
   return (crime || ownSubject) && (places > 0 || unknownPlace || placeSet || foreignCount > 0);
 }
 
