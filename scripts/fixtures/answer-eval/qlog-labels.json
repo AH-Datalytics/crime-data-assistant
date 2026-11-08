@@ -32247,20 +32247,19 @@
    "question": "National clearance rates 1960 to 2024",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "crime"
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "coordinator-2026-11-07",
+    "reviewed_by": "coordinator-2026-11-07",
+    "notes": "D31/D09: no crime named, so which kind of crime is asked (PR #131 scorecard; agreed by the coordinator 2026-11-07)"
    }
   },
   {
