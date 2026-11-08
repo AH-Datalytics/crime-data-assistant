@@ -127,15 +127,13 @@ def state_near(before, after):
         return STATE_OF_NAME[m.group("n").lower()]
     return None
 
-# A one-word name is a place only where a place stands, on both sides: before it ("in Mobile", "did Charlotte", a list's
-# comma or place, or the question's start) and after it ("Mobile murders", "Charlotte's", "Fresno, CA", "Mobile in
-# 2024", "Baltimore last year", the end, a list's next place). So "thefts of mobile phones", "Charlotte Hornets" and
-# "reported to Charlotte" are not places; "to" before a name counts in a comparison ("Compare Chicago to Baltimore").
-# A name of two or more words ("Los Angeles") is a place unless an institution follows ("San Diego State"), since it
-# can't be an ordinary word.
-PLACE_AFTER = R(r"^\s*(?:$|\d|[,?.:;)]|'s\b|\b(?:and|or|vs\.?|versus|murders?|homicides?|crimes?|violent|property|robber\w*|burglar\w*|aggravated|assaults?|thefts?|auto|car|motor|rapes?|shoot\w*|carjack\w*|police|officers?|staffing|clearance|in|since|from|per|by|over|during|monthly|yearly|annual\w*|data|trends?|stats|statistics|numbers?|rates?|have|had|has|is|was|were|are|compare\w*|for|to|at|with|through|until|between|last|this|next|past|previous|recent\w*|year\w*|month\w*|ytd)\b)")
-PLACE_BEFORE = R(r"(?:\b(?:in|for|of|at|from|between|and|or|vs\.?|versus|compared?|compare|than|with|on|across|around|near|did|does|do|is|was|has|have|me|show|give|plot|chart|list|about)\s+(?:the\s+)?|[,:;(]\s*|&\s*)$")
-COMPARED_TO = R(r"\bcompar\w*\b[^?!]*\bto\s+(?:the\s+)?$")
+# A name is read as the place unless the words around it make it something else: an ordinary noun after a one-word
+# name ("mobile phones", "Charlotte Hornets"), "to" before it outside a comparison or a "from ... to" ("reported to
+# Charlotte"; "Compare Chicago to Baltimore" and "from Chicago to Baltimore" are places), or an institution after any
+# name ("San Diego State").
+NOT_PLACE_AFTER = R(r"^\s+(?:phones?|cell\w*|devices?|apps?|homes?|units?|hornets|bobcats|panthers|fc)\b")
+TO_BEFORE = R(r"\bto\s+(?:the\s+)?$")
+COMPARED_TO = R(r"(?:\bcompar\w*\b|\bfrom\b)[^?!]*\bto\s+(?:the\s+)?$")
 INSTITUTION_AFTER = R(r"^\s+(?:state\b(?!\s*(?:,|police|patrol))|university|college|unified|school|airport|zoo|harbor|port\b|international)")
 # Words at one mention that say which agency it is: "St. Louis city", "Los Angeles Police", "St Louis County",
 # "sheriff"; "city of St. Louis", "county of ..."; a list under "cities" or "counties" ("the cities of New York, ...
@@ -144,14 +142,9 @@ INSTITUTION_AFTER = R(r"^\s+(?:state\b(?!\s*(?:,|police|patrol))|university|coll
 SETTLED_AFTER = R(r"^\s+(?:city|police|pd|sheriff\w*|county|parish)\b")
 SETTLED_BEFORE = R(r"\b(?:city|county)\s+of\s+(?:the\s+)?$")
 LIST_HEAD = R(r"\b(?:cities|counties)\b([^?!;]*)$")   # a period may be "St."
-# A state code of any case right after the name puts it where a place stands ("mobile al in 2025"), though a code that
-# is also a word doesn't name the state (state_near).
-STATE_CODE_AFTER = R(r"^\s+(?:" + "|".join(STATE_ABBR) + r")(?:$|[\s,?.])")
-# "to" ends a list unless a number follows ("cities from 2010 to 2025: ... Los Angeles").
-LEAVES_LIST = R(r"\b(?:with|than|vs\.?|versus|compared?|against|besides|outside|except)\b|\bto\b(?!\s*\d)")
-
-def _place_left(before):
-    return bool(PLACE_BEFORE.search(before)) or bool(COMPARED_TO.search(before)) or not before.strip() or bool(re.search(r"(?:" + PLACE_RE.pattern[5:-3] + r")\s+$", before[-40:], re.I))
+# "to" ends a list unless a number follows ("cities from 2010 to 2025: ... Los Angeles"); so does a new place clause
+# ("Texas cities and in Los Angeles").
+LEAVES_LIST = R(r"\b(?:with|than|vs\.?|versus|compared?|against|besides|outside|except)\b|\bto\b(?!\s*\d)|\b(?:and|or|but)\s+(?:also\s+)?(?:in|for|at|from)\b")
 
 def _mention_asks(name, n, big, text):
     """True: a bare mention of the name is asked about; False: every mention is settled or isn't a place; None: the
@@ -171,8 +164,11 @@ def _mention_asks(name, n, big, text):
             continue
         if INSTITUTION_AFTER.match(after):
             continue
-        if " " in name or (_place_left(before) and (PLACE_AFTER.match(after) or PLACE_RE.match(after.lstrip()) or STATE_CODE_AFTER.match(after))):
-            return True
+        if TO_BEFORE.search(before) and not COMPARED_TO.search(before):
+            continue
+        if " " not in name and NOT_PLACE_AFTER.match(after):
+            continue
+        return True
     return False
 
 def same_name_ask(name, q, raw=""):

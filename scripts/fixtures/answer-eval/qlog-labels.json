@@ -4812,10 +4812,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing Baltimore city and county."
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -5554,6 +5554,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which Baltimore",
      "period"
     ]
    },
@@ -9558,10 +9559,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires distinguishing city and county."
+    "notes": "P28 requires distinguishing city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -13297,6 +13298,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which Charlotte",
      "period"
     ]
    },
@@ -14810,10 +14812,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "D5 permits the quarterly series but Baltimore remains ambiguous."
+    "notes": "D5 permits the quarterly series but Baltimore remains ambiguous.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -26558,17 +26560,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which Charlotte",
     "about_any": [
+     "which Charlotte",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -31881,6 +31884,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which Charlotte",
      "period"
     ]
    },
@@ -59278,10 +59282,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Richmond has multiple qualifying cities."
+    "notes": "Richmond has multiple qualifying cities.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -69830,10 +69834,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -106992,10 +106996,10 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
