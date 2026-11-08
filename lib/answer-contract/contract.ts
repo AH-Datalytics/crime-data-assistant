@@ -155,7 +155,14 @@ export type TitleParts = {
 export type Lead =
   | { kind: "described"; what: string; who: string; when: string; countedAs: string | null; brokenDownBy: string | null }
   /** `quantity`: the number with what it counts ("10,149 shoplifting offenses", "robberies at a rate of 68.6 per 100,000 people"). */
-  | { kind: "single"; who: string; quantity: string; when: string; countedAs: string | null };
+  | { kind: "single"; who: string; quantity: string; when: string; countedAs: string | null }
+  /**
+   * Population on its own (item 11): nothing is reported, so the lead says whose population Crime Index publishes.
+   * `value`: the one population shown, or null for several.
+   */
+  | { kind: "population"; who: string; value: number | null; when: string }
+  /** A state's agencies listed by population (item 11b): how many, and the largest few with their populations. */
+  | { kind: "agencies"; where: string; count: number; top: { label: string; population: number }[]; when: string };
 export type OfferRole = "consistent_agencies" | "all_agencies" | "other_source" | "nearest_question" | "ask_instead" | "choice" | "entry" | "by_year";
 /**
  * An offer or button: its role and the source it runs on; `text`: the lead's inline wording, the link in the middle;
@@ -230,7 +237,13 @@ export function leadOf(p: Presentation, opts: { firstMention: boolean } = { firs
   const to = opts.firstMention ? prof.name.reportedToLong : prof.name.reportedToShort;
   const pub = prof.name.asPublished ? `, ${prof.name.asPublished},` : "";
   const l = p.lead;
-  const first = l.kind === "single"
+  const n = (x: number) => x.toLocaleString("en-US");
+  const listed = (t: { label: string; population: number }[]) => { const w = t.map((x) => `${x.label} (${n(x.population)})`); return w.length > 1 ? `${w.slice(0, -1).join(", ")} and ${w[w.length - 1]}` : w[0]; };
+  const first = l.kind === "agencies"
+    ? `Crime Index publishes figures for ${n(l.count)} ${l.count === 1 ? "agency" : "agencies"} in ${l.where} ${l.when}${l.top.length ? `; the largest by population ${l.top.length === 1 ? "is" : "are"} ${listed(l.top)}` : ""}.`
+    : l.kind === "population"
+    ? (l.value !== null ? `Crime Index publishes a population of ${l.value.toLocaleString("en-US")} for ${l.who} ${l.when}.` : `These are populations as published by Crime Index, for ${l.who}, ${l.when}.`)
+    : l.kind === "single"
     ? `${cap(l.who)} reported ${l.quantity} to ${to}${pub} ${l.when}${l.countedAs ? `, ${l.countedAs}` : ""}.`
     : `These are ${l.what} ${l.who} reported to ${to}${pub} ${l.when}${l.countedAs ? `, ${l.countedAs}` : ""}${l.brokenDownBy ? `, broken down by ${l.brokenDownBy}` : ""}.`;
   const sentences = [first.replace(/,,/g, ","), ...(p.caveat && p.caveat !== "blank_not_available" ? [NOTE_TEXT[p.caveat]] : [])];

@@ -115,7 +115,7 @@ const STATE_CODE: Record<string, string> = {
 };
 export const STATE_NAME_BY_CODE: Record<string, string> = Object.fromEntries(Object.entries(STATE_CODE).map(([n, c]) => [c, n]));
 
-function placeOf(p: Part): NPlace | null {
+export function placeOf(p: Part): NPlace | null {
   const v = p.value ?? "";
   if (v === "national") return { kind: "national", label: "United States" };
   if (v.startsWith("state:")) { const name = v.slice(6); const code = STATE_CODE[name]; return code ? { kind: "state", name, code, label: name } : null; }
@@ -124,7 +124,7 @@ function placeOf(p: Part): NPlace | null {
   return null;
 }
 
-function periodOf(p: Part): NPeriod | null {
+export function periodOf(p: Part): NPeriod | null {
   const v = p.value ?? "";
   let m: RegExpExecArray | null;
   if ((m = /^year:(\d{4})$/.exec(v))) return { form: "year", year: Number(m[1]) };

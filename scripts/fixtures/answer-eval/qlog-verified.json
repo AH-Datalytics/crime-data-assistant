@@ -4949,6 +4949,34 @@
    "batch": "pr129-2026-11-07",
    "numbers": 10,
    "date": "2026-11-07"
+  },
+  "QL-hist-a896f0891d": {
+   "digest": "036e06c4ccd1d67d",
+   "by": "claude-source-csv",
+   "batch": "pr130-2026-11-07",
+   "numbers": 13,
+   "date": "2026-11-07"
+  },
+  "QL-hist-cb0a873518": {
+   "digest": "43e5e8ca6095a019",
+   "by": "claude-source-csv",
+   "batch": "pr130-2026-11-07",
+   "numbers": 66,
+   "date": "2026-11-07"
+  },
+  "QL-hist-d4b7850d53": {
+   "digest": "9ef82cd623a469eb",
+   "by": "claude-source-csv",
+   "batch": "pr130-2026-11-07",
+   "numbers": 1,
+   "date": "2026-11-07"
+  },
+  "QL-hist-394e5b02d0": {
+   "digest": "7474ff660d3ff268",
+   "by": "claude-source-csv",
+   "batch": "pr130-2026-11-07",
+   "numbers": 92,
+   "date": "2026-11-07"
   }
  }
 }

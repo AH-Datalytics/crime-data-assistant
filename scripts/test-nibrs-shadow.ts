@@ -432,7 +432,7 @@ assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"
   assert.doesNotMatch(unfound.explanation, /don't answer this question/);
   const outside: [string, RegExp][] = [
     ["Memphis crime on a map", /^Maps aren't available here/],
-    ["US population per year since 1960", /^Population figures on their own aren't available here/],
+    ["US population per year since 1960", /^Population is answered on its own for an agency, a state or the nation/], // without the Crime Index build
     ["Can you give me a list of Hawaii law enforcement agencies ordered by population covered in 2024?", /^A list of agencies/],
     ["How common is cybercrime in New Hampshire?", /^Cybercrime isn't one category/],
     ["Thefts on college campuses in New Jersey in 2020", /^College and university police agencies/],
@@ -440,7 +440,7 @@ assert.ok(places.byName.get("new york city")!.every((x) => x.ori === "NY0303000"
   ];
   for (const [q, re] of outside) assert.match(as(ask(q), "decline").explanation, re, q);
   assert.equal(ask("College Station robberies in 2024").kind !== "decline" || !/College and university/.test((ask("College Station robberies in 2024") as { explanation: string }).explanation), true, "a place named College is not a campus");
-  assert.ok(ask("Memphis population and robbery rate in 2023").kind === "decline" ? !/^Population figures/.test((ask("Memphis population and robbery rate in 2023") as { explanation: string }).explanation) : true, "population beside a crime is not the population-only limit");
+  assert.ok(ask("Memphis population and robbery rate in 2023").kind === "decline" ? !/^Population is answered on its own/.test((ask("Memphis population and robbery rate in 2023") as { explanation: string }).explanation) : true, "population beside a crime is not the population-only limit");
   const nation = as(ask("show homicides and total violent crimes nationwide by year for 2000 to 2025"), "decline");
   assert.doesNotMatch(nation.explanation + (nation.alternative?.question ?? ""), /\bin nationwide\b/);
 }

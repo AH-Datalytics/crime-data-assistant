@@ -6,7 +6,9 @@
  *     [--historical <crime index build>] [--python <python with duckdb>] [--limit N] [--report]
  *     [--workers N] [--sql-cache <dir>] [--spot] [--compare <outcomes.jsonl>]
  *
- * --labels is the local label file (with the question text; outside the repo). Each label's engine outcome is appended
+ * --labels: the labels with each question's text, either the repo's scripts/fixtures/answer-eval/qlog-labels.json
+ * ({about, labels: [...]}) or a local array of the same labels (labels_local_v17.json: the same 4,379). The file's
+ * hash is part of a progress file's identity, so a run resumes only with the same file. Each label's engine outcome is appended
  * to --progress as it is made (outside the repo), so a stopped run resumes where it stopped. --report writes the counts
  * only to docs/reports/qlog-scorecard.md. Local only: reads the canonical build; never in CI.
  *
@@ -245,7 +247,11 @@ function bucket(l: Label, g: Got | null): Bucket {
   return miss(kind === "answer" ? "wrong answer" : "wrong clarify");
 }
 
-const allLabels = (JSON.parse(fs.readFileSync(LABELS, "utf8")) as Label[]);
+// The repo fixture wraps the labels in an object; a local file is the array itself (the runner laptop, 2026-11-07:
+// "labels.forEach is not a function" when the fixture was passed).
+const labelFile = JSON.parse(fs.readFileSync(LABELS, "utf8")) as Label[] | { labels: Label[] };
+const allLabels = Array.isArray(labelFile) ? labelFile : labelFile.labels;
+if (!Array.isArray(allLabels)) throw new Error(`--labels ${LABELS}: no labels array (expected an array, or an object with "labels")`);
 /**
  * The spot set: a fixed 200 questions, 40 from each source's tab, the first by a hash of the label id (so the same 200
  * every run, whatever the order of the file), first questions and follow-ups alike.
