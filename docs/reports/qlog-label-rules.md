@@ -136,7 +136,4 @@ A clarify is correct when the engine asks about any missing part. A route to ano
 - reviewed labels: 3 of 82 wrong; corrected drafts: 0 of 18.
 The three corrections are applied as review entries (codex-check-4).
 
-**Changes after the review** (each a review entry in `qlog-label-review.json`, so the drafter keeps it):
-- v18 (2026-11-07): QL-hist-81df62c2e3, "National clearance rates 1960 to 2024", is a clarify about the crime, not an answer. No crime is named, and D31/D09 ask which (PR #131's scorecard; agreed by the coordinator).
-
 **Still to do.** No label is confirmed: a reviewed label is two labelers agreeing, not a human check. A miss on the scorecard is a strong candidate, not yet a finding.

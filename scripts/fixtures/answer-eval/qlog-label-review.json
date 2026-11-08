@@ -6602,15 +6602,7 @@
 },
 "QL-hist-81df62c2e3": {
 "status": "reviewed",
-"by": "coordinator-2026-11-07",
-"why": "D31/D09: no crime named, so which kind of crime is asked (PR #131 scorecard; agreed by the coordinator 2026-11-07)",
-"expected": {
-"outcome": "clarify",
-"source": null,
-"about_any": [
-"crime"
-]
-}
+"by": "codex-second-1"
 },
 "QL-hist-82abcdbbd2": {
 "status": "reviewed",
