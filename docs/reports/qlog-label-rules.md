@@ -136,11 +136,24 @@ A clarify is correct when the engine asks about any missing part. A route to ano
 - reviewed labels: 3 of 82 wrong; corrected drafts: 0 of 18.
 The three corrections are applied as review entries (codex-check-4).
 
-**Changes after the review** (each a review entry in `qlog-label-review.json`, so the drafter keeps it):
-- v18 (2026-11-07): QL-hist-81df62c2e3, "National clearance rates 1960 to 2024", is a clarify about the crime, not an answer. No crime is named, and D31/D09 ask which (PR #131's scorecard; agreed by the coordinator).
-- v18 (2026-11-07): same-name places follow the Los Angeles rule. Jeff: "2, yes". When two same-named agencies each serve 100,000+ people (St. Louis city and county, El Paso, Mobile, Fresno, Sacramento, San Diego, Kansas City, Charlotte-Mecklenburg), the question asks which. 34 more labels (found with the engine's own place resolver) now expect "which <place>": an answer label becomes that clarify, and a clarify about another part also accepts it, since any missing part is a right one to ask (D31). A question that already says which agency ("LAPD", "City of Los Angeles", "Kansas City Police Department", a county or sheriff) keeps its answer label: the engine asking there is a misread for an engine fix, not this rule (8 such).
-- v18 (2026-11-07): where the question names no crime at all ("clearance rates in Chicago"), the crime is a missing part too (D31). 6 labels that listed only the period or place now also accept the crime question. Questions asking about every crime type or a named category ("all major crime categories", "Crimes Against Property") keep their labels, since asking which crime there is the engine's miss.
-- Scoring (2026-11-07): D31's "which kind of crime" (buttons Violent crime, Property crime, Both) counts as the "violent, property or both" question (D09) as well as a crime question. These are one question under two names; the wrong-clarify audit found 79 such clarifies filed as wrong.
-- v18 (2026-11-07): a bare "Los Angeles" asks which agency. Jeff: "Los Angeles should ask whether they mean the county sheriff or police department". The 31 labels for a bare "Los Angeles" (not "Los Angeles city", "City of Los Angeles", "LAPD", "Los Angeles County" or "sheriff") that expected an answer now expect the clarify "which Los Angeles", follow-ups too. Left out: "What agencies have the name Los Angeles in the historical_agency table?", which isn't about a place's figures.
+**v18 (2026-11-07): two rules in the drafter, applied to every label.** Both are in `scripts/draft-qlog-labels.py`, and every label was regenerated from them. No label was picked or changed by hand, and none to match the engine. Today's drafter reproduces v17 exactly, so v18's 85 changes are these two rules' effect alone.
+- **Same-named agencies (R11, Jeff).** Jeff: "Los Angeles should ask whether they mean the county sheriff or police department", and "2, yes": same-name places follow the Los Angeles rule.
+  - A name that two city or county agencies share, each serving 100,000+ people, is asked about: "which <place>". That includes a city and its county in one state (Los Angeles, St. Louis, El Paso, Mobile, Fresno, San Diego, Charlotte, Baltimore). It applies whether the question names one place or several, and whether or not it names a state, unless the state leaves only one of them.
+  - Words that say which agency settle it, read in the question as asked: "city of St. Louis", "St. Louis city", "Los Angeles Police Department", "LAPD", "St Louis County", "sheriff". Such questions keep their labels. Where the engine asks anyway, that's an engine misread to fix, not a label to change.
+  - The same-name question is added to the label's missing parts, since any missing part is a right one to ask (D31): an answer label becomes that clarify, and a clarify about another part also accepts it.
+- **A clearance rate names no crime (R09, D31).** "Clearance rates in Chicago" and "National clearance rates 1960 to 2024" name a statistic, not a crime, so the crime is missing and asked. A crime named beside it ("murder clearance rate") or a NIBRS offense code ("23F") names one. With no crime and no place either ("clearance", "clearance rates over time"), the whole question is asked (R08).
+- **Knock-on effect:** a follow-up to a question whose label became a clarify follows the follow-up rules (a reply to a clarify is left out, D4).
+
+**Scoring change (2026-11-07), separate from the labels.** D31's "which kind of crime" (buttons Violent crime, Property crime, Both) counts as the "violent, property or both" question (D09) as well as a crime question. It is one question under two names; the wrong-clarify audit found 79 such clarifies filed as wrong. This changes what is measured, not what users see.
+
+**Before and after** on dev's last full run (81cbe67 outcomes, dev's verified answers). The rescoring reproduces dev's published counts exactly in its first row.
+
+| | Correct | Unverified | Wrong answer | Bad decline | Wrong clarify | Follow-up error |
+|---|---|---|---|---|---|---|
+| Dev labels, dev scorer | 2,102 | 37 | 0 | 888 | 407 | 490 |
+| Dev labels, scorer change only | 2,181 | 37 | 0 | 888 | 328 | 490 |
+| v18 labels and scorer change | 2,225 | 37 | 0 | 888 | 288 | 485 |
+
+None of the 85 changed labels is a question the engine answers today, so the change cannot make a wrong answer.
 
 **Still to do.** No label is confirmed: a reviewed label is two labelers agreeing, not a human check. A miss on the scorecard is a strong candidate, not yet a finding.

@@ -88,6 +88,37 @@ for a in agencies:
             states_of[n].add(a["state"])
             pop_of[n][a["state"]] = max(pop_of[n][a["state"]], a.get("population") or 0)
 
+# The city and county agencies of each base name ("los angeles" for Los Angeles and Los Angeles County), by state, with
+# the largest population of each kind in each state: Jeff's same-name rule (below) reads them.
+same_base = collections.defaultdict(lambda: collections.defaultdict(int))
+for a in agencies:
+    if a.get("kind") not in ("city", "county"):
+        continue
+    for n in {a["name"].lower(), *(x.lower() for x in (a.get("aliases") or []))}:
+        b = re.sub(r"\s+(?:county|parish)$", "", n)
+        if len(b) >= 4:
+            same_base[b][(a["kind"], a["state"])] = max(same_base[b][(a["kind"], a["state"])], a.get("population") or 0)
+
+def same_name_ask(name, q, raw=""):
+    """Jeff 2026-11-07 ("Los Angeles should ask whether they mean the county sheriff or police department"; "2, yes":
+    same-name places follow the Los Angeles rule): a name two city or county agencies share, each serving 100,000+
+    people, is asked about. Words that say which ("city of St. Louis", "St. Louis city", "Los Angeles Police", "LAPD")
+    settle it; a state named settles it only when it leaves one of them (a city and its county are in one state). The
+    words are read in the question as asked too (`raw`): the misspelling fixer can rewrite "St Louis County"."""
+    if re.search(r"\s(?:county|parish)$", name):
+        return False
+    big = [(k, st) for (k, st), pop in same_base.get(name, {}).items() if pop >= 100_000]
+    if len(big) < 2:
+        return False
+    # "St. Louis", "St Louis" and "Saint Louis" are one name.
+    n = re.sub(r"^st\\?\.?\\ ", r"(?:st\\.?|saint)\\s+", re.escape(name)).replace(r"\.", r"\.?")
+    said = r"\bcity\s+of\s+" + n + r"\b|\b" + n + r"\s+(?:city|police|pd|sheriff|county|parish)\b"
+    if re.search(said, q, re.I) or re.search(said, raw, re.I):
+        return False
+    if has_state(q) and len({st for _, st in big}) > 1:
+        return False
+    return True
+
 def ambiguous(name):
     """Several states have it and none is plainly the one meant, by the app's reviewed rule (places.ts resolvePlace):
     two or more of 100,000+ people, or the largest less than twice the next ("Clinton"). Salem, Oregon (about four
@@ -176,8 +207,11 @@ def label_first(q, tab):
         return ("answer", "a lookup (coverage, codes, agency list)", TAB_SOURCE.get(tab), "R07", "draft", "a capability gap today")
     # Misspellings the engine reads ("new orlens", "homocide") are read here too, so a label never asks about a part
     # the question does name.
-    q = spelled(q)
+    q0, q = q, spelled(q)
     crime = bool(CRIME.search(q))
+    # A NIBRS offense code ("23F", "13A") names a crime.
+    if crime and R(r"\bclear").search(q) and not CRIME.search(R(r"\bclear\w*(?:\s+(?:rates?|percent(?:age)?s?))?").sub(" ", q)) and not re.search(r"\b\d{2}[a-z]\b", q, re.I):
+        crime = False   # a clearance rate names no crime (D31)
     named = places(q)
     scope = bool(named) or has_state(q) or bool(NATIONAL.search(q)) or bool(REGION.search(q))
     # No crime and no place, or no crime and words that point back ("now detroit", "how about the national average"):
@@ -201,6 +235,11 @@ def label_first(q, tab):
         amb = [p for p in named if ambiguous(p)]
         if amb and len(named) == 1:
             missing.append(f"which {amb[0].title()}")
+    # Jeff's same-name rule (2026-11-07), for every place named, a state named or not, one place or several.
+    for p in dict.fromkeys(named):
+        w = f"which {p.title()}"
+        if same_name_ask(p, q, q0) and w not in missing:
+            missing.append(w)
     if SHOOTING.search(q) and not R(r"fatal|homicid|murder|killed|deaths?|injur|aggravated").search(q):
         missing.insert(0, "fatal or non-fatal shootings")
     if NEW_YORK.search(q) and not has_state(q.replace("New York", "").replace("new york", "")) and not any(p for p in named if p != "new york"):

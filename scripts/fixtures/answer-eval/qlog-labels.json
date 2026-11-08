@@ -43,17 +43,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -820,17 +820,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -1381,7 +1381,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -1540,7 +1540,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -1781,7 +1781,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities under P28."
@@ -1906,17 +1906,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -2279,7 +2279,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -3253,7 +3253,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -4361,7 +4361,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Several unqualified place names meet P28 ambiguity rules."
@@ -4490,17 +4490,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which Los Angeles",
     "about_any": [
+     "which Los Angeles",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -4811,7 +4812,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -4881,17 +4882,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -5553,6 +5554,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which Baltimore",
      "period"
     ]
    },
@@ -5788,7 +5790,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -5831,18 +5833,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -6359,7 +6361,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -6657,7 +6659,8 @@
     "source": null,
     "about": "crime",
     "about_any": [
-     "crime"
+     "crime",
+     "which Baltimore"
     ]
    },
    "label": {
@@ -6680,18 +6683,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -7150,7 +7153,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The earliest available date supplies the period but Baltimore is ambiguous."
@@ -7482,7 +7485,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires resolving both ambiguous place names."
@@ -7500,18 +7503,20 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Sacramento",
     "about_any": [
-     "period",
-     "which Sacramento"
-    ],
-    "about": "period"
+     "which Sacramento",
+     "which El Paso",
+     "which San Diego",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -7624,18 +7629,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "period",
     "about_any": [
-     "period",
-     "which El Paso"
-    ],
-    "about": "period"
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R13",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -7762,17 +7766,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -7787,17 +7791,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -7810,19 +7814,20 @@
    "question": "Los Angeles murder rate 12 months rolling",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    "outcome": "answer",
+    "source": "rtci",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "status": "draft",
+    "rule": "R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "A rolling series uses all available periods under D5."
    }
   },
   {
@@ -8048,7 +8053,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -8277,7 +8282,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing Baltimore city and county."
@@ -8598,18 +8603,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
-     "period",
-     "crime"
-    ],
-    "about": "period"
+     "crime",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "coordinator-2026-11-07",
-    "reviewed_by": "coordinator-2026-11-07",
-    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -8649,17 +8654,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Charlotte",
     "about_any": [
-     "which Charlotte-Mecklenburg"
-    ],
-    "about": "which Charlotte-Mecklenburg"
+     "which Charlotte"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -8747,18 +8752,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "violent, property or both",
     "about_any": [
-     "violent, property or both",
-     "which El Paso"
-    ],
-    "about": "violent, property or both"
+     "violent, property or both"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R09b",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D09"
    }
   },
   {
@@ -8825,18 +8829,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "period",
     "about_any": [
-     "period",
-     "which El Paso"
-    ],
-    "about": "period"
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R13",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -9061,7 +9064,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Baltimore city and county are ambiguous under P28."
@@ -9156,18 +9159,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -9553,7 +9556,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing city and county."
@@ -9775,17 +9778,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -10013,7 +10016,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The period is reversed and several city names are ambiguous."
@@ -10282,7 +10285,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Kansas City requires disambiguation under P28."
@@ -10307,7 +10310,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing city and county."
@@ -10976,17 +10979,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -11704,18 +11707,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -12142,17 +12145,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which St. Louis",
     "about_any": [
      "which St. Louis"
-    ],
-    "about": "which St. Louis"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -12195,7 +12198,8 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both"
+     "violent, property or both",
+     "which Los Angeles"
     ]
    },
    "label": {
@@ -12248,7 +12252,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing city and county."
@@ -12676,7 +12680,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires distinguishing city and county."
@@ -13242,7 +13246,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Baltimore city and county require disambiguation."
@@ -13288,6 +13292,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which Charlotte",
      "period"
     ]
    },
@@ -13469,7 +13474,9 @@
     "source": null,
     "about": "fatal or non-fatal shootings",
     "about_any": [
-     "fatal or non-fatal shootings"
+     "fatal or non-fatal shootings",
+     "which Los Angeles",
+     "which Baltimore"
     ]
    },
    "label": {
@@ -13540,19 +13547,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
      "crime",
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "crime"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -13850,17 +13857,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Mobile",
     "about_any": [
      "which Mobile"
-    ],
-    "about": "which Mobile"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -14801,7 +14808,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "D5 permits the quarterly series but Baltimore remains ambiguous."
@@ -14852,7 +14859,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -15121,7 +15128,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -15196,7 +15203,8 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both"
+     "violent, property or both",
+     "which Los Angeles"
     ]
    },
    "label": {
@@ -15736,17 +15744,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Charlotte",
     "about_any": [
-     "which Charlotte-Mecklenburg"
-    ],
-    "about": "which Charlotte-Mecklenburg"
+     "which Charlotte"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -16052,7 +16060,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Jacksonville has multiple qualifying places under P28."
@@ -16290,7 +16298,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -16476,7 +16484,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "D5 permits the moving series but Baltimore remains ambiguous."
@@ -16793,7 +16801,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -16921,7 +16929,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -17225,7 +17233,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -17379,7 +17387,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -17664,18 +17672,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which El Paso",
     "about_any": [
-     "period",
-     "which El Paso"
-    ],
-    "about": "period"
+     "which El Paso",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -17972,6 +17980,7 @@
     "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
+     "which Los Angeles",
      "period"
     ]
    },
@@ -18189,7 +18198,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Fayetteville has multiple qualifying cities under P28."
@@ -18240,7 +18249,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -18522,6 +18531,7 @@
     "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
+     "which San Diego",
      "period"
     ]
    },
@@ -18786,7 +18796,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Maryland does not distinguish city and county."
@@ -19317,17 +19327,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which Los Angeles",
     "about_any": [
+     "which Los Angeles",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -19499,17 +19510,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Fresno",
     "about_any": [
      "which Fresno"
-    ],
-    "about": "which Fresno"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -19524,18 +19535,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -19635,7 +19646,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -19782,7 +19793,8 @@
     "source": null,
     "about": "crime",
     "about_any": [
-     "crime"
+     "crime",
+     "which Los Angeles"
     ]
    },
    "label": {
@@ -19838,7 +19850,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -20149,7 +20161,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -22537,7 +22549,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -23181,7 +23193,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "New York does not explicitly specify the city."
@@ -23784,7 +23796,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -24088,7 +24100,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "New York requires city versus state clarification."
@@ -24540,17 +24552,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -24665,17 +24677,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which St. Louis",
     "about_any": [
      "which St. Louis"
-    ],
-    "about": "which St. Louis"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -25044,17 +25056,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -25170,17 +25182,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -25632,18 +25644,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -25742,7 +25754,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -26494,7 +26506,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -26538,17 +26550,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which Charlotte",
     "about_any": [
+     "which Charlotte",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -26622,7 +26635,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -27051,7 +27064,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -27917,7 +27930,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "20210 is malformed and cannot be silently replaced."
@@ -27984,19 +27997,20 @@
    "question": "show st louis homicide rates from 1930",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which St. Louis"
-    ],
-    "about": "which St. Louis"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "St Louis is a recognizable place."
    }
   },
   {
@@ -28135,17 +28149,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -28627,7 +28641,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R10>2nd",
+    "rule": "R08>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "This asks about data availability."
@@ -28829,7 +28843,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P18 prohibits state clearance rates."
@@ -29000,18 +29014,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
-     "period",
-     "crime"
-    ],
-    "about": "period"
+     "crime",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "coordinator-2026-11-07",
-    "reviewed_by": "coordinator-2026-11-07",
-    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -30273,18 +30287,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
+    "about": "the whole question",
     "about_any": [
-     "place",
-     "period"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
+    "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -30433,7 +30446,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R10>2nd",
+    "rule": "R08>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Anne Arundel County and murder are recognizable misspellings."
@@ -31860,6 +31873,7 @@
     "about": "crime",
     "about_any": [
      "crime",
+     "which Charlotte",
      "period"
     ]
    },
@@ -32215,17 +32229,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
      "crime"
-    ],
-    "about": "crime"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "coordinator-2026-11-07",
-    "reviewed_by": "coordinator-2026-11-07",
-    "notes": "D31/D09: no crime named, so which kind of crime is asked (PR #131 scorecard; agreed by the coordinator 2026-11-07)"
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -32296,7 +32310,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P18 prohibits the requested statewide comparison."
@@ -32937,7 +32951,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P26 requires city versus state."
@@ -33064,7 +33078,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities under P28."
@@ -34138,7 +34152,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -34295,7 +34309,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The offense category and two place names remain ambiguous."
@@ -36652,7 +36666,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -36696,17 +36710,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -37645,17 +37659,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -37670,17 +37684,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "which Los Angeles",
     "about_any": [
+     "which Los Angeles",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -37821,18 +37836,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -38282,17 +38297,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "period",
-     "crime"
+     "period"
     ],
     "about": "period"
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R11>2nd",
-    "drafted_by": "coordinator-2026-11-07",
-    "reviewed_by": "coordinator-2026-11-07",
-    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
+    "status": "draft",
+    "rule": "R09>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Harris County must not be changed to Harrison County."
    }
   },
   {
@@ -38359,18 +38373,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -38444,7 +38458,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -38880,17 +38894,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -39480,6 +39494,7 @@
     "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
+     "which Los Angeles",
      "period"
     ]
    },
@@ -39530,17 +39545,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -40153,6 +40168,7 @@
     "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
+     "which San Diego",
      "period"
     ]
    },
@@ -40591,7 +40607,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P26 requires city versus state."
@@ -40643,7 +40659,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P26 requires city versus state."
@@ -42149,7 +42165,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -42402,7 +42418,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Residential burglary requires location detail."
@@ -42627,7 +42643,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -43611,7 +43627,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P47 explicitly declines cases."
@@ -44757,19 +44773,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
      "crime",
-     "period",
-     "which El Paso"
-    ],
-    "about": "crime"
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -47135,7 +47150,8 @@
     "source": null,
     "about": "violent, property or both",
     "about_any": [
-     "violent, property or both"
+     "violent, property or both",
+     "which Los Angeles"
     ]
    },
    "label": {
@@ -47182,19 +47198,20 @@
    "question": "DWI in El Paso, Texas over time",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which El Paso"
-    ],
-    "about": "which El Paso"
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R09>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "DWI specifies a Group B offense answered through arrests."
    }
   },
   {
@@ -48077,18 +48094,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -48703,7 +48720,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Communities within Los Angeles request sub-city geography."
@@ -48874,17 +48891,20 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+     "crime",
+     "which Los Angeles",
+     "which Baltimore",
+     "which St. Louis"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -48924,17 +48944,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Charlotte",
     "about_any": [
-     "which Charlotte-Mecklenburg"
-    ],
-    "about": "which Charlotte-Mecklenburg"
+     "which Charlotte"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -49280,18 +49300,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "place",
     "about_any": [
-     "place",
-     "crime"
-    ],
-    "about": "place"
+     "place"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10>2nd",
-    "drafted_by": "coordinator-2026-11-07",
-    "reviewed_by": "coordinator-2026-11-07",
-    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
+    "rule": "R10",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -50497,7 +50516,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "D5 permits the rolling series but Baltimore remains ambiguous."
@@ -50977,17 +50996,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which St. Louis",
     "about_any": [
      "which St. Louis"
-    ],
-    "about": "which St. Louis"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -51156,18 +51175,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -51769,7 +51788,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R09>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P18 prohibits state clearance rates."
@@ -51794,7 +51813,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities."
@@ -52554,18 +52573,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "period",
     "about_any": [
-     "period",
-     "which El Paso"
-    ],
-    "about": "period"
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R13",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
    }
   },
   {
@@ -53652,19 +53670,20 @@
    "question": "St Louis carjackings per month",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which St. Louis"
-    ],
-    "about": "which St. Louis"
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "St Louis is a recognizable place."
    }
   },
   {
@@ -56543,7 +56562,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county before routing weapon detail."
@@ -57392,18 +57411,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -57502,7 +57521,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities."
@@ -57844,17 +57863,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "crime",
     "about_any": [
+     "crime",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
+    "rule": "R09",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "D31"
    }
   },
   {
@@ -60301,17 +60321,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Mobile",
     "about_any": [
      "which Mobile"
-    ],
-    "about": "which Mobile"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -61897,7 +61917,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R10>2nd",
+    "rule": "R08>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The requested evidence detail is outside these sources."
@@ -63284,18 +63304,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
+    "about": "the whole question",
     "about_any": [
-     "place",
-     "period"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
+    "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -63512,17 +63531,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "period",
-     "which San Diego"
+     "period"
     ],
     "about": "period"
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R09>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Shoplifting is recognizable despite the misspelling."
    }
   },
   {
@@ -65687,7 +65705,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -66217,17 +66235,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -67516,7 +67534,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -67685,7 +67703,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R10>2nd",
+    "rule": "R08>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The requested evidence detail is unavailable."
@@ -68802,18 +68820,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
-     "period",
-     "crime"
-    ],
-    "about": "period"
+     "crime",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "coordinator-2026-11-07",
-    "reviewed_by": "coordinator-2026-11-07",
-    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -68983,17 +69001,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -69615,17 +69633,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -69768,17 +69786,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Charlotte",
     "about_any": [
-     "which Charlotte-Mecklenburg"
-    ],
-    "about": "which Charlotte-Mecklenburg"
+     "which Charlotte"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -69801,7 +69819,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R13>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -70044,18 +70062,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
+    "about": "the whole question",
     "about_any": [
-     "place",
-     "period"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
+    "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -71924,7 +71941,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R10>2nd",
+    "rule": "R08>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "D1 permits defining clearance rates."
@@ -72079,7 +72096,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "20210 is malformed."
@@ -74432,18 +74449,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
+    "about": "the whole question",
     "about_any": [
-     "place",
-     "period"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
+    "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -74714,17 +74730,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -74922,7 +74938,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Columbus has multiple qualifying cities."
@@ -75478,18 +75494,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "crime",
     "about_any": [
-     "period",
-     "crime"
-    ],
-    "about": "period"
+     "crime",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "coordinator-2026-11-07",
-    "reviewed_by": "coordinator-2026-11-07",
-    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
+    "rule": "R09",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D31"
    }
   },
   {
@@ -75632,18 +75648,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "period",
-     "which Los Angeles"
-    ],
-    "about": "period"
+     "which Los Angeles",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
+    "rule": "R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -75922,7 +75938,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -75940,17 +75956,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
+    "about": "the whole question",
     "about_any": [
-     "place"
+     "the whole question"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
+    "rule": "R08",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -77223,7 +77239,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "R14>2nd",
+    "rule": "R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -80714,7 +80730,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -80765,7 +80781,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F3>2nd",
+    "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Adding Baltimore introduces city versus county ambiguity."
@@ -80962,7 +80978,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F3>2nd",
+    "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Baltimore remains ambiguous in the inherited comparison."
@@ -82242,7 +82258,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Several unqualified place names remain ambiguous."
@@ -82830,19 +82846,20 @@
    "question": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "las vegas murder clearances by type of clearance in 2025",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "status": "draft",
+    "rule": "F1+R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Clearance type detail requires NIBRS, not annual Historical totals."
    }
   },
   {
@@ -84023,7 +84040,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F3>2nd",
+    "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Correcting the years leaves place ambiguity unresolved."
@@ -85122,7 +85139,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Baltimore city versus county remains unresolved."
@@ -85189,20 +85206,15 @@
    "question": "Add 2020 and 2021",
    "previous": "Murders per year from 2022 to 2025 in Houston, Dallas, Plano, Atlanta, Memphis, New Orleans, Birmingham, Baton Rouge and Mobile",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the earlier question, changed as asked",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
     "status": "reviewed",
-    "rule": "F3",
+    "rule": "F4",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a follow-up to an answerable question"
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -85246,7 +85258,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F3>2nd",
+    "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The new shooting measure and inherited Baltimore both remain ambiguous."
@@ -86874,17 +86886,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "F1+R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -87158,7 +87170,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F3>2nd",
+    "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The inherited comparison still has Baltimore ambiguity."
@@ -87703,17 +87715,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+     "which Los Angeles",
+     "which Baltimore",
+     "which Jacksonville"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "F1+R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -88266,20 +88280,19 @@
    "question": "hate crime data San Diego, California from 2000 to 2024",
    "previous": "hate crime data san diego county",
    "expected": {
-    "outcome": "answer",
-    "source": "hate_crime",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which San Diego",
+    "about_any": [
+     "which San Diego"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
+    "rule": "F1+R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": ""
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -90560,7 +90573,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R13>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The standalone question cannot inherit a period and Baltimore remains ambiguous."
@@ -90805,7 +90818,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -90970,17 +90983,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
+    "about": "crime",
     "about_any": [
+     "crime",
      "period"
     ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R13",
+    "rule": "F1+R09",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "notes": "D31"
    }
   },
   {
@@ -91220,17 +91234,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which St. Louis",
     "about_any": [
+     "which St. Louis",
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "F1+R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -93050,7 +93065,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
@@ -94035,20 +94050,19 @@
    "question": "car theft in los angelos 2020",
    "previous": "murders in New Orleans 2015 to 2020",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which Los Angeles",
+    "about_any": [
+     "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
+    "rule": "F1+R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -95230,17 +95244,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
+    "about": "which Los Angeles",
     "about_any": [
      "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "rule": "F1+R11",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -96832,7 +96846,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F3>2nd",
+    "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -97667,7 +97681,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F3>2nd",
+    "rule": "F4>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
@@ -98718,19 +98732,20 @@
    "question": "Give me the number of murder clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
    "previous": "Give me the number of clearances broken down by type for these cities in 2025: Chicago, IL New York, NY Houston, TX Los Angeles, CA Philadelphia, PA Memphis, TN Detroit, MI Baltimore, MD Dallas, TX Washington, DC Indianapolis, IN St. Louis, MO Louisville, KY Kansas City, MO Phoenix, AZ Milwaukee, WI San Antonio, TX Birmingham, AL Columbus, OH Charlotte, NC Cleveland, OH Las Vegas, NV Albuquerque, NM Nashville, TN Atlanta, GA Oakland, CA Minneapolis, MN Fort Worth, TX Oklahoma City, OK Denver, CO Cincinnati, OH Portland, OR Austin, TX Richmond, VA Seattle, WA Stockton, CA",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "status": "draft",
+    "rule": "F1+R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Clearance type detail requires NIBRS."
    }
   },
   {
@@ -99663,19 +99678,20 @@
    "question": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "las vegas murder clearances by type of clearance in 2025",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "status": "draft",
+    "rule": "F1+R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Clearance type detail requires NIBRS."
    }
   },
   {
@@ -100654,6 +100670,7 @@
     "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
+     "which San Bernardino",
      "period"
     ]
    },
@@ -100725,19 +100742,20 @@
    "question": "give me number of murders and murder clearances by type for 2025 for these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "previous": "no, cities in California, not California City",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "status": "draft",
+    "rule": "F1+R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Clearance type detail requires NIBRS."
    }
   },
   {
@@ -105069,19 +105087,20 @@
    "question": "murder clearances by type in 2025 in these cities Chicago, IL,  New York City, NY,  Houston, TX,  Philadelphia, PA,  Los Angeles, CA,  Memphis, TN,  Detroit, MI,  Milwaukee, WI,  St Louis, MO,  Dallas, TX,  Indianapolis, IN,  Baltimore, MD,  Kansas City, MO,  Phoenix, AZ,  Washington, DC,  San Antonio, TX,  Cleveland, OH,  Atlanta, GA,  Charlotte, NC,  Las Vegas, NV,  Columbus, OH,  Birmingham, AL,  Jacksonville, FL,  Fort Worth, TX,  Albuquerque, NM,  Oklahoma City, OK,  Cincinnati, OH,  Minneapolis, MN,  Nashville, TN,  Richmond, VA,  Austin, TX,  Portland, OR,",
    "previous": "Murder clearances by type in 2025 in these cities: Chicago, IL New York City, NY Houston, TX Philadelphia, PA Los Angeles, CA Memphis, TN Detroit, MI Milwaukee, WI St Louis, MO Dallas, TX Indianapolis, IN Baltimore, MD Kansas City, MO Phoenix, AZ Washington, DC San Antonio, TX Cleveland, OH Atlanta, GA Charlotte, NC Las Vegas, NV Columbus, OH Birmingham, AL Jacksonville, FL Fort Worth, TX Albuquerque, NM Oklahoma City, OK Cincinnati, OH Minneapolis, MN Nashville, TN Richmond, VA Austin, TX Portland, OR",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "which Los Angeles"
-    ],
-    "about": "which Los Angeles"
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
-    "rule": "F1+R14>2nd",
-    "drafted_by": "jeff-2026-11-07",
-    "reviewed_by": "jeff-2026-11-07",
-    "notes": "Jeff 2026-11-07: \"Los Angeles should ask whether they mean the county sheriff or police department\""
+    "status": "draft",
+    "rule": "F1+R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Clearance type detail requires NIBRS."
    }
   },
   {
@@ -105380,20 +105399,19 @@
    "question": "number of homicides in mobile al in 2025",
    "previous": "number of homicides in houson  tx in 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which Mobile",
+    "about_any": [
+     "which Mobile"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
+    "rule": "F1+R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -106233,20 +106251,19 @@
    "question": "number of homicides in fresno ca in 2025",
    "previous": "number of homicides in fresno county ca in 2025",
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "which Fresno",
+    "about_any": [
+     "which Fresno"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R14",
+    "rule": "F1+R11",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's"
+    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -106959,7 +106976,7 @@
    },
    "label": {
     "status": "draft",
-    "rule": "F1+R14>2nd",
+    "rule": "F1+R11>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county."
