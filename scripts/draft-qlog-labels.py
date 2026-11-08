@@ -131,9 +131,10 @@ def state_near(before, after):
 # name ("mobile phones", "Charlotte Hornets"), "to" before it outside a comparison or a "from ... to" ("reported to
 # Charlotte"; "Compare Chicago to Baltimore" and "from Chicago to Baltimore" are places), or an institution after any
 # name ("San Diego State").
-NOT_PLACE_AFTER = R(r"^\s+(?:phones?|cell\w*|devices?|apps?|homes?|units?|hornets|bobcats|panthers|fc)\b")
-TO_BEFORE = R(r"\bto\s+(?:the\s+)?$")
-COMPARED_TO = R(r"(?:\bcompar\w*\b|\bfrom\b)[^?!]*\bto\s+(?:the\s+)?$")
+NOT_PLACE_AFTER = R(r"^\s+(?:phones?|cell\w*|devices?|apps?|homes?|units?|banking|payments?|wallets?|money|hornets|bobcats|panthers|fc)\b")
+# "to" after a verb of telling or sending ("reported to Charlotte"); "compared to", "relative to", "from ... to" keep it
+# a place.
+TO_BEFORE = R(r"\b(?:reported|report|reports|sent|send|given|gave|told|tell|talked|talk|spoke|speak|said|say|wrote|write|belongs?)\s+to\s+(?:the\s+)?$")
 INSTITUTION_AFTER = R(r"^\s+(?:state\b(?!\s*(?:,|police|patrol))|university|college|unified|school|airport|zoo|harbor|port\b|international)")
 # Words at one mention that say which agency it is: "St. Louis city", "Los Angeles Police", "St Louis County",
 # "sheriff"; "city of St. Louis", "county of ..."; a list under "cities" or "counties" ("the cities of New York, ...
@@ -164,7 +165,7 @@ def _mention_asks(name, n, big, text):
             continue
         if INSTITUTION_AFTER.match(after):
             continue
-        if TO_BEFORE.search(before) and not COMPARED_TO.search(before):
+        if TO_BEFORE.search(before):
             continue
         if " " not in name and NOT_PLACE_AFTER.match(after):
             continue

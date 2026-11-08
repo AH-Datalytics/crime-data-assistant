@@ -148,8 +148,8 @@ The three corrections are applied as review entries (codex-check-4).
 
     Such questions keep their labels. Where the engine asks anyway, that's an engine misread to fix, not a label to change. "District of Columbia" is not Columbia.
   - A name is read as the place unless the words around it make it something else:
-    - an ordinary noun after a one-word name ("mobile phones", "Charlotte Hornets");
-    - "to" before it outside a comparison or "from … to" ("reported to Charlotte"; "Compare Chicago to Baltimore" is a place);
+    - an ordinary noun after a one-word name ("mobile phones", "mobile banking", "Charlotte Hornets");
+    - "to" after a verb of telling or sending ("reported to Charlotte"); "compared to", "relative to" and "from … to" leave it a place;
     - an institution after any name ("San Diego State").
   - The same-name question is added to the label's missing parts, since any missing part is a right one to ask (D31): an answer label becomes that clarify, and a clarify about another part also accepts it.
 - **Earlier review corrections meet the new rules.** A correction from the second labeler keeps its wording, and the parts these two rules drafted for the same question are added to it. A corrected answer becomes the clarify the rules ask ("Los Angeles murder rate 12 months rolling" now asks which Los Angeles), and a corrected clarify also accepts the new part. A corrected decline or exclusion stays as it was. Only parts the rules drafted for that question are added, so a definition question ("What is a clearance rate") isn't made to ask for a crime.
