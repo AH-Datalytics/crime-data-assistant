@@ -5831,17 +5831,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -6679,17 +6680,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -7498,17 +7500,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Sacramento"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -7621,17 +7624,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which El Paso"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -8594,17 +8598,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "coordinator-2026-11-07",
+    "reviewed_by": "coordinator-2026-11-07",
+    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
    }
   },
   {
@@ -8642,20 +8647,19 @@
    "question": "Show me violent crime per capita over time in Charlotte",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Charlotte-Mecklenburg"
+    ],
+    "about": "which Charlotte-Mecklenburg"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -8743,17 +8747,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
-     "violent, property or both"
-    ]
+     "violent, property or both",
+     "which El Paso"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -8820,17 +8825,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which El Paso"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -9150,17 +9156,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -11697,17 +11704,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -12132,20 +12140,19 @@
    "question": "what is the murder trend in st louis",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which St. Louis"
+    ],
+    "about": "which St. Louis"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -13533,18 +13540,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "crime",
     "about_any": [
      "crime",
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -13840,20 +13848,19 @@
    "question": "Murders per year from 2022 to 2025 in Houston, Dallas, Plano, Atlanta, Memphis, New Orleans, Birmingham, Baton Rouge and Mobile",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Mobile"
+    ],
+    "about": "which Mobile"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -15727,24 +15734,19 @@
    "question": "violent crime in Charlotte monthly",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Charlotte-Mecklenburg"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Charlotte-Mecklenburg"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -17662,17 +17664,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which El Paso"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -19494,24 +19497,19 @@
    "question": "Robbery per month in Fresno, ca",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Fresno"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Fresno"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -19526,17 +19524,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -24664,20 +24663,19 @@
    "question": "Historical murder count in St. Louis",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which St. Louis"
+    ],
+    "about": "which St. Louis"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -25634,17 +25632,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -27985,20 +27984,19 @@
    "question": "show st louis homicide rates from 1930",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which St. Louis"
+    ],
+    "about": "which St. Louis"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "St Louis is a recognizable place."
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -29002,17 +29000,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "coordinator-2026-11-07",
+    "reviewed_by": "coordinator-2026-11-07",
+    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
    }
   },
   {
@@ -37822,17 +37821,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -38282,16 +38282,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "period"
+     "period",
+     "crime"
     ],
     "about": "period"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R11>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Harris County must not be changed to Harrison County."
+    "drafted_by": "coordinator-2026-11-07",
+    "reviewed_by": "coordinator-2026-11-07",
+    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
    }
   },
   {
@@ -38358,17 +38359,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -44755,18 +44757,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "crime",
     "about_any": [
      "crime",
-     "period"
-    ]
+     "period",
+     "which El Paso"
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -47179,20 +47182,19 @@
    "question": "DWI in El Paso, Texas over time",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which El Paso"
+    ],
+    "about": "which El Paso"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "DWI specifies a Group B offense answered through arrests."
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -48075,17 +48077,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -48919,24 +48922,19 @@
    "question": "Charlotte aggravated assaults per month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Charlotte-Mecklenburg"
     ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "about": "which Charlotte-Mecklenburg"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -49282,17 +49280,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place"
-    ]
+     "place",
+     "crime"
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "coordinator-2026-11-07",
+    "reviewed_by": "coordinator-2026-11-07",
+    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
    }
   },
   {
@@ -50976,20 +50975,19 @@
    "question": "How many carjackings occurred in St. Louis, MO in 2018?",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which St. Louis"
+    ],
+    "about": "which St. Louis"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -51158,17 +51156,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -52555,17 +52554,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which El Paso"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -53652,20 +53652,19 @@
    "question": "St Louis carjackings per month",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which St. Louis"
+    ],
+    "about": "which St. Louis"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "St Louis is a recognizable place."
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -57393,17 +57392,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -60299,20 +60299,19 @@
    "question": "Mobile, AL aggravated assaults per year, 2021 to 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Mobile"
+    ],
+    "about": "which Mobile"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -63513,16 +63512,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "period"
+     "period",
+     "which San Diego"
     ],
     "about": "period"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Shoplifting is recognizable despite the misspelling."
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -68802,17 +68802,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "coordinator-2026-11-07",
+    "reviewed_by": "coordinator-2026-11-07",
+    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
    }
   },
   {
@@ -69765,20 +69766,19 @@
    "question": "firearm murders in Charlotte since 2018",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Charlotte-Mecklenburg"
+    ],
+    "about": "which Charlotte-Mecklenburg"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {
@@ -75478,17 +75478,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "coordinator-2026-11-07",
+    "reviewed_by": "coordinator-2026-11-07",
+    "notes": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)"
    }
   },
   {
@@ -75631,17 +75632,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "which Los Angeles"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-07",
+    "reviewed_by": "jeff-2026-11-07",
+    "notes": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about"
    }
   },
   {

@@ -1236,7 +1236,16 @@
 },
 "QL-ct-49f10ad033": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-ct-49f501e7c0": {
 "status": "reviewed",
@@ -1424,7 +1433,16 @@
 },
 "QL-ct-532287e676": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-ct-5323272be4": {
 "status": "reviewed",
@@ -1616,7 +1634,16 @@
 },
 "QL-ct-5d8bb2b496": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Sacramento"
+]
+}
 },
 "QL-ct-5dc4002550": {
 "status": "draft",
@@ -1641,7 +1668,16 @@
 },
 "QL-ct-5f7bd203b6": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which El Paso"
+]
+}
 },
 "QL-ct-5f982de9e5": {
 "status": "reviewed",
@@ -1849,7 +1885,16 @@
 },
 "QL-ct-6839863e6c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-07",
+"why": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-ct-6857db5c72": {
 "status": "reviewed",
@@ -1857,7 +1902,15 @@
 },
 "QL-ct-685e5422ff": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Charlotte-Mecklenburg"
+]
+}
 },
 "QL-ct-68a5a2d44f": {
 "status": "draft",
@@ -1881,7 +1934,16 @@
 },
 "QL-ct-69ad318e43": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"violent, property or both",
+"which El Paso"
+]
+}
 },
 "QL-ct-69e6af2add": {
 "status": "reviewed",
@@ -1898,7 +1960,16 @@
 },
 "QL-ct-6a37dcebbc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which El Paso"
+]
+}
 },
 "QL-ct-6b0ccaf1ae": {
 "status": "reviewed",
@@ -1970,7 +2041,16 @@
 },
 "QL-ct-6e1b5cbca2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-ct-6e5a3bb5e5": {
 "status": "reviewed",
@@ -2506,7 +2586,16 @@
 },
 "QL-ct-8c1edc5135": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-ct-8ccdaaad6c": {
 "status": "reviewed",
@@ -2604,7 +2693,15 @@
 },
 "QL-ct-91208b8be1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which St. Louis"
+]
+}
 },
 "QL-ct-919e10fb48": {
 "status": "reviewed",
@@ -2900,7 +2997,17 @@
 },
 "QL-ct-a538dcd0b7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"crime",
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-ct-a5702324e2": {
 "status": "reviewed",
@@ -2960,7 +3067,15 @@
 },
 "QL-ct-a90e55b0b3": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Mobile"
+]
+}
 },
 "QL-ct-a9f17a6098": {
 "status": "reviewed",
@@ -3329,7 +3444,15 @@
 },
 "QL-ct-c490651b2a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Charlotte-Mecklenburg"
+]
+}
 },
 "QL-ct-c49c2d3bb2": {
 "status": "reviewed",
@@ -3783,7 +3906,16 @@
 },
 "QL-ct-dbcbd2a52a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which El Paso"
+]
+}
 },
 "QL-ct-dbe5eafde9": {
 "status": "reviewed",
@@ -4140,11 +4272,28 @@
 },
 "QL-ct-f3b1e8f431": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Fresno"
+]
+}
 },
 "QL-ct-f3bca6b8c5": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-ct-f3bed2b9ca": {
 "status": "reviewed",
@@ -5165,7 +5314,15 @@
 },
 "QL-hist-1f8afb6461": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which St. Louis"
+]
+}
 },
 "QL-hist-200454c354": {
 "status": "reviewed",
@@ -5366,7 +5523,16 @@
 },
 "QL-hist-2f9951cdad": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-hist-2fccc68bd6": {
 "status": "reviewed",
@@ -5839,12 +6005,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-4cfe2bc4b3": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "St Louis is a recognizable place.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
 "expected": {
-"outcome": "answer",
-"source": "historical"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which St. Louis"
+]
 }
 },
 "QL-hist-4d1a87a7b7": {
@@ -6065,7 +6234,16 @@
 },
 "QL-hist-5b8584137e": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-07",
+"why": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-hist-5b8ade42d5": {
 "status": "reviewed",
@@ -7804,7 +7982,16 @@
 },
 "QL-hist-c7f6c6c7c8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-hist-c8095590c0": {
 "status": "reviewed",
@@ -7887,13 +8074,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-ceef4ff63b": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Harris County must not be changed to Harrison County.",
+"status": "reviewed",
+"by": "coordinator-2026-11-07",
+"why": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)",
 "expected": {
 "outcome": "clarify",
+"source": null,
 "about_any": [
-"period"
+"period",
+"crime"
 ]
 }
 },
@@ -7912,7 +8101,16 @@
 },
 "QL-hist-cf529dcf28": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-hist-cf5a3d0bcc": {
 "status": "reviewed",
@@ -9153,7 +9351,17 @@
 },
 "QL-nibrs-17a9ddf4d9": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"crime",
+"period",
+"which El Paso"
+]
+}
 },
 "QL-nibrs-17b15bde40": {
 "status": "reviewed",
@@ -9646,12 +9854,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-2d042fbbf1": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "DWI specifies a Group B offense answered through arrests.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which El Paso"
+]
 }
 },
 "QL-nibrs-2d788e7430": {
@@ -9825,7 +10036,16 @@
 },
 "QL-nibrs-374b3eab47": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-nibrs-375abeaa09": {
 "status": "reviewed",
@@ -9997,7 +10217,15 @@
 },
 "QL-nibrs-410d0e5d97": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Charlotte-Mecklenburg"
+]
+}
 },
 "QL-nibrs-4114e7dba5": {
 "status": "draft",
@@ -10078,7 +10306,16 @@
 },
 "QL-nibrs-44927493d8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-07",
+"why": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"place",
+"crime"
+]
+}
 },
 "QL-nibrs-44a949917a": {
 "status": "reviewed",
@@ -10441,7 +10678,15 @@
 },
 "QL-nibrs-5118c44346": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which St. Louis"
+]
+}
 },
 "QL-nibrs-513b2b2145": {
 "status": "reviewed",
@@ -10482,7 +10727,16 @@
 },
 "QL-nibrs-52daf17740": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-nibrs-53525d97a5": {
 "status": "reviewed",
@@ -10772,7 +11026,16 @@
 },
 "QL-nibrs-5f7bd203b6": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which El Paso"
+]
+}
 },
 "QL-nibrs-5fd549e2e4": {
 "status": "reviewed",
@@ -10970,12 +11233,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-6a1bd69fdb": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "St Louis is a recognizable place.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which St. Louis"
+]
 }
 },
 "QL-nibrs-6a31829ddf": {
@@ -11698,7 +11964,16 @@
 },
 "QL-nibrs-8c1edc5135": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-nibrs-8c6a19ada0": {
 "status": "reviewed",
@@ -12286,7 +12561,15 @@
 },
 "QL-nibrs-a876df46a3": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Mobile"
+]
+}
 },
 "QL-nibrs-a881beaca7": {
 "status": "reviewed",
@@ -12935,13 +13218,15 @@
 "by": "codex-second-1"
 },
 "QL-nibrs-c8b191ca13": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Shoplifting is recognizable despite the misspelling.",
+"status": "reviewed",
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
 "expected": {
 "outcome": "clarify",
+"source": null,
 "about_any": [
-"period"
+"period",
+"which San Diego"
 ]
 }
 },
@@ -14026,7 +14311,16 @@
 },
 "QL-shr-08c0555a78": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-07",
+"why": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-shr-0973f98d14": {
 "status": "reviewed",
@@ -14228,7 +14522,15 @@
 },
 "QL-shr-1c413ef158": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"which Charlotte-Mecklenburg"
+]
+}
 },
 "QL-shr-1c538c9cb7": {
 "status": "draft",
@@ -15459,7 +15761,16 @@
 },
 "QL-shr-9d31a7479c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "coordinator-2026-11-07",
+"why": "Wrong-clarify audit 2026-11-07 (group D): the question names no crime, so the crime is a missing part too (D31)",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-shr-9d330706ed": {
 "status": "reviewed",
@@ -15488,7 +15799,16 @@
 },
 "QL-shr-9e03f9c4f0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-07",
+"why": "Jeff 2026-11-07 (\"2, yes\"): same-name places follow the Los Angeles rule; two same-named agencies of 100,000+ are asked about",
+"expected": {
+"outcome": "clarify",
+"source": null,
+"about_any": [
+"period",
+"which Los Angeles"
+]
+}
 },
 "QL-shr-9e4aca8cbb": {
 "status": "reviewed",
