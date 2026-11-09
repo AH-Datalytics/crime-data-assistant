@@ -56,7 +56,7 @@ import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { tableDigest } from "../lib/answer-eval/table-digest";
 import { bucket, type Bucket, type Got, type Label } from "./qlog-bucket";
-import { qualifies, readerBinding, readerKey, validateProposal, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
+import { qualifies, readerBinding, readerKey, scrubPersonal, validateProposal, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const LABELS = arg("--labels")!, PROGRESS = arg("--progress")!;
@@ -301,9 +301,11 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
     if (READINGS) {
       const fu = l.kind === "follow-up" && !!l.previous, year = Number(deps.release.lastMonth.slice(0, 4));
       const o0 = o as unknown as { kind: string; reason?: string };
-      if (qualifies(l.question, { kind: o0.kind, reason: o0.reason }, year)) {
-        const e = READINGS.entries[readerKey(l.question, fu ? l.previous : null)];
-        const v = e?.done ? validateProposal(e.proposal, l.question, year) : { ok: false as const, reason: "not fetched" };
+      // The scrubbed text, as fetched (a scrubbed detail stays unread, so a question that needed it is refused).
+      const q = scrubPersonal(l.question), prev = fu ? scrubPersonal(l.previous!) : null;
+      if (qualifies(q, { kind: o0.kind, reason: o0.reason }, year)) {
+        const e = READINGS.entries[readerKey(q, prev)];
+        const v = e?.done ? validateProposal(e.proposal, q, year) : { ok: false as const, reason: "not fetched" };
         if (v.ok) { o = fu ? shadowFollowUp(l.previous!, v.question, deps) : shadowAnswer(v.question, deps); via = "gemini"; read = v.question; }
         else via = `gemini refused: ${v.reason}`;
       }

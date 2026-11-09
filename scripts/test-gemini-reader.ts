@@ -5,7 +5,7 @@
  * proposals are written for the test.
  */
 import assert from "node:assert/strict";
-import { MEASURE_WORDS, qualifies, replacementText, unreadSpans, validateProposal, type Proposal, type Replacement } from "../lib/nibrs-shadow/gemini-reader";
+import { MEASURE_WORDS, qualifies, replacementText, scrubPersonal, unreadSpans, validateProposal, type Proposal, type Replacement } from "../lib/nibrs-shadow/gemini-reader";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 
 const Y = 2026;
@@ -72,6 +72,16 @@ assert.equal(replacementText({ span: "comparied", kind: "spelling", spelling: "c
 assert.equal(replacementText({ span: "willful", kind: "spelling", spelling: "willful" }), null);         // the same word
 // A prefix added, dropped or changed is another word, not a typo (Codex review 08).
 for (const [f, t] of [["unreported", "reported"], ["deported", "reported"], ["unrelated", "related"]]) assert.equal(replacementText({ span: f, kind: "spelling", spelling: t }), null, f);
+// Personal details are scrubbed before anything is sent or cached (the coordinator for Jeff, 2026-11-09); the rest of
+// the question is untouched, and a scrubbed detail stays unread, so a question that needed it is refused.
+assert.equal(scrubPersonal("is my business at 910 st. louis street 62025 risky"), "is my business at [address] risky");
+assert.equal(scrubPersonal("crime near 1600 Pennsylvania Ave NW, Washington DC 20500"), "crime near [address], Washington DC [zip]");
+assert.equal(scrubPersonal("email me at jane.doe@example.com the murders"), "email me at [email] the murders");
+assert.equal(scrubPersonal("call 314-555-0199 about robberies"), "call [phone] about robberies");
+for (const q of ["murders in 2024 on 5th street", "robberies in Memphis from 2019 to 2023", "show 10 years of murders in Memphis", "crime in zip code 62025", "top 10 cities by murder rate in 2024"])
+  assert.ok(!/\[(?:address|zip|email|phone)\]/.test(scrubPersonal(q)) || q.includes("5th street"), q);
+assert.ok(scrubPersonal("murders in 2024 on 5th street").includes("2024"));
+assert.ok(unreadSpans(scrubPersonal("burglaries at 123 main st in Memphis in 2024"), Y).some((u) => u.includes("[address]")));
 // When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "clarify" }, Y), true);

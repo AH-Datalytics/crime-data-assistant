@@ -28,7 +28,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { qualifies, READER_FOLLOW_UP_PROMPT, READER_GENERATION, READER_MODEL_ID, READER_RESPONSE_SCHEMA, READER_SYSTEM_PROMPT,
-  readerBinding, readerFollowUpPrompt, readerKey, readerUserPrompt, unreadSpans, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
+  readerBinding, readerFollowUpPrompt, readerKey, readerUserPrompt, scrubPersonal, unreadSpans, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 /** USD per million tokens (the model rewriter's prices for the same model; thinking billed as output). */
@@ -104,7 +104,9 @@ async function main() {
     const g = base.get(l.id);
     if (l.expected.outcome === "exclude" || !g) continue;
     const fu = l.kind === "follow-up" && !!l.previous;
-    if (qualifies(l.question, g, year)) asks.set(readerKey(l.question, fu ? l.previous : null), { question: l.question, previous: fu ? l.previous : null, unread: unreadSpans(l.question, year) });
+    // Personal details never leave the runner or reach the cache: everything below is the scrubbed text.
+    const q = scrubPersonal(l.question), prev = fu ? scrubPersonal(l.previous!) : null;
+    if (qualifies(q, g, year)) asks.set(readerKey(q, prev), { question: q, previous: prev, unread: unreadSpans(q, year) });
   }
   const binding = readerBinding();
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });

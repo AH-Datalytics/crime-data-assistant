@@ -19,7 +19,7 @@ import { readQuestion } from "./reading";
 import { STATE_NAMES } from "./places";
 
 export const READER_MODEL_ID = "gemini-3.8-flash";
-export const READER_PROMPT_VERSION = "gr-3";
+export const READER_PROMPT_VERSION = "gr-4-scrub1";   // the scrub is part of what was sent: a cache from before it never loads
 /**
  * The output cap and thinking level (the model rewriter's, proven with this model). Thinking is billed as output and
  * isn't capped by the level, so the fetch reserves an allowance for it: 4,096 tokens, twice the most this model used at
@@ -305,4 +305,21 @@ export function qualifies(question: string, outcome: { kind: string; reason?: st
   const parts = l.parts.filter((p) => p.clause === 0);
   if (parts.some((p) => p.state === "not-recorded")) return false;
   return parts.some((p) => p.concept === "unrecognized" || p.state === "not-interpreted");
+}
+
+// ------------------------------------------------------------------------------------------------- personal details
+const STREET_SUFFIX = String.raw`(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|row|pike|loop|crescent|plaza)`;
+/**
+ * Personal details taken out of question text before it leaves the runner or is cached (the coordinator for Jeff,
+ * 2026-11-09: a logged question held a user's street address and ZIP). Emails, phone numbers, street addresses (a house
+ * number, up to five words, a street suffix, an optional unit and ZIP), and a ZIP right after an address become
+ * neutral placeholders the pattern reader leaves unread, so a question that needed them is refused as today.
+ */
+export function scrubPersonal(text: string): string {
+  return text
+    .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "[email]")
+    .replace(/(?:\+?1[-.\s]?)?\(?\b\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/g, "[phone]")
+    .replace(new RegExp(String.raw`(?<!\b(?:in|since|from|to|through|thru|until|during|of|and|between|before|after|by|for)\s+)\b\d{1,6}[A-Za-z]?\s+(?:[A-Za-z0-9.'-]+\s+){0,4}${STREET_SUFFIX}\b\.?(?:\s+(?:N|S|E|W|NE|NW|SE|SW)\b\.?)?(?:\s*,?\s*(?:apt|unit|suite|ste|#)\.?\s*[\w-]+)?(?:\s*,?\s*\d{5}(?:-\d{4})?\b)?`, "gi"), "[address]")
+    // A ZIP (with or without the +4) right after a placeholder or a city-and-state line ending in one.
+    .replace(/(\[address\][^.?!\d]{0,40}?)\b\d{5}(?:-\d{4})?\b/g, "$1[zip]");
 }
