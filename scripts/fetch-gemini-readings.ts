@@ -11,6 +11,8 @@
  *   - A reservation is released when the attempt's usage comes back, or when the service answers with an HTTP error
  *     (429, 5xx: not billed); with no answer at all (a network failure, the 90 s timeout) it stays reserved, across
  *     resumes. A response that cost more than its reservation stops the run.
+ *   - A request the service refuses outright (429, 503: not billed) doesn't count as an attempt: the run waits (15 s,
+ *     doubling, at most 2 minutes) and tries again, and stops after six refusals in a row.
  *   - Each question has one attempt plus at most one retry, counted in the cache before each attempt is sent, so a
  *     resumed run never gives a question fresh attempts (Codex review 01.6).
  *   - The cost test comes first, enforced: until 10 questions are cached, a run sends at most 10. After it, a run goes
@@ -130,7 +132,7 @@ async function main() {
     if (projected > budget) { console.log(`the projection is over the $${budget} budget; stopping before any request.`); return; }
   }
   console.log(`questions that qualify ${asks.size} (distinct), left ${todo.length}, done ${done().length}; spent $${store.spent.toFixed(4)} (+ $${store.unresolved.toFixed(4)} unresolved) of $${budget}; this run sends at most ${Math.min(limit, todo.length)}`);
-  let sent = 0;
+  let sent = 0, refusedInARow = 0;
   try {
     for (const [k, a] of todo) {
       if (sent >= limit) break;
@@ -143,15 +145,24 @@ async function main() {
         store.unresolved += worst; e.attempts++; save();
         const r = await once(a, key);
         if (r.error) console.log(`attempt ${e.attempts} failed: ${r.error}`);
+        // The service refused it outright (429, 503: not billed, nothing reached the model): the attempt doesn't count,
+        // and the run waits, longer each time, before trying again; refused six times running, the run stops (job J
+        // step 1 rerun, 2026-11-09: 15 of 16 attempts were 503 or 429 and used up eight questions' attempts).
+        if (r.billed === false) {
+          store.unresolved = Math.max(0, store.unresolved - worst);
+          e.attempts--; refusedInARow++; save();
+          if (refusedInARow >= 6) throw new Error("REFUSED");
+          const wait = Math.min(120, 15 * 2 ** (refusedInARow - 1));
+          console.log(`the service refused it (${r.error}); waiting ${wait} s`);
+          await new Promise((res) => setTimeout(res, wait * 1000));
+          continue;
+        }
+        refusedInARow = 0;
         if (r.usage) {
           const cost = costOf(r.usage);
           store.unresolved = Math.max(0, store.unresolved - worst); store.spent += cost;
           e.usage = { input: e.usage.input + r.usage.input, output: e.usage.output + r.usage.output, thinking: e.usage.thinking + r.usage.thinking };
           if (cost > worst) { save(); throw new Error(`a response cost $${cost.toFixed(5)}, more than its reservation $${worst.toFixed(5)}`); }
-        } else if (r.billed === false) {
-          // An HTTP error answer isn't billed: its reservation is released (job J step 1: failures were piling up as
-          // spend that never happened). One with no answer at all keeps its reservation.
-          store.unresolved = Math.max(0, store.unresolved - worst);
         }
         e.proposal = r.proposal; e.raw = r.raw; e.done = !r.retry || e.attempts >= 2;
         save();
@@ -163,7 +174,8 @@ async function main() {
   } catch (err) {
     save();
     const m = redact(String(err instanceof Error ? err.message : err), key);
-    console.log(m === "BUDGET" ? `stopped before the budget: $${store.spent.toFixed(4)} spent and $${store.unresolved.toFixed(4)} unresolved of $${budget}` : `stopped: ${m}`);
+    console.log(m === "BUDGET" ? `stopped before the budget: $${store.spent.toFixed(4)} spent and $${store.unresolved.toFixed(4)} unresolved of $${budget}`
+      : m === "REFUSED" ? "stopped: the service refused six requests in a row (429/503, not billed); try later or check the key's quota" : `stopped: ${m}`);
   }
   const all = done();
   const pricedAll = all.filter((x) => x.usage.input > 0).length;
