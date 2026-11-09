@@ -47,43 +47,46 @@ questions is not approved (an option to bring to Jeff, not part of step 1).
 
 ## Design
 
-### When Gemini is called
-A question is "not fully read" when the deterministic outcome is not an answer (a decline or a clarify) and the reader
-left words of the question unread (an unrecognized or not-interpreted part). A question the reader read in full but
-declined or asked about (a missing place, an ambiguous name, a crime the data doesn't record, a forecast) is not
-Gemini's: no reading can fix it, and calling would only add a chance to answer what policy declines.
+The plan's step 2 ("Gemini turns the question into the plan language") is carried out in its narrowest form, after
+Codex's review of a first design (a full reading checked by quoted words) showed a reading could quote the question's
+real words and still misread them, and quoted words could hide a condition. Here Gemini only proposes what the words
+the pattern reader couldn't read mean; every other word stays the user's own and is read by the pattern reader.
 
-Follow-ups (C) are the same: a follow-up whose deterministic outcome is a decline or clarify, with its own words not
-read, gets Gemini with the previous question as state.
+### When Gemini is called
+- The engine doesn't answer (a decline or a clarify);
+- a decline is the reader's own ("I didn't understand", a place not found), never a policy decision (forecast, court
+  outcome, not recorded, unsupported, outside the data), and the question carries no policy flag;
+- the pattern reader left some of the question's words unread (for a follow-up: the follow-up's words).
+A question read in full is never Gemini's, whatever its outcome. About 1,750 logged questions qualify.
 
 ### What Gemini returns
-A reading in the plan language's terms, every field with the words of the question it comes from ("evidence"): the
-measure (one of the reader's measure ids), the unit when the question names one (victims, offenses, offenders,
-arrests), places (as named), the period (a year, a range, a list of years), breakdowns (a time grain, or a person's
-attribute with whose: victim, offender, arrestee), the statistic (count, rate, percent change), and every condition or
-word it could not put in a field ("unhandled"). For a follow-up, each field says whether it comes from the follow-up or
-the previous question. Gemini never returns a number to show.
+For each unread span it can map: the span (the question's exact words) and what it means in the plan language: a
+measure (one of the reader's measure ids), a place (as named), a period (years written in the span), a breakdown
+(whose only when the span names it), a statistic (rate, percent change, share) or a unit. And "unhandled": every unread
+condition or request it couldn't map. Gemini never returns a number to show.
 
 ### How the engine validates it
-- Grounding: each field's evidence must occur in the question (or, for a follow-up's state, in the previous question).
-  A field without it is dropped, so a missing part stays missing and the engine asks about it, as today.
-- Nothing unhandled: a reading with any unhandled condition is refused (an answer without the user's condition would be
-  a wrong answer).
-- Coverage: every content word of the question must fall inside some field's evidence or a short list of filler words
-  ("show me", "how many", "data", ...). Uncovered words refuse the reading.
-- The same reader decides the rest: the reading is written back as a canonical question in the reader's own grammar
-  ("murders in Memphis, Tennessee in 2024 by offender race"), the deterministic reader reads it, and every part it
-  reads must match the reading's field values exactly, with nothing unread. Measure, places (each resolving to one
-  agency, state or the nation; several candidates ask which, as today), period (within the data), breakdown and
-  statistic are then validated, routed and answered by the engine's normal path, its first line stating the reading.
-- Any refusal keeps today's outcome (the decline or clarify), with the reason counted in the report.
+- Nothing unhandled; each span found once in the question; each value from the vocabulary and grounded in its span
+  (a year written in it, a person word for whose, a state named in it, never from Gemini's knowledge).
+- The span is replaced by the reader's own words for the value, and the rewritten question must:
+  - read in full (nothing unread);
+  - keep every part the original read, unchanged (one refinement allowed: "by race" with "of the killers" becomes by
+    offender race), and every condition or setting the reader read ("unsolved" is a clearance setting);
+  - gain only parts of the kinds the replacements declared.
+- Then the engine answers the rewritten question by its normal path (a follow-up's rewritten follow-up by the normal
+  follow-up path, with the previous question as state): places resolve to one agency, state or the nation or are asked
+  about; periods outside the data decline; the answer's first line states the reading.
+- Any refusal keeps today's outcome, with its reason counted.
 
 ### Step 1: the shadow run
-- `scripts/fetch-gemini-readings.ts` calls Gemini for the questions that qualify, one at a time, with the same budget
-  enforcement as the model rewriter's fetch (each attempt's worst case reserved before dispatch; spend kept across
-  resumes; a response without usage stops the run), a $15 hard cap, one attempt plus at most one retry, and progress
-  saved after each call. The cache holds question text, so it lives outside the repo.
-- The 10-question cost test first: its cost per question, times the questions that qualify, must project under $15.
-- The scorecard then runs offline from the cache (`--gemini-readings`), and `--compare` against dev's run gives the
-  fixes and breaks by bucket. The gate: 0 new wrong answers.
-- The key: `GEMINI_API_KEY` in the runner's environment, typed in by Jeff. It is never printed, logged or written.
+- `scripts/fetch-gemini-readings.ts`: one request at a time; each attempt's worst case (every byte sent as an input
+  token, plus the output cap and a 4,096-token thinking allowance) reserved before it is sent and released only when
+  its usage comes back; a $15 maximum; one attempt plus at most one retry, counted before each is sent; the 10-question
+  cost test enforced before the rest, which runs only if its projection (spend, unresolved reservations, average times
+  the questions left) fits the budget; the cache outside the repo; the key never printed, logged or written.
+- The scorecard runs offline from the cache (`--gemini-readings`); `--compare` against dev's run gives the fixes and
+  breaks by bucket and the new wrong answers against dev; `--gemini-review` lists every new Gemini answer.
+- The gate: 0 new wrong answers, judged after the listed answers are reviewed (each is unverified, so the scorecard
+  alone can't show it is the question asked): the rewritten question against the user's words, then their numbers by
+  the blind verification tool.
+- The key: `GEMINI_API_KEY` in the runner's environment, typed in by Jeff.

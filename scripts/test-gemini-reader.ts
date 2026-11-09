@@ -1,64 +1,63 @@
 /**
- * The Gemini reader's validator (lib/nibrs-shadow/gemini-reader.ts): a reading is accepted only when grounded,
- * complete and read back exactly; anything else keeps today's outcome. No model calls: readings written for the test.
+ * The Gemini reader's validator (lib/nibrs-shadow/gemini-reader.ts): Gemini's replacements for the words the pattern
+ * reader left unread are accepted only when grounded in their span, nothing is left unhandled, and the rewritten
+ * question reads in full, keeps everything the original read and gains only what was declared. No model calls:
+ * proposals are written for the test.
  */
 import assert from "node:assert/strict";
-import { MEASURE_WORDS, renderReading, validateReading, type Reading } from "../lib/nibrs-shadow/gemini-reader";
+import { MEASURE_WORDS, qualifies, replacementText, unreadSpans, validateProposal, type Proposal, type Replacement } from "../lib/nibrs-shadow/gemini-reader";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 
-// Every measure's canonical words read back as that measure, as a count, a rate and with a unit.
-for (const [id, [one, many]] of Object.entries(MEASURE_WORDS)) for (const w of [many, `${one} rate`, `${one} victims`]) {
-  const parts = readQuestion(`${w} in Memphis, Tennessee in 2024`, 2026).ledger.parts.filter((p) => p.clause === 0);
-  assert.deepEqual(parts.filter((p) => p.concept === "measure").map((p) => p.value), [id], w);
-  assert.ok(!parts.some((p) => p.concept === "unrecognized" || p.state === "not-interpreted"), w);
+const Y = 2026;
+// Every measure's words read back as that measure.
+for (const [id, [, many]] of Object.entries(MEASURE_WORDS)) {
+  const parts = readQuestion(`${many} in Memphis, Tennessee in 2024`, Y).ledger.parts.filter((p) => p.clause === 0);
+  assert.deepEqual(parts.filter((p) => p.concept === "measure").map((p) => p.value), [id], many);
 }
 
-const base: Reading = { measure: { id: "murder", evidence: "killings" }, unit: null, places: [{ name: "Memphis", evidence: "Memphis" }],
-  period: { kind: "year", years: [2024], evidence: "2024" }, breakdowns: [], statistic: null, unhandled: [] };
-const ok = (r: Reading, q: string, prev: string | null = null) => { const v = validateReading(r, q, prev, 2026); assert.ok(v.ok, `${q}: ${JSON.stringify(v)}`); return (v as { question: string }).question; };
-const no = (r: Reading | null, q: string, reason: string, prev: string | null = null) => assert.deepEqual(validateReading(r, q, prev, 2026), { ok: false, reason }, q);
+const P = (...replacements: Replacement[]): Proposal => ({ replacements, unhandled: [] });
+const ok = (p: Proposal, q: string) => { const v = validateProposal(p, q, Y); assert.ok(v.ok, `${q}: ${JSON.stringify(v)}`); return (v as { question: string }).question; };
+const no = (p: Proposal | null, q: string, reason: RegExp) => { const v = validateProposal(p, q, Y); assert.ok(!v.ok && reason.test(v.reason), `${q}: ${JSON.stringify(v)}`); };
+const slayings: Replacement = { span: "slayings", kind: "measure", measure: "murder" };
 
-// Accepted: grounded, covered, read back.
-assert.equal(ok(base, "how many killings were there in Memphis in 2024"), "murders in Memphis in 2024");
-assert.equal(ok({ ...base, breakdowns: [{ value: "race", person: "offender", evidence: "race of the killers" }], measure: { id: "murder", evidence: "murders" } },
-  "show me the murders in memphis during 2024 broken out by race of the killers"), "murders in Memphis in 2024 by offender race");
-assert.equal(ok({ ...base, period: { kind: "range", years: [2020, 2024], evidence: "between 2020 and 2024" }, statistic: { value: "percent_change", evidence: "percentage swing" } },
-  "percentage swing in killings in Memphis between 2020 and 2024"), "percent change in murders in Memphis from 2020 to 2024");
-// A person's attribute without whose stays a bare breakdown, which the engine asks about (never assumed victims).
-assert.equal(ok({ ...base, breakdowns: [{ value: "race", person: null, evidence: "by race" }] }, "killings in Memphis in 2024 by race"), "murders in Memphis in 2024 by race");
+// The question's own words stay; only the unread span is replaced, and the result reads in full.
+assert.ok(unreadSpans("slayings in Memphis in 2024", Y).some((s) => /slayings/i.test(s)));
+assert.equal(ok(P(slayings), "slayings in Memphis in 2024"), "murders in Memphis in 2024");
+assert.equal(ok(P(slayings, { span: "San fran", kind: "place", place: "San Francisco" }), "slayings in San fran in 2024"), "murders in San Francisco in 2024");
+assert.equal(ok(P(slayings, { span: "broken out by race of the killers", kind: "breakdown", breakdown: { value: "race", person: "offender" } }), "slayings in Memphis in 2024 broken out by race of the killers"),
+  "murders in Memphis in 2024 by offender race");
+// A condition the reader read is kept by the user's own words ("unsolved" is a clearance setting), and can't be
+// swallowed into a span.
+assert.equal(ok(P(slayings), "unsolved slayings in Memphis in 2024"), "unsolved murders in Memphis in 2024");
+no(P({ span: "unsolved slayings", kind: "measure", measure: "murder" }), "unsolved slayings in Memphis in 2024", /clearance was lost/);
+// A part the reader read can't be replaced (Memphis read as a place, swapped for Dallas).
+no(P(slayings, { span: "Memphis", kind: "place", place: "Dallas" }), "slayings in Memphis in 2024", /lost or changed/);
+// An unread condition left in place keeps the question unread.
+no(P(slayings), "slayings near schools in Memphis in 2024", /still unread/);
+// Grounding in the span: years written; whose named; a state named (never "in" for Indiana); vocabulary only.
+assert.equal(replacementText({ span: "since twenty eighteen", kind: "period", period: { kind: "since", years: [2018] } }), null);
+assert.equal(replacementText({ span: "between 2019 and 2023", kind: "period", period: { kind: "range", years: [2019, 2023] } }), "from 2019 to 2023");
+assert.equal(replacementText({ span: "by race", kind: "breakdown", breakdown: { value: "race", person: "offender" } }), null);
+assert.equal(replacementText({ span: "broken out by race of the killers", kind: "breakdown", breakdown: { value: "race", person: "offender" } }), "by offender race");
+assert.equal(replacementText({ span: "by race", kind: "breakdown", breakdown: { value: "race", person: null } }), "by race");
+assert.equal(replacementText({ span: "portland", kind: "place", place: "Portland, Oregon" }), "Portland");
+assert.equal(replacementText({ span: "portland in", kind: "place", place: "Portland, IN" }), "Portland");
+assert.equal(replacementText({ span: "Portland IN", kind: "place", place: "Portland, IN" }), "Portland, IN");
+assert.equal(replacementText({ span: "portland oregon", kind: "place", place: "Portland, Oregon" }), "Portland, Oregon");
+assert.equal(replacementText({ span: "killings", kind: "measure", measure: "genocide" }), null);
+assert.equal(replacementText({ span: "by weapon", kind: "breakdown", breakdown: { value: "weapon", person: "victim" } }), null);
+// Refusals: anything unhandled; a span not in the question, or found twice; no proposal.
+no({ replacements: [slayings], unhandled: ["near schools"] }, "slayings near schools in Memphis in 2024", /unhandled/);
+no(P({ span: "homicides", kind: "measure", measure: "murder" }), "slayings in Memphis in 2024", /span not found once/);
+no(null, "anything", /no proposal/);
+no(P(), "slayings in Memphis in 2024", /no replacements/);
 
-// Refused: anything unhandled; words not in the question; words left over; a measure whose words read as another.
-no({ ...base, unhandled: ["unsolved"] }, "unsolved killings in Memphis in 2024", "unhandled");
-no({ ...base, places: [{ name: "Memphis", evidence: "Nashville" }] }, "killings in Memphis in 2024", "ungrounded");
-no(base, "killings near schools in Memphis in 2024", "uncovered");
-no({ ...base, measure: { id: "murder", evidence: "homicides" } }, "homicides in Memphis in 2024", "measure words read as another measure");
-no(null, "anything", "no reading");
-// Years must be written; no future years; a range has two ends.
-no({ ...base, period: { kind: "year", years: [2023], evidence: "last year" } }, "killings in Memphis last year", "period");
-no({ ...base, period: { kind: "year", years: [2030], evidence: "2030" } }, "killings in Memphis in 2030", "period");
-no({ ...base, period: { kind: "range", years: [2020], evidence: "2020" } }, "killings in Memphis in 2020", "period");
-// Whose only for a person's attribute.
-no({ ...base, breakdowns: [{ value: "weapon", person: "victim", evidence: "by weapon" }] }, "killings in Memphis in 2024 by weapon", "breakdown");
-// A missing measure stays missing.
-no({ ...base, measure: null }, "Memphis in 2024", "no measure");
+// When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
+assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);
+assert.equal(qualifies("slayings in Memphis in 2024", { kind: "clarify" }, Y), true);
+assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "unsupported_capability" }, Y), false);
+assert.equal(qualifies("slayings in Memphis in 2024", { kind: "answer" }, Y), false);
+assert.equal(qualifies("murders in Memphis in 2024", { kind: "clarify" }, Y), false);
+assert.equal(qualifies("will slayings in Memphis rise next year", { kind: "decline", reason: "reader" }, Y), false);
 
-// Follow-ups: state from the previous question, grounded there; the follow-up's own words covered.
-const prev = "killings in Memphis in 2024";
-assert.equal(ok({ ...base, measure: { id: "murder", evidence: "killings", from: "previous" }, period: { kind: "year", years: [2024], evidence: "2024", from: "previous" },
-  places: [{ name: "Dallas", evidence: "Dallas", from: "question" }] }, "same for Dallas", prev), "murders in Dallas in 2024");
-assert.equal(ok({ ...base, measure: { id: "murder", evidence: "killings", from: "previous" }, places: [{ name: "Memphis", evidence: "Memphis", from: "previous" }],
-  period: { kind: "year", years: [2024], evidence: "2024", from: "previous" }, statistic: { value: "rate", evidence: "as a rate", from: "question" } }, "as a rate", prev), "murder rate in Memphis in 2024");
-no({ ...base, measure: { id: "murder", evidence: "robberies", from: "previous" } }, "same for 2024 in Memphis", "ungrounded", prev);
-no({ ...base, measure: { id: "murder", evidence: "killings", from: "previous" } }, "same for Memphis in 2024", "ungrounded", null);
-
-// "Since" a written year; a state the question doesn't name is dropped (the engine asks which Portland), one it names kept.
-assert.equal(ok({ ...base, places: [{ name: "San Francisco", evidence: "san fran" }], period: { kind: "since", years: [2018], evidence: "since 2018" } }, "san fran killings since 2018"), "murders in San Francisco since 2018");
-assert.equal(ok({ ...base, places: [{ name: "Portland, Oregon", evidence: "Portland" }] }, "killings in Portland in 2024"), "murders in Portland in 2024");
-assert.equal(ok({ ...base, places: [{ name: "Portland, Oregon", evidence: "Portland Oregon" }] }, "killings in Portland Oregon in 2024"), "murders in Portland, Oregon in 2024");
-assert.equal(ok({ ...base, places: [{ name: "Portland, OR", evidence: "Portland OR" }] }, "killings in Portland OR in 2024"), "murders in Portland, OR in 2024");
-// Forms the canonical grammar doesn't write are refused, never approximated.
-assert.equal(renderReading({ ...base, unit: { value: "victims", evidence: "victims" }, statistic: { value: "rate", evidence: "rate" } }), null);
-assert.equal(renderReading({ ...base, statistic: { value: "share", evidence: "share" } }), null);
-assert.equal(renderReading({ ...base, statistic: { value: "percent_change", evidence: "change" } }), null);
-
-console.log("gemini reader: readings accepted only when grounded, complete and read back; the rest keep today's outcome");
+console.log("gemini reader: replacements accepted only when grounded and the rewritten question reads in full, keeping what was read");
