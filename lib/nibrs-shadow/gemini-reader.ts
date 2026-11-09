@@ -19,7 +19,7 @@ import { readQuestion } from "./reading";
 import { STATE_NAMES } from "./places";
 
 export const READER_MODEL_ID = "gemini-3.8-flash";
-export const READER_PROMPT_VERSION = "gr-4-scrub1";   // the scrub is part of what was sent: a cache from before it never loads
+export const READER_PROMPT_VERSION = "gr-5-withhold1";   // what is withheld is part of what was sent: an older cache never loads
 /**
  * The output cap and thinking level (the model rewriter's, proven with this model). Thinking is billed as output and
  * isn't capped by the level, so the fetch reserves an allowance for it: 4,096 tokens, twice the most this model used at
@@ -308,18 +308,40 @@ export function qualifies(question: string, outcome: { kind: string; reason?: st
 }
 
 // ------------------------------------------------------------------------------------------------- personal details
-const STREET_SUFFIX = String.raw`(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|row|pike|loop|crescent|plaza)`;
 /**
- * Personal details taken out of question text before it leaves the runner or is cached (the coordinator for Jeff,
- * 2026-11-09: a logged question held a user's street address and ZIP). Emails, phone numbers, street addresses (a house
- * number, up to five words, a street suffix, an optional unit and ZIP), and a ZIP right after an address become
- * neutral placeholders the pattern reader leaves unread, so a question that needed them is refused as today.
+ * Whether a question may hold a personal detail: an email, a phone number, a street address, a PO box, a ZIP. Such a
+ * question (or a follow-up whose previous question is one) is withheld: never sent to Google, never cached; it keeps
+ * today's outcome. A cautious detector, not a scrubber (Codex review 09: rewriting details out missed common forms,
+ * changed questions with none, and left placeholders Gemini could replace): a false alarm only means a question
+ * Gemini isn't tried on.
  */
-export function scrubPersonal(text: string): string {
-  return text
-    .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "[email]")
-    .replace(/(?:\+?1[-.\s]?)?\(?\b\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/g, "[phone]")
-    .replace(new RegExp(String.raw`(?<!\b(?:in|since|from|to|through|thru|until|during|of|and|between|before|after|by|for)\s+)\b\d{1,6}[A-Za-z]?\s+(?:[A-Za-z0-9.'-]+\s+){0,4}${STREET_SUFFIX}\b\.?(?:\s+(?:N|S|E|W|NE|NW|SE|SW)\b\.?)?(?:\s*,?\s*(?:apt|unit|suite|ste|#)\.?\s*[\w-]+)?(?:\s*,?\s*\d{5}(?:-\d{4})?\b)?`, "gi"), "[address]")
-    // A ZIP (with or without the +4) right after a placeholder or a city-and-state line ending in one.
-    .replace(/(\[address\][^.?!\d]{0,40}?)\b\d{5}(?:-\d{4})?\b/g, "$1[zip]");
+const STREET_WORD = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|row|pike|loop|crescent|plaza|broadway|box|apt|apartment|unit|suite|ste|floor|fl|rue|via|strasse|calle|avenida)$/i;
+/** City names that begin with "St." (never a street). */
+const SAINT_CITY = /^(?:louis|paul|petersburg|joseph|lucie|george|charles|cloud|augustine|clair|johns|helens|albans|marys)$/i;
+const YEAR = /^(?:1[89]|20)\d\d$/;
+export function looksPersonal(text: string): boolean {
+  const t = text.normalize("NFKC");
+  if (/@|\bp\.?\s*o\.?\s*box\b|\bzip\s*(?:code)?\s*:?\s*\d/i.test(t)) return true;
+  // A phone: a run of digits and separators holding nine or more digits that isn't just years and counts.
+  for (const m of t.matchAll(/\+?\(?\d[\d\s().-]{6,}\d\)?/g)) {
+    const groups = m[0].match(/\d+/g) ?? [];
+    if (m[0].startsWith("+") && groups.join("").length >= 8) return true;   // an international number in short groups
+    if (groups.join("").length >= 9 && !groups.every((g) => YEAR.test(g) || g.length <= 2)) return true;
+  }
+  // A ZIP: five digits standing alone (a thousands count is written with a comma: "100,000").
+  if (/(?<![\d,.])\b\d{5}(?:-\d{4})?\b(?![\d,.])/.test(t)) return true;
+  // A street address: a number (a house number, not a year after "in", "since" ...) with a street word within the
+  // next five words; "St." before a city name ("St. Louis") is not a street.
+  const words = t.split(/[\s,]+/).filter(Boolean);
+  for (let i = 0; i < words.length; i++) {
+    if (!/^\d{1,6}[a-z]?$/i.test(words[i])) continue;   // a house number ("12", "12B"), not an ordinal street name ("5th")
+    if (YEAR.test(words[i]) && i > 0 && /^(?:in|since|from|to|through|thru|until|during|of|and|between|before|after|by|for)$/i.test(words[i - 1])) continue;
+    for (let j = i + 1; j <= Math.min(words.length - 1, i + 5); j++) {
+      const w = words[j].replace(/[.#:;]+$/, "");
+      if (!STREET_WORD.test(w)) continue;
+      if (/^st$/i.test(w) && words[j + 1] && SAINT_CITY.test(words[j + 1].replace(/[^A-Za-z]/g, ""))) continue;
+      return true;
+    }
+  }
+  return false;
 }

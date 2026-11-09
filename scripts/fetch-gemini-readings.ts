@@ -28,7 +28,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { qualifies, READER_FOLLOW_UP_PROMPT, READER_GENERATION, READER_MODEL_ID, READER_RESPONSE_SCHEMA, READER_SYSTEM_PROMPT,
-  readerBinding, readerFollowUpPrompt, readerKey, readerUserPrompt, scrubPersonal, unreadSpans, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
+  readerBinding, readerFollowUpPrompt, readerKey, readerUserPrompt, looksPersonal, unreadSpans, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 /** USD per million tokens (the model rewriter's prices for the same model; thinking billed as output). */
@@ -99,14 +99,16 @@ async function main() {
   const base = new Map<string, { kind: string; reason?: string }>();
   for (const line of fs.readFileSync(arg("--baseline")!, "utf8").split("\n")) { if (line.trim()) try { const r = JSON.parse(line); base.set(r.id, r.got); } catch { /* cut short */ } }
   const year = Number(arg("--year", String(new Date().getFullYear())));
-  const asks = new Map<string, Ask>();
+  const asks = new Map<string, Ask>(), withheld = new Set<string>();
   for (const l of labels) {
     const g = base.get(l.id);
     if (l.expected.outcome === "exclude" || !g) continue;
     const fu = l.kind === "follow-up" && !!l.previous;
-    // Personal details never leave the runner or reach the cache: everything below is the scrubbed text.
-    const q = scrubPersonal(l.question), prev = fu ? scrubPersonal(l.previous!) : null;
-    if (qualifies(q, g, year)) asks.set(readerKey(q, prev), { question: q, previous: prev, unread: unreadSpans(q, year) });
+    // A question that may hold a personal detail (or whose previous question may) is withheld: never sent, never cached.
+    const q = l.question, prev = fu ? l.previous : null;
+    if (!qualifies(q, g, year)) continue;
+    if (looksPersonal(q) || (prev && looksPersonal(prev))) { withheld.add(readerKey(q, prev)); continue; }
+    asks.set(readerKey(q, prev), { question: q, previous: prev, unread: unreadSpans(q, year) });
   }
   const binding = readerBinding();
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });
@@ -133,6 +135,7 @@ async function main() {
     console.log(`cost test: $${per.toFixed(5)} a question; projected total $${projected.toFixed(2)} (spent $${store.spent.toFixed(4)}, unresolved $${store.unresolved.toFixed(4)}, ${todo.length} left)`);
     if (projected > budget) { console.log(`the projection is over the $${budget} budget; stopping before any request.`); return; }
   }
+  console.log(`withheld for personal details: ${withheld.size} (never sent)`);
   console.log(`questions that qualify ${asks.size} (distinct), left ${todo.length}, done ${done().length}; spent $${store.spent.toFixed(4)} (+ $${store.unresolved.toFixed(4)} unresolved) of $${budget}; this run sends at most ${Math.min(limit, todo.length)}`);
   let sent = 0, refusedInARow = 0;
   try {
