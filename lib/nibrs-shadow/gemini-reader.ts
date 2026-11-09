@@ -321,12 +321,14 @@ export function qualifies(question: string, outcome: { kind: string; reason?: st
 export function looksPersonal(text: string): boolean {
   if (/[@＠﹫]/.test(text)) return true;
   const t = text.normalize("NFKC");
-  if (/\d{7,}/.test(t.replace(/[\s.\-–—()]/g, ""))) return true;
-  for (const m of t.matchAll(/\d+/g)) {
-    const n = m[0];
+  // Any space, dot, parenthesis or dash character (Unicode hyphens too: Codex review 16) is a separator.
+  if (/\d{7,}/.test(t.replace(/[\s.()\p{Pd}]/gu, ""))) return true;
+  // A number with its decimals is one number ("123.45%" is a percent: Codex review 16).
+  for (const m of t.matchAll(/\d+(?:\.\d+)?/g)) {
+    const n = m[0].split(".")[0];
     if (n.length <= 2) continue;
     if (/^(?:19|20)\d\d$/.test(n)) continue;
-    if (/^\s*(?:%|percent\b)/i.test(t.slice(m.index! + n.length))) continue;
+    if (/^\s*(?:%|percent\b)/i.test(t.slice(m.index! + m[0].length))) continue;
     return true;
   }
   return /\b(?:box|apt|suite|unit)\b\.?\s*#?\s*\d|\d\s*#?\s*(?:box|apt|suite|unit)\b/i.test(t);
