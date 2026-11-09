@@ -117,17 +117,41 @@ export const readerKey = (question: string, previous?: string | null) => createH
 const norm = (s: string) => s.toLowerCase().replace(/[’']/g, "'").replace(/\s+/g, " ").trim();
 const STATE_WORDS = new Set([...Object.values(STATE_NAMES).map((n) => n.toLowerCase()), ...Object.keys(STATE_NAMES).map((a) => a.toLowerCase())]);
 
+/**
+ * What a span must say for a unit or statistic (Codex review 02.3: "per household" is not a population rate, "families"
+ * are not victims): a word for it in the span itself.
+ */
+const UNIT_WORDS: Record<NonNullable<Replacement["unit"]>, RegExp> = {
+  victims: /\b(?:victims?|killed|dead|people|persons?|individuals?)\b/i, offenders: PERSON_WORDS.offender, arrests: /\barrest/i,
+  offenses: /\b(?:offen[cs]es?|crimes?|charges?)\b/i, incidents: /\b(?:incidents?|events?|cases?)\b/i,
+};
+const STAT_WORDS: Record<NonNullable<Replacement["statistic"]>, RegExp> = {
+  rate: /\b(?:per[-\s]?capita|capita|population|residents?|people|persons?|inhabitants|100[, ]?000|1[, ]?000|100k)\b|\bper\s+(?:\d|ten\b|one\b|a\s+(?:thousand|million))/i,
+  share: /%|\b(?:percent(?:age)?|share|proportion|portion|fraction)\b/i,
+  percent_change: /\b(?:change[ds]?|increase[ds]?|decrease[ds]?|rose|rise|risen|fell|fall|fallen|drop(?:ped)?|gr[eo]w|grown|jump(?:ed)?|declin\w*)\b/i,
+};
+const wordCount = (s: string) => s.split(/\s+/).filter(Boolean).length;
+
 /** The words a replacement puts in place of its span; null when its value isn't in the vocabulary or not grounded. */
 export function replacementText(r: Replacement): string | null {
   const span = norm(r.span ?? "");
   if (!span) return null;
   switch (r.kind) {
-    case "measure": return r.measure && MEASURE_WORDS[r.measure] ? MEASURE_WORDS[r.measure][1] : null;
-    case "unit": return r.unit ?? null;
-    case "statistic": return r.statistic === "rate" ? "rate" : r.statistic === "share" ? "share of" : r.statistic === "percent_change" ? "percent change in" : null;
+    // A measure's span is the crime's own word or two ("slayings", "agg assaults"), never a phrase that could carry a
+    // condition ("slayings near schools": Codex review 02.1).
+    case "measure": return r.measure && MEASURE_WORDS[r.measure] && wordCount(span) <= 2 ? MEASURE_WORDS[r.measure][1] : null;
+    case "unit": return r.unit && wordCount(span) <= 2 && UNIT_WORDS[r.unit]?.test(r.span) ? r.unit : null;
+    case "statistic": {
+      if (!r.statistic || !STAT_WORDS[r.statistic]?.test(r.span) || wordCount(span) > 4) return null;
+      return r.statistic === "rate" ? "rate" : r.statistic === "share" ? "share of" : "percent change in";
+    }
     case "place": {
       const name = (r.place ?? "").trim();
       if (!name || /\d/.test(name)) return null;
+      // Every word of the span starts a word of the name, or names its state ("san fran" is San Francisco; "downtown"
+      // is not part of any name, so "downtown San fran" is refused: Codex review 02.2).
+      const nameWords = norm(name).replace(/[^a-z ]/g, " ").split(/\s+/).filter(Boolean);
+      if (!span.replace(/[^a-z ]/g, " ").split(/\s+/).filter(Boolean).every((w) => nameWords.some((n) => n.startsWith(w)) || STATE_WORDS.has(w))) return null;
       // A state only when the span itself names it as a whole word (never from Gemini's knowledge: "Portland" stays
       // Portland, asked about; "in" is never Indiana: a state's two letters count only in capitals in the span).
       const m = /^(.*?),\s*([^,]+)$/.exec(name);
@@ -176,10 +200,19 @@ export function validateProposal(p: Proposal | null, question: string, currentYe
   if (!p || !Array.isArray(p.replacements)) return { ok: false, reason: "no proposal" };
   if ((p.unhandled ?? []).some((u) => norm(String(u)))) return { ok: false, reason: "unhandled" };
   if (!p.replacements.length) return { ok: false, reason: "no replacements" };
+  const unread = unreadSpans(question, currentYear).map(norm);
   let text = question;
   for (const r of p.replacements) {
     const words = replacementText(r);
     if (words === null) return { ok: false, reason: `${r.kind}: not in the vocabulary or not in its words` };
+    // The span lies inside one stretch of words the reader left unread (never across words it read: "downtown Memphis"
+    // can't become Memphis; Codex review 02.2).
+    // The refinement (a breakdown naming whose) may also cover the "by race" the reader read; its other words, each
+    // stretch, still lie in unread words.
+    const chunks = r.kind === "breakdown" && r.breakdown?.person
+      ? norm(r.span ?? "").split(new RegExp(`\\bby\\s+(?:the\\s+)?${r.breakdown.value}\\b`, "i")).map((c) => c.trim()).filter(Boolean)
+      : [norm(r.span ?? "")];
+    if (!chunks.every((c) => unread.some((u) => u.includes(c)))) return { ok: false, reason: "span not within unread words" };
     // The span is the question's own contiguous words, found exactly once, case aside.
     const esc = (r.span ?? "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
     if (!esc) return { ok: false, reason: "span not found once" };

@@ -29,9 +29,9 @@ assert.equal(ok(P(slayings, { span: "broken out by race of the killers", kind: "
 // A condition the reader read is kept by the user's own words ("unsolved" is a clearance setting), and can't be
 // swallowed into a span.
 assert.equal(ok(P(slayings), "unsolved slayings in Memphis in 2024"), "unsolved murders in Memphis in 2024");
-no(P({ span: "unsolved slayings", kind: "measure", measure: "murder" }), "unsolved slayings in Memphis in 2024", /clearance was lost/);
+no(P({ span: "unsolved slayings", kind: "measure", measure: "murder" }), "unsolved slayings in Memphis in 2024", /unread words|clearance was lost/);
 // A part the reader read can't be replaced (Memphis read as a place, swapped for Dallas).
-no(P(slayings, { span: "Memphis", kind: "place", place: "Dallas" }), "slayings in Memphis in 2024", /lost or changed/);
+no(P(slayings, { span: "Memphis", kind: "place", place: "Dallas" }), "slayings in Memphis in 2024", /lost or changed|place|unread words/);
 // An unread condition left in place keeps the question unread.
 no(P(slayings), "slayings near schools in Memphis in 2024", /still unread/);
 // Grounding in the span: years written; whose named; a state named (never "in" for Indiana); vocabulary only.
@@ -48,10 +48,19 @@ assert.equal(replacementText({ span: "killings", kind: "measure", measure: "geno
 assert.equal(replacementText({ span: "by weapon", kind: "breakdown", breakdown: { value: "weapon", person: "victim" } }), null);
 // Refusals: anything unhandled; a span not in the question, or found twice; no proposal.
 no({ replacements: [slayings], unhandled: ["near schools"] }, "slayings near schools in Memphis in 2024", /unhandled/);
-no(P({ span: "homicides", kind: "measure", measure: "murder" }), "slayings in Memphis in 2024", /span not found once/);
+no(P({ span: "homicides", kind: "measure", measure: "murder" }), "slayings in Memphis in 2024", /span not found once|unread words/);
 no(null, "anything", /no proposal/);
 no(P(), "slayings in Memphis in 2024", /no replacements/);
 
+// Codex review 02: a measure span carrying a condition, a place swallowing a qualifier, a rate or unit that isn't what
+// the words count: all refused.
+no(P({ span: "slayings near schools", kind: "measure", measure: "murder" }), "slayings near schools in Memphis in 2024", /measure/);
+no(P({ span: "downtown Memphis", kind: "place", place: "Memphis" }), "murders in downtown Memphis in 2024", /unread words|place/);
+no(P({ span: "downtown San fran", kind: "place", place: "San Francisco" }), "murders in downtown San fran in 2024", /place/);
+assert.equal(replacementText({ span: "per household", kind: "statistic", statistic: "rate" }), null);
+assert.equal(replacementText({ span: "per capita", kind: "statistic", statistic: "rate" }), "rate");
+assert.equal(replacementText({ span: "counting families", kind: "unit", unit: "victims" }), null);
+assert.equal(replacementText({ span: "people killed", kind: "unit", unit: "victims" }), "victims");
 // When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "clarify" }, Y), true);
