@@ -189,6 +189,9 @@ export function replacementText(r: Replacement): string | null {
       // ("aggravates" -> "aggravated", "comparied" -> "compared"); never the same word.
       const from = span, to = norm(r.spelling ?? "");
       if (!/^[a-z]{4,}$/.test(from) || !/^[a-z]+$/.test(to) || from === to) return null;
+      // The first two letters stay: a prefix added, dropped or changed turns a word into another ("unreported" ->
+      // "reported", "deported" -> "reported", "unrelated" -> "related": Codex review 08), never a typo of it.
+      if (from.slice(0, 2) !== to.slice(0, 2)) return null;
       const d = editDistance(from, to);
       return d <= 2 && d <= Math.max(1, Math.floor(from.length / 4)) ? to : null;
     }

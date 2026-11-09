@@ -70,6 +70,8 @@ assert.equal(replacementText({ span: "rob", kind: "spelling", spelling: "rod" })
 assert.equal(replacementText({ span: "comparied to", kind: "spelling", spelling: "compared to" }), null); // one word only
 assert.equal(replacementText({ span: "comparied", kind: "spelling", spelling: "compared" }), "compared");
 assert.equal(replacementText({ span: "willful", kind: "spelling", spelling: "willful" }), null);         // the same word
+// A prefix added, dropped or changed is another word, not a typo (Codex review 08).
+for (const [f, t] of [["unreported", "reported"], ["deported", "reported"], ["unrelated", "related"]]) assert.equal(replacementText({ span: f, kind: "spelling", spelling: t }), null, f);
 // When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "clarify" }, Y), true);
