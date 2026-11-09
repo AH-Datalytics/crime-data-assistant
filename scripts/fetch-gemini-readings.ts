@@ -51,10 +51,19 @@ export const worstCase = (a: Ask) => (Buffer.byteLength(JSON.stringify(requestBo
 const redact = (s: string, key: string) => (key ? s.split(key).join("REDACTED") : s).replace(/key=[^&\s]+/gi, "key=REDACTED");
 
 async function once(a: Ask, key: string): Promise<{ retry: boolean; proposal: Proposal | null; raw: string; usage: Usage | null; error?: string }> {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${READER_MODEL_ID}:generateContent`, {
-    method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody(a)) });
-  if (res.status === 429 || res.status >= 500) return { retry: true, proposal: null, raw: "", usage: null, error: `HTTP ${res.status}` };
-  const j = (await res.json()) as { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[]; usageMetadata?: Record<string, number>; error?: { message?: string } };
+  // A network failure ("fetch failed": a dropped connection, DNS, a reset; job J step 1, 2026-11-09) is an attempt whose
+  // usage is unknown, like a rate limit: its reservation stays, and it counts toward the one retry. Its cause is
+  // reported (redacted), never the request.
+  let res: Response, j: { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[]; usageMetadata?: Record<string, number>; error?: { message?: string } };
+  try {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${READER_MODEL_ID}:generateContent`, {
+      method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody(a)), signal: AbortSignal.timeout(120_000) });
+    if (res.status === 429 || res.status >= 500) return { retry: true, proposal: null, raw: "", usage: null, error: `HTTP ${res.status}` };
+    j = (await res.json()) as typeof j;
+  } catch (e) {
+    const c = (e as { cause?: { code?: string; message?: string } }).cause;
+    return { retry: true, proposal: null, raw: "", usage: null, error: redact(`network: ${(e as Error).name} ${c?.code ?? ""} ${(c?.message ?? (e as Error).message ?? "").slice(0, 120)}`, key) };
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${redact((j.error?.message ?? "").slice(0, 200), key)}`);
   const u = j.usageMetadata;
   if (!u || typeof u.promptTokenCount !== "number") throw new Error("USAGE: a response without usage; its cost is unknown");
@@ -94,9 +103,13 @@ async function main() {
   const todo = [...asks].filter(([k]) => !store.entries[k]?.done && (store.entries[k]?.attempts ?? 0) < 2);
   // The cost test first; then the projection decides whether the rest may run.
   let limit = Number(arg("--limit", "1000000"));
-  if (done().length < COST_TEST) limit = Math.min(limit, COST_TEST - done().length);
+  const pricedNow = done().filter((x) => x.usage.input > 0).length;
+  if (pricedNow < COST_TEST) limit = Math.min(limit, COST_TEST - pricedNow);
   else {
-    const per = store.spent / done().length;
+    // The average over questions whose usage came back (a failed attempt has no price to average).
+    const priced = done().filter((x) => x.usage.input > 0).length;
+    if (!priced) { console.log("no question has a price yet; run the cost test again"); return; }
+    const per = store.spent / priced;
     const projected = store.spent + store.unresolved + per * todo.length;
     console.log(`cost test: $${per.toFixed(5)} a question; projected total $${projected.toFixed(2)} (spent $${store.spent.toFixed(4)}, unresolved $${store.unresolved.toFixed(4)}, ${todo.length} left)`);
     if (projected > budget) { console.log(`the projection is over the $${budget} budget; stopping before any request.`); return; }
@@ -114,6 +127,7 @@ async function main() {
         // Reserved and counted before it is sent.
         store.unresolved += worst; e.attempts++; save();
         const r = await once(a, key);
+        if (r.error) console.log(`attempt ${e.attempts} failed: ${r.error}`);
         if (r.usage) {
           const cost = costOf(r.usage);
           store.unresolved = Math.max(0, store.unresolved - worst); store.spent += cost;
@@ -133,7 +147,8 @@ async function main() {
     console.log(m === "BUDGET" ? `stopped before the budget: $${store.spent.toFixed(4)} spent and $${store.unresolved.toFixed(4)} unresolved of $${budget}` : `stopped: ${m}`);
   }
   const all = done();
-  const per = all.length ? store.spent / all.length : 0;
+  const pricedAll = all.filter((x) => x.usage.input > 0).length;
+  const per = pricedAll ? store.spent / pricedAll : 0;
   console.log(`sent ${sent}; ${all.length} questions done (${all.filter((x) => !x.proposal).length} unparsed); spent $${store.spent.toFixed(4)} + $${store.unresolved.toFixed(4)} unresolved; ` +
     `$${per.toFixed(5)} a question; projected for all ${asks.size}: $${(store.spent + store.unresolved + per * (asks.size - all.length)).toFixed(2)} (budget $${budget})`);
 }
