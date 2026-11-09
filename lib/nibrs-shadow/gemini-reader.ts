@@ -318,7 +318,7 @@ export function qualifies(question: string, outcome: { kind: string; reason?: st
 const YEAR = /^(?:1[89]|20)\d\d$/;
 /** City names that begin with "St." (never a street). */
 const SAINT_CITY = /^(?:louis|paul|petersburg|joseph|lucie|george|charles|cloud|augustine|clair|johns|helens|albans|marys)$/i;
-const STREET_OR_UNIT = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|court|ct|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|plaza|broadway|apt|apartment|suite|ste|unit|box)$/i;
+const STREET_OR_UNIT = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|row|pike|loop|crescent|close|mews|plaza|broadway|apt|apartment|suite|ste|unit|box)$/i;
 const STREET_WORDS = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|plaza|broadway)$/i;
 /** Words before a small number that make it a count, an age or a rate ("top 10", "last 5", "age 18", "per 1000"). */
 const COUNT_BEFORE = /^(?:top|bottom|last|past|first|next|previous|prior|over|under|above|below|than|about|around|nearly|almost|least|most|age|ages|aged|per|every|each|only|just|within|rolling|trailing|those|these|the|of|for|in|to|and|or|by|with|vs|versus|between|from|through|thru|until|since)$/i;

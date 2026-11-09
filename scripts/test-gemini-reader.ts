@@ -86,7 +86,9 @@ for (const q of ["is my business at 910 st. louis street 62025 risky", "crime in
   "crime near (123 Main St)", "crime in 63101, please", "crime in Memphis, my phone is 555 0199", "crime in Memphis, my phone is 5550199",
   // Codex review 12
   "crime in 123 main st", "crime by 12 elm street", "crime in 123 MAIN ST", "crime near 1900 main", "crime near apartment 2024",
-  "crime near 12-14 Main Street", "crime near 2019-2023 Main Street", "crime near Apt 12K"]) assert.equal(looksPersonal(q), true, q);
+  "crime near 12-14 Main Street", "crime near 2019-2023 Main Street", "crime near Apt 12K",
+  // Codex review 13
+  "crime in 123 maple way", "crime by 12 elm place", "crime near 12-14 Park Place", "crime near 2019-2023 Park Place"]) assert.equal(looksPersonal(q), true, q);
 // ... and questions with none are never withheld (St. Louis, counts, years, rates, ages, roads).
 for (const q of ["2024 murders in St. Louis", "top 10 cities in St. Louis County", "3 month rolling counts in St. Louis", "murders per 100,000 in St. Louis",
   "victims age 18 in St. Louis", "murders in 2019 2020 2021 2022 2023", "Route 66 crime", "murders in Memphis from 2019 to 2023",
