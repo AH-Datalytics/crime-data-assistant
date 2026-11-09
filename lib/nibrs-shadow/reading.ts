@@ -435,15 +435,16 @@ function readPeople(text0: string): { text: string; people: People | null } {
   // offenders (Codex gap-2 review 01.1).
   const COMMITTED = /\b(?:comm?itt?ed|perpetrated)\s+by\b/i;
   if (!p.by && !vm && COMMITTED.test(text)
-    && cut(/,?\s*\b(?:(?:comm?itt?ed|perpetrated)\s+)?by\s+(?:the\s+)?(race|sex|gender|ethnicity|age)(?:\s+groups?)?(?:\s+(?:comm?itt?ed|perpetrated)(?:\s+by)?(?=\s*$|\s*[?.!,]))?/i,
+    && cut(/,?\s*\b(?:(?:comm?itt?ed|perpetrated|broken\s+down)\s+)?by\s+(?:the\s+)?(race|sex|gender|ethnicity|age)(?:\s+groups?)?(?:\s+(?:comm?itt?ed|perpetrated)(?:\s+by)?(?=\s*$|\s*[?.!,]))?/i,
       (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: false }; }))
     text = text.replace(/\s+(?:comm?itt?ed|perpetrated)\s+by\s*(?=[?.!]?\s*$)/i, "").trim();
   // A bare "by race (sex, ethnicity, age)" naming no person ("murders in D.C. in 2025 by race"): victims' or offenders'
   // is asked, never assumed (coordinator 2026-11-08, scoring gap 1; the labels' "victim or offender race").
   // "Committed by ..." (as typed: "comited by blacks asians hispanics ...") names the offenders (runner job G,
-  // QL-shr-34ce1c60e0).
+  // QL-shr-34ce1c60e0). "Race breakdown of murders ..." is the same bare breakdown (phrasing probe, 2026-11-08: it
+  // answered with the victims' race).
   if (!p.by && !p.ask && !vm && !/\b(?:victims?|offenders?|arrest(?:s|ed|ee|ees)?|suspects?|perpetrators?)\b|\b(?:comm?itt?ed|perpetrated)\s+by\b/i.test(text)
-    && /\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)\b/i.test(text)) p.ask = "victims or offenders";
+    && /\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)\b|\b(?:race|sex|gender|ethnicity|age)\s+breakdown\b/i.test(text)) p.ask = "victims or offenders";
   // Only when offenders are what is counted ("offenders in aggravated assaults ..."); for victims the reader's own
   // "by strangers" applies.
   if (/^\s*(?:[a-z]+\s+){0,2}?offenders\b/i.test(text))
