@@ -23,6 +23,12 @@ assert.equal(oldGot({ tab: "nibrs", sql: "SELECT 1", rows: 4, error: "guardrail_
 // Answers without SQL (data completeness), and a reply that fits no form: left out, never guessed.
 assert.equal(oldGot({ tab: "nibrs", rows: 0, guardrails: "completeness-deterministic", response: "NIBRS covers 2024 for 16,000 agencies." }).kind, "answer");
 assert.equal(oldGot({ tab: "nibrs", response: "Here are the offense codes, grouped." }).kind, "unclassified");
+// The app's own outcomes win over a deterministic plan's tag (Codex gap-2 review 02.1, the SHR route's replies), and a
+// guard's refusal naming "multiple agencies" is a decline, not a which-place question (02.2, lib/guardrails.ts).
+assert.deepEqual([oldGot({ tab: "shr", rows: 0, error: "ambiguous_city", guardrails: "[\"deterministic-shooting\"]", response: "Please specify Kansas City, Missouri (KCMO) or Kansas City, Kansas (KCK). Both exist in the SHR data, and I should not combine or choose between them without that state." }).kind,
+  oldGot({ tab: "shr", rows: 0, error: "ambiguous_city", guardrails: "[\"deterministic-shooting\"]", response: "Please specify Kansas City, Missouri (KCMO) or Kansas City, Kansas (KCK)." }).about], ["clarify", "which"]);
+assert.equal(oldGot({ tab: "shr", rows: 0, error: "shr_ori_not_in_source", guardrails: "[\"deterministic-shooting\",\"shr-place-resolution-block\",\"shr-ori-not-in-source\"]", response: "I could not find ORI XX0000000 in the SHR agency identity data, so I cannot return a reliable result." }).kind, "decline");
+assert.equal(oldGot({ tab: "shr", sql: "SELECT 1", rows: 0, error: "sql_guardrail", response: "SHR population data is per-agency and per-incident — summing it across multiple agencies produces unreliable rates. For aggregate murder rates, try the Historical Library tab. I can provide raw victim counts from SHR instead." }).kind, "decline");
 // A decline that offers something else is a decline; a plain question back is a clarify.
 assert.equal(oldGot({ tab: "current", response: "This tab is not available for staffing. Do you want the Historical tab instead?" }).kind, "decline");
 assert.equal(oldGot({ tab: "current", response: "Which year?" }).kind, "clarify");

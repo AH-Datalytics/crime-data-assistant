@@ -44,7 +44,7 @@ export type Reply = { tab: string; sql?: string | null; rows?: number | null; er
 // Which of two places one name means ("Say Washington, DC or Washington state", "Kansas City can mean Missouri or
 // Kansas", "Cook County exists in multiple states", "For Alameda County, do you want the countywide total ..."): the
 // labels' "which <name>" question.
-const WHICH_NAME = /^(?:say|use|choose)\b[^.?]*\bor\b|\bcan mean\b|\busually needs\b|\bexists in (?:multiple|several|more than one)\b|^for [a-z .'-]+ (?:county|parish), do you want\b|\bis ambiguous\b|\bmultiple (?:cities|counties|places|jurisdictions|agencies)\b|\bwhich (?:jurisdictions?|kansas city|baltimore|st\.? louis|portland|washington|new york)\b/i;
+const WHICH_NAME = /^(?:say|use|choose)\b[^.?]*\bor\b|\bcan mean\b|\busually needs\b|\bexists in (?:multiple|several|more than one)\b|^for [a-z .'-]+ (?:county|parish), do you want\b|\bis ambiguous\b|\bmultiple (?:cities|counties|places) named\b|\bwhich (?:jurisdictions?|kansas city|baltimore|st\.? louis|portland|washington|new york)\b/i;
 /** What a clarifying reply asks about, in the labels' words; "unclassified" when its words name no part. */
 export function oldAbout(text: string): string {
   const t = text.toLowerCase();
@@ -90,12 +90,15 @@ export function oldGot(r: Reply): Got {
   const tags = (r.guardrails ?? "").replace(/^\[|\]$/g, "").split(/[,"\s]+/).filter(Boolean);
   if (r.error && FAILED.test(r.error)) return { kind: "error", source: null, reason: String(r.error).slice(0, 40), ms: 0 };
   if (r.sql && (r.rows ?? 0) > 0) return answer();
-  // A plan the app answers without SQL (data completeness, deterministic shootings): an answer when it said something.
-  if (!r.sql && text && tags.some((t) => /^completeness-deterministic$|^deterministic-/.test(t)) && !NOT_HELD.test(text)) return answer();
+  // The app's own outcomes first (Codex gap-2 review 02.1): an ambiguous city or county (its error tag) asks which; a
+  // place-resolution block or another guard's refusal declines; a geo:* guard's question asks which.
+  if (/^ambiguous_/.test(r.error ?? "")) return clarify("which");
+  if (!r.sql && tags.some((t) => /block|unsupported|unavailable|refusal|not-in-source/.test(t))) return decline("not held");
+  if (tags.some((t) => t.startsWith("geo:")) && (WHICH_NAME.test(text) || /\?/.test(text))) return clarify("which");
   // A source switch reruns the question elsewhere: its outcome isn't in this row.
   if (tags.includes("followup-source-switch")) return { kind: "unclassified", source: null, reason: "source switch", ms: 0 };
-  // Which of two places a name means (the app's geo:* guards), or an ambiguous city or county.
-  if ((tags.some((t) => t.startsWith("geo:")) || /^ambiguous_/.test(r.error ?? "")) && (WHICH_NAME.test(text) || /\?/.test(text))) return clarify("which");
+  // Data completeness, answered without SQL: an answer when it said something and declined nothing.
+  if (!r.sql && text && tags.includes("completeness-deterministic") && !NOT_HELD.test(text)) return answer();
   if (UNREAD.test(text)) return decline("reader");
   if (ASKS.test(text) || WHICH_NAME.test(text)) return clarify(oldAbout(text));
   if (r.sql) return decline("no rows");
