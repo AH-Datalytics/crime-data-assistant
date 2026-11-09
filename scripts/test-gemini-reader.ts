@@ -83,11 +83,14 @@ for (const q of ["is my business at 910 st. louis street 62025 risky", "crime in
   "crime near 123 Main St?", "crime in 1900 Main St", "call 06 12 34 56 78", "call 555-0199", "crime in 63101.",
   // Codex review 11
   "crime near 123 main", "crime near 1600 pennsylvania", "crime near 12 Main", "crime near 1900 Main", "crime near 1900 5th Ave",
-  "crime near (123 Main St)", "crime in 63101, please", "crime in Memphis, my phone is 555 0199", "crime in Memphis, my phone is 5550199"]) assert.equal(looksPersonal(q), true, q);
+  "crime near (123 Main St)", "crime in 63101, please", "crime in Memphis, my phone is 555 0199", "crime in Memphis, my phone is 5550199",
+  // Codex review 12
+  "crime in 123 main st", "crime by 12 elm street", "crime in 123 MAIN ST", "crime near 1900 main", "crime near apartment 2024",
+  "crime near 12-14 Main Street", "crime near 2019-2023 Main Street", "crime near Apt 12K"]) assert.equal(looksPersonal(q), true, q);
 // ... and questions with none are never withheld (St. Louis, counts, years, rates, ages, roads).
 for (const q of ["2024 murders in St. Louis", "top 10 cities in St. Louis County", "3 month rolling counts in St. Louis", "murders per 100,000 in St. Louis",
   "victims age 18 in St. Louis", "murders in 2019 2020 2021 2022 2023", "Route 66 crime", "murders in Memphis from 2019 to 2023",
-  "show 10 years of murders", "top 25 cities by murder rate in 2024", "murders in 2024 on 5th street", "9 out of 10 cities", "robberies in the 1990s and 2000s",
+  "show 10 years of murders", "top 25 cities by murder rate in 2024", "9 out of 10 cities", "robberies in the 1990s and 2000s",
   "murders from 2015-2024 in Memphis", "2019-2023 robberies in Chicago", "In 2023 Memphis had how many murders", "top 100 cities", "murders in 2020 Chicago",
   "rate per 1000 residents", "last 12 months", "5 largest cities", "50% of murders", "over 100k people", "murders among 18-24 year olds"])
   assert.equal(looksPersonal(q), false, q);

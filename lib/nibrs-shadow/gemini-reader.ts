@@ -318,6 +318,7 @@ export function qualifies(question: string, outcome: { kind: string; reason?: st
 const YEAR = /^(?:1[89]|20)\d\d$/;
 /** City names that begin with "St." (never a street). */
 const SAINT_CITY = /^(?:louis|paul|petersburg|joseph|lucie|george|charles|cloud|augustine|clair|johns|helens|albans|marys)$/i;
+const STREET_OR_UNIT = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|court|ct|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|plaza|broadway|apt|apartment|suite|ste|unit|box)$/i;
 const STREET_WORDS = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|plaza|broadway)$/i;
 /** Words before a small number that make it a count, an age or a rate ("top 10", "last 5", "age 18", "per 1000"). */
 const COUNT_BEFORE = /^(?:top|bottom|last|past|first|next|previous|prior|over|under|above|below|than|about|around|nearly|almost|least|most|age|ages|aged|per|every|each|only|just|within|rolling|trailing|those|these|the|of|for|in|to|and|or|by|with|vs|versus|between|from|through|thru|until|since)$/i;
@@ -326,6 +327,16 @@ const COUNT_AFTER = /^(?:years?|yrs?|months?|mos?|weeks?|days?|hours?|decades?|q
 export function looksPersonal(text: string): boolean {
   const t = text.normalize("NFKC");
   if (/@|\bp\.?\s*o\.?\s*box\b/i.test(t)) return true;
+  // A street or unit word anywhere in a question with any digit in it (Codex review 12: count, year and range
+  // exceptions let "123 main st", "12-14 Main Street", "apartment 2024" through): "St." before a city name excepted.
+  if (/\d/.test(t)) {
+    const ws = t.split(/[\s,;:!?()"]+/).filter(Boolean).map((x) => x.replace(/[^A-Za-z]/g, ""));
+    for (let k = 0; k < ws.length; k++) {
+      if (!STREET_OR_UNIT.test(ws[k]) && !/(?:strasse|straße|gasse|straat)$/i.test(ws[k])) continue;
+      if (/^st$/i.test(ws[k]) && SAINT_CITY.test(ws[k + 1] ?? "")) continue;
+      return true;
+    }
+  }
   // Take out the numbers that are plainly crime-data numbers; any number left withholds the question.
   const left = t
     .replace(/\b(?:1[89]|20)\d\d\s*[-–—/]\s*(?:(?:1[89]|20)?\d\d)\b/g, " ")          // year ranges: 2019-2023, 2019-23
@@ -350,7 +361,8 @@ export function looksPersonal(text: string): boolean {
         if (/^(?:on|in|at|of|for|from|to|by|near)$/i.test(after[k])) break;
         if (STREET_WORDS.test(after[k]) && !(/^st$/i.test(after[k]) && SAINT_CITY.test(after[k + 1] ?? (words[i + k + 2] ?? "").replace(/[^A-Za-z]/g, "")))) { street = true; break; }
       }
-      const nearName = /^(?:near|at|on|by|around)$/i.test(words[i - 1] ?? "") && /^[A-Z][a-z]+$/.test(after[0] ?? "");
+      // ... or after "near", "at", "on", "by" or "around" before any word that isn't a count word ("near 1900 main").
+      const nearName = /^(?:near|at|on|by|around)$/i.test(words[i - 1] ?? "") && /^[A-Za-z]+$/.test(after[0] ?? "") && !COUNT_AFTER.test(after[0] ?? "");
       if (!street && !nearName) continue;
       return true;
     }
