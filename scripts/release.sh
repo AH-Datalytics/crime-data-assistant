@@ -115,8 +115,9 @@ notify() {
 
 cleanup() {
   # The rollback target's pin is released once production is known to be stable (LIVE, ROLLED BACK, NOT DEPLOYED). After
-  # ROLLBACK NOT CONFIRMED the previous release may be the only good one left, so its pin stays until a person clears it.
-  if (( PINNED_BY_US )) && [[ "$FINAL_STATE" != "ROLLBACK NOT CONFIRMED" ]] && [[ -f "$PINNED_FILE" ]]; then
+  # ROLLBACK NOT CONFIRMED (or any state not recorded) the previous release may be the only good one left, so its pin
+  # stays until a person clears it.
+  if (( PINNED_BY_US )) && [[ "$FINAL_STATE" =~ ^(LIVE|ROLLED\ BACK|NOT\ DEPLOYED)$ ]] && [[ -f "$PINNED_FILE" ]]; then
     grep -vxF "$(basename "$TARGET")" "$PINNED_FILE" > "$PINNED_FILE.tmp"; mv -f "$PINNED_FILE.tmp" "$PINNED_FILE"
   fi
   [[ -n "$STUDIO_TOKEN" ]] && $STUDIO_CTL unlock "$STUDIO_TOKEN" > /dev/null 2>&1 8>&- 9>&-
@@ -149,7 +150,7 @@ stop_deploy() {
 
 # The rollback could not be verified: alert, then the result (shared by every path that ends this way).
 unconfirmed() {
-  notify "ROLLBACK NOT CONFIRMED for $SHA" "Attempt $ATTEMPT: $1. The previous release $TARGET could not be verified live. Log: $LOG"
+  notify "ROLLBACK NOT CONFIRMED for $SHA" "Attempt $ATTEMPT: $1. The previous release $TARGET could not be verified live and stays pinned in $PINNED_FILE until you clear it. Log: $LOG"
   finish "ROLLBACK NOT CONFIRMED" "$1 -- act at once" 3
 }
 

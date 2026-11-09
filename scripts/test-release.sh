@@ -232,6 +232,7 @@ for _ in $(seq 1 200); do grep -q "ROLLING BACK" "$T/logs/$SHA".*/release.log 2>
 kill -TERM "$RELEASE_PID"; wait "$RELEASE_PID"; RC=$?; collect
 ok "SIGTERM during the rollback: result" "$RES" "ROLLBACK NOT CONFIRMED"; ok "SIGTERM during the rollback: exit" "$RC" 3
 has "SIGTERM during the rollback: alert sent" "$T/notify" "ROLLBACK NOT CONFIRMED"
+ok "SIGTERM during the rollback: the rollback target stays pinned" "$(grep -cxF R1 "$R/releases/.pinned" 2>/dev/null)" 1
 setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1" "$T/notify-fails"; run
 ok "alert fails: still exit 3" "$RC" 3; has "alert fails: logged" "$(lastlog)release.log" "ALERT DELIVERY FAILED"
 setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1" "$T/fixed-by-reload"; run
