@@ -8,8 +8,9 @@
  *   - Each attempt reserves its worst case before it is sent: the input at one token per byte of everything sent (a
  *     token is never shorter than a byte), plus the output cap and the thinking allowance (gemini-reader.ts) at the output price. It is sent
  *     only if the spend so far, the unresolved reservations and it stay within --budget (at most 15).
- *   - A reservation is released only when the attempt's usage comes back; without usage (a rate limit, a server error,
- *     a lost response) it stays reserved, across resumes. A response that cost more than its reservation stops the run.
+ *   - A reservation is released when the attempt's usage comes back, or when the service answers with an HTTP error
+ *     (429, 5xx: not billed); with no answer at all (a network failure, the 90 s timeout) it stays reserved, across
+ *     resumes. A response that cost more than its reservation stops the run.
  *   - Each question has one attempt plus at most one retry, counted in the cache before each attempt is sent, so a
  *     resumed run never gives a question fresh attempts (Codex review 01.6).
  *   - The cost test comes first, enforced: until 10 questions are cached, a run sends at most 10. After it, a run goes
@@ -72,7 +73,8 @@ async function once(a: Ask, key: string): Promise<{ retry: boolean; proposal: Pr
   try { j = (await res.json()) as typeof j; }
   // A body cut off or not JSON: a fixed message (the parser's would quote the body).
   catch { return { retry: true, proposal: null, raw: "", usage: null, billed: null, error: `HTTP ${res.status}: the response was not JSON` }; }
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${redact(j.error?.message ?? "", key).slice(0, 200)}`);
+  // The service's own error text can echo the request (question text): only the status is printed (Codex review 05).
+  if (!res.ok) throw new Error(`HTTP ${res.status} (an error answer; its text is not printed)`);
   const u = j.usageMetadata;
   if (!u || typeof u.promptTokenCount !== "number") throw new Error("USAGE: a response without usage; its cost is unknown");
   const usage = { input: u.promptTokenCount ?? 0, output: u.candidatesTokenCount ?? 0, thinking: u.thoughtsTokenCount ?? 0 };
@@ -108,8 +110,10 @@ async function main() {
   if (store.binding !== binding) { console.error("The cache on disk was made with another prompt, model or settings; stopping."); process.exit(3); }
   // A question whose two attempts are used up is done, answered or not (a run stopped mid-attempt could leave one
   // neither done nor retryable: job J step 1's third question).
-  for (const e of Object.values(store.entries)) if (!e.done && e.attempts >= 2) e.done = true;
   const save = () => fs.writeFileSync(cachePath, JSON.stringify(store, null, 1));
+  let repaired = 0;
+  for (const e of Object.values(store.entries)) if (!e.done && e.attempts >= 2) { e.done = true; repaired++; }
+  if (repaired) save();   // saved at once, whatever happens next (Codex review 05)
   const done = () => Object.values(store.entries).filter((e) => e.done);
   const todo = [...asks].filter(([k]) => !store.entries[k]?.done && (store.entries[k]?.attempts ?? 0) < 2);
   // The cost test first; then the projection decides whether the rest may run.
