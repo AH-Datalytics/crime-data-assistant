@@ -19,7 +19,7 @@ import { readQuestion } from "./reading";
 import { STATE_NAMES } from "./places";
 
 export const READER_MODEL_ID = "gemini-3.8-flash";
-export const READER_PROMPT_VERSION = "gr-2";
+export const READER_PROMPT_VERSION = "gr-3";
 /**
  * The output cap and thinking level (the model rewriter's, proven with this model). Thinking is billed as output and
  * isn't capped by the level, so the fetch reserves an allowance for it: 4,096 tokens, twice the most this model used at
@@ -27,7 +27,7 @@ export const READER_PROMPT_VERSION = "gr-2";
  */
 export const READER_GENERATION = { temperature: 0, maxOutputTokens: 1024, thinkingLevel: "low", thinkingAllowance: 4096 } as const;
 
-export type Kind = "measure" | "place" | "period" | "breakdown" | "statistic" | "unit";
+export type Kind = "measure" | "place" | "period" | "breakdown" | "statistic" | "unit" | "spelling";
 export type Breakdown = "year" | "month" | "quarter" | "race" | "sex" | "age" | "ethnicity" | "weapon" | "location" | "relationship" | "offense";
 export type Replacement = {
   /** The exact words of the question replaced (contiguous, copied). */
@@ -39,6 +39,8 @@ export type Replacement = {
   breakdown?: { value: Breakdown; person: "victim" | "offender" | "arrestee" | null } | null;
   statistic?: "rate" | "percent_change" | "share" | null;
   unit?: "victims" | "offenses" | "offenders" | "arrests" | "incidents" | null;
+  /** The correct spelling of a misspelled word (kind "spelling"): the pattern reader then reads it. */
+  spelling?: string | null;
 };
 export type Proposal = { replacements: Replacement[]; unhandled: string[] };
 
@@ -63,6 +65,8 @@ const PERSON_WORDS: Record<"victim" | "offender" | "arrestee", RegExp> = {
 const ADDS: Record<Kind, string[]> = {
   measure: ["measure"], place: ["place"], period: ["period"], breakdown: ["breakdown", "grain"],
   statistic: ["statistic", "share", "change"], unit: ["unit"],
+  // A corrected spelling is the user's own word: the pattern reader decides what it adds (checked against nothing lost).
+  spelling: [],
 };
 
 // ------------------------------------------------------------------------------------------------- the prompt
@@ -77,6 +81,7 @@ You get the question and the spans the reader could not read. For each such span
   - breakdown: { value, person }: value one of ${BREAKDOWNS.join(", ")}; person victim, offender or arrestee only when the span says whose.
   - statistic: rate (per population), percent_change, or share (percent of a total).
   - unit: victims, offenses, offenders, arrests or incidents.
+  - spelling: the correct spelling of one misspelled word (the span is that one word, e.g. "aggravates" -> "aggravated", "comparied" -> "compared"). Only an obvious typo of the word the user meant; never a different word.
 - unhandled: every unread word or phrase that is a condition, qualifier or request you could not map (for example "unsolved", "near schools", "predict", "why", "compared to the national average"). Leave a span out of replacements rather than map it loosely.`;
 
 export const READER_FOLLOW_UP_PROMPT = `${READER_SYSTEM_PROMPT}
@@ -89,13 +94,14 @@ export const READER_RESPONSE_SCHEMA = {
   properties: {
     replacements: { type: "ARRAY", items: { type: "OBJECT", properties: {
       span: { type: "STRING" },
-      kind: { type: "STRING", enum: ["measure", "place", "period", "breakdown", "statistic", "unit"] },
+      kind: { type: "STRING", enum: ["measure", "place", "period", "breakdown", "statistic", "unit", "spelling"] },
       measure: opt({ type: "STRING", enum: Object.keys(MEASURE_WORDS) }),
       place: opt({ type: "STRING" }),
       period: opt({ type: "OBJECT", properties: { kind: { type: "STRING", enum: ["year", "range", "years", "since"] }, years: { type: "ARRAY", items: { type: "INTEGER" } } }, required: ["kind", "years"] }),
       breakdown: opt({ type: "OBJECT", properties: { value: { type: "STRING", enum: BREAKDOWNS }, person: { type: "STRING", nullable: true, enum: ["victim", "offender", "arrestee"] } }, required: ["value"] }),
       statistic: opt({ type: "STRING", enum: ["rate", "percent_change", "share"] }),
       unit: opt({ type: "STRING", enum: ["victims", "offenses", "offenders", "arrests", "incidents"] }),
+      spelling: opt({ type: "STRING" }),
     }, required: ["span", "kind"] } },
     unhandled: { type: "ARRAY", items: { type: "STRING" } },
   },
@@ -131,6 +137,15 @@ const STAT_WORDS: Record<NonNullable<Replacement["statistic"]>, RegExp> = {
   percent_change: /\b(?:change[ds]?|increase[ds]?|decrease[ds]?|rose|rise|risen|fell|fall|fallen|drop(?:ped)?|gr[eo]w|grown|jump(?:ed)?|declin\w*)\b/i,
 };
 const wordCount = (s: string) => s.split(/\s+/).filter(Boolean).length;
+/** Edits (insert, delete, substitute, swap two neighbours) from one word to another. */
+export function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
 
 /** The words a replacement puts in place of its span; null when its value isn't in the vocabulary or not grounded. */
 export function replacementText(r: Replacement): string | null {
@@ -169,6 +184,14 @@ export function replacementText(r: Replacement): string | null {
       return p.kind === "year" ? `in ${p.years[0]}` : p.kind === "since" ? `since ${p.years[0]}` : p.kind === "range" ? `from ${p.years[0]} to ${p.years[1]}`
         : `in ${p.years.slice(0, -1).join(", ")} and ${p.years[p.years.length - 1]}`;
     }
+    case "spelling": {
+      // One word for one word, letters only, at least four of them, within two edits and a quarter of its length
+      // ("aggravates" -> "aggravated", "comparied" -> "compared"); never the same word.
+      const from = span, to = norm(r.spelling ?? "");
+      if (!/^[a-z]{4,}$/.test(from) || !/^[a-z]+$/.test(to) || from === to) return null;
+      const d = editDistance(from, to);
+      return d <= 2 && d <= Math.max(1, Math.floor(from.length / 4)) ? to : null;
+    }
     case "breakdown": {
       const b = r.breakdown;
       if (!b || !BREAKDOWNS.includes(b.value)) return null;
@@ -181,7 +204,7 @@ export function replacementText(r: Replacement): string | null {
 }
 
 export type Verdict = { ok: true; question: string } | { ok: false; reason: string };
-type Part = { concept: string; value: string | null; clause: number; state: string };
+type Part = { concept: string; value: string | null; clause: number; state: string; text?: string };
 const keyOf = (p: Part) => `${p.concept}=${p.value}`;
 /** The ledger's own bookkeeping; every other key is a condition or setting the reader read (clearance, circumstance, ...). */
 const BOOKKEEPING = new Set(["parts", "question", "text", "obligations", "finalized", "taken", "readings"]);
@@ -228,10 +251,22 @@ export function validateProposal(p: Proposal | null, question: string, currentYe
   // of the killers" -> by offender race), when its span holds both and names the person.
   const refined = (k: string) => p.replacements.some((r) => r.kind === "breakdown" && !!r.breakdown?.person && k === `breakdown=${r.breakdown.value}`
     && new RegExp(`\\b${r.breakdown.value}\\b`, "i").test(r.span));
-  for (const [k, n] of b) if ((a.get(k) ?? 0) < n && !refined(k)) return { ok: false, reason: "a part the reader read was lost or changed" };
+  // And a corrected spelling may join a part the reader read into a longer one of the same kind ("aggravates assaults":
+  // "assaults" read as assault becomes "aggravated assaults", aggravated assault), when the new part's words hold both
+  // the corrected word and the old part's words.
+  const spellings = p.replacements.filter((r) => r.kind === "spelling").map((r) => norm(r.spelling ?? ""));
+  const joined = (k: string) => {
+    const old = before.parts.find((x) => x.state === "recognized" && keyOf(x) === k);
+    if (!old || !spellings.length) return false;
+    return after.parts.some((x) => x.state === "recognized" && x.concept === old.concept && keyOf(x) !== k
+      && spellings.some((w) => new RegExp(`\\b${w}\\b`).test(norm(x.text ?? ""))) && norm(x.text ?? "").includes(norm(old.text ?? "")));
+  };
+  for (const [k, n] of b) if ((a.get(k) ?? 0) < n && !refined(k) && !joined(k)) return { ok: false, reason: "a part the reader read was lost or changed" };
   // What is new is only what the replacements declared.
   const allowed = new Set(p.replacements.flatMap((r) => ADDS[r.kind]));
-  for (const [k, n] of a) if (n > (b.get(k) ?? 0) && !allowed.has(k.split("=")[0])) return { ok: false, reason: `gained an undeclared ${k.split("=")[0]}` };
+  // A corrected spelling is the user's word: what it adds is the pattern reader's reading of it, whatever its kind.
+  const spelled = p.replacements.some((r) => r.kind === "spelling");
+  for (const [k, n] of a) if (n > (b.get(k) ?? 0) && !spelled && !allowed.has(k.split("=")[0])) return { ok: false, reason: `gained an undeclared ${k.split("=")[0]}` };
   // Every condition or setting the reader read ("unsolved" is a clearance setting, not a part) is unchanged, except one a
   // replacement declares where there was none: a comparison (percent change), whose attribute (people), quarters.
   const declared: Record<string, boolean> = {
@@ -244,7 +279,8 @@ export function validateProposal(p: Proposal | null, question: string, currentYe
     const was = before.flags[k] ?? "null", now = after.flags[k] ?? "null";
     // A bare "by race" asks victims or offenders; a span naming whose answers that ask (and nothing else about people).
     const bareAsk = k === "people" && was === JSON.stringify({ by: null, where: [], ask: "victims or offenders" });
-    if (was !== now && !(declared[k] && (unset.has(was) || bareAsk))) return { ok: false, reason: `the reader's ${k} was lost or changed` };
+    // A corrected spelling may switch a setting on (the user's own word read), never change or clear one already set.
+    if (was !== now && !((declared[k] || spelled) && (unset.has(was) || bareAsk))) return { ok: false, reason: `the reader's ${k} was lost or changed` };
   }
   return { ok: true, question: text };
 }

@@ -61,6 +61,15 @@ assert.equal(replacementText({ span: "per household", kind: "statistic", statist
 assert.equal(replacementText({ span: "per capita", kind: "statistic", statistic: "rate" }), "rate");
 assert.equal(replacementText({ span: "counting families", kind: "unit", unit: "victims" }), null);
 assert.equal(replacementText({ span: "people killed", kind: "unit", unit: "victims" }), "victims");
+// Spelling: one unread word for its correct spelling, close enough to be a typo; the pattern reader then reads it, and
+// may join it with a part it already read ("aggravates assaults" -> aggravated assaults).
+assert.equal(ok(P({ span: "aggravates", kind: "spelling", spelling: "aggravated" }), "show me aggravates assaults in salem oregon from 2004 to 2025"),
+  "show me aggravated assaults in salem oregon from 2004 to 2025");
+assert.equal(replacementText({ span: "aggravates", kind: "spelling", spelling: "aggravating" }), null);   // too far
+assert.equal(replacementText({ span: "rob", kind: "spelling", spelling: "rod" }), null);                 // too short to judge
+assert.equal(replacementText({ span: "comparied to", kind: "spelling", spelling: "compared to" }), null); // one word only
+assert.equal(replacementText({ span: "comparied", kind: "spelling", spelling: "compared" }), "compared");
+assert.equal(replacementText({ span: "willful", kind: "spelling", spelling: "willful" }), null);         // the same word
 // When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "clarify" }, Y), true);
