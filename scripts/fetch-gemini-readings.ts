@@ -50,21 +50,29 @@ export const worstCase = (a: Ask) => (Buffer.byteLength(JSON.stringify(requestBo
   + (READER_GENERATION.maxOutputTokens + READER_GENERATION.thinkingAllowance) * PRICE.output) / 1e6;
 const redact = (s: string, key: string) => (key ? s.split(key).join("REDACTED") : s).replace(/key=[^&\s]+/gi, "key=REDACTED");
 
-async function once(a: Ask, key: string): Promise<{ retry: boolean; proposal: Proposal | null; raw: string; usage: Usage | null; error?: string }> {
+/**
+ * One attempt. `billed`: false when the service answered with an HTTP error (it doesn't bill those), so the attempt's
+ * reservation is released; null when no answer came back (a network failure or the 90 s timeout: it may have been
+ * processed), so the reservation stays.
+ */
+async function once(a: Ask, key: string): Promise<{ retry: boolean; proposal: Proposal | null; raw: string; usage: Usage | null; billed?: false | null; error?: string }> {
   // A network failure ("fetch failed": a dropped connection, DNS, a reset; job J step 1, 2026-11-09) is an attempt whose
-  // usage is unknown, like a rate limit: its reservation stays, and it counts toward the one retry. Its cause is
-  // reported (redacted), never the request.
-  let res: Response, j: { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[]; usageMetadata?: Record<string, number>; error?: { message?: string } };
+  // usage is unknown: its reservation stays, and it counts toward the one retry. Its cause is reported, redacted before
+  // it is cut short (Codex review 04), never the request.
+  let res: Response;
   try {
     res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${READER_MODEL_ID}:generateContent`, {
-      method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody(a)), signal: AbortSignal.timeout(120_000) });
-    if (res.status === 429 || res.status >= 500) return { retry: true, proposal: null, raw: "", usage: null, error: `HTTP ${res.status}` };
-    j = (await res.json()) as typeof j;
+      method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody(a)), signal: AbortSignal.timeout(90_000) });
   } catch (e) {
     const c = (e as { cause?: { code?: string; message?: string } }).cause;
-    return { retry: true, proposal: null, raw: "", usage: null, error: redact(`network: ${(e as Error).name} ${c?.code ?? ""} ${(c?.message ?? (e as Error).message ?? "").slice(0, 120)}`, key) };
+    return { retry: true, proposal: null, raw: "", usage: null, billed: null, error: `network: ${redact(`${(e as Error).name} ${c?.code ?? ""} ${c?.message ?? (e as Error).message ?? ""}`, key).slice(0, 160)}` };
   }
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${redact((j.error?.message ?? "").slice(0, 200), key)}`);
+  if (res.status === 429 || res.status >= 500) return { retry: true, proposal: null, raw: "", usage: null, billed: false, error: `HTTP ${res.status}` };
+  let j: { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[]; usageMetadata?: Record<string, number>; error?: { message?: string } };
+  try { j = (await res.json()) as typeof j; }
+  // A body cut off or not JSON: a fixed message (the parser's would quote the body).
+  catch { return { retry: true, proposal: null, raw: "", usage: null, billed: null, error: `HTTP ${res.status}: the response was not JSON` }; }
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${redact(j.error?.message ?? "", key).slice(0, 200)}`);
   const u = j.usageMetadata;
   if (!u || typeof u.promptTokenCount !== "number") throw new Error("USAGE: a response without usage; its cost is unknown");
   const usage = { input: u.promptTokenCount ?? 0, output: u.candidatesTokenCount ?? 0, thinking: u.thoughtsTokenCount ?? 0 };
@@ -98,6 +106,9 @@ async function main() {
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });
   const store: ReadingCache = fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, "utf8")) : { binding, spent: 0, unresolved: 0, entries: {} };
   if (store.binding !== binding) { console.error("The cache on disk was made with another prompt, model or settings; stopping."); process.exit(3); }
+  // A question whose two attempts are used up is done, answered or not (a run stopped mid-attempt could leave one
+  // neither done nor retryable: job J step 1's third question).
+  for (const e of Object.values(store.entries)) if (!e.done && e.attempts >= 2) e.done = true;
   const save = () => fs.writeFileSync(cachePath, JSON.stringify(store, null, 1));
   const done = () => Object.values(store.entries).filter((e) => e.done);
   const todo = [...asks].filter(([k]) => !store.entries[k]?.done && (store.entries[k]?.attempts ?? 0) < 2);
@@ -133,6 +144,10 @@ async function main() {
           store.unresolved = Math.max(0, store.unresolved - worst); store.spent += cost;
           e.usage = { input: e.usage.input + r.usage.input, output: e.usage.output + r.usage.output, thinking: e.usage.thinking + r.usage.thinking };
           if (cost > worst) { save(); throw new Error(`a response cost $${cost.toFixed(5)}, more than its reservation $${worst.toFixed(5)}`); }
+        } else if (r.billed === false) {
+          // An HTTP error answer isn't billed: its reservation is released (job J step 1: failures were piling up as
+          // spend that never happened). One with no answer at all keeps its reservation.
+          store.unresolved = Math.max(0, store.unresolved - worst);
         }
         e.proposal = r.proposal; e.raw = r.raw; e.done = !r.retry || e.attempts >= 2;
         save();

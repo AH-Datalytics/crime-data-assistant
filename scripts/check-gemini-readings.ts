@@ -17,7 +17,9 @@ for (const e of Object.values(store.entries)) {
   if (!e.done) { add("not done (an attempt left)"); continue; }
   if (!e.proposal) { add(e.usage.input > 0 ? "unparsed" : "no answer (network or rate limit)"); continue; }
   const v = validateProposal(e.proposal, e.question, year);
-  add(v.ok ? "accepted" : `refused: ${v.reason}`);
+  // Fixed categories only: a reason can name a field Gemini sent, which is not ours to print (Codex review 04).
+  const CATS = ["unhandled", "no replacements", "no proposal", "span not within unread words", "span not found once", "still unread", "a part the reader read was lost or changed", "gained an undeclared", "the reader's", "not in the vocabulary"];
+  add(v.ok ? "accepted" : `refused: ${CATS.find((c) => v.reason.includes(c)) ?? "other"}`);
 }
 console.log(`entries ${Object.keys(store.entries).length}; spent $${store.spent.toFixed(4)} + $${store.unresolved.toFixed(4)} unresolved`);
 console.log(JSON.stringify(out));
