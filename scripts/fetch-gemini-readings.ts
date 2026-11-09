@@ -11,7 +11,7 @@
  *   - A reservation is released when the attempt's usage comes back, or when the service answers with an HTTP error
  *     (429, 5xx: not billed); with no answer at all (a network failure, the 90 s timeout) it stays reserved, across
  *     resumes. A response that cost more than its reservation stops the run.
- *   - A request the service refuses outright (429, 503: not billed) doesn't count as an attempt: the run waits (15 s,
+ *   - A request the service refuses outright (429 or any 5xx: not billed) doesn't count as an attempt: the run waits (15 s,
  *     doubling, at most 2 minutes) and tries again, and stops after six refusals in a row.
  *   - Each question has one attempt plus at most one retry, counted in the cache before each attempt is sent, so a
  *     resumed run never gives a question fresh attempts (Codex review 01.6).
@@ -145,7 +145,7 @@ async function main() {
         store.unresolved += worst; e.attempts++; save();
         const r = await once(a, key);
         if (r.error) console.log(`attempt ${e.attempts} failed: ${r.error}`);
-        // The service refused it outright (429, 503: not billed, nothing reached the model): the attempt doesn't count,
+        // The service refused it outright (429 or any 5xx: not billed, nothing reached the model): the attempt doesn't count,
         // and the run waits, longer each time, before trying again; refused six times running, the run stops (job J
         // step 1 rerun, 2026-11-09: 15 of 16 attempts were 503 or 429 and used up eight questions' attempts).
         if (r.billed === false) {
@@ -175,7 +175,7 @@ async function main() {
     save();
     const m = redact(String(err instanceof Error ? err.message : err), key);
     console.log(m === "BUDGET" ? `stopped before the budget: $${store.spent.toFixed(4)} spent and $${store.unresolved.toFixed(4)} unresolved of $${budget}`
-      : m === "REFUSED" ? "stopped: the service refused six requests in a row (429/503, not billed); try later or check the key's quota" : `stopped: ${m}`);
+      : m === "REFUSED" ? "stopped: the service refused six requests in a row (429/5xx, not billed); try later or check the key's quota" : `stopped: ${m}`);
   }
   const all = done();
   const pricedAll = all.filter((x) => x.usage.input > 0).length;
