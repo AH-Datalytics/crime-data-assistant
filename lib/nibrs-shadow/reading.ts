@@ -423,6 +423,14 @@ function readPeople(text0: string): { text: string; people: People | null } {
   // The counted person's own attribute: offenders by sex or age (the reader's own breakdown, left to it), arrests by race.
   if (!p.by && /^\s*(?:all\s+crime\s+)?arrests\b|\barrests\s+in\b/i.test(text))
     cut(/,?\s*\bby\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i, (m) => { p.by = { who: "arrestee", attr: ATTR(m[1]), paired: false }; });
+  // "Committed by" names the offenders: "murders in D.C. in 2025 committed by race", "... by race committed by", "murder
+  // comited by blacks ... seperated by sex" break down by the offenders' attribute, never the victims' (coordinator
+  // 2026-11-09, found live on /redesign). The "committed (by)" words go with it.
+  const COMMITTED = /\b(?:comm?itt?ed|perpetrated)\s+by\b|\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)(?:\s+groups?)?\s+(?:comm?itt?ed|perpetrated)\b/i;
+  if (!p.by && !vm && COMMITTED.test(text)
+    && cut(/,?\s*\b(?:(?:comm?itt?ed|perpetrated)\s+)?by\s+(?:the\s+)?(race|sex|gender|ethnicity|age)(?:\s+groups?)?(?:\s+(?:comm?itt?ed|perpetrated)(?:\s+by)?(?=\s*$|\s*[?.!,]))?/i,
+      (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: false }; }))
+    text = text.replace(/\s+(?:comm?itt?ed|perpetrated)\s+by\s*(?=[?.!]?\s*$)/i, "").trim();
   // A bare "by race (sex, ethnicity, age)" naming no person ("murders in D.C. in 2025 by race"): victims' or offenders'
   // is asked, never assumed (coordinator 2026-11-08, scoring gap 1; the labels' "victim or offender race").
   // "Committed by ..." (as typed: "comited by blacks asians hispanics ...") names the offenders (runner job G,
