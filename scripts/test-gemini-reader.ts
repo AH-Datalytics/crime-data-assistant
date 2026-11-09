@@ -77,11 +77,15 @@ for (const [f, t] of [["unreported", "reported"], ["deported", "reported"], ["un
 for (const q of ["is my business at 910 st. louis street 62025 risky", "crime in 123 Main St", "crime by 123 Main St", "PO Box 12",
   "123 Broadway, New York NY 10001", "Apt 4B, 77 Elm Street", "123 Main St, St. Louis MO 63101", "Unit 3 12 Oak Rd", "(314)555-0199",
   "3145550199", "+44 20 7946 0958", "+33 6 12 34 56 78", "call 314-555-0199", "jane@example.com", "12 rue de la Paix, 75002 Paris",
-  "123 N Main St", "456 5th Ave", "crime in zip code 62025"]) assert.equal(looksPersonal(q), true, q);
+  "123 N Main St", "456 5th Ave", "crime in zip code 62025",
+  // Codex review 10
+  "crime near 123 Main", "crime near 1600 Pennsylvania", "crime near suite 200", "crime near Apt 4B", "crime near Hauptstrasse 12",
+  "crime near 123 Main St?", "crime in 1900 Main St", "call 06 12 34 56 78", "call 555-0199", "crime in 63101."]) assert.equal(looksPersonal(q), true, q);
 // ... and questions with none are never withheld (St. Louis, counts, years, rates, ages, roads).
 for (const q of ["2024 murders in St. Louis", "top 10 cities in St. Louis County", "3 month rolling counts in St. Louis", "murders per 100,000 in St. Louis",
   "victims age 18 in St. Louis", "murders in 2019 2020 2021 2022 2023", "I-95 robberies", "Route 66 crime", "murders in Memphis from 2019 to 2023",
-  "show 10 years of murders", "top 25 cities by murder rate in 2024", "murders in 2024 on 5th street", "9 out of 10 cities", "robberies in the 1990s and 2000s"])
+  "show 10 years of murders", "top 25 cities by murder rate in 2024", "murders in 2024 on 5th street", "9 out of 10 cities", "robberies in the 1990s and 2000s",
+  "murders from 2015-2024 in Memphis", "2019-2023 robberies in Chicago", "In 2023 Memphis had how many murders", "top 100 cities", "murders in 2020 Chicago"])
   assert.equal(looksPersonal(q), false, q);
 // When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);

@@ -322,24 +322,35 @@ const YEAR = /^(?:1[89]|20)\d\d$/;
 export function looksPersonal(text: string): boolean {
   const t = text.normalize("NFKC");
   if (/@|\bp\.?\s*o\.?\s*box\b|\bzip\s*(?:code)?\s*:?\s*\d/i.test(t)) return true;
-  // A phone: a run of digits and separators holding nine or more digits that isn't just years and counts.
-  for (const m of t.matchAll(/\+?\(?\d[\d\s().-]{6,}\d\)?/g)) {
+  // A unit anywhere ("suite 200", "Apt 4B", "#12"), and a street word joined to its name followed by a number
+  // ("Hauptstrasse 12").
+  if (/\b(?:apt|apartment|suite|ste|unit|flat|room|rm)\.?\s*#?\s*\d|(?:^|\s)#\s?\d|\b\w*(?:strasse|straße|gasse|weg|straat|street|avenue|road)\s+\d/i.test(t)) return true;
+  // A phone: a run of digits and separators with nine or more digits that isn't just years and short counts; any
+  // +number; four or more two-digit groups ("06 12 34 56 78"); a local seven-digit number ("555-0199").
+  for (const m of t.matchAll(/\+?\(?\d[\d\s().-]{4,}\d\)?/g)) {
     const groups = m[0].match(/\d+/g) ?? [];
-    if (m[0].startsWith("+") && groups.join("").length >= 8) return true;   // an international number in short groups
-    if (groups.join("").length >= 9 && !groups.every((g) => YEAR.test(g) || g.length <= 2)) return true;
+    const digits = groups.join("").length;
+    if (m[0].startsWith("+") && digits >= 7) return true;
+    if (groups.filter((g) => g.length === 2).length >= 4) return true;
+    if (digits >= 9 && !groups.every((g) => YEAR.test(g) || g.length <= 2)) return true;
   }
-  // A ZIP: five digits standing alone (a thousands count is written with a comma: "100,000").
-  if (/(?<![\d,.])\b\d{5}(?:-\d{4})?\b(?![\d,.])/.test(t)) return true;
-  // A street address: a number (a house number, not a year after "in", "since" ...) with a street word within the
-  // next five words; "St." before a city name ("St. Louis") is not a street.
+  if (/(?<![\d,])\b\d{3}[-.]\d{4}\b(?![\d,])/.test(t)) return true;
+  // A ZIP: five digits standing alone, before any punctuation (a thousands count is written "100,000").
+  if (/(?<![\d,.])\b\d{5}(?:-\d{4})?\b(?![\d,]|\.\d)/.test(t)) return true;
+  // A street address: a house number with a street word within the next five words (St. before a city name, "St.
+  // Louis", excepted), or a number of three or more digits followed by a capitalized name ("1600 Pennsylvania",
+  // "123 Main"); years are not excepted here (Codex review 10: "in 1900 Main St").
   const words = t.split(/[\s,]+/).filter(Boolean);
   for (let i = 0; i < words.length; i++) {
     if (!/^\d{1,6}[a-z]?$/i.test(words[i])) continue;   // a house number ("12", "12B"), not an ordinal street name ("5th")
-    if (YEAR.test(words[i]) && i > 0 && /^(?:in|since|from|to|through|thru|until|during|of|and|between|before|after|by|for)$/i.test(words[i - 1])) continue;
+    const next = (words[i + 1] ?? "").replace(/[^A-Za-z]/g, "");
+    if (/^\d{3,6}[a-z]?$/i.test(words[i]) && /^[A-Z][a-z]+$/.test(next) && !SAINT_CITY.test(next) && !YEAR.test(words[i])) return true;
     for (let j = i + 1; j <= Math.min(words.length - 1, i + 5); j++) {
-      const w = words[j].replace(/[.#:;]+$/, "");
+      const w = words[j].replace(/[^A-Za-z]+$/, "");
       if (!STREET_WORD.test(w)) continue;
       if (/^st$/i.test(w) && words[j + 1] && SAINT_CITY.test(words[j + 1].replace(/[^A-Za-z]/g, ""))) continue;
+      // An ordinal street ("2024 on 5th street") names a street, not an address: the number must be next to it.
+      if (YEAR.test(words[i]) && j > i + 1 && /^\d+(?:st|nd|rd|th)$/i.test(words[j - 1] ?? "")) continue;
       return true;
     }
   }
