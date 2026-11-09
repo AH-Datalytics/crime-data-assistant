@@ -56,6 +56,7 @@ import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { tableDigest } from "../lib/answer-eval/table-digest";
 import { bucket, type Bucket, type Got, type Label } from "./qlog-bucket";
+import { qualifies, readerBinding, readerKey, validateReading } from "../lib/nibrs-shadow/gemini-reader";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const LABELS = arg("--labels")!, PROGRESS = arg("--progress")!;
@@ -76,6 +77,15 @@ const crimeIndex = arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeind
 const WORKERS = Math.max(1, Number(arg("--workers", "1")));
 const SHARD = arg("--shard") ? arg("--shard")!.split("/").map(Number) as [number, number] : null;
 const SPOT = process.argv.includes("--spot");
+/**
+ * --gemini-readings <cache> (plan 3 step 1, the Gemini reader's shadow run): readings fetched by
+ * scripts/fetch-gemini-readings.ts, read offline. A question that qualifies (the engine doesn't answer and the reader
+ * left words unread) takes Gemini's reading when it validates, and the engine answers the canonical question; otherwise
+ * today's outcome stands. Each such question's outcome says which ("via").
+ */
+const READINGS_FILE = arg("--gemini-readings");
+const READINGS = READINGS_FILE ? JSON.parse(fs.readFileSync(READINGS_FILE, "utf8")) as { binding: string; entries: Record<string, { reading: never }> } : null;
+if (READINGS && READINGS.binding !== readerBinding()) throw new Error(`${READINGS_FILE} was made with another prompt, model or settings`);
 // The spot set checks the cache against DuckDB itself, so it never reads or writes the cache.
 const CACHE_DIR = SPOT ? undefined : arg("--sql-cache");
 // The DuckDB and Python versions (for the cache's fingerprint), read before any executor starts: on Windows a process
@@ -140,6 +150,7 @@ function runFingerprint(): string {
   };
   walk(path.join(repo, "lib")); walk(path.join(repo, "scripts", "fixtures"));
   h.update(fs.readFileSync(__filename));
+  if (READINGS_FILE) h.update(fs.readFileSync(READINGS_FILE));
   return h.digest("hex");
 }
 // Rows in the cache are frozen, and every question gets its own copy: the engine sees rows exactly as DuckDB's (it may
@@ -282,7 +293,18 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
       nextMs = LIMIT_MS * 3;
       try { o = once(); } finally { nextMs = LIMIT_MS; }
     }
-    g = got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t);
+    // The Gemini reader (--gemini-readings): only where it qualifies; a reading that doesn't validate keeps the outcome.
+    let via: string | undefined;
+    if (READINGS) {
+      const fu = l.kind === "follow-up" && !!l.previous, year = Number(deps.release.lastMonth.slice(0, 4));
+      const o0 = o as unknown as { kind: string; about?: string };
+      if (qualifies(l.question, { kind: o0.kind, about: o0.about }, fu, year)) {
+        const e = READINGS.entries[readerKey(l.question, fu ? l.previous : null)];
+        const v = e ? validateReading(e.reading, l.question, fu ? l.previous : null, year) : { ok: false as const, reason: "not fetched" };
+        if (v.ok) { o = shadowAnswer(v.question, deps); via = "gemini"; } else via = `gemini refused: ${v.reason}`;
+      }
+    }
+    g = { ...got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t), ...(via ? { via } : {}) };
   } catch (e) {
     // A process that can't be ended stops the run (incomplete, so not judged): the next one must never run beside it.
     if (/duckdb executor:/.test(String(e))) throw e;
@@ -323,6 +345,12 @@ const incomplete = all.notRun > 0 || shardFailed;
 const gate = incomplete ? `NOT JUDGED: the run is incomplete (${all.notRun} questions not run${shardFailed ? ", a shard failed" : ""})`
   : all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
 console.log(`hard gate (wrong answers = 0): ${gate}`);
+if (READINGS) {
+  // The Gemini reader's questions, by what happened: used (and the bucket it reached), or refused and why.
+  const via = new Map<string, number>();
+  for (const l of scored) { const g = done.get(l.id); if (g?.via) { const k = g.via === "gemini" ? `gemini used -> ${bucket(l, g)}` : g.via; via.set(k, (via.get(k) ?? 0) + 1); } }
+  console.log("gemini reader:", JSON.stringify(Object.fromEntries([...via].sort())));
+}
 // Follow-up answers on their own (undisputed labels): how many there are, and how many of each kind.
 const fuAnswers = scored.filter((l) => l.kind === "follow-up" && l.label.status !== "disputed" && done.get(l.id)?.kind === "answer");
 const fuCount = (b: Bucket) => fuAnswers.filter((l) => bucket(l, done.get(l.id) ?? null) === b).length;

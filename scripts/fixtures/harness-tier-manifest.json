@@ -2511,6 +2511,15 @@
       "note": "Scoring gap 2: the old app's logged replies read as answer, clarify or decline, and label ids made as the label drafter makes them; replies written for the test, no query log."
     },
     {
+      "id": "test-gemini-reader",
+      "tier": "F",
+      "script": "scripts/test-gemini-reader.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "The Gemini reader's validator (plan 3): a reading is accepted only when every field is grounded in the question, nothing is unhandled, every content word is covered and it reads back exactly; no model calls."
+    },
+    {
       "id": "test-nibrs-duckdb-executor",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-executor.ts",
