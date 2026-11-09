@@ -652,7 +652,9 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // Increment 7: words policy asks about, a button per reading (P30 "young adults", P44 "attackers"), the rest of the
   // question kept (P22).
   const ppl0 = flags(ledger0).people;
-  if (ppl0?.unsupported) return decline("unsupported_capability", `This isn't available yet: ${ppl0.unsupported} (an arrest lists the person arrested, not the victim). I haven't answered with the arrestees' instead.`);
+  if (ppl0?.unsupported) return decline("unsupported_capability", / for offenders$/.test(ppl0.unsupported)
+    ? `This isn't available yet: ${ppl0.unsupported}. I haven't answered with the offenders' own instead.`
+    : `This isn't available yet: ${ppl0.unsupported} (an arrest lists the person arrested, not the victim). I haven't answered with the arrestees' instead.`);
   if (ppl0?.ask === "young adults") {
     const ages = (lo: number, hi: number): ShadowOption => ({ label: `${lo} to ${hi}`,
       continuation: fromLedger(Object.assign(withParts(ledger0, ledger0.parts), { people: { ...ppl0, ask: null, where: [...ppl0.where, { who: "offender", attr: "age", range: [lo, hi], paired: false }] } }), deps, pins) });
