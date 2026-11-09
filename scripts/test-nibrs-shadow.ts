@@ -1312,6 +1312,10 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     assert.deepEqual(as(ask("give me Memphis murders in 2024 broken down by race committed by"), "answer").plan.groupings.map((x) => x.dimension), ["offender.race"]);
     // Offenders counted by a victim's race: declined, never the offenders' own race (Codex gap-2 review 04).
     assert.match(as(ask("Murder offenders in Memphis in 2024 by victim race"), "decline").explanation, /a victim's race for offenders/);
+    // Codex gap-2 review 05: any opener; "victims of offenders" counts victims.
+    for (const q of ["Give me the number of murder offenders in Memphis in 2024 by victim race", "List aggravated assault offenders in Memphis in 2024 by victim race"])
+      assert.match(as(ask(q), "decline").explanation, /a victim's race for offenders/, q);
+    assert.ok(!/for offenders/.test(JSON.stringify(ask("Victims of offenders who were under 18 in Memphis in 2024 by victim race"))));
     assert.deepEqual(as(ask("Murders in Memphis in 2024 by victim race"), "answer").plan.groupings.map((x) => x.dimension), ["victim.race"]);
     // "Committed against" names victims, never offenders (Codex gap-2 review 01.1).
     assert.ok(!JSON.stringify(ask("Murders in Memphis in 2024 by race committed against women")).includes("offender.race"));

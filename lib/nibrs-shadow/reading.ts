@@ -426,7 +426,8 @@ function readPeople(text0: string): { text: string; people: People | null } {
   if (vm && /\barrest(?:s|ed|ee|ees)?\b/i.test(text)) cut(new RegExp(vm[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), () => { p.unsupported = `a victim's ${vm[1].toLowerCase()} for arrests`; });
   // Offenders counted by a victim's attribute ("murder offenders ... by victim race") isn't available yet: declined,
   // never answered with the offenders' own attribute (Codex gap-2 review 04: a bare "by race" is the counted person's).
-  else if (vm && /^\s*(?:(?:how\s+many|number\s+of|count\s+of|show(?:\s+me)?)\s+)?(?:[a-z]+\s+){0,2}?offenders?\b/i.test(text)) cut(new RegExp(vm[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), () => { p.unsupported = `a victim's ${vm[1].toLowerCase()} for offenders`; });
+  // What is counted is the first person the question names ("victims of offenders ..." counts victims; Codex gap-2 review 05).
+  else if (vm && /^offenders?$/i.test(/\b(victims?|offenders?|arrests?|arrestees?)\b/i.exec(text.replace(vm[0], " "))?.[1] ?? "")) cut(new RegExp(vm[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), () => { p.unsupported = `a victim's ${vm[1].toLowerCase()} for offenders`; });
   else if (vm) text = text.replace(vm[0], ` by ${vm[1]}`);
   // The counted person's own attribute: offenders by sex or age (the reader's own breakdown, left to it), arrests by race.
   if (!p.by && /^\s*(?:all\s+crime\s+)?arrests\b|\barrests\s+in\b/i.test(text))
