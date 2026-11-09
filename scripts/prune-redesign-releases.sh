@@ -7,9 +7,10 @@
 # if any check fails nothing is deleted. PRUNE_DRY_RUN=1 lists what would be removed and deletes nothing.
 set -euo pipefail
 
-BASE=/opt/nibrs-beta
+BASE=${PRUNE_BASE:-/opt/nibrs-beta}      # PRUNE_BASE=/opt/nibrs for the nibrsai.com releases (one-off, with PRUNE_KEEP=5)
 REL="$BASE/releases"
-KEEP_NEWEST=3
+KEEP_NEWEST=${PRUNE_KEEP:-3}
+PINNED_FILE="$REL/.pinned"                # names listed there (one per line) are never removed, as the deploy scripts do
 
 REL_REAL=$(readlink -f "$REL")
 [ "$REL_REAL" = "$REL" ] || { echo "prune: $REL is not a plain directory ($REL_REAL); nothing deleted" >&2; exit 1; }
@@ -30,7 +31,11 @@ for i in "${!ALL[@]}"; do
 done
 
 DEL=()
-for n in "${ALL[@]}"; do [ -z "${KEEP[$n]:-}" ] && DEL+=("$n"); done
+for n in "${ALL[@]}"; do
+  [ -z "${KEEP[$n]:-}" ] || continue
+  if [ -f "$PINNED_FILE" ] && sed 's/[[:space:]]*$//' "$PINNED_FILE" | grep -qxF -- "$n"; then echo "prune: $n is pinned; kept"; continue; fi
+  DEL+=("$n")
+done
 echo "prune: keeping: $(printf '%s\n' "${!KEEP[@]}" | sort | tr '\n' ' ')"
 echo "prune: removing ${#DEL[@]}: ${DEL[*]:-none}"
 [ "${#DEL[@]}" -gt 0 ] || exit 0
