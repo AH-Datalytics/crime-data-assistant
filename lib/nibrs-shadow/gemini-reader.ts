@@ -309,50 +309,58 @@ export function qualifies(question: string, outcome: { kind: string; reason?: st
 
 // ------------------------------------------------------------------------------------------------- personal details
 /**
- * Whether a question may hold a personal detail: an email, a phone number, a street address, a PO box, a ZIP. Such a
+ * Whether a question may hold a personal detail (an email, a phone number, a street address, a PO box, a ZIP). Such a
  * question (or a follow-up whose previous question is one) is withheld: never sent to Google, never cached; it keeps
- * today's outcome. A cautious detector, not a scrubber (Codex review 09: rewriting details out missed common forms,
- * changed questions with none, and left placeholders Gemini could replace): a false alarm only means a question
- * Gemini isn't tried on.
+ * today's outcome. Not a scrubber (Codex review 09) and not a list of address forms (reviews 10-11 kept finding more):
+ * any number that isn't plainly a crime-data number withholds the question, so a house number, ZIP or phone number in
+ * any format is never sent. A false alarm only means a question Gemini isn't tried on.
  */
-const STREET_WORD = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|row|pike|loop|crescent|plaza|broadway|box|apt|apartment|unit|suite|ste|floor|fl|rue|via|strasse|calle|avenida)$/i;
+const YEAR = /^(?:1[89]|20)\d\d$/;
 /** City names that begin with "St." (never a street). */
 const SAINT_CITY = /^(?:louis|paul|petersburg|joseph|lucie|george|charles|cloud|augustine|clair|johns|helens|albans|marys)$/i;
-const YEAR = /^(?:1[89]|20)\d\d$/;
+const STREET_WORDS = /^(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|way|court|ct|place|pl|parkway|pkwy|highway|hwy|circle|cir|terrace|ter|trail|trl|square|sq|alley|plaza|broadway)$/i;
+/** Words before a small number that make it a count, an age or a rate ("top 10", "last 5", "age 18", "per 1000"). */
+const COUNT_BEFORE = /^(?:top|bottom|last|past|first|next|previous|prior|over|under|above|below|than|about|around|nearly|almost|least|most|age|ages|aged|per|every|each|only|just|within|rolling|trailing|those|these|the|of|for|in|to|and|or|by|with|vs|versus|between|from|through|thru|until|since)$/i;
+/** Words after a small number that make it a count ("10 cities", "5 years", "3 month rolling", "2 offenders"). */
+const COUNT_AFTER = /^(?:years?|yrs?|months?|mos?|weeks?|days?|hours?|decades?|quarters?|cities|city|states?|counties|county|agencies|agency|places?|people|persons?|victims?|offenders?|suspects?|arrests?|crimes?|murders?|homicides?|incidents?|offenses?|categories|types?|times?|percent|pct|largest|biggest|smallest|most|worst|safest|highest|lowest|year-old|year-olds|month|rolling|x|k|m|million|thousand|hundred|or|and|to|through|thru|out)$/i;
 export function looksPersonal(text: string): boolean {
   const t = text.normalize("NFKC");
-  if (/@|\bp\.?\s*o\.?\s*box\b|\bzip\s*(?:code)?\s*:?\s*\d/i.test(t)) return true;
-  // A unit anywhere ("suite 200", "Apt 4B", "#12"), and a street word joined to its name followed by a number
-  // ("Hauptstrasse 12").
-  if (/\b(?:apt|apartment|suite|ste|unit|flat|room|rm)\.?\s*#?\s*\d|(?:^|\s)#\s?\d|\b\w*(?:strasse|straße|gasse|weg|straat|street|avenue|road)\s+\d/i.test(t)) return true;
-  // A phone: a run of digits and separators with nine or more digits that isn't just years and short counts; any
-  // +number; four or more two-digit groups ("06 12 34 56 78"); a local seven-digit number ("555-0199").
-  for (const m of t.matchAll(/\+?\(?\d[\d\s().-]{4,}\d\)?/g)) {
-    const groups = m[0].match(/\d+/g) ?? [];
-    const digits = groups.join("").length;
-    if (m[0].startsWith("+") && digits >= 7) return true;
-    if (groups.filter((g) => g.length === 2).length >= 4) return true;
-    if (digits >= 9 && !groups.every((g) => YEAR.test(g) || g.length <= 2)) return true;
-  }
-  if (/(?<![\d,])\b\d{3}[-.]\d{4}\b(?![\d,])/.test(t)) return true;
-  // A ZIP: five digits standing alone, before any punctuation (a thousands count is written "100,000").
-  if (/(?<![\d,.])\b\d{5}(?:-\d{4})?\b(?![\d,]|\.\d)/.test(t)) return true;
-  // A street address: a house number with a street word within the next five words (St. before a city name, "St.
-  // Louis", excepted), or a number of three or more digits followed by a capitalized name ("1600 Pennsylvania",
-  // "123 Main"); years are not excepted here (Codex review 10: "in 1900 Main St").
-  const words = t.split(/[\s,]+/).filter(Boolean);
+  if (/@|\bp\.?\s*o\.?\s*box\b/i.test(t)) return true;
+  // Take out the numbers that are plainly crime-data numbers; any number left withholds the question.
+  const left = t
+    .replace(/\b(?:1[89]|20)\d\d\s*[-–—/]\s*(?:(?:1[89]|20)?\d\d)\b/g, " ")          // year ranges: 2019-2023, 2019-23
+    .replace(/\b(?:1[89]|20)\d0'?s\b|\b'?\d0s\b/gi, " ")                              // decades: 1990s, '90s, 90s
+    .replace(/\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/g, " ")                              // thousands: 100,000
+    .replace(/\b\d+(?:\.\d+)?\s*(?:%|percent\b|pct\b)/gi, " ")                       // percents
+    .replace(/\b\d+(?:st|nd|rd|th)\b/gi, " ")                                        // ordinals
+    .replace(/\b\d+(?:\.\d+)?\s*[km]\b/gi, " ")                                      // 100k, 1.5m
+    .replace(/\b\d{1,2}\s*[-–]\s*\d{1,2}\b/g, " ");                                   // age ranges: 18-24
+  const words = left.split(/[\s,;:!?()"]+/).filter(Boolean);
   for (let i = 0; i < words.length; i++) {
-    if (!/^\d{1,6}[a-z]?$/i.test(words[i])) continue;   // a house number ("12", "12B"), not an ordinal street name ("5th")
-    const next = (words[i + 1] ?? "").replace(/[^A-Za-z]/g, "");
-    if (/^\d{3,6}[a-z]?$/i.test(words[i]) && /^[A-Z][a-z]+$/.test(next) && !SAINT_CITY.test(next) && !YEAR.test(words[i])) return true;
-    for (let j = i + 1; j <= Math.min(words.length - 1, i + 5); j++) {
-      const w = words[j].replace(/[^A-Za-z]+$/, "");
-      if (!STREET_WORD.test(w)) continue;
-      if (/^st$/i.test(w) && words[j + 1] && SAINT_CITY.test(words[j + 1].replace(/[^A-Za-z]/g, ""))) continue;
-      // An ordinal street ("2024 on 5th street") names a street, not an address: the number must be next to it.
-      if (YEAR.test(words[i]) && j > i + 1 && /^\d+(?:st|nd|rd|th)$/i.test(words[j - 1] ?? "")) continue;
+    const w = words[i].replace(/[.]+$/, "");
+    if (!/\d/.test(w)) continue;
+    // A year, unless it is a house number: a street word within the next three words ("1900 Main St", "1900 5th Ave"),
+    // or after "near", "at", "on" or "by" before a name ("near 1900 Main"; Codex review 11).
+    if (YEAR.test(w)) {
+      const after = words.slice(i + 1, i + 4).map((x) => x.replace(/[^A-Za-z0-9]/g, ""));
+      // A street word right after the number or its name, with no preposition between ("1900 Main St"; not "2024 on 5th
+      // street", not "2024 murders in St. Louis").
+      let street = false;
+      for (let k = 0; k < after.length; k++) {
+        if (/^(?:on|in|at|of|for|from|to|by|near)$/i.test(after[k])) break;
+        if (STREET_WORDS.test(after[k]) && !(/^st$/i.test(after[k]) && SAINT_CITY.test(after[k + 1] ?? (words[i + k + 2] ?? "").replace(/[^A-Za-z]/g, "")))) { street = true; break; }
+      }
+      const nearName = /^(?:near|at|on|by|around)$/i.test(words[i - 1] ?? "") && /^[A-Z][a-z]+$/.test(after[0] ?? "");
+      if (!street && !nearName) continue;
       return true;
     }
+    // A small count (one to four digits) next to a word that makes it one.
+    if (/^\d{1,4}$/.test(w) && (COUNT_BEFORE.test(words[i - 1] ?? "") || COUNT_AFTER.test((words[i + 1] ?? "").replace(/[^A-Za-z-]/g, "")))) {
+      // ... unless it's followed by a capitalized name or a street word (an address after "the", "in", "near" ...).
+      const next = (words[i + 1] ?? "").replace(/[^A-Za-z]/g, "");
+      if (!/^[A-Z][a-z]+$/.test(next) || COUNT_AFTER.test(next)) continue;
+    }
+    return true;
   }
   return false;
 }
