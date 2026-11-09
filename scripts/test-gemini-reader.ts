@@ -72,29 +72,15 @@ assert.equal(replacementText({ span: "comparied", kind: "spelling", spelling: "c
 assert.equal(replacementText({ span: "willful", kind: "spelling", spelling: "willful" }), null);         // the same word
 // A prefix added, dropped or changed is another word, not a typo (Codex review 08).
 for (const [f, t] of [["unreported", "reported"], ["deported", "reported"], ["unrelated", "related"]]) assert.equal(replacementText({ span: f, kind: "spelling", spelling: t }), null, f);
-// A question that may hold a personal detail is withheld (never sent, never cached; the coordinator for Jeff,
-// 2026-11-09): addresses, PO boxes, ZIPs, emails, phones, including the forms Codex review 09 found the scrub missed.
-for (const q of ["is my business at 910 st. louis street 62025 risky", "crime in 123 Main St", "crime by 123 Main St", "PO Box 12",
-  "123 Broadway, New York NY 10001", "Apt 4B, 77 Elm Street", "123 Main St, St. Louis MO 63101", "Unit 3 12 Oak Rd", "(314)555-0199",
-  "3145550199", "+44 20 7946 0958", "+33 6 12 34 56 78", "call 314-555-0199", "jane@example.com", "12 rue de la Paix, 75002 Paris",
-  "123 N Main St", "456 5th Ave", "crime in zip code 62025",
-  // Codex review 10
-  "crime near 123 Main", "crime near 1600 Pennsylvania", "crime near suite 200", "crime near Apt 4B", "crime near Hauptstrasse 12",
-  "crime near 123 Main St?", "crime in 1900 Main St", "call 06 12 34 56 78", "call 555-0199", "crime in 63101.",
-  // Codex review 11
-  "crime near 123 main", "crime near 1600 pennsylvania", "crime near 12 Main", "crime near 1900 Main", "crime near 1900 5th Ave",
-  "crime near (123 Main St)", "crime in 63101, please", "crime in Memphis, my phone is 555 0199", "crime in Memphis, my phone is 5550199",
-  // Codex review 12
-  "crime in 123 main st", "crime by 12 elm street", "crime in 123 MAIN ST", "crime near 1900 main", "crime near apartment 2024",
-  "crime near 12-14 Main Street", "crime near 2019-2023 Main Street", "crime near Apt 12K",
-  // Codex review 13
-  "crime in 123 maple way", "crime by 12 elm place", "crime near 12-14 Park Place", "crime near 2019-2023 Park Place"]) assert.equal(looksPersonal(q), true, q);
-// ... and questions with none are never withheld (St. Louis, counts, years, rates, ages, roads).
-for (const q of ["2024 murders in St. Louis", "top 10 cities in St. Louis County", "3 month rolling counts in St. Louis", "murders per 100,000 in St. Louis",
-  "victims age 18 in St. Louis", "murders in 2019 2020 2021 2022 2023", "Route 66 crime", "murders in Memphis from 2019 to 2023",
-  "show 10 years of murders", "top 25 cities by murder rate in 2024", "9 out of 10 cities", "robberies in the 1990s and 2000s",
-  "murders from 2015-2024 in Memphis", "2019-2023 robberies in Chicago", "In 2023 Memphis had how many murders", "top 100 cities", "murders in 2020 Chicago",
-  "rate per 1000 residents", "last 12 months", "5 largest cities", "50% of murders", "over 100k people", "murders among 18-24 year olds"])
+// A question that may hold a personal detail is withheld (never sent, never cached): the blunt rule (the coordinator,
+// 2026-11-09). An at sign; seven or more digits once separators are taken out; any number but a year 1900-2099, a
+// percent or one or two digits; box, apt, suite or unit next to a number.
+for (const q of ["jane@example.com", "jane\uFF20example.com", "(314)555-0199", "314 555 0199", "+33 6 12 34 56 78", "call 555-0199",
+  "is my business at 910 st. louis street 62025 risky", "crime in 123 Main St", "crime in 63101.", "crime near 1600 Pennsylvania",
+  "PO Box 12", "crime near Apt 4B", "suite 12", "12 unit building fire", "crime near 12-14 Park Place", "murders per 100,000 in St. Louis",
+  "murders in 2019 2020 2021", "murders from 2015-2024"]) assert.equal(looksPersonal(q), true, q);
+for (const q of ["2024 murders in St. Louis", "top 10 cities in St. Louis County", "victims age 18", "50% of murders", "murders in 2020 Chicago",
+  "last 12 months", "murders in Memphis from 2019 to 2023", "robberies in the 1990s", "murders among 18 to 24 year olds"])
   assert.equal(looksPersonal(q), false, q);
 // When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);
