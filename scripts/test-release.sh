@@ -226,6 +226,7 @@ echo "16. the old release stays unhealthy after rollback and a corrective reload
 setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1"; run
 ok "result" "$RES" "ROLLBACK NOT CONFIRMED"; ok "exit" "$RC" 3; has "alert sent" "$T/notify" "ROLLBACK NOT CONFIRMED"
 has "corrective reload from the target's ecosystem file" "$T/reloads" "R1/ecosystem.config.js"
+ok "ROLLBACK NOT CONFIRMED keeps the rollback target pinned" "$(grep -cxF R1 "$R/releases/.pinned" 2>/dev/null)" 1
 setup same; touch "$T/unhealthy-R2"; run BG=1 FAKE_ROLLBACK=hang ROLLBACK_MAX=60
 for _ in $(seq 1 200); do grep -q "ROLLING BACK" "$T/logs/$SHA".*/release.log 2>/dev/null && break; sleep 0.2; done; sleep 1
 kill -TERM "$RELEASE_PID"; wait "$RELEASE_PID"; RC=$?; collect
@@ -235,6 +236,7 @@ setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1" "$T/notify-fails"; run
 ok "alert fails: still exit 3" "$RC" 3; has "alert fails: logged" "$(lastlog)release.log" "ALERT DELIVERY FAILED"
 setup same; touch "$T/unhealthy-R2" "$T/unhealthy-R1" "$T/fixed-by-reload"; run
 ok "a corrective reload that works: result" "$RES" "ROLLED BACK"
+ok "a rolled-back run releases its pin" "$(grep -cxF R1 "$R/releases/.pinned" 2>/dev/null)" 0
 
 echo "17. a retry of the same SHA never shows the earlier result; a running attempt says RUNNING"
 setup same; run FAKE_DEPLOY=fail-before; first="$RES"; sleep 1

@@ -77,7 +77,7 @@ source "$BUNDLE/scripts/lib/prune-releases.sh"
 
 TARGET="" TARGET_COMMIT="" UTIL_PRIOR="" PINNED_BY_US=0 STUDIO_TOKEN="" FINISHED=0 ABORTING=0 PHASE=start DEPLOY_PID="" DEPLOY_PGID=""
 PENDING_SIGNAL=""
-IN_EXIT=0 FINAL_RC=""
+IN_EXIT=0 FINAL_RC="" FINAL_STATE=""
 
 # This attempt's result, written atomically, then copied atomically to <sha>.latest. Non-zero if either write fails.
 result() {
@@ -102,7 +102,7 @@ result() {
 # success. Inside the EXIT trap it returns instead of exiting, so the trap can still clean up.
 finish() {
   (( FINISHED )) && return 0
-  FINISHED=1; FINAL_RC="${3:-0}"
+  FINISHED=1; FINAL_RC="${3:-0}"; FINAL_STATE="$1"
   result "$1" "$2" || FINAL_RC=4
   (( IN_EXIT )) && return 0
   exit "$FINAL_RC"
@@ -114,7 +114,9 @@ notify() {
 }
 
 cleanup() {
-  if (( PINNED_BY_US )) && [[ -f "$PINNED_FILE" ]]; then
+  # The rollback target's pin is released once production is known to be stable (LIVE, ROLLED BACK, NOT DEPLOYED). After
+  # ROLLBACK NOT CONFIRMED the previous release may be the only good one left, so its pin stays until a person clears it.
+  if (( PINNED_BY_US )) && [[ "$FINAL_STATE" != "ROLLBACK NOT CONFIRMED" ]] && [[ -f "$PINNED_FILE" ]]; then
     grep -vxF "$(basename "$TARGET")" "$PINNED_FILE" > "$PINNED_FILE.tmp"; mv -f "$PINNED_FILE.tmp" "$PINNED_FILE"
   fi
   [[ -n "$STUDIO_TOKEN" ]] && $STUDIO_CTL unlock "$STUDIO_TOKEN" > /dev/null 2>&1 8>&- 9>&-
