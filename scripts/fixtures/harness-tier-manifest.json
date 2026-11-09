@@ -2502,6 +2502,15 @@
       "note": "Blind verification requests for new scorecard answers: every number named with its place in the table, the scorecard's table digest, no engine SQL; an answer becomes a verified entry only when every number matched."
     },
     {
+      "id": "test-score-old-engine",
+      "tier": "F",
+      "script": "scripts/test-score-old-engine.ts",
+      "databases": [],
+      "seed_profile": "empty",
+      "requires": [],
+      "note": "Scoring gap 2: the old app's logged replies read as answer, clarify or decline, and label ids made as the label drafter makes them; replies written for the test, no query log."
+    },
+    {
       "id": "test-nibrs-duckdb-executor",
       "tier": "F",
       "script": "scripts/test-nibrs-duckdb-executor.ts",

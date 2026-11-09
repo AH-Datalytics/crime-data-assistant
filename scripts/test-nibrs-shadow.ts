@@ -1293,6 +1293,32 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     // "Committed by <people>" names the offenders: not asked about (runner job G, QL-shr-34ce1c60e0).
     assert.notEqual((ask("Murders committed by men in Memphis in 2024 by race") as { about?: string }).about, "victim or offender race");
     assert.notEqual((ask("murder comited by blacks and whites in Memphis in 2024 also seperated by sex") as { about?: string }).about, "victim or offender sex");
+    // "Committed by race" (either order) is the offenders' race, never the victims' (found live on /redesign, 2026-11-09);
+    // "committed in" names no one, so it is asked.
+    for (const q of ["Murders in Memphis in 2024 committed by race", "Murders in Memphis in 2024 by race committed by"])
+      assert.deepEqual(as(ask(q), "answer").plan.groupings.map((x) => x.dimension), ["offender.race"], q);
+    assert.equal(as(ask("Murders committed in Memphis in 2024 by race"), "clarify").about, "victim or offender race");
+    // "By race of the offender" is "by offender race" (Jeff 2026-11-08): the same plan; counting offenders stays offenders.
+    {
+      const plan = (q: string) => JSON.stringify(as(ask(q), "answer").plan);
+      assert.equal(plan("Murders in Memphis in 2024 by race of the offender"), plan("Murders in Memphis in 2024 by offender race"));
+      assert.equal(plan("Murders in Memphis in 2024 by the race of the offenders"), plan("Murders in Memphis in 2024 by offender race"));
+      const offenders = as(ask("Murder offenders in Memphis in 2024 by race of the offender"), "answer").plan;
+      assert.ok(offenders.measures[0].unit === "offender" && offenders.groupings.some((g) => g.dimension === "offender.race"), JSON.stringify(offenders));
+    }
+    // Phrasing probe (2026-11-08) misses, kept: "race breakdown of murders" is a bare breakdown, asked; "broken down by
+    // race committed by" is the offenders' race.
+    assert.equal(as(ask("race breakdown of murders in Memphis in 2023"), "clarify").about, "victim or offender race");
+    assert.deepEqual(as(ask("give me Memphis murders in 2024 broken down by race committed by"), "answer").plan.groupings.map((x) => x.dimension), ["offender.race"]);
+    // Offenders counted by a victim's race: declined, never the offenders' own race (Codex gap-2 review 04).
+    assert.match(as(ask("Murder offenders in Memphis in 2024 by victim race"), "decline").explanation, /a victim's race for offenders/);
+    // Codex gap-2 review 05: any opener; "victims of offenders" counts victims.
+    for (const q of ["Give me the number of murder offenders in Memphis in 2024 by victim race", "List aggravated assault offenders in Memphis in 2024 by victim race"])
+      assert.match(as(ask(q), "decline").explanation, /a victim's race for offenders/, q);
+    assert.ok(!/for offenders/.test(JSON.stringify(ask("Victims of offenders who were under 18 in Memphis in 2024 by victim race"))));
+    assert.deepEqual(as(ask("Murders in Memphis in 2024 by victim race"), "answer").plan.groupings.map((x) => x.dimension), ["victim.race"]);
+    // "Committed against" names victims, never offenders (Codex gap-2 review 01.1).
+    assert.ok(!JSON.stringify(ask("Murders in Memphis in 2024 by race committed against women")).includes("offender.race"));
     // Each button keeps what else the question set (Codex review 02: "unsolved" had been dropped).
     const u = as(ask("Unsolved murders in Memphis in 2024 by race"), "clarify");
     const [uv, uo] = u.options.map((x) => as(x.continuation!, "answer"));

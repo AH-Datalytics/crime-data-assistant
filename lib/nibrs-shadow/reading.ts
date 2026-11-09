@@ -415,20 +415,40 @@ function readPeople(text0: string): { text: string; people: People | null } {
     (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: true }; });
   if (!p.by) cut(/,?\s*\bby\s+(?:the\s+)?(offenders?|arrestees?)(?:'s|s')?\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i,
     (m) => { p.by = { who: /^arrestee/i.test(m[1]) ? "arrestee" : "offender", attr: ATTR(m[2]), paired: false }; });
+  // "By race of the offender(s)" is "by offender race" (Jeff 2026-11-08: the two wordings match, "by offender race"
+  // the reading): what is counted stays the question's own (murder victims, or offenders when it counts offenders).
+  // Offenders only: "by age of arrestee" stays the arrests' own breakdown, as before.
+  if (!p.by) cut(/,?\s*\bby\s+(?:the\s+)?(race|sex|gender|ethnicity|age)(?:\s+groups?)?\s+of\s+(?:the\s+|their\s+)?offenders?\b(?!\s+who\b)/i,
+    (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: false }; });
   // "By victim race": the victims' own breakdown, as the reader writes it ("by race"); for arrests the victim is not
   // recorded, so it is declined, never read as the arrestee's (Codex 04.2).
   const vm = /,?\s*\bby\s+(?:the\s+)?victims?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b/i.exec(text);
   if (vm && /\barrest(?:s|ed|ee|ees)?\b/i.test(text)) cut(new RegExp(vm[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), () => { p.unsupported = `a victim's ${vm[1].toLowerCase()} for arrests`; });
+  // Offenders counted by a victim's attribute ("murder offenders ... by victim race") isn't available yet: declined,
+  // never answered with the offenders' own attribute (Codex gap-2 review 04: a bare "by race" is the counted person's).
+  // What is counted is the first person the question names ("victims of offenders ..." counts victims; Codex gap-2 review 05).
+  else if (vm && /^offenders?$/i.test(/\b(victims?|offenders?|arrests?|arrestees?)\b/i.exec(text.replace(vm[0], " "))?.[1] ?? "")) cut(new RegExp(vm[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), () => { p.unsupported = `a victim's ${vm[1].toLowerCase()} for offenders`; });
   else if (vm) text = text.replace(vm[0], ` by ${vm[1]}`);
   // The counted person's own attribute: offenders by sex or age (the reader's own breakdown, left to it), arrests by race.
   if (!p.by && /^\s*(?:all\s+crime\s+)?arrests\b|\barrests\s+in\b/i.test(text))
     cut(/,?\s*\bby\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i, (m) => { p.by = { who: "arrestee", attr: ATTR(m[1]), paired: false }; });
+  // "Committed by" names the offenders: "murders in D.C. in 2025 committed by race", "... by race committed by", "murder
+  // comited by blacks ... seperated by sex" break down by the offenders' attribute, never the victims' (coordinator
+  // 2026-11-09, found live on /redesign). The "committed (by)" words go with it.
+  // Only "committed by" names who committed it: "by race committed against women" names the victims, not the
+  // offenders (Codex gap-2 review 01.1).
+  const COMMITTED = /\b(?:comm?itt?ed|perpetrated)\s+by\b/i;
+  if (!p.by && !vm && COMMITTED.test(text)
+    && cut(/,?\s*\b(?:(?:comm?itt?ed|perpetrated|broken\s+down)\s+)?by\s+(?:the\s+)?(race|sex|gender|ethnicity|age)(?:\s+groups?)?(?:\s+(?:comm?itt?ed|perpetrated)(?:\s+by)?(?=\s*$|\s*[?.!,]))?/i,
+      (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: false }; }))
+    text = text.replace(/\s+(?:comm?itt?ed|perpetrated)\s+by\s*(?=[?.!]?\s*$)/i, "").trim();
   // A bare "by race (sex, ethnicity, age)" naming no person ("murders in D.C. in 2025 by race"): victims' or offenders'
   // is asked, never assumed (coordinator 2026-11-08, scoring gap 1; the labels' "victim or offender race").
   // "Committed by ..." (as typed: "comited by blacks asians hispanics ...") names the offenders (runner job G,
-  // QL-shr-34ce1c60e0).
+  // QL-shr-34ce1c60e0). "Race breakdown of murders ..." is the same bare breakdown (phrasing probe, 2026-11-08: it
+  // answered with the victims' race).
   if (!p.by && !p.ask && !vm && !/\b(?:victims?|offenders?|arrest(?:s|ed|ee|ees)?|suspects?|perpetrators?)\b|\b(?:comm?itt?ed|perpetrated)\s+by\b/i.test(text)
-    && /\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)\b/i.test(text)) p.ask = "victims or offenders";
+    && /\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)\b|\b(?:race|sex|gender|ethnicity|age)\s+breakdown\b/i.test(text)) p.ask = "victims or offenders";
   // Only when offenders are what is counted ("offenders in aggravated assaults ..."); for victims the reader's own
   // "by strangers" applies.
   if (/^\s*(?:[a-z]+\s+){0,2}?offenders\b/i.test(text))
