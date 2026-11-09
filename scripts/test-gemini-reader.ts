@@ -77,11 +77,13 @@ for (const [f, t] of [["unreported", "reported"], ["deported", "reported"], ["un
 // percent or one or two digits; box, apt, suite or unit next to a number.
 for (const q of ["jane@example.com", "jane\uFF20example.com", "(314)555-0199", "314 555 0199", "+33 6 12 34 56 78", "call 555-0199",
   "is my business at 910 st. louis street 62025 risky", "crime in 123 Main St", "crime in 63101.", "crime near 1600 Pennsylvania",
-  "PO Box 12", "crime near Apt 4B", "suite 12", "12 unit building fire", "crime near 12-14 Park Place", "murders per 100,000 in St. Louis",
+  "PO Box 12", "crime near Apt 4B", "suite 12", "12 unit building fire", "murders per 100,000 in St. Louis",
   "murders in 2019 2020 2021", "murders from 2015-2024"]) assert.equal(looksPersonal(q), true, q);
 for (const q of ["2024 murders in St. Louis", "top 10 cities in St. Louis County", "victims age 18", "50% of murders", "murders in 2020 Chicago",
   "last 12 months", "murders in Memphis from 2019 to 2023", "robberies in the 1990s", "murders among 18 to 24 year olds"])
   assert.equal(looksPersonal(q), false, q);
+// What the blunt rule lets through by design (a one- or two-digit or year-like house number; the coordinator's rule):
+for (const q of ["crime near 12 Oak Rd", "crime near 12-14 Park Place", "crime in 1900 Main St"]) assert.equal(looksPersonal(q), false, q);
 // When Gemini is consulted: not for policy declines, nor a fully read question, nor an answer.
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "decline", reason: "reader" }, Y), true);
 assert.equal(qualifies("slayings in Memphis in 2024", { kind: "clarify" }, Y), true);
