@@ -415,6 +415,11 @@ function readPeople(text0: string): { text: string; people: People | null } {
     (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: true }; });
   if (!p.by) cut(/,?\s*\bby\s+(?:the\s+)?(offenders?|arrestees?)(?:'s|s')?\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i,
     (m) => { p.by = { who: /^arrestee/i.test(m[1]) ? "arrestee" : "offender", attr: ATTR(m[2]), paired: false }; });
+  // "By race of the offender(s)" is "by offender race" (Jeff 2026-11-08: the two wordings match, "by offender race"
+  // the reading): what is counted stays the question's own (murder victims, or offenders when it counts offenders).
+  // Offenders only: "by age of arrestee" stays the arrests' own breakdown, as before.
+  if (!p.by) cut(/,?\s*\bby\s+(?:the\s+)?(race|sex|gender|ethnicity|age)(?:\s+groups?)?\s+of\s+(?:the\s+|their\s+)?offenders?\b(?!\s+who\b)/i,
+    (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: false }; });
   // "By victim race": the victims' own breakdown, as the reader writes it ("by race"); for arrests the victim is not
   // recorded, so it is declined, never read as the arrestee's (Codex 04.2).
   const vm = /,?\s*\bby\s+(?:the\s+)?victims?(?:'s|s')?\s+(race|sex|gender|ethnicity|age)\b/i.exec(text);

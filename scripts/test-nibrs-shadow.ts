@@ -1298,6 +1298,14 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
     for (const q of ["Murders in Memphis in 2024 committed by race", "Murders in Memphis in 2024 by race committed by"])
       assert.deepEqual(as(ask(q), "answer").plan.groupings.map((x) => x.dimension), ["offender.race"], q);
     assert.equal(as(ask("Murders committed in Memphis in 2024 by race"), "clarify").about, "victim or offender race");
+    // "By race of the offender" is "by offender race" (Jeff 2026-11-08): the same plan; counting offenders stays offenders.
+    {
+      const plan = (q: string) => JSON.stringify(as(ask(q), "answer").plan);
+      assert.equal(plan("Murders in Memphis in 2024 by race of the offender"), plan("Murders in Memphis in 2024 by offender race"));
+      assert.equal(plan("Murders in Memphis in 2024 by the race of the offenders"), plan("Murders in Memphis in 2024 by offender race"));
+      const offenders = as(ask("Murder offenders in Memphis in 2024 by race of the offender"), "answer").plan;
+      assert.ok(offenders.measures[0].unit === "offender" && offenders.groupings.some((g) => g.dimension === "offender.race"), JSON.stringify(offenders));
+    }
     // "Committed against" names victims, never offenders (Codex gap-2 review 01.1).
     assert.ok(!JSON.stringify(ask("Murders in Memphis in 2024 by race committed against women")).includes("offender.race"));
     // Each button keeps what else the question set (Codex review 02: "unsolved" had been dropped).
