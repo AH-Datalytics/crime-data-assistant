@@ -14,8 +14,18 @@ assert.equal(labelId({ tab: "other", question: "x", n: 1 }), null);
 // Answers: rows from a query, the tab's source.
 assert.deepEqual(oldGot({ tab: "current", sql: "SELECT 1", rows: 12 }), { kind: "answer", source: "rtci", ms: 0 });
 assert.deepEqual(oldGot({ tab: "shr", sql: "SELECT 1", rows: 3 }), { kind: "answer", source: "shr", ms: 0 });
-// A failed query is the old app's error; a query with no rows answered nothing.
-assert.equal(oldGot({ tab: "nibrs", sql: "SELECT x", rows: 0, error: "no such column" }).kind, "error");
+// A failed query is the old app's error; a guard's tag on a delivered reply is not (Codex gap-2 review 01.3); a query
+// with no rows answered nothing.
+assert.equal(oldGot({ tab: "nibrs", sql: "SELECT x", rows: 0, error: "DB: Schema validation failed: no such column: d.age" }).kind, "error");
+assert.equal(oldGot({ tab: "nibrs", sql: "SELECT x", rows: 0, error: "raw_table_second_failure", response: "I wasn't able to build a valid query." }).kind, "error");
+assert.equal(oldGot({ tab: "shr", error: "nonfatal_shooting_refusal", response: "This database does not track nonfatal shootings." }).kind, "decline");
+assert.equal(oldGot({ tab: "nibrs", sql: "SELECT 1", rows: 4, error: "guardrail_override" }).kind, "answer");
+// Answers without SQL (data completeness), and a reply that fits no form: left out, never guessed.
+assert.equal(oldGot({ tab: "nibrs", rows: 0, guardrails: "completeness-deterministic", response: "NIBRS covers 2024 for 16,000 agencies." }).kind, "answer");
+assert.equal(oldGot({ tab: "nibrs", response: "Here are the offense codes, grouped." }).kind, "unclassified");
+// A decline that offers something else is a decline; a plain question back is a clarify.
+assert.equal(oldGot({ tab: "current", response: "This tab is not available for staffing. Do you want the Historical tab instead?" }).kind, "decline");
+assert.equal(oldGot({ tab: "current", response: "Which year?" }).kind, "clarify");
 assert.deepEqual([oldGot({ tab: "nibrs", sql: "SELECT 1", rows: 0 }).kind, oldGot({ tab: "nibrs", sql: "SELECT 1", rows: 0 }).reason], ["decline", "no rows"]);
 // Words not understood: the reader's decline ("try asking another way").
 assert.equal(oldGot({ tab: "historical", response: "I could not generate a database query for that request. Please restate it." }).reason, "reader");

@@ -426,7 +426,9 @@ function readPeople(text0: string): { text: string; people: People | null } {
   // "Committed by" names the offenders: "murders in D.C. in 2025 committed by race", "... by race committed by", "murder
   // comited by blacks ... seperated by sex" break down by the offenders' attribute, never the victims' (coordinator
   // 2026-11-09, found live on /redesign). The "committed (by)" words go with it.
-  const COMMITTED = /\b(?:comm?itt?ed|perpetrated)\s+by\b|\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)(?:\s+groups?)?\s+(?:comm?itt?ed|perpetrated)\b/i;
+  // Only "committed by" names who committed it: "by race committed against women" names the victims, not the
+  // offenders (Codex gap-2 review 01.1).
+  const COMMITTED = /\b(?:comm?itt?ed|perpetrated)\s+by\b/i;
   if (!p.by && !vm && COMMITTED.test(text)
     && cut(/,?\s*\b(?:(?:comm?itt?ed|perpetrated)\s+)?by\s+(?:the\s+)?(race|sex|gender|ethnicity|age)(?:\s+groups?)?(?:\s+(?:comm?itt?ed|perpetrated)(?:\s+by)?(?=\s*$|\s*[?.!,]))?/i,
       (m) => { p.by = { who: "offender", attr: ATTR(m[1]), paired: false }; }))
