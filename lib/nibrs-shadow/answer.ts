@@ -658,6 +658,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
       continuation: fromLedger(Object.assign(withParts(ledger0, ledger0.parts), { people: { ...ppl0, ask: null, where: [...ppl0.where, { who: "offender", attr: "age", range: [lo, hi], paired: false }] } }), deps, pins) });
     return { kind: "clarify", about: "which ages \"young adults\" means", question: ledger0.question, options: [ages(18, 24), ages(18, 29)] };
   }
+  if (ppl0?.ask === "victims or offenders") {
+    // A button each, the same reading with the person named: everything else the question set (its conditions, such as
+    // "unsolved" or "gang-related", and its place pins) is kept (Codex review 02). Victims: the breakdown as read (the
+    // counted victims' own attribute). Offenders: that breakdown becomes the offenders' attribute. When neither can be
+    // answered, the victims' refusal is given, not a question (D28).
+    const ATTRS = ["race", "sex", "ethnicity", "age"] as const;
+    const part = ledger0.parts.find((p) => p.clause === 0 && p.concept === "breakdown" && ATTRS.includes(p.value as (typeof ATTRS)[number]));
+    const attr = (part?.value ?? "race") as (typeof ATTRS)[number];
+    const victims = fromLedger(Object.assign(withParts(ledger0, ledger0.parts), { people: { ...ppl0, ask: null } }), deps, pins);
+    const offenders = part
+      ? fromLedger(Object.assign(withParts(ledger0, ledger0.parts.filter((p) => p !== part)), { people: { ...ppl0, ask: null, by: { who: "offender" as const, attr, paired: false } } }), deps, pins)
+      : victims;
+    if (victims.kind === "decline" && offenders.kind === "decline") return victims;
+    return { kind: "clarify", about: `victim or offender ${attr}`, question: ledger0.question, options: [
+      { label: "Victims", continuation: victims }, { label: "Offenders", continuation: offenders }] };
+  }
   if (ppl0?.ask === "attackers") {
     const rest = ledger0.question.replace(/^\s*how\s+many\s+attackers\s+(?:were\s+there\s+)?(?:in|for)\s+/i, "").replace(/\?\s*$/, "");
     if (rest === ledger0.question.replace(/\?\s*$/, "")) return decline("reader", "\"Attackers\" can mean offenders or people arrested; ask for offenders or arrests.");
@@ -685,7 +701,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   const ledger = withParts(ledger0, parts);
   if (ask) {
     const a: { part: Part; name: string; candidates: Candidate[]; more?: boolean } = ask;
-    const options: ShadowOption[] = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
+    const options: ShadowOption[] = a.candidates.map((c) => ({ label: candidateLabel(c, a.candidates, deps.places), continuation: fromLedger(ledger0, deps, new Map(pins).set(a.part.span[0], c)) }));
     // A question no choice could answer is declined, not asked about (D28): when no button leads to an answer or a
     // further question, the most likely reading's refusal is given.
     if (options.every((o) => o.continuation!.kind === "decline")) return options[0].continuation!;

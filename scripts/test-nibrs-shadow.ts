@@ -114,6 +114,12 @@ const ori = (r: ReturnType<typeof at>) => (r.kind === "agency" ? r.agency.ori : 
 const asked = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates)) : r.kind);
 assert.equal(ori(at("city:Memphis:TN", "Memphis")), "TNMPD0000");
 assert.deepEqual(asked(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+// Jeff 2026-11-07: "Los Angeles should ask whether they mean the county sheriff or police department": the buttons name
+// the two agencies; a county police department beside its city keeps the place's name.
+const named = (r: ReturnType<typeof at>) => (r.kind === "ask" ? r.candidates.map((c) => candidateLabel(c, r.candidates, places)) : r.kind);
+assert.deepEqual(named(at("city:Los Angeles:", "Los Angeles")), ["Los Angeles Police Department", "Los Angeles County Sheriff's Department"]);
+assert.deepEqual(named(at("ambiguous:Baltimore", "Baltimore")), ["Baltimore city, Maryland", "Baltimore County, Maryland"]);
+assert.equal(agencyName(places, "CA0190000"), "Los Angeles County Sheriff's Department");
 assert.deepEqual(asked(at("ambiguous:St Louis", "St Louis")), ["St. Louis city, Missouri", "St. Louis County, Missouri"], "St. Louis County, Minnesota is under 100,000");
 assert.deepEqual(asked(at("ambiguous:Washington", "Washington")), ["Washington, D.C.", "Washington state", "Washington County, Oregon", "Washington County, Maryland"]);
 assert.deepEqual(asked(at("ambiguous:Kansas City", "Kansas City")), ["Kansas City, Missouri", "Kansas City, Kansas"]);
@@ -1274,6 +1280,25 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   // "Young adults" and "attackers" are asked about, with buttons that keep the rest of the question (P22).
   assert.deepEqual(as(ask("Murders by young adults in Memphis in 2024"), "clarify").options.map((o) => o.label), ["18 to 24", "18 to 29"]);
   assert.deepEqual(as(ask("How many attackers were there in aggravated assaults in Detroit in 2024?"), "clarify").options.map((o) => o.label), ["Offenders", "People arrested"]);
+  // A bare "by race" names no person: victims' or offenders' is asked (QL-hist-0c09c89043, D.C. murders by race); each
+  // button answers with the person named. Named people and arrests are answered as before.
+  {
+    const o = as(ask("Murders in Memphis in 2024 by race"), "clarify");
+    assert.equal(o.about, "victim or offender race");
+    assert.deepEqual(o.options.map((x) => x.label), ["Victims", "Offenders"]);
+    assert.deepEqual(o.options.map((x) => x.continuation?.kind), ["answer", "answer"]);
+    assert.equal(as(ask("Murders in Memphis in 2024 by gender"), "clarify").about, "victim or offender sex");
+    assert.equal(ask("Murders in Memphis in 2024 by victim race").kind, "answer");
+    assert.equal(ask("Murders in Memphis in 2024 by offender race").kind, "answer");
+    // "Committed by <people>" names the offenders: not asked about (runner job G, QL-shr-34ce1c60e0).
+    assert.notEqual((ask("Murders committed by men in Memphis in 2024 by race") as { about?: string }).about, "victim or offender race");
+    assert.notEqual((ask("murder comited by blacks and whites in Memphis in 2024 also seperated by sex") as { about?: string }).about, "victim or offender sex");
+    // Each button keeps what else the question set (Codex review 02: "unsolved" had been dropped).
+    const u = as(ask("Unsolved murders in Memphis in 2024 by race"), "clarify");
+    const [uv, uo] = u.options.map((x) => as(x.continuation!, "answer"));
+    for (const c of [uv, uo]) assert.ok(c.plan.filters.some((f) => JSON.stringify(f).includes("clearance")), JSON.stringify(c.plan.filters));
+    assert.deepEqual([uv.plan.groupings.map((x) => x.dimension), uo.plan.groupings.map((x) => x.dimension)], [["victim.race"], ["offender.race"]]);
+  }
 }
 
 // Increment 7b. P71: each quarter is the sum of its three months; a quarter with a month not known (March 2024 in the
