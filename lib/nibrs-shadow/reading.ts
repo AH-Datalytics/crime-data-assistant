@@ -87,7 +87,7 @@ export type PersonAttr = "sex" | "race" | "ethnicity" | "age";
 export type People = {
   by: { who: "offender" | "arrestee"; attr: PersonAttr; paired: boolean } | null;
   where: ({ who: "victim" | "offender" | "arrestee"; attr: "age"; range: [number, number]; paired: boolean } | { who: "offender"; attr: "relationship"; values: string[]; paired: true })[];
-  ask: "young adults" | "attackers" | null;
+  ask: "young adults" | "attackers" | "victims or offenders" | null;
   /** A person named for a unit that does not record them ("arrests ... by victim race"): declined, never re-read. */
   unsupported?: string;
 };
@@ -100,8 +100,8 @@ const PHRASES: [RegExp, string][] = [
   // A victim breakdown asked as its categories: "victims ... were male or female" -> "victims ... by sex". Only victims,
   // and only "were": "committed by men and women" is about offenders and is left alone (Codex increment-1 review).
   [/\b(victims?\b[^?.!]*?\s)were\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "$1by sex"],
-  // P29: "against men and women" names the victims -> by (victim) sex.
-  [/\bagainst\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "by sex"],
+  // P29: "against men and women" names the victims -> by victim sex (named, so a bare "by sex" is not asked about).
+  [/\bagainst\s+(?:(?:males?|men)\s+(?:or|and|vs\.?|versus)\s+(?:females?|women)|(?:females?|women)\s+(?:or|and|vs\.?|versus)\s+(?:males?|men))\b/gi, "by victim sex"],
   // A category and a time grain joined by "and", in either order: "by race and year", "by year and age" -> "by race by
   // year", "by age by year" (coordinator 2026-11-02: "by age and year" had dropped the year).
   [/\bby\s+(race|sex|gender|ethnicity|age(?:\s+groups?)?|weapons?|relationships?|location(?:\s+type)?)\s+(?:and|&)\s+(?:by\s+)?(year|month|quarter)\b/gi, "by $1 by $2"],
@@ -423,6 +423,12 @@ function readPeople(text0: string): { text: string; people: People | null } {
   // The counted person's own attribute: offenders by sex or age (the reader's own breakdown, left to it), arrests by race.
   if (!p.by && /^\s*(?:all\s+crime\s+)?arrests\b|\barrests\s+in\b/i.test(text))
     cut(/,?\s*\bby\s+(race|sex|gender|ethnicity|age)(?:\s+groups?)?\b/i, (m) => { p.by = { who: "arrestee", attr: ATTR(m[1]), paired: false }; });
+  // A bare "by race (sex, ethnicity, age)" naming no person ("murders in D.C. in 2025 by race"): victims' or offenders'
+  // is asked, never assumed (coordinator 2026-11-08, scoring gap 1; the labels' "victim or offender race").
+  // "Committed by ..." (as typed: "comited by blacks asians hispanics ...") names the offenders (runner job G,
+  // QL-shr-34ce1c60e0).
+  if (!p.by && !p.ask && !vm && !/\b(?:victims?|offenders?|arrest(?:s|ed|ee|ees)?|suspects?|perpetrators?)\b|\b(?:comm?itt?ed|perpetrated)\s+by\b/i.test(text)
+    && /\bby\s+(?:the\s+)?(?:race|sex|gender|ethnicity|age)\b/i.test(text)) p.ask = "victims or offenders";
   // Only when offenders are what is counted ("offenders in aggravated assaults ..."); for victims the reader's own
   // "by strangers" applies.
   if (/^\s*(?:[a-z]+\s+){0,2}?offenders\b/i.test(text))
