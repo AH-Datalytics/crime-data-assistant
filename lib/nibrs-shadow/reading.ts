@@ -55,6 +55,8 @@ export type Flags = { readings: Reading[]; forecast: boolean; court: boolean; of
   undefinedTerm: "shooters" | "gun violence" | "gang" | null; comparison: Comparison | null; last12: boolean; combined: boolean; largeCities: boolean;
   /** "The 100 largest US cities", "the 5 biggest Texas cities", "the 20 most populous cities": a set of city agencies by population (Jeff 2026-11-10, ranking decision 1). */
   largestSet: number | null;
+  /** P70: an explicit county-wide request ("countywide", "the whole county", "all agencies in X County"): the words taken out. */
+  countywide: boolean;
   /** The words "top N cities" when read as the N largest (no "by", no "highest"): said in the answer. */
   topAsLargest: string | null;
   /** A Census region named ("the Northeast"): read as the nation, flagged; only Current Trends answers it (current.ts REGIONS). */
@@ -107,6 +109,9 @@ const PHRASES: [RegExp, string][] = [
   [/\b(murders?|homicides?|robberies|robbery|burglar(?:y|ies)|rapes?|assaults?|thefts?|crimes?)\s+totals\b/gi, "$1 count"],
   // Not "sort by year" or by name, which order rows, not rank by a crime (Codex rankings review 09.1).
   [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b(?!\s+(?:the\s+)?(?:years?|months?|dates?|names?|city|cities|states?|population|size|alphabet\w*))/gi, "ranked by"],
+  [/\b(?:and\s+)?sort(?:ed)?\s+(?:them\s+|it\s+)?by\b/gi, "ranked by"],
+  // "Rank Virginia counties in terms of murder rate": "by", only after a rank word (rankings PR B).
+  [/(\brank\w*\b[^.?!]*?)\bin\s+terms\s+of\b/gi, "$1by"],
   [/\bthefts?\s+from\s+(?:a\s+|the\s+|their\s+)?(?:motor\s+vehicles?|vehicles?|cars?|automobiles?|autos?|trucks?)\b/gi, "theft from motor vehicle"],
   [/\b(?:vehicle|auto|automobile|truck)\s+break[-\s]?ins?\b/gi, "car break-ins"],
   [/\bcar\s+jack(?:ing|ings|ed)\b/gi, "carjackings"],
@@ -306,6 +311,11 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
         return qual && !/^(?:u\.?s\.?|american)\s*$/i.test(qual.trim()) ? ` in ${qual.trim()} ` : " ";
       });
   }
+  // P70 (decided 2026-10-30): "countywide", "the whole county", "across all agencies in X County" asks for the sum of
+  // every agency in the county; flagged and the words taken out, so the county is read as usual.
+  let countywide = false;
+  text = text.replace(/\b(?:county[-\s]?wide|(?:for\s+|in\s+)?(?:the\s+)?(?:whole|entire)\s+county|(?:across|for|from|in)\s+all\s+(?:the\s+)?(?:law\s+enforcement\s+)?(?:agencies|police\s+departments|departments)\s+(?=in\b))/i,
+    (m) => { countywide = true; readings.push({ kind: "phrase", from: m.trim(), to: "(every agency in the county, summed)" }); return " "; });
   let largeCities = false;
   text = text.replace(/(?<!\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred|top)\s+)\b(?:the\s+)?(?:large|larger|largest|big|bigger|biggest|major)\s+(?=(?:u\.?s\.?\s+|[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });
   // A Census region (Current Trends' groups; coordinator 2026-11-03): "the Northeast", "the midwest US", "southern
@@ -445,7 +455,7 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
     .replace(/^\s*how many (?:law enforcement )?agencies (?:reported|report|submitted)\s+/i, () => col("agencies"))
     .replace(/^\s*(?:the )?(?:number of )?(?:law enforcement )?agencies reporting\s+/i, () => col("agencies"))
     .replace(/,?\s*with (?:its |the |their )?(?:coverage|population covered|agencies reporting(?: and (?:the )?population covered)?)\b/gi, () => col("agencies"));
-  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, largestSet, topAsLargest, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
+  const flags: Flags = { readings, forecast, court, offenders: offendersLeft, composite, undefinedTerm, comparison: cmp?.comparison ?? null, last12, combined, largeCities, largestSet, topAsLargest, countywide, region, circumstance, nibrsAsked, consistent, shrDetail, property, clearance, arrestsThrough, people, quarter, column };
   const ledger = Object.assign(readings.length || combined || nibrsAsked || consistent || property || clearance || arrestsThrough || people || peopleRewrote || quarter || column ? accountNibrsRequest(text) : first, flags);
   return { question, text, ...flags, ledger };
 }

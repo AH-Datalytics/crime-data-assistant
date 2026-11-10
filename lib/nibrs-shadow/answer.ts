@@ -54,7 +54,7 @@ import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { answerBeside, answerCountywide, answerHistorical, answerHistoricalPosition, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, COUNTYWIDE_FIRST_YEAR, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
@@ -1118,6 +1118,69 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     }
     return decline("unsupported_capability", `This isn't available yet: the ${setN} largest cities with this question. They can be asked for one Part I crime, a count or a rate, by year through ${deps.historical?.lastYear ?? 2025}.`);
   }
+  // P70: an explicit county-wide request is the county's agencies summed (2017 on), never the county's own agency alone.
+  if (flags(ledger0).countywide) {
+    const sp = d.kind === "spec" ? d.spec : null;
+    const pl = sp?.type === "series" && sp.places.length === 1 ? sp.places[0] : null;
+    const county = pl?.kind === "agency" && pl.agencyKind === "county" ? resolved.get(`${pl.agencyKind}:${pl.name}:${pl.state}`) : undefined;
+    const hb = deps.historical;
+    if (sp?.type === "series" && hb && county?.kind === "agency" && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && (sp.statistic === "count" || sp.statistic === "rate")
+      && !sp.filters.length && !sp.window && (sp.grain === "year" || sp.grain === "total") && historicalUnitFits(sp.measures[0], sp.unit)
+      && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
+      && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).combined && !flags(ledger0).column && !saysToDate(ledger0)) {
+      if (sp.period.form === "none" && sp.grain === "total") {
+        const y = hb.lastYear;
+        return { kind: "clarify", about: "which period", question: ledger0.question, options: [
+          { label: `${y}`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, `in ${y}`), deps, pins) }, { label: "Other years", entry: "which years" }] };
+      }
+      const yrs = yearSpan({ period: sp.period, grain: sp.grain }, Number(release.lastMonth.slice(0, 4)), COUNTYWIDE_FIRST_YEAR);
+      if (yrs) {
+        const r = answerCountywide({ measure: sp.measures[0], countyOri: county.ori, countyName: pl!.kind === "agency" ? pl!.name : "", state: county.ori.slice(0, 2) === (pl as { state: string }).state.toUpperCase() ? county.ori.slice(0, 2) : (pl as { state: string }).state.toUpperCase(),
+          from: yrs[0], to: yrs[1], statistic: sp.statistic === "rate" ? "rate" : "count", byYear: sp.grain === "year", canonicalRoot: deps.target.root }, hb, deps.execute);
+        if (r.kind === "historical") return r;
+        return decline(/cover|outside/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
+    }
+    return decline("unsupported_capability", `County-wide totals (every agency in a county, summed) are answered for one Part I crime, by count or rate, by year from ${COUNTYWIDE_FIRST_YEAR} through ${hb?.lastYear ?? 2025}. This question asks for something else.`);
+  }
+  // "Where does Durham rank in murder rate in 2024?" (Jeff 2026-11-10, ranking decision 4): with no scope named, asked
+  // (among the state's cities, or among U.S. cities of its size); "nationally" is the size group, "in the state" or the
+  // city's own state named is the state. Only with one Part I crime and one year named; otherwise the usual asks.
+  {
+    const c0 = ledger.parts.filter((p) => p.clause === 0);
+    const rankWord = c0.find((p) => p.concept === "rank" && p.value === "rank:");
+    const cities = c0.filter((p) => p.concept === "place" && /^city:/.test(String(p.value)));
+    const measures = c0.filter((p) => p.concept === "measure");
+    const periods = c0.filter((p) => p.concept === "period" && /^year:\d{4}$/.test(String(p.value)));
+    const others = c0.filter((p) => p.state !== "context" && !["rank", "place", "measure", "period", "statistic"].includes(p.concept)
+      && !(p.state === "not-interpreted" && /^(?:where|how)\s+does$/i.test(p.text.trim())));
+    const geo = c0.filter((p) => p.concept === "place" && !/^city:/.test(String(p.value)));
+    const hb = deps.historical;
+    if (rankWord && hb && cities.length === 1 && measures.length === 1 && isHistoricalMeasure(String(measures[0].value)) && periods.length === 1 && !others.length
+      && !c0.some((p) => p.concept === "entity") && geo.length <= 1 && !qualified(ledger0)) {
+      const [, cityName, cityState] = String(cities[0].value).split(":");
+      const a = resolved.get(`city:${cityName}:${cityState}`);
+      const year = Number(String(periods[0].value).slice(5));
+      const statistic = c0.some((p) => p.concept === "statistic" && ["rate", "per100k", "percapita"].includes(String(p.value))) ? "rate" as const : "count" as const;
+      if (a?.kind === "agency") {
+        const g = geo[0];
+        const inState = /\bin\s+(?:the|their|its)\s+state\b/i.test(ledger0.question) || (g && /^state:/.test(String(g.value)) && placeOf(g)?.kind === "state" && (placeOf(g) as { code: string }).code.toUpperCase() === cityState.toUpperCase());
+        const nationally = g?.value === "national";
+        const run = (scope: "state" | "size") => {
+          const r = answerHistoricalPosition({ measure: String(measures[0].value), ori: a.ori, label: a.label, state: cityState.toUpperCase(), year, statistic, scope }, hb, deps.execute);
+          return r.kind === "historical" ? r : decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+        };
+        if (g && !inState && !nationally) return decline("unsupported_capability", `${a.label} is ranked among its own state's cities or among U.S. cities of its size.`);
+        if (inState) return run("state");
+        if (nationally) return run("size");
+        const options = [{ label: `Among ${stateName(cityState.toUpperCase())} cities`, continuation: run("state") }, { label: "Among U.S. cities of similar size", continuation: run("size") }]
+          .filter((o) => runsNow(o.continuation));
+        if (options.length > 1) return { kind: "clarify", about: "which cities to rank against", question: ledger0.question, options };
+        if (options.length === 1) return options[0].continuation;
+        return run("state");
+      }
+    }
+  }
   // Police staffing (Crime Index's staffing tables: officers and civilian employees) isn't built here yet: said plainly,
   // never "couldn't tell what this asks" (query-log step one, 2026-11-02: 1 in 8 of the Historical tab's first questions).
   // "Assaults on officers" is not staffing; "the number of police officers" is.
@@ -1448,7 +1511,7 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // is in; decision 5, states 1960-2025 without DC): a state's cities or the nation's, or the states. A population floor
   // is "large" (P08: 250,000) or one named; a clearance or a detail stays on its own path (NIBRS ranks NIBRS-only detail).
   const floorOf = (sp: Extract<typeof d.spec, { type: "rank" }>) => (sp.min ? (sp.min.op === ">" ? sp.min.amount + 1 : sp.min.amount) : flags(ledger0).largeCities ? 250000 : null);
-  if (deps.historical && d.spec.type === "rank" && (d.spec.entity === "city" || d.spec.entity === "state" || d.spec.entity === "agency")
+  if (deps.historical && d.spec.type === "rank" && (d.spec.entity === "city" || d.spec.entity === "state" || d.spec.entity === "agency" || d.spec.entity === "county")
     && (d.spec.scope.kind === "state" ? d.spec.entity !== "state" : d.spec.scope.kind === "national") && isHistoricalMeasure(d.spec.measure)
     && (d.spec.statistic === "count" || d.spec.statistic === "rate") && !(d.spec.entity === "state" && (d.spec.min || flags(ledger0).largeCities))
     && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
@@ -1484,11 +1547,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     if (ctSpan && cur && sp.entity !== "state") {
       const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: ctSpan[0], to: ctSpan[1],
         statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation,
-        entity: sp.entity === "agency" ? "agency" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
+        entity: sp.entity === "agency" ? "agency" : sp.entity === "county" ? "county" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
       if (r.kind === "current") return saidFloor(r);
       return decline("unsupported_capability", r.explanation);
     }
   }
+  // Counties ranked are Crime Index's county agencies (above) or nothing: never another path's reading (rankings PR B).
+  if (d.spec.type === "rank" && d.spec.entity === "county")
+    return decline("unsupported_capability", "Counties are ranked by their own agency (the sheriff or county police) from Crime Index, for one year through 2025, or from Current Trends' sample in 2026, by count or rate of a Part I crime. This question asks for something else.");
   // The reader's own change form ("how did burglaries in Memphis change from 2010 to 2020") for one agency: the same
   // Historical answer as "<crime> in <agency>, <earlier> against <later>" (P54, P55).
   if (deps.historical && d.spec.type === "change" && d.spec.statistic === "count" && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent

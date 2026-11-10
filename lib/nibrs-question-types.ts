@@ -95,7 +95,7 @@ export type SeriesSpec = { type: "series"; measures: string[]; unit: Unit | null
   window?: { months: number | null; average: boolean } };
 export type BreakdownSpec = { type: "breakdown"; measure: string; unit: Unit | null; filters: string[]; dim: string; place: NPlace; period: NPeriod; byYear?: true; byMonth?: true };
 export type ShareSpec = { type: "share"; measure: string; unit: Unit | null; population: string[]; subset: string[]; denominator: "units" | "clearances"; place: NPlace; period: NPeriod; byState?: true };
-export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
+export type RankSpec = { type: "rank"; entity: "state" | "city" | "agency" | "county"; measure: string; statistic: "count" | "rate" | "clearance_rate"; scope: NPlace; period: NPeriod; rank: { dir: "top" | "bottom"; n: number | null } | null; min: { op: ">=" | ">"; amount: number } | null };
 export type ChangeSpec = { type: "change"; measure: string; unit: Unit | null; statistic: "count" | "rate"; place: NPlace; earlier: number; later: number };
 export type NibrsSpec = SeriesSpec | BreakdownSpec | ShareSpec | RankSpec | ChangeSpec;
 
@@ -233,8 +233,10 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
   // ---- N6: rankings (rank words, a threshold, or a list of entities) ----
   if (rankParts.length || thresholdParts.length || (entityParts.length && listParts.length === 0 && /\b(?:which|list)\b/i.test(ledger.question) && !placeParts.some((p) => p.value?.startsWith("city:")))) {
     take(rankParts); take(thresholdParts); take(entityParts); take(clearance);
-    const entity = entityParts.map((p) => p.value)[0] ?? (rankParts.length ? null : null);
-    if (!entity || !["state", "city", "agency"].includes(entity)) return { kind: "none" };
+    // Counties ranked (Jeff 2026-11-10): the county's own agency, the sheriff or county police.
+    const entity0 = entityParts.map((p) => p.value)[0] ?? (rankParts.length ? null : null);
+    const entity = entity0 === "counties" ? "county" : entity0;
+    if (!entity || !["state", "city", "agency", "county"].includes(entity)) return { kind: "none" };
     if (measures.length !== 1) return { kind: "none" };
     if (changeParts.length) return declineParts(changeParts, (p) => cannot(p, "I rank places by a level, not by a change, in this version."));
     const rankVal = rankParts.map((p) => p.value ?? "").find((v) => /^(?:top|bottom):/.test(v)) ?? null;
@@ -265,7 +267,7 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     if (places.length > 1 || (scope.kind === "agency")) return declineParts(placeParts, (p) => cannot(p, "a ranking covers the nation or one state."));
     const stat = clearanceRate ? "clearance_rate" : statistic === "rate" ? "rate" : statistic === "count" ? "count" : null;
     if (!stat) return { kind: "none" };
-    return finish({ type: "rank", entity: entity as "state" | "city" | "agency", measure: measures[0], statistic: stat, scope, period: periods[0] ?? { form: "none" }, rank, min: thresholds[0] ?? null });
+    return finish({ type: "rank", entity: entity as "state" | "city" | "agency" | "county", measure: measures[0], statistic: stat, scope, period: periods[0] ?? { form: "none" }, rank, min: thresholds[0] ?? null });
   }
 
   // ---- N7: change between two years ----
