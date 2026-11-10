@@ -635,7 +635,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
@@ -5595,19 +5595,16 @@
    "question": "Graph it",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R08",
+    "status": "draft",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "reviewed_by": null,
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
    }
   },
   {
@@ -6387,16 +6384,20 @@
    "question": "Please show me examples of cities of more than 100,00 people in which crime continued declining in summer 2025 instead of rising",
    "previous": null,
    "expected": {
-    "outcome": "exclude",
+    "outcome": "clarify",
     "source": null,
-    "reason": "no-earlier-question:refers-back"
+    "about_any": [
+     "violent, property or both",
+     "place"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "draft",
-    "rule": "X1",
+    "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
+    "notes": "The city set has no geographic scope under P12."
    }
   },
   {
@@ -11435,16 +11436,21 @@
    "question": "can you make complex analysis for me for the crime types that I will give you?",
    "previous": null,
    "expected": {
-    "outcome": "exclude",
+    "outcome": "clarify",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "about_any": [
+     "crime",
+     "place",
+     "period"
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "draft",
-    "rule": "X1",
+    "rule": "R09b>2nd",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
+    "notes": "The user has not yet supplied the promised crime types."
    }
   },
   {
@@ -19402,21 +19408,16 @@
    "question": "Can you show me the number of per-capita crimes for both cities?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "place",
-     "period"
-    ]
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R09b",
+    "status": "draft",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "reviewed_by": null,
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
    }
   },
   {
@@ -20330,20 +20331,16 @@
    "question": "can you show me the number of murder for both cities?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about": "place",
-    "about_any": [
-     "place",
-     "period"
-    ]
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R10",
+    "status": "draft",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "reviewed_by": null,
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
    }
   },
   {
@@ -26002,21 +25999,16 @@
    "question": "Compare this to New York, Los Angeles and Houston",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about_any": [
-     "crime",
-     "which New York",
-     "period"
-    ],
-    "about": "crime"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
-    "rule": "R09>2nd",
+    "rule": "X1",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "New York remains city versus state ambiguous."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
    }
   },
   {
@@ -28064,7 +28056,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
@@ -43010,7 +43002,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
@@ -43835,7 +43827,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
@@ -52039,16 +52031,19 @@
    "question": "have domestic violence trends followed the same patterns as other types of violent crime in the past 5 years",
    "previous": null,
    "expected": {
-    "outcome": "exclude",
+    "outcome": "clarify",
     "source": null,
-    "reason": "no-earlier-question:refers-back"
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
    },
    "label": {
-    "status": "draft",
-    "rule": "X1",
+    "status": "reviewed",
+    "rule": "R10",
     "drafted_by": "rules-v1",
-    "reviewed_by": null,
-    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -53068,7 +53063,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:refers-back"
+    "reason": "no-earlier-question:follow-up-opening"
    },
    "label": {
     "status": "draft",
@@ -60548,19 +60543,16 @@
    "question": "break that down by race",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R08",
+    "status": "draft",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "reviewed_by": null,
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
    }
   },
   {
@@ -61544,7 +61536,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:refers-back"
+    "reason": "no-earlier-question:follow-up-opening"
    },
    "label": {
     "status": "draft",
@@ -62594,7 +62586,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
@@ -65492,19 +65484,16 @@
    "question": "break this down by offense type",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
-    "rule": "R10>2nd",
+    "rule": "X1",
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
-    "notes": "Only a breakdown instruction is supplied."
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
    }
   },
   {
@@ -66474,19 +66463,16 @@
    "question": "break this down by year",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "exclude",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
-    "status": "reviewed",
-    "rule": "R08",
+    "status": "draft",
+    "rule": "X1",
     "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "reviewed_by": null,
+    "notes": "no earlier question: a session-less row that needs the turn before (Jeff 2026-11-10: left out, not scored)"
    }
   },
   {
@@ -66852,7 +66838,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",
@@ -74204,7 +74190,7 @@
    "expected": {
     "outcome": "exclude",
     "source": null,
-    "reason": "no-earlier-question:follow-up-opening"
+    "reason": "no-earlier-question:refers-back"
    },
    "label": {
     "status": "draft",

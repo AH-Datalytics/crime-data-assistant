@@ -492,13 +492,15 @@ if os.path.exists(REVIEW):
 # "instead of", "add ... to the chart", "that's murder, not shootings") or opens as a follow-up ("how about ...",
 # "now add ...") without naming its own crime and place. Follow-ups stay tested through rows with real session ids.
 # It comes after the review: a verdict given to the question read on its own doesn't apply to a reply.
-REFERS_BACK = R(r"\b(?:the same|same (?:chart|prompt|thing|data|stats|for|as)|instead of|rather than|as previous|previous (?:chart|prompt|question|answer|one)|take me back|layer(?:ed)? on|overlay|(?:to|on|in|from) (?:the|this|that|your) (?:chart|graph|graphic|list|comparison|table|map)|narrow (?:it|the data|this|that)|i said|that'?s (?:the|murder|not|wrong)|this (?:chart|graph|graphic|looks|is wrong)|these (?:numbers|results|figures|cities|places|agencies))\b")
+REFERS_BACK = R(r"\b(?:(?:the )?same (?:chart|prompt|thing|data|stats|statistic|shares|trend|figure|for|but|with|as|time frame|period)|instead of|rather than|as previous|previous (?:chart|prompt|question|answer|one)|take me back|layer(?:ed)? on|overlay|(?:to|on|in|from) (?:the|this|that|your) (?:chart|graph|graphic|list|comparison|table|map)|narrow (?:it|the data|this|that)|i said|that'?s (?:the|murder|not|wrong)|this (?:chart|graph|graphic|looks|is wrong)|these (?:numbers|results|figures|cities|places|agencies))\b")
 # Back-references that make a reply of a question even when it names its crime and place ("the clearance rate on
 # carjackings in these cities", "layer on top the national homicide rate", "same chart but ... Charlotte").
-STRONG_BACK = R(r"\b(?:(?:these|those)\b(?![^:]*:)|previous (?:chart|prompt|question|answer|one)|same (?:chart|prompt|figure)|i said|that'?s (?:the|murder|not|wrong)|take me back|layer(?:ed)? on|instead of)\b")
+# "Graph it", "Compare this to New York ..." and "for both cities" (never named) point back too (Codex review 2).
+STRONG_BACK = R(r"\b(?:(?:these|those)\b(?![^:]*:)|both (?:cities|places|states|counties|agencies)|previous (?:chart|prompt|question|answer|one)|same (?:chart|prompt|figure)|i said|that'?s (?:the|murder|not|wrong)|take me back|layer(?:ed)? on)\b|^(?:graph|chart|plot|map|compare|show|put|make|break|redo|recreate|sort|rank|add) (?:it|this|that|them)\b")
 # "Can you show/break/graph ..." also opens first questions; as a follow-up opening it needs a pronoun or nothing named.
 CAN_YOU = R(r"^can you (?:make|change|show|put|do|add|remove|switch|break|split|graph|chart|plot)\b")
-POINTS = R(r"\b(?:it|this|that|these|those|them|both)\b")
+# "that" starting a relative clause ("the crime types that I will give you") points nowhere.
+POINTS = R(r"\b(?:it|this|these|those|them|both)\b|\bthat\b(?! (?:i|you|we|they|is|are|was|were|has|have|had|will|would|can|could)\b)")
 NO_EARLIER = "scripts/fixtures/answer-eval/qlog-no-earlier-question.json"
 owner_left_out = set(json.load(open(NO_EARLIER, encoding="utf-8"))["owner_ids"])
 def names_own(q):
@@ -508,7 +510,7 @@ def needs_earlier_turn(q):
     q = q.strip()
     # A long question's "these" or "those" is usually its own ("... Texas, Florida and New York ... those states").
     m = STRONG_BACK.search(q)
-    if m and (m.group(0).lower() not in ("these", "those") or len(q.split()) <= 15):
+    if m and (not re.match(r"(?:these|those|both)\b", m.group(0), re.I) or len(q.split()) <= 15):
         return "refers-back"
     if names_own(q) or complete(q):
         return None
