@@ -15,7 +15,11 @@ as written and, for a follow-up, the turn before it (Jeff 2026-11-04: "Redacted 
 there": text as written; a grep for anything like a credential or token runs before each PR).
 
 "First question" (coordinator 2026-11-04): the first row of each session in each tab; every later row of that session
-in that tab is a follow-up to the row before it.
+in that tab is a follow-up to the row before it. A row logged with no session (March to August 2026) is a follow-up to
+the row before it in its tab when it came within 5 minutes of it (Jeff 2026-11-09).
+
+The synthetic list (questions from the repo's own scripts, left out) is not in the repo: one reproducing the labels was
+rebuilt on 2026-11-09 from them (every question the drafter labels without a list that the labels left out).
 """
 import argparse, collections, hashlib, json, re
 
@@ -401,6 +405,19 @@ def label_follow(prev_label, q, tab):
 # ---------------------------------------------------------------------------------------------- run
 rows = json.load(open(args.extract, encoding="utf-8"))
 synthetic = {norm(s) for s in json.load(open(args.synthetic, encoding="utf-8"))}
+# Rows logged before sessions were recorded (March to August 2026: no session_id) carry no previous turn, so each read as
+# a first question (Jeff 2026-11-09: "These are clear follow ups"). A session-less row is a follow-up to the row before it
+# in the same tab when it came within LINK_MINUTES of it (46 of the 51 such rows in the bad-declines review came within
+# 2 minutes).
+LINK_MINUTES = 5
+_last = {}
+for r in sorted(rows, key=lambda r: (r["ts"], r["id"])):
+    if r.get("session_id") is not None or r.get("tab") not in TAB_SOURCE:
+        continue
+    p = _last.get(r["tab"])
+    if p is not None and not r.get("previous") and r["ts"] - p["ts"] <= LINK_MINUTES * 60_000 and (p.get("question") or "").strip():
+        r["previous"], r["n"] = p["question"], (p.get("n") or 1) + 1
+    _last[r["tab"]] = r
 firsts, follows = {}, {}
 for r in rows:
     tab, q = r.get("tab"), (r.get("question") or "").strip()
@@ -452,6 +469,14 @@ if os.path.exists(REVIEW):
     review = json.load(open(REVIEW, encoding="utf-8"))["labels"]
     for r in repo:
         v = review.get(r["id"])
+        # A question reviewed when it read as a first question, now a linked follow-up (session-less rows, 2026-11-09):
+        # its verdict carries when the follow-up stands alone (F1+: labeled by the first-question rules, so the same
+        # label was judged), or when it is an owner's decline, which no earlier turn changes.
+        if not v and r["kind"] == "follow-up":
+            v0 = review.get(f"QL-{TAB_SHORT[r['tab']]}-{r['hash']}")
+            if v0 and v0.get("status") != "disputed" and (r["label"]["rule"].startswith("F1+")
+                    or (v0["by"].startswith("jeff") and v0.get("expected", {}).get("outcome") == "decline")):
+                v = {**v0, "why": (v0.get("why") or "") + " [carried from the question when it read as a first question]"}
         if not v:
             continue
         lab = r["label"]
