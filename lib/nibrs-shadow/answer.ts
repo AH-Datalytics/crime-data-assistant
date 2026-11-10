@@ -123,7 +123,7 @@ function readsWhole(t: string, year: number): boolean {
 const tidy = (t: string) => t.replace(/\s+([,?.!])/g, "$1").replace(/\s{2,}/g, " ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
 /** The conditions the reader sets aside from its text (clearance, people, property...): a button must keep them. */
 const CONDITIONS = ["clearance", "people", "property", "arrestsThrough", "consistent", "offenders", "composite", "quarter", "combined",
-  "largeCities", "largestSet", "last12", "nibrsAsked", "shrDetail", "court", "forecast", "undefinedTerm"] as const;
+  "largeCities", "largestSet", "countywide", "last12", "nibrsAsked", "shrDetail", "court", "forecast", "undefinedTerm"] as const;
 /**
  * A button's question that reads whole and keeps every condition of the question asked, but the ones the step changes
  * on purpose (Codex decline review 01: a period button that dropped "that were cleared").
@@ -1152,19 +1152,23 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const cities = c0.filter((p) => p.concept === "place" && /^city:/.test(String(p.value)));
     const measures = c0.filter((p) => p.concept === "measure");
     const periods = c0.filter((p) => p.concept === "period" && /^year:\d{4}$/.test(String(p.value)));
+    // "In the state" is read as an entity "state": it is the scope here (Codex rankings-B review 01.5).
+    const inStateWords = /\bin\s+(?:the|their|its)\s+state\b/i.test(ledger0.question);
     const others = c0.filter((p) => p.state !== "context" && !["rank", "place", "measure", "period", "statistic"].includes(p.concept)
-      && !(p.state === "not-interpreted" && /^(?:where|how)\s+does$/i.test(p.text.trim())));
+      && !(p.state === "not-interpreted" && /^(?:where|how)\s+does$/i.test(p.text.trim())) && !(inStateWords && p.concept === "entity" && p.value === "state"));
+    // A count or a rate per 100,000 only ("per 1,000" keeps the matcher's decline), never the year to date (01.3).
+    const statOk = c0.filter((p) => p.concept === "statistic").every((p) => ["rate", "per100k", "percapita", "count"].includes(String(p.value)));
     const geo = c0.filter((p) => p.concept === "place" && !/^city:/.test(String(p.value)));
     const hb = deps.historical;
     if (rankWord && hb && cities.length === 1 && measures.length === 1 && isHistoricalMeasure(String(measures[0].value)) && periods.length === 1 && !others.length
-      && !c0.some((p) => p.concept === "entity") && geo.length <= 1 && !qualified(ledger0)) {
+      && statOk && !saysToDate(ledger0) && geo.length <= 1 && !qualified(ledger0)) {
       const [, cityName, cityState] = String(cities[0].value).split(":");
       const a = resolved.get(`city:${cityName}:${cityState}`);
       const year = Number(String(periods[0].value).slice(5));
       const statistic = c0.some((p) => p.concept === "statistic" && ["rate", "per100k", "percapita"].includes(String(p.value))) ? "rate" as const : "count" as const;
       if (a?.kind === "agency") {
         const g = geo[0];
-        const inState = /\bin\s+(?:the|their|its)\s+state\b/i.test(ledger0.question) || (g && /^state:/.test(String(g.value)) && placeOf(g)?.kind === "state" && (placeOf(g) as { code: string }).code.toUpperCase() === cityState.toUpperCase());
+        const inState = inStateWords || (g && /^state:/.test(String(g.value)) && placeOf(g)?.kind === "state" && (placeOf(g) as { code: string }).code.toUpperCase() === cityState.toUpperCase());
         const nationally = g?.value === "national";
         const run = (scope: "state" | "size") => {
           const r = answerHistoricalPosition({ measure: String(measures[0].value), ori: a.ori, label: a.label, state: cityState.toUpperCase(), year, statistic, scope }, hb, deps.execute);
@@ -1173,11 +1177,13 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         if (g && !inState && !nationally) return decline("unsupported_capability", `${a.label} is ranked among its own state's cities or among U.S. cities of its size.`);
         if (inState) return run("state");
         if (nationally) return run("size");
-        const options = [{ label: `Among ${stateName(cityState.toUpperCase())} cities`, continuation: run("state") }, { label: "Among U.S. cities of similar size", continuation: run("size") }]
-          .filter((o) => runsNow(o.continuation));
-        if (options.length > 1) return { kind: "clarify", about: "which cities to rank against", question: ledger0.question, options };
-        if (options.length === 1) return options[0].continuation;
-        return run("state");
+        // Always asked (Jeff): a choice that can't run is left out and said, never chosen silently (01.5).
+        const all = [{ label: `Among ${stateName(cityState.toUpperCase())} cities`, continuation: run("state") }, { label: "Among U.S. cities of similar size", continuation: run("size") }];
+        const options = all.filter((o) => runsNow(o.continuation));
+        if (!options.length) return all[0].continuation;
+        const gone = all.find((o) => !runsNow(o.continuation));
+        return { kind: "clarify", about: "which cities to rank against", question: ledger0.question, options,
+          ...(gone ? { note: `${gone.label} isn't available: ${(gone.continuation as { explanation?: string }).explanation ?? ""}`.trim() } : {}) };
       }
     }
   }
@@ -2248,7 +2254,7 @@ function agencyListQuestion(ledger: RequestLedger, ledger0: RequestLedger, deps:
 }
 
 /** Whether the reader kept any qualifier aside as a flag: population and agency lists take none. */
-const QUALIFIERS: (keyof Flags)[] = ["forecast", "court", "offenders", "composite", "undefinedTerm", "comparison", "last12", "combined", "largeCities", "largestSet", "region",
+const QUALIFIERS: (keyof Flags)[] = ["forecast", "court", "offenders", "composite", "undefinedTerm", "comparison", "last12", "combined", "largeCities", "largestSet", "countywide", "region",
   "circumstance", "nibrsAsked", "consistent", "shrDetail", "property", "arrestsThrough", "clearance", "people", "quarter", "column"];
 function qualified(ledger0: RequestLedger): boolean {
   const f = flags(ledger0);
@@ -2333,6 +2339,6 @@ function baseOf(v: string): number | null {
 /** Any qualifier the reader kept aside (combined, a change, a region, NIBRS asked by name): staffing takes none. */
 function qualifiedStaffing(ledger0: RequestLedger): boolean {
   const f = flags(ledger0);
-  return (["forecast", "court", "offenders", "composite", "undefinedTerm", "comparison", "last12", "combined", "largeCities", "largestSet", "region", "circumstance", "nibrsAsked",
+  return (["forecast", "court", "offenders", "composite", "undefinedTerm", "comparison", "last12", "combined", "largeCities", "largestSet", "countywide", "region", "circumstance", "nibrsAsked",
     "consistent", "shrDetail", "property", "arrestsThrough", "clearance", "people", "quarter", "column"] as (keyof Flags)[]).some((k) => { const v = f[k]; return !!v && !(Array.isArray(v) && !v.length); });
 }

@@ -314,7 +314,8 @@ export function readQuestion(question: string, currentYear: number, lastMonth?: 
   // P70 (decided 2026-10-30): "countywide", "the whole county", "across all agencies in X County" asks for the sum of
   // every agency in the county; flagged and the words taken out, so the county is read as usual.
   let countywide = false;
-  text = text.replace(/\b(?:county[-\s]?wide|(?:for\s+|in\s+)?(?:the\s+)?(?:whole|entire)\s+county|(?:across|for|from|in)\s+all\s+(?:the\s+)?(?:law\s+enforcement\s+)?(?:agencies|police\s+departments|departments)\s+(?=in\b))/i,
+  // "All agencies" only before a county ("all agencies in Kern County"), never a state (Codex rankings-B review 01.1).
+  text = text.replace(/\b(?:county[-\s]?wide|(?:for\s+|in\s+)?(?:the\s+)?(?:whole|entire)\s+county|(?:(?:across|for|from|in|of)\s+)?all\s+(?:the\s+)?(?:law\s+enforcement\s+)?(?:agencies|police\s+departments|departments)\s+(?=in\s+(?:[\w.'-]+\s+){1,3}county\b))/i,
     (m) => { countywide = true; readings.push({ kind: "phrase", from: m.trim(), to: "(every agency in the county, summed)" }); return " "; });
   let largeCities = false;
   text = text.replace(/(?<!\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|fifty|hundred|top)\s+)\b(?:the\s+)?(?:large|larger|largest|big|bigger|biggest|major)\s+(?=(?:u\.?s\.?\s+|[A-Z][a-zA-Z]+\s+){0,2}cit(?:y|ies)\b)/i, (m) => { largeCities = true; readings.push({ kind: "phrase", from: m.trim(), to: "(a population of 250,000 or more)" }); return ""; });

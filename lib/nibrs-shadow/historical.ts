@@ -21,6 +21,7 @@ import type { ResultTable } from "../nibrs-plan/result";
 import { pct1, rankAgencies } from "../nibrs-plan/transforms";
 import { fmt, fmtRate, periodWords, SRS_SOURCE } from "./deliver";
 import { stateName } from "./places";
+import { headerStates } from "../nibrs-plan/state-codes";
 import { answerSrsSeveral, type SrsPlace } from "./srs";
 
 /** Where the Crime Index build is, and the years it holds. */
@@ -577,7 +578,7 @@ export function answerHistoricalRegion(hq: HistoricalRegionQuestion, build: Hist
   if (hq.from < first || hq.to > build.lastYear)
     return { kind: "historical-decline", explanation: `Historical state figures in the data cover ${first} through ${build.lastYear}, so ${hq.from === hq.to ? hq.from : `${hq.from} through ${hq.to}`} is outside them.` };
   const states = hq.region.states.filter((s) => s !== "DC");
-  const got = execute(`SELECT year, sum(${m.col}_total), sum(population), count(${m.col}_total), count(*) FROM read_parquet(${q(`${build.root}/state_crime.parquet`)}) `
+  const got = execute(`SELECT year, sum(${m.col}_total), sum(population), count(${m.col}_total), count(*), count(population) FROM read_parquet(${q(`${build.root}/state_crime.parquet`)}) `
     + `WHERE state IN (${states.map(q).join(", ")}) AND year BETWEEN ${hq.from} AND ${hq.to} GROUP BY year ORDER BY year`);
   const byYear = new Map(got.map((r) => [Number(r[0]), r]));
   const years = Array.from({ length: hq.to - hq.from + 1 }, (_, i) => hq.from + i);
@@ -588,7 +589,8 @@ export function answerHistoricalRegion(hq: HistoricalRegionQuestion, build: Hist
     if (!r || Number(r[3]) !== states.length) return null;
     const total = num(r[1]), pop = num(r[2]);
     if (total === null) return null;
-    return rate ? (pop && pop > 0 ? Math.round((total * 1e6) / pop) / 10 : null) : total;
+    // A rate needs every state's population (Codex rankings-B review 01.4).
+    return rate ? (pop && pop > 0 && Number(r[5]) === states.length ? Math.round((total * 1e6) / pop) / 10 : null) : total;
   };
   const name = ucFirst(hq.region.name);
   const what = rate ? `${m.words} per 100,000` : m.words;
@@ -633,23 +635,24 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
     + `s AS (SELECT DISTINCT data_year, ori, state_abbr FROM read_parquet(${q(`${c}/agency_year/**/*.parquet`)}, hive_partitioning = 1)), `
     + `k AS (SELECT data_year, fips_county FROM f WHERE ori = ${q(cq.countyOri)}), `
     + `mem AS (SELECT f.data_year AS y, f.ori FROM f JOIN k USING (data_year, fips_county) JOIN s ON s.data_year = f.data_year AND s.ori = f.ori `
-    + `WHERE s.state_abbr = ${q(cq.state)} AND f.data_year BETWEEN ${cq.from} AND ${cq.to}) `
+    + `WHERE s.state_abbr IN (${headerStates(cq.state).map(q).join(", ")}) AND f.data_year BETWEEN ${cq.from} AND ${cq.to}) `
     + `SELECT mem.y, mem.ori, a.name, a.population, a.${m.col}_total FROM mem LEFT JOIN read_parquet(${q(`${build.root}/agency_crime.parquet`)}) a ON a.ori = mem.ori AND a.year = mem.y ORDER BY mem.y, a.name`);
   const years = Array.from({ length: cq.to - cq.from + 1 }, (_, i) => cq.from + i);
   const rate = cq.statistic === "rate";
-  type Y = { total: number | null; pop: number; popAll: number; reporting: string[]; members: number };
+  // A rate needs every reporting member's population (Codex rankings-B review 01.4): one missing, no rate that year.
+  type Y = { total: number | null; pop: number; popAll: number; reporting: string[]; members: number; popMissing: boolean };
   const per = new Map<number, Y>();
-  for (const y of years) per.set(y, { total: null, pop: 0, popAll: 0, reporting: [], members: 0 });
+  for (const y of years) per.set(y, { total: null, pop: 0, popAll: 0, reporting: [], members: 0, popMissing: false });
   for (const r of got) {
     const y = per.get(Number(r[0]));
     if (!y) continue;
     y.members++;
     const pop = num(r[3]), total = num(r[4]);
     if (pop !== null) y.popAll += pop;
-    if (total !== null) { y.total = (y.total ?? 0) + total; if (pop !== null) y.pop += pop; y.reporting.push(String(r[2] ?? r[1])); }
+    if (total !== null) { y.total = (y.total ?? 0) + total; if (pop !== null) y.pop += pop; else y.popMissing = true; y.reporting.push(String(r[2] ?? r[1])); }
   }
   if (![...per.values()].some((y) => y.members)) return { kind: "historical-decline", explanation: `The FBI's agency records have no agencies in ${cq.countyName} for ${cq.from === cq.to ? cq.from : `${cq.from} through ${cq.to}`}.` };
-  const value = (y: Y) => (y.total === null ? null : rate ? (y.pop > 0 ? Math.round((y.total * 1e6) / y.pop) / 10 : null) : y.total);
+  const value = (y: Y) => (y.total === null ? null : rate ? (y.pop > 0 && !y.popMissing ? Math.round((y.total * 1e6) / y.pop) / 10 : null) : y.total);
   const multi = cq.byYear || cq.from !== cq.to;
   const rows: (string | number | null)[][] = multi ? years.map((y) => [String(y), value(per.get(y)!)]) : [[value(per.get(cq.from)!)]];
   const where = `${cq.countyName}, ${stateName(cq.state)}`;
@@ -661,7 +664,15 @@ export function answerCountywide(cq: CountywideQuestion, build: HistoricalBuild,
     const y = per.get(cq.from)!;
     const share = y.popAll > 0 ? Math.round((y.pop * 1000) / y.popAll) / 10 : null;
     text.push(`${y.reporting.length} of ${y.members} agencies in the county reported${share !== null ? `, covering ${share}% of the residents of the agencies with a population` : ""}: ${y.reporting.join(", ")}.`);
-  } else text.push("Each year sums the agencies that reported that year; their number and coverage change from year to year.");
+  } else {
+    // Each year's reporting agencies and share (Codex rankings-B review 01.7).
+    for (const yr of years) {
+      const y = per.get(yr)!;
+      const share = y.popAll > 0 ? Math.round((y.pop * 1000) / y.popAll) / 10 : null;
+      text.push(`${yr}: ${y.reporting.length} of ${y.members} agencies reported${share !== null ? `, covering ${share}% of the residents of the agencies with a population` : ""}${y.reporting.length ? `: ${y.reporting.join(", ")}` : ""}.`);
+    }
+  }
+  if (rate && [...per.values()].some((y) => y.total !== null && y.popMissing)) text.push("A year with a reporting agency whose population isn't published has no rate.");
   if (rate) text.push("The rate is per 100,000 of the reporting agencies' summed population.");
   text.push(SRS_SOURCE);
   const period = { from: `${cq.from}-01`, to: `${cq.to}-12` };
