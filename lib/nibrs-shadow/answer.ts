@@ -1536,7 +1536,14 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
     const covered = period.to >= release.firstMonth && !yearSet ? fromLedger(filled(ledger, "period", value, `from ${firstY}`), deps, pins) : null;
     // Murder before NIBRS's years is Homicide Reports' (FBI SHR, from 1976: by month, weapon, victim and offender), never
     // "not in the data" (Jeff 2026-11-09: "oakland murders per month in 1996", "firearm murders in Louisville in 2003").
-    if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && plan.measures.length > 0 && plan.measures.every((m) => /\.(?:murder|homicide)$|^victims\.(?:murder|homicide)/.test(m.id)))
+    // Only what Homicide Reports count (homicide victims and offenses, never offenders or arrests) and only its own
+    // details (the victims, offenders, relationship, weapon, circumstance): a location or a clearance stays NIBRS's
+    // (Codex coverage review 1).
+    const shrDims = plan.filters.map((f) => (f.kind === "attribute" ? [f.dimension] : f.kind === "exists" ? f.where.map((w) => (w.kind === "attribute" ? w.dimension : "")) : [""]));
+    const shrFits = plan.measures.length > 0 && plan.measures.every((m) => /^(?:victims|offenses)\.(?:murder|homicide)(?![a-z_])/.test(m.id))
+      && shrDims.every((ds) => ds.length > 0 && ds.every((d) => shrDetailDim(d))) && catG.every((g) => shrDetailDim(g.dimension))
+      && !flags(ledger0).clearance && !flags(ledger0).property && !flags(ledger0).arrestsThrough;
+    if (period.to >= `${SHR_FIRST_YEAR}-01` && !flags(ledger0).nibrsAsked && shrFits)
       return { kind: "route", source: "shr", explanation: `Murders before ${firstY} come from Homicide Reports (FBI SHR), which hold the homicides agencies reported from ${SHR_FIRST_YEAR} on. Homicide Reports aren't available here yet.` };
     // Never "the data" for NIBRS's years alone: Crime Index has yearly figures for cities and counties back to its first
     // year (1930), offered by year when the question runs that way (Jeff 2026-11-09: "THE HISTORICAL DATA STARTS AT 1930").

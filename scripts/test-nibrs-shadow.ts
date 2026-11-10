@@ -1631,5 +1631,10 @@ for (const q of ["oakland murders per month in 1996", "firearm murders in Louisv
   assert.ok(o.kind === "decline" && o.explanation.startsWith("NIBRS figures here cover") && !/^The data here/.test(o.explanation), JSON.stringify(o).slice(0, 300));
   const m = ask("murders per month in Oakland in 1970");
   assert.ok(!(m.kind === "route" && m.source === "shr"), "1970 is before Homicide Reports");
+  // Only Homicide Reports' own units and details (Codex coverage review 1).
+  for (const q of ["murder offenders in Oakland in 1996", "murders at residences in Oakland in 1996", "murders cleared by arrest in Oakland in 1996"]) {
+    const x = ask(q);
+    assert.ok(!(x.kind === "route" && x.source === "shr"), `${q}: ${JSON.stringify(x).slice(0, 200)}`);
+  }
 }
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
