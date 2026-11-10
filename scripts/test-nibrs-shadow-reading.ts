@@ -118,8 +118,14 @@ assert.match(readQuestion("homicides in ny city in 2023", 2026).text, /in New Yo
 assert.match(readQuestion("Rochester NY murders in 2023", 2026).text, /^Rochester NY murders/);
 assert.match(readQuestion("homicides reported by the Suffern (NY) Police Department", 2026).text, /\(NY\)/);
 // Circumstances (element 31, coordinator 2026-11-04): a filter, taken out of the words; domestic violence is not one.
-assert.deepEqual(readQuestion("Gang-related murders in Chicago by year since 2020", 2026).circumstance, ["04", "05"]);
-assert.match(readQuestion("Gang-related murders in Chicago by year since 2020", 2026).text, /^murders in Chicago/);
+assert.deepEqual(readQuestion("Murders during an argument in Chicago by year since 2020", 2026).circumstance, ["01"]);
+assert.doesNotMatch(readQuestion("Murders during an argument in Chicago by year since 2020", 2026).text, /argument/);
+// Gang wording is not a circumstance: it is declined by policy (P38, Jeff 2026-11-09).
+for (const q of ["Gang-related murders in Chicago by year since 2020", "gangland killings in 2024", "gangrelated murders in Memphis", "gangs in Houston"]) {
+  assert.equal(readQuestion(q, 2026).circumstance, null, q);
+  assert.equal(readQuestion(q, 2026).undefinedTerm, "gang", q);
+}
+assert.equal(readQuestion("murders in Gangnam in 2024", 2026).undefinedTerm, null);
 assert.deepEqual(readQuestion("Aggravated assault victims in Memphis from arguments in 2024", 2026).circumstance, ["01"]);
 assert.equal(readQuestion("Domestic violence murders in Texas in 2024", 2026).circumstance, null);
 assert.equal(readQuestion("Arrests in arguments in Memphis in 2024", 2026).circumstance, null);

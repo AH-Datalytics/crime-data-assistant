@@ -56,6 +56,7 @@ import { currentBuildAt } from "../lib/nibrs-shadow/current";
 import { loadNibrsRelease } from "../lib/nibrs-shadow/release";
 import { tableDigest } from "../lib/answer-eval/table-digest";
 import { bucket, type Bucket, type Got, type Label } from "./qlog-bucket";
+import { qualifies, readerBinding, readerKey, looksPersonal, validateProposal, type Proposal } from "../lib/nibrs-shadow/gemini-reader";
 
 const arg = (name: string, dflt?: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : dflt; };
 const LABELS = arg("--labels")!, PROGRESS = arg("--progress")!;
@@ -76,6 +77,18 @@ const crimeIndex = arg("--historical", "C:/Users/jeffm/crimeindex-build/crimeind
 const WORKERS = Math.max(1, Number(arg("--workers", "1")));
 const SHARD = arg("--shard") ? arg("--shard")!.split("/").map(Number) as [number, number] : null;
 const SPOT = process.argv.includes("--spot");
+/**
+ * --gemini-readings <cache> (plan 3 step 1, the Gemini reader's shadow run): readings fetched by
+ * scripts/fetch-gemini-readings.ts, read offline. A question that qualifies (the engine doesn't answer, the decline is
+ * the reader's own, and the reader left words unread) takes Gemini's replacements for its unread words when they
+ * validate, and the engine answers the rewritten question by its normal path (a follow-up by the follow-up path);
+ * otherwise today's outcome stands. Each such question's outcome says which ("via"), and the rewritten question ("read").
+ * --gemini-review <file> (outside the repo) lists every question Gemini's reading answered, for review before the gate is
+ * judged: such an answer is unverified, so the scorecard alone can't show it is the question asked (Codex review 01.8).
+ */
+const READINGS_FILE = arg("--gemini-readings");
+const READINGS = READINGS_FILE ? JSON.parse(fs.readFileSync(READINGS_FILE, "utf8")) as { binding: string; entries: Record<string, { proposal: Proposal | null; done: boolean }> } : null;
+if (READINGS && READINGS.binding !== readerBinding()) throw new Error(`${READINGS_FILE} was made with another prompt, model or settings`);
 // The spot set checks the cache against DuckDB itself, so it never reads or writes the cache.
 const CACHE_DIR = SPOT ? undefined : arg("--sql-cache");
 // The DuckDB and Python versions (for the cache's fingerprint), read before any executor starts: on Windows a process
@@ -140,6 +153,7 @@ function runFingerprint(): string {
   };
   walk(path.join(repo, "lib")); walk(path.join(repo, "scripts", "fixtures"));
   h.update(fs.readFileSync(__filename));
+  if (READINGS_FILE) h.update(fs.readFileSync(READINGS_FILE));
   return h.digest("hex");
 }
 // Rows in the cache are frozen, and every question gets its own copy: the engine sees rows exactly as DuckDB's (it may
@@ -282,7 +296,22 @@ if (WORKERS === 1 || SHARD) labels.forEach((l, i) => {
       nextMs = LIMIT_MS * 3;
       try { o = once(); } finally { nextMs = LIMIT_MS; }
     }
-    g = got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t);
+    // The Gemini reader (--gemini-readings): only where it qualifies; a reading that doesn't validate keeps the outcome.
+    let via: string | undefined, read: string | undefined;
+    if (READINGS) {
+      const fu = l.kind === "follow-up" && !!l.previous, year = Number(deps.release.lastMonth.slice(0, 4));
+      const o0 = o as unknown as { kind: string; reason?: string };
+      const q = l.question, prev = fu ? l.previous : null;
+      if (qualifies(q, { kind: o0.kind, reason: o0.reason }, year)) {
+        // Withheld for personal details (never sent): today's outcome stands.
+        const e = looksPersonal(q) || (prev && looksPersonal(prev)) ? undefined : READINGS.entries[readerKey(q, prev)];
+        const v = e?.done ? validateProposal(e.proposal, q, year)
+          : { ok: false as const, reason: looksPersonal(q) || (prev && looksPersonal(prev)) ? "withheld: personal details" : "not fetched" };
+        if (v.ok) { o = fu ? shadowFollowUp(l.previous!, v.question, deps) : shadowAnswer(v.question, deps); via = "gemini"; read = v.question; }
+        else via = `gemini refused: ${v.reason}`;
+      }
+    }
+    g = { ...got(o as unknown as { kind: string } & Record<string, unknown>, Date.now() - t), ...(via ? { via } : {}), ...(read ? { read } : {}) };
   } catch (e) {
     // A process that can't be ended stops the run (incomplete, so not judged): the next one must never run beside it.
     if (/duckdb executor:/.test(String(e))) throw e;
@@ -323,6 +352,19 @@ const incomplete = all.notRun > 0 || shardFailed;
 const gate = incomplete ? `NOT JUDGED: the run is incomplete (${all.notRun} questions not run${shardFailed ? ", a shard failed" : ""})`
   : all.c["wrong answer"] === 0 ? "met" : `NOT met: ${all.c["wrong answer"]} wrong answers`;
 console.log(`hard gate (wrong answers = 0): ${gate}`);
+if (READINGS) {
+  // The Gemini reader's questions, by what happened: used (and the bucket it reached), or refused and why.
+  const via = new Map<string, number>();
+  for (const l of scored) { const g = done.get(l.id); if (g?.via) { const k = g.via === "gemini" ? `gemini used -> ${bucket(l, g)}` : g.via; via.set(k, (via.get(k) ?? 0) + 1); } }
+  console.log("gemini reader:", JSON.stringify(Object.fromEntries([...via].sort())));
+  const review = arg("--gemini-review");
+  if (review) {
+    const rows = scored.filter((l) => done.get(l.id)?.via === "gemini" && done.get(l.id)?.kind === "answer")
+      .map((l) => JSON.stringify({ id: l.id, question: l.question, previous: l.kind === "follow-up" ? l.previous : null, read: done.get(l.id)!.read, source: done.get(l.id)!.source, bucket: bucket(l, done.get(l.id)!) }));
+    fs.writeFileSync(review, rows.join("\n") + (rows.length ? "\n" : ""));
+    console.log(`gemini answers to review: ${rows.length} (${review})`);
+  }
+}
 // Follow-up answers on their own (undisputed labels): how many there are, and how many of each kind.
 const fuAnswers = scored.filter((l) => l.kind === "follow-up" && l.label.status !== "disputed" && done.get(l.id)?.kind === "answer");
 const fuCount = (b: Bucket) => fuAnswers.filter((l) => bucket(l, done.get(l.id) ?? null) === b).length;
@@ -335,7 +377,8 @@ if (cacheOut) console.log(`queries from the cache ${hits}, from DuckDB ${misses}
 const COMPARE = arg("--compare");
 if (COMPARE) {
   const before = new Map<string, Got | null>(); readProgress(COMPARE, before);
-  const same = (a: Got | null, b: Got | null) => JSON.stringify({ ...a, ms: 0 }) === JSON.stringify({ ...b, ms: 0 });
+  // The outcome itself, not where it came from (Codex review 01: a refused reading is an unchanged outcome).
+  const same = (a: Got | null, b: Got | null) => JSON.stringify({ ...a, ms: 0, via: undefined, read: undefined }) === JSON.stringify({ ...b, ms: 0, via: undefined, read: undefined });
   const both = scored.filter((l) => before.has(l.id));
   const moved = new Map<string, number>();
   const diffs: string[] = [];
@@ -348,6 +391,8 @@ if (COMPARE) {
     diffs.push(`${l.id}\t${ba} -> ${bb}\t${short(a)} -> ${short(b)}\t${l.question.slice(0, 100)}`);
   }
   console.log(`\ncompared with ${COMPARE}: ${both.length} questions in both, ${diffs.length} outcomes differ, ${[...moved.values()].reduce((x, y) => x + y, 0)} change bucket`);
+  // The gate against the baseline (Codex review 01.8): wrong answers this run has that the compared run didn't.
+  console.log(`new wrong answers against ${COMPARE}: ${[...moved].filter(([k]) => /-> wrong answer$/.test(k) && !/^wrong answer ->/.test(k)).reduce((x, [, n]) => x + n, 0)}`);
   for (const [k, n] of [...moved].sort()) console.log(`  ${n}  ${k}`);
   for (const d of diffs) console.log(d);
 }

@@ -27902,50 +27902,18 @@
    "setup": [],
    "question": "Gang-related murders in Memphis in 2024",
    "policy": [
-    "D18",
-    "P01"
+    "P38"
    ],
    "expected": {
-    "action": "answer",
-    "meaning": {
-     "source": "nibrs",
-     "places": [
-      {
-       "kind": "agency",
-       "name": "Memphis Police Department",
-       "state": "TN"
-      }
-     ],
-     "period": {
-      "from": "2024-01",
-      "to": "2024-12"
-     },
-     "measures": [
-      {
-       "name": "murder",
-       "unit": "victim"
-      }
-     ],
-     "filters": [
-      "circumstance: gangland (organized crime involvement) or juvenile gang"
-     ],
-     "groupings": [],
-     "statistic": "count"
-    },
-    "values": {
-     "status": "pending_build"
-    },
-    "statements": [
-     "names the agency (Memphis Police Department)",
-     "says agencies often record the circumstance as unknown, so the count can be lower",
-     "names its source at the end"
-    ]
+    "action": "decline",
+    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading.",
+    "alternative": null
    },
    "label": {
     "status": "reviewed",
     "drafted_by": "claude-circumstance",
     "reviewed_by": "codex:circumstance-labels-1",
-    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04). [Jeff 2026-11-09: gang questions declined for every source (P38).]"
    }
   },
   {
@@ -28018,46 +27986,18 @@
    "setup": [],
    "question": "Gang-related murders in Tennessee in 2024",
    "policy": [
-    "P01",
-    "P53"
+    "P38"
    ],
    "expected": {
-    "action": "answer",
-    "meaning": {
-     "source": "shr",
-     "places": [
-      {
-       "kind": "state",
-       "name": "Tennessee",
-       "state": "TN"
-      }
-     ],
-     "period": {
-      "from": "2024-01",
-      "to": "2024-12"
-     },
-     "measures": [
-      {
-       "name": "murder",
-       "unit": "victim"
-      }
-     ],
-     "filters": [
-      "circumstance: gangland (organized crime involvement) or juvenile gang"
-     ],
-     "groupings": [],
-     "statistic": "count"
-    },
-    "values": {
-     "status": "pending_build"
-    },
-    "statements": []
+    "action": "decline",
+    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading.",
+    "alternative": null
    },
    "label": {
     "status": "reviewed",
     "drafted_by": "claude-circumstance",
     "reviewed_by": "codex:circumstance-labels-1",
-    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04). [Jeff 2026-11-09: gang questions declined for every source (P38).]"
    }
   },
   {
@@ -28072,18 +28012,18 @@
    "setup": [],
    "question": "Gang-related robberies in Memphis in 2024",
    "policy": [
-    "D18"
+    "P38"
    ],
    "expected": {
     "action": "decline",
-    "reason": "Circumstances (element 31) are recorded for murder and aggravated assault victims, not robberies.",
+    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading.",
     "alternative": null
    },
    "label": {
     "status": "reviewed",
     "drafted_by": "claude-circumstance",
     "reviewed_by": "codex:circumstance-labels-1",
-    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04)."
+    "notes": "NIBRS data element 31, victims' circumstances (coordinator 2026-11-04). [Jeff 2026-11-09: gang questions declined for every source (P38).]"
    }
   }
  ]
