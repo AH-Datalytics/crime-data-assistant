@@ -20792,15 +20792,6 @@
 "source": "shr"
 }
 },
-"QL-ct-00d6ef79d8": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The November 9 owner decision declines chart styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-ct-02b44c7323": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -20863,15 +20854,6 @@
 "QL-ct-0f74f666f7": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-ct-12f15235ed": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This requests display formatting under the owner styling limit.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart and table styling is not supported."
-}
 },
 "QL-ct-12f485cb71": {
 "status": "reviewed",
@@ -20964,15 +20946,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-ct-2160450d72": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Overlaying a graphic requests chart presentation.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-ct-21fe4efdbf": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -20990,10 +20963,6 @@
 "by": "codex-second-3"
 },
 "QL-ct-24a435412b": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-ct-24d1c6575c": {
 "status": "reviewed",
 "by": "codex-second-3"
 },
@@ -21046,10 +21015,6 @@
 "by": "codex-second-3"
 },
 "QL-ct-2fa949bdcb": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-ct-30250f897c": {
 "status": "reviewed",
 "by": "codex-second-3"
 },
@@ -21123,10 +21088,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-ct-4248ac3777": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
 "QL-ct-4394f9fbeb": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -21170,17 +21131,6 @@
 "why": "This supplies crime and comparison details to the preceding clarification under F4.",
 "expected": {
 "outcome": "exclude"
-}
-},
-"QL-ct-50d728af73": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The previous chart-overlay request declines, so F5 applies.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
 }
 },
 "QL-ct-5222707d0f": {
@@ -21284,10 +21234,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-ct-6299c2269c": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
 "QL-ct-62e88295bc": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -21355,15 +21301,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-ct-6ecc721604": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The owner styling limit covers overlaying chart series.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-ct-6f0233f366": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -21371,24 +21308,6 @@
 "QL-ct-6f67e8a798": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-ct-6fee48474f": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The previous turn identifies the covered states being counted.",
-"expected": {
-"outcome": "answer",
-"source": "rtci"
-}
-},
-"QL-ct-71d24ff2a8": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The owner decision declines chart-type changes.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-ct-71e109892a": {
 "status": "reviewed",
@@ -21491,19 +21410,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-ct-8f3a9d3240": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-ct-90d3b6c215": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing lines to bars is chart styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-ct-90f530e25a": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -21538,15 +21444,6 @@
 "QL-ct-99c4384738": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-ct-99f8c883e0": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing chart type is declined by the owner decision.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-ct-9a00615c14": {
 "status": "reviewed",
@@ -21663,15 +21560,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-ct-aa01ca68c7": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Adding a chart annotation is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-ct-ab73cfbf69": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -21691,15 +21579,6 @@
 "QL-ct-af663d3240": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-ct-b0405654ec": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Separating the plotted series is a presentation-only edit.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-ct-b0ba662092": {
 "status": "reviewed",
@@ -21756,15 +21635,6 @@
 "QL-ct-c1b37d36ad": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-ct-c27f9470a4": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This is a presentation-only graph request under the owner limit.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-ct-c377762ef7": {
 "status": "reviewed",
@@ -21919,17 +21789,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-ct-f6dd5084e3": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The previous color-and-line edit declines, so F5 applies.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
-},
 "QL-ct-f7180184df": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -21956,15 +21815,6 @@
 "QL-ct-f86484b0cf": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-ct-f897c27712": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "A vertical annotation is chart styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-ct-f955b59517": {
 "status": "reviewed",
@@ -22000,29 +21850,9 @@
 "source": "historical"
 }
 },
-"QL-ct-ff2a81c955": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The preceding chart-style change declines, so F5 applies.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
-},
 "QL-hc-67bd3bcd49": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-03131d6a21": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This only requests a chart display change.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart presentation requests are not supported."
-}
 },
 "QL-hist-03b3a18b08": {
 "status": "reviewed",
@@ -22043,15 +21873,6 @@
 ]
 }
 },
-"QL-hist-067ce8cd52": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "A dual-axis chart request is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-hist-06ad765b03": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -22059,15 +21880,6 @@
 "QL-hist-06b776b86b": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-08de9765d3": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The question requests separate chart lines.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-hist-094b0094b0": {
 "status": "reviewed",
@@ -22101,15 +21913,6 @@
 "QL-hist-1b7110cff2": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-1f256ebf87": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Removing a chart label is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-hist-1f8af0da15": {
 "status": "reviewed",
@@ -22157,19 +21960,6 @@
 ]
 }
 },
-"QL-hist-2e066b40ff": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-hist-2f9705aaf8": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Swapping chart axes is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-hist-2f99558da0": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -22190,15 +21980,6 @@
 "QL-hist-333579c589": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-33b9adde4f": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing series colors is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-hist-357588df46": {
 "status": "reviewed",
@@ -22229,15 +22010,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-hist-369f88d63e": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This only changes how the series appear in a chart.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-hist-36bef61f3c": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -22249,18 +22021,6 @@
 "QL-hist-3969161815": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-3bf787d1a7": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The new city ranking also lacks a geographic scope under P12.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"place"
-]
-}
 },
 "QL-hist-3c422b45ca": {
 "status": "reviewed",
@@ -22294,14 +22054,6 @@
 "by": "codex-second-3"
 },
 "QL-hist-424400c6ae": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-hist-4248a06b77": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-hist-4248a6b86b": {
 "status": "reviewed",
 "by": "codex-second-3"
 },
@@ -22364,17 +22116,6 @@
 ]
 }
 },
-"QL-hist-4e45003131": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The preceding presentation-only request declines and supplies no actual data or chart.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
-},
 "QL-hist-4f463abecd": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -22390,15 +22131,6 @@
 "expected": {
 "outcome": "decline",
 "reason": "Staffing recommendations are outside the crime datasets."
-}
-},
-"QL-hist-5d8db4e450": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The follow-up requests a presentation-only trend-line chart.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
 }
 },
 "QL-hist-64c0b9bf7a": {
@@ -22491,24 +22223,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-hist-7d1a77ea80": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This requests different chart lines.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
-"QL-hist-7ea808b832": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This requests different chart lines.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-hist-804193e9c6": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -22518,10 +22232,6 @@
 "by": "codex-second-3"
 },
 "QL-hist-84bc820e37": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-hist-85c1c11a62": {
 "status": "reviewed",
 "by": "codex-second-3"
 },
@@ -22547,19 +22257,6 @@
 "period"
 ]
 }
-},
-"QL-hist-8cb71c2dfa": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Overlaying chart series is a presentation edit.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
-"QL-hist-92d12e041c": {
-"status": "reviewed",
-"by": "codex-second-3"
 },
 "QL-hist-935f48fe8a": {
 "status": "reviewed",
@@ -22700,17 +22397,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-hist-c2dfa351ba": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The previous chart-overlay request declines, so F5 applies.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
-},
 "QL-hist-c3fccd4e1c": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -22718,15 +22404,6 @@
 "QL-hist-c4be264c0b": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-c4f892f970": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Adding chart labels is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-hist-c7746c7746": {
 "status": "reviewed",
@@ -22751,15 +22428,6 @@
 "QL-hist-ceef45ef5e": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-cf73c50a64": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing to a bar chart is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-hist-d00f4ff4c2": {
 "status": "reviewed",
@@ -22815,17 +22483,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-hist-dde4f46b28": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The preceding color edit declines, so F5 applies.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
-},
 "QL-hist-df3e4ad70d": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -22861,15 +22518,6 @@
 "QL-hist-e49bf2207a": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-hist-ebf87b69a1": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing graph color is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-hist-ed68b99c10": {
 "status": "draft",
@@ -23105,15 +22753,6 @@
 "by": "codex-second-3",
 "why": "The female-population reference is not explained by the preceding homicide question."
 },
-"QL-nibrs-152930f41d": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing category colors is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-nibrs-156988d206": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -23147,15 +22786,6 @@
 "QL-nibrs-197fc07e30": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-19e59267c0": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The national female arrest rate is a group-population rate under D03.",
-"expected": {
-"outcome": "decline",
-"reason": "Population rates for demographic groups are not supported."
-}
 },
 "QL-nibrs-19ed48f5ce": {
 "status": "reviewed",
@@ -23192,15 +22822,6 @@
 "QL-nibrs-1c6ab1c6ab": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-1d07d69131": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The follow-up only requests a chart display change.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart presentation changes are not supported."
-}
 },
 "QL-nibrs-1d4140adac": {
 "status": "reviewed",
@@ -23244,10 +22865,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-2706f4edfc": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
 "QL-nibrs-272e00c15f": {
 "status": "draft",
 "by": "codex-second-3",
@@ -23263,15 +22880,6 @@
 "QL-nibrs-2868af6f78": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-2986f2986f": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "P89 explicitly retains the decline for rolling breakdowns.",
-"expected": {
-"outcome": "decline",
-"reason": "Rolling demographic breakdowns are not supported."
-}
 },
 "QL-nibrs-2986f81823": {
 "status": "draft",
@@ -23348,10 +22956,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-3387bf3fdf": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
 "QL-nibrs-3469c4dd4d": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -23409,15 +23013,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-3f9abc4f29": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing to a line chart is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-nibrs-410d016d92": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -23461,15 +23056,6 @@
 "expected": {
 "outcome": "answer",
 "source": "nibrs"
-}
-},
-"QL-nibrs-476e0b7424": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing bars to lines is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
 }
 },
 "QL-nibrs-47fafef151": {
@@ -23548,15 +23134,6 @@
 "why": "The previous clearance-type ranking needs scope and place level, rather than a decline.",
 "expected": {
 "outcome": "exclude"
-}
-},
-"QL-nibrs-4dd4d3469c": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Adding a vertical chart annotation is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
 }
 },
 "QL-nibrs-4deea63ed0": {
@@ -23702,15 +23279,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-5807b0d13a": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Comparing juvenile and adult population rates is barred by D03.",
-"expected": {
-"outcome": "decline",
-"reason": "Rates for demographic groups are not supported."
-}
-},
 "QL-nibrs-5858fa4f8d": {
 "status": "draft",
 "by": "codex-second-3",
@@ -23729,15 +23297,6 @@
 "QL-nibrs-5af4f5af4f": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-5af4facb09": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This independently asks whether ethnicity information is recorded under R07.",
-"expected": {
-"outcome": "answer",
-"source": "nibrs"
-}
 },
 "QL-nibrs-5b333973bd": {
 "status": "disputed",
@@ -23845,17 +23404,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-6913152cf3": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The preceding chart-display request declines and supplies no underlying data question.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
-},
 "QL-nibrs-6996e4b573": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -23937,15 +23485,6 @@
 "QL-nibrs-78de0a7b33": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-78de0c4f29": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing to a line chart is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-nibrs-78de0f3c00": {
 "status": "reviewed",
@@ -24141,15 +23680,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-8d2067b711": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Combining existing series on one chart is a presentation edit.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-nibrs-8e3c2c78bc": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -24211,15 +23741,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-938b42986f": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "P89 explicitly declines rolling age breakdowns.",
-"expected": {
-"outcome": "decline",
-"reason": "Rolling demographic breakdowns are not supported."
-}
-},
 "QL-nibrs-950ee6fd51": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -24266,15 +23787,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-99a9184dcf": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "P03 does not supply race populations and D03 declines demographic rates.",
-"expected": {
-"outcome": "decline",
-"reason": "Population rates by race are not supported."
-}
-},
 "QL-nibrs-9a8b79a8b7": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -24284,10 +23796,6 @@
 "by": "codex-second-3"
 },
 "QL-nibrs-9b41804d8e": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-nibrs-9bf54a5e87": {
 "status": "reviewed",
 "by": "codex-second-3"
 },
@@ -24388,15 +23896,6 @@
 "QL-nibrs-a6fdd91f7b": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-a765fbbf80": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Stacking bars and changing colors is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-nibrs-a7c2e88a01": {
 "status": "reviewed",
@@ -24542,15 +24041,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-bbf8012452": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The follow-up asks for Detroit racial population data rather than crime data.",
-"expected": {
-"outcome": "decline",
-"reason": "The sources do not provide demographic population shares."
-}
-},
 "QL-nibrs-bc26e50755": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -24558,24 +24048,6 @@
 "QL-nibrs-bdbc534f70": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-beedd06cfb": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "This requests adjacent placement of chart series.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
-"QL-nibrs-bffe90691b": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "D03 explicitly declines demographic population rates.",
-"expected": {
-"outcome": "decline",
-"reason": "Population rates by race are not supported."
-}
 },
 "QL-nibrs-c02f2abb04": {
 "status": "reviewed",
@@ -24604,17 +24076,6 @@
 "expected": {
 "outcome": "decline",
 "reason": "Cases are not a supported counting unit."
-}
-},
-"QL-nibrs-c4f294edfc": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The preceding line-chart edit declines, so F5 applies.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
 }
 },
 "QL-nibrs-c74ce2bbf2": {
@@ -24717,14 +24178,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-d30b6a5e6c": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The preceding misdemeanor question requires an offense choice, so F4 applies.",
-"expected": {
-"outcome": "exclude"
-}
-},
 "QL-nibrs-d3f117a6fa": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -24798,15 +24251,6 @@
 "source": "nibrs"
 }
 },
-"QL-nibrs-da0c599a91": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "D03 explicitly declines demographic population rates.",
-"expected": {
-"outcome": "decline",
-"reason": "Population rates by race are not supported."
-}
-},
 "QL-nibrs-da9df78de0": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -24848,46 +24292,15 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-e2af68ed77": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing the chart title is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-nibrs-e2f5569166": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-e6981f4ce8": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing the chart to stacked columns is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
-"QL-nibrs-e6dca24114": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "D03 explicitly declines demographic population rates.",
-"expected": {
-"outcome": "decline",
-"reason": "Population rates by sex are not supported."
-}
 },
 "QL-nibrs-e78532868a": {
 "status": "reviewed",
 "by": "codex-second-3"
 },
 "QL-nibrs-e7ec7e2af6": {
-"status": "reviewed",
-"by": "codex-second-3"
-},
-"QL-nibrs-e8fd402d90": {
 "status": "reviewed",
 "by": "codex-second-3"
 },
@@ -24939,15 +24352,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-nibrs-ee9f0f90c7": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing chart axes and line arrangement is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-nibrs-ef151573a0": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -24975,15 +24379,6 @@
 "QL-nibrs-f3f9fcb21f": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-nibrs-f4ce8a46a1": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Replacing chart labels is a presentation-only edit.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
 },
 "QL-nibrs-f683912ac4": {
 "status": "reviewed",
@@ -25046,17 +24441,6 @@
 "QL-shr-04b1742a19": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-shr-08b3484fb3": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The new city ranking lacks geographic scope and cannot inherit it from the declined district request.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"place"
-]
-}
 },
 "QL-shr-0b443a4064": {
 "status": "reviewed",
@@ -25130,15 +24514,6 @@
 "QL-shr-213f6213f6": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-shr-23e36e3640": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The available months in the source are independently answerable coverage information.",
-"expected": {
-"outcome": "answer",
-"source": "shr"
-}
 },
 "QL-shr-25ec695384": {
 "status": "reviewed",
@@ -25217,15 +24592,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-shr-4f74fc2a84": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "D03 explicitly declines demographic population rates.",
-"expected": {
-"outcome": "decline",
-"reason": "Population rates by race and sex are not supported."
-}
-},
 "QL-shr-508fbb26b3": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -25298,17 +24664,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-shr-6eafb7e2b9": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The preceding rolling demographic breakdown declines under P89, so F5 applies.",
-"expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
-}
-},
 "QL-shr-7319326893": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -25338,15 +24693,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-shr-827e054167": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing to stacked columns is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-shr-838067915f": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -25366,24 +24712,6 @@
 "expected": {
 "outcome": "answer",
 "source": "shr"
-}
-},
-"QL-shr-8ce83f493f": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing the axis maximum is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
-"QL-shr-9415d8ce83": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The request includes an unsupported axis-setting edit.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
 }
 },
 "QL-shr-990fba6f5b": {
@@ -25432,27 +24760,9 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-shr-a546e3d41c": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing the axis baseline is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-shr-a6f5b9dfb0": {
 "status": "reviewed",
 "by": "codex-second-3"
-},
-"QL-shr-a73556eafb": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "P89 explicitly declines rolling age breakdowns.",
-"expected": {
-"outcome": "decline",
-"reason": "Rolling demographic breakdowns are not supported."
-}
 },
 "QL-shr-a9435a25d0": {
 "status": "reviewed",
@@ -25506,15 +24816,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-shr-b2e2afe772": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "The request explicitly specifies a below-agency geography under D02.",
-"expected": {
-"outcome": "decline",
-"reason": "Data stops at the agency level, not ZIP codes."
-}
-},
 "QL-shr-ba4f71c538": {
 "status": "reviewed",
 "by": "codex-second-3"
@@ -25538,15 +24839,6 @@
 "expected": {
 "outcome": "decline",
 "reason": "The listed staffing data does not provide officers by race."
-}
-},
-"QL-shr-c2a84b2266": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "D03 explicitly declines demographic population rates.",
-"expected": {
-"outcome": "decline",
-"reason": "Population rates by race and sex are not supported."
 }
 },
 "QL-shr-c2b66f1be6": {
@@ -25619,15 +24911,6 @@
 "status": "reviewed",
 "by": "codex-second-3"
 },
-"QL-shr-f493f0c808": {
-"status": "draft",
-"by": "codex-second-3",
-"why": "Changing axis limits is styling.",
-"expected": {
-"outcome": "decline",
-"reason": "Chart styling is not supported."
-}
-},
 "QL-shr-f5febc0c8c": {
 "status": "draft",
 "by": "codex-second-3",
@@ -25652,6 +24935,607 @@
 "QL-shr-fe772d0776": {
 "status": "reviewed",
 "by": "codex-second-3"
+},
+"QL-ct-00d6ef79d8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-ct-05adea10e4": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-ct-2160450d72": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-3497f45f11": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-50d728af73": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-66591e8367": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "Blue car problems do not plainly continue the murder question."
+},
+"QL-ct-6ecc721604": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-71d24ff2a8": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-8fd46e9453": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-ct-90d3b6c215": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-99f8c883e0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-a10e4f6dd5": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-ct-aa01ca68c7": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-ct-b0405654ec": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c27f9470a4": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-c9f8f8fd46": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-ct-cc458aa01c": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-ct-f6dd5084e3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding styling-only request declines, so F5 asks for the whole question.",
+"expected": {
+"about_any": [
+"the whole question"
+],
+"outcome": "clarify"
+}
+},
+"QL-ct-f897c27712": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-ct-ff2a81c955": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The preceding chart request contains no recoverable data question."
+},
+"QL-hist-03131d6a21": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-067ce8cd52": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-08de9765d3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-1f256ebf87": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-2e1b1f1392": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "A Maryland agency code does not plainly continue a New Mexico question."
+},
+"QL-hist-2f9705aaf8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-33b9adde4f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-369f88d63e": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-3bf787d1a7": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The follow-up retains the national violent-crime comparison and changes the ranked cities.",
+"expected": {
+"source": "historical",
+"outcome": "answer"
+}
+},
+"QL-hist-4e45003131": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-572f67c970": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-5d8db4e450": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-7c9703bf78": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The national violent-crime series is an answerable data addition despite accompanying styling.",
+"expected": {
+"source": "historical",
+"outcome": "answer"
+}
+},
+"QL-hist-7d1a77ea80": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-7ea808b832": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-8cb71c2dfa": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-933924f463": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-b7fe6ceef4": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "Harris County clearances do not plainly continue a question about areas near DC."
+},
+"QL-hist-c2dfa351ba": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-c4f892f970": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-cf73c50a64": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-hist-dde4f46b28": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The preceding styling-only request declines, so F5 asks for the whole question.",
+"expected": {
+"about_any": [
+"the whole question"
+],
+"outcome": "clarify"
+}
+},
+"QL-hist-ebf87b69a1": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-hist-ffab6ccfe2": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-152930f41d": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-19e59267c0": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The standalone national female arrest-rate question declines under D03.",
+"expected": {
+"reason": "Rates for demographic groups are not supported; counts or shares can be offered.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-1b711a5e6c": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The reply presupposes a misdemeanor-arrest discussion absent from the supplied previous turn."
+},
+"QL-nibrs-1d07d69131": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-2924f02d90": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-2986f2986f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P89 explicitly declines rolling demographic breakdowns.",
+"expected": {
+"reason": "Rolling breakdowns are not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-3f9abc4f29": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-476e0b7424": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-4dd4d3469c": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-5807b0d13a": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 declines rates for demographic groups.",
+"expected": {
+"reason": "Rates for demographic groups are not supported; counts or shares can be offered.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-5af4facb09": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-6913152cf3": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The preceding graph request supplies no simple-assault query to expand."
+},
+"QL-nibrs-6ef0d6da32": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-78de0c4f29": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-7ad9cb2e35": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines gang questions.",
+"expected": {
+"reason": "Gang questions are not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-8d2067b711": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-92f48d75d5": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-938b42986f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P89 explicitly declines rolling demographic breakdowns.",
+"expected": {
+"reason": "Rolling breakdowns are not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-9541b4edfc": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9541ba5e87": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-9541bb099b": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-99a9184dcf": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-a765fbbf80": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-ac12fa8d7d": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-bbf8012452": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The preceding styling request supplies no context for interpreting the Detroit percentage."
+},
+"QL-nibrs-beedd06cfb": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-bffe90691b": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 declines rates for demographic groups.",
+"expected": {
+"reason": "Rates for demographic groups are not supported; counts or shares can be offered.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-c266733ba0": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-nibrs-c4f294edfc": {
+"status": "disputed",
+"by": "codex-second-3",
+"why": "The preceding line-chart request supplies no data question to filter."
+},
+"QL-nibrs-da0c599a91": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 declines rates for demographic groups.",
+"expected": {
+"reason": "Rates for demographic groups are not supported; counts or shares can be offered.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-e2af68ed77": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-e6981f4ce8": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "F2 answers a short request to present the same data as stacked columns.",
+"expected": {
+"source": "nibrs",
+"outcome": "answer"
+}
+},
+"QL-nibrs-e6dca24114": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 declines rates for demographic groups.",
+"expected": {
+"reason": "Rates for demographic groups are not supported; counts or shares can be offered.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-ee9f0f90c7": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-nibrs-f4ce8a46a1": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-shr-08b3484fb3": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The previous precinct-level request declines, so F5 requires the whole question rather than an assumed ranking scope.",
+"expected": {
+"about_any": [
+"the whole question"
+],
+"outcome": "clarify"
+}
+},
+"QL-shr-0b2970dbe3": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-23e36e3640": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-4f74fc2a84": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "D03 declines rates for demographic groups.",
+"expected": {
+"reason": "Rates for demographic groups are not supported; counts or shares can be offered.",
+"outcome": "decline"
+}
+},
+"QL-shr-6bf16ea74a": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-6eafb7e2b9": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P89 explicitly declines rolling demographic breakdowns.",
+"expected": {
+"reason": "Rolling breakdowns are not supported.",
+"outcome": "decline"
+}
+},
+"QL-shr-827e054167": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "F2 answers the short request to show the same data as stacked columns.",
+"expected": {
+"source": "shr",
+"outcome": "answer"
+}
+},
+"QL-shr-8ce83f493f": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
+},
+"QL-shr-9415d8ce83": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-a73556eafb": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "P89 explicitly declines rolling demographic breakdowns.",
+"expected": {
+"reason": "Rolling breakdowns are not supported.",
+"outcome": "decline"
+}
+},
+"QL-shr-b2e2afe772": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The explicit ZIP-code request is below the supported geography.",
+"expected": {
+"reason": "Data is available only down to the agency level, not ZIP codes.",
+"outcome": "decline"
+}
+},
+"QL-shr-b4b78d4068": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines gang questions.",
+"expected": {
+"reason": "Gang questions are not supported.",
+"outcome": "decline"
+}
+},
+"QL-shr-c2a84b2266": {
+"status": "reviewed",
+"by": "codex-second-3"
+},
+"QL-shr-f493f0c808": {
+"status": "draft",
+"by": "codex-second-3",
+"why": "The owner decision declines styling-only requests.",
+"expected": {
+"reason": "Chart styling is not supported.",
+"outcome": "decline"
+}
 }
 }
 }

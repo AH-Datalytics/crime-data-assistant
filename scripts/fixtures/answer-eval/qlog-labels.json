@@ -1570,6 +1570,56 @@
    }
   },
   {
+   "id": "QL-ct-2269c0be00",
+   "tab": "current",
+   "kind": "first",
+   "hash": "2269c0be00",
+   "previous_hash": null,
+   "times": 1,
+   "question": "range",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R08",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "no crime, and no place or a word pointing back"
+   }
+  },
+  {
+   "id": "QL-ct-235edf5cbf",
+   "tab": "current",
+   "kind": "first",
+   "hash": "235edf5cbf",
+   "previous_hash": null,
+   "times": 1,
+   "question": "can you combine the year and month into a date (MMM-YY) on the table?",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R08",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "no crime, and no place or a word pointing back"
+   }
+  },
+  {
    "id": "QL-ct-244afc97dc",
    "tab": "current",
    "kind": "first",
@@ -2208,6 +2258,32 @@
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "The requested comparison requires socioeconomic data outside the listed sources."
+   }
+  },
+  {
+   "id": "QL-ct-2fa94800be",
+   "tab": "current",
+   "kind": "first",
+   "hash": "2fa94800be",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Virginia murder rates per agency in 2024",
+   "previous": null,
+   "expected": {
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a Part I figure by year (Crime Index)"
    }
   },
   {
@@ -3499,32 +3575,6 @@
    }
   },
   {
-   "id": "QL-ct-50e100418a",
-   "tab": "current",
-   "kind": "first",
-   "hash": "50e100418a",
-   "previous_hash": null,
-   "times": 1,
-   "question": "auto thefts per month in the 5 cities with the most auto thefts in 2022\nMonthly auto theft counts for Chicago, IL, Denver, CO, Houston, TX, Los A",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "complete city list or ranking scope",
-     "crime"
-    ],
-    "about": "complete city list or ranking scope"
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
-   }
-  },
-  {
    "id": "QL-ct-51a2a0ca3d",
    "tab": "current",
    "kind": "first",
@@ -4280,6 +4330,31 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "D31"
+   }
+  },
+  {
+   "id": "QL-ct-6575c8f870",
+   "tab": "current",
+   "kind": "first",
+   "hash": "6575c8f870",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Ok. Now compare the monthly murder trend in Baltimore with the trend in DC. Is DC improving more than Balto?",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Baltimore"
+    ],
+    "about": "which Baltimore"
+   },
+   "label": {
+    "status": "draft",
+    "rule": "R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "P28 requires distinguishing Baltimore city and county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -5859,6 +5934,31 @@
    }
   },
   {
+   "id": "QL-ct-8474f25d65",
+   "tab": "current",
+   "kind": "first",
+   "hash": "8474f25d65",
+   "previous_hash": null,
+   "times": 1,
+   "question": "how many states is that?",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "the referenced set of states"
+    ],
+    "about": "the referenced set of states"
+   },
+   "label": {
+    "status": "draft",
+    "rule": "R09>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "The missing referent prevents determining which states to count."
+   }
+  },
+  {
    "id": "QL-ct-848734783e",
    "tab": "current",
    "kind": "first",
@@ -5958,6 +6058,31 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a Part I figure by year (Crime Index)"
+   }
+  },
+  {
+   "id": "QL-ct-88156b1363",
+   "tab": "current",
+   "kind": "first",
+   "hash": "88156b1363",
+   "previous_hash": null,
+   "times": 1,
+   "question": "baltimore city annual crime counts",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "violent, property or both",
+    "about_any": [
+     "violent, property or both"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R09b",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D09"
    }
   },
   {
@@ -7529,36 +7654,6 @@
    }
   },
   {
-   "id": "QL-ct-b250715789",
-   "tab": "current",
-   "kind": "first",
-   "hash": "b250715789",
-   "previous_hash": null,
-   "times": 1,
-   "question": "SF aggravated assault per month",
-   "previous": null,
-   "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
-   }
-  },
-  {
    "id": "QL-ct-b29a17f65a",
    "tab": "current",
    "kind": "first",
@@ -7854,7 +7949,7 @@
    "kind": "first",
    "hash": "bb09c436ce",
    "previous_hash": null,
-   "times": 4,
+   "times": 3,
    "question": "Murders in Louisville in 2025",
    "previous": null,
    "expected": {
@@ -8215,7 +8310,7 @@
    "kind": "first",
    "hash": "c37770b5b4",
    "previous_hash": null,
-   "times": 3,
+   "times": 4,
    "question": "Can I see the top 10 auto theft rates in 2025?",
    "previous": null,
    "expected": {
@@ -8977,7 +9072,7 @@
    "kind": "first",
    "hash": "d32408965b",
    "previous_hash": null,
-   "times": 1,
+   "times": 2,
    "question": "What jurisdictions had the highest murder rates in 2025?",
    "previous": null,
    "expected": {
@@ -9462,6 +9557,33 @@
    }
   },
   {
+   "id": "QL-ct-df0e43158d",
+   "tab": "current",
+   "kind": "first",
+   "hash": "df0e43158d",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Los Angeles, CA crime scorecard",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "violent, property or both",
+    "about_any": [
+     "violent, property or both",
+     "which Los Angeles",
+     "period"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R09b",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D09"
+   }
+  },
+  {
    "id": "QL-ct-df6a291291",
    "tab": "current",
    "kind": "first",
@@ -9906,31 +10028,6 @@
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Arrest data belongs to NIBRS."
-   }
-  },
-  {
-   "id": "QL-ct-e8367ad4fc",
-   "tab": "current",
-   "kind": "first",
-   "hash": "e8367ad4fc",
-   "previous_hash": null,
-   "times": 1,
-   "question": "Top cities with blue car problems",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -10766,6 +10863,31 @@
    }
   },
   {
+   "id": "QL-ct-f897c52110",
+   "tab": "current",
+   "kind": "first",
+   "hash": "f897c52110",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Your chart shows like no murders in Baltimore and way more in DC. Show me a chart that compares the monthly murder rate in Baltimore and DC",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Baltimore"
+    ],
+    "about": "which Baltimore"
+   },
+   "label": {
+    "status": "draft",
+    "rule": "R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+   }
+  },
+  {
    "id": "QL-ct-f8a13cbe6f",
    "tab": "current",
    "kind": "first",
@@ -10796,7 +10918,7 @@
    "kind": "first",
    "hash": "f929f6340f",
    "previous_hash": null,
-   "times": 4,
+   "times": 3,
    "question": "SF aggravated assault per month in 2025",
    "previous": null,
    "expected": {
@@ -12330,6 +12452,32 @@
    }
   },
   {
+   "id": "QL-hist-05e2f10091",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "05e2f10091",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Ohio crime scorecard",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "violent, property or both",
+    "about_any": [
+     "violent, property or both",
+     "period"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R09b",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D09"
+   }
+  },
+  {
    "id": "QL-hist-062bebbfe0",
    "tab": "historical",
    "kind": "first",
@@ -12405,6 +12553,31 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+   }
+  },
+  {
+   "id": "QL-hist-06b7771900",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "06b7771900",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Baltimore murder rate per year",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "which Baltimore"
+    ],
+    "about": "which Baltimore"
+   },
+   "label": {
+    "status": "draft",
+    "rule": "R11>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -12896,6 +13069,31 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a Part I figure by year (Crime Index)"
+   }
+  },
+  {
+   "id": "QL-hist-11a62c2341",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "11a62c2341",
+   "previous_hash": null,
+   "times": 1,
+   "question": "City",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R08",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -14045,7 +14243,7 @@
    "kind": "first",
    "hash": "2f9951cdad",
    "previous_hash": null,
-   "times": 1,
+   "times": 2,
    "question": "how do robbery clearance rates compare between Los Angeles and Chicago?",
    "previous": null,
    "expected": {
@@ -14756,6 +14954,32 @@
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "P28 requires city versus county.; with the 2026-11-07 rules' parts"
+   }
+  },
+  {
+   "id": "QL-hist-41629fdb39",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "41629fdb39",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Toledo crime scorecard",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "violent, property or both",
+    "about_any": [
+     "violent, property or both",
+     "period"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R09b",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D09"
    }
   },
   {
@@ -15564,32 +15788,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "staffing (Crime Index)"
-   }
-  },
-  {
-   "id": "QL-hist-4f4630775c",
-   "tab": "historical",
-   "kind": "first",
-   "hash": "4f4630775c",
-   "previous_hash": null,
-   "times": 1,
-   "question": "crime in Washington since 2010",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "violent, property or both",
-     "which Washington"
-    ],
-    "about": "violent, property or both"
-   },
-   "label": {
-    "status": "draft",
-    "rule": "R09b>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires distinguishing Washington state, city and counties."
    }
   },
   {
@@ -17072,7 +17270,7 @@
    "kind": "first",
    "hash": "6b6bd4147d",
    "previous_hash": null,
-   "times": 22,
+   "times": 21,
    "question": "National murder clearance rate since 1960",
    "previous": null,
    "expected": {
@@ -17090,6 +17288,27 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a Part I figure by year (Crime Index)"
+   }
+  },
+  {
+   "id": "QL-hist-6b86b273ff",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "6b86b273ff",
+   "previous_hash": null,
+   "times": 1,
+   "question": "1",
+   "previous": null,
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "draft",
+    "rule": "R01",
+    "drafted_by": "rules-v1",
+    "reviewed_by": null,
+    "notes": "a greeting, a test or a single word"
    }
   },
   {
@@ -20097,7 +20316,7 @@
    "kind": "first",
    "hash": "aeafec914d",
    "previous_hash": null,
-   "times": 3,
+   "times": 4,
    "question": "Chicago officers per year, 1930–2025",
    "previous": null,
    "expected": {
@@ -20226,7 +20445,7 @@
    "kind": "first",
    "hash": "b15bd28402",
    "previous_hash": null,
-   "times": 1,
+   "times": 2,
    "question": "what is seattle 2026 per capita murder rate",
    "previous": null,
    "expected": {
@@ -20350,6 +20569,32 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "staffing (Crime Index)"
+   }
+  },
+  {
+   "id": "QL-hist-b40ff70aab",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "b40ff70aab",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Show me the city of charlotte murder rate from beginning of data until present",
+   "previous": null,
+   "expected": {
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "draft",
+    "rule": "R13>2nd",
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Beginning of data through present explicitly supplies a period."
    }
   },
   {
@@ -21012,32 +21257,6 @@
    }
   },
   {
-   "id": "QL-hist-c1e598e606",
-   "tab": "historical",
-   "kind": "first",
-   "hash": "c1e598e606",
-   "previous_hash": null,
-   "times": 1,
-   "question": "give me domestic violence trends in kentucky from the last 5 years",
-   "previous": null,
-   "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
-   }
-  },
-  {
    "id": "QL-hist-c28d5c570a",
    "tab": "historical",
    "kind": "first",
@@ -21173,7 +21392,7 @@
    "kind": "first",
    "hash": "c4f89c362b",
    "previous_hash": null,
-   "times": 8,
+   "times": 7,
    "question": "give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more",
    "previous": null,
    "expected": {
@@ -21476,6 +21695,31 @@
    }
   },
   {
+   "id": "QL-hist-ca0a7cac07",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "ca0a7cac07",
+   "previous_hash": null,
+   "times": 1,
+   "question": "show murder rates in baltimore city and nationwide side-by-side",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R13",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
+   }
+  },
+  {
    "id": "QL-hist-cb0a873518",
    "tab": "historical",
    "kind": "first",
@@ -21550,32 +21794,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a Part I figure by year (Crime Index)"
-   }
-  },
-  {
-   "id": "QL-hist-ccfe2fec49",
-   "tab": "historical",
-   "kind": "first",
-   "hash": "ccfe2fec49",
-   "previous_hash": null,
-   "times": 1,
-   "question": "Toledo, Ohio scorecard",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime",
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
    }
   },
   {
@@ -21679,32 +21897,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "D31"
-   }
-  },
-  {
-   "id": "QL-hist-ceef4ff63b",
-   "tab": "historical",
-   "kind": "first",
-   "hash": "ceef4ff63b",
-   "previous_hash": null,
-   "times": 1,
-   "question": "what are clearance rates in harris county",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "period",
-     "crime"
-    ],
-    "about": "period"
-   },
-   "label": {
-    "status": "draft",
-    "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Harris County must not be changed to Harrison County.; with the 2026-11-07 rules' parts"
    }
   },
   {
@@ -22337,31 +22529,6 @@
    }
   },
   {
-   "id": "QL-hist-ddbce83c73",
-   "tab": "historical",
-   "kind": "first",
-   "hash": "ddbce83c73",
-   "previous_hash": null,
-   "times": 1,
-   "question": "What 5 city police departments had the most officers in 2025?",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
-   }
-  },
-  {
    "id": "QL-hist-ddf8a494cb",
    "tab": "historical",
    "kind": "first",
@@ -22413,6 +22580,33 @@
    }
   },
   {
+   "id": "QL-hist-df0e43158d",
+   "tab": "historical",
+   "kind": "first",
+   "hash": "df0e43158d",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Los Angeles, CA crime scorecard",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "violent, property or both",
+    "about_any": [
+     "violent, property or both",
+     "which Los Angeles",
+     "period"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R09b",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D09"
+   }
+  },
+  {
    "id": "QL-hist-df3e4191cb",
    "tab": "historical",
    "kind": "first",
@@ -22440,29 +22634,29 @@
    }
   },
   {
-   "id": "QL-hist-dfc6eff4e0",
+   "id": "QL-hist-e041c60942",
    "tab": "historical",
    "kind": "first",
-   "hash": "dfc6eff4e0",
+   "hash": "e041c60942",
    "previous_hash": null,
    "times": 1,
-   "question": "lapd murders per year",
+   "question": "murders",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place",
+     "period"
+    ]
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
+    "rule": "R10",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "notes": "P12/D31"
    }
   },
   {
@@ -23219,7 +23413,7 @@
    "kind": "first",
    "hash": "f13922a183",
    "previous_hash": null,
-   "times": 2,
+   "times": 1,
    "question": "MD0030100",
    "previous": null,
    "expected": {
@@ -26622,31 +26816,6 @@
    }
   },
   {
-   "id": "QL-nibrs-33ba0def5a",
-   "tab": "nibrs",
-   "kind": "first",
-   "hash": "33ba0def5a",
-   "previous_hash": null,
-   "times": 1,
-   "question": "what share of murders were cleared by exception in 2025?",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
-   }
-  },
-  {
    "id": "QL-nibrs-36aa50edb3",
    "tab": "nibrs",
    "kind": "first",
@@ -29826,32 +29995,6 @@
    }
   },
   {
-   "id": "QL-nibrs-6da327da6f",
-   "tab": "nibrs",
-   "kind": "first",
-   "hash": "6da327da6f",
-   "previous_hash": null,
-   "times": 1,
-   "question": "add Omaha",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime",
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
-   }
-  },
-  {
    "id": "QL-nibrs-6ddc2985c0",
    "tab": "nibrs",
    "kind": "first",
@@ -31625,32 +31768,6 @@
    }
   },
   {
-   "id": "QL-nibrs-927471f541",
-   "tab": "nibrs",
-   "kind": "first",
-   "hash": "927471f541",
-   "previous_hash": null,
-   "times": 1,
-   "question": "niversity of California Berkley vehicle burglaries per month",
-   "previous": null,
-   "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
-   }
-  },
-  {
    "id": "QL-nibrs-92f486a9ca",
    "tab": "nibrs",
    "kind": "first",
@@ -32662,32 +32779,6 @@
    }
   },
   {
-   "id": "QL-nibrs-a8d7d39a00",
-   "tab": "nibrs",
-   "kind": "first",
-   "hash": "a8d7d39a00",
-   "previous_hash": null,
-   "times": 1,
-   "question": "UCLA vehicle burglaries per month",
-   "previous": null,
-   "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "draft",
-    "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "UCLA identifies the university police agency."
-   }
-  },
-  {
    "id": "QL-nibrs-a98b45c639",
    "tab": "nibrs",
    "kind": "first",
@@ -32985,32 +33076,6 @@
     "about": "place",
     "about_any": [
      "place"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
-   }
-  },
-  {
-   "id": "QL-nibrs-b099b4387f",
-   "tab": "nibrs",
-   "kind": "first",
-   "hash": "b099b4387f",
-   "previous_hash": null,
-   "times": 1,
-   "question": "what share of robbery, murder, and aggravated assault incidents involving an offender under age 18 also involve a firearm",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place",
-     "period"
     ]
    },
    "label": {
@@ -33951,32 +34016,6 @@
    }
   },
   {
-   "id": "QL-nibrs-c19630de61",
-   "tab": "nibrs",
-   "kind": "first",
-   "hash": "c19630de61",
-   "previous_hash": null,
-   "times": 1,
-   "question": "give me a 5 year history of domestic violence in kentucky",
-   "previous": null,
-   "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
-   }
-  },
-  {
    "id": "QL-nibrs-c2667aae6e",
    "tab": "nibrs",
    "kind": "first",
@@ -34149,6 +34188,32 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "P53"
+   }
+  },
+  {
+   "id": "QL-nibrs-c562c5076b",
+   "tab": "nibrs",
+   "kind": "first",
+   "hash": "c562c5076b",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Auto theft in Texas 2024",
+   "previous": null,
+   "expected": {
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a Part I figure by year (Crime Index)"
    }
   },
   {
@@ -35003,31 +35068,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "no crime, and no place or a word pointing back"
-   }
-  },
-  {
-   "id": "QL-nibrs-d75d599e33",
-   "tab": "nibrs",
-   "kind": "first",
-   "hash": "d75d599e33",
-   "previous_hash": null,
-   "times": 1,
-   "question": "show me murders, robberies, and aggravated assaults by offender age by year for 2017 to 2025",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
    }
   },
   {
@@ -36064,6 +36104,31 @@
    }
   },
   {
+   "id": "QL-nibrs-f3fdfee963",
+   "tab": "nibrs",
+   "kind": "first",
+   "hash": "f3fdfee963",
+   "previous_hash": null,
+   "times": 1,
+   "question": "show aggravated assaults by offender age group by year for continuous reporters only, 2015 through 2025",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R10",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
+   }
+  },
+  {
    "id": "QL-nibrs-f525f10144",
    "tab": "nibrs",
    "kind": "first",
@@ -36939,31 +37004,6 @@
    }
   },
   {
-   "id": "QL-shr-0dbe3a7bf5",
-   "tab": "shr",
-   "kind": "first",
-   "hash": "0dbe3a7bf5",
-   "previous_hash": null,
-   "times": 1,
-   "question": "Homicide victims by weapon since 2000",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
-   }
-  },
-  {
    "id": "QL-shr-0ef3aa546f",
    "tab": "shr",
    "kind": "first",
@@ -37435,31 +37475,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "several places have this name (P26 for New York)"
-   }
-  },
-  {
-   "id": "QL-shr-1f7c6033bd",
-   "tab": "shr",
-   "kind": "first",
-   "hash": "1f7c6033bd",
-   "previous_hash": null,
-   "times": 1,
-   "question": "fatal shootings in Kansas City, Missouri",
-   "previous": null,
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
    }
   },
   {
@@ -38459,6 +38474,31 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "P12/D31"
+   }
+  },
+  {
+   "id": "QL-shr-3d41c7a12c",
+   "tab": "shr",
+   "kind": "first",
+   "hash": "3d41c7a12c",
+   "previous_hash": null,
+   "times": 1,
+   "question": "Start Y-axis at 60% on the chart",
+   "previous": null,
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "R08",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "no crime, and no place or a word pointing back"
    }
   },
   {
@@ -40716,7 +40756,7 @@
    "kind": "first",
    "hash": "9c5d721446",
    "previous_hash": null,
-   "times": 54,
+   "times": 53,
    "question": "shootings in Chicago since 2015",
    "previous": null,
    "expected": {
@@ -43038,32 +43078,6 @@
    }
   },
   {
-   "id": "QL-shr-ea74a11e4f",
-   "tab": "shr",
-   "kind": "first",
-   "hash": "ea74a11e4f",
-   "previous_hash": null,
-   "times": 1,
-   "question": "california murder rate 12 months rolling",
-   "previous": null,
-   "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "draft",
-    "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "D5 permits a rolling series across all periods."
-   }
-  },
-  {
    "id": "QL-shr-ea89c8edd7",
    "tab": "shr",
    "kind": "first",
@@ -43615,7 +43629,7 @@
     "rule": "F3>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The November 9 owner decision declines chart styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -44007,14 +44021,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
+    "reason": "Chart styling is not supported."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -44070,6 +44084,36 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "P06/D31"
+   }
+  },
+  {
+   "id": "QL-ct-05f06f929f",
+   "tab": "current",
+   "kind": "follow-up",
+   "hash": "f929f6340f",
+   "previous_hash": "05f06e39bc",
+   "times": 1,
+   "question": "SF aggravated assault per month in 2025",
+   "previous": "San francisco assaults per month",
+   "expected": {
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -44164,31 +44208,6 @@
     "drafted_by": "jeff-2026-11-09",
     "reviewed_by": "jeff-2026-11-09",
     "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
-   }
-  },
-  {
-   "id": "QL-ct-07da788156",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "88156b1363",
-   "previous_hash": "07da73c6c0",
-   "times": 1,
-   "question": "baltimore city annual crime counts",
-   "previous": "baltimore city",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
    }
   },
   {
@@ -45064,28 +45083,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "second labeler unclear: No option list is supplied."
-   }
-  },
-  {
-   "id": "QL-ct-12f15235ed",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "235edf5cbf",
-   "previous_hash": "12f15a49a2",
-   "times": 1,
-   "question": "can you combine the year and month into a date (MMM-YY) on the table?",
-   "previous": "remove 2017",
-   "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart and table styling is not supported."
-   },
-   "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This requests display formatting under the owner styling limit."
    }
   },
   {
@@ -46656,16 +46653,15 @@
    "question": "can youoverlay assault monthly percentage change on that graphic?",
    "previous": "Great can we overlay robbery percentage change by month and murder percentage change by month?",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Overlaying a graphic requests chart presentation."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -46924,27 +46920,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-3",
     "notes": "a follow-up to an answerable question"
-   }
-  },
-  {
-   "id": "QL-ct-24d1c6575c",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "6575c8f870",
-   "previous_hash": "24d1c75d17",
-   "times": 1,
-   "question": "Ok. Now compare the monthly murder trend in Baltimore with the trend in DC. Is DC improving more than Balto?",
-   "previous": "Normalize that please",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -47901,31 +47876,6 @@
    }
   },
   {
-   "id": "QL-ct-30250f897c",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "f897c52110",
-   "previous_hash": "30250e7939",
-   "times": 1,
-   "question": "Your chart shows like no murders in Baltimore and way more in DC. Show me a chart that compares the monthly murder rate in Baltimore and DC",
-   "previous": "Your chart looks weird.",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Baltimore",
-    "about_any": [
-     "which Baltimore"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "several places have this name (P26 for New York)"
-   }
-  },
-  {
    "id": "QL-ct-3190b22821",
    "tab": "current",
    "kind": "follow-up",
@@ -48188,16 +48138,15 @@
    "question": "St Louis, MO\t150\t277,294\t54.1 Memphis, TN\t250\t613,207\t40.8 Baton Rouge, LA\t77\t217,387\t35.4 Baltimore, MD\t197\t566,632\t34.8 New Orleans, LA\t124\t361,802\t34.3 Detroit, MI\t203\t651,171\t31.2 Cleveland, OH\t111\t362,762\t30.6 Kansas City, MO\t141\t511,437\t27.6 Washington, DC\t187\t702,250\t26.6 Atlanta, GA",
    "previous": "Make me a chart of the 3-month rolling average murder rate for the following cities plus Washington, DC. Make the DC line black.",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "This is a policy or political question, not a request for crime counts."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
     "status": "reviewed",
-    "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -48899,57 +48848,6 @@
    }
   },
   {
-   "id": "QL-ct-4248a2fa94",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "2fa94800be",
-   "previous_hash": "4248a0bb52",
-   "times": 1,
-   "question": "Virginia murder rates per agency in 2024",
-   "previous": "baltimore murders per year",
-   "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
-   }
-  },
-  {
-   "id": "QL-ct-4248ac3777",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "c37770b5b4",
-   "previous_hash": "4248a0bb52",
-   "times": 1,
-   "question": "Can I see the top 10 auto theft rates in 2025?",
-   "previous": "baltimore murders per year",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "P12/D31"
-   }
-  },
-  {
    "id": "QL-ct-42f3fbb7f4",
    "tab": "current",
    "kind": "follow-up",
@@ -49029,6 +48927,32 @@
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
     "notes": "This standalone agency assault trend uses all available years under D5."
+   }
+  },
+  {
+   "id": "QL-ct-440c150e10",
+   "tab": "current",
+   "kind": "follow-up",
+   "hash": "50e100418a",
+   "previous_hash": "440c1d3f44",
+   "times": 1,
+   "question": "auto thefts per month in the 5 cities with the most auto thefts in 2022\nMonthly auto theft counts for Chicago, IL, Denver, CO, Houston, TX, Los A",
+   "previous": "Motor vehicle thefts per month in the 5 cities with the most motor vehicle thefts in 2022",
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "complete city list or ranking scope",
+     "crime"
+    ],
+    "about": "complete city list or ranking scope"
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
    }
   },
   {
@@ -49957,19 +49881,15 @@
    "question": "now take out robbery",
    "previous": "can youoverlay assault monthly percentage change on that graphic?",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The previous chart-overlay request declines, so F5 applies."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -51353,27 +51273,6 @@
    }
   },
   {
-   "id": "QL-ct-6299c2269c",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "2269c0be00",
-   "previous_hash": "6299c2a2f1",
-   "times": 1,
-   "question": "range",
-   "previous": "show seattle for 20206",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
-   }
-  },
-  {
    "id": "QL-ct-629d113672",
    "tab": "current",
    "kind": "follow-up",
@@ -51381,6 +51280,36 @@
    "previous_hash": "629d1a168d",
    "times": 1,
    "question": "San francisco agg assaults per month",
+   "previous": "San fran agg assaults per month",
+   "expected": {
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+   }
+  },
+  {
+   "id": "QL-ct-629d1b2507",
+   "tab": "current",
+   "kind": "follow-up",
+   "hash": "b250715789",
+   "previous_hash": "629d1a168d",
+   "times": 1,
+   "question": "SF aggravated assault per month",
    "previous": "San fran agg assaults per month",
    "expected": {
     "outcome": "answer",
@@ -51843,6 +51772,36 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "P12/D31"
+   }
+  },
+  {
+   "id": "QL-ct-66591e8367",
+   "tab": "current",
+   "kind": "follow-up",
+   "hash": "e8367ad4fc",
+   "previous_hash": "665910d467",
+   "times": 1,
+   "question": "Top cities with blue car problems",
+   "previous": "New Orleans murder per month",
+   "expected": {
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the earlier question, changed as asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "disputed",
+    "rule": "F3",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "second labeler unclear: Blue car problems do not plainly continue the murder question."
    }
   },
   {
@@ -52374,16 +52333,15 @@
    "question": "Great can we overlay robbery percentage change by month and murder percentage change by month?",
    "previous": "can we look at murder in terms of percentage change by month?",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The owner styling limit covers overlaying chart series."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -52478,32 +52436,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a capability gap today"
-   }
-  },
-  {
-   "id": "QL-ct-6fee48474f",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "8474f25d65",
-   "previous_hash": "6fee46f329",
-   "times": 1,
-   "question": "how many states is that?",
-   "previous": "which states do you have data for?",
-   "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "draft",
-    "rule": "F1+R09>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The previous turn identifies the covered states being counted."
    }
   },
   {
@@ -52675,16 +52607,20 @@
    "question": "can you make that a line chart",
    "previous": "can you show me the same data annually",
    "expected": {
-    "outcome": "decline",
+    "outcome": "answer",
     "source": null,
-    "reason": "Chart styling is not supported."
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The owner decision declines chart-type changes."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -54614,31 +54550,6 @@
    }
   },
   {
-   "id": "QL-ct-8f3a9d3240",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "d32408965b",
-   "previous_hash": "8f3a9f278b",
-   "times": 1,
-   "question": "What jurisdictions had the highest murder rates in 2025?",
-   "previous": "Could you do the same for 2024",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "P12/D31"
-   }
-  },
-  {
    "id": "QL-ct-8fd46e9453",
    "tab": "current",
    "kind": "follow-up",
@@ -54650,14 +54561,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
+    "reason": "Chart styling is not supported."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -54692,16 +54603,24 @@
    "question": "Can you adjust this so that the annual counts are a bar chart rather than a line chart?",
    "previous": "I would like a chart that shows the National Murder Trend - Rolling 12-month total compared to the national count of murders in each calendar year",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the earlier question, changed as asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F3>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Changing lines to bars is chart styling."
+    "status": "reviewed",
+    "rule": "F3",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "a follow-up to an answerable question"
    }
   },
   {
@@ -55006,6 +54925,32 @@
    }
   },
   {
+   "id": "QL-ct-956c0bb09c",
+   "tab": "current",
+   "kind": "follow-up",
+   "hash": "bb09c436ce",
+   "previous_hash": "956c06f5ea",
+   "times": 1,
+   "question": "Murders in Louisville in 2025",
+   "previous": "Place Atlanta",
+   "expected": {
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a Part I figure by year (Crime Index)"
+   }
+  },
+  {
    "id": "QL-ct-95c15b6dfc",
    "tab": "current",
    "kind": "follow-up",
@@ -55238,16 +55183,20 @@
    "question": "can you make that a bar chart instead?",
    "previous": "now add Dallas to the comparison",
    "expected": {
-    "outcome": "decline",
+    "outcome": "answer",
     "source": null,
-    "reason": "Chart styling is not supported."
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Changing chart type is declined by the owner decision."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -55974,14 +55923,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
+    "reason": "Chart styling is not supported."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -56626,7 +56575,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Adding a chart annotation is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -56962,16 +56911,24 @@
    "question": "separate them",
    "previous": "san francisco and new orleans auto theft per month",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the earlier question, changed as asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F3>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Separating the plotted series is a presentation-only edit."
+    "status": "reviewed",
+    "rule": "F3",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "a follow-up to an answerable question"
    }
   },
   {
@@ -58011,16 +57968,24 @@
    "question": "Graph it",
    "previous": "Can I get the raw numbers, not rates, for New Orleans homicides, monthly",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "answer",
+    "source": "rtci",
+    "source_any": [
+     "rtci",
+     "nibrs"
+    ],
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This is a presentation-only graph request under the owner limit."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -58682,14 +58647,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
+    "reason": "Chart styling is not supported."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F3>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -58899,16 +58864,15 @@
    "question": "Great. Please also add Detroit. And make the DC line darker",
    "previous": "Show me a chart of the three-month moving average for murders in DC and Baltimore.",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
     "status": "reviewed",
-    "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -60016,33 +59980,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-3",
     "notes": "a Part I figure by year (Crime Index)"
-   }
-  },
-  {
-   "id": "QL-ct-de8e9df0e4",
-   "tab": "current",
-   "kind": "follow-up",
-   "hash": "df0e43158d",
-   "previous_hash": "de8e97909a",
-   "times": 1,
-   "question": "Los Angeles, CA crime scorecard",
-   "previous": "Louisville, KY crime scorecard",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "which Los Angeles",
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
    }
   },
   {
@@ -61755,7 +61692,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The previous color-and-line edit declines, so F5 applies."
+    "notes": "The preceding styling-only request declines, so F5 asks for the whole question."
    }
   },
   {
@@ -62212,7 +62149,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "A vertical annotation is chart styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -62777,19 +62714,15 @@
    "question": "trim the edn date to 2025",
    "previous": "can you make that a line chart",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The preceding chart-style change declines, so F5 applies."
+    "status": "disputed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "second labeler unclear: The preceding chart request contains no recoverable data question."
    }
   },
   {
@@ -63909,16 +63842,20 @@
    "question": "Show the previous chart.",
    "previous": "Tell me what this chart is showing.",
    "expected": {
-    "outcome": "decline",
+    "outcome": "answer",
     "source": null,
-    "reason": "Chart presentation requests are not supported."
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This only requests a chart display change."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -64167,7 +64104,7 @@
     "rule": "F3>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "A dual-axis chart request is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -64343,31 +64280,6 @@
    }
   },
   {
-   "id": "QL-hist-07da7ca0a7",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "ca0a7cac07",
-   "previous_hash": "07da73c6c0",
-   "times": 1,
-   "question": "show murder rates in baltimore city and nationwide side-by-side",
-   "previous": "baltimore city",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
-   }
-  },
-  {
    "id": "QL-hist-08507067e7",
    "tab": "historical",
    "kind": "follow-up",
@@ -64408,7 +64320,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The question requests separate chart lines."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -64973,32 +64885,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a ranking or set of places (Crime Index or NIBRS)"
-   }
-  },
-  {
-   "id": "QL-hist-0fa00192dd",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "192dd57de3",
-   "previous_hash": "0fa0037118",
-   "times": 1,
-   "question": "Murders reported by the Cook County police department in Illinois in 2022",
-   "previous": "Murders across all agencies in Kern County, California in 2025",
-   "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
    }
   },
   {
@@ -65935,7 +65821,7 @@
     "rule": "F3>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Removing a chart label is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -66087,58 +65973,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a Part I figure by year (Crime Index)"
-   }
-  },
-  {
-   "id": "QL-hist-23b4a05e2f",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "05e2f10091",
-   "previous_hash": "23b4a27c3f",
-   "times": 1,
-   "question": "Ohio crime scorecard",
-   "previous": "Toledo scorecard",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
-   }
-  },
-  {
-   "id": "QL-hist-23b4a41629",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "41629fdb39",
-   "previous_hash": "23b4a27c3f",
-   "times": 1,
-   "question": "Toledo crime scorecard",
-   "previous": "Toledo scorecard",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
    }
   },
   {
@@ -66791,28 +66625,24 @@
    }
   },
   {
-   "id": "QL-hist-2e066b40ff",
+   "id": "QL-hist-2e1b1f1392",
    "tab": "historical",
    "kind": "follow-up",
-   "hash": "b40ff70aab",
-   "previous_hash": "2e066a81c0",
+   "hash": "f13922a183",
+   "previous_hash": "2e1b179756",
    "times": 1,
-   "question": "Show me the city of charlotte murder rate from beginning of data until present",
-   "previous": "Let's look at Nashville",
+   "question": "MD0030100",
+   "previous": "new mexico crime by year",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "reviewed",
-    "rule": "F1+R13",
+    "status": "disputed",
+    "rule": "F4",
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-3",
-    "notes": "P06/D31"
+    "notes": "second labeler unclear: A Maryland agency code does not plainly continue a New Mexico question."
    }
   },
   {
@@ -66880,7 +66710,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Swapping chart axes is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -67161,7 +66991,7 @@
     "rule": "F2>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing series colors is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -67535,16 +67365,15 @@
    "question": "Show this in the same chart across these other cities",
    "previous": "Compare this to New York, Los Angeles and Houston",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This only changes how the series appear in a chart."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -67831,20 +67660,20 @@
    "question": "recreate this chart but instead of using largest cities, use the 15 cities in the dataset with the highest crime rates as of 2025",
    "previous": "same chart but add a line for national violent crime rate and make Charlotte's line bright yellow",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "violent, property or both",
-     "place"
-    ],
-    "about": "violent, property or both"
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
     "rule": "F1+R09b>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The new city ranking also lacks a geographic scope under P12."
+    "notes": "The follow-up retains the national violent-crime comparison and changes the ranked cities."
    }
   },
   {
@@ -68364,52 +68193,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-3",
     "notes": "a follow-up to an answerable question"
-   }
-  },
-  {
-   "id": "QL-hist-4248a06b77",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "06b7771900",
-   "previous_hash": "4248a0bb52",
-   "times": 1,
-   "question": "Baltimore murder rate per year",
-   "previous": "Baltimore murders per year",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Baltimore",
-    "about_any": [
-     "which Baltimore"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "several places have this name (P26 for New York)"
-   }
-  },
-  {
-   "id": "QL-hist-4248a6b86b",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "6b86b273ff",
-   "previous_hash": "4248a0bb52",
-   "times": 1,
-   "question": "1",
-   "previous": "Baltimore murders per year",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -69229,19 +69012,20 @@
    "question": "Tell me what this chart is showing.",
    "previous": "Present this data as a historical trend line by city.",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "answer",
     "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The preceding presentation-only request declines and supplies no actual data or chart."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -69625,14 +69409,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
+    "reason": "Chart styling is not supported."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -69856,6 +69640,31 @@
    }
   },
   {
+   "id": "QL-hist-5c550ddbce",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "ddbce83c73",
+   "previous_hash": "5c550ea420",
+   "times": 1,
+   "question": "What 5 city police departments had the most officers in 2025?",
+   "previous": "violent crime in Alameda County since 2008",
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R10",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
+   }
+  },
+  {
    "id": "QL-hist-5c550debe6",
    "tab": "historical",
    "kind": "follow-up",
@@ -69965,16 +69774,15 @@
    "question": "Present this data as a historical trend line by city.",
    "previous": "Show me the murder rate for the 50 largest cities in the United States.",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The follow-up requests a presentation-only trend-line chart."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -72614,16 +72422,20 @@
    "question": "same chart but add a line for national violent crime rate and make Charlotte's line bright yellow",
    "previous": "make charlotte a bright yellow color so it stands out better",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The national violent-crime series is an answerable data addition despite accompanying styling."
    }
   },
   {
@@ -72688,16 +72500,15 @@
    "question": "recreate this chart showing a different line for each of the cities",
    "previous": "recreate this chart but instead of using largest cities, use the 15 cities in the dataset with the highest crime rates as of 2025",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This requests different chart lines."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -72756,16 +72567,15 @@
    "question": "show a separate line for each city rather than an aggregate",
    "previous": "recreate this chart showing a different line for each of the cities",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This requests different chart lines."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -73039,53 +72849,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a Part I figure by year (Crime Index)"
-   }
-  },
-  {
-   "id": "QL-hist-85c1c11a62",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "11a62c2341",
-   "previous_hash": "85c1ce5bad",
-   "times": 1,
-   "question": "City",
-   "previous": "St Louis murders per year",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
-   }
-  },
-  {
-   "id": "QL-hist-85c1c2f995",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "2f9951cdad",
-   "previous_hash": "85c1ce5bad",
-   "times": 1,
-   "question": "how do robbery clearance rates compare between Los Angeles and Chicago?",
-   "previous": "St louis murders per year",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "which Los Angeles",
-    "about_any": [
-     "which Los Angeles",
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
    }
   },
   {
@@ -73747,16 +73510,15 @@
    "question": "Overlay that with the homicide clearance rate",
    "previous": "Show me the same statistic for juvenile arrests",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Overlaying chart series is a presentation edit."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -73859,36 +73621,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a follow-up to an answerable question"
-   }
-  },
-  {
-   "id": "QL-hist-8f1ceb15bd",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "b15bd28402",
-   "previous_hash": "8f1ce26c2f",
-   "times": 1,
-   "question": "what is seattle 2026 per capita murder rate",
-   "previous": "what is seattle's 2026 per capita murder rate",
-   "expected": {
-    "outcome": "answer",
-    "source": "rtci",
-    "source_any": [
-     "rtci",
-     "nibrs"
-    ],
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
    }
   },
   {
@@ -74188,27 +73920,6 @@
    }
   },
   {
-   "id": "QL-hist-92d12e041c",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "e041c60942",
-   "previous_hash": "92d128a605",
-   "times": 1,
-   "question": "murders",
-   "previous": "District of Columbia",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
-   }
-  },
-  {
    "id": "QL-hist-9339249069",
    "tab": "historical",
    "kind": "follow-up",
@@ -74232,6 +73943,31 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a Part I figure by year (Crime Index)"
+   }
+  },
+  {
+   "id": "QL-hist-933924f463",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "4f4630775c",
+   "previous_hash": "93392e54a5",
+   "times": 1,
+   "question": "crime in Washington since 2010",
+   "previous": "murder rate in Washington since 2010",
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "violent, property or both",
+    "about_any": [
+     "violent, property or both"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R09b",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D09"
    }
   },
   {
@@ -74435,6 +74171,32 @@
    }
   },
   {
+   "id": "QL-hist-956c0192dd",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "192dd57de3",
+   "previous_hash": "956c06f5ea",
+   "times": 1,
+   "question": "Murders reported by the Cook County police department in Illinois in 2022",
+   "previous": "Place Atlanta",
+   "expected": {
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a Part I figure by year (Crime Index)"
+   }
+  },
+  {
    "id": "QL-hist-95808c8434",
    "tab": "historical",
    "kind": "follow-up",
@@ -74593,32 +74355,6 @@
    "times": 11,
    "question": "police staffing in Chicago since 1980",
    "previous": "clearance rate for murder since 1960",
-   "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "staffing (Crime Index)"
-   }
-  },
-  {
-   "id": "QL-hist-96a36aeafe",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "aeafec914d",
-   "previous_hash": "96a366af4a",
-   "times": 1,
-   "question": "Chicago officers per year, 1930–2025",
-   "previous": "US murder rate",
    "expected": {
     "outcome": "answer",
     "source": "historical",
@@ -76054,6 +75790,32 @@
    }
   },
   {
+   "id": "QL-hist-ac888c1e59",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "c1e598e606",
+   "previous_hash": "ac8886009c",
+   "times": 1,
+   "question": "give me domestic violence trends in kentucky from the last 5 years",
+   "previous": "crime in Alameda County since 2008",
+   "expected": {
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+   }
+  },
+  {
    "id": "QL-hist-acd6cb66a1",
    "tab": "historical",
    "kind": "follow-up",
@@ -76214,7 +75976,7 @@
    "kind": "follow-up",
    "hash": "6b6bd4147d",
    "previous_hash": "adcbee43c5",
-   "times": 1,
+   "times": 2,
    "question": "National murder clearance rate since 1960",
    "previous": "National murder trend, 2000–2020",
    "expected": {
@@ -76533,6 +76295,32 @@
     "drafted_by": "rules-v1",
     "reviewed_by": null,
     "notes": "D4 (Jeff 2026-11-04): left out"
+   }
+  },
+  {
+   "id": "QL-hist-b2113dfc6e",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "dfc6eff4e0",
+   "previous_hash": "b21139afb4",
+   "times": 1,
+   "question": "lapd murders per year",
+   "previous": "now compare to violent crime in Oakland since 2008",
+   "expected": {
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a Part I figure by year (Crime Index)"
    }
   },
   {
@@ -76989,6 +76777,27 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-3",
     "notes": "D4 (Jeff 2026-11-04): left out"
+   }
+  },
+  {
+   "id": "QL-hist-b7fe6ceef4",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "ceef4ff63b",
+   "previous_hash": "b7fe6376cb",
+   "times": 1,
+   "question": "what are clearance rates in harris county",
+   "previous": "crime in surrounding areas near DC",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "disputed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "second labeler unclear: Harris County clearances do not plainly continue a question about areas near DC."
    }
   },
   {
@@ -77951,19 +77760,15 @@
    "question": "Show me the same trend adjusted for population",
    "previous": "Overlay that with the homicide clearance rate",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The previous chart-overlay request declines, so F5 applies."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -78105,7 +77910,32 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Adding chart labels is styling."
+    "notes": "The owner decision declines styling-only requests."
+   }
+  },
+  {
+   "id": "QL-hist-c4f89c4f89",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "c4f89c362b",
+   "previous_hash": "c4f89c362b",
+   "times": 1,
+   "question": "give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more",
+   "previous": "give me a scatter plot of violent crime rate per 100k in 2024 vs officers per 100k in cities of 250k or more",
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "place",
+    "about_any": [
+     "place"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R10",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P12/D31"
    }
   },
   {
@@ -78885,16 +78715,20 @@
    "question": "show it to me as a bar chart",
    "previous": "annual homicides in baltimore from 1980 to 2024, excluding 2021",
    "expected": {
-    "outcome": "decline",
+    "outcome": "answer",
     "source": null,
-    "reason": "Chart styling is not supported."
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Changing to a bar chart is styling."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -79807,34 +79641,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The preceding color edit declines, so F5 applies."
-   }
-  },
-  {
-   "id": "QL-hist-de8e9df0e4",
-   "tab": "historical",
-   "kind": "follow-up",
-   "hash": "df0e43158d",
-   "previous_hash": "de8e97909a",
-   "times": 1,
-   "question": "Los Angeles, CA crime scorecard",
-   "previous": "Louisville, KY crime scorecard",
-   "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both",
-     "which Los Angeles",
-     "period"
-    ]
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "notes": "The preceding styling-only request declines, so F5 asks for the whole question."
    }
   },
   {
@@ -80956,7 +80763,7 @@
     "rule": "F2>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing graph color is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -82380,6 +82187,27 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "P12/D31"
+   }
+  },
+  {
+   "id": "QL-hist-ffab6ccfe2",
+   "tab": "historical",
+   "kind": "follow-up",
+   "hash": "ccfe2fec49",
+   "previous_hash": "ffab630e79",
+   "times": 1,
+   "question": "Toledo, Ohio scorecard",
+   "previous": "Tulsa scorecard",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -84743,7 +84571,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing category colors is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -85268,14 +85096,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Population rates for demographic groups are not supported."
+    "reason": "Rates for demographic groups are not supported; counts or shares can be offered."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The national female arrest rate is a group-population rate under D03."
+    "notes": "The standalone national female arrest-rate question declines under D03."
    }
   },
   {
@@ -85369,6 +85197,53 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+   }
+  },
+  {
+   "id": "QL-nibrs-1b478c1963",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "c19630de61",
+   "previous_hash": "1b478cf52e",
+   "times": 1,
+   "question": "give me a 5 year history of domestic violence in kentucky",
+   "previous": "how many cases used DNA evidence",
+   "expected": {
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+   }
+  },
+  {
+   "id": "QL-nibrs-1b711a5e6c",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "a5e6c8467c",
+   "previous_hash": "1b7118c15e",
+   "times": 1,
+   "question": "Yea, make your own rough version of misdemeanor arrests combining whatever you think fits",
+   "previous": "show crime in Pennsylvania",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "disputed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "second labeler unclear: The reply presupposes a misdemeanor-arrest discussion absent from the supplied previous turn."
    }
   },
   {
@@ -85700,16 +85575,20 @@
    "question": "can you go back to the last graph",
    "previous": "what is the defanition of simple assault",
    "expected": {
-    "outcome": "decline",
+    "outcome": "answer",
     "source": null,
-    "reason": "Chart presentation changes are not supported."
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The follow-up only requests a chart display change."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -86456,27 +86335,6 @@
    }
   },
   {
-   "id": "QL-nibrs-2706f4edfc",
-   "tab": "nibrs",
-   "kind": "follow-up",
-   "hash": "4edfc36e55",
-   "previous_hash": "2706f9abee",
-   "times": 1,
-   "question": "include only continuously reporting agencies",
-   "previous": "show me the share of offenders whose offenses involved firearms, by offender age, for the following offenses: weapons law violations, and violent crimes",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
-   }
-  },
-  {
    "id": "QL-nibrs-2720f3ccba",
    "tab": "nibrs",
    "kind": "follow-up",
@@ -86742,6 +86600,32 @@
    }
   },
   {
+   "id": "QL-nibrs-2924f02d90",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "02d9044095",
+   "previous_hash": "2924f5681f",
+   "times": 1,
+   "question": "A national estimate since 1991 of robbery offenders by race",
+   "previous": "which cities are in Santa Clara County?",
+   "expected": {
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+   }
+  },
+  {
    "id": "QL-nibrs-2986f2986f",
    "tab": "nibrs",
    "kind": "follow-up",
@@ -86753,14 +86637,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Rolling demographic breakdowns are not supported."
+    "reason": "Rolling breakdowns are not supported."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "P89 explicitly retains the decline for rolling breakdowns."
+    "notes": "P89 explicitly declines rolling demographic breakdowns."
    }
   },
   {
@@ -87877,27 +87761,6 @@
    }
   },
   {
-   "id": "QL-nibrs-3387bf3fdf",
-   "tab": "nibrs",
-   "kind": "follow-up",
-   "hash": "f3fdfee963",
-   "previous_hash": "3387b2e397",
-   "times": 1,
-   "question": "show aggravated assaults by offender age group by year for continuous reporters only, 2015 through 2025",
-   "previous": "disaggregate by year",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
-   }
-  },
-  {
    "id": "QL-nibrs-3469c4dd4d",
    "tab": "nibrs",
    "kind": "follow-up",
@@ -88821,16 +88684,20 @@
    "question": "show this as a line chart",
    "previous": "show me offenses by offender age for 2017 to 2025 by year for consistent reporters only",
    "expected": {
-    "outcome": "decline",
+    "outcome": "answer",
     "source": null,
-    "reason": "Chart styling is not supported."
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Changing to a line chart is styling."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -89641,16 +89508,15 @@
    "question": "Please change the bar chart to a line chart",
    "previous": "Show me the share of weapons law violations involving offenders in the following age groups: under 18; 18 to 24; 25 to 39; and 40 and older",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Changing bars to lines is styling."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -90453,7 +90319,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Adding a vertical chart annotation is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -91961,14 +91827,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Rates for demographic groups are not supported."
+    "reason": "Rates for demographic groups are not supported; counts or shares can be offered."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Comparing juvenile and adult population rates is barred by D03."
+    "notes": "D03 declines rates for demographic groups."
    }
   },
   {
@@ -92154,20 +92020,15 @@
    "question": "Is there information on the data detailing what percentage are hispanic?",
    "previous": "What percentage of the \"white\" people are hispanic?",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This independently asks whether ethnicity information is recorded under R07."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -93399,19 +93260,15 @@
    "question": "any more details on the simple assault",
    "previous": "can you go back to the last graph",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The preceding chart-display request declines and supplies no underlying data question."
+    "status": "disputed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "second labeler unclear: The preceding graph request supplies no simple-assault query to expand."
    }
   },
   {
@@ -93857,6 +93714,27 @@
    "previous_hash": "6ef0da1a7d",
    "times": 1,
    "question": "handgun victims and injury type 2024",
+   "previous": "breakdown of weapons used in assaults 2024",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
+   }
+  },
+  {
+   "id": "QL-nibrs-6ef0d6da32",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "6da327da6f",
+   "previous_hash": "6ef0da1a7d",
+   "times": 1,
+   "question": "add Omaha",
    "previous": "breakdown of weapons used in assaults 2024",
    "expected": {
     "outcome": "exclude",
@@ -94659,16 +94537,20 @@
    "question": "show this as a line chart",
    "previous": "adjust for incomplete reporting",
    "expected": {
-    "outcome": "decline",
+    "outcome": "answer",
     "source": null,
-    "reason": "Chart styling is not supported."
+    "answer": "the same data, shown another way",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Changing to a line chart is styling."
+    "status": "reviewed",
+    "rule": "F2",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "presentation only"
    }
   },
   {
@@ -95018,14 +94900,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
+    "reason": "Gang questions are not supported."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The owner decision declines gang questions."
    }
   },
   {
@@ -97078,16 +96960,15 @@
    "question": "This is good.  But can you also put Hispanic and Not Hispanic on same chart?",
    "previous": "The chart has \"non Hispanic Firearm arrests\" and \"other race firearm arrests\", but I'd also like it to have Hispanic firearm arrests",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Combining existing series on one chart is a presentation edit."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -97454,32 +97335,6 @@
    }
   },
   {
-   "id": "QL-nibrs-9153dc562c",
-   "tab": "nibrs",
-   "kind": "follow-up",
-   "hash": "c562c5076b",
-   "previous_hash": "9153d426e1",
-   "times": 1,
-   "question": "Auto theft in Texas 2024",
-   "previous": "Murders by state 2024",
-   "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
-   }
-  },
-  {
    "id": "QL-nibrs-915d444a94",
    "tab": "nibrs",
    "kind": "follow-up",
@@ -97668,6 +97523,27 @@
    }
   },
   {
+   "id": "QL-nibrs-92f48d75d5",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "d75d599e33",
+   "previous_hash": "92f486a9ca",
+   "times": 1,
+   "question": "show me murders, robberies, and aggravated assaults by offender age by year for 2017 to 2025",
+   "previous": "juvenile arrests by race nationally",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
+   }
+  },
+  {
    "id": "QL-nibrs-9304c2d7a0",
    "tab": "nibrs",
    "kind": "follow-up",
@@ -97768,14 +97644,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Rolling demographic breakdowns are not supported."
+    "reason": "Rolling breakdowns are not supported."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "P89 explicitly declines rolling age breakdowns."
+    "notes": "P89 explicitly declines rolling demographic breakdowns."
    }
   },
   {
@@ -97808,6 +97684,69 @@
    "times": 1,
    "question": "Excluding sexual offenses, what share of violent crimes involve an offender under age 18",
    "previous": "Which offense category has the highest share of known or suspected offenders under age 18",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
+   }
+  },
+  {
+   "id": "QL-nibrs-9541b4edfc",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "4edfc36e55",
+   "previous_hash": "9541b634c3",
+   "times": 1,
+   "question": "include only continuously reporting agencies",
+   "previous": "aggravated assault with firearm in Dallas",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
+   }
+  },
+  {
+   "id": "QL-nibrs-9541ba5e87",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "a5e876e777",
+   "previous_hash": "9541b634c3",
+   "times": 1,
+   "question": "show murder, robbery, and aggravated assault only",
+   "previous": "aggravated assault with firearm in Dallas",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
+   }
+  },
+  {
+   "id": "QL-nibrs-9541bb099b",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "b099b4387f",
+   "previous_hash": "9541b634c3",
+   "times": 1,
+   "question": "what share of robbery, murder, and aggravated assault incidents involving an offender under age 18 also involve a firearm",
+   "previous": "aggravated assault with firearm in Dallas",
    "expected": {
     "outcome": "exclude",
     "source": null
@@ -98231,16 +98170,19 @@
    "question": "show the shoplifting rate by race of offender for 2019 and 2023",
    "previous": "show the shoplifting rate since 2010 by race of offender",
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Population rates by race are not supported."
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "draft",
-    "rule": "F5>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "P03 does not supply race populations and D03 declines demographic rates."
+    "status": "reviewed",
+    "rule": "F5",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "a follow-up to a question that was declined or excluded"
    }
   },
   {
@@ -98458,27 +98400,6 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "a NIBRS detail (an agency's murder detail too: P53)"
-   }
-  },
-  {
-   "id": "QL-nibrs-9bf54a5e87",
-   "tab": "nibrs",
-   "kind": "follow-up",
-   "hash": "a5e876e777",
-   "previous_hash": "9bf54da83e",
-   "times": 1,
-   "question": "show murder, robbery, and aggravated assault only",
-   "previous": "only include agencies that provided data for all four years from 2022 to 2025",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F4",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -99341,7 +99262,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Stacking bars and changing colors is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -99781,6 +99702,58 @@
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Clearance type detail requires NIBRS."
+   }
+  },
+  {
+   "id": "QL-nibrs-ac12f92747",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "927471f541",
+   "previous_hash": "ac12fc17c3",
+   "times": 1,
+   "question": "niversity of California Berkley vehicle burglaries per month",
+   "previous": "University of California Berkley vehicle burglaries per month",
+   "expected": {
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+   }
+  },
+  {
+   "id": "QL-nibrs-ac12fa8d7d",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "a8d7d39a00",
+   "previous_hash": "ac12fc17c3",
+   "times": 1,
+   "question": "UCLA vehicle burglaries per month",
+   "previous": "University of California Berkley vehicle burglaries per month",
+   "expected": {
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the earlier question, changed as asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F3",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "a follow-up to an answerable question"
    }
   },
   {
@@ -101135,16 +101108,15 @@
    "question": "This looks wrong.  Isn't Detroit 93.2% black?",
    "previous": "Now put black in the same bar as total, just change the color at the line",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "The sources do not provide demographic population shares."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The follow-up asks for Detroit racial population data rather than crime data."
+    "status": "disputed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "second labeler unclear: The preceding styling request supplies no context for interpreting the Detroit percentage."
    }
   },
   {
@@ -101321,16 +101293,15 @@
    "question": "Can you make the chart so it shows the number of Hispanic/Latino arrestees for weapon violations next to the number of non-hispanic arrestees",
    "previous": "Is this the Total number of arrestees or the total number of hispanic arrestees",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "This requests adjacent placement of chart series."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -101391,14 +101362,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Population rates by race are not supported."
+    "reason": "Rates for demographic groups are not supported; counts or shares can be offered."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "D03 explicitly declines demographic population rates."
+    "notes": "D03 declines rates for demographic groups."
    }
   },
   {
@@ -101697,6 +101668,27 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "several places have this name (P26 for New York)"
+   }
+  },
+  {
+   "id": "QL-nibrs-c266733ba0",
+   "tab": "nibrs",
+   "kind": "follow-up",
+   "hash": "33ba0def5a",
+   "previous_hash": "c2667aae6e",
+   "times": 1,
+   "question": "what share of murders were cleared by exception in 2025?",
+   "previous": "carjacking clearance rates in Chicago",
+   "expected": {
+    "outcome": "exclude",
+    "source": null
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -102099,19 +102091,15 @@
    "question": "include only continuously reporting agencies",
    "previous": "show this as a line chart",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The preceding line-chart edit declines, so F5 applies."
+    "status": "disputed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "second labeler unclear: The preceding line-chart request supplies no data question to filter."
    }
   },
   {
@@ -103303,27 +103291,6 @@
    }
   },
   {
-   "id": "QL-nibrs-d30b6a5e6c",
-   "tab": "nibrs",
-   "kind": "follow-up",
-   "hash": "a5e6c8467c",
-   "previous_hash": "d30b62640a",
-   "times": 1,
-   "question": "Yea, make your own rough version of misdemeanor arrests combining whatever you think fits",
-   "previous": "What are the trends in misdemeanor arrests nationally since 1991?",
-   "expected": {
-    "outcome": "exclude",
-    "source": null
-   },
-   "label": {
-    "status": "draft",
-    "rule": "F3>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The preceding misdemeanor question requires an offense choice, so F4 applies."
-   }
-  },
-  {
    "id": "QL-nibrs-d39b8130a8",
    "tab": "nibrs",
    "kind": "follow-up",
@@ -104047,14 +104014,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Population rates by race are not supported."
+    "reason": "Rates for demographic groups are not supported; counts or shares can be offered."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "D03 explicitly declines demographic population rates."
+    "notes": "D03 declines rates for demographic groups."
    }
   },
   {
@@ -104554,7 +104521,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing the chart title is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -104619,16 +104586,20 @@
    "question": "show this as stacked columns",
    "previous": "break this down by offense type",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing the chart to stacked columns is styling."
+    "notes": "F2 answers a short request to present the same data as stacked columns."
    }
   },
   {
@@ -104690,14 +104661,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Population rates by sex are not supported."
+    "reason": "Rates for demographic groups are not supported; counts or shares can be offered."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "D03 explicitly declines demographic population rates."
+    "notes": "D03 declines rates for demographic groups."
    }
   },
   {
@@ -104843,32 +104814,6 @@
     "drafted_by": "codex-second-1",
     "reviewed_by": null,
     "notes": "Durham as a comparator does not define the ranking scope."
-   }
-  },
-  {
-   "id": "QL-nibrs-e8fd402d90",
-   "tab": "nibrs",
-   "kind": "follow-up",
-   "hash": "02d9044095",
-   "previous_hash": "e8fd44815b",
-   "times": 1,
-   "question": "A national estimate since 1991 of robbery offenders by race",
-   "previous": "Show me the states wit the highest share of rapes that were cleared by exception in 2025 broken down by the type of exceptional clearance",
-   "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-3",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
    }
   },
   {
@@ -105426,7 +105371,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing chart axes and line arrangement is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -105888,7 +105833,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Replacing chart labels is a presentation-only edit."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -107215,16 +107160,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "place"
+     "the whole question"
     ],
-    "about": "place"
+    "about": "the whole question"
    },
    "label": {
     "status": "draft",
     "rule": "F3>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The new city ranking lacks geographic scope and cannot inherit it from the declined district request."
+    "notes": "The previous precinct-level request declines, so F5 requires the whole question rather than an assumed ranking scope."
    }
   },
   {
@@ -107301,6 +107246,32 @@
    }
   },
   {
+   "id": "QL-shr-0b2970dbe3",
+   "tab": "shr",
+   "kind": "follow-up",
+   "hash": "0dbe3a7bf5",
+   "previous_hash": "0b297bf5d8",
+   "times": 1,
+   "question": "Homicide victims by weapon since 2000",
+   "previous": "domestic homicides in California since 1980",
+   "expected": {
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the earlier question, changed as asked",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F3",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "a follow-up to an answerable question"
+   }
+  },
+  {
    "id": "QL-shr-0b29726e06",
    "tab": "shr",
    "kind": "follow-up",
@@ -107323,6 +107294,32 @@
     "drafted_by": "rules-v1",
     "reviewed_by": "codex-second-1",
     "notes": "P06/D31"
+   }
+  },
+  {
+   "id": "QL-shr-0b2973b03c",
+   "tab": "shr",
+   "kind": "follow-up",
+   "hash": "3b03ca8bb0",
+   "previous_hash": "0b297bf5d8",
+   "times": 1,
+   "question": "california annual murder rate",
+   "previous": "domestic homicides in California since 1980",
+   "expected": {
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R14",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's"
    }
   },
   {
@@ -108321,20 +108318,15 @@
    "question": "What months in 2026 are included in this data",
    "previous": "Show me the share of homicides with any offender under age 18",
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The available months in the source are independently answerable coverage information."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -110137,6 +110129,31 @@
    }
   },
   {
+   "id": "QL-shr-4a4781f7c6",
+   "tab": "shr",
+   "kind": "follow-up",
+   "hash": "1f7c6033bd",
+   "previous_hash": "4a47887d5f",
+   "times": 1,
+   "question": "fatal shootings in Kansas City, Missouri",
+   "previous": "fatal shootings in Kansas City",
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R13",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-1",
+    "notes": "P06/D31"
+   }
+  },
+  {
    "id": "QL-shr-4af5a23c8c",
    "tab": "shr",
    "kind": "follow-up",
@@ -110324,14 +110341,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Population rates by race and sex are not supported."
+    "reason": "Rates for demographic groups are not supported; counts or shares can be offered."
    },
    "label": {
     "status": "draft",
     "rule": "F3>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "D03 explicitly declines demographic population rates."
+    "notes": "D03 declines rates for demographic groups."
    }
   },
   {
@@ -111481,6 +111498,31 @@
    }
   },
   {
+   "id": "QL-shr-6bf16ea74a",
+   "tab": "shr",
+   "kind": "follow-up",
+   "hash": "ea74a11e4f",
+   "previous_hash": "6bf1633bed",
+   "times": 1,
+   "question": "california murder rate 12 months rolling",
+   "previous": "murder victim race in Houston since 2010",
+   "expected": {
+    "outcome": "clarify",
+    "source": null,
+    "about": "period",
+    "about_any": [
+     "period"
+    ]
+   },
+   "label": {
+    "status": "reviewed",
+    "rule": "F1+R13",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "P06/D31"
+   }
+  },
+  {
    "id": "QL-shr-6d21369d31",
    "tab": "shr",
    "kind": "follow-up",
@@ -111623,19 +111665,16 @@
    "question": "Show January 1996 through January 2026",
    "previous": "Show the rolling 12-month total of homicides involving offenders under age 18 and offenders age 50 and older",
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "reason": "Rolling breakdowns are not supported."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The preceding rolling demographic breakdown declines under P89, so F5 applies."
+    "notes": "P89 explicitly declines rolling demographic breakdowns."
    }
   },
   {
@@ -112133,16 +112172,20 @@
    "question": "show stacked columns",
    "previous": "show count of offenders rather than victims",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing to stacked columns is styling."
+    "notes": "F2 answers the short request to show the same data as stacked columns."
    }
   },
   {
@@ -112476,7 +112519,7 @@
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing the axis maximum is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {
@@ -112670,16 +112713,15 @@
    "question": "make it 2000 to 2026 and set the y-axis at 60%",
    "previous": "Share of murders committed with a firearm, 2020 - 2026",
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
+    "outcome": "exclude",
+    "source": null
    },
    "label": {
-    "status": "draft",
-    "rule": "F4>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "The request includes an unsupported axis-setting edit."
+    "status": "reviewed",
+    "rule": "F4",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "D4 (Jeff 2026-11-04): left out"
    }
   },
   {
@@ -113328,28 +113370,6 @@
    }
   },
   {
-   "id": "QL-shr-a546e3d41c",
-   "tab": "shr",
-   "kind": "follow-up",
-   "hash": "3d41c7a12c",
-   "previous_hash": "a546eed07f",
-   "times": 1,
-   "question": "Start Y-axis at 60% on the chart",
-   "previous": "Share of murder committed via firearm, 2000 - 2026, start Y-axis at 60%",
-   "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Chart styling is not supported."
-   },
-   "label": {
-    "status": "draft",
-    "rule": "F2>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "Changing the axis baseline is styling."
-   }
-  },
-  {
    "id": "QL-shr-a63a434939",
    "tab": "shr",
    "kind": "follow-up",
@@ -113428,14 +113448,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Rolling demographic breakdowns are not supported."
+    "reason": "Rolling breakdowns are not supported."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "P89 explicitly declines rolling age breakdowns."
+    "notes": "P89 explicitly declines rolling demographic breakdowns."
    }
   },
   {
@@ -114058,14 +114078,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Data stops at the agency level, not ZIP codes."
+    "reason": "Data is available only down to the agency level, not ZIP codes."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "The request explicitly specifies a below-agency geography under D02."
+    "notes": "The explicit ZIP-code request is below the supported geography."
    }
   },
   {
@@ -114105,14 +114125,14 @@
    "expected": {
     "outcome": "decline",
     "source": null,
-    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
+    "reason": "Gang questions are not supported."
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "F4>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09) [carried from the question when it read as a first question]"
+    "drafted_by": "codex-second-3",
+    "reviewed_by": null,
+    "notes": "The owner decision declines gang questions."
    }
   },
   {
@@ -114623,16 +114643,19 @@
    "question": "Population by race and sex and rate per 100000",
    "previous": "i want ir in per capita seperated by race and sex",
    "expected": {
-    "outcome": "decline",
+    "outcome": "clarify",
     "source": null,
-    "reason": "Population rates by race and sex are not supported."
+    "about": "the whole question",
+    "about_any": [
+     "the whole question"
+    ]
    },
    "label": {
-    "status": "draft",
-    "rule": "F5>2nd",
-    "drafted_by": "codex-second-3",
-    "reviewed_by": null,
-    "notes": "D03 explicitly declines demographic population rates."
+    "status": "reviewed",
+    "rule": "F5",
+    "drafted_by": "rules-v1",
+    "reviewed_by": "codex-second-3",
+    "notes": "a follow-up to a question that was declined or excluded"
    }
   },
   {
@@ -115054,7 +115077,7 @@
    "kind": "follow-up",
    "hash": "9c5d721446",
    "previous_hash": "cda3d5839c",
-   "times": 4,
+   "times": 5,
    "question": "shootings in Chicago since 2015",
    "previous": "firearm murders in Houston since 2010",
    "expected": {
@@ -116135,32 +116158,6 @@
    }
   },
   {
-   "id": "QL-shr-ea74a3b03c",
-   "tab": "shr",
-   "kind": "follow-up",
-   "hash": "3b03ca8bb0",
-   "previous_hash": "ea74a11e4f",
-   "times": 1,
-   "question": "california annual murder rate",
-   "previous": "california murder rate 12 months rolling",
-   "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
-   },
-   "label": {
-    "status": "reviewed",
-    "rule": "F1+R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D3 (Jeff 2026-11-04): a Homicide Reports tab's plain murder count is Historical's"
-   }
-  },
-  {
    "id": "QL-shr-ea89c5ad28",
    "tab": "shr",
    "kind": "follow-up",
@@ -116601,7 +116598,7 @@
     "rule": "F5>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "Changing axis limits is styling."
+    "notes": "The owner decision declines styling-only requests."
    }
   },
   {

@@ -411,11 +411,14 @@ synthetic = {norm(s) for s in json.load(open(args.synthetic, encoding="utf-8"))}
 # 2 minutes).
 LINK_MINUTES = 5
 _last = {}
+# The row before is the one before in the tab, with a session or not (Codex link review 1.1); a synthetic row (the
+# repo's own test strings) is never a previous turn, and a row right after one stays a first question (1.2).
 for r in sorted(rows, key=lambda r: (r["ts"], r["id"])):
-    if r.get("session_id") is not None or r.get("tab") not in TAB_SOURCE:
+    if r.get("tab") not in TAB_SOURCE:
         continue
     p = _last.get(r["tab"])
-    if p is not None and not r.get("previous") and r["ts"] - p["ts"] <= LINK_MINUTES * 60_000 and (p.get("question") or "").strip():
+    if (r.get("session_id") is None and p is not None and not r.get("previous") and r["ts"] - p["ts"] <= LINK_MINUTES * 60_000
+            and (p.get("question") or "").strip() and norm(p["question"]) not in synthetic):
         r["previous"], r["n"] = p["question"], (p.get("n") or 1) + 1
     _last[r["tab"]] = r
 firsts, follows = {}, {}
@@ -470,12 +473,12 @@ if os.path.exists(REVIEW):
     for r in repo:
         v = review.get(r["id"])
         # A question reviewed when it read as a first question, now a linked follow-up (session-less rows, 2026-11-09):
-        # its verdict carries when the follow-up stands alone (F1+: labeled by the first-question rules, so the same
-        # label was judged), or when it is an owner's decline, which no earlier turn changes.
+        # its verdict carries only when the follow-up stands alone (F1+: labeled by the first-question rules, so the same
+        # label was judged); an owner's decline judged without the turn before may not hold with it (Codex link
+        # review 1.3), so it goes to the second labeler like the rest.
         if not v and r["kind"] == "follow-up":
             v0 = review.get(f"QL-{TAB_SHORT[r['tab']]}-{r['hash']}")
-            if v0 and v0.get("status") != "disputed" and (r["label"]["rule"].startswith("F1+")
-                    or (v0["by"].startswith("jeff") and v0.get("expected", {}).get("outcome") == "decline")):
+            if v0 and v0.get("status") != "disputed" and r["label"]["rule"].startswith("F1+"):
                 v = {**v0, "why": (v0.get("why") or "") + " [carried from the question when it read as a first question]"}
         if not v:
             continue
