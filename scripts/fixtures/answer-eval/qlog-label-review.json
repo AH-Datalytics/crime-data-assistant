@@ -11,7 +11,16 @@
 },
 "QL-ct-027acf9113": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"period",
+"crime"
+]
+}
 },
 "QL-ct-02b4402008": {
 "status": "reviewed",
@@ -63,7 +72,15 @@
 },
 "QL-ct-05ade307b0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"crime"
+]
+}
 },
 "QL-ct-05d1e87c0a": {
 "status": "reviewed",
@@ -152,7 +169,16 @@
 },
 "QL-ct-0ccd61a7cd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"period",
+"crime"
+]
+}
 },
 "QL-ct-0d002d35e7": {
 "status": "reviewed",
@@ -172,14 +198,15 @@
 }
 },
 "QL-ct-0d825bc231": {
-"status": "draft",
-"by": "codex-check-4",
-"why": "crime type and the comparison cities' scope are missing (P12)",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
 "violent, property or both",
-"place"
+"place",
+"crime"
 ]
 }
 },
@@ -391,12 +418,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-15ffa7d9ce": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Completed-year aggravated assault counts use Historical.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Yearly Part I: \"Felony assaults should be declined\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "answer",
-"source": "historical"
+"outcome": "decline",
+"reason": "Felony assault is a local legal category, not one the FBI data records, so it can't be counted."
 }
 },
 "QL-ct-1630a3afab": {
@@ -412,14 +439,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-1737e5fc83": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P32 requires clarifying sexual assault categories.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
 "which sex offenses",
-"period"
+"period",
+"crime"
 ]
 }
 },
@@ -437,7 +465,12 @@
 },
 "QL-ct-183945b82a": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "This is a policy or political question, not a request for crime counts."
+}
 },
 "QL-ct-184df936d4": {
 "status": "reviewed",
@@ -591,14 +624,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-222e295bf3": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Cyber attacks name a specific subject rather than generic violent or property crime.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Offenses outside Part I: \"1 should be declined because we don't do cyber attacks\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which cyber offenses"
-]
+"outcome": "decline",
+"reason": "The site doesn't cover cyber attacks."
 }
 },
 "QL-ct-22364c0a38": {
@@ -754,13 +785,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-29099ae082": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P40 requires clarifying people killed rather than assuming murder.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Missing time period or scope: \"#1 should be answered\" (this is #1) (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"whether murder is meant"
+"outcome": "answer",
+"source": "shr",
+"source_any": [
+"shr",
+"nibrs"
 ]
 }
 },
@@ -775,7 +808,15 @@
 },
 "QL-ct-295bcbbbaf": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"crime",
+"period"
+]
+}
 },
 "QL-ct-2971127fb4": {
 "status": "reviewed",
@@ -811,14 +852,15 @@
 "by": "codex-second-1"
 },
 "QL-ct-2c17b16c68": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Areas does not specify cities, states or agencies under P27.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
 "place level",
-"period"
+"period",
+"crime"
 ]
 }
 },
@@ -1153,7 +1195,12 @@
 },
 "QL-ct-45f11db8dc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "This is a policy or political question, not a request for crime counts."
+}
 },
 "QL-ct-45f7ff203f": {
 "status": "reviewed",
@@ -1355,13 +1402,14 @@
 "by": "codex-second-1"
 },
 "QL-ct-50e100418a": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "The listed cities are truncated and the ranking scope is unspecified.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"complete city list or ranking scope"
+"complete city list or ranking scope",
+"crime"
 ]
 }
 },
@@ -1412,7 +1460,15 @@
 },
 "QL-ct-5412b91544": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"crime",
+"period"
+]
+}
 },
 "QL-ct-5479dabd5c": {
 "status": "reviewed",
@@ -1539,7 +1595,16 @@
 },
 "QL-ct-5bc387de95": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"period",
+"crime"
+]
+}
 },
 "QL-ct-5bc55e2a46": {
 "status": "reviewed",
@@ -1826,7 +1891,12 @@
 },
 "QL-ct-6991df79f8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "This is a policy or political question, not a request for crime counts."
+}
 },
 "QL-ct-69ad318e43": {
 "status": "reviewed",
@@ -2338,7 +2408,15 @@
 },
 "QL-ct-85b412bcd7": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-ct-86106b385c": {
 "status": "reviewed",
@@ -2498,7 +2576,12 @@
 },
 "QL-ct-8fd46d2aff": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
+}
 },
 "QL-ct-902f028776": {
 "status": "reviewed",
@@ -2738,7 +2821,15 @@
 },
 "QL-ct-9f18f436a0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"crime"
+]
+}
 },
 "QL-ct-9f2cc66b3e": {
 "status": "draft",
@@ -2778,7 +2869,12 @@
 },
 "QL-ct-a10e4c85df": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
+}
 },
 "QL-ct-a162513a6f": {
 "status": "reviewed",
@@ -2901,7 +2997,12 @@
 },
 "QL-ct-aa01c46d01": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
+}
 },
 "QL-ct-ab73c4c2c2": {
 "status": "draft",
@@ -2965,7 +3066,12 @@
 },
 "QL-ct-af7797adad": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "This is a policy or political question, not a request for crime counts."
+}
 },
 "QL-ct-b0405181c2": {
 "status": "reviewed",
@@ -2980,15 +3086,12 @@
 "by": "codex-second-1"
 },
 "QL-ct-b15d9749bf": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "The requested figures are crime trends; prison counts are supplied as context.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"violent, property or both",
-"period"
-]
+"outcome": "decline",
+"reason": "This is a policy or political question, not a request for crime counts."
 }
 },
 "QL-ct-b18701e8da": {
@@ -3278,15 +3381,23 @@
 },
 "QL-ct-c5febb0077": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"crime"
+]
+}
 },
 "QL-ct-c605731327": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Simple assaults require NIBRS.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Yearly Part I: \"Felony assaults should be declined\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "Felony assault is a local legal category, not one the FBI data records, so it can't be counted."
 }
 },
 "QL-ct-c61de4ef9f": {
@@ -3677,7 +3788,15 @@
 },
 "QL-ct-d977d4a625": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"crime",
+"period"
+]
+}
 },
 "QL-ct-d99b4e4a3f": {
 "status": "reviewed",
@@ -3955,7 +4074,12 @@
 },
 "QL-ct-e9453c025c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
+}
 },
 "QL-ct-e9d670fecb": {
 "status": "reviewed",
@@ -3967,7 +4091,15 @@
 },
 "QL-ct-ea8fcf985b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"crime"
+]
+}
 },
 "QL-ct-eae792fea4": {
 "status": "reviewed",
@@ -4116,7 +4248,15 @@
 },
 "QL-ct-f4e70ee5b8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"crime"
+]
+}
 },
 "QL-ct-f51a3df1b9": {
 "status": "draft",
@@ -4129,7 +4269,14 @@
 },
 "QL-ct-f5e1f49dc3": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"crime"
+]
+}
 },
 "QL-ct-f5eb45b43a": {
 "status": "reviewed",
@@ -4148,7 +4295,12 @@
 },
 "QL-ct-f67ae4ad47": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "This is a policy or political question, not a request for crime counts."
+}
 },
 "QL-ct-f688df1c26": {
 "status": "reviewed",
@@ -4169,7 +4321,12 @@
 },
 "QL-ct-f6dd5169ec": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
+}
 },
 "QL-ct-f6f0863a95": {
 "status": "reviewed",
@@ -4693,14 +4850,15 @@
 "by": "codex-second-1"
 },
 "QL-hist-08de9c1294": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "A national comparison line does not specify the city ranking scope.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
 "violent, property or both",
-"place"
+"place",
+"crime"
 ]
 }
 },
@@ -5180,7 +5338,16 @@
 },
 "QL-hist-27933240c3": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"period",
+"crime"
+]
+}
 },
 "QL-hist-27e59eb8e8": {
 "status": "reviewed",
@@ -5466,7 +5633,12 @@
 },
 "QL-hist-3bf7843018": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
+}
 },
 "QL-hist-3c422e1735": {
 "status": "reviewed",
@@ -5701,7 +5873,15 @@
 },
 "QL-hist-4a18f62bcf": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-hist-4a839cc5c4": {
 "status": "reviewed",
@@ -5990,7 +6170,15 @@
 },
 "QL-hist-5d8dbe9215": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-hist-5d8f232ce0": {
 "status": "reviewed",
@@ -6422,15 +6610,12 @@
 }
 },
 "QL-hist-75fdc8ed4b": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Cybercrime needs a recorded offense definition.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Offenses outside Part I: \"1 should be declined because we don't do cyber attacks\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which cyber offenses",
-"period"
-]
+"outcome": "decline",
+"reason": "The site doesn't cover cyber attacks."
 }
 },
 "QL-hist-7613957032": {
@@ -6527,7 +6712,12 @@
 },
 "QL-hist-7c97043770": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
+}
 },
 "QL-hist-7c9a9f394b": {
 "status": "draft",
@@ -6925,7 +7115,15 @@
 },
 "QL-hist-9829606e04": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-hist-985b92e740": {
 "status": "draft",
@@ -7609,7 +7807,16 @@
 },
 "QL-hist-c4be24fd9f": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"period",
+"crime"
+]
+}
 },
 "QL-hist-c4d9809764": {
 "status": "reviewed",
@@ -7669,14 +7876,12 @@
 "by": "codex-second-1"
 },
 "QL-hist-c7ba489595": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "No actual comparison or data request is supplied.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"the whole question"
-]
+"outcome": "decline",
+"reason": "This is a policy or political question, not a request for crime counts."
 }
 },
 "QL-hist-c7f6c6c7c8": {
@@ -8381,7 +8586,15 @@
 },
 "QL-hist-f917d91ae4": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-hist-f98e3ce3b0": {
 "status": "reviewed",
@@ -9604,11 +9817,11 @@
 },
 "QL-nibrs-31b2a79218": {
 "status": "reviewed",
-"by": "jeff-2026-11-04",
-"why": "P38 amended (Jeff: \"Merge; keep gang codes\"): gang-related murders answer from circumstance codes 04 and 05",
+"by": "jeff-2026-11-09",
+"why": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "answer",
-"source": "nibrs"
+"outcome": "decline",
+"reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
 }
 },
 "QL-nibrs-326656513a": {
@@ -9911,7 +10124,15 @@
 },
 "QL-nibrs-42be43dff1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period",
+"crime"
+]
+}
 },
 "QL-nibrs-42d415dae4": {
 "status": "reviewed",
@@ -10363,7 +10584,16 @@
 },
 "QL-nibrs-5445e3c9e2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"violent, property or both",
+"period",
+"crime"
+]
+}
 },
 "QL-nibrs-54ca21929c": {
 "status": "reviewed",
@@ -11046,15 +11276,12 @@
 }
 },
 "QL-nibrs-75fdc8ed4b": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "Cybercrime requires an offense definition.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "Offenses outside Part I: \"1 should be declined because we don't do cyber attacks\" (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "clarify",
-"about_any": [
-"which cyber offenses",
-"period"
-]
+"outcome": "decline",
+"reason": "The site doesn't cover cyber attacks."
 }
 },
 "QL-nibrs-7691a959e5": {
@@ -12327,7 +12554,12 @@
 },
 "QL-nibrs-b2e355cf84": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "decline",
+"reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
+}
 },
 "QL-nibrs-b2e66055d5": {
 "status": "draft",
@@ -13447,7 +13679,15 @@
 },
 "QL-nibrs-ea8fcf985b": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"crime"
+]
+}
 },
 "QL-nibrs-eb58ac7f53": {
 "status": "reviewed",
@@ -15317,7 +15557,15 @@
 },
 "QL-shr-9f18f436a0": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-09",
+"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"place",
+"crime"
+]
+}
 },
 "QL-shr-a14554c775": {
 "status": "reviewed",
@@ -15915,12 +16163,12 @@
 "by": "codex-second-1"
 },
 "QL-shr-d4068d7cd3": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "This asks about recorded classification capabilities.",
+"status": "reviewed",
+"by": "jeff-2026-11-09",
+"why": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09)",
 "expected": {
-"outcome": "answer",
-"source": "shr"
+"outcome": "decline",
+"reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
 }
 },
 "QL-shr-d5a602238c": {
