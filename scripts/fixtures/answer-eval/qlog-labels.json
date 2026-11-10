@@ -25,10 +25,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -4173,10 +4173,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Pre-coverage: \"THE HISTORICAL DATA STARTS AT 1930 FOR CITIES!\" (answerable) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -4446,11 +4446,11 @@
     "about": "the other cities"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "The referenced city list is missing while a rolling series qualifies under D5."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -6997,11 +6997,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "An agency-name lookup does not require a crime or period."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -7692,10 +7692,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -8504,7 +8504,7 @@
    "expected": {
     "outcome": "answer",
     "source": "rtci",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -8512,10 +8512,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R07",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a capability gap today"
+    "rule": "R07>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -15861,11 +15861,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Simple assaults require NIBRS."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Felony and simple assaults: answer the simple assaults and say why felony assaults aren't shown (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -16280,11 +16280,11 @@
     "about": "which Baltimore"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -16835,10 +16835,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -19832,11 +19832,11 @@
     "about": "which Baltimore"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P28 requires city versus county."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart plus styling: answer the data part (a data part missing a place still asks it) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -21764,10 +21764,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": ""
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Hate crimes rolling 12 months: \"Hate crime data from the FBI has by day, we should allow rolling when that is ready\" (build backlog) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -21812,10 +21812,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": ""
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Hate crimes rolling 12 months: \"Hate crime data from the FBI has by day, we should allow rolling when that is ready\" (build backlog) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -25765,10 +25765,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by year (Crime Index)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Pre-coverage: \"THE HISTORICAL DATA STARTS AT 1930 FOR CITIES!\" (answerable) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -31796,20 +31796,20 @@
    "question": "SWhow me murders in new orleans back to 1`980",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "clarify",
+    "source": null,
+    "about_any": [
+     "period",
+     "the whole question"
+    ],
+    "about": "period"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "The typographical punctuation still clearly identifies 1980."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Typo: ask (the year is garbled) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -32555,7 +32555,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -32563,10 +32563,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R07",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a capability gap today"
+    "rule": "R07>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -33847,11 +33847,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Prohibition names a historical period; unavailable years can be identified."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Pre-coverage: \"THE HISTORICAL DATA STARTS AT 1930 FOR CITIES!\" (answerable); the years from 1930 (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -41753,7 +41753,7 @@
    "expected": {
     "outcome": "answer",
     "source": "historical",
-    "answer": "a lookup (coverage, codes, agency list)",
+    "answer": "the figures asked for",
     "meaning": null,
     "values": {
      "status": "pending"
@@ -41761,10 +41761,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R07",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a capability gap today"
+    "rule": "R07>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -51101,11 +51101,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency population metadata is a lookup."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -65499,11 +65499,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Agency metadata is a lookup."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Agency table requests: answer in plain terms with the covered agencies and years, without showing the schema (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -68893,10 +68893,10 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "shr",
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -68906,10 +68906,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Pre-coverage: \"THE HISTORICAL DATA STARTS AT 1930 FOR CITIES!\" (answerable); monthly homicides from Homicide Reports (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -70538,7 +70538,10 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "nibrs",
+    "source": "shr",
+    "source_any": [
+     "shr"
+    ],
     "answer": "the figures asked for",
     "meaning": null,
     "values": {
@@ -70547,10 +70550,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a NIBRS detail (an agency's murder detail too: P53)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Pre-coverage: \"THE HISTORICAL DATA STARTS AT 1930 FOR CITIES!\" (answerable); firearm murders from Homicide Reports (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -73654,10 +73657,10 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "shr",
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -73667,10 +73670,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Pre-coverage: \"THE HISTORICAL DATA STARTS AT 1930 FOR CITIES!\" (answerable); monthly homicides from Homicide Reports (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -79174,10 +79177,10 @@
    "previous": null,
    "expected": {
     "outcome": "answer",
-    "source": "rtci",
+    "source": "shr",
     "source_any": [
-     "rtci",
-     "nibrs"
+     "shr",
+     "historical"
     ],
     "answer": "the figures asked for",
     "meaning": null,
@@ -79187,10 +79190,10 @@
    },
    "label": {
     "status": "reviewed",
-    "rule": "R14",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "a Part I figure by month (Current Trends, or NIBRS where it lacks the place)"
+    "rule": "R14>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Pre-coverage: \"THE HISTORICAL DATA STARTS AT 1930 FOR CITIES!\" (answerable); homicides through May from Homicide Reports (bad-declines review, 2026-11-09)"
    }
   },
   {
