@@ -3,7 +3,7 @@
  * Offline: a stub executor stands in for DuckDB over the build (scripts/build-crimeindex.py), and its SQL is checked.
  */
 import assert from "node:assert/strict";
-import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalSet, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
+import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
 import { answerCurrentRanking, type CurrentBuild } from "../lib/nibrs-shadow/current";
 import { rankAgencies } from "../lib/nibrs-plan/transforms";
@@ -606,5 +606,29 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   assert.equal(readQuestion("top 10 cities in Texas by murder in 2024", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities in 2024 by murder rate", 2026, "2026-09").largestSet, null);
   assert.equal(readQuestion("top 10 cities by population murder rate 2024", 2026, "2026-09").largestSet, 10);
+}
+// Census regions from Crime Index (bad-declines plan item 8): the region's cities ranked; its yearly total the sum of
+// its states, a year counted only when every state has a figure; DC said for the South.
+{
+  const gsql: string[] = [];
+  const MW = ["IL", "IN", "MI", "OH", "WI", "IA", "KS", "MN", "MO", "NE", "ND", "SD"];
+  const gexec = (sql: string) => { gsql.push(sql); return /state_crime/.test(sql) ? [[2023, 1000, 10_000_000, 12, 12], [2024, 900, 10_000_000, 11, 12]] : []; };
+  answerHistoricalRanking({ measure: "murder", state: "US", year: 2024, statistic: "rate", direction: "top", limit: 20, minPopulation: 100000, region: { name: "the Midwest", states: MW } }, build, gexec);
+  assert.match(gsql[0], /WHERE state IN \('IL', 'IN', 'MI', 'OH', 'WI', 'IA', 'KS', 'MN', 'MO', 'NE', 'ND', 'SD'\) AND \(type = 'city'/);
+  const g = answerHistoricalRegion({ measure: "robbery", region: { name: "the Midwest", states: MW }, from: 2023, to: 2024, statistic: "count", byYear: true }, build, gexec);
+  assert.ok(g.kind === "historical" && JSON.stringify(g.delivered.table.rows) === '[["2023",1000],["2024",null]]', JSON.stringify(g));
+  if (g.kind === "historical") assert.ok(g.delivered.text.some((t) => /A blank year is one in which a state of the region has no figure/.test(t)));
+  const south = answerHistoricalRegion({ measure: "robbery", region: { name: "the South", states: ["DC", "TX"] }, from: 2023, to: 2023, statistic: "rate", byYear: false },
+    build, () => [[2023, 100, 1_000_000, 1, 1]]);
+  assert.ok(south.kind === "historical" && JSON.stringify(south.delivered.table.rows) === "[[10]]" && south.delivered.text.some((t) => /District of Columbia isn't in the state totals/.test(t)), JSON.stringify(south));
+  // Through the shadow: a region's city ranking and total, never the nation's.
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: gexec, historical: build };
+  gsql.length = 0;
+  shadowAnswer("Which Midwest cities had the highest murder rate in 2024?", base as never);
+  assert.ok(gsql.some((x) => /state IN \('IL'.*population >= 100000/.test(x)), gsql.join("\n"));
+  gsql.length = 0;
+  const tot = shadowAnswer("robberies in the Midwest by year from 2023 to 2024", base as never);
+  assert.ok(tot.kind === "historical" && gsql.some((x) => /state_crime.*state IN \('IL'/.test(x)), JSON.stringify(tot).slice(0, 200));
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

@@ -417,6 +417,8 @@ export type HistoricalRankingQuestion = {
    * "agencies" are asked; or the states, 1960 on, without DC.
    */
   entity?: "city" | "state" | "agency";
+  /** A Census region (bad-declines plan item 8): its states, and its name for the answer; `state` is then "US". */
+  region?: { name: string; states: string[] };
 };
 export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
   const m = HISTORICAL_MEASURE[rq.measure];
@@ -433,7 +435,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
     ? execute(`SELECT state, name, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${q(`${build.root}/state_crime.parquet`)}) `
       + `WHERE year = ${rq.year} AND state <> 'DC' ORDER BY state`)
     : execute(`SELECT ori, ${cities ? cityNameSql() : "name"}, population, ${m.col}_total, ${m.col}_capita, state FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
-      + `WHERE ${national ? "" : `state = ${q(rq.state)} AND `}${cities ? `${citySql()} AND ` : `ori NOT IN (${CITY_AS.drop.map(q).join(", ")}) AND `}year = ${rq.year}${floorSql} ORDER BY ori`);
+      + `WHERE ${national ? (rq.region ? `state IN (${rq.region.states.map(q).join(", ")}) AND ` : "") : `state = ${q(rq.state)} AND `}${cities ? `${citySql()} AND ` : `ori NOT IN (${CITY_AS.drop.map(q).join(", ")}) AND `}year = ${rq.year}${floorSql} ORDER BY ori`);
   const entries = got.map((r) => {
     const total = num(r[3]), capita = num(r[4]), population = num(r[2]);
     const v = rate ? historicalRate(capita, total, population) : { rate: total, computed: false };
@@ -441,7 +443,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
     const name = national && !states ? `${String(r[1])}, ${String(r[5])}` : String(r[1]);
     return { ori: String(r[0]), name, state: national ? String(r[5]) : rq.state, population, value: v.rate, computed: v.computed, known: v.rate !== null };
   });
-  const where = national ? "United States" : stateName(rq.state);
+  const where = rq.region ? ucFirst(rq.region.name) : national ? "United States" : stateName(rq.state);
   const floor = rq.minPopulation && !states ? ` with a population of ${fmt(rq.minPopulation)} or more` : "";
   const figure = rate ? `${m.name} rate` : `${m.name} figure`;
   const unit = states ? "states" : cities ? "city agencies" : "agencies";
@@ -451,7 +453,7 @@ export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: Hi
   const what = rate ? `${m.name} rates` : m.words;
   const most = rq.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
   const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
-  const text = [`${states ? "States" : `${where} ${unit}`}${floor}: the ${ranked.length} with the ${most} ${what}${rate ? " per 100,000" : ""}, ${rq.year}.`,
+  const text = [`${states ? "States" : rq.region ? `${ucFirst(unit)} in ${rq.region.name}` : `${where} ${unit}`}${floor}: the ${ranked.length} with the ${most} ${what}${rate ? " per 100,000" : ""}, ${rq.year}.`,
     states ? `Ranked: the 50 states with a ${figure} in Crime Index for ${rq.year} (the District of Columbia is not a state); ties are ordered by name.`
       : cities ? `Ranked: city agencies (Crime Index's city geography, whatever the agency) with a ${figure} in Crime Index for ${rq.year}; ties are ordered by agency name.`
         : `Ranked: every agency, city and county, with a ${figure} in Crime Index for ${rq.year}; ties are ordered by agency name.`];
@@ -556,4 +558,55 @@ export function answerHistoricalSet(sq: HistoricalSetQuestion, build: Historical
 
 function ordinal(n: number): string {
   return `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`;
+}
+
+/**
+ * A Census region's yearly total from Crime Index (bad-declines plan item 8): the sum of its states' published totals,
+ * a year counted only when every one of its states has a figure (Jeff 2026-11-10: complete data only); a rate is the
+ * sum per 100,000 of the states' summed population. The District of Columbia isn't in the state totals: said for the South.
+ */
+export type HistoricalRegionQuestion = { measure: string; region: { name: string; states: string[] }; from: number; to: number; statistic: "count" | "rate"; byYear: boolean };
+export function answerHistoricalRegion(hq: HistoricalRegionQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
+  const m = HISTORICAL_MEASURE[hq.measure];
+  if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
+  const first = Math.max(1960, build.firstYear);
+  if (hq.from < first || hq.to > build.lastYear)
+    return { kind: "historical-decline", explanation: `Historical state figures in the data cover ${first} through ${build.lastYear}, so ${hq.from === hq.to ? hq.from : `${hq.from} through ${hq.to}`} is outside them.` };
+  const states = hq.region.states.filter((s) => s !== "DC");
+  const got = execute(`SELECT year, sum(${m.col}_total), sum(population), count(${m.col}_total), count(*) FROM read_parquet(${q(`${build.root}/state_crime.parquet`)}) `
+    + `WHERE state IN (${states.map(q).join(", ")}) AND year BETWEEN ${hq.from} AND ${hq.to} GROUP BY year ORDER BY year`);
+  const byYear = new Map(got.map((r) => [Number(r[0]), r]));
+  const years = Array.from({ length: hq.to - hq.from + 1 }, (_, i) => hq.from + i);
+  const rate = hq.statistic === "rate";
+  const value = (y: number): number | null => {
+    const r = byYear.get(y);
+    // Every state of the region with a figure, or the year is blank.
+    if (!r || Number(r[3]) !== states.length) return null;
+    const total = num(r[1]), pop = num(r[2]);
+    if (total === null) return null;
+    return rate ? (pop && pop > 0 ? Math.round((total * 1e6) / pop) / 10 : null) : total;
+  };
+  const name = ucFirst(hq.region.name);
+  const what = rate ? `${m.words} per 100,000` : m.words;
+  const span = hq.from === hq.to ? `${hq.from}` : `${hq.from} through ${hq.to}`;
+  let rows: (string | number | null)[][];
+  if (hq.byYear || hq.from !== hq.to) rows = years.map((y) => [String(y), value(y)]);
+  else rows = [[value(hq.from)]];
+  const text = [`${name} (${states.length} states): ${what}${hq.byYear || hq.from !== hq.to ? " by year" : ""}, ${span}.`,
+    `The region's states summed from Crime Index's state totals${rate ? "; the rate is per 100,000 of their summed population" : ""}.`];
+  if (hq.region.states.includes("DC")) text.push("The District of Columbia isn't in the state totals, so it isn't included.");
+  if (rows.some((r) => r[r.length - 1] === null)) text.push("A blank year is one in which a state of the region has no figure.");
+  text.push(SRS_SOURCE);
+  const period = { from: `${hq.from}-01`, to: `${hq.to}-12` };
+  const header = `${ucFirst(m.words)}${rate ? " per 100,000" : ""}`;
+  const columns = [...(rows[0].length > 1 ? [{ binding: { kind: "grouping" as const, dimension: "time.year" }, header: "Year" }] : []), { binding: { kind: "statistic" as const, as: "x" }, header }];
+  return {
+    kind: "historical", period,
+    question: { measure: hq.measure, agencies: [], from: hq.from, to: hq.to, byYear: rows[0].length > 1, statistic: hq.statistic, comparison: null },
+    meaning: { source: "historical", places: [{ kind: "national", name }], filters: [`the states of ${hq.region.name}`], measures: [{ name: m.name, unit: m.unit }], period,
+      groupings: rows[0].length > 1 ? ["year"] : [], statistic: rate ? "rate" : "count",
+      ...(rate ? { denominator: "the states' summed residents as published by Crime Index, per 100,000" } : {}) },
+    delivered: { table: { columns, rows }, text },
+    read: { table: "state_crime", column: `${m.col}_total`, release: build.release },
+  };
 }

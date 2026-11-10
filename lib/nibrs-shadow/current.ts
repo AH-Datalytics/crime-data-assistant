@@ -329,6 +329,8 @@ export type CurrentRankQuestion = {
   /** A ranking (top or bottom, cut at the limit), or the N largest by population. */
   pick: { kind: "rank"; direction: "top" | "bottom"; limit: number } | { kind: "largest"; n: number };
   minPopulation: number | null; entity: "city" | "agency";
+  /** A Census region: its states (`state` is then "US") and its name. */
+  region?: { name: string; states: string[] };
 };
 type CurrentEntry = { ori: string; name: string; state: string; population: number | null; value: number | null; known: boolean };
 export function currentEntries(b: CurrentBuild, historicalRoot: string, rq: CurrentRankQuestion, execute: (sql: string) => unknown[][]): { entries: CurrentEntry[]; months: number } {
@@ -338,7 +340,7 @@ export function currentEntries(b: CurrentBuild, historicalRoot: string, rq: Curr
   const national = rq.state === "US";
   const rows = execute(`WITH a AS (SELECT ori, any_value(state) AS state, sum(${col}_total) AS v, count(${col}_total) AS known, `
     + `max(CASE WHEN year * 100 + month = ${t} THEN population END) AS pop FROM read_parquet(${q(`${b.root}/current_crime.parquet`)}) `
-    + `WHERE sample AND year * 100 + month BETWEEN ${f} AND ${t}${national ? "" : ` AND state = ${q(rq.state)}`} GROUP BY ori), `
+    + `WHERE sample AND year * 100 + month BETWEEN ${f} AND ${t}${national ? (rq.region ? ` AND state IN (${rq.region.states.map(q).join(", ")})` : "") : ` AND state = ${q(rq.state)}`} GROUP BY ori), `
     + `n AS (SELECT ori, ${rq.entity === "city" ? cityNameSql() : "name"} AS name, type, row_number() OVER (PARTITION BY ori ORDER BY year DESC) AS k FROM read_parquet(${q(`${historicalRoot}/agency_crime.parquet`)})) `
     + `SELECT a.ori, n.name, a.state, a.pop, a.v, a.known FROM a JOIN n ON n.ori = a.ori AND n.k = 1 WHERE ${rq.entity === "city" ? citySql("n") : `n.ori NOT IN (${CITY_AS.drop.map(q).join(", ")})`} ORDER BY a.ori`);
   const entries = rows.map((r) => {
@@ -355,7 +357,7 @@ export function answerCurrentRanking(rq: CurrentRankQuestion, b: CurrentBuild, h
   if (!col) return { kind: "current-decline", explanation: "Current Trends has violent and property crime and the seven Part I offenses only." };
   if (rq.from < b.firstMonth || rq.to > b.lastMonth) return { kind: "current-decline", explanation: `Current Trends covers ${spanWords(b.firstMonth, b.lastMonth)}.` };
   const { entries } = currentEntries(b, historicalRoot, rq, execute);
-  const where = rq.state === "US" ? "the United States" : stateName(rq.state);
+  const where = rq.region ? rq.region.name : rq.state === "US" ? "the United States" : stateName(rq.state);
   const kindWord = rq.entity === "city" ? "city agencies" : "agencies";
   const floor = rq.minPopulation ? ` with a population of ${rq.minPopulation.toLocaleString("en-US")} or more` : "";
   if (!entries.length) return { kind: "current-decline", explanation: `Current Trends' sample has no ${kindWord}${floor} in ${where} for ${spanWords(rq.from, rq.to)}.` };

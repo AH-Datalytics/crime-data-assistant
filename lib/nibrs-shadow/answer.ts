@@ -54,7 +54,7 @@ import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalSet, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalRegion, answerHistoricalSet, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
@@ -1217,6 +1217,53 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         ...(place.kind === "agency" ? { agencyLine: reportedBy([agencyName(deps.places, place.ori)]).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, [place.ori], ledger0.question) ? { agencyNote: sheriffNote(deps, [place.ori], ledger0.question) } : {}) } : {}) }, cur, deps.execute);
       if (r.kind === "current") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+    }
+  }
+  // A Census region from Crime Index (bad-declines plan item 8): its cities ranked (Jeff's ranking rules: complete data,
+  // 100,000+ for a rate with no population named, Current Trends' sample past 2025), or its yearly total, the sum of its
+  // states. Anything else asked of a region keeps the decline below.
+  const regionKey = flags(ledger0).region;
+  const plain = !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
+    && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).arrestsThrough && !flags(ledger0).combined && !flags(ledger0).column
+    && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+  if (regionKey && deps.historical && plain) {
+    const region = { name: REGIONS[regionKey].name, states: REGIONS[regionKey].states };
+    const hb = deps.historical;
+    const sp = d.spec;
+    const toDate = saysToDate(ledger0);
+    if (sp.type === "rank" && (sp.entity === "city" || sp.entity === "agency") && sp.scope.kind === "national" && isHistoricalMeasure(sp.measure)
+      && (sp.statistic === "count" || sp.statistic === "rate")) {
+      const named = sp.min ? (sp.min.op === ">" ? sp.min.amount + 1 : sp.min.amount) : flags(ledger0).largeCities ? 250000 : null;
+      const defaultFloor = sp.statistic === "rate" && named === null ? 100000 : null;
+      const said = <T extends { delivered: { text: string[] } }>(r: T): T => {
+        if (defaultFloor) r.delivered.text.splice(1, 0, "No population was given, so rates are ranked among agencies of 100,000 or more.");
+        return r;
+      };
+      const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
+      const base = { measure: sp.measure, statistic: sp.statistic === "rate" ? "rate" as const : "count" as const, minPopulation: named ?? defaultFloor };
+      if (yrs && yrs[0] === yrs[1] && yrs[0] <= hb.lastYear && !toDate) {
+        const r = answerHistoricalRanking({ ...base, state: "US", year: yrs[0], direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20, entity: sp.entity, region }, hb, deps.execute);
+        if (r.kind === "historical") return said(r);
+        return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
+      const cur = deps.current;
+      const ctSpan = yrs && yrs[0] === yrs[1] && cur ? currentYearSpan(yrs[0], cur, toDate) : null;
+      if (ctSpan && cur) {
+        const r = answerCurrentRanking({ ...base, state: "US", from: ctSpan[0], to: ctSpan[1], pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 },
+          entity: sp.entity === "agency" ? "agency" : "city", region }, cur, hb.root, deps.execute, rankAgencies);
+        if (r.kind === "current") return said(r);
+        return decline("unsupported_capability", r.explanation);
+      }
+    }
+    if (sp.type === "series" && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && (sp.statistic === "count" || sp.statistic === "rate")
+      && sp.places.length === 1 && sp.places[0].kind === "national" && !sp.filters.length && !sp.window && (sp.grain === "year" || sp.grain === "total")
+      && historicalUnitFits(sp.measures[0], sp.unit) && !toDate) {
+      const yrs = yearSpan({ period: sp.period, grain: sp.grain }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
+      if (yrs && yrs[1] <= hb.lastYear) {
+        const r = answerHistoricalRegion({ measure: sp.measures[0], region, from: yrs[0], to: yrs[1], statistic: sp.statistic === "rate" ? "rate" : "count", byYear: sp.grain === "year" }, hb, deps.execute);
+        if (r.kind === "historical") return r;
+        return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
     }
   }
   // A Census region is a Current Trends group only: anything else asked of one is said plainly, never answered for the nation.
