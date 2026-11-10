@@ -412,13 +412,17 @@ synthetic = {norm(s) for s in json.load(open(args.synthetic, encoding="utf-8"))}
 LINK_MINUTES = 5
 _last = {}
 # The row before is the one before in the tab, with a session or not (Codex link review 1.1); a synthetic row (the
-# repo's own test strings) is never a previous turn, and a row right after one stays a first question (1.2).
+# repo's own test strings) is never a previous turn, and a row right after one stays a first question (1.2). A row that
+# is a question of its own (it names its crime and place, or crime, place and period) stays a first question: the link
+# is only a guess by time, and pairing it with someone else's question gave the engine context it never had (job N:
+# "DC murders rolling over 6 months" read after "Kansas City robberies per year").
 for r in sorted(rows, key=lambda r: (r["ts"], r["id"])):
     if r.get("tab") not in TAB_SOURCE:
         continue
     p = _last.get(r["tab"])
     if (r.get("session_id") is None and p is not None and not r.get("previous") and r["ts"] - p["ts"] <= LINK_MINUTES * 60_000
-            and (p.get("question") or "").strip() and norm(p["question"]) not in synthetic):
+            and (p.get("question") or "").strip() and norm(p["question"]) not in synthetic
+            and not (stands_alone(r.get("question") or "") or complete(r.get("question") or ""))):
         r["previous"], r["n"] = p["question"], (p.get("n") or 1) + 1
     _last[r["tab"]] = r
 firsts, follows = {}, {}
