@@ -68,18 +68,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -405,17 +406,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
-     "violent, property or both"
-    ]
+     "violent, property or both",
+     "crime"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -870,18 +872,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -971,16 +974,17 @@
     "source": null,
     "about_any": [
      "violent, property or both",
-     "place"
+     "place",
+     "crime"
     ],
     "about": "violent, property or both"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09b>2nd",
-    "drafted_by": "codex-check-4",
-    "reviewed_by": null,
-    "notes": "crime type and the comparison cities' scope are missing (P12)"
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -1827,20 +1831,16 @@
    "question": "what are the count of felony assaults in new york city in 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "historical",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Felony assault is a local legal category, not one the FBI data records, so it can't be counted."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Completed-year aggravated assault counts use Historical."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Yearly Part I: \"Felony assaults should be declined\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -1933,16 +1933,17 @@
     "source": null,
     "about_any": [
      "which sex offenses",
-     "period"
+     "period",
+     "crime"
     ],
     "about": "which sex offenses"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P32 requires clarifying sexual assault categories."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -2036,19 +2037,16 @@
    "question": "How has crime changed in Philadelphia since larry krasner was elected",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
+    "reason": "This is a policy or political question, not a request for crime counts."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -2859,19 +2857,16 @@
    "question": "How have crimes involving cyber attacks in the US trended from 2020 to present?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which cyber offenses"
-    ],
-    "about": "which cyber offenses"
+    "reason": "The site doesn't cover cyber attacks."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09b>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Cyber attacks name a specific subject rather than generic violent or property crime."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Offenses outside Part I: \"1 should be declined because we don't do cyber attacks\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -3673,19 +3668,24 @@
    "question": "How many Hispanic or Latino people were killed in Texas in the last five years?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about_any": [
-     "whether murder is meant"
+    "outcome": "answer",
+    "source": "shr",
+    "source_any": [
+     "shr",
+     "nibrs"
     ],
-    "about": "whether murder is meant"
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P40 requires clarifying people killed rather than assuming murder."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Missing time period or scope: \"#1 should be answered\" (this is #1) (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -3726,18 +3726,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "crime",
     "about_any": [
      "crime",
      "period"
-    ]
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -3933,16 +3933,17 @@
     "source": null,
     "about_any": [
      "place level",
-     "period"
+     "period",
+     "crime"
     ],
     "about": "place level"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Areas does not specify cities, states or agencies under P27."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -5549,21 +5550,16 @@
    "question": "St Louis, MO\t150\t277,294\t54.1 Memphis, TN\t250\t613,207\t40.8 Baton Rouge, LA\t77\t217,387\t35.4 Baltimore, MD\t197\t566,632\t34.8 New Orleans, LA\t124\t361,802\t34.3 Detroit, MI\t203\t651,171\t31.2 Cleveland, OH\t111\t362,762\t30.6 Kansas City, MO\t141\t511,437\t27.6 Washington, DC\t187\t702,250\t26.6 Atlanta, GA",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime",
-     "which Baltimore",
-     "period"
-    ]
+    "reason": "This is a policy or political question, not a request for crime counts."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -6531,16 +6527,17 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "complete city list or ranking scope"
+     "complete city list or ranking scope",
+     "crime"
     ],
     "about": "complete city list or ranking scope"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "The listed cities are truncated and the ranking scope is unspecified."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -6812,18 +6809,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "crime",
     "about_any": [
      "crime",
      "period"
-    ]
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -7349,18 +7346,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
      "place",
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -8726,19 +8724,16 @@
    "question": "please show a chart comparing overall crime trends in red states and blue states (defined by most recent presidential election vote) since 2000",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "violent, property or both",
-    "about_any": [
-     "violent, property or both"
-    ]
+    "reason": "This is a policy or political question, not a request for crime counts."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -11164,17 +11159,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -11991,19 +11987,16 @@
    "question": "Ok but make the DC line yellow",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "rule": "R08>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -13168,17 +13161,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place"
-    ]
+     "place",
+     "crime"
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -13293,21 +13287,16 @@
    "question": "in this chart, please highlight Charlotte's position in a different color so that it is readily visible",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime",
-     "which Charlotte",
-     "period"
-    ]
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -13910,20 +13899,16 @@
    "question": "Great. Please also add Detroit. And make the DC line darker",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime",
-     "period"
-    ]
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -14219,19 +14204,16 @@
    "question": "chart the homicide rate in states won by donald trump vs states won by kamala harris",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "This is a policy or political question, not a request for crime counts."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -14325,20 +14307,16 @@
    "question": "I was just looking at prison population statistics for the five largest states, and the inmate numbers appear to be rising in Texas, Florida and New York and falling in California and Pennsylvania. Do the crime numbers from those states show a similar divergence?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "violent, property or both",
-     "period"
-    ],
-    "about": "violent, property or both"
+    "reason": "This is a policy or political question, not a request for crime counts."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R03>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "The requested figures are crime trends; prison counts are supplied as context."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -15850,17 +15828,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
-     "violent, property or both"
-    ]
+     "violent, property or both",
+     "crime"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -15873,20 +15852,16 @@
    "question": "What is the count of felony assaults and simply assaults in New York City between 2018 and 2025",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Felony assault is a local legal category, not one the FBI data records, so it can't be counted."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Simple assaults require NIBRS."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Yearly Part I: \"Felony assaults should be declined\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -17462,18 +17437,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "crime",
     "about_any": [
      "crime",
      "period"
-    ]
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -18817,19 +18792,16 @@
    "question": "Ok fine but the DC line needs to be darker and yellow.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "rule": "R08>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -18899,17 +18871,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place"
-    ]
+     "place",
+     "crime"
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -19746,17 +19719,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place"
-    ]
+     "place",
+     "crime"
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -19797,17 +19771,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "crime",
     "about_any": [
      "crime"
-    ]
+    ],
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -19871,19 +19845,16 @@
    "question": "What happens to national murder rates if we ignore nypd?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "period",
-    "about_any": [
-     "period"
-    ]
+    "reason": "This is a policy or political question, not a request for crime counts."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -19949,19 +19920,16 @@
    "question": "this does not make charlotte visible. Can you connect the dots representing charlotte with a single line that is bright yellow while leaving the rest in red?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "rule": "R08>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -22728,16 +22696,17 @@
     "source": null,
     "about_any": [
      "violent, property or both",
-     "place"
+     "place",
+     "crime"
     ],
     "about": "violent, property or both"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R09b>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "A national comparison line does not specify the city ranking scope."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -25087,18 +25056,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -26558,20 +26528,16 @@
    "question": "same chart but add a line for national violent crime rate and make Charlotte's line bright yellow",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "which Charlotte",
-    "about_any": [
-     "which Charlotte",
-     "period"
-    ]
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R11",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "several places have this name (P26 for New York)"
+    "rule": "R11>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -27783,17 +27749,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -29178,17 +29145,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -31396,20 +31364,16 @@
    "question": "How common is cybercrime in New Hampshire?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which cyber offenses",
-     "period"
-    ],
-    "about": "which cyber offenses"
+    "reason": "The site doesn't cover cyber attacks."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Cybercrime needs a recorded offense definition."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Offenses outside Part I: \"1 should be declined because we don't do cyber attacks\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -31879,21 +31843,16 @@
    "question": "make charlotte a bright yellow color so it stands out better",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "crime",
-    "about_any": [
-     "crime",
-     "which Charlotte",
-     "period"
-    ]
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D31"
+    "rule": "R09>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Chart styling: \"Decline is right, our charts are fine now\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -33903,17 +33862,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -37465,18 +37425,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -37822,19 +37783,16 @@
    "question": "Here are states that collect DNA for felony arrests. The rest only collect them for felony convictions.",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "the whole question"
-    ],
-    "about": "the whole question"
+    "reason": "This is a policy or political question, not a request for crime counts."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "No actual comparison or data request is supplied."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Policy, politics or not a data question: \"Decline\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -41488,17 +41446,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -47648,20 +47607,16 @@
    "question": "Show me gang-related murders in Chicago by year since 2020",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
    },
    "label": {
     "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-04",
-    "reviewed_by": "jeff-2026-11-04",
-    "notes": "P38 amended (Jeff: \"Merge; keep gang codes\"): gang-related murders answer from circumstance codes 04 and 05"
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -49185,17 +49140,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "period",
     "about_any": [
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R13",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P06/D31"
+    "rule": "R13>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -51365,18 +51321,19 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "violent, property or both",
     "about_any": [
      "violent, property or both",
-     "period"
-    ]
+     "period",
+     "crime"
+    ],
+    "about": "violent, property or both"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R09b",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "D09"
+    "rule": "R09b>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -54922,20 +54879,16 @@
    "question": "How common is cybercrime in New Hampshire?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about_any": [
-     "which cyber offenses",
-     "period"
-    ],
-    "about": "which cyber offenses"
+    "reason": "The site doesn't cover cyber attacks."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R13>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "Cybercrime requires an offense definition."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Offenses outside Part I: \"1 should be declined because we don't do cyber attacks\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -61251,19 +61204,16 @@
    "question": "How many related to gangs?",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
+    "outcome": "decline",
     "source": null,
-    "about": "the whole question",
-    "about_any": [
-     "the whole question"
-    ]
+    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
    },
    "label": {
     "status": "reviewed",
-    "rule": "R08",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "no crime, and no place or a word pointing back"
+    "rule": "R08>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -66624,17 +66574,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place"
-    ]
+     "place",
+     "crime"
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -75716,17 +75667,18 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place"
-    ]
+     "place",
+     "crime"
+    ],
+    "about": "place"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
    }
   },
   {
@@ -78716,20 +78668,16 @@
    "question": "does the data classify gang homicides",
    "previous": null,
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "This asks about recorded classification capabilities."
+    "drafted_by": "jeff-2026-11-09",
+    "reviewed_by": "jeff-2026-11-09",
+    "notes": "P38 reversed (Jeff 2026-11-09): \"decline and explain why\"; gang-related can be ill-defined and poorly reported (bad-declines review, 2026-11-09)"
    }
   },
   {
