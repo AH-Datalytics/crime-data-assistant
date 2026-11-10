@@ -3,7 +3,7 @@
  * Offline: a stub executor stands in for DuckDB over the build (scripts/build-crimeindex.py), and its SQL is checked.
  */
 import assert from "node:assert/strict";
-import { answerBeside, answerHistorical, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
+import { answerBeside, answerHistorical, answerHistoricalRanking, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
 import { shadowAnswer, shadowFollowUp, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { standsAlone } from "../lib/nibrs-shadow/follow-up";
@@ -378,4 +378,51 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   }
 }
 
+// A state's city agencies ranked from Crime Index for one year (Jeff 2026-11-10, option A): ties at the cut all shown,
+// agencies with no figure left out and named, the computed rate said, P08's floor in the SQL, the pre-1960 caveat.
+{
+  const rsql: string[] = [];
+  // ori, name, population, total, capita
+  const TX1950: unknown[][] = [["TXHPD0000", "Houston", 596163, 91, 15.3], ["TXDPD0000", "Dallas", 434462, 59, 13.6], ["TX2201200", "Fort Worth", 278778, 48, 17.2],
+    ["TX0000001", "Abilene", 45570, 48, null], ["TX0000002", "Tyler", 38968, null, null], ["TX0000003", "Laredo", 51910, null, null]];
+  const rexec = (sql: string) => { rsql.push(sql); return /type = 'city'/.test(sql) && /year = 1950/.test(sql) ? TX1950 : []; };
+  const r = answerHistoricalRanking({ measure: "murder", state: "TX", year: 1950, statistic: "count", direction: "top", limit: 3, minPopulation: null }, build, rexec);
+  assert.ok(r.kind === "historical", JSON.stringify(r));
+  if (r.kind === "historical") {
+    assert.deepEqual(r.delivered.table.rows, [["Houston", 91], ["Dallas", 59], ["Abilene", 48], ["Fort Worth", 48]]);
+    assert.equal(r.delivered.text[0], "Texas city agencies: the 4 with the most murders, 1950.");
+    assert.ok(r.delivered.text.includes("Abilene and Fort Worth tie for 3rd, so 4 agencies are shown."), JSON.stringify(r.delivered.text));
+    assert.ok(r.delivered.text.includes("Not ranked because Crime Index has no murder figure for them in 1950: Laredo and Tyler."), JSON.stringify(r.delivered.text));
+    assert.ok(r.delivered.text.some((t) => /^Data before 1960 may reflect incomplete or limited reporting/.test(t)));
+    assert.equal(r.delivered.text[r.delivered.text.length - 1], SRS_SOURCE);
+    assert.equal(r.meaning.statistic, "rank");
+    assert.match(rsql[0], /FROM read_parquet\('\/ci\/agency_crime\.parquet'\) WHERE state = 'TX' AND type = 'city' AND year = 1950/);
+  }
+  // A rate: the published one, else the count per 100,000 of the published population (P75), said.
+  const rr = answerHistoricalRanking({ measure: "murder", state: "TX", year: 1950, statistic: "rate", direction: "top", limit: 2, minPopulation: null }, build, rexec);
+  assert.ok(rr.kind === "historical");
+  if (rr.kind === "historical") {
+    assert.deepEqual(rr.delivered.table.rows, [["Abilene", 105.3], ["Fort Worth", 17.2]]);
+    const all = answerHistoricalRanking({ measure: "murder", state: "TX", year: 1950, statistic: "rate", direction: "bottom", limit: 10, minPopulation: null }, build, rexec);
+    assert.ok(all.kind === "historical" && all.delivered.text.some((t) => /publishes no murder rate for Abilene in 1950; its rate is the count per 100,000/.test(t)), JSON.stringify(all));
+    assert.ok(all.kind === "historical" && all.delivered.table.rows[0][0] === "Dallas");
+  }
+  // P08's floor is in the query; a year outside the build is declined with the span.
+  rsql.length = 0;
+  answerHistoricalRanking({ measure: "robbery", state: "CA", year: 1985, statistic: "count", direction: "bottom", limit: 20, minPopulation: 250000 }, build, rexec);
+  assert.match(rsql[0], /AND population >= 250000/);
+  const out = answerHistoricalRanking({ measure: "murder", state: "TX", year: 1925, statistic: "count", direction: "top", limit: 20, minPopulation: null }, build, rexec);
+  assert.ok(out.kind === "historical-decline" && /cover 1930 through 2025, so 1925 is outside them/.test(out.explanation));
+  // No 1960 caveat from 1960 on.
+  const later = answerHistoricalRanking({ measure: "murder", state: "TX", year: 1950, statistic: "count", direction: "top", limit: 20, minPopulation: null }, { ...build, firstYear: 1930 }, rexec);
+  assert.ok(later.kind === "historical");
+  // The shadow: a ranking of a state's cities in a year before NIBRS's is Crime Index's; a NIBRS year never is.
+  const places = loadPlaceIndex();
+  const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
+  const viaShadow = shadowAnswer("Which Texas cities had the most murders in 1950?", base as never) as ShadowOutcome & { question?: { ranking?: unknown } };
+  assert.ok(viaShadow.kind === "historical" && !!viaShadow.question?.ranking, JSON.stringify(viaShadow).slice(0, 300));
+  let nibrsYear: ShadowOutcome | null = null;
+  try { nibrsYear = shadowAnswer("Which Texas cities had the most murders in 2024?", base as never); } catch { /* the stub has no NIBRS rows */ }
+  assert.ok(!(nibrsYear && nibrsYear.kind === "historical"), "a NIBRS year keeps the NIBRS ranking");
+}
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");

@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Meaning } from "../answer-eval/case";
 import type { ResultTable } from "../nibrs-plan/result";
-import { pct1 } from "../nibrs-plan/transforms";
+import { pct1, rankAgencies } from "../nibrs-plan/transforms";
 import { fmt, fmtRate, periodWords, SRS_SOURCE } from "./deliver";
 import { stateName } from "./places";
 import { answerSrsSeveral, type SrsPlace } from "./srs";
@@ -90,6 +90,8 @@ export type HistoricalQuestion = {
   shown?: string[];
   /** A state's agencies listed by population (population.ts, item 11b): the state, how many, the largest few. */
   list?: { state: string; count: number; top: { label: string; population: number }[] };
+  /** A ranking of a state's city agencies (answerHistoricalRanking): the state, the direction and how many. */
+  ranking?: { state: string; direction: "top" | "bottom"; limit: number; minPopulation: number | null };
 };
 export type HistoricalAnswer = {
   kind: "historical"; meaning: Meaning; period: { from: string; to: string };
@@ -377,5 +379,71 @@ export function answerBeside(hq: HistoricalQuestion, places: BesidePlace[], buil
       ...(rate ? { denominator: "each place's population as published by Crime Index, per 100,000" } : {}) },
     delivered: { table: { columns, rows }, text: [title, ...rest, ...rateNote, SRS_SOURCE] },
     read: { ...a.read, table: "agency_crime + historical_crime_states_nation_1960-2025.csv" },
+  };
+}
+
+/**
+ * A state's city agencies ranked from Crime Index for one year (Jeff 2026-11-10, option A: "any year from 1930 to 2025,
+ * counts and rates"): the build's agency rows of type city in the state, with a figure for the year, by count or by
+ * rate per 100,000 (P75: the published rate, else the count per 100,000 of the published population), ties ordered by
+ * name and every place tied at the cut shown (P17, as the NIBRS ranking, rankAgencies); cut at the limit (D05: 20). An
+ * agency with no figure is left out and counted; before 1960 the reporting caveat is said (fewer agencies reported).
+ */
+export type HistoricalRankingQuestion = {
+  measure: string; state: string; year: number; statistic: "count" | "rate"; direction: "top" | "bottom"; limit: number;
+  /** P08: "large" cities, 250,000 residents or more by the year's published population. */
+  minPopulation: number | null;
+};
+export function answerHistoricalRanking(rq: HistoricalRankingQuestion, build: HistoricalBuild, execute: (sql: string) => unknown[][]): HistoricalAnswer | HistoricalDecline {
+  const m = HISTORICAL_MEASURE[rq.measure];
+  if (!m) return { kind: "historical-decline", explanation: "Historical has violent and property crime and the seven Part I offenses only." };
+  if (rq.year < build.firstYear || rq.year > build.lastYear)
+    return { kind: "historical-decline", explanation: `Historical city figures in the data cover ${build.firstYear} through ${build.lastYear}, so ${rq.year} is outside them.` };
+  if (!/^[A-Z]{2}$/.test(rq.state)) return { kind: "historical-decline", explanation: "This isn't available yet: a ranking outside one state." };
+  const rate = rq.statistic === "rate";
+  const got = execute(`SELECT ori, name, population, ${m.col}_total, ${m.col}_capita FROM read_parquet(${q(`${build.root}/agency_crime.parquet`)}) `
+    + `WHERE state = ${q(rq.state)} AND type = 'city' AND year = ${rq.year}${rq.minPopulation ? ` AND population >= ${Math.floor(rq.minPopulation)}` : ""} ORDER BY ori`);
+  const entries = got.map((r) => {
+    const total = num(r[3]), capita = num(r[4]), population = num(r[2]);
+    const v = rate ? historicalRate(capita, total, population) : { rate: total, computed: false };
+    return { ori: String(r[0]), name: String(r[1]), population, value: v.rate, computed: v.computed, known: v.rate !== null };
+  });
+  const where = stateName(rq.state);
+  const floor = rq.minPopulation ? ` with a population of ${fmt(rq.minPopulation)} or more` : "";
+  const figure = rate ? `${m.name} rate` : `${m.name} figure`;
+  if (!entries.length) return { kind: "historical-decline", explanation: `Crime Index has no city agencies${floor} in ${where} for ${rq.year}.` };
+  const { ranked, leftOut, tie } = rankAgencies(entries, rq.direction, rq.limit);
+  if (!ranked.length) return { kind: "historical-decline", explanation: `Crime Index has no ${figure} for any city agency${floor} in ${where} in ${rq.year}: not available in this data.` };
+  const what = rate ? `${m.name} rates` : m.words;
+  const most = rq.direction === "top" ? (rate ? "highest" : "most") : (rate ? "lowest" : "fewest");
+  const andList = (xs: string[]) => (xs.length > 2 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs.join(" and "));
+  const text = [`${where} city agencies${floor}: the ${ranked.length} with the ${most} ${what}${rate ? " per 100,000" : ""}, ${rq.year}.`,
+    `Ranked: city agencies with a ${figure} in Crime Index for ${rq.year}; ties are ordered by agency name.`];
+  if (tie) {
+    const nth = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+    text.push(`${andList(tie.names)} tie for ${nth(tie.position)}, so ${tie.shown} agencies are shown.`);
+  }
+  if (leftOut.length) text.push(`Not ranked because Crime Index has no ${figure} for them in ${rq.year}: ${leftOut.length <= 5 ? andList(leftOut.map((a) => a.name).sort((x, y) => x.localeCompare(y))) : `${leftOut.length} city agencies`}.`);
+  if (rate) {
+    text.push("Rates are per 100,000 of each agency's population as published by Crime Index.");
+    const computed = ranked.filter((a) => a.computed).map((a) => a.name);
+    if (computed.length) text.push(`Crime Index publishes no ${m.name} rate for ${andList(computed)} in ${rq.year}; ${computed.length > 1 ? "their rates are" : "its rate is"} the count per 100,000 of the published population.`);
+  }
+  if (rq.year < 1960) text.push("Data before 1960 may reflect incomplete or limited reporting: fewer agencies reported then, and only those that did are ranked.");
+  text.push(SRS_SOURCE);
+  const header = `${ucFirst(m.words)}${rate ? " per 100,000" : ""}`;
+  const period = { from: `${rq.year}-01`, to: `${rq.year}-12` };
+  const agencies = ranked.map((a) => ({ ori: a.ori, label: a.name, name: a.name, state: rq.state }));
+  return {
+    kind: "historical", period,
+    question: { measure: rq.measure, agencies, from: rq.year, to: rq.year, byYear: false, statistic: rq.statistic, comparison: null,
+      ranking: { state: rq.state, direction: rq.direction, limit: rq.limit, minPopulation: rq.minPopulation } },
+    meaning: { source: "historical", places: [{ kind: "state", name: where, state: rq.state }], filters: ["city agencies", ...(rq.minPopulation ? [`population ${fmt(rq.minPopulation)} or more`] : [])],
+      measures: [{ name: m.name, unit: m.unit }], period, groupings: ["agency"], statistic: "rank",
+      rank: { by: rate ? `${m.name} rate` : m.words, direction: rq.direction, limit: rq.limit },
+      ...(rate ? { denominator: "the agency's residents as published by Crime Index, per 100,000" } : {}) },
+    delivered: { table: { columns: [{ binding: { kind: "grouping", dimension: "geo.agency" }, header: "Agency" }, { binding: { kind: "statistic", as: "x" }, header }],
+      rows: ranked.map((a) => [a.name, a.value]) }, text },
+    read: { table: "agency_crime", column: `${m.col}_${rate ? "capita" : "total"}`, release: build.release },
   };
 }

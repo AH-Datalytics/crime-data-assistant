@@ -34,7 +34,7 @@ import { NOT_YET, plainReaderExplanation } from "./wording";
 import type { Part, RequestLedger } from "../request-accounting";
 import { COURT_TEXT, FORECAST_TEXT, GANG, readQuestion, readingSentence, type Flags } from "./reading";
 import { deterministicRewriter, standsAlone, type FollowUpRewriter, type Rewrite } from "./follow-up";
-import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod } from "../nibrs-question-types";
+import { matchNibrsType, MEASURE_CODES, periodOf, placeOf, type MatchOptions, type NPeriod, type NPlace } from "../nibrs-question-types";
 import { answerAgencyList, answerPopulation, type PopulationPlace } from "./population";
 import { answerStaffing, type StaffKind } from "./staffing";
 /** The shadow reads the monthly build: breakdowns by month are answered (coordinator 2026-11-02). */
@@ -54,7 +54,7 @@ import { answerPlaces } from "./places-answer";
 import { answerSrs, answerSrsSeveral, isSrsMeasure, type SrsAnswer, type SrsPlace } from "./srs";
 import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
-import { answerBeside, answerHistorical, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
+import { answerBeside, answerHistorical, answerHistoricalRanking, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
 import { answerCurrent, answerCurrentChange, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
@@ -1134,6 +1134,22 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         comparison: cmp ? { earlier: Number(cmp.earlier.from.slice(0, 4)), later: Number(cmp.later.from.slice(0, 4)) } : null,
         notes: reachesNow ? [`${thisYear} is this year: its figures come from Current Trends (Crime Index) and are not included here.`] : [],
         agencyLine: reportedBy(list.map((a) => agencyName(deps.places, a.ori))).replace(/^Reported by /, "Figures for "), ...(sheriffNote(deps, list.map((a) => a.ori), ledger0.question) ? { agencyNote: sheriffNote(deps, list.map((a) => a.ori), ledger0.question) } : {}) }, deps.historical, deps.execute);
+      if (r.kind === "historical") return r;
+      return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+    }
+  }
+  // A state's cities ranked for one year before NIBRS's years: from Crime Index (Jeff 2026-11-10, option A: "any year
+  // from 1930 to 2025, counts and rates"). A year NIBRS holds keeps the NIBRS ranking; a population floor other than
+  // "large" (P08), a count threshold, a clearance or a detail stays on its own path.
+  if (deps.historical && d.spec.type === "rank" && d.spec.entity === "city" && d.spec.scope.kind === "state" && isHistoricalMeasure(d.spec.measure)
+    && (d.spec.statistic === "count" || d.spec.statistic === "rate") && !d.spec.min && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent
+    && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance && !flags(ledger0).people && !flags(ledger0).composite
+    && !flags(ledger0).arrestsThrough && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept))) {
+    const sp = d.spec, scope = sp.scope as Extract<NPlace, { kind: "state" }>;
+    const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), deps.historical.firstYear);
+    if (yrs && yrs[0] === yrs[1] && yrs[0] < Number(release.firstMonth.slice(0, 4))) {
+      const r = answerHistoricalRanking({ measure: sp.measure, state: scope.code.toUpperCase(), year: yrs[0], statistic: sp.statistic === "rate" ? "rate" : "count", direction: sp.rank?.dir ?? "top",
+        limit: sp.rank?.n ?? 20, minPopulation: flags(ledger0).largeCities ? 250000 : null }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
     }
