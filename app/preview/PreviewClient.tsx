@@ -59,7 +59,7 @@ function Buttons({ buttons, onButton }: { buttons: PreviewButton[]; onButton: (b
 }
 
 function Outcome({ r, onButton }: { r: PreviewResponse; onButton: (b: PreviewButton) => void }) {
-  if (r.kind === "clarify") return (<div><p>Which {r.about.replace(/^which /, "")}?</p><Buttons buttons={r.buttons} onButton={onButton} /></div>);
+  if (r.kind === "clarify") return (<div><p>Which {r.about.replace(/^which /, "")}?</p>{r.note ? <p>{r.note}</p> : null}<Buttons buttons={r.buttons} onButton={onButton} /></div>);
   if (r.kind === "decline") return (<div><p>{r.text}</p>{r.notBuilt ? <p className="text-sm text-gray-500">(Outside the years the data here covers.)</p> : null}<Buttons buttons={r.buttons} onButton={onButton} /></div>);
   return (
     <div>

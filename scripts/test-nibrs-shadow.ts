@@ -7,7 +7,7 @@
 import { CIRCUMSTANCE } from "../lib/nibrs-plan/draft-layer";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
+import { askInsteadChecks, shadowAnswer, shadowFollowUp, type ShadowDeps, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { jargon, UNMAPPED } from "../lib/nibrs-shadow/wording";
 import { agencyLabel, agencyName, candidateLabel, loadPlaceIndex, nearestPlaceName, reportedBy, resolvePlace, STATE_NAMES } from "../lib/nibrs-shadow/places";
 import { agencyPopulationSql } from "../lib/nibrs-plan/compile";
@@ -300,10 +300,45 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
   const s = ask("Shootings in Chicago in 2024");
   if (s.kind === "clarify") {
     assert.equal(s.about, "fatal or non-fatal shootings");
-    assert.ok(s.options.every((o) => /^(?:Fatal|Non-fatal) \(/.test(o.label)));
+    // Jeff 2026-11-10: the two named as such; the fatal one points to Homicide Reports until they answer here.
+    assert.deepEqual(s.options.map((o) => o.label), ["Fatal shootings (Homicide Reports)", "Aggravated assaults with a firearm (NIBRS)"]);
+    assert.ok(s.options[0].continuation?.kind === "route" && s.options[0].continuation.source === "shr");
   } else assert.equal(s.kind, "decline");
   assert.notEqual((ask("fatal shootings in Chicago in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
   assert.notEqual((ask("mass shootings in 2024") as { about?: string }).about, "fatal or non-fatal shootings");
+  // Ask instead of decline (Jeff 2026-11-10, bad-declines plan clusters 1, 11, 12, 16): only a reader's decline whose
+  // unread words are all filler is asked instead, and only an ask is given, never an answer.
+  {
+    const { fillerOnly, garbledYear } = askInsteadChecks;
+    for (const t of ["scorecard", "more about", "up in", "an overview for", "look like in", "average", "side-by-side", "going up or down in"]) assert.ok(fillerOnly(t), t);
+    for (const t of ["VA", "Saint Augustine", "carjackings", "tecas", "aggregating both county"]) assert.ok(!fillerOnly(t), t);
+    for (const t of ["since 20210", "to 202", "back to 1`980", "in2p2t"]) assert.ok(garbledYear(t), t);
+    for (const t of ["since 2021", "to 2025", "in 1995", "hi", "202 robberies"]) assert.ok(!garbledYear(t), t);
+    const ANSWERS = new Set(["answer", "srs", "historical", "current"]);
+    for (const q of ["Toledo crime scorecard", "Minneapolis scorecard", "is crime up in milwaukee", "What does crime look like in pierce county?", "Tell me more about crime in Pittsburgh"]) {
+      const o = ask(q);
+      assert.ok(!ANSWERS.has(o.kind), `${q}: never an answer`);
+      if (o.kind === "clarify") assert.ok(/^which /.test(o.about), q);
+      else assert.equal(o.kind, "decline", q);
+    }
+    // A word that isn't filler keeps the decline: "VA" left unread would ask about Arlington, Texas.
+    assert.equal(ask("Tell me more about crime in Arlington, VA").kind, "decline");
+    // A year that can't be read: the years are asked.
+    // A question about what data there is is never asked about a crime instead.
+    for (const q of ["Do you have any data for NYC?", "does Olathe KS report NIBRS data?", "do you have shootings data"]) assert.notEqual(ask(q).kind, "clarify", q);
+    for (const q of ["San Diego, California murders since 20210", "Can I see gun crimes in each month in Boston from 2022 to 202"]) {
+      const o = ask(q);
+      assert.ok(o.kind === "clarify" && o.about === "which years" && o.options.length === 1 && !!o.options[0].entry, q);
+    }
+    // Peers with no crime named: the crime type is asked for the place alone, saying the comparison is left out.
+    const pe = ask("Crime trends in Philadelphia compared to similar cities");
+    if (pe.kind === "clarify") {
+      assert.equal(pe.about, "which kind of crime");
+      assert.match(pe.note ?? "", /^Comparing with similar cities isn't available yet/);
+    } else assert.equal(pe.kind, "decline");
+    // A named crime with peers keeps its decline (the ask is only for the crime type).
+    assert.notEqual(ask("robberies in Philadelphia compared to similar cities in 2024").kind, "clarify");
+  }
   // 3. A crime named once per place is one crime.
   const sp = (q: string) => (matchNibrsType(readQuestion(q, 2026, "2026-09").ledger, { allowExplanation: false } as never) as { spec?: { measures: string[] } }).spec;
   assert.deepEqual(sp("Ohio murder rate vs Louisiana murder rate per year")?.measures, ["murder"]);

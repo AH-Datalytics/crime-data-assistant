@@ -271,7 +271,7 @@ export type ShadowOutcome =
   | CurrentAnswer
   /** A question another source answers (P53): the route is named; this NIBRS shadow does not run it. */
   | { kind: "route"; source: "rtci" | "shr" | "historical"; explanation: string }
-  | { kind: "clarify"; about: string; question: string; options: ShadowOption[] }
+  | { kind: "clarify"; about: string; question: string; options: ShadowOption[]; /** Said with the ask (what the choices leave out). */ note?: string }
   /** `detail`: an internal diagnostic (a compiler or validation reason) for logs; never shown (P74). */
   | { kind: "decline"; reason: LimitationReason | "reader"; explanation: string; alternative: ShadowOption | null; notBuilt?: boolean; detail?: string;
     /** Further buttons after `alternative` (a monthly rate: the rate for the whole period, then the counts by month). */
@@ -358,7 +358,88 @@ function inOriginal(question: string, ledger: RequestLedger, part: Part, to: str
 }
 /** An "assault" with a kind before it: the reader's bare-assault rule leaves these to their own measures. */
 const ASSAULT_QUALIFIED = /\b(?:aggravated|simple|sexual|sex|agg\.?|felony)[\s-]+$/i;
+
+/**
+ * Ask instead of decline (Jeff 2026-11-10, bad-declines plan clusters 1, 11, 12 and 16). Only a reader's own decline
+ * ("I didn't understand ...") is reconsidered, never an answer or a decline about the data:
+ * - The words the reader left unread are all vague or comparison filler ("scorecard", "tell me more about", "is crime
+ *   up in", "an overview for", "vs national average"): the question without them is read again, and its ask is given
+ *   when it asks (which kind of crime, which period, which place). Its answer is never given: the user's question had
+ *   words the reader set aside, so an answer could be to another question. A word that isn't filler ("VA" after
+ *   "Arlington", read as Arlington, Texas; a crime the reader doesn't know) keeps the decline.
+ * - A year that can't be read ("since 20210", "to 202", "back to 1`980", "in2p2t"): the years are asked.
+ */
+const FILLER_WORDS = new Set(("a an the my me i we you your our more about tell give show see get let us please can could would will " +
+  "what what's whats how is are was has have had does do did been being look looks looking like in on of for to at with from by " +
+  "overview overviews scorecard scorecards score card cards report reports snapshot summary profile picture situation " +
+  "statistics stats data info information numbers figures general overall major prevalent most trend trends trending " +
+  "highlight highlights up down gone going rising falling increasing decreasing improving worsening dropping doing lately " +
+  "recently recent current currently last past few several couple years year " +
+  "average averages statewide nationwide level levels terms side-by-side side compared compare comparison versus vs vs. " +
+  "relative rest same specifically or and any way so").split(/\s+/));
+/** A question about what data there is ("Do you have any data for NYC?", "does Olathe report NIBRS data?"): never an ask. */
+const COVERAGE_QUESTION = /^\s*(?:do|does)\s+(?:you|this\s+(?:site|tool|app))\s+have\b|\b(?:any|what)\s+data\b|\breports?\s+(?:to\s+)?(?:nibrs|the\s+fbi|data)\b|\bdata\s+(?:do|does)\s+you\b/i;
+const fillerOnly = (text: string) => {
+  const words = text.toLowerCase().replace(/[“”"’'?!.,;:()]/g, " ").split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.every((w) => FILLER_WORDS.has(w));
+};
+/** A year the reader couldn't read: digits run too short or too long, or broken by a stray character. */
+const garbledYear = (text: string) => {
+  const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+  const last = words[words.length - 1] ?? "";
+  // The words before it are period words ("since", "back to"), and it has digits but isn't a year.
+  if (!words.slice(0, -1).every((w) => /^(?:since|from|to|through|thru|until|back|in|before|after)$/.test(w))) return false;
+  const tok = last.replace(/^(?:in|to)(?=\d)/, "").replace(/[?.!,]+$/, "");
+  return /\d/.test(tok) && !/^(?:19|20)\d\d$/.test(tok) && tok.length >= 3 && tok.length <= 6 && /^[12]/.test(tok);
+};
+/** For tests: the filler and garbled-year checks of the ask-instead rule. */
+export const askInsteadChecks = { fillerOnly: (t: string) => fillerOnly(t), garbledYear: (t: string) => garbledYear(t) };
+const aboutCrime = (about: string) => /^which kind of crime\b|^which sex offenses\b/i.test(about);
+function clarifyInstead(question: string, o: ShadowOutcome, deps: ShadowDeps): ShadowOutcome | null {
+  if (o.kind !== "decline" || COVERAGE_QUESTION.test(question)) return null;
+  const ledger = readQuestion(question, Number(deps.release.lastMonth.slice(0, 4)), deps.release.lastMonth).ledger;
+  // Peers and similar places with no crime named ("how crime in Nashville compares to peer cities"): Jeff 2026-11-10,
+  // "Should ask for crime type", and "A is fine": the crime type is asked for the place named alone, saying the peer
+  // comparison is left out (peers can't be picked yet).
+  const c0 = ledger.parts.filter((p) => p.clause === 0);
+  const peer = c0.find((p) => p.concept === "peer");
+  if (peer && ledger.question === question && c0.filter((p) => p.concept === "measure").every((p) => p.value === "unspecified")) {
+    const drop = c0.filter((p) => p === peer || (p.concept === "entity" && p.span[0] >= peer.span[1] && /^\s*$/.test(question.slice(peer.span[1], p.span[0])))
+      || (p.state === "not-interpreted" && fillerOnly(p.text)));
+    if (c0.every((p) => p.state !== "not-interpreted" || drop.includes(p))) {
+      let rest = question;
+      for (const p of [...drop].sort((a, b) => b.span[0] - a.span[0])) rest = rest.slice(0, p.span[0]) + " " + rest.slice(p.span[1]);
+      // A comparison left with nothing to compare to ("compared to", "compares to") goes too.
+      rest = rest.replace(/\b(?:compar(?:e|es|ed|ing)|vs\.?|versus)\s+(?:with\s+|to\s+)?(?:other\s+)?\s*([?.!]?\s*)$/i, "$1").replace(/\s+/g, " ").trim();
+      const again = answerAsked(rest, { ...deps, rewritten: true });
+      if (again.kind === "clarify" && aboutCrime(again.about))
+        return { ...again, question, note: `Comparing with ${peer.text.trim()} isn't available yet, so these choices answer for the place named alone.` };
+    }
+    return null;
+  }
+  if (o.reason !== "reader") return null;
+  const unread = ledger.parts.filter((p) => p.state === "not-interpreted");
+  if (!unread.length) return null;
+  // Something of the question was read: a place or a crime (a bare "crime" counts).
+  if (!ledger.parts.some((p) => p.clause === 0 && p.state === "recognized" && (p.concept === "place" || p.concept === "measure"))) return null;
+  if (unread.some((p) => garbledYear(p.text)) && unread.every((p) => garbledYear(p.text) || fillerOnly(p.text)))
+    return { kind: "clarify", about: "which years", question, options: [{ label: "Name the years", entry: "which years" }] };
+  if (!unread.every((p) => fillerOnly(p.text))) return null;
+  // The question without the unread words (spans are the reader's, on its own text), cut from the end so earlier
+  // ones stay put.
+  let rest = ledger.question;
+  for (const p of [...unread].sort((a, b) => b.span[0] - a.span[0])) rest = rest.slice(0, p.span[0]) + " " + rest.slice(p.span[1]);
+  rest = rest.replace(/\s+/g, " ").trim();
+  const again = answerAsked(rest, { ...deps, rewritten: true });
+  return again.kind === "clarify" ? { ...again, question } : null;
+}
+
 export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome {
+  const o = answerAsked(question, deps);
+  return deps.rewritten ? o : clarifyInstead(question, o, deps) ?? o;
+}
+
+function answerAsked(question: string, deps: ShadowDeps): ShadowOutcome {
   // P38 (Jeff 2026-11-09): gang wording is declined first, before any place is asked or a forecast declined (Codex
   // review 19.2), with its reason; the next step never keeps the gang words.
   if (GANG.test(question)) {
@@ -385,15 +466,27 @@ export function shadowAnswer(question: string, deps: ShadowDeps): ShadowOutcome 
   // Only bare "shooting(s)" beside nothing but a place, a period, a grain or a statistic: "shooting incidents" would
   // become victims, "police shootings" and "shootings of sheriffs" would lose who was shot (Codex root-causes reviews
   // 01.1-2, 02.1).
-  const ALONE = new Set(["shooting", "place", "period", "grain", "statistic"]);
+  // Also a total or a change ("total shootings per year", "the change in shootings"), and filler the reader left unread
+  // ("I wanna see shootings nationwide"), which the choices leave out (ask instead of decline, Jeff 2026-11-10).
+  const ALONE = new Set(["shooting", "place", "period", "grain", "statistic", "combine", "change"]);
+  const fillerUnread = ledger.question === question && !COVERAGE_QUESTION.test(question)
+    ? ledger.parts.filter((p) => p.clause === 0 && p.state === "not-interpreted" && fillerOnly(p.text)) : [];
   const bareShooting = !!shooting && /^shootings?$/i.test(shooting.text.trim())
     && !/\b(?:police|officers?|cops?|sheriffs?|deput(?:y|ies)|troopers?|law\s+enforcement)\b/i.test(question)
-    && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept));
+    && ledger.parts.every((p) => p.clause !== 0 || p.state === "context" || ALONE.has(p.concept) || fillerUnread.includes(p));
   if (shooting && bareShooting && !deps.rewritten && inOriginal(question, ledger, shooting, "") !== null && !/\b(?:fatal|non[-\s]?fatal|killed|killings?|homicides?|murders?|deadly|deaths?|died|wounded|injur(?:ed|ies|y)|mass)\b/i.test(question)) {
-    const as = (to: string) => inOriginal(question, ledger, shooting, to)!;
-    const options = [["Fatal (murders with a firearm)", "murders with a firearm"], ["Non-fatal (aggravated assaults with a firearm)", "aggravated assaults with a firearm"]]
-      .map(([label, to]) => ({ label, continuation: shadowAnswer(as(to), { ...deps, rewritten: true }) })).filter((o) => runsNow(o.continuation));
-    if (options.length) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options };
+    let base = question;
+    for (const p of [...fillerUnread].sort((a, b) => b.span[0] - a.span[0])) base = base.slice(0, p.span[0]) + " " + base.slice(p.span[1]);
+    base = base.replace(/\s+/g, " ").trim();
+    const as = (to: string) => inOriginal(base, ledger, shooting, to)!;
+    // Jeff (2026-11-10): "Ask if fatal shootings in SHR or agg assaults with a firearm in NIBRS are okay", the two named
+    // as such. Until Homicide Reports answer here, the fatal choice points to them (Jeff: "A is fine for now"), the one
+    // button that doesn't run; the NIBRS choice runs, and the ask is made only when it does.
+    const assaults = shadowAnswer(as("aggravated assaults with a firearm"), { ...deps, rewritten: true });
+    if (runsNow(assaults)) return { kind: "clarify", about: "fatal or non-fatal shootings", question, options: [
+      { label: "Fatal shootings (Homicide Reports)", continuation: { kind: "route", source: "shr",
+        explanation: "Fatal shootings are murders with a firearm, counted in Homicide Reports (FBI SHR). Homicide Reports aren't available here yet; the Homicide Reports tab has them." } },
+      { label: "Aggravated assaults with a firearm (NIBRS)", continuation: assaults }] };
   }
   // A bare "assault" (coordinator 2026-11-06, "San Francisco assaults per month"): Crime Index and Current Trends hold
   // aggravated assault only, so their answer is given, named as aggravated assaults; asking would offer one choice.

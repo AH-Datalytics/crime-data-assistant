@@ -46,7 +46,7 @@ export type PreviewResponse =
    * whose rows are in natural order (time; age groups with Unknown last), which a chart keeps and never sorts by value.
    */
   | { kind: "answer"; columns: string[]; rows: Record<string, string | number | null>[]; chart: ChartConfig | null; text: string[]; period: { from: string; to: string }; buttons: PreviewButton[]; exclusive?: boolean; exclusiveByColumn?: Record<string, boolean>; ordered?: string[] }
-  | { kind: "clarify"; about: string; buttons: PreviewButton[] }
+  | { kind: "clarify"; about: string; buttons: PreviewButton[]; note?: string }
   | { kind: "decline"; reason: string; text: string; buttons: PreviewButton[]; notBuilt: boolean };
 /**
  * The answer contract (lib/answer-contract): every response also carries `presentation`, the structured fields the
@@ -91,7 +91,7 @@ export function toPreview(o: ShadowOutcome, path: string[] = [], places?: PlaceI
   return { ...r, presentation };
 }
 function previewOf(o: ShadowOutcome, path: string[]): PreviewResponse {
-  if (o.kind === "clarify") return { kind: "clarify", about: o.about, buttons: o.options.map((x) => button(x, path)) };
+  if (o.kind === "clarify") return { kind: "clarify", about: o.about, buttons: o.options.map((x) => button(x, path)), ...(o.note ? { note: o.note } : {}) };
   if (o.kind === "decline") return { kind: "decline", reason: o.reason, text: o.explanation, buttons: [...(o.alternative ? [o.alternative] : []), ...(o.more ?? [])].map((x) => button(x, path)), notBuilt: !!o.notBuilt };
   // Another source's question: the route is named (this preview runs only the NIBRS shadow and the historical file).
   if (o.kind === "route") return { kind: "decline", reason: `route:${o.source}`, text: o.explanation, buttons: [], notBuilt: false };
