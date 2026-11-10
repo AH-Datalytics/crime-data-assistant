@@ -338,6 +338,7 @@ assert.deepEqual(MEASURE_CODES.murder, ["09A"]);
     assert.deepEqual(peerRewrite("Crime trends in Philadelphia compared to similar cities"), { rest: "Crime trends in Philadelphia", peer: "similar cities" });
     assert.deepEqual(peerRewrite("i want to know how crime in nashville compares to peer cities"), { rest: "i want to know crime in nashville", peer: "peer" });
     assert.equal(peerRewrite("robberies in Philadelphia compared to similar cities in 2024"), null);
+    assert.equal(peerRewrite("is crime up in Philadelphia in 2024 compared to similar cities"), null);
     for (const q of ["Do you have any data for NYC?", "Do we have data for the United States?", "does Olathe KS report NIBRS data?"]) assert.ok(covers(q), q);
     for (const q of ["Did Los Angeles have more homicides than ny city?", "has violent crime in baltimore gone down", "Show me the crime data for Jersey Village, Texas"]) assert.ok(!covers(q), q);
     // With no place, the crime is asked (no data needed): the ask is given, never an answer.

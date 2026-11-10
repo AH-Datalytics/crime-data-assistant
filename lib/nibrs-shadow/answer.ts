@@ -425,7 +425,8 @@ function peerRewrite(question: string, ledger: RequestLedger): { rest: string; p
   if (!peer || !sameText(question, ledger.question) || !c0.filter((p) => p.concept === "measure").every((p) => p.value === "unspecified")) return null;
   const lq = ledger.question;
   const drop = c0.filter((p) => p === peer || (p.concept === "entity" && p.span[0] >= peer.span[1] && /^\s*$/.test(lq.slice(peer.span[1], p.span[0])))
-    || (p.state === "not-interpreted" && fillerOnly(p.text)));
+    // Filler with a meaning of its own ("is crime up ... compared to similar cities") keeps the decline (Codex 02.1).
+    || (p.state === "not-interpreted" && fillerOnly(p.text) && !meaningful(p.text)));
   if (!c0.every((p) => p.state !== "not-interpreted" || drop.includes(p))) return null;
   // A comparison left with nothing to compare to ("compared to", "compares to", the reader's "and") goes too.
   const rest = cut(lq, drop).replace(/\s*\b(?:compar(?:e|es|ed|ing)|vs\.?|versus|and)(?:\s+(?:with|to))?(?:\s+other)?\s*([?.!]?)\s*$/i, "$1").trim();
