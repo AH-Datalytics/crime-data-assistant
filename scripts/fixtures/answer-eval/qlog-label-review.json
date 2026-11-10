@@ -3392,12 +3392,12 @@
 }
 },
 "QL-ct-c605731327": {
-"status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Yearly Part I: \"Felony assaults should be declined\" (bad-declines review, 2026-11-09)",
+"status": "draft",
+"by": "codex-second-1",
+"why": "Simple assaults require NIBRS.",
 "expected": {
-"outcome": "decline",
-"reason": "Felony assault is a local legal category, not one the FBI data records, so it can't be counted."
+"outcome": "answer",
+"source": "nibrs"
 }
 },
 "QL-ct-c61de4ef9f": {
