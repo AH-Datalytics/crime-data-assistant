@@ -25401,10 +25401,10 @@
 "QL-nibrs-e6981f4ce8": {
 "status": "draft",
 "by": "codex-second-3",
-"why": "F2 answers a short request to present the same data as stacked columns.",
+"why": "Styling alone: stacked columns change only how the chart is drawn (owner 2026-11-09: chart styling declines; Codex link review 2)",
 "expected": {
-"source": "nibrs",
-"outcome": "answer"
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
 }
 },
 "QL-nibrs-e6dca24114": {
@@ -25478,10 +25478,10 @@
 "QL-shr-827e054167": {
 "status": "draft",
 "by": "codex-second-3",
-"why": "F2 answers the short request to show the same data as stacked columns.",
+"why": "Styling alone: stacked columns change only how the chart is drawn (owner 2026-11-09: chart styling declines; Codex link review 2)",
 "expected": {
-"source": "shr",
-"outcome": "answer"
+"outcome": "decline",
+"reason": "Chart styling isn't something the site changes; the charts stay as they are."
 }
 },
 "QL-shr-8ce83f493f": {

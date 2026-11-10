@@ -104586,20 +104586,16 @@
    "question": "show this as stacked columns",
    "previous": "break this down by offense type",
    "expected": {
-    "outcome": "answer",
-    "source": "nibrs",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "F2 answers a short request to present the same data as stacked columns."
+    "notes": "Styling alone: stacked columns change only how the chart is drawn (owner 2026-11-09: chart styling declines; Codex link review 2)"
    }
   },
   {
@@ -112172,20 +112168,16 @@
    "question": "show stacked columns",
    "previous": "show count of offenders rather than victims",
    "expected": {
-    "outcome": "answer",
-    "source": "shr",
-    "answer": "the figures asked for",
-    "meaning": null,
-    "values": {
-     "status": "pending"
-    }
+    "outcome": "decline",
+    "source": null,
+    "reason": "Chart styling isn't something the site changes; the charts stay as they are."
    },
    "label": {
     "status": "draft",
     "rule": "F4>2nd",
     "drafted_by": "codex-second-3",
     "reviewed_by": null,
-    "notes": "F2 answers the short request to show the same data as stacked columns."
+    "notes": "Styling alone: stacked columns change only how the chart is drawn (owner 2026-11-09: chart styling declines; Codex link review 2)"
    }
   },
   {
