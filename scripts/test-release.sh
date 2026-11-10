@@ -266,6 +266,11 @@ run; ok "result" "$RES" "NOT DEPLOYED"; ok "exit" "$RC" 2; ok "live (nothing swi
 has "says why" "$T/logs/$SHA.latest" "cannot read the pin file"
 ok "the existing pin is untouched" "$(grep -cxF R1 "$R/releases/.pinned")" 1
 
+echo "19c. a read error while the run releases its own pin leaves the pin file as it is (other pins kept)"
+setup same; printf 'R0\n' > "$R/releases/.pinned"
+printf '#!/usr/bin/env bash\ncase "$*" in *-vxF*) exit 2 ;; esac\nexec "$(PATH=/usr/bin:/bin command -v grep)" "$@"\n' > "$T/bin/grep"; chmod +x "$T/bin/grep"
+run; ok "result" "$RES" "LIVE"; ok "the unrelated pin survives" "$(grep -cxF R0 "$R/releases/.pinned")" 1
+
 echo "20. a site with a password: health checks send the auth cookie"
 setup same; echo "AUTH_PASSWORD=test-secret" > "$R/shared/.env"; touch "$T/auth-required"; run
 ok "result" "$RES" "LIVE"

@@ -118,7 +118,11 @@ cleanup() {
   # ROLLBACK NOT CONFIRMED (or any state not recorded) the previous release may be the only good one left, so its pin
   # stays until a person clears it.
   if (( PINNED_BY_US )) && [[ "$FINAL_STATE" =~ ^(LIVE|ROLLED\ BACK|NOT\ DEPLOYED)$ ]] && [[ -f "$PINNED_FILE" ]]; then
-    grep -vxF "$(basename "$TARGET")" "$PINNED_FILE" > "$PINNED_FILE.tmp"; mv -f "$PINNED_FILE.tmp" "$PINNED_FILE"
+    # grep exits 1 when nothing is left (fine: an empty list); any higher status is a read error, and then the pin file is
+    # left exactly as it is, never replaced by a partial or empty copy that would drop every other pin.
+    local pin_rc=0
+    grep -vxF "$(basename "$TARGET")" "$PINNED_FILE" > "$PINNED_FILE.tmp" || pin_rc=$?
+    if (( pin_rc <= 1 )); then mv -f "$PINNED_FILE.tmp" "$PINNED_FILE"; else rm -f "$PINNED_FILE.tmp"; fi
   fi
   [[ -n "$STUDIO_TOKEN" ]] && $STUDIO_CTL unlock "$STUDIO_TOKEN" > /dev/null 2>&1 8>&- 9>&-
 }
