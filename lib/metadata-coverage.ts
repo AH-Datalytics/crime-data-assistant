@@ -274,7 +274,7 @@ function dataSourcesResult(source: MetadataSource, question: string): MetadataCo
   const clearance = /\bclearance|cleared|solved\b/i.test(question);
   const explanation = clearance
     ? "In this tool, the Historical tab has clearance percentages by year for the U.S., each state and city or county agencies, and the NIBRS tab has clearances by method (arrest or exceptional means) and by exceptional-clearance reason. The underlying FBI data is published on the FBI's Crime Data Explorer (cde.ucr.cjis.gov)."
-    : "In this tool: Current Trends has recent monthly counts for a sample of agencies; the Historical tab has yearly FBI counts and rates (cities and counties from 1930, with police staffing; states, the nation and clearances from 1960); the NIBRS tab has incident-level detail (victims, offenders, weapons, locations, clearances); Homicide Reports has homicide detail since 1976. The underlying FBI data is published on the FBI's Crime Data Explorer (cde.ucr.cjis.gov).";
+    : "In this tool: Current Trends has recent monthly counts for a sample of agencies; the Historical tab has yearly FBI counts and rates back to 1960; the NIBRS tab has incident-level detail (victims, offenders, weapons, locations, clearances); Homicide Reports has homicide detail since 1976. The underlying FBI data is published on the FBI's Crime Data Explorer (cde.ucr.cjis.gov).";
   return result(source, "data_sources", "SELECT 'Data sources described from the application' AS answer", [{ answer: explanation }], explanation);
 }
 
