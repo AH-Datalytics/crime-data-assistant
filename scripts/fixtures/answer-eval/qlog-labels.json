@@ -15852,16 +15852,20 @@
    "question": "What is the count of felony assaults and simply assaults in New York City between 2018 and 2025",
    "previous": null,
    "expected": {
-    "outcome": "decline",
-    "source": null,
-    "reason": "Felony assault is a local legal category, not one the FBI data records, so it can't be counted."
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
-    "status": "reviewed",
+    "status": "draft",
     "rule": "R14>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Yearly Part I: \"Felony assaults should be declined\" (bad-declines review, 2026-11-09)"
+    "drafted_by": "codex-second-1",
+    "reviewed_by": null,
+    "notes": "Simple assaults require NIBRS."
    }
   },
   {
