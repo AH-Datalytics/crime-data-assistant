@@ -190,6 +190,35 @@ function toBashPath(value: string): string {
   }
 }
 
+// An empty (or comment-only) pin file must not abort the deploy. The helper's grep exits 1 when nothing is listed; under
+// the deploy's `set -euo pipefail` an unguarded `PINNED_NAMES="$(prune_read_pinned ...)"` then stops the script after
+// the switch, and release.sh reads that as a failed deploy and rolls back. Runs the SHIPPED line from the deploy script.
+{
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "deploy-empty-pin-"));
+  try {
+    const helper = toBashPath(path.join(repoRoot, "scripts", "lib", "prune-releases.sh"));
+    const deploy = fs.readFileSync(path.join(repoRoot, "scripts", "deploy-zero-downtime.sh"), "utf8");
+    const readLine = deploy.split(/\r?\n/).find((l) => l.startsWith("PINNED_NAMES="));
+    assert.ok(readLine, "the deploy script must read the pin list into PINNED_NAMES");
+    const cases: [string, string | null][] = [["empty-file", ""], ["comments-and-blanks-only", "# nothing pinned\n\n"], ["no-file", null]];
+    for (const [label, content] of cases) {
+      const pinned = path.join(workDir, `pinned-${label}`);
+      if (content !== null) fs.writeFileSync(pinned, content);
+      const script = `
+        set -euo pipefail
+        source "${helper}"
+        PINNED_FILE="${toBashPath(pinned)}"
+        ${readLine}
+        echo "reached:[$PINNED_NAMES]"
+      `;
+      const out = execFileSync(BASH, ["-c", script], { encoding: "utf8" });
+      assert.match(out, /reached:\[\]/, `${label}: the deploy's pin read must not abort and must yield an empty list`);
+    }
+  } finally {
+    removeDir(workDir);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 3. Deploy script: RELEASE_INFO provenance
 // ---------------------------------------------------------------------------

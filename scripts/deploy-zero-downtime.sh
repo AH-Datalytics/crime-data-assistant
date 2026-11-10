@@ -647,7 +647,9 @@ fi
 log "Pruning old releases (keeping last $KEEP_RELEASES)..."
 
 CURRENT_TARGET=$(readlink -f "$CURRENT_LINK")
-PINNED_NAMES="$(prune_read_pinned "$PINNED_FILE")"
+# `|| true`: an empty or comment-only pin file makes the helper's grep exit 1, and under set -e/pipefail that would
+# abort the deploy here, after the switch, which release.sh then reads as a failed deploy and rolls back.
+PINNED_NAMES="$(prune_read_pinned "$PINNED_FILE" || true)"
 if [[ -n "$PINNED_NAMES" ]]; then
   log "  Pinned releases (never pruned): $(echo "$PINNED_NAMES" | tr '\n' ' ')"
 fi
