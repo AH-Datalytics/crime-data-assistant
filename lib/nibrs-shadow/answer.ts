@@ -42,7 +42,7 @@ const SHADOW_MATCH: MatchOptions = { monthlyBreakdowns: true };
 import { AGE_BINS, planFromSpec } from "../nibrs-plan/from-spec";
 import { DRAFT_LAYER, DRAFT_SEMANTIC_VERSION } from "../nibrs-plan/draft-layer";
 import { agencyPopulationSql, compilePlan, type CompileTarget } from "../nibrs-plan/compile";
-import { compare, rolling, windowMonths, type MonthCell } from "../nibrs-plan/transforms";
+import { compare, rankAgencies, rolling, windowMonths, type MonthCell } from "../nibrs-plan/transforms";
 import { validateOutcome } from "../nibrs-plan/outcome";
 import type { Filter, LimitationReason, NibrsPlan, Place } from "../nibrs-plan/plan";
 import { resolvePeriod, type ReleaseInfo } from "../nibrs-plan/resolve";
@@ -56,7 +56,7 @@ import { missingGroupings } from "./named-groupings";
 import type { OfferRole, SourceId } from "../answer-contract/contract";
 import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalSet, type BesidePlace, historicalCounts, historicalUnitFits, isHistoricalMeasure, type HistoricalAnswer, type HistoricalBuild } from "./historical";
 import { agencyHeaderSql, answerStateSum, universeStates, type StateSumMeta } from "./state-sum";
-import { answerCurrent, answerCurrentChange, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
+import { answerCurrent, answerCurrentChange, answerCurrentRanking, CURRENT_MEASURE, REGIONS, type CurrentAnswer, type CurrentBuild, type CurrentPlace } from "./current";
 
 export type ShadowDeps = {
   places: PlaceIndex;
@@ -1003,28 +1003,56 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
   // answered as if the set weren't there.
   // Before every other route: a national or state total must never stand in for the set.
   const setN = flags(ledger0).largestSet;
-  if (setN && d.kind !== "spec") return decline("unsupported_capability", `This isn't available yet: the ${setN} largest cities with this question.`);
-  if (setN && d.kind === "spec") {
-    const sp = d.spec;
-    const fits = !!deps.historical && sp.type === "series" && sp.measures.length === 1 && isHistoricalMeasure(sp.measures[0]) && (sp.statistic === "count" || sp.statistic === "rate")
-      && sp.places.length === 1 && (sp.places[0].kind === "national" || sp.places[0].kind === "state") && !sp.filters.length && !sp.window
+  // The set ranked ("ranked by their murder rate"): the rank word has no places of its own to rank (the set's words were
+  // taken out), so the question is matched without it and the set is ordered by the figure.
+  const setRank = setN ? ledger.parts.find((p) => p.clause === 0 && p.concept === "rank") : undefined;
+  const dSet = setN && setRank && d.kind !== "spec" ? matchNibrsType(withParts(ledger, ledger.parts.filter((p) => p !== setRank)), SHADOW_MATCH) : d;
+  if (setN && dSet.kind !== "spec") return decline("unsupported_capability", `This isn't available yet: the ${setN} largest cities with this question.`);
+  if (setN && dSet.kind === "spec") {
+    const sp0 = dSet.spec;
+    const rankDir: "top" | "bottom" | null = setRank ? (/^bottom/.test(String(setRank.value)) ? "bottom" : "top") : null;
+    // A series of the set, or the set ranked ("the 20 most populous cities ranked by their murder rate"): one crime, a
+    // count or a rate, the nation or a state; a ranking orders the set by the figure, highest first.
+    const one = sp0.type === "series" ? (sp0.measures.length === 1 && !sp0.filters.length && !sp0.window && sp0.places.length === 1
+        ? { measure: sp0.measures[0], statistic: sp0.statistic, place: sp0.places[0], period: sp0.period, ordered: rankDir as null | "top" | "bottom" } : null)
+      : sp0.type === "rank" && !sp0.min && sp0.entity !== "state" ? { measure: sp0.measure, statistic: sp0.statistic, place: sp0.scope, period: sp0.period, ordered: sp0.rank?.dir ?? "top" } : null;
+    const fits = !!deps.historical && !!one && isHistoricalMeasure(one.measure) && (one.statistic === "count" || one.statistic === "rate")
+      && (one.place.kind === "national" || one.place.kind === "state")
       && !flags(ledger0).nibrsAsked && !flags(ledger0).consistent && !flags(ledger0).property && !flags(ledger0).circumstance && !flags(ledger0).clearance
       && !flags(ledger0).people && !flags(ledger0).composite && !flags(ledger0).arrestsThrough && !flags(ledger0).largeCities
-      && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share", "rank"].includes(p.concept));
-    if (fits && sp.type === "series") {
+      && !ledger.parts.some((p) => p.clause === 0 && ["clearance", "clearance-reason", "breakdown", "filter", "share"].includes(p.concept));
+    if (fits && one) {
       const hb = deps.historical!;
-      if (sp.period.form === "none") {
+      if (one.period.form === "none") {
         const y = hb.lastYear;
         return { kind: "clarify", about: "which period", question: ledger0.question, options: [
           { label: `${y}`, continuation: fromLedger(filled(ledger, "period", `year:${y}`, `in ${y}`), deps, pins) }, { label: "Other years", entry: "which years" }] };
       }
-      const yrs = yearSpan({ period: sp.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
+      const yrs = yearSpan({ period: one.period, grain: "total" }, Number(release.lastMonth.slice(0, 4)), hb.firstYear);
+      const state = one.place.kind === "state" ? one.place.code.toUpperCase() : "US";
+      const statistic = one.statistic === "rate" ? "rate" as const : "count" as const;
+      // The set ranked: one year only, ordered by the figure (blanks last), said.
+      const order = <T extends { delivered: { table: { rows: unknown[][] }; text: string[] } }>(r: T): T => {
+        if (!one.ordered || !yrs || yrs[0] !== yrs[1]) return r;
+        const v = (row: unknown[]) => row[row.length - 1] as number | null;
+        r.delivered.table.rows.sort((a, b) => (v(a) === null ? 1 : v(b) === null ? -1 : one.ordered === "top" ? v(b)! - v(a)! : v(a)! - v(b)!) || String(a[0]).localeCompare(String(b[0])));
+        for (let i = 0; i < r.delivered.text.length; i++) r.delivered.text[i] = r.delivered.text[i].replace(", largest first;", ";");
+        r.delivered.text.splice(1, 0, `Ordered by the ${statistic === "rate" ? "rate" : "count"}, ${one.ordered === "top" ? "highest" : "lowest"} first.`);
+        return r;
+      };
+      if (one.ordered && yrs && yrs[0] !== yrs[1]) return decline("unsupported_capability", "This isn't available yet: the largest cities ranked over several years. Ask for one year.");
       if (yrs && yrs[1] <= hb.lastYear) {
-        const pl = sp.places[0];
-        const r = answerHistoricalSet({ measure: sp.measures[0], state: pl.kind === "state" ? pl.code.toUpperCase() : "US", from: yrs[0], to: yrs[1],
-          statistic: sp.statistic === "rate" ? "rate" : "count", n: setN }, hb, deps.execute);
-        if (r.kind === "historical") return r;
+        const r = answerHistoricalSet({ measure: one.measure, state, from: yrs[0], to: yrs[1], statistic, n: setN }, hb, deps.execute);
+        if (r.kind === "historical") return order(r);
         return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+      }
+      // Past Crime Index's last year (2026): Current Trends' sample cities, January through its latest month (decision 4).
+      const cur = deps.current;
+      if (yrs && yrs[0] === yrs[1] && cur && yrs[0] === Number(cur.lastMonth.slice(0, 4))) {
+        const r = answerCurrentRanking({ measure: one.measure, state, from: `${yrs[0]}-01`, to: cur.lastMonth, statistic, pick: { kind: "largest", n: setN },
+          minPopulation: null, entity: "city" }, cur, hb.root, deps.execute, rankAgencies);
+        if (r.kind === "current") return order(r);
+        return decline("unsupported_capability", r.explanation);
       }
       if (yrs) return decline("outside_release_coverage", `The largest cities' yearly figures in Crime Index run through ${hb.lastYear}; ${yrs[1]} isn't in them yet.`);
     }
@@ -1328,6 +1356,16 @@ function fromLedger(ledger0: RequestLedger, deps: ShadowDeps, pins = new Map<num
         entity: sp.entity }, deps.historical, deps.execute);
       if (r.kind === "historical") return r;
       return decline(/outside them/.test(r.explanation) ? "outside_release_coverage" : "unsupported_capability", r.explanation);
+    }
+    // Past Crime Index's last year (2026): Current Trends' sample agencies, January through its latest month (Jeff
+    // 2026-11-10, ranking decision 4), said; states aren't ranked from its sample.
+    const cur = deps.current;
+    if (yrs && yrs[0] === yrs[1] && cur && yrs[0] === Number(cur.lastMonth.slice(0, 4)) && sp.entity !== "state") {
+      const r = answerCurrentRanking({ measure: sp.measure, state: sp.scope.kind === "state" ? sp.scope.code.toUpperCase() : "US", from: `${yrs[0]}-01`, to: cur.lastMonth,
+        statistic: sp.statistic === "rate" ? "rate" : "count", pick: { kind: "rank", direction: sp.rank?.dir ?? "top", limit: sp.rank?.n ?? 20 }, minPopulation: floorOf(sp),
+        entity: sp.entity === "agency" ? "agency" : "city" }, cur, deps.historical.root, deps.execute, rankAgencies);
+      if (r.kind === "current") return r;
+      return decline("unsupported_capability", r.explanation);
     }
   }
   // The reader's own change form ("how did burglaries in Memphis change from 2010 to 2020") for one agency: the same

@@ -5,6 +5,8 @@
 import assert from "node:assert/strict";
 import { answerBeside, answerHistorical, answerHistoricalRanking, answerHistoricalSet, historicalRate, historicalUnitFits, type HistoricalBuild, type HistoricalQuestion } from "../lib/nibrs-shadow/historical";
 import { readQuestion } from "../lib/nibrs-shadow/reading";
+import { answerCurrentRanking, type CurrentBuild } from "../lib/nibrs-shadow/current";
+import { rankAgencies } from "../lib/nibrs-plan/transforms";
 import { SRS_SOURCE } from "../lib/nibrs-shadow/deliver";
 import { shadowAnswer, shadowFollowUp, type ShadowOutcome } from "../lib/nibrs-shadow/answer";
 import { standsAlone } from "../lib/nibrs-shadow/follow-up";
@@ -515,5 +517,33 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
     const o = shadowAnswer(q, base as never);
     assert.equal(o.kind, "decline", `${q}: never a total in the set's place: ${JSON.stringify(o).slice(0, 200)}`);
   }
+}
+// Rankings and sets past Crime Index's last year from Current Trends' sample agencies (Jeff 2026-11-10, decisions 1, 4):
+// January through the latest month, only agencies with every month ranked, the population of the latest month, said.
+{
+  const csql: string[] = [];
+  const cb: CurrentBuild = { root: "/ct", release: "ct-test", firstMonth: "2025-01", lastMonth: "2026-08", finalFirstMonth: "2017-01" };
+  // ori, name, state, pop (latest month), total, months known
+  const ROWS: unknown[][] = [["TXDPD0000", "Dallas", "TX", 1_300_000, 89, 8], ["TXHPD0000", "Houston", "TX", 2_400_000, 120, 7], ["TXSPD0000", "San Antonio", "TX", 1_500_000, 58, 8]];
+  const cexec = (sql: string) => { csql.push(sql); return ROWS; };
+  const r = answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "count", pick: { kind: "rank", direction: "top", limit: 20 },
+    minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
+  assert.ok(r.kind === "current", JSON.stringify(r));
+  if (r.kind === "current") {
+    assert.deepEqual(r.delivered.table.rows, [["Dallas", 89], ["San Antonio", 58]]);
+    assert.equal(r.delivered.text[0], "Current Trends' sample city agencies in Texas: the 2 with the most murders, January 2026 through August 2026.");
+    assert.ok(r.delivered.text.some((t) => /^Not ranked because a month is missing: Houston\./.test(t)), JSON.stringify(r.delivered.text));
+    assert.ok(r.delivered.text.some((t) => /Only Current Trends' sample agencies are included/.test(t)));
+    assert.match(csql[0], /WHERE sample AND year \* 100 \+ month BETWEEN 202601 AND 202608 AND state = 'TX'/);
+    assert.match(csql[0], /agency_crime\.parquet'\)\) SELECT .* WHERE n\.type = 'city'/);
+  }
+  // A rate: per 100,000 of the latest month's population, not scaled to a full year.
+  const rr = answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "rate", pick: { kind: "rank", direction: "top", limit: 1 },
+    minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
+  assert.ok(rr.kind === "current" && JSON.stringify(rr.delivered.table.rows) === '[["Dallas",6.8]]' && rr.delivered.text.some((t) => /not scaled to a full year/.test(t)), JSON.stringify(rr));
+  // The set: the largest by population, Houston blank (a month missing), said.
+  const st = answerCurrentRanking({ measure: "murder", state: "TX", from: "2026-01", to: "2026-08", statistic: "count", pick: { kind: "largest", n: 2 },
+    minPopulation: null, entity: "city" }, cb, "/ci", cexec, rankAgencies);
+  assert.ok(st.kind === "current" && JSON.stringify(st.delivered.table.rows) === '[["Houston",null],["San Antonio",58]]', JSON.stringify(st));
 }
 console.log("nibrs historical: agencies' Part I figures from the Crime Index build, as published; blanks never zero");
