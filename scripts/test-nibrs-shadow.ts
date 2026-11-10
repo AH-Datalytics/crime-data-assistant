@@ -1620,4 +1620,16 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
   assert.equal(matchNibrsType(readQuestion("Aggravated assault victims in Nashville by sex by year by month in 2023", 2026, "2026-09").ledger, { monthlyBreakdowns: true }).kind, "decline", "by year and by month at once");
 }
 
+// Before NIBRS's years (Jeff 2026-11-09): murder is Homicide Reports' from 1976 (by month, weapon), never "not in the
+// data"; another crime says NIBRS's span and that Crime Index has yearly figures (agencies from 1930, states from 1960).
+for (const q of ["oakland murders per month in 1996", "firearm murders in Louisville in 2003", "DC murders per month in 1996 and 1997"]) {
+  const o = ask(q);
+  assert.ok(o.kind === "route" && o.source === "shr", `${q}: ${JSON.stringify(o).slice(0, 200)}`);
+}
+{
+  const o = ask("robberies per month in Oakland in 1996");
+  assert.ok(o.kind === "decline" && o.explanation.startsWith("NIBRS figures here cover") && !/^The data here/.test(o.explanation), JSON.stringify(o).slice(0, 300));
+  const m = ask("murders per month in Oakland in 1970");
+  assert.ok(!(m.kind === "route" && m.source === "shr"), "1970 is before Homicide Reports");
+}
 console.log("nibrs shadow: answers, clarifications and declines follow the slice's policy; scoring judges them");
