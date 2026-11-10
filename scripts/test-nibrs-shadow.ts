@@ -1198,6 +1198,7 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       assert.equal(d.kind, "decline", fu);
       if (d.kind === "decline") {
         assert.ok(d.explanation.startsWith("Gang involvement is loosely defined"), fu);
+        assert.ok(!/not recorded|isn't recorded|doesn't record/i.test(JSON.stringify([d.explanation, d.alternative])), fu);
         assert.ok(!/gang/i.test(d.alternative?.question ?? "") && !/follow-up/i.test(d.alternative?.label ?? ""), `${fu}: ${JSON.stringify(d.alternative)}`);
       }
     }
@@ -1209,6 +1210,8 @@ assert.equal(as(ask("Robberies in Texas by year from 2026 to 2027"), "decline").
       const d = as(ask(q), "decline");
       assert.ok(d.explanation.startsWith("Gang involvement is loosely defined and inconsistently reported to the FBI, so counts of gang-related crime would be misleading."), q);
       assert.ok(!/gang/i.test(d.alternative?.question ?? "") && !/gang/i.test(d.explanation.slice(130)), q);
+      // What the user sees (the preview renders the text and buttons, never the reason code) never says "not recorded".
+      assert.ok(!/not recorded|isn't recorded|doesn't record/i.test(JSON.stringify([d.explanation, d.alternative, (d as { more?: unknown }).more])), q);
     }
   }
   // P53 (Codex state-categories review 01.2): murder by a Homicide Report detail for a state or the nation, NIBRS not
