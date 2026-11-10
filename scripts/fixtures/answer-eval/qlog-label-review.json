@@ -408,7 +408,14 @@
 },
 "QL-ct-15953e5e90": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-ct-15c14278a3": {
 "status": "draft",
@@ -2849,12 +2856,11 @@
 },
 "QL-ct-9f18f436a0": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"place",
 "crime"
 ]
 }
@@ -4285,12 +4291,11 @@
 },
 "QL-ct-f4e70ee5b8": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"place",
 "crime"
 ]
 }
@@ -4886,7 +4891,14 @@
 },
 "QL-hist-07bf6d2063": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-hist-07d4308fda": {
 "status": "reviewed",
@@ -7261,14 +7273,13 @@
 "by": "codex-second-1"
 },
 "QL-hist-9c58989da2": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P40 requires clarifying killings.",
+"status": "reviewed",
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"whether murder is meant",
-"place"
+"whether murder is meant"
 ]
 }
 },
@@ -8105,7 +8116,14 @@
 },
 "QL-hist-d154718834": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-hist-d157d3d8c6": {
 "status": "reviewed",
@@ -13726,9 +13744,9 @@
 }
 },
 "QL-nibrs-ea38289d6e": {
-"status": "draft",
-"by": "codex-second-1",
-"why": "P09 defaults assaults to aggravated assaults and annual totals use Historical.",
+"status": "reviewed",
+"by": "jeff-2026-11-10",
+"why": "Assault trend in Texas 2020-2023: \"keep historical\" (Jeff 2026-11-10)",
 "expected": {
 "outcome": "answer",
 "source": "historical"
@@ -14394,7 +14412,14 @@
 },
 "QL-shr-1ed7e4ce26": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-shr-1ed88a32b2": {
 "status": "reviewed",
@@ -14461,7 +14486,14 @@
 },
 "QL-shr-24521ae073": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-shr-25b1803ff6": {
 "status": "reviewed",
@@ -14761,7 +14793,12 @@
 },
 "QL-shr-440cd864d8": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-44a020a3ce": {
 "status": "draft",
@@ -14952,7 +14989,14 @@
 },
 "QL-shr-547bba64ed": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-shr-55cca56390": {
 "status": "reviewed",
@@ -15066,7 +15110,12 @@
 },
 "QL-shr-5e789288cc": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-5ef633c578": {
 "status": "draft",
@@ -15646,12 +15695,11 @@
 },
 "QL-shr-9f18f436a0": {
 "status": "reviewed",
-"by": "jeff-2026-11-09",
-"why": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)",
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
 "expected": {
 "outcome": "clarify",
 "about_any": [
-"place",
 "crime"
 ]
 }
@@ -16192,7 +16240,16 @@
 },
 "QL-shr-cf22c622eb": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "historical",
+"source_any": [
+"historical",
+"shr"
+]
+}
 },
 "QL-shr-cf33be2943": {
 "status": "reviewed",
@@ -16359,7 +16416,14 @@
 },
 "QL-shr-e257ab48d2": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "clarify",
+"about_any": [
+"period"
+]
+}
 },
 "QL-shr-e27f7024e5": {
 "status": "reviewed",
@@ -18159,7 +18223,12 @@
 },
 "QL-hist-44d405302c": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "historical"
+}
 },
 "QL-hist-44e77ddff9": {
 "status": "reviewed",
@@ -19539,7 +19608,12 @@
 },
 "QL-nibrs-5aac15aac1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
 },
 "QL-nibrs-5bd500a7a3": {
 "status": "reviewed",
@@ -19580,7 +19654,12 @@
 },
 "QL-nibrs-5ebf25aac1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
 },
 "QL-nibrs-6181512644": {
 "status": "reviewed",
@@ -19655,7 +19734,12 @@
 },
 "QL-nibrs-743bf5aac1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
 },
 "QL-nibrs-743bf72912": {
 "status": "draft",
@@ -19874,7 +19958,12 @@
 },
 "QL-nibrs-aeb3f5aac1": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "nibrs"
+}
 },
 "QL-nibrs-aeb3f5ebf2": {
 "status": "reviewed",
@@ -20167,7 +20256,12 @@
 },
 "QL-shr-075a9440cd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-075a99dffa": {
 "status": "reviewed",
@@ -20370,7 +20464,12 @@
 },
 "QL-shr-440cd440cd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-440cdc0b52": {
 "status": "draft",
@@ -20436,7 +20535,12 @@
 },
 "QL-shr-5bbb3440cd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-5bbb35bbb3": {
 "status": "reviewed",
@@ -20668,7 +20772,12 @@
 },
 "QL-shr-cb73a440cd": {
 "status": "reviewed",
-"by": "codex-second-1"
+"by": "jeff-2026-11-10",
+"why": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)",
+"expected": {
+"outcome": "answer",
+"source": "shr"
+}
 },
 "QL-shr-cda3d5ad28": {
 "status": "reviewed",

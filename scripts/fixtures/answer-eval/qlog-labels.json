@@ -1732,18 +1732,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -13029,17 +13028,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "place",
      "crime"
     ],
-    "about": "place"
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -19535,17 +19533,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "place",
      "crime"
     ],
-    "about": "place"
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -22418,18 +22415,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -33962,17 +33958,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "whether murder is meant",
-     "place"
+     "whether murder is meant"
     ],
     "about": "whether murder is meant"
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P40 requires clarifying killings."
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -38238,18 +38233,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -65887,11 +65881,11 @@
     }
    },
    "label": {
-    "status": "draft",
+    "status": "reviewed",
     "rule": "R14>2nd",
-    "drafted_by": "codex-second-1",
-    "reviewed_by": null,
-    "notes": "P09 defaults assaults to aggravated assaults and annual totals use Historical."
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Assault trend in Texas 2020-2023: \"keep historical\" (Jeff 2026-11-10)"
    }
   },
   {
@@ -69200,18 +69194,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -69575,18 +69568,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -70993,19 +70985,20 @@
    "question": "Big cities with highest share of murders via firearm in 2024",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -71731,18 +71724,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -72237,19 +72229,20 @@
    "question": "Show me which big cities had the highest share of firearm murders in 2024",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -74973,17 +74966,16 @@
     "outcome": "clarify",
     "source": null,
     "about_any": [
-     "place",
      "crime"
     ],
-    "about": "place"
+    "about": "crime"
    },
    "label": {
     "status": "reviewed",
     "rule": "R10>2nd",
-    "drafted_by": "jeff-2026-11-09",
-    "reviewed_by": "jeff-2026-11-09",
-    "notes": "Peers or major cities: \"Should ask for crime type\" (bad-declines review, 2026-11-09)"
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -77581,19 +77573,24 @@
    "question": "Big cities with most murder victims in 2024",
    "previous": null,
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "source_any": [
+     "historical",
+     "shr"
+    ],
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -78407,18 +78404,17 @@
    "expected": {
     "outcome": "clarify",
     "source": null,
-    "about": "place",
     "about_any": [
-     "place",
      "period"
-    ]
+    ],
+    "about": "period"
    },
    "label": {
     "status": "reviewed",
-    "rule": "R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -89648,19 +89644,20 @@
    "question": "Are there any large cities where car thefts did not increase in the early 2020's?",
    "previous": "How have car thefts changed over the past 20 years?",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "historical",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -99184,19 +99181,20 @@
    "question": "what big cities had the highest rate of rapes that were expectionally cleared in 2025?",
    "previous": "what big cities had the highest rate of rapes that were expectionally cleared in 2025?",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -99427,19 +99425,20 @@
    "question": "what big cities had the highest rate of rapes that were expectionally cleared in 2025?",
    "previous": "murders by weapon in New Haven, CT in the last three years",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -99913,19 +99912,20 @@
    "question": "what big cities had the highest rate of rapes that were expectionally cleared in 2025?",
    "previous": "Min 200 off",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -101898,19 +101898,20 @@
    "question": "what big cities had the highest rate of rapes that were expectionally cleared in 2025?",
    "previous": "crime in san bernardino, ca",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "nibrs",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -104521,19 +104522,20 @@
    "question": "Big cities with highest share of murders via firearm in 2024",
    "previous": "Show domestic homicide trends nationally since 2000",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -106162,19 +106164,20 @@
    "question": "Big cities with highest share of murders via firearm in 2024",
    "previous": "Big cities with highest share of murders via firearm in 2024",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -106588,19 +106591,20 @@
    "question": "Big cities with highest share of murders via firearm in 2024",
    "previous": "Cities with highest share of murders via firearm in 2024",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
@@ -108304,19 +108308,20 @@
    "question": "Big cities with highest share of murders via firearm in 2024",
    "previous": "Share of murders via firearm in NYC by year",
    "expected": {
-    "outcome": "clarify",
-    "source": null,
-    "about": "place",
-    "about_any": [
-     "place"
-    ]
+    "outcome": "answer",
+    "source": "shr",
+    "answer": "the figures asked for",
+    "meaning": null,
+    "values": {
+     "status": "pending"
+    }
    },
    "label": {
     "status": "reviewed",
-    "rule": "F1+R10",
-    "drafted_by": "rules-v1",
-    "reviewed_by": "codex-second-1",
-    "notes": "P12/D31"
+    "rule": "F1+R10>2nd",
+    "drafted_by": "jeff-2026-11-10",
+    "reviewed_by": "jeff-2026-11-10",
+    "notes": "Major/big/large cities with no number are cities of 250,000 or more, said in the answer; no ask (Jeff 2026-11-10, ranking decision 2)"
    }
   },
   {
