@@ -240,7 +240,8 @@ export function matchNibrsType(ledger: RequestLedger, opts: MatchOptions = {}): 
     const rankVal = rankParts.map((p) => p.value ?? "").find((v) => /^(?:top|bottom):/.test(v)) ?? null;
     const n = rankVal ? rankVal.split(":")[1] : "";
     const rank = rankVal ? { dir: rankVal.startsWith("bottom") ? "bottom" as const : "top" as const, n: n ? Number(n) : (entity === "state" && /\bwhich\s+state\s+has\b/i.test(ledger.question) ? 1 : null) } : null;
-    if (rank && rank.n === null && /\bwhich\s+(?:state|city|agency)\s+(?:has|had)\b/i.test(ledger.question)) rank.n = 1;
+    // One place asked for ("which city had", "which Ohio city had", "which city in Texas had": Codex ranking review 1).
+    if (rank && rank.n === null && /\bwhich\s+(?:[a-z]+\s+){0,2}(?:state|city|agency)\s+(?:(?:in|of)\s+(?:the\s+)?[a-z.]+(?:\s+[a-z.]+){0,2}\s+)?(?:has|had)\b/i.test(ledger.question)) rank.n = 1;
     const thresholds = thresholdParts.map(thresholdOf);
     if (thresholds.some((t) => t === null) || thresholds.length > 1) return declineParts(thresholdParts, (p) => cannot(p, "I can apply one minimum population (\"at least\" or \"over\"), not a maximum."));
     const notInRank = [...of("filter"), ...of("clearance-reason"), ...unitParts, ...monthPeriodParts, ...grainParts, ...of("rolling"), ...of("combine")];

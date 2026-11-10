@@ -421,6 +421,11 @@ assert.match((answerHistorical({ measure: "shoplifting", agencies: [memphis], fr
   const base = { places, release: { id: "t", firstMonth: "2017-01", lastMonth: "2026-09", asOf: "2026-10-29" }, target: { root: "/b", builtYears: [2023] }, execute: rexec, historical: build };
   const viaShadow = shadowAnswer("Which Texas cities had the most murders in 1950?", base as never) as ShadowOutcome & { question?: { ranking?: unknown } };
   assert.ok(viaShadow.kind === "historical" && !!viaShadow.question?.ranking, JSON.stringify(viaShadow).slice(0, 300));
+  // One city asked for, however the state is said (Codex ranking review 1): one row.
+  for (const q of ["Which city in Texas had the most murders in 1950?", "Which city had the most murders in Texas in 1950?"]) {
+    const one = shadowAnswer(q, base as never);
+    assert.ok(one.kind === "historical" && one.delivered.table.rows.length === 1 && one.delivered.table.rows[0][0] === "Houston", `${q}: ${JSON.stringify(one).slice(0, 300)}`);
+  }
   let nibrsYear: ShadowOutcome | null = null;
   try { nibrsYear = shadowAnswer("Which Texas cities had the most murders in 2024?", base as never); } catch { /* the stub has no NIBRS rows */ }
   assert.ok(!(nibrsYear && nibrsYear.kind === "historical"), "a NIBRS year keeps the NIBRS ranking");
