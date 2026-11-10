@@ -86,7 +86,7 @@ const range = toPreview(shadowAnswer("Shoplifting in Memphis by month", deps));
 assert.ok(range.kind === "clarify");
 if (range.kind === "clarify") {
   assert.deepEqual(range.buttons.map((b) => [b.label, b.kind]), [["The last 10 complete years", "not-built"], ["Every year available", "continuation"], ["Another range", "entry"]]);
-  assert.match(range.buttons[0].note ?? "", /^Not in the data this preview uses: The data here covers January 2017 through September 2026, so it doesn.t include 2016 to 2025.$/);
+  assert.match(range.buttons[0].note ?? "", /^Not in the data this preview uses: NIBRS figures here cover January 2017 through September 2026, so they don.t include 2016 to 2025.$/);
   assert.match(range.buttons[2].note ?? "", /ask the whole question again/);
 }
 const forecast = toPreview(shadowAnswer("Will shoplifting rise in Denver next year?", deps));
