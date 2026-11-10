@@ -20,7 +20,9 @@
 prune_read_pinned() {
   local pinned_file="$1"
   [[ -f "$pinned_file" ]] || return 0
-  grep -vE '^[[:space:]]*(#|$)' "$pinned_file" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//'
+  # `|| true`: grep exits 1 when the file lists nothing, and under set -e/pipefail that would abort every caller
+  # (the deploy's own read, and prune_releases below, whose process substitution would silently stop pruning).
+  { grep -vE '^[[:space:]]*(#|$)' "$pinned_file" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//'; } || true
 }
 
 prune_is_pinned() {

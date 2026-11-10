@@ -214,6 +214,21 @@ function toBashPath(value: string): string {
       const out = execFileSync(BASH, ["-c", script], { encoding: "utf8" });
       assert.match(out, /reached:\[\]/, `${label}: the deploy's pin read must not abort and must yield an empty list`);
     }
+    // prune_releases reads the pin file itself; with nothing pinned it must still prune (the deploy runs it in a process
+    // substitution, where an abort would silently stop the pruning while the deploy carried on).
+    const releasesDir = path.join(workDir, "releases");
+    fs.mkdirSync(releasesDir);
+    const rel = ["20260801_000000", "20260802_000000", "20260803_000000", "20260804_000000", "20260805_000000", "20260806_000000", "20260807_000000"];
+    for (const name of rel) fs.mkdirSync(path.join(releasesDir, name));
+    fs.writeFileSync(path.join(releasesDir, ".pinned"), "");
+    const pruneOut = execFileSync(BASH, ["-c", `
+      set -euo pipefail
+      source "${helper}"
+      prune_releases "${toBashPath(releasesDir)}" "${toBashPath(path.join(releasesDir, "20260807_000000"))}" 5 "${toBashPath(path.join(releasesDir, ".pinned"))}"
+    `], { encoding: "utf8" });
+    assert.match(pruneOut, /remove 20260801_000000/, "an empty pin file: the oldest surplus release is still pruned");
+    assert.ok(!fs.existsSync(path.join(releasesDir, "20260801_000000")) && !fs.existsSync(path.join(releasesDir, "20260802_000000")), "an empty pin file: surplus releases are removed");
+    assert.ok(rel.slice(2).every((n) => fs.existsSync(path.join(releasesDir, n))), "an empty pin file: the newest five survive");
   } finally {
     removeDir(workDir);
   }
