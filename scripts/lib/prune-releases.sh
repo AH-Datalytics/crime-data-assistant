@@ -18,11 +18,15 @@
 # ignored, CR and trailing whitespace stripped so a file edited on Windows or
 # with a stray space still matches.
 prune_read_pinned() {
-  local pinned_file="$1"
+  local pinned_file="$1" lines="" rc=0
   [[ -f "$pinned_file" ]] || return 0
-  # `|| true`: grep exits 1 when the file lists nothing, and under set -e/pipefail that would abort every caller
-  # (the deploy's own read, and prune_releases below, whose process substitution would silently stop pruning).
-  { grep -vE '^[[:space:]]*(#|$)' "$pinned_file" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//'; } || true
+  # grep exits 1 when the file lists nothing: that is an empty pin list, not a failure (under set -e/pipefail it would
+  # abort every caller, e.g. prune_releases in the deploy's process substitution). Any other status (2 = unreadable
+  # file or I/O error) is returned, so a read error can never look like "nothing pinned" and let a pinned release go.
+  lines=$(grep -vE '^[[:space:]]*(#|$)' "$pinned_file" 2>/dev/null) || rc=$?
+  (( rc <= 1 )) || return "$rc"
+  if [[ -n "$lines" ]]; then printf '%s\n' "$lines" | tr -d '\r' | sed 's/[[:space:]]*$//'; fi
+  return 0
 }
 
 prune_is_pinned() {
@@ -49,7 +53,7 @@ prune_releases() {
   [[ -d "$releases_dir" ]] || { echo "prune_releases: no such directory: $releases_dir" >&2; return 1; }
 
   local pinned
-  pinned="$(prune_read_pinned "$pinned_file")"
+  pinned="$(prune_read_pinned "$pinned_file")" || { echo "prune_releases: cannot read the pin file $pinned_file; nothing removed" >&2; return 1; }
 
   local release_count remove_count candidates old name old_full
   # A subshell for the listing keeps the caller's working directory untouched.

@@ -229,6 +229,24 @@ function toBashPath(value: string): string {
     assert.match(pruneOut, /remove 20260801_000000/, "an empty pin file: the oldest surplus release is still pruned");
     assert.ok(!fs.existsSync(path.join(releasesDir, "20260801_000000")) && !fs.existsSync(path.join(releasesDir, "20260802_000000")), "an empty pin file: surplus releases are removed");
     assert.ok(rel.slice(2).every((n) => fs.existsSync(path.join(releasesDir, n))), "an empty pin file: the newest five survive");
+    // A pin file that cannot be read (grep status 2) must stop the prune, never read as "nothing pinned".
+    const stubDir = path.join(workDir, "stub-bin");
+    fs.mkdirSync(stubDir);
+    fs.writeFileSync(path.join(stubDir, "grep"), "#!/usr/bin/env bash\nexit 2\n", { mode: 0o755 });
+    const failDir = path.join(workDir, "releases-unreadable");
+    fs.mkdirSync(failDir);
+    for (const name of rel) fs.mkdirSync(path.join(failDir, name));
+    fs.writeFileSync(path.join(failDir, ".pinned"), "20260801_000000\n");
+    assert.throws(
+      () => execFileSync(BASH, ["-c", `
+        set -euo pipefail
+        source "${helper}"
+        PATH="${toBashPath(stubDir)}:$PATH"
+        prune_releases "${toBashPath(failDir)}" "${toBashPath(path.join(failDir, "20260807_000000"))}" 5 "${toBashPath(path.join(failDir, ".pinned"))}"
+      `], { encoding: "utf8", stdio: "pipe" }),
+      "an unreadable pin file must stop prune_releases",
+    );
+    assert.ok(rel.every((n) => fs.existsSync(path.join(failDir, n))), "an unreadable pin file: nothing is removed, the pinned baseline included");
   } finally {
     removeDir(workDir);
   }
